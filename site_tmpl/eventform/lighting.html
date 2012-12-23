@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load bootstrap_toolkit %}
+{% load i18n %}
+
+
+{% block head %}
+{{ wizard.form.media }}
+{% endblock %}
+
+
+{% block extras %}
+    <script type="text/javascript">
+        $(document).ready(function () {
+            
+            $('.radio').parent().addClass("btn btn-danger btn-large");
+            $('.radio').hide()
+            $('.radio').parent().button();
+            $('input:checked').parent().button('toggle');
+            $('.radio').parent().parent().parent().attr("data-toggle","buttons-radio")
+            $('.radio').parent().mousedown(function () {
+                $(this).button('toggle');
+                $(this).siblings().button('reset');
+                });
+            });
+    </script>
+    <style>
+        li {float:left; margin: 3px; list-style-type:none}
+    </style>
+{% endblock %}
+
+
+{% block content %}
+<h2>Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}: Lighting</h2>
+<form class="form" action="" method="post">{% csrf_token %}
+<table>
+{{ wizard.management_form }}
+{% if wizard.form.forms %}
+    {{ wizard.form.management_form }}
+    {% for form in wizard.form.forms %}
+        {{ form|as_bootstrap }}
+    {% endfor %}
+{% else %}
+    {{ wizard.form }}
+{% endif %}
+</table>
+{% if wizard.steps.prev %}
+<button class="btn btn-info" name="wizard_goto_step" type="submit" value="{{ wizard.steps.first }}">{% trans "first step" %}</button>
+<button class="btn btn-info" name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}">{% trans "prev step" %}</button>
+{% endif %}
+<input class="btn btn-primary" type="submit" value="{% trans "submit" %}"/>
+</form>
+{% endblock %}

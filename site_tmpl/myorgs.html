@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}    
+<h1> <a href="{% url events.views.my.my %}">My</a> Work Organisations </h1>
+<p class="lead"> All the organizations you are associated with </p>
+<table class="table table-striped table-bordered">
+    <tr> 
+        <th>Name </th>
+        <th></th>
+    </tr>
+    {% for org in orgs %}
+            <tr>
+                <td>{{org}}</td>
+                <td></td>
+            </tr>
+    {% empty %}
+    No Organizations.
+    {% endfor %}
+</table>
+{% endblock %}

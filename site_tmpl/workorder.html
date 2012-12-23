@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block extras %}
+{% endblock %}
+{% block content %}
+      <div class="row-fluid">
+
+        <div class="span12">
+          <div class="hero-unit">
+            <h3>Workorder Form</h3>
+		<p>While filling out the Workorder it may be helpful to view our <a href='/pricing/pricelist.pdf'>Price List</a>.  
+		If you have any questions regarding pricing of packages, you may email the Vice President at <a href='mailto:lnl-vp@wpi.edu'> lnl-vp@wpi.edu</a>. 
+		Ensure that you provide the correct email address for the form, as that is the primary form of contact Lens and Lights uses to communicate with other clubs and organizations.
+		</p>
+		<br />
+		<p>Please allow at least five business days during classes, and a minimum of ten business days during breaks, for the Vice President to reply to your Workorder submission.  E-mails sent to <a href='mailto:lnl-vp@wpi.edu'> lnl-vp@wpi.edu</a> inquring about the status of an event request will be ignored until the Vice President has had sufficient time to review the Workorder. After reviewing your Workorder the Vice President will either confirm your event, deny your event, or request a meeting to gather more information about the requirements for your event.</p>
+		<br />
+		<p><strong>NOTE: If you are from outside the WPI community and would like to submit a workorder, please email:<a href='mailto:lnl-vp@wpi.edu'> lnl-vp@wpi.edu</a> </strong></p>
+        <br />
+
+		<p><strong>** Late Event Requests **</strong></p>
+		<p>Failure to submit a workorder at least two (2) weeks prior to your event will result in late fees, maximum late fees are specified in the <a href='/pricing/pricelist.pdf'>Price List</a>.</p>
+		<br />
+
+		<p><strong>Any requests received less than 48 hours prior to the event will not be guaranteed services.</strong></p></p>
+          </div>
+          
+      <div class="container-fluid">
+      <div class="row-fluid">
+
+<!-- WORKORDER SUBMISSION FORM STARTS HERE-->
+        <div class="span12">
+          <div class="hero-unit">
+		    <form class="form-horizontal" method="post" action="">
+  			  
+  			  <h4>Summary of Services Needed:</h4>
+					<p>
+					Please fully describe the services you are requesting.  If you wish to include a floorplan (see right column), tech rider, or additional information that cannot be included here please indicate in the box below and do one of the following:</p>
+					<br>
+					<p>
+					1) Place in the Lens and Lights mailbox in the Student Activities Office<br>
+					2) Email to the Vice President at <a href='mailto:lnl-vp@wpi.edu'> lnl-vp@wpi.edu</a>, make sure to use your event name in the subject<br>
+					3) Fax to (508)-831-6045
+					</p>
+              {% csrf_token %}              
+              {{formset}}
+    		  <button type="submit" class="btn btn-success">Submit</button>
+    		  </form>
+          </div>
+ 
+            
+          </div><!--/row-->
+          
+            </div><!--/span-->
+          </div><!--/row-->
+        </div><!--/span-->
+      </div><!--/row-->
+
+      <hr>
+{% endblock %}

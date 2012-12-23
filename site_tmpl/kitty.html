@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block nav %}
+    {% include "my.nav.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container marketing" style="text-align:center;">
+    <h1> FUCK OFF KITTY </h1>
+
+    user: {{ kitty.user }} <br />
+    ip: {{ kitty.user_ip }} <br />
+    requested_url: {{ kitty.requested_uri }} <br />
+    timestamp: {{ kitty.timestamp }} <br />
+    <br />
+    <strong>You've been logged kitty. Fuck off.</strong>
+    {{foo}}
+</div>
+
+{% endblock %}

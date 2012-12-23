@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block content %}    
+<div class="row-fluid">
+
+    <div class="span12">
+        <div class="hero-unit">
+            <h2>Welcome to the LnL Database</h2>
+            <p>A fresh database model!</p>
+        </div>
+
+        <div class="row-fluid">
+            {% if is_officer %}
+            <div class="span4">
+            {% else %}
+            <div class="span6">
+            {% endif %}
+                <h2>Workorders</h2>
+                  <p><a class="btn btn-primary" href="{% url events.views.indices.workorder %}">Submit A Workorder &raquo;</a></p>
+            </div><!--/span-->
+
+            {% if is_officer %}
+            <div class="span4">
+            {% else %}
+            <div class="span6">
+            {% endif %}
+                <h2>View Your Account</h2>
+                <p><a class="btn btn-success" href="{% url events.views.my.my %}">My Account &raquo;</a></p>
+            </div><!--/span-->
+
+            {% if is_officer %}
+            <div class="span4">
+                <h2>Admin</h2>
+                <p><a class="btn btn-danger" href="{% url events.views.indices.admin %}">LN Admin&raquo;</a></p>
+            </div><!--/span-->
+            {% endif %}
+        </div><!--/row-->
+         
+    </div><!--/span-->
+</div><!--/row-->
+<hr>
+{% endblock %}

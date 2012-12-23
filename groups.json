@@ -1,0 +1,42 @@
+[
+  {
+    "pk": 1, 
+    "model": "auth.group", 
+    "fields": {
+      "name": "Officers", 
+      "permissions": []
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "auth.group", 
+    "fields": {
+      "name": "Associate", 
+      "permissions": []
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "auth.group", 
+    "fields": {
+      "name": "Active", 
+      "permissions": []
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "auth.group", 
+    "fields": {
+      "name": "Alumni", 
+      "permissions": []
+    }
+  }, 
+  {
+    "pk": 5, 
+    "model": "auth.group", 
+    "fields": {
+      "name": "Away", 
+      "permissions": []
+    }
+  }
+]

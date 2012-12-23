@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block nav %}
+    {% include "my.nav.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container marketing" style="text-align:center;">
+    <div class="row">
+        {% if is_lnl %}
+        <div class="span3">
+        {% else %}
+        <div class="span4">
+        {% endif %}
+            <img class="img-circle" src="http://placehold.it/140x140" />
+            <h2> My Account </h2>
+            <p> Modify Account </p>
+            <a href="{% url events.views.my.myacct %}" class="btn btn-large btn-primary">Go</a>
+        </div>
+
+        
+        {% if is_lnl %}
+        <div class="span3">
+        {% else %}
+        <div class="span4">
+        {% endif %}
+            <img class="img-circle" src="http://placehold.it/140x140" />
+            <h2> WorkOrders </h2>
+            <p> Repeat Past Workorders, Make new ones </p>
+            <a href="#" class="btn btn-large btn-primary">New</a>
+            <a href="{% url events.views.my.mywo %}" class="btn btn-large btn-primary">Repeat</a>
+        </div>
+
+        
+        {% if is_lnl %}
+        <div class="span3">
+        {% else %}
+        <div class="span4">
+        {% endif %}
+            <img class="img-circle" src="http://placehold.it/140x140" />
+            <h2> My Orgs </h2>
+            <p> View my associated organizations </p>
+            <a href="{% url events.views.my.myorgs %}" class="btn btn-large btn-primary">Go</a>
+        </div>
+
+        {% if is_lnl %}
+        <div class="span3">
+            <img class="img-circle" src="http://placehold.it/140x140" />
+            <h2> My Events </h2>
+            <p> View My events </p>
+            <a href="{% url events.views.my.myevents %}" class="btn btn-large btn-primary">Go</a>
+            
+        </div>
+        {% endif %}
+        
+    </div>
+</div>
+
+{% endblock %}
