@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block nav %}
+    {% include "admin.nav.html" %}
+{% endblock %}
+{% block content %}
+    <div class="row-fluid">
+        <div class="span12">
+            <div class="hero-unit">
+                <h2> {{u}} </h2>
+                <table class="table">
+                    <tr>
+                        <th>Status</th>
+                        <td>{{ u.status }}</td>
+                    </tr>
+                    <tr>
+                        <th>Events CCd:</th>
+                        <td>{{u.crewchief.count}}</td>
+                    </tr>
+                    <tr>
+                        <th>Events Participated:</th>
+                        <td>{{u.crew.count}}</td>
+                    </tr>
+                    <tr>
+                        <th>Films CC'd</th>
+                        <td>TODO</td>
+                    </tr>
+                    <tr>
+                        <th>Meeting Attendance Count</th>
+                        <td>{{ u.meeting_set.count }}</td>
+                    </tr>
+
+                </table>
+                <h3>Last 3 CC'd Events <a href="#">(All)</a></h3>
+                <ul class="unstyled"> 
+                    {% for event in u.crewchief.all %}
+                        {% if not forloop.counter > 3 %}
+                            <li><a href="{% url events.views.list.viewevent event.id %}">{{ event }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+                
+                <h3>Last 3 Participated Events <a href="#">(All)</a></h3>
+                <ul class="unstyled"> 
+                    {% for event in u.crew.all %}
+                        {% if not forloop.counter > 3 %}
+                            <li><a href="{% url events.views.list.viewevent event.id %}">{{ event }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+{% endblock %}

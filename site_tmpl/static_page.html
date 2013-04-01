@@ -1,0 +1,67 @@
+{% extends 'base_pages.html' %}
+{% load markup %}
+
+{% block content %}
+    
+    <link href="{{ STATIC_URL }}css/{{page.carousel_css}}-carousel.css" rel="stylesheet">
+    
+    
+    {% if page.imgs.all %}
+    <div id="myCarousel" class="carousel slide">
+        <div class="carousel-inner">
+        {% for img in page.imgs.all %}
+            <div class="item {% if forloop.counter == 1 %}active {%endif %}">
+            <img src="{{ MEDIA_URL }}{{img.img}}" alt="">
+            {% if img.href %}
+            <div class="container">
+                <div class="carousel-caption">
+                <h1>{{ img.href }}</h1>
+                <p class="lead">{{ img.href_desc }}</p>
+                <a class="btn btn-large btn-primary" href="{% url pages.views.page img.href.slug %}">{{ img.href_words }}</a>
+                </div>
+            </div>
+            {% else %}
+            <div class="carousel-caption">
+                <h4>{{ img.href_words }}</h4>
+                <p>{{ img.href_desc }}</p>
+                </div>
+            {% endif %}
+            </div>
+        
+        {% endfor %}
+        </div>
+        {% if page.imgs.count != 1 %}
+        <a class="left carousel-control" href="#myCarousel" data-slide="prev">‹</a>
+        <a class="right carousel-control" href="#myCarousel" data-slide="next">›</a>
+        {% endif %}
+    </div>
+    {% else %}
+    {% endif %}
+    
+    
+    <div class="container">
+    {% if page.body_in_hero %}
+    <div class="hero-unit">
+    {% endif %}
+    
+    {{ page.body|markdown }} <BR />
+    <div class="clearfix"> </div>
+    
+    
+    {% if page.body_in_hero %}
+    </div> <!-- /hero-unit  -->
+    {% endif %}
+    
+    </div> <!-- /container -->
+{% endblock %}
+
+{% block finaljs %}
+<script type="text/javascript">
+      !function ($) {
+        $(function(){
+          // carousel demo
+          $('#myCarousel').carousel()
+        })
+      }(window.jQuery)
+</script>
+{% endblock %}

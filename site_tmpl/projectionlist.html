@@ -1,0 +1,22 @@
+
+{% extends 'base.html' %}
+{% block nav %}
+    {% include "admin.nav.html" %}
+{% endblock %}
+{% block content %}
+<h2> {{ h2 }} </h2>
+<table class="table table-striped table-bordered">
+    <tr> 
+        <th> User Name </th>
+        <th> Class </th>
+    </tr>
+    {% for user in users %}
+            <tr>
+                <td>{{ user }}</td>
+                <td>
+                    {{ user.projectionist.pit_level }}
+                </td>
+            </tr>
+    {% endfor %}
+</table>
+{% endblock %}

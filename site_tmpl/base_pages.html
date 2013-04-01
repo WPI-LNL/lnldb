@@ -1,0 +1,92 @@
+{% load markup %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        {% block head %}
+        {% endblock %}
+        <meta charset="utf-8">
+        <title>Lens and Lights at WPI</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="">
+        <meta name="author" content="">
+        
+        <link href="{{ STATIC_URL }}css/bootstrap.css" rel="stylesheet">
+        <style type="text/css">
+        body {
+            padding-top: 20px;
+            padding-bottom: 40px;
+        }
+        .sidebar-nav {
+            padding: 9px 0;
+        }
+        </style>
+        <link href="{{ STATIC_URL }}css/bootstrap-responsive.css" rel="stylesheet">
+
+
+        <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+        <!--[if lt IE 9]>
+        <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+        
+        <!-- Le fav and touch icons -->
+        <link rel="shortcut icon" href="{{ STATIC_URL }}ico/favicon.ico">
+        <link rel="apple-touch-icon-precomposed" sizes="144x144" href="{{ STATIC_URL }}ico/apple-touch-icon-144-precomposed.png">
+        <link rel="apple-touch-icon-precomposed" sizes="114x114" href="{{ STATIC_URL }}ico/apple-touch-icon-114-precomposed.png">
+        <link rel="apple-touch-icon-precomposed" sizes="72x72" href="{{ STATIC_URL }}ico/apple-touch-icon-72-precomposed.png">
+        <link rel="apple-touch-icon-precomposed" href="{{ STATIC_URL }}ico/apple-touch-icon-57-precomposed.png">
+        {% block extras %}
+        {% endblock %}
+    </head>
+
+    <body>
+ <!-- Beginning of the top NavBar code -->
+    {% block nav %}
+    <div class="container navbar-wrapper">
+      <div class="navbar navbar-inverse">
+        <div class="navbar-inner">
+          <!-- Responsive Navbar Part 1: Button for triggering responsive navbar (not covered in tutorial). Include responsive CSS to utilize. -->
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" href="{% url pages.views.page "index" %}">Lens and Lights</a>
+          <!-- Responsive Navbar Part 2: Place all navbar contents you want collapsed withing .navbar-collapse.collapse. -->
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              {% for nav in navs.navs %}
+              <li {% if nav = page %} class="active" {% endif %}><a href="{% url pages.views.page nav.slug %}">{{ nav.title }}</a></li>
+              {% endfor %}
+              <li><a href="#PriceModal" data-toggle="modal">Price List</a></li>
+              <li><a href="/workorder">Workorder</a></li>
+              <li><a href="{% url events.views.my.my %}">My Account</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div><!-- /.navbar-inner -->
+      </div><!-- /.navbar -->
+
+    </div><!-- /.container -->
+    {% endblock %}
+    
+
+      {% block content %}
+      {% endblock %}
+      <div class="clearfix"> </div>
+      <div class="container">
+        <footer>
+            <p class="pull-right"><a href="#">Back to top</a></p>
+            <p>&copy; WPI Lens and Lights</p>
+        </footer>
+      </div>
+
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="{{ STATIC_URL }}js/jquery.js"></script>
+    <script src="{{ STATIC_URL }}js/bootstrap.js"></script>    
+    {% block finaljs %}
+    {% endblock %}
+    {% include 'modals/pricelist.html' %}
+  </body>
+</html>

@@ -17,9 +17,66 @@
         <div class="span12">
           <div class="hero-unit">
             <h2>Welcome to the LnL Database</h2>
-            <p>A fresh database model!</p>
+            <table class="table">
+                <thead>
+                    <th>Starting Today</th>
+                    <th>Start</th>
+                    <th>Ends</th>
+                </thead>
+                    {% for e in starting %}
+                    <tr>
+                        <td>{{ e }}</td>
+                        <td>
+                            {% if e.datetime_start > now %}
+                            {{ e.datetime_start|timeuntil }} From Now
+                            {% else %}
+                            {{ e.datetime_start|timesince }} Ago
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if e.datetime_emd <= now %}
+                            {{ e.datetime_end|timeuntil }} from now
+                            {% else %}
+                            {{ e.datetime_end|timesince }} Ago
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                <thead>
+                    <th>Events in Progress</th>
+                    <th>Started</th>
+                    <th>Ends</th>
+                </thead>
+                    {% for e in ip %}
+                    <tr>
+                        <td>{{ e }}</td>
+                        <td>
+                            {{ e.datetime_start|timesince }} Ago
+                        </td>
+                        <td>
+                            {{ e.datetime_end|timeuntil }} from now
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    
+                <thead>
+                    <th>Ended Today</th>
+                    <th>Started</th>
+                    <th>Ended</th>
+                </thead>
+                    {% for e in et %}
+                    <tr>
+                        <td>{{ e }}</td>
+                        <td>
+                            {{ e.datetime_start|timesince }} Ago
+                        </td>
+                        <td>
+                            {{ e.datetime_end|timesince}} from now
+                        </td>
+                    </tr>
+                    {% endfor %}
+            </table>
           </div>
-          
             </div><!--/span-->
           </div><!--/row-->
         </div><!--/span-->

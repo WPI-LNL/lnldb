@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load bootstrap_toolkit %}
+{% block nav %}
+    {% include "admin.nav.html" %}
+{% endblock %}
+{% block content %}
+    <h1>Meeting for {{ m.datetime }}</h1>
+    <div class="hero-unit">
+        <h3>Attendance:</h3>
+        <ul>
+        {% for a in m.attendance.all %}
+            <li><a href="{% url members.views.detail a.id %}">{{a.first_name }} {{a.last_name }}</a></li>
+        
+        {% endfor %}
+        </ul>
+    </div>
+{% endblock %}

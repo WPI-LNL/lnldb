@@ -1,99 +1,77 @@
 <div class="navbar navbar-inverse navbar-fixed-top">
-      <div class="navbar-inner">
+    <div class="navbar-inner">
         <div class="container-fluid">
-          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </a>
-          <a class="brand" href="{% url events.views.indices.index %}">LNLDB</a>
-          <div class="nav-collapse collapse">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+            <a class="brand" href="{% url events.views.indices.index %}">LNLDB</a>
+            <div class="nav-collapse collapse">
             <p class="navbar-text pull-right">
               Logged in as <a href="{% url events.views.my.my %}" class="navbar-link"> {{user}}</a>
             </p>
             <ul class="nav nav-pills">
-              <li class="active"><a href="{% url events.views.indices.admin %}">Home</a></li>
-            <ul class="nav nav-pills">
-              <li class="dropdown">
-                <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                     Events <b class="caret"></b>
-                </a>
-            <ul class="dropdown-menu">
-                <li><a href="#">Add Events</a></li>
-                <li><a href="{% url events.views.list.incoming %}">Incoming Workorders</a></li>
-                <li><a href="{% url events.views.list.upcoming %}">Upcoming Events</a></li>
-                <li><a href="{% url events.views.list.openworkorders %}">View Open Workorders</a></li>
-                    <li class="dropdown-submenu">
-                        <a tabindex="-1" href="#">Event Payments</a>
-                        <ul class="dropdown-menu">
-                            <li><a href="{% url events.views.list.unpaid %}">Events to be billed</a></li>
-                            <li><a href="#">Events not yet paid</a></li>
-                        </ul>
-                    </li>
-                        <li><a href="{% url events.views.list.closed %}">Closed Workorders</a></li>
-             </ul>
-             </li>
-                 </ul>
-              <ul class="nav nav-pills">
-                     <li class="dropdown">
-                      <a class="dropdown-toggle"
-                        data-toggle="dropdown"
-                        href="#">
+                <li class="active"><a href="{% url events.views.indices.admin %}">Home</a></li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                        Events <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="{% url events.views.mkedrm.eventnew %}">Add Events</a></li>
+                        <li><a href="{% url events.views.list.incoming %}">Incoming Workorders</a></li>
+                        <li><a href="{% url events.views.list.upcoming %}">Upcoming Events</a></li>
+                        <li><a href="{% url events.views.list.openworkorders %}">View Open Workorders</a></li>
+                            <li class="dropdown-submenu">
+                                <a tabindex="-1" href="#">Event Payments</a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="{% url events.views.list.unpaid %}">Events to be billed</a></li>
+                                    <li><a href="#">Events not yet paid</a></li>
+                                </ul>
+                            </li>
+                                <li><a href="{% url events.views.list.closed %}">Closed Workorders</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Clients
                         <b class="caret"></b>
                       </a>
                     <ul class="dropdown-menu">
                         <li><a href="{% url events.views.orgs.vieworgs %}">View Clients</a></li>
-                        <li><a href="{% url events.views.orgs.addorgs %}">Add Clients</a></li>
-                        <li><a href="#">Edit Clients</a></li>
+                        <li><a href="{% url events.views.orgs.addeditorgs %}">Add Clients</a></li>
                     </ul>
-                    </li>
-                 </ul>
-              <ul class="nav nav-pills">
-                     <li class="dropdown">
-                      <a class="dropdown-toggle"
-                        data-toggle="dropdown"
-                        href="#">
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Members
                         <b class="caret"></b>
-                      </a>
+                    </a>
                     <ul class="dropdown-menu">
-                          <li><a href="#">Officers</a></li>
-                          <li><a href="#">Active</a></li>
-                          <li class="dropdown-submenu">
-                            <a tabindex="-1" href="#">Associate</a>
-                            <ul class="dropdown-menu">
-                            <li><a href="#">Activate Members</a></li>
-                            </ul>
-                          </li>
-                          <li><a href="#">Alumni</a></li>
-                          <li><a href="#">Away</a></li>
+                        <li><a href="{% url members.views.officers %}">Officers</a></li>
+                        <li><a href="{% url members.views.active %}">Active</a></li>
+                        <li><a href="{% url members.views.associate %}">Associate</a></li>
+                        <li><a href="{% url members.views.alum %}">Alumni</a></li>
+                        <li><a href="{% url members.views.away %}">Inactive</a></li>
                     </ul>
-                    </li>
-                 </ul> 
-              <ul class="nav nav-pills">
-                     <li class="dropdown">
-                      <a class="dropdown-toggle"
-                        data-toggle="dropdown"
-                        href="#">
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown"  href="#">
                         Meetings
                         <b class="caret"></b>
-                      </a>
+                    </a>
                     <ul class="dropdown-menu">
                           <li><a href="#">View/Send General Meeting Notice</a></li>
                           <li><a href="#">View/Send Crew List</a></li>
-                          <li><a href="#">View Meeting Attendance</a></li>
+                          <li><a href="{% url meetings.views.listattendance %}">View Meeting Attendance</a></li>
+                          <li><a href="{% url meetings.views.newattendance %}">New Meeting</a></li>
                     </ul>
-                    </li>
-                 </ul>      
-              <ul class="nav nav-pills">
-                     <li class="dropdown">
-                      <a class="dropdown-toggle"
-                        data-toggle="dropdown"
-                        href="#">
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Inventory
                         <b class="caret"></b>
-                      </a>
+                    </a>
                     <ul class="dropdown-menu">
                          <li><a href="{% url inventory.views.view %}">View Inventory</a></li>
                          <li><a href="{% url inventory.views.add %}">Add Inventory Item</a></li>
@@ -104,25 +82,20 @@
                             </ul>
                          </li>
                     </ul>
-                    </li>
-                 </ul>                   
-                <ul class="nav nav-pills">
-                     <li class="dropdown">
-                      <a class="dropdown-toggle"
-                        data-toggle="dropdown"
-                        href="#">
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Projection
                         <b class="caret"></b>
                       </a>
                     <ul class="dropdown-menu">
-                      <li><a href="#">View Projectionists</a></li>
-                      <li><a href="#">Update Projectionist</a></li>
+                        <li><a href="{% url projection.views.plist %}">View Projectionists</a></li>
+                        <li><a href="#">Update Projectionist</a></li>
                     </ul>
-                    </li>
-                 </ul>                   
+                </li>
                  <!-- paste menu bar text above here --> 
             </ul>
-          </div><!--/.nav-collapse -->
+            </div><!--/.nav-collapse -->
         </div>
-      </div>
     </div>
+</div>

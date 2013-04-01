@@ -15,7 +15,7 @@ framework.
 """
 import os
 import sys
-path = '/home/gmorell/lnldb'
+path = '/home/lnldb/lnldb'
 if path not in sys.path: sys.path.append(path)
 
 

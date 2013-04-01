@@ -2,11 +2,61 @@
 {% block nav %}
     {% include "admin.nav.html" %}
 {% endblock %}
-{% block content %}    
+{% block content %}
+<h2>{{ h2 }}</h2>
+{% if cats or scats %}
+<div class="well well-small">
+    {% if cats %}
+    <ul class="nav nav-pills">
+        <li class="disabled"><a>Categories</a></li>
+        {% for cat in cats %}
+        <li><a href="{% url inventory.views.cat cat %}">{{ cat }}</a></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    
+    {% if scats %}
+    <ul class="nav nav-pills">
+        <li class="disabled"><a>SubCategories</a></li>
+        {% for scat in scats %}
+        <li><a href="{% url inventory.views.subcat scat.category scat %}">{{ scat }}</a></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+{% endif %}
+
 <table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>
+                Name
+            </th>
+            <th>
+                Category
+            </th>
+            <th>
+                SubCategory
+            </th>
+            <th>
+                Status
+            </th>
+        </tr>
+    </thead>
     {% for i in inv  %}
             <tr>
-                <td>{{i}}</td>
+                <td><a href="{% url inventory.views.detail i.id %}">{{i}}</a></td>
+                <td><a href="{% url inventory.views.cat i.subcategory.category %}">{{i.subcategory.category }}</a></td>
+                <td><a href="{% url inventory.views.subcat i.subcategory.category i.subcategory %}">{{i.subcategory }}</a></td>
+                <td>
+                    {% if i.equip_status == "AV" %}
+                        <i class="icon-ok" title="available"></i>
+                    {% elif i.equip_status == "UR" %}
+                        <i class="icon-wrench" title="under repair"></i>
+                    {% elif i.equip_status == "RE" %}
+                        <i class="icon-remove" title="retired"></i>
+                    {% endif %}
+                </th>
             </tr>
     {% endfor %}
 </table>

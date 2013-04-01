@@ -5,9 +5,90 @@
 {% block content %}
     <div class="row-fluid">
         <div class="span12">
+            <h1> {{event }}:</h1>
             <div class="hero-unit">
-                <h2> Event Details </h2>
-                {{event }} < thats the object I swear
+                <ul class="nav nav-tabs">
+                    <li class="active"><a href="#home" data-toggle="tab">Detail</a></li>
+                    <li><a href="#crew" data-toggle="tab">Crew</a></li>
+                    <li><a href="#reports" data-toggle="tab">Reports</a></li>
+                </ul>
+                
+                <div class="tab-content">
+                    <div id="home" class="tab-pane active">
+                        <table class="table">
+                            <tr>
+                                <th>Start</th>
+                                <td>{{event.datetime_start }}</td>
+                            </tr>
+                            <tr>
+                                <th>End</th>
+                                <td>{{event.datetime_end}}</td>
+                            </tr>
+                            <tr>
+                                <th>Submitter</th>
+                                <td>{{event.submitted_by}}</td>
+                            </tr>
+                            <tr>
+                                <th>IP</th>
+                                <td>{{event.submitted_ip}}</td>
+                            </tr>
+                            <tr>
+                                <th>Setup Start</th>
+                                <td>{{event.datetime_setup_start}}</td>
+                            </tr>
+                            <tr>
+                                <th>Setup Completion</th>
+                                <td>{{event.datetime_setup_complete}}</td>
+                            </tr>
+                            <tr>
+                                <th>Location</th>
+                                <td>{{event.location}}</td>
+                            </tr>
+                            <tr>
+                                <th>Posted Description</th>
+                                <td>{{event.description}}</td>
+                            </tr>
+                        </table>
+                        {% if not event.approved %}
+                        <a class="btn" href="{% url events.views.flow.approval event.id %}">Approve</a>
+                        {% endif %}
+                    </div>
+                    <div id="crew" class="tab-pane">
+                        <a class="btn btn-large pull-right" href="{% url events.views.flow.assigncc event.id %}">Modify</a>
+                        <h2> Crew Chief(s) </h2>
+                        <ul>
+                            {% for cc in event.crew_chief.all %}
+                            <li>{{ cc }}</li>
+                            {% endfor %}
+                        </ul>
+                        
+                        <a class="btn btn-large pull-right" href="{% url events.views.flow.assigncrew event.id %}">Modify</a>
+                        <h2> Crew </h2>
+                        <ul>
+                            {% for c in event.crew.all %}
+                            <li>{{ c }}</li>
+                            {% endfor %}
+                        </ul>
+                        
+                    </div>
+                    <div id="reports" class="tab-pane">
+                    {% for report in event.ccreport_set.all %}
+                        <h3>Report by {{report.crew_chief }}</h3> <em class="muted pull-right">posted on {{ report.created_on }}</em>
+                        <blockquote>
+                            {{ report.report }}
+                            <small>{% for cat in report.for_service_cat.all %} {{cat}} {% endfor %}</small>
+                        </blockquote>
+                    {% empty %}
+                        No Reports
+                    {% endfor %}
+                    {% if event.crew_needing_reports %}
+                        <h3> Crew Chiefs Needing Reports </h3>
+                        {% for crew in event.crew_needing_reports %}
+                            {{ crew }}<br />
+                        {% endfor %}
+                    {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>

@@ -12,6 +12,7 @@ from events.forms import WorkorderSubmit,CrewAssign,OrgForm
 from events.models import Event,Organization
 from helpers.challenges import is_officer
 
+import datetime
 
 ### FRONT 3 PAGES
 def index(request):
@@ -49,7 +50,24 @@ def workorder(request):
 @user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
 def admin(request,msg=None):
     """ admin landing page """
+
     context = RequestContext(request)
     context['msg'] = msg
+    
+    today = datetime.datetime.now()
+    # get today's events 
+    starting = Event.objects.filter(datetime_start__year=today.year,datetime_start__month=today.month,datetime_start__day=today.day)
+    context['starting'] = starting
+    
+    #in progress
+    ip = Event.objects.filter(datetime_start__lte=today,datetime_end__gte=today)
+    context['ip'] = ip
+    
+    #ended
+    et =  Event.objects.filter(datetime_end__year=today.year,datetime_end__month=today.month,datetime_end__day=today.day)
+    context['et'] = et
+    
+    context['now'] = today
+    
     return render_to_response('admin.html', context) 
 

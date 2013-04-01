@@ -2,11 +2,17 @@
 {% block nav %}
     {% include "admin.nav.html" %}
 {% endblock %}
-{% block content %}    
+{% block content %}
+<h2> Org List </h2>
 <table class="table table-striped table-bordered">
+    <thead>
+        <th>
+            Org Name
+        </th>
+    </thead>
     {% for org in orgs %}
             <tr>
-                <td>{{org}}</td>
+                <td><a href="{% url events.views.orgs.orgdetail org.id %}">{{org}}</a></td>
             </tr>
     {% endfor %}
 </table>

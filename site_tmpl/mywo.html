@@ -1,23 +1,28 @@
 {% extends 'base.html' %}
 
 {% block content %}    
-<h1> <a href="{% url events.views.my.my %}">My</a> Work Orders </h1>
+<h1> <a href="{% url events.views.my.my %}">My</a> Previous Work Orders </h1>
+<p class="lead">Here you can see all your associated orgs' previous events</p>
 <table class="table table-striped table-bordered">
+    <thead>
     <tr> 
         <th>Name </th>
         <th>Date </th>
         <th>Location </th>
         <th></th>
     </tr>
-    {% for event in events %}
-            <tr>
+    </thead>
+    {% for org,events in events.items %} 
+        <thead><tr ><th colspan="4">{{ org }}</th></tr></thead>
+        {% for event in events %}
+            <tr class="info">
                 <td>{{event.event_name}}</td>
                 <td title="{{event.datetime_end}}">{{event.datetime_end|timesince}} Ago</td>
                 <td>{{event.location}}</td>
                 <td><a class="btn">Repeat</a>
             </tr>
-    {% empty %}
-    You dont have any events.
+        {% endfor %}
     {% endfor %}
 </table>
+
 {% endblock %}

@@ -1,0 +1,23 @@
+<script type="text/javascript" src="{{ STATIC_URL }}js/bootstrap-datepicker.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}js/bootstrap-timepicker.js"></script>
+<link href="{{ STATIC_URL }}css/datepicker.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}css/timepicker.css" rel="stylesheet">
+<script type="text/javascript">
+    $(document).ready(function () {
+        $(".dtp").parent().find(":first-child").addClass('datepick')
+        $(".datepick").datepicker({
+                format: 'yyyy-mm-dd',
+            });
+        
+        $(".dtp").parent().find(":last-child").addClass('timepick');
+        $(".timepick").timepicker(
+            {
+                minuteStep: 10,
+                showInputs: false,
+                disableFocus: true,
+                showMeridian: false,
+                defaultTime:false
+                
+            });
+        });
+</script>

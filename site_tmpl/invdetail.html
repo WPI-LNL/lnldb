@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block nav %}
+    {% include "admin.nav.html" %}
+{% endblock %}
+
+{% block extrajs %}
+    $(document).ready(function () {
+        $('.collapse').collapse('hide');
+    });
+{% endblock %}
+
+
+{% block content %}
+    <div class="row-fluid">
+        <div class="span12">
+            <div class="hero-unit">
+                <h2> {{e}} Details </h2>
+                <table class="table">
+                    <tr>
+                        <th>Category/SubCategory:</th>
+                        <td>{{e.subcategory.category}}/{{e.subcategory}}</td>
+                    </tr>
+                    <tr>
+                        <th>Desc:</th>
+                        <td>{{e.description}}</td>
+                    </tr>
+                    <tr>
+                        <th>Purchase Date:</th>
+                        <td>{{e.purchase_date}}</td>
+                    </tr>
+                    <tr>
+                        <th>Purchase Price:</th>
+                        <td>${{e.purchase_price}}</td>
+                    </tr>
+                    <tr>
+                        <th>Model No.:</th>
+                        <td>{{e.model_number}}</td>
+                    </tr>
+                    <tr>
+                        <th>Serial No.:</th>
+                        <td>{{e.serial_number}}</td>
+                    </tr>
+                    <tr>
+                        <th>Road Case:</th>
+                        <td>{{e.road_case}}</td>
+                    </tr>
+                    <tr>
+                        <th>Model No.:</th>
+                        <td>{{e.manufacturer}}</td>
+                    </tr>
+                    <tr>
+                        <th>Home</th>
+                        <td>{{e.home}}</td>
+                    </tr>
+                    <tr>
+                        <th>Status:</th>
+                        <td>{{e.status}}</td>
+                    </tr>         
+                </table>
+                <h3>Last Five Maint Entries</h3>
+                <table class="table">
+                {% for entry in e.equipmentmaintentry_set.all|slice:":5" %}
+                    <tr>
+                        <td>{{ entry.desc }}</td>
+                        <td>{{ entry.date }}</td>
+                        <td>{{ entry.user }}</td>
+                        <td><i class="{{ entry.status.iconclass }}" title="{{entry.status}}"></i></td>
+                    </tr>
+                {% empty %}
+                    No Entries
+                {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

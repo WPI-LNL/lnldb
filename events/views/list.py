@@ -7,6 +7,7 @@ from django.template import Context,RequestContext
 
 from events.models import Event,Organization
 
+
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from helpers.challenges import is_officer
@@ -29,7 +30,7 @@ def upcoming(request,limit=True):
     events = Event.objects.filter(approved=True).filter(closed=False).filter(paid=False).filter(datetime_start__gte=today)
     if limit:
         events = events.filter(datetime_start__lte=weekfromnow)
-    
+    context['h2'] = "Upcoming Workorders"
     context['events'] = events
     
     return render_to_response('events.html', context)
@@ -42,6 +43,7 @@ def incoming(request):
     
     events = Event.objects.filter(approved=False).filter(closed=False).filter(paid=False)
     
+    context['h2'] = "Incoming Workorders"
     context['events'] = events
     return render_to_response('events.html', context)
 
@@ -53,6 +55,7 @@ def openworkorders(request):
     
     events = Event.objects.filter(closed=False)
     
+    context['h2'] = "Open Workorders"
     context['events'] = events
     return render_to_response('events.html', context)
 
@@ -64,6 +67,7 @@ def paid(request):
     
     events = Event.objects.filter(approved=True).filter(paid=True)
     
+    context['h2'] = "Paid Workorders"
     context['events'] = events
     return render_to_response('events.html', context)
 
@@ -77,6 +81,7 @@ def unpaid(request):
     now = time.time()
     events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now()).filter(date_setup_start__lte=today)
     
+    context['h2'] = "UnPaid Workorders"
     context['events'] = events
     return render_to_response('events.html', context)    
 
@@ -88,41 +93,9 @@ def closed(request):
      
     events = Event.objects.filter(closed=True)
     
+    context['h2'] = "Closed Workorders"
     context['events'] = events
     return render_to_response('events.html', context)       
 
 
-@login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
-def assigncrew(request,id):
-    context = RequestContext(request)
-    
-    event = get_object_or_404(Event,pk=id)
-    
-    if request.method == 'POST':
-        formset = CrewAssign(request.POST)
-        if formset.is_valid():
-            formset.save()
-            
-        else:
-            context['formset'] = formset
-            
-    else:
-        formset = CrewAssign
-        
-        context['formset'] = formset
-        
-    return render_to_response('form_master.html', context)
-    
-
-
-@login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
-def viewevent(request,id):
-    context = RequestContext(request)
-    event = get_object_or_404(Event,pk=id)
-    
-    context['event'] = event
-    
-    return render_to_response('uglydetail.html', context)
     

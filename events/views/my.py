@@ -36,9 +36,13 @@ def mywo(request):
     user = request.user
     orgs = user.orgusers.get_query_set()
     
-    events = Event.objects.filter(group__in=orgs)
+    events = Event.objects.filter(org__in=orgs)
+    l = {}
+    for org in orgs:
+        l[org.name] = Event.objects.filter(org=org)
     
-    context['events'] = events
+    #context['events'] = events
+    context['events'] = l
     return render_to_response('mywo.html', context)
 
 

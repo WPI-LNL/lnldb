@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load bootstrap_toolkit %}
+{% block nav %}
+    {% include "admin.nav.html" %}
+{% endblock %}
+{% block content %}
+    <h1>Meeting List </h1>
+    <div class="hero-unit">
+        <table class="table table-condensed">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Count</th>
+                </tr>
+            </thead>
+            {% for m in attend %}
+            <tr>
+                <td><a href="{% url meetings.views.viewattendance m.id %}">{{ m }}</a></td>
+                <td>{{m.meeting_type}}</td>
+                <td>{{ m.attendance.count }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <ul class="pager">
+
+            {% if attend.has_previous %}
+                <li class="previous">
+            {% else %}
+                <li class="previous disabled">
+            {% endif %}
+            <a href="{% url meetings.views.listattendance attend.previous_page_number %}">&larr; Newer</a>
+            </li>
+    
+            
+            <li>
+                <a href="#">Page {{ attend.number }} of {{ attend.num_pages }}</a>
+            </li>
+    
+            {% if attend.has_next %}
+                <li class="next">
+            {% else %}
+                <li class="next disabled">
+            {% endif %}
+            <a href="{% url meetings.views.listattendance attend.next_page_number %}">Older &rarr;</a>
+            </li>
+
+        </ul>
+    </div>
+{% endblock %}
+
+{% block extras %}
+<script type="text/javascript" src="{{ STATIC_URL }}js/jquery-ui.js"></script>
+<link href="{{ STATIC_URL }}/css/ajax_select.css" rel="stylesheet">
+<script type="text/javascript" src="{{ STATIC_URL }}/js/ajax_select.js"></script>
+
+
+
+<link href="{{ STATIC_URL }}css/bootstrap-datetimepicker.min.css" rel="stylesheet">
+<script type="text/javascript" src="{{ STATIC_URL }}js//bootstrap-datetimepicker.min.js"></script>
+<script type="text/javascript">
+$(function() {
+    $('.dtw').datetimepicker({
+        language: 'en'
+    });
+  });
+</script>
+{% endblock %}
