@@ -10,7 +10,7 @@
     <ul class="nav nav-pills">
         <li class="disabled"><a>Categories</a></li>
         {% for cat in cats %}
-        <li><a href="{% url inventory.views.cat cat %}">{{ cat }}</a></li>
+        <li><a href="{% url "inventory.views.cat" cat %}">{{ cat }}</a></li>
         {% endfor %}
     </ul>
     {% endif %}
@@ -19,7 +19,7 @@
     <ul class="nav nav-pills">
         <li class="disabled"><a>SubCategories</a></li>
         {% for scat in scats %}
-        <li><a href="{% url inventory.views.subcat scat.category scat %}">{{ scat }}</a></li>
+        <li><a href="{% url "inventory.views.subcat" scat.category scat %}">{{ scat }}</a></li>
         {% endfor %}
     </ul>
     {% endif %}
@@ -45,9 +45,9 @@
     </thead>
     {% for i in inv  %}
             <tr>
-                <td><a href="{% url inventory.views.detail i.id %}">{{i}}</a></td>
-                <td><a href="{% url inventory.views.cat i.subcategory.category %}">{{i.subcategory.category }}</a></td>
-                <td><a href="{% url inventory.views.subcat i.subcategory.category i.subcategory %}">{{i.subcategory }}</a></td>
+                <td><a href="{% url "inventory.views.detail" i.id %}">{{i}}</a></td>
+                <td><a href="{% url "inventory.views.cat" i.subcategory.category %}">{{i.subcategory.category }}</a></td>
+                <td><a href="{% url "inventory.views.subcat" i.subcategory.category i.subcategory %}">{{i.subcategory }}</a></td>
                 <td>
                     {% if i.equip_status == "AV" %}
                         <i class="icon-ok" title="available"></i>

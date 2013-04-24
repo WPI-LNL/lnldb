@@ -21,11 +21,11 @@
     </tr>
     {% for event in events %}
             <tr>
-                <td><a href="{% url events.views.flow.viewevent event.id %}">{{event.event_name}}</a></td>
+                <td><a href="{% url "events.views.flow.viewevent" event.id %}">{{event.event_name}}</a></td>
                 <td>{{event.datetime_start}}</td>
                 <td>{{event.group.name}}</td>
                 <td>{{event.location}}</td>
-                <td>{% for cc in event.crew_chief.all %}<a href="{% url members.views.detail cc.id %}">{{cc}}</a> {% endfor %}</td>
+                <td>{% for cc in event.crew_chief.all %}<a href="{% url "members.views.detail" cc.id %}">{{cc}}</a> {% endfor %}</td>
                 <td>
                     {% if event.lights %} L{{ event.l }} {% endif %}
                 </td>
@@ -38,8 +38,8 @@
                 <td>
                     {% if event.projecct %} {{ event.projection }} {% else %} N {% endif %}
                 </td>
-                <td> <a class="btn btn-mini" href="{% url events.views.flow.assigncrew event.id %}">Crew</a></td>
-                <td> <a class="btn btn-mini" href="{% url events.views.flow.viewevent event.id %}">Details</a></td>
+                <td> <a class="btn btn-mini" href="{% url "events.views.flow.assigncrew" event.id %}">Crew</a></td>
+                <td> <a class="btn btn-mini" href="{% url "events.views.flow.viewevent" event.id %}">Details</a></td>
             </tr>
     {% endfor %}
 </table>

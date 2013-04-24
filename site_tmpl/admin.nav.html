@@ -6,30 +6,30 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </a>
-            <a class="brand" href="{% url events.views.indices.index %}">LNLDB</a>
+            <a class="brand" href="{% url "events.views.indices.index" %}">LNLDB</a>
             <div class="nav-collapse collapse">
             <p class="navbar-text pull-right">
-              Logged in as <a href="{% url events.views.my.my %}" class="navbar-link"> {{user}}</a>
+              Logged in as <a href="{% url "events.views.my.my" %}" class="navbar-link"> {{user}}</a>
             </p>
             <ul class="nav nav-pills">
-                <li class="active"><a href="{% url events.views.indices.admin %}">Home</a></li>
+                <li class="active"><a href="{% url "events.views.indices.admin" %}">Home</a></li>
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Events <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a href="{% url events.views.mkedrm.eventnew %}">Add Events</a></li>
-                        <li><a href="{% url events.views.list.incoming %}">Incoming Workorders</a></li>
-                        <li><a href="{% url events.views.list.upcoming %}">Upcoming Events</a></li>
-                        <li><a href="{% url events.views.list.openworkorders %}">View Open Workorders</a></li>
+                        <li><a href="{% url "events.views.mkedrm.eventnew" %}">Add Events</a></li>
+                        <li><a href="{% url "events.views.list.incoming" %}">Incoming Workorders</a></li>
+                        <li><a href="{% url "events.views.list.upcoming" %}">Upcoming Events</a></li>
+                        <li><a href="{% url "events.views.list.openworkorders" %}">View Open Workorders</a></li>
                             <li class="dropdown-submenu">
                                 <a tabindex="-1" href="#">Event Payments</a>
                                 <ul class="dropdown-menu">
-                                    <li><a href="{% url events.views.list.unpaid %}">Events to be billed</a></li>
+                                    <li><a href="{% url "events.views.list.unpaid" %}">Events to be billed</a></li>
                                     <li><a href="#">Events not yet paid</a></li>
                                 </ul>
                             </li>
-                                <li><a href="{% url events.views.list.closed %}">Closed Workorders</a></li>
+                                <li><a href="{% url "events.views.list.closed" %}">Closed Workorders</a></li>
                     </ul>
                 </li>
                 <li class="dropdown">
@@ -38,8 +38,8 @@
                         <b class="caret"></b>
                       </a>
                     <ul class="dropdown-menu">
-                        <li><a href="{% url events.views.orgs.vieworgs %}">View Clients</a></li>
-                        <li><a href="{% url events.views.orgs.addeditorgs %}">Add Clients</a></li>
+                        <li><a href="{% url "events.views.orgs.vieworgs" %}">View Clients</a></li>
+                        <li><a href="{% url "events.views.orgs.addeditorgs" %}">Add Clients</a></li>
                     </ul>
                 </li>
                 <li class="dropdown">
@@ -48,11 +48,11 @@
                         <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a href="{% url members.views.officers %}">Officers</a></li>
-                        <li><a href="{% url members.views.active %}">Active</a></li>
-                        <li><a href="{% url members.views.associate %}">Associate</a></li>
-                        <li><a href="{% url members.views.alum %}">Alumni</a></li>
-                        <li><a href="{% url members.views.away %}">Inactive</a></li>
+                        <li><a href="{% url "members.views.officers" %}">Officers</a></li>
+                        <li><a href="{% url "members.views.active" %}">Active</a></li>
+                        <li><a href="{% url "members.views.associate" %}">Associate</a></li>
+                        <li><a href="{% url "members.views.alum" %}">Alumni</a></li>
+                        <li><a href="{% url "members.views.away" %}">Inactive</a></li>
                     </ul>
                 </li>
                 <li class="dropdown">
@@ -63,8 +63,8 @@
                     <ul class="dropdown-menu">
                           <li><a href="#">View/Send General Meeting Notice</a></li>
                           <li><a href="#">View/Send Crew List</a></li>
-                          <li><a href="{% url meetings.views.listattendance %}">View Meeting Attendance</a></li>
-                          <li><a href="{% url meetings.views.newattendance %}">New Meeting</a></li>
+                          <li><a href="{% url "meetings.views.listattendance" %}">View Meeting Attendance</a></li>
+                          <li><a href="{% url "meetings.views.newattendance" %}">New Meeting</a></li>
                     </ul>
                 </li>
                 <li class="dropdown">
@@ -73,12 +73,12 @@
                         <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
-                         <li><a href="{% url inventory.views.view %}">View Inventory</a></li>
-                         <li><a href="{% url inventory.views.add %}">Add Inventory Item</a></li>
+                         <li><a href="{% url "inventory.views.view" %}">View Inventory</a></li>
+                         <li><a href="{% url "inventory.views.add" %}">Add Inventory Item</a></li>
                          <li class="dropdown-submenu">
                             <a tabindex="-1" href="#">Organize</a>
                             <ul class="dropdown-menu">
-                            <li><a href="{% url inventory.views.categories %}">Categories</a></li>
+                            <li><a href="{% url "inventory.views.categories" %}">Categories</a></li>
                             </ul>
                          </li>
                     </ul>
@@ -89,7 +89,7 @@
                         <b class="caret"></b>
                       </a>
                     <ul class="dropdown-menu">
-                        <li><a href="{% url projection.views.plist %}">View Projectionists</a></li>
+                        <li><a href="{% url "projection.views.plist" %}">View Projectionists</a></li>
                         <li><a href="#">Update Projectionist</a></li>
                     </ul>
                 </li>

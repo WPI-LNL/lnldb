@@ -9,7 +9,7 @@
         <h3>Attendance:</h3>
         <ul>
         {% for a in m.attendance.all %}
-            <li><a href="{% url members.views.detail a.id %}">{{a.first_name }} {{a.last_name }}</a></li>
+            <li><a href="{% url "members.views.detail" a.id %}">{{a.first_name }} {{a.last_name }}</a></li>
         
         {% endfor %}
         </ul>

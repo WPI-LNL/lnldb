@@ -17,7 +17,7 @@
                 <div class="carousel-caption">
                 <h1>{{ img.href }}</h1>
                 <p class="lead">{{ img.href_desc }}</p>
-                <a class="btn btn-large btn-primary" href="{% url pages.views.page img.href.slug %}">{{ img.href_words }}</a>
+                <a class="btn btn-large btn-primary" href="{% url "pages.views.page" img.href.slug %}">{{ img.href_words }}</a>
                 </div>
             </div>
             {% else %}

@@ -12,7 +12,7 @@
     </thead>
     {% for org in orgs %}
             <tr>
-                <td><a href="{% url events.views.orgs.orgdetail org.id %}">{{org}}</a></td>
+                <td><a href="{% url "events.views.orgs.orgdetail" org.id %}">{{org}}</a></td>
             </tr>
     {% endfor %}
 </table>

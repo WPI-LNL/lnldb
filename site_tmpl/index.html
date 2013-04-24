@@ -24,13 +24,13 @@
             <div class="span6">
             {% endif %}
                 <h2>View Your Account</h2>
-                <p><a class="btn btn-success" href="{% url events.views.my.my %}">My Account &raquo;</a></p>
+                <p><a class="btn btn-success" href="{% url "events.views.my.my" %}">My Account &raquo;</a></p>
             </div><!--/span-->
 
             {% if is_officer %}
             <div class="span4">
                 <h2>Admin</h2>
-                <p><a class="btn btn-danger" href="{% url events.views.indices.admin %}">LN Admin&raquo;</a></p>
+                <p><a class="btn btn-danger" href="{% url "events.views.indices.admin" %}">LN Admin&raquo;</a></p>
             </div><!--/span-->
             {% endif %}
         </div><!--/row-->
