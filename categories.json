@@ -1,0 +1,1 @@
+[{"pk": 1, "model": "events.category", "fields": {"name": "Lighting"}}, {"pk": 2, "model": "events.category", "fields": {"name": "Sound"}}, {"pk": 3, "model": "events.category", "fields": {"name": "Projection"}}, {"pk": 4, "model": "events.category", "fields": {"name": "Power"}}]
