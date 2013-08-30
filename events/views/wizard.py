@@ -44,6 +44,7 @@ def show_projection_form_condition(wizard):
 class EventWizard(NamedUrlSessionWizardView):
     def done(self, form_list, **kwargs):
         #return HttpResponse([form.cleaned_data for form in form_list])
-        Event.event_mg.consume_workorder_formwiz(form_list,self)
+        event = Event.event_mg.consume_workorder_formwiz(form_list,self)
+        return HttpResponseRedirect(reverse('events.views.my.myeventdetail',args=(event.id,)))
     def get_template_names(self):
         return [named_event_tmpls[self.steps.current]]

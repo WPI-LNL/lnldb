@@ -47,7 +47,7 @@ def mywo(request):
 
 
 @login_required
-def myorgs(request):
+def omyorgs(request):
     """ List of associated organizations """
     context = RequestContext(request)
     
@@ -59,7 +59,7 @@ def myorgs(request):
 
 
 @login_required
-@user_passes_test(is_lnlmember, login_url='/lnldb/fuckoffkitty/')
+#@user_passes_test(is_lnlmember, login_url='/lnldb/fuckoffkitty/')
 def myevents(request):
     """ List Events That Have been CC'd / involved """
     context = RequestContext(request)
@@ -67,4 +67,18 @@ def myevents(request):
     user = request.user
 
     return render_to_response('myevents.html', context)
+
+def myeventdetail(request,id):
+    context = RequestContext(request)
+    event = get_object_or_404(Event,pk=id)
+    
+    u = request.user
+    if not event.usercanseevent(u):
+        pass
+    else:
+        context['event'] = event
+        return render_to_response('eventdetail.html', context)
+    
+    
+    
     
