@@ -47,7 +47,7 @@ def mywo(request):
 
 
 @login_required
-def omyorgs(request):
+def myorgs(request):
     """ List of associated organizations """
     context = RequestContext(request)
     
