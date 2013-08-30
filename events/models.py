@@ -214,7 +214,7 @@ class Event(models.Model):
     crew = models.ManyToManyField(User,null=True,blank=True,related_name='crewx')
     
     
-    @property
+    
     def usercanseeevent(self,user):
         
         if user in self.crew_chief.all():
