@@ -214,6 +214,34 @@ class Event(models.Model):
     crew = models.ManyToManyField(User,null=True,blank=True,related_name='crewx')
     
     
+    @property
+    def usercanseeevent(self,user):
+        
+        if user in self.crew_chief.all():
+            return True
+        elif user in self.crew.all():
+            return True
+        else:
+            eventorgs = self.return_orgs_and_associates(self)
+            for org in eventorgs:
+                if org.user_in_charge == user:
+                    return True
+                elif user in org.associated_users:
+                    return True
+                    
+            
+        return False
+        
+    def return_orgs_and_associates(self):
+        out = []
+        orgs = self.org.all()
+        out.extend(orgs)
+        for org in orgs:
+            out.extend(org.associated_orgs.all())
+            
+        return out
+            
+    
     def __unicode__(self):
         return self.event_name
     
@@ -272,6 +300,8 @@ class Organization(models.Model):
         return self.name
     
     ordering = ['name']
+    
+    
 
 
 
