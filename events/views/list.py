@@ -16,7 +16,7 @@ import datetime,time
 ### EVENT VIEWS
 # these more or less do what they say on the tin. Might need some work and refinement
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def upcoming(request,limit=True):
     """
     Lists Upcoming Events
@@ -37,7 +37,7 @@ def upcoming(request,limit=True):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def incoming(request):
     context = RequestContext(request)
     
@@ -49,7 +49,7 @@ def incoming(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def openworkorders(request):
     context = RequestContext(request)
     
@@ -61,7 +61,7 @@ def openworkorders(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def paid(request):
     context = RequestContext(request)
     
@@ -73,7 +73,7 @@ def paid(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def unpaid(request):
     context = RequestContext(request)
     
@@ -87,7 +87,7 @@ def unpaid(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def closed(request):
     context = RequestContext(request)
      

@@ -15,7 +15,7 @@ from helpers.challenges import is_officer
 import datetime
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def approval(request,id):
     context = RequestContext(request)
     event = get_object_or_404(Event,pk=id)
@@ -38,7 +38,7 @@ def approval(request,id):
         return render_to_response('form_crispy.html', context) 
     
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def rmcrew(request,id,user):
     context = RequestContext(request)
     event = get_object_or_404(Event,pk=id)
@@ -48,7 +48,7 @@ def rmcrew(request,id,user):
         
         
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def assigncrew(request,id):
     context = RequestContext(request)
     context['msg'] = "Crew"
@@ -72,7 +72,7 @@ def assigncrew(request,id):
     return render_to_response('form_crew_add.html', context)
     
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def rmcc(request,id,user):
     context = RequestContext(request)
     event = get_object_or_404(Event,pk=id)
@@ -82,7 +82,7 @@ def rmcc(request,id,user):
         
         
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def assigncc(request,id):
     context = RequestContext(request)
     context['msg'] = "CrewChief"
@@ -106,7 +106,7 @@ def assigncc(request,id):
     return render_to_response('form_crew_chiefadd.html', context)
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def viewevent(request,id):
     context = RequestContext(request)
     event = get_object_or_404(Event,pk=id)

@@ -17,7 +17,7 @@ import datetime,time
 ### ORGANIZATION VIEWS
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def vieworgs(request):
     """ Views all organizations, """
     #todo add filters
@@ -30,7 +30,7 @@ def vieworgs(request):
     return render_to_response('orgs.html', context)
     
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')    
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')    
 def addeditorgs(request,id=None):
     """form for adding an org """
     # need to fix this 
@@ -61,7 +61,7 @@ def addeditorgs(request,id=None):
     return render_to_response('form_crispy.html', context)
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')    
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')    
 def orgdetail(request,id):
     context = RequestContext(request)
     org = get_object_or_404(Organization,pk=id)
