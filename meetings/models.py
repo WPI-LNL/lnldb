@@ -22,6 +22,9 @@ class TargetEmailList(models.Model):
     name = models.CharField(max_length=16)
     email = models.EmailField()
     
+    def __unicode__(self):
+        return "<EmailList (%s)>" % self.email
+    
 class AnnounceSend(models.Model):
     announce = models.ForeignKey(MeetingAnnounce)
     sent_at = models.DateTimeField(auto_now_add=True)
