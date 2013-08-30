@@ -5,6 +5,7 @@ from django.template import Context,RequestContext
 
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
 
 from events.forms import EventApprovalForm
 from events.forms import CrewAssign,CrewChiefAssign
@@ -12,6 +13,7 @@ from events.models import Event,Organization
 from helpers.challenges import is_officer
 
 import datetime
+
 @login_required
 @user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
 def approval(request,id):
@@ -26,6 +28,10 @@ def approval(request,id):
         e = form.save(commit=False)
         e.approved = True
         e.save()
+        # confirm with user
+        messages.add_message(request, messages.INFO, 'Approved Event')
+        
+        return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
     else:
         form = EventApprovalForm(instance=event)
         context['formset'] = form
