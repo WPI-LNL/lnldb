@@ -4,6 +4,7 @@ from events.forms import named_event_tmpls
 from events.models import Event
 
 from django.contrib.formtools.wizard.views import NamedUrlSessionWizardView
+from django.core.urlresolvers import reverse
 
 from django.http import HttpResponse, HttpResponseRedirect
 
