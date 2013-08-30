@@ -73,7 +73,7 @@ def myeventdetail(request,id):
     event = get_object_or_404(Event,pk=id)
     
     u = request.user
-    if not event.usercanseevent(u):
+    if not event.usercanseeevent(u):
         pass
     else:
         context['event'] = event
