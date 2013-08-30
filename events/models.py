@@ -222,7 +222,7 @@ class Event(models.Model):
         elif user in self.crew.all():
             return True
         else:
-            eventorgs = self.return_orgs_and_associates(self)
+            eventorgs = self.return_orgs_and_associates()
             for org in eventorgs:
                 if org.user_in_charge == user:
                     return True
