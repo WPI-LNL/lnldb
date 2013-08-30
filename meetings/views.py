@@ -23,7 +23,24 @@ def viewattendance(request,id):
     m = get_object_or_404(Meeting,pk=id)
     context['m'] = m
     return render_to_response('meeting_view.html', context)
-    
+
+@login_required
+@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+def editattendance(request,id):
+    context = RequestContext(request)
+    context['msg'] = "Edit Meeting"
+    m = get_object_or_404(Meeting,pk=id)
+    if request.method == 'POST':
+        formset = MAF(request.POST,instance=m)
+        if formset.is_valid():
+            m = formset.save()
+            return HttpResponseRedirect(reverse('meetings.views.viewattendance',args=(m.id,)))
+        else:
+            context['formset'] = formset
+    else:
+        formset = MAF(instance=m)
+    return render_to_response('form_crispy.html', context)
+        
 @login_required
 @user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
 def listattendance(request,page=1):
@@ -54,4 +71,10 @@ def newattendance(request):
         context['msg'] = "New Meeting"
         return render_to_response('form_crispy.html', context)
 
-#TODO actually add views
+
+@login_required
+@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+def sendnotice(request,id):
+    pass
+
+    # create form to customize 
