@@ -29,6 +29,9 @@ event_wizard = EventWizard.as_view(
         }
     )
 
+#generics
+from django.views.generic.base import RedirectView
+
 urlpatterns = patterns('',
     # Examples:
     # url(r'^$', 'lnldb.views.home', name='home'),
@@ -106,10 +109,12 @@ urlpatterns = patterns('',
     url(r'^lnadmin/meetings/list/$', 'meetings.views.listattendance'),
     url(r'^lnadmin/meetings/list/(\d+)/$', 'meetings.views.listattendance'),
     url(r'^lnadmin/meetings/view/(\d+)/$', 'meetings.views.viewattendance'),
+    url(r'^lnadmin/meetings/edit/(\d+)/$', 'meetings.views.editattendance'),
     #projection
     url(r'^lnadmin/projection/list/$', 'projection.views.plist'),
 
-    url(r'^fuckoffkitty/$', 'data.views.fuckoffkitty'),
+    url(r'^NOTOUCHING/$', 'data.views.fuckoffkitty'),
+    url(r'^lnldb/fuckoffkitty/', RedirectView.as_view(url="NOTOUCHING/")),
     url(r'^(?P<slug>[-\w]+)/$', 'pages.views.page'),
         
     url(r'^lnadmin/(?P<msg>\w+)/$', 'events.views.indices.admin'),
