@@ -7,6 +7,8 @@ from django.contrib.formtools.wizard.views import NamedUrlSessionWizardView
 from django.core.urlresolvers import reverse
 
 from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import render_to_response, get_object_or_404
+from django.template import Context,RequestContext
 
 #CBV NuEventForm
 def show_lighting_form_condition(wizard):
@@ -47,6 +49,8 @@ class EventWizard(NamedUrlSessionWizardView):
         #return HttpResponse([form.cleaned_data for form in form_list])
         event = Event.event_mg.consume_workorder_formwiz(form_list,self)
         #return HttpResponseRedirect(reverse('events.views.my.myeventdetail',args=(event.id,)))
+        
+        context = RequestContext(request)
         return render_to_response('wizard_finished.html', context)
     def get_template_names(self):
         return [named_event_tmpls[self.steps.current]]
