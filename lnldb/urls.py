@@ -114,7 +114,7 @@ urlpatterns = patterns('',
     url(r'^lnadmin/projection/list/$', 'projection.views.plist'),
 
     url(r'^NOTOUCHING/$', 'data.views.fuckoffkitty'),
-    url(r'^lnldb/fuckoffkitty/', RedirectView.as_view(url="NOTOUCHING/")),
+    url(r'^lnldb/fuckoffkitty/', RedirectView.as_view(url="/NOTOUCHING/")),
     url(r'^(?P<slug>[-\w]+)/$', 'pages.views.page'),
         
     url(r'^lnadmin/(?P<msg>\w+)/$', 'events.views.indices.admin'),
