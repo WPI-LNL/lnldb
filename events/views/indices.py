@@ -47,7 +47,7 @@ def workorder(request):
     return render_to_response('workorder.html', context)
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def admin(request,msg=None):
     """ admin landing page """
 
