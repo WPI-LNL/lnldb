@@ -53,7 +53,7 @@ urlpatterns = patterns('',
     url(r'^my/orgs/$', 'events.views.my.myorgs'),
     url(r'^my/acct/$', AcctUpdate.as_view(), name="my-acct"),
     url(r'^my/events/$', 'events.views.my.myevents'),
-    url(r'^my/events/(?P<id>[0-9a-f]+)$', 'events.views.my.myeventdtail',name="my-event-detail"),
+    url(r'^my/events/(?P<id>[0-9a-f]+)$', 'events.views.my.myeventdetail',name="my-event-detail"),
     #workorders
     url(r'^workorder2/$', 'events.views.indices.workorder'),
     url(r'^workorder/(?P<step>.+)/$', event_wizard, name='event_step'),
