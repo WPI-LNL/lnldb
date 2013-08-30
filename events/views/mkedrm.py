@@ -6,6 +6,8 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def eventnew(request,id=None):
     context = RequestContext(request)
     

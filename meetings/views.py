@@ -17,7 +17,7 @@ from helpers.challenges import is_officer
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def viewattendance(request,id):
     context = RequestContext(request)
     m = get_object_or_404(Meeting,pk=id)
@@ -25,7 +25,7 @@ def viewattendance(request,id):
     return render_to_response('meeting_view.html', context)
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def editattendance(request,id):
     context = RequestContext(request)
     context['msg'] = "Edit Meeting"
@@ -42,7 +42,7 @@ def editattendance(request,id):
     return render_to_response('form_crispy.html', context)
         
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def listattendance(request,page=1):
     context = RequestContext(request)
     attend = Meeting.objects.all()
@@ -57,7 +57,7 @@ def listattendance(request,page=1):
     return render_to_response('meeting_list.html', context)
         
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def newattendance(request):
     context = RequestContext(request)
     if request.method == 'POST':
@@ -73,7 +73,7 @@ def newattendance(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/lnldb/fuckoffkitty/')
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def sendnotice(request,id):
     pass
 
