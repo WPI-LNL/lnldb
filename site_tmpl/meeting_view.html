@@ -13,5 +13,7 @@
         
         {% endfor %}
         </ul>
+        <a class="btn" href="{% url "meetings.views.editattendance" %}">Edit</a>
+        <a class="btn" href="#">Send Meeting E-Mail</a>
     </div>
 {% endblock %}
