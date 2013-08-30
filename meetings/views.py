@@ -39,6 +39,7 @@ def editattendance(request,id):
             context['formset'] = formset
     else:
         formset = MAF(instance=m)
+        context['formset'] = formset
     return render_to_response('form_crispy.html', context)
         
 @login_required
