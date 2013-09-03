@@ -50,6 +50,7 @@ class EventWizard(NamedUrlSessionWizardView):
         event = Event.event_mg.consume_workorder_formwiz(form_list,self)
         #return HttpResponseRedirect(reverse('events.views.my.myeventdetail',args=(event.id,)))
         
-        return render_to_response('wizard_finished.html', {})
+        context = RequestContext(self.request)
+        return render_to_response('wizard_finished.html',context)
     def get_template_names(self):
         return [named_event_tmpls[self.steps.current]]
