@@ -62,7 +62,26 @@
                                 <pre>{{ event.lighting_reqs }}</pre>
                             {% if event.extras_lighting %}
                             <h4>Extras:</h4>
-                                {{ event.extras_lighting }}
+                                <table>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Quantity</th>
+                                        <th>Cost</th>
+                                        <th>Total</th>
+                                    </tr>
+                                    {% for e in event.extras_lighting %}
+                                        <tr>
+                                            <td>{{ e }}</td>
+                                            <td>{{ e.quant }}</td>
+                                            <td>{{ e.cost }}</td>
+                                            <td>{{ e.totalcost }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                    <tr>
+                                        <td colspan="3">Total:</td>
+                                        <td>{{ event.cost_lighting_extras }}</td>
+                                    </tr>
+                                </table>
                             {% endif %}
                         {% endif %}
                         
@@ -73,7 +92,26 @@
                                 <pre>{{ event.sound_reqs }}</pre>
                             {% if event.extras_sound %}
                             <h4>Extras:</h4>
-                                {{ event.extras_sound }}
+                                <table>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Quantity</th>
+                                        <th>Cost</th>
+                                        <th>Total</th>
+                                    </tr>
+                                    {% for e in event.extras_sound %}
+                                        <tr>
+                                            <td>{{ e }}</td>
+                                            <td>{{ e.quant }}</td>
+                                            <td>{{ e.cost }}</td>
+                                            <td>{{ e.totalcost }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                    <tr>
+                                        <td colspan="3">Total:</td>
+                                        <td>{{ event.cost_sound_extras }}</td>
+                                    </tr>
+                                </table>
                             {% endif %}
                         {% endif %}
                         
@@ -81,10 +119,29 @@
                             <h2> Projection Services </h2>
                             <h4>Level:</h4> {{ event.projection }}
                             <h4>Requirements:</h4>
-                                <pre>{{ event.projection_reqs }}</pre>
+                                <pre>{{ event.proj_reqs }}</pre>
                             {% if event.extras_projection %}
-                            <h4>Extras:</h4>
-                                {{ event.extras_projection }}
+                                <h4>Extras:</h4>
+                                <table>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Quantity</th>
+                                        <th>Cost</th>
+                                        <th>Total</th>
+                                    </tr>
+                                    {% for e in event.extras_projection %}
+                                        <tr>
+                                            <td>{{ e }}</td>
+                                            <td>{{ e.quant }}</td>
+                                            <td>{{ e.cost }}</td>
+                                            <td>{{ e.totalcost }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                    <tr>
+                                        <td colspan="3">Total:</td>
+                                        <td>{{ event.cost_projection_extras }}</td>
+                                    </tr>
+                                </table>
                             {% endif %}
                         {% endif %}
                     </div>
