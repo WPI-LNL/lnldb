@@ -55,6 +55,8 @@
                         {% endif %}
                     </div>
                     <div id="services" class="tab-pane">
+                        <h2>Total Billing Amount</h2>
+                        ${{ event.cost_projection_total }}
                         {% if event.lighting %}
                             <h2> Lighting Services </h2>
                             <h3>Level:</h3> {{ event.lighting }}
@@ -71,15 +73,15 @@
                                     </tr>
                                     {% for e in event.extras_lighting %}
                                         <tr>
-                                            <td>{{ e.extra }}</td>
-                                            <td>{{ e.quant }}</td>
-                                            <td>{{ e.cost }}</td>
-                                            <td>{{ e.totalcost }}</td>
+                                            <td>{{ e.extra }} </td>
+                                            <td>{{ e.quant }} </td>
+                                            <td>${{ e.cost }} </td>
+                                            <td>${{ e.totalcost }} </td>
                                         </tr>
                                     {% endfor %}
                                     <tr class="info">
                                         <td colspan="3">Total:</td>
-                                        <td>{{ event.cost_lighting_extras }}</td>
+                                        <td>${{ event.cost_lighting_extras }}</td>
                                     </tr>
                                 </table>
                             {% endif %}
@@ -103,13 +105,13 @@
                                         <tr>
                                             <td>{{ e.extra }}</td>
                                             <td>{{ e.quant }}</td>
-                                            <td>{{ e.cost }}</td>
-                                            <td>{{ e.totalcost }}</td>
+                                            <td>${{ e.cost }} </td>
+                                            <td>${{ e.totalcost }} </td>
                                         </tr>
                                     {% endfor %}
                                     <tr class="info">
                                         <td colspan="3">Total:</td>
-                                        <td>{{ event.cost_sound_extras }}</td>
+                                        <td>${{ event.cost_sound_extras }}</td>
                                     </tr>
                                 </table>
                             {% endif %}
@@ -133,13 +135,13 @@
                                         <tr>
                                             <td>{{ e.extra }}</td>
                                             <td>{{ e.quant }}</td>
-                                            <td>{{ e.cost }}</td>
-                                            <td>{{ e.totalcost }}</td>
+                                            <td>${{ e.cost }} </td>
+                                            <td>${{ e.totalcost }} </td>
                                         </tr>
                                     {% endfor %}
                                     <tr class="info">
                                         <td colspan="3">Total:</td>
-                                        <td>{{ event.cost_projection_extras }}</td>
+                                        <td>${{ event.cost_projection_extras }}</td>
                                     </tr>
                                 </table>
                             {% endif %}
