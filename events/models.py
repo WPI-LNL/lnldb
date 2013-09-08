@@ -323,7 +323,7 @@ class Event(models.Model):
     
     @property
     def cost_total(self):
-        return self.cost_projection_total + self.cost_lighting_total + self.cost.sound_total
+        return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total
     
 class CCReport(models.Model):
     crew_chief = models.ForeignKey(User)
