@@ -55,15 +55,38 @@
                         {% endif %}
                     </div>
                     <div id="services" class="tab-pane">
-                        {{ event.lighting }}
-                        {{ event.lighting_reqs }}
-                        {{ event.extras_lighting }}
-                        {{ event.sound }}
-                        {{ event.sound_reqs }}
-                        {{ event.extras_sound }}
-                        {{ event.projection }}
-                        {{ event.projection_reqs }}
-                        {{ event.extras_projection }}
+                        {% if event lighting %}
+                            <h2> Lighting Services </h2>
+                            <h4>Level:</h4> {{ event.lighting }}
+                            <h4>Requirements:</h4>
+                                <pre>{{ event.lighting_reqs }}</pre>
+                            {% if event.extras_lighting %}
+                            <h4>Extras:</h4>
+                                {{ event.extras_lighting }}
+                            {% endif %}
+                        {% endif %}
+                        
+                        {% if event.sound %}
+                            <h2> Sound Services </h2>
+                            <h4>Level:</h4> {{ event.sound }}
+                            <h4>Requirements:</h4>
+                                <pre>{{ event.sound_reqs }}</pre>
+                            {% if event.extras_sound %}
+                            <h4>Extras:</h4>
+                                {{ event.extras_sound }}
+                            {% endif %}
+                        {% endif %}
+                        
+                        {% if event.projection %}
+                            <h2> Projection Services </h2>
+                            <h4>Level:</h4> {{ event.projection }}
+                            <h4>Requirements:</h4>
+                                <pre>{{ event.projection_reqs }}</pre>
+                            {% if event.extras_projection %}
+                            <h4>Extras:</h4>
+                                {{ event.extras_projection }}
+                            {% endif %}
+                        {% endif %}
                     </div>
                     <div id="crew" class="tab-pane">
                         <a class="btn btn-large pull-right" href="{% url "events.views.flow.assigncc" event.id %}">Modify</a>
