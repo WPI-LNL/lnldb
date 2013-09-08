@@ -132,6 +132,13 @@ class ExtraInstance(models.Model):
     extra = models.ForeignKey('Extra')
     quant = models.IntegerField()
     
+    @property
+    def totalcost(self):
+        return self.quant * self.extra.cost
+    @property
+    def cost(self):
+        return self.extra.cost
+    
 class Extra(models.Model):
     name = models.CharField(max_length=64)
     cost = models.DecimalField(max_digits=8,decimal_places=2)
@@ -265,12 +272,54 @@ class Event(models.Model):
         return self.extrainstance_set.filter(extra__category__name="Lighting")
     
     @property
+    def cost_lighting_extras(self):
+        return sum([x.totalcost for x in self.extras_lighting])
+    
+    @property
+    def cost_lighting_total(self):
+        extras = self.cost_lighting_extras
+        if self.lighting:
+            servicecost = self.lighting.base_cost
+        else:
+            servicecost = 0
+            
+        return extras+servicecost
+    
+    @property
     def extras_sound(self):
         return self.extrainstance_set.filter(extra__category__name="Sound")
     
     @property
+    def cost_sound_extras(self):
+        return sum([x.totalcost for x in self.extras_sound])
+    
+    @property
+    def cost_sound_total(self):
+        extras = self.cost_sound_extras
+        if self.sound:
+            servicecost = self.sound.base_cost
+        else:
+            servicecost = 0
+            
+        return extras+servicecost
+    
+    @property
     def extras_projection(self):
         return self.extrainstance_set.filter(extra__category__name="Projection")
+    
+    @property
+    def cost_projection_extras(self):
+        return sum([x.totalcost for x in self.extras_projection])
+    
+    @property
+    def cost_projection_total(self):
+        extras = self.cost_projection_extras
+        if self.projection:
+            servicecost = self.projection.base_cost
+        else:
+            servicecost = 0
+            
+        return extras+servicecost
     
 class CCReport(models.Model):
     crew_chief = models.ForeignKey(User)
