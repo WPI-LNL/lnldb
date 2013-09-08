@@ -59,7 +59,7 @@
                         ${{ event.cost_total }}
                         {% if event.lighting %}
                             <h2> Lighting Services </h2>
-                            <h3>Level:</h3> {{ event.lighting }}
+                            <h3>Level:</h3> {{ event.lighting }} (${{ event.lighting.base_cost }})
                             <h3>Requirements:</h3>
                                 <pre>{{ event.lighting_reqs }}</pre>
                             {% if event.extras_lighting %}
@@ -89,7 +89,7 @@
                         
                         {% if event.sound %}
                             <h2> Sound Services </h2>
-                            <h3>Level:</h3> {{ event.sound }}
+                            <h3>Level:</h3> {{ event.sound }} (${{ event.sound.base_cost }})
                             <h3>Requirements:</h3>
                                 <pre>{{ event.sound_reqs }}</pre>
                             {% if event.extras_sound %}
@@ -119,7 +119,7 @@
                         
                         {% if event.projection %}
                             <h2> Projection Services </h2>
-                            <h3>Level:</h3> {{ event.projection }}
+                            <h3>Level:</h3> {{ event.projection }} (${{ event.projection.base_cost }})
                             <h3>Requirements:</h3>
                                 <pre>{{ event.proj_reqs }}</pre>
                             {% if event.extras_projection %}
