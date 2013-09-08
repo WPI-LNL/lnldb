@@ -357,7 +357,10 @@ class Organization(models.Model):
     associated_users = models.ManyToManyField(User,related_name='orgusers')
     
     associated_orgs = models.ManyToManyField("self",null=True,blank=True)
+    
+    
     notes = models.TextField(null=True,blank=True)
+    personal = models.BooleanField(default=False)
 
     def fopal(self):
         return self.fund, self.organization, self.account
