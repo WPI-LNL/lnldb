@@ -259,6 +259,18 @@ class Event(models.Model):
         
         return self.crew_chief.filter(id__in=k)
         #return k
+        
+    @property
+    def extras_lighting(self):
+        return self.extrainstance_set.filter(extra__category__name="Lighting")
+    
+    @property
+    def extras_sound(self):
+        return self.extrainstance_set.filter(extra__category__name="Sound")
+    
+    @property
+    def extras_projection(self):
+        return self.extrainstance_set.filter(extra__category__name="Projection")
     
 class CCReport(models.Model):
     crew_chief = models.ForeignKey(User)

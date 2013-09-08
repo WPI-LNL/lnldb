@@ -9,6 +9,7 @@
             <div class="hero-unit">
                 <ul class="nav nav-tabs">
                     <li class="active"><a href="#home" data-toggle="tab">Detail</a></li>
+                    <li><a href="#services" data-toggle="tab">Services</a></li>
                     <li><a href="#crew" data-toggle="tab">Crew</a></li>
                     <li><a href="#reports" data-toggle="tab">Reports</a></li>
                 </ul>
@@ -53,6 +54,17 @@
                         <a class="btn" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
                         {% endif %}
                     </div>
+                    <div id="services" class="tab-pane">
+                        {{ event.lighting }}
+                        {{ event.lighting_reqs }}
+                        {{ event.extras_lighting }}
+                        {{ event.sound }}
+                        {{ event.sound_reqs }}
+                        {{ event.extras_sound }}
+                        {{ event.projection }}
+                        {{ event.projection_reqs }}
+                        {{ event.extras_projection }}
+                    </div>
                     <div id="crew" class="tab-pane">
                         <a class="btn btn-large pull-right" href="{% url "events.views.flow.assigncc" event.id %}">Modify</a>
                         <h2> Crew Chief(s) </h2>
@@ -72,21 +84,21 @@
                         
                     </div>
                     <div id="reports" class="tab-pane">
-                    {% for report in event.ccreport_set.all %}
-                        <h3>Report by {{report.crew_chief }}</h3> <em class="muted pull-right">posted on {{ report.created_on }}</em>
-                        <blockquote>
-                            {{ report.report }}
-                            <small>{% for cat in report.for_service_cat.all %} {{cat}} {% endfor %}</small>
-                        </blockquote>
-                    {% empty %}
-                        No Reports
-                    {% endfor %}
-                    {% if event.crew_needing_reports %}
-                        <h3> Crew Chiefs Needing Reports </h3>
-                        {% for crew in event.crew_needing_reports %}
-                            {{ crew }}<br />
+                        {% for report in event.ccreport_set.all %}
+                            <h3>Report by {{report.crew_chief }}</h3> <em class="muted pull-right">posted on {{ report.created_on }}</em>
+                            <blockquote>
+                                {{ report.report }}
+                                <small>{% for cat in report.for_service_cat.all %} {{cat}} {% endfor %}</small>
+                            </blockquote>
+                        {% empty %}
+                            No Reports
                         {% endfor %}
-                    {% endif %}
+                        {% if event.crew_needing_reports %}
+                            <h3> Crew Chiefs Needing Reports </h3>
+                            {% for crew in event.crew_needing_reports %}
+                                {{ crew }}<br />
+                            {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
             </div>
