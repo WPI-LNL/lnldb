@@ -215,7 +215,8 @@ class Event(models.Model):
     description = models.TextField(null=True,blank=True)
     
     #NOT SHOWN
-    
+    otherservices = models.ManyToManyField(Service)
+    setup_location = models.ForeignKey('Location')
     #Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True,blank=True)
