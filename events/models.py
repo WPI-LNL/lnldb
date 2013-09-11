@@ -123,6 +123,7 @@ class EventManager(models.Manager):
 
 class Location(models.Model):
     name = models.CharField(max_length=64)
+    setup_only = models.BooleanField(default=False)
     
     def __unicode__(self):
         return self.name
@@ -216,7 +217,7 @@ class Event(models.Model):
     
     #NOT SHOWN
     otherservices = models.ManyToManyField(Service)
-    setup_location = models.ForeignKey('Location')
+    setup_location = models.ForeignKey('Location',related_name="setuplocation",null=True,blank=True)
     #Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True,blank=True)
