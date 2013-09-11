@@ -5,8 +5,15 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
+#email
+from django.template.loader import render_to_string
+from django.core.mail import EmailMultiAlternatives
+
 from meetings.forms import MeetingAdditionForm as MAF
 from meetings.models import Meeting
+
+from meetings.forms import AnnounceSendForm as ASF
+from meetings.models import AnnounceSend
 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
@@ -14,6 +21,20 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from helpers.challenges import is_officer
 
+DEFAULT_FROM_ADDR = 'LnL <lnl@wpi.edu>'
+
+def generate_email(notice):
+    subject = notice.subject
+    from_email = DEFAULT_FROM_ADDR
+    to_email = notice.email_to.email
+    
+    cont_html = render_to_string('email_tmpl/html.html')
+    cont_text = notice.message
+    
+    email = EmailMultiAlternatives(subject,cont_text,from_email,[to_email])
+    email.attach_alternative(cont_html, "text/html")
+    
+    return email
 
 
 @login_required
@@ -75,7 +96,29 @@ def newattendance(request):
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
-def sendnotice(request,id):
-    pass
-
-    # create form to customize 
+def mknotice(request,id):
+    context = RequestContext(request)
+    
+    meeting = get_object_or_404(Meeting,pk=id)
+    
+    if request.method == 'POST':
+        formset = ASF(meeting,request.POST)
+        if formset.is_valid():
+            notice = formset.save()
+            email = generate_email(notice)
+            res = email.send()
+            if res == 1:
+                success = True
+            else:
+                success = False
+            AnnounceSend.objects.create(announce=notice,sent_success=success)
+            
+            return HttpResponseRedirect(reverse('meetings.views.viewattendance',args=(meeting.id,)))
+        else:
+            context['formset'] = formset
+    
+    else:
+        formset = ASF(meeting)
+        context['formset'] = formset
+        context['msg'] = "New Meeting Notice"
+    return render_to_response('form_crispy.html',context)

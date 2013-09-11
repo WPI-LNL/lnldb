@@ -110,6 +110,7 @@ urlpatterns = patterns('',
     url(r'^lnadmin/meetings/list/(\d+)/$', 'meetings.views.listattendance'),
     url(r'^lnadmin/meetings/view/(\d+)/$', 'meetings.views.viewattendance'),
     url(r'^lnadmin/meetings/edit/(\d+)/$', 'meetings.views.editattendance'),
+    url(r'^lnadmin/meetings/notice/(\d+)/$', 'meetings.views.mknotice'),
     #projection
     url(r'^lnadmin/projection/list/$', 'projection.views.plist'),
 

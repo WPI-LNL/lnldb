@@ -16,7 +16,9 @@ class Meeting(models.Model):
 class MeetingAnnounce(models.Model):
     meeting = models.ForeignKey(Meeting)
     events = models.ManyToManyField(Event,related_name="meetingannouncements")
+    subject = models.CharField(max_length=128)
     message = models.TextField()
+    email_to = models.ForeignKey('TargetEmailList')
     
 class TargetEmailList(models.Model):
     name = models.CharField(max_length=16)
@@ -28,7 +30,6 @@ class TargetEmailList(models.Model):
 class AnnounceSend(models.Model):
     announce = models.ForeignKey(MeetingAnnounce)
     sent_at = models.DateTimeField(auto_now_add=True)
-    send_to = models.ForeignKey(TargetEmailList)
     sent_success = models.BooleanField(default=False)
     
 
