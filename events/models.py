@@ -44,7 +44,7 @@ class EventManager(models.Manager):
         person_name = contact_fields['name']
         
         #group stuff
-        group = Organization.objects.get(pk=1) #do this later
+        group = Organization.objects.get(pk=6) #do this later
         
         #set levels
         lighting = None
@@ -169,6 +169,13 @@ class Sound(Service):
 class Projection(Service):
     pass
 
+class Billing(models.Model):
+    date_billed = models.DateField()
+    date_paid = models.DateField(null=True,blank=True)
+    event = models.ForeignKey('Event',related_name="billings")
+    amount = models.DecimalField(max_digits=8,decimal_places=2)
+
+    
 class Event(models.Model):
     
     objects = models.Manager()
@@ -211,7 +218,13 @@ class Event(models.Model):
     
     #Status Indicators
     approved = models.BooleanField(default=False)
+    approved_on = models.DateTimeField(null=True,blank=True)
+    
     closed = models.BooleanField(default=False)
+    closed_on = models.DateTimeField(null=True,blank=True)
+    
+    cancelled = models.BooleanField(default=False)
+    cancelled_on = models.DateTimeField(null=True,blank=True)
     
     payment_amount = models.IntegerField(blank=True,null=True,default=None)
     paid = models.BooleanField(default=False)
