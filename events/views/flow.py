@@ -20,13 +20,15 @@ def approval(request,id):
     context = RequestContext(request)
     event = get_object_or_404(Event,pk=id)
     if event.approved:
-        pass # gb2 event page
+        return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(event.id,)))
     
     
     if request.method == 'POST':
         form = EventApprovalForm(request.POST,instance=event)
         e = form.save(commit=False)
         e.approved = True
+        e.approved_on = datetime.datetime.now()
+        e.approved_by = request.user
         e.save()
         # confirm with user
         messages.add_message(request, messages.INFO, 'Approved Event')
