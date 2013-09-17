@@ -7,7 +7,7 @@ from events.models import Event
 
 class Meeting(models.Model):
     datetime = models.DateTimeField()
-    attendance = models.ManyToManyField(User)
+    attendance = models.ManyToManyField(User,null=True,blank=True)
     meeting_type = models.ForeignKey('MeetingType',default=1)
     
     def __unicode__(self):
@@ -19,6 +19,8 @@ class MeetingAnnounce(models.Model):
     subject = models.CharField(max_length=128)
     message = models.TextField()
     email_to = models.ForeignKey('TargetEmailList')
+    
+    added = models.DateTimeField(auto_now_add=True)
     
 class TargetEmailList(models.Model):
     name = models.CharField(max_length=16)

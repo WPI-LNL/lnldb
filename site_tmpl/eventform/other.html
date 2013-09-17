@@ -1,0 +1,23 @@
+{% extends 'eventform/base_wo.html' %}
+{% load i18n %}
+{% block extras %}
+    <script type="text/javascript">
+        $(document).ready(function () {
+            
+            $('.checkbox').addClass("btn btn-danger btn-large");
+            $('.checkbox input ').hide()
+            $('.checkbox').parent().button();
+            $('input:checked').parent().button('toggle');
+            $('.checkbox').mousedown(function () {
+                $(this).button('toggle');
+                });
+            });
+    </script>
+        <style>
+        li {float:left; margin: 3px; list-style-type:none}
+        .form-horizontal .controls {margin-left:0px;}
+        .controls .checkbox {padding-top:11px;}
+        .controls >.checkbox:first-child {padding-top:11px;}
+    </style>
+
+{% endblock %}

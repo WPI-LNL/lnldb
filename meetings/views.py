@@ -9,6 +9,8 @@ from django.template import Context,RequestContext
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 
+from events.models import Event
+
 from meetings.forms import MeetingAdditionForm as MAF
 from meetings.models import Meeting
 
@@ -20,6 +22,8 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from helpers.challenges import is_officer
+
+import datetime
 
 DEFAULT_FROM_ADDR = 'LnL <lnl@wpi.edu>'
 
@@ -43,6 +47,17 @@ def viewattendance(request,id):
     context = RequestContext(request)
     m = get_object_or_404(Meeting,pk=id)
     context['m'] = m
+    
+    now = datetime.datetime.now()
+    yest = now + datetime.timedelta(days=-1)
+    morethanaweek = now + datetime.timedelta(days=7,hours=12)
+    
+    upcoming = Event.objects.filter(datetime_start__gte=yest,datetime_start__lte=morethanaweek)
+    context['events'] = upcoming
+    
+    
+    future = Event.objects.filter(datetime_start__gte=morethanaweek)
+    context['future'] = future
     return render_to_response('meeting_view.html', context)
 
 @login_required

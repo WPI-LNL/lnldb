@@ -18,6 +18,45 @@
                     <div id="home" class="tab-pane active">
                         <table class="table">
                             <tr>
+                                <th>Submitted on</th>
+                                <td>{{ event.submitted_on }} </td>
+                            </tr>
+                            <tr>
+                                <th>Submitted by</th>
+                                <td>{{event.submitted_by}}</td>
+                            </tr>
+                            <tr>
+                                <th>Submitted from</th>
+                                <td>{{event.submitted_ip}}</td>
+                            </tr>
+                            <tr>
+                                <th>Approved by/on</th>
+                                <td>
+                                    {% if event.approved_by %} 
+                                        {{ event.approved_by }} on {{ event.approved_on }}      
+                                    {% else %}
+                                        Needs Approval 
+                                    {% endif %}
+                            </tr>
+                            <tr>
+                                <th>Cancelled by/on</th>
+                                <td>
+                                    {% if event.cancelled_by %} 
+                                        {{ event.cancelled_by }} on {{ event.cancelled_on }}      
+                                    {% else %}
+                                        N/A 
+                                    {% endif %}
+                            </tr>
+                            <tr>
+                                <th>Closed by/on</th>
+                                <td>
+                                    {% if event.closed_by %} 
+                                        {{ event.closed_by }} on {{ event.closed_on }}      
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                            </tr>
+                            <tr>
                                 <th>Start</th>
                                 <td>{{event.datetime_start }}</td>
                             </tr>
@@ -25,14 +64,7 @@
                                 <th>End</th>
                                 <td>{{event.datetime_end}}</td>
                             </tr>
-                            <tr>
-                                <th>Submitter</th>
-                                <td>{{event.submitted_by}}</td>
-                            </tr>
-                            <tr>
-                                <th>IP</th>
-                                <td>{{event.submitted_ip}}</td>
-                            </tr>
+
                             <tr>
                                 <th>Setup Start</th>
                                 <td>{{event.datetime_setup_start}}</td>

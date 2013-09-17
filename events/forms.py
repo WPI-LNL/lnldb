@@ -1,6 +1,7 @@
 from django import forms
 from django.forms import Form, ModelForm, TextInput
 from django.forms.extras.widgets import SelectDateWidget
+from django.db.models import Q
 
 from django.contrib.auth.models import User
 
@@ -8,7 +9,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,MultiField,Field,HTML
 from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions
 
-from events.models import Event,Organization,Category,Extra,Location,Lighting,Sound,Projection
+from events.models import Event,Organization,Category,Extra,Location,Lighting,Sound,Projection,Service
 from events.widgets import ExtraSelectorWidget,ValueSelectField
 from events.fields import ExtraSelectorField
 
@@ -37,6 +38,7 @@ JOBTYPES = (
     (0,'Lighting'),
     (1,'Sound'),
     (2,'Projection'),
+    (3,'Other Services'),
 )
 
 LIGHT_CHOICES = (
@@ -219,17 +221,25 @@ class InternalEventForm(forms.ModelForm):
         
 #FormWizard Forms
 class ContactForm(forms.Form):
+    #def __init__(self,*args,**kwargs):
+        #user = kwargs.pop('user')
+        #super(ContactForm,self).__init__(*args,**kwargs)
     name = forms.CharField()
     email = forms.EmailField()
     phone = forms.CharField()
 
 
 class OrgForm(forms.Form):
-    group = forms.CharField()
-    group_address = forms.CharField(
-            widget=forms.Textarea,
-            label = "Group Address",
-        )
+    def __init__(self,*args,**kwargs):
+        user = kwargs.pop('user')
+        
+        super(OrgForm,self).__init__(*args,**kwargs)
+        self.fields['group'].queryset = Organization.objects.filter(Q(user_in_charge=user)|Q(associated_users=user))
+    group = forms.ModelChoiceField(queryset = Organization.objects.all(),label="Organization")
+    #group_address = forms.CharField(
+            #widget=forms.Textarea,
+            #label = "Group Address",
+        #)
 
 
 class SelectForm(forms.Form):
@@ -254,7 +264,7 @@ class SelectForm(forms.Form):
         )
     
     location = forms.ModelChoiceField(
-            queryset = Location.objects.all()
+            queryset = Location.objects.filter(show_in_wo_form=True     )
         )
     
     
@@ -339,6 +349,17 @@ class ProjectionForm(forms.Form):
             widget=forms.Textarea,
             label = "Projection Requirements",
         )
+    
+class ServiceForm(forms.Form):
+    services = forms.ModelMultipleChoiceField(
+            queryset = Service.objects.filter(category__name__in=["Misc","Power"]),
+            widget = forms.CheckboxSelectMultiple(attrs={'class':'checkbox'}),
+        )   
+    otherservice_reqs = forms.CharField(
+            widget=forms.Textarea,
+            label = "Additional Information",
+        )
+        
         
 class ScheduleForm(forms.Form):
     def __init__(self,*args,**kwargs):
@@ -356,10 +377,10 @@ class ScheduleForm(forms.Form):
                 ),
         )
         super(ScheduleForm,self).__init__(*args,**kwargs)
-    setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    event_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    event_end = forms.SplitDateTimeField(initial=datetime.datetime.now())
+    #setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
+    setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Setup Completed By")
+    event_start = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Event Starts")
+    event_end = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Event Ends")
     
     
 #helpers for the formwizard
@@ -369,6 +390,7 @@ named_event_forms = (
     ('select',SelectForm),
     ('lighting',LightingForm),
     ('sound',SoundForm),
+    ('other',ServiceForm),
     ('projection',ProjectionForm),
     ('schedule',ScheduleForm),
 )
@@ -379,6 +401,7 @@ named_event_tmpls= {
     'select':'eventform/select.html',
     'lighting':'eventform/lighting.html',
     'sound':'eventform/sound.html',
+    'other':'eventform/other.html',
     'projection':'eventform/projection.html',
     'schedule':'eventform/schedule.html',
 }

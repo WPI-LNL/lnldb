@@ -44,7 +44,7 @@ class EventManager(models.Manager):
         person_name = contact_fields['name']
         
         #group stuff
-        group = Organization.objects.get(pk=6) #do this later
+        group = org_fields['group']
         
         #set levels
         lighting = None
@@ -55,6 +55,10 @@ class EventManager(models.Manager):
         lighting_reqs = None
         sound_reqs = None
         proj_reqs = None
+        
+        #other
+        otherservices_l = []
+        otherdescription = None
         
         #setup buckets for our extras
         lighting_extras = []
@@ -83,10 +87,13 @@ class EventManager(models.Manager):
             elif emethod == '2': #projection
                 level,proj_reqs = consume_event_method(details,'projection')
                 projection = level
+            elif emethod == '3': #other
+                otherservices_l = details.pop('services')
+                otherdescription = details.pop('otherservice_reqs')
         
         #scheduling
         
-        setup_start = event_schedule['setup_start']
+        #setup_start = event_schedule['setup_start']
         setup_complete = event_schedule['setup_complete']
         event_start = event_schedule['event_start']
         event_end = event_schedule['event_end']
@@ -101,7 +108,7 @@ class EventManager(models.Manager):
             contact_email = contact_email,
             contact_phone = contact_phone,
             
-            datetime_setup_start = setup_start,
+            #datetime_setup_start = setup_start,
             datetime_setup_complete = setup_complete,
             datetime_start = event_start,
             datetime_end = event_end,
@@ -116,7 +123,14 @@ class EventManager(models.Manager):
             sound_reqs = sound_reqs,
             proj_reqs = proj_reqs,
             
+            #otherservices = otherservices_l, 
+            otherservice_reqs = otherdescription
+            
             )
+        event.org.add(group)
+        if otherservices_l:
+            event.otherservices.add(*otherservices_l) #* because its a list yo.
+        event.save()
         return event
             
 ### MODELS
@@ -124,10 +138,13 @@ class EventManager(models.Manager):
 class Location(models.Model):
     name = models.CharField(max_length=64)
     setup_only = models.BooleanField(default=False)
+    show_in_wo_form = models.BooleanField(default=True)
     
     def __unicode__(self):
         return self.name
 
+    class Meta:
+        ordering = ['name']
 class ExtraInstance(models.Model):
     event = models.ForeignKey('Event')
     extra = models.ForeignKey('Extra')
@@ -161,7 +178,7 @@ class Service(models.Model):
     addtl_cost = models.DecimalField(max_digits=8,decimal_places=2)
     category = models.ForeignKey('Category')    
     def __unicode__(self):
-        return self.shortname
+        return self.longname
     
 class Lighting(Service):
     pass
@@ -195,7 +212,7 @@ class Event(models.Model):
     contact_phone = models.CharField(max_length=32,null=True,blank=True)
 
     #Dates & Times
-    datetime_setup_start = models.DateTimeField()
+    datetime_setup_start = models.DateTimeField(null=True,blank=True)
     datetime_setup_complete = models.DateTimeField()
 
     datetime_start = models.DateTimeField()
@@ -216,17 +233,21 @@ class Event(models.Model):
     description = models.TextField(null=True,blank=True)
     
     #NOT SHOWN
-    otherservices = models.ManyToManyField(Service)
+    otherservices = models.ManyToManyField(Service,null=True,blank=True)
+    otherservice_reqs = models.TextField(null=True,blank=True)
     setup_location = models.ForeignKey('Location',related_name="setuplocation",null=True,blank=True)
     #Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True,blank=True)
+    approved_by = models.ForeignKey(User,related_name="eventapprovals",null=True,blank=True)
     
     closed = models.BooleanField(default=False)
     closed_on = models.DateTimeField(null=True,blank=True)
+    closed_by = models.ForeignKey(User,related_name="eventclosings",null=True,blank=True)
     
     cancelled = models.BooleanField(default=False)
     cancelled_on = models.DateTimeField(null=True,blank=True)
+    cancelled_by = models.ForeignKey(User,related_name="eventcancellations",null=True,blank=True)
     
     payment_amount = models.IntegerField(blank=True,null=True,default=None)
     paid = models.BooleanField(default=False)

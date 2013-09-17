@@ -15,5 +15,81 @@
         </ul>
         <a class="btn" href="{% url "meetings.views.editattendance" m.id %}">Edit</a>
         <a class="btn" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
+        
+        <br />
+        <h3>This Week's Upcoming Events</h3>
+        <table class="table">
+            <tr>        
+                <th>Name</th>
+                <th>Services</th>
+                <th>Setup Start</th>
+                <th>Setup Completed By</th>
+                <th>CC's</th>
+                <th></th>
+            </tr>
+            {% for e in events %}
+                <tr>
+                    <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
+                    <td>
+                        {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
+                        {% if e.sound %} {{ e.sound.shortname }} {% endif %}
+                        {% if e.projection %} {{ e.projection.shortname }} {% endif %}
+                        {% if e.otherservices %} {{ e.otherservices.shortname }} {% endif %}
+                    </td>
+                    <td>{{ e.datetime_setup_start }}</td>
+                    <td>{{ e.datetime_setup_complete }}</td>
+
+                    <td>
+                        {% if e.crew_chief.count %}
+                            {% for c in e.crew_chief.all %}
+                                {{ c.first_name }} {{ c.last_name }}
+                            {% endfor %}
+                        {% else %}
+                            None Set 
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a class="btn" href="#">Setup&amp;CCs</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+        <h3>Future Events (next week)</h3>
+        <table class="table">
+            <tr>        
+                <th>Name</th>
+                <th>Services</th>
+                <th>Setup Start</th>
+                <th>Setup Completed By</th>
+                <th>CC's</th>
+                <th></th>
+            </tr>
+            {% for e in future %}
+                <tr>
+                    <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
+                    <td>
+                        {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
+                        {% if e.sound %} {{ e.sound.shortname }} {% endif %}
+                        {% if e.projection %} {{ e.projection.shortname }} {% endif %}
+                        {% if e.otherservices %} {{ e.otherservices.shortname }} {% endif %}
+                    </td>
+                    <td>{{ e.datetime_setup_start }}</td>
+                    <td>{{ e.datetime_setup_complete }}</td>
+
+                    <td>
+                        {% if e.crew_chief.count %}
+                            {% for c in e.crew_chief.all %}
+                                {{ c.first_name }} {{ c.last_name }}
+                            {% endfor %}
+                        {% else %}
+                            None Set 
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a class="btn" href="#">Setup&amp;CCs</a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </table>
     </div>
 {% endblock %}
