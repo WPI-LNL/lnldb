@@ -3,7 +3,7 @@ from django.conf.urls import patterns, include, url
 from events.forms import OrgForm,ContactForm,LightingForm,SoundForm,ProjectionForm
 from events.forms import named_event_forms
 from events.views.wizard import EventWizard
-from events.views.wizard import show_lighting_form_condition,show_sound_form_condition,show_projection_form_condition
+from events.views.wizard import show_lighting_form_condition,show_sound_form_condition,show_projection_form_condition,show_other_services_form_condition
 
 from ajax_select import urls as ajax_select_urls
 
@@ -17,6 +17,9 @@ from acct.views import AcctUpdate,LNLUpdate
 #event wizard form defenitions
 
 
+from django.contrib.auth.decorators import login_required
+
+
 
 event_wizard = EventWizard.as_view(
     named_event_forms,
@@ -25,9 +28,16 @@ event_wizard = EventWizard.as_view(
     condition_dict = {
             'lighting':show_lighting_form_condition,
             'sound':show_sound_form_condition,
-            'projection':show_projection_form_condition
+            'projection':show_projection_form_condition,
+            'other':show_other_services_form_condition,
         }
     )
+
+#hacky as hell
+@login_required
+def login_wrapped_wo(request,**kwargs):
+    return event_wizard(request,**kwargs)
+
 
 #generics
 from django.views.generic.base import RedirectView
@@ -59,8 +69,8 @@ urlpatterns = patterns('',
     url(r'^my/events/(?P<id>[0-9a-f]+)$', 'events.views.my.myeventdetail',name="my-event-detail"),
     #workorders
     url(r'^workorder2/$', 'events.views.indices.workorder'),
-    url(r'^workorder/(?P<step>.+)/$', event_wizard, name='event_step'),
-    url(r'^workorder/$', event_wizard, name='event'),
+    url(r'^workorder/(?P<step>.+)/$', login_wrapped_wo, name='event_step'),
+    url(r'^workorder/$', login_wrapped_wo, name='event'),
     #
     url(r'^lnadmin/$', 'events.views.indices.admin'),
     url(r'^lnadmin/lookups/', include(ajax_select_urls)),
