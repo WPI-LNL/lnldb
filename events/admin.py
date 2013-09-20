@@ -14,7 +14,8 @@ class EventAdmin(admin.ModelAdmin):
     filter_horizontal = ('crew','crew_chief','org')
     
 class OrgAdmin(admin.ModelAdmin):
-    filter_horizontal = ('user_in_charge','assoicated_users','associated_orgs')
+    filter_horizontal = ('associated_users','associated_orgs')
+    search_fields = ['name']
 
 class LocAdmin(admin.ModelAdmin):
     list_filter = ('show_in_wo_form',)
@@ -22,7 +23,7 @@ class LocAdmin(admin.ModelAdmin):
 admin.site.register(Location,LocAdmin)
 admin.site.register(Event,EventAdmin)
 admin.site.register(CCReport)
-admin.site.register(Organization)
+admin.site.register(Organization,OrgAdmin)
 admin.site.register(Extra)
 admin.site.register(ExtraInstance)
 

@@ -9,7 +9,7 @@ from django.views.generic import UpdateView
 
 from django.forms.models import inlineformset_factory
 
-from acct.forms import UserAcct,ProfileAcct
+from acct.forms import UserAcct,ProfileAcct,UserProfileFormSet
 from acct.models import Profile
 
 
@@ -38,7 +38,7 @@ class LNLUpdate(UpdateView):
     
     def form_valid(self,form):
         messages.success(self.request,"Account Info Saved!", extra_tags='success')
-        return super(AcctUpdate,self).form_valid(form)
+        return super(LNLUpdate,self).form_valid(form)
         
     def get_success_url(self):
         return reverse('my-lnl')

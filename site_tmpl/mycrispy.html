@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}    
+<h1> <a href="{% url "events.views.my.my" %}">My</a> {{msg}} </h1>
+<div class="hero-unit">
+{% crispy formset %}
+</div>
+{% endblock %}

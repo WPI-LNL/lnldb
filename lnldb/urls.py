@@ -61,9 +61,11 @@ urlpatterns = patterns('',
     
     #user facing shit
     url(r'^my/$', 'events.views.my.my', name="my"),
-    url(r'^my/lnl/$', LNLUpdate.as_view(), name="my-lnl"),
+    url(r'^my/contact/$', LNLUpdate.as_view(), name="my-lnl"),
     url(r'^my/workorders/$', 'events.views.my.mywo'),
     url(r'^my/orgs/$', 'events.views.my.myorgs'),
+    url(r'^my/orgs/incharge/$', 'events.views.orgs.orglist',name="my-orgs-incharge-list"),
+    url(r'^my/orgs/incharge/(?P<id>[0-9a-f]+)/$', 'events.views.orgs.orgedit', name="my-orgs-incharge-edit"),
     url(r'^my/acct/$', AcctUpdate.as_view(), name="my-acct"),
     url(r'^my/events/$', 'events.views.my.myevents'),
     url(r'^my/events/(?P<id>[0-9a-f]+)$', 'events.views.my.myeventdetail',name="my-event-detail"),

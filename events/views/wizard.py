@@ -69,7 +69,7 @@ class EventWizard(NamedUrlSessionWizardView):
         if step == "contact": #contact
             u = self.request.user
             first_last = "%s %s" % (u.first_name, u.last_name)
-            initial.update({'email': u.email,"name":"first_last"})
+            initial.update({'email': u.email,"name":first_last,"phone":u.profile.phone})
         return initial
     def get_form_kwargs(self, step):
         user = self.request.user

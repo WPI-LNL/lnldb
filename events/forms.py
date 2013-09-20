@@ -4,6 +4,8 @@ from django.forms.extras.widgets import SelectDateWidget
 from django.db.models import Q
 
 from django.contrib.auth.models import User
+from helpers.form_fields import django_msgs
+from django.core.urlresolvers import reverse
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,MultiField,Field,HTML
@@ -211,7 +213,28 @@ class InternalEventForm(forms.ModelForm):
         
         
         
+class ExternalOrgUpdateForm(forms.ModelForm):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.layout = Layout(
+                django_msgs,
+                
+                'address',
+                'phone',
+                'associated_users',
+                FormActions(
+                    Submit('save', 'Save changes'),
+                )
+        )
+        super(ExternalOrgUpdateForm,self).__init__(*args,**kwargs)
         
+    associated_users = AutoCompleteSelectMultipleField('Users',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    class Meta:
+        model = Organization
+        fields = ('address','phone','associated_users')
         
         
         
@@ -221,9 +244,19 @@ class InternalEventForm(forms.ModelForm):
         
 #FormWizard Forms
 class ContactForm(forms.Form):
-    #def __init__(self,*args,**kwargs):
-        #user = kwargs.pop('user')
-        #super(ContactForm,self).__init__(*args,**kwargs)
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.layout = Layout(
+                django_msgs,
+                
+                'name',
+                'email',
+                'phone',
+                HTML('<span class="muted">To avoid entering this information again, update your <a target="_blank" href="%s">contact information</a></span>' % reverse('my-lnl')),
+        )
+        super(ContactForm,self).__init__(*args,**kwargs)
     name = forms.CharField()
     email = forms.EmailField()
     phone = forms.CharField()
@@ -234,7 +267,16 @@ class OrgForm(forms.Form):
         user = kwargs.pop('user')
         
         super(OrgForm,self).__init__(*args,**kwargs)
-        self.fields['group'].queryset = Organization.objects.filter(Q(user_in_charge=user)|Q(associated_users=user))
+        self.fields['group'].queryset = Organization.objects.filter(Q(user_in_charge=user)|Q(associated_users__in=[user.id])).distinct()
+        
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.layout = Layout(
+                'group',
+                HTML('<span class="muted">If the organization you are looking for does not show up in the list, please contact the person in charge and tell them to use <a target="_blank" href="%s">this page</a> to grant you access</span>' % reverse('my-orgs-incharge-list')),
+        )
+        super(OrgForm,self).__init__(*args,**kwargs)
     group = forms.ModelChoiceField(queryset = Organization.objects.all(),label="Organization")
     #group_address = forms.CharField(
             #widget=forms.Textarea,

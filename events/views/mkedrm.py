@@ -17,7 +17,7 @@ def eventnew(request,id=None):
     
     #get instance if id is passed in
     if id:
-        instance = get_object_or_404(Chore,pk = id)
+        instance = get_object_or_404(Event,pk = id)
         context['new'] = False
     else:
         instance = None
