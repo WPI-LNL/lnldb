@@ -56,7 +56,9 @@ urlpatterns = patterns('',
     #
     url(r'^$', 'pages.views.page', {'slug':'index'}),
     url(r'^db/$', 'events.views.indices.index'),
-        
+    #auth? we don't need no stinking auth...
+    (r'^accounts/login/$', 'django_cas.views.login'),
+    (r'^accounts/logout/$', 'django_cas.views.logout'),
     #static
     
     #user facing shit
