@@ -377,6 +377,7 @@ class CCReport(models.Model):
     
 class Organization(models.Model):
     name = models.CharField(max_length=128,unique=True)
+    shortname = models.CharField(max_length=8,null=True,blank=True)
     email = models.EmailField(null=True,blank=True)
     exec_email = models.EmailField(null=True,blank=True)
     
@@ -397,6 +398,8 @@ class Organization(models.Model):
     
     notes = models.TextField(null=True,blank=True)
     personal = models.BooleanField(default=False)
+    
+    last_updated = models.DateTimeField(auto_now=True)
 
     def fopal(self):
         return self.fund, self.organization, self.account
@@ -404,7 +407,12 @@ class Organization(models.Model):
     def __unicode__(self):
         return self.name
     
-    ordering = ['name']
+    @property
+    def eventcount(self):
+        return self.event_set.count()
+    
+    class Meta:
+        ordering = ['name']
     
     
 

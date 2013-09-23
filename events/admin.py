@@ -14,8 +14,9 @@ class EventAdmin(admin.ModelAdmin):
     filter_horizontal = ('crew','crew_chief','org')
     
 class OrgAdmin(admin.ModelAdmin):
+    list_display = ('name','shortname','email','exec_email','email_exec','email_normal','user_in_charge')
     filter_horizontal = ('associated_users','associated_orgs')
-    search_fields = ['name']
+    search_fields = ['name','shortname','email','exec_email']
 
 class LocAdmin(admin.ModelAdmin):
     list_filter = ('show_in_wo_form',)
