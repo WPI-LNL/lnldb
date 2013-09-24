@@ -1,27 +1,16 @@
-{% extends 'base.html' %}
+{% extends 'base_admin.html' %}
 {% load crispy_forms_tags %}
 
-{% block nav %}
-    {% include "admin.nav.html" %}
-{% endblock %}
 {% block content %}
     <div class="row-fluid">
         <div class="span12">
-            <div class="hero-unit">
                 <h2> {{msg }} </h2>
                 {% crispy formset %}
-            </div>
         </div>
     </div>
 {% endblock %}
 
 {% block extras %}
-
-<link href="{{ STATIC_URL }}css/jquery-ui.css" rel="stylesheet">
-<script type="text/javascript" src="{{ STATIC_URL }}js/jquery-ui.min.js"></script>
-<link href="{{ STATIC_URL }}css/ajax_select.css" rel="stylesheet">
-
-<script type="text/javascript" src="{{ STATIC_URL }}js/ajax_select.js"></script> 
 
 {% include "js_datetimepick.tmpl" %}
 {% endblock %}

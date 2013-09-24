@@ -80,7 +80,7 @@ urlpatterns = patterns('',
     url(r'^lnadmin/lookups/', include(ajax_select_urls)),
     
     #events
-    url(r'^lnadmin/events/view/(?P<id>[0-9a-f]+)/$', 'events.views.flow.viewevent'),        
+    url(r'^lnadmin/events/view/(?P<id>[0-9a-f]+)/$', 'events.views.flow.viewevent', name="events-detail"),        
     url(r'^lnadmin/events/mk/', 'events.views.mkedrm.eventnew'),
     url(r'^lnadmin/events/edit/(?P<id>[0-9a-f]+)/$','events.views.mkedrm.eventnew'),
     url(r'^lnadmin/events/upcoming/$', 'events.views.list.upcoming'),
@@ -96,10 +96,10 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/rmcc/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$', 'events.views.flow.rmcc'),
     
     #orgs (clients)
-    url(r'^lnadmin/clients/$', 'events.views.orgs.vieworgs'),
-    url(r'^lnadmin/clients/(\d+)/$', 'events.views.orgs.orgdetail'),
-    url(r'^lnadmin/clients/add/$', 'events.views.orgs.addeditorgs'),
-    url(r'^lnadmin/clients/edit/(\d+)/$', 'events.views.orgs.addeditorgs'),
+    url(r'^lnadmin/clients/$', 'events.views.orgs.vieworgs', name="admin-orglist"),
+    url(r'^lnadmin/clients/(\d+)/$', 'events.views.orgs.orgdetail', name="admin-orgdetail"),
+    url(r'^lnadmin/clients/add/$', 'events.views.orgs.addeditorgs', name="admin-orgadd"),
+    url(r'^lnadmin/clients/edit/(\d+)/$', 'events.views.orgs.addeditorgs',name="admin-orgedit"),
         
     #inventory 
     url(r'^lnadmin/inventory/view/$', 'inventory.views.view'),
@@ -119,12 +119,13 @@ urlpatterns = patterns('',
     url(r'^lnadmin/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail'),
         
     #meetings
-    url(r'^lnadmin/meetings/new/$', 'meetings.views.newattendance'),
-    url(r'^lnadmin/meetings/list/$', 'meetings.views.listattendance'),
-    url(r'^lnadmin/meetings/list/(\d+)/$', 'meetings.views.listattendance'),
-    url(r'^lnadmin/meetings/view/(\d+)/$', 'meetings.views.viewattendance'),
-    url(r'^lnadmin/meetings/edit/(\d+)/$', 'meetings.views.editattendance'),
-    url(r'^lnadmin/meetings/notice/(\d+)/$', 'meetings.views.mknotice'),
+    url(r'^lnadmin/meetings/new/$', 'meetings.views.newattendance',name="meeting-new"),
+    url(r'^lnadmin/meetings/list/$', 'meetings.views.listattendance',name="meeting-list"),
+    url(r'^lnadmin/meetings/list/(\d+)/$', 'meetings.views.listattendance',),
+    url(r'^lnadmin/meetings/view/(\d+)/$', 'meetings.views.viewattendance',name="meeting-view"),
+    url(r'^lnadmin/meetings/view/(\d+)/(\d+)/$', 'meetings.views.updateevent',name="meeting-updateevent"),
+    url(r'^lnadmin/meetings/edit/(\d+)/$', 'meetings.views.editattendance',name="meeting-edit"),
+    url(r'^lnadmin/meetings/notice/(\d+)/$', 'meetings.views.mknotice',name="meeting-email"),
     #projection
     url(r'^lnadmin/projection/list/$', 'projection.views.plist'),
 

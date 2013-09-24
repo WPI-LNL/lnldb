@@ -304,6 +304,30 @@ class Event(models.Model):
         #return k
         
     @property
+    def allservices(self):
+        foo = []
+        if self.lighting:
+            foo.append({"i":"icon-fire","title":"lighting"})
+        if self.sound:
+            foo.append({"i":"icon-volume-up","title":"sound"})
+        if self.projection:
+            foo.append({"i":"icon-film","title":"projection"})
+        if self.otherservices:
+            foo.append({"i":"icon-tasks","title":"other services"})
+        return foo
+    
+    @property
+    def status(self):
+        if self.cancelled:
+            return "Cancelled"
+        elif self.closed:
+            return "Closed"
+        elif self.approved:
+            return "Approved"
+        else:
+            return "Open"
+    ### Extras And Money
+    @property
     def extras_lighting(self):
         return self.extrainstance_set.filter(extra__category__name="Lighting")
     

@@ -152,6 +152,28 @@ class EventApprovalForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ['description',]
+class EventMeetingForm(forms.ModelForm):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.layout = Layout(
+            Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
+            Field('datetime_setup_complete',label="Setup Finish",css_class="dtp"),
+            Field('crew_chief',label="Crew Chief"),
+            Field('crew',label="Crew"),
+            FormActions(
+                Submit('save', 'Update Event and Return'),
+            )
+        )
+        super(EventMeetingForm,self).__init__(*args,**kwargs)
+        
+    class Meta:
+        model = Event
+        fields = ['datetime_setup_start','datetime_setup_complete','crew_chief','crew']
+    datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
+    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
+    crew_chief = AutoCompleteSelectMultipleField('Users',required=False)
+    crew = AutoCompleteSelectMultipleField('Users',required=False)
 class InternalEventForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()

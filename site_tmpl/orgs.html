@@ -3,14 +3,20 @@
 <h2> Org List </h2>
 <table class="table table-striped table-bordered">
     <thead>
-        <th>
-            Org Name
-        </th>
+        <th>Org Name</th>
+        <th>Exec Email</th>
+        <th>Normal Email</th>
+        <th>User in charge</th>
+        <th>Personal / Individual</th>
     </thead>
     {% for org in orgs %}
-            <tr>
-                <td><a href="{% url "events.views.orgs.orgdetail" org.id %}">{{org}}</a></td>
-            </tr>
+        <tr>
+            <td><a href="{% url "events.views.orgs.orgdetail" org.id %}">{{org}}</a></td>
+            <td>{{ org.exec_email }}</td>
+            <td>{{ org.email }}</td>
+            <td>{{ org.user_in_charge }}</td>
+            <td>{{ org.personal }}</td>
+        </tr>
     {% endfor %}
 </table>
 {% endblock %}

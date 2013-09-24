@@ -1,92 +1,131 @@
 {% extends 'base_admin.html' %}
 {% load bootstrap_toolkit %}
 {% block content %}
-    <h1>Meeting for {{ m.datetime }}</h1>
     <div class="hero-unit">
-        <h3>Attendance:</h3>
-        <ul>
-        {% for a in m.attendance.all %}
-            <li><a href="{% url "members.views.detail" a.id %}">{{a.first_name }} {{a.last_name }}</a></li>
-        
-        {% endfor %}
-        </ul>
-        <a class="btn" href="{% url "meetings.views.editattendance" m.id %}">Edit</a>
-        <a class="btn" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
-        
-        <br />
-        <h3>This Week's Upcoming Events</h3>
-        <table class="table">
-            <tr>        
-                <th>Name</th>
-                <th>Services</th>
-                <th>Setup Start</th>
-                <th>Setup Completed By</th>
-                <th>CC's</th>
-                <th></th>
-            </tr>
-            {% for e in events %}
-                <tr>
-                    <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
-                    <td>
-                        {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
-                        {% if e.sound %} {{ e.sound.shortname }} {% endif %}
-                        {% if e.projection %} {{ e.projection.shortname }} {% endif %}
-                        {% if e.otherservices %} {{ e.otherservices.shortname }} {% endif %}
-                    </td>
-                    <td>{{ e.datetime_setup_start }}</td>
-                    <td>{{ e.datetime_setup_complete }}</td>
-
-                    <td>
-                        {% if e.crew_chief.count %}
-                            {% for c in e.crew_chief.all %}
-                                {{ c.first_name }} {{ c.last_name }}
-                            {% endfor %}
-                        {% else %}
-                            None Set 
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a class="btn" href="#">Setup&amp;CCs</a>
-                    </td>
-                </tr>
+    <h1>Meeting for {{ m.datetime.date }}</h1>
+    </div>
+    <div class="row-fluid">
+        <div class="span3">
+    
+            <h3>Attendance:</h3>
+            <ul>
+            {% for a in m.attendance.all %}
+                <li><a href="{% url "members.views.detail" a.id %}">{{a.first_name }} {{a.last_name }}</a></li>
+            
             {% endfor %}
-        </table>
-        <h3>Future Events (next week)</h3>
-        <table class="table">
-            <tr>        
-                <th>Name</th>
-                <th>Services</th>
-                <th>Setup Start</th>
-                <th>Setup Completed By</th>
-                <th>CC's</th>
-                <th></th>
-            </tr>
-            {% for e in future %}
-                <tr>
-                    <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
-                    <td>
-                        {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
-                        {% if e.sound %} {{ e.sound.shortname }} {% endif %}
-                        {% if e.projection %} {{ e.projection.shortname }} {% endif %}
-                        {% if e.otherservices %} {{ e.otherservices.shortname }} {% endif %}
-                    </td>
-                    <td>{{ e.datetime_setup_start }}</td>
-                    <td>{{ e.datetime_setup_complete }}</td>
-
-                    <td>
-                        {% if e.crew_chief.count %}
-                            {% for c in e.crew_chief.all %}
-                                {{ c.first_name }} {{ c.last_name }}
+            </ul>
+            <a class="btn btn-primary" href="{% url "meetings.views.editattendance" m.id %}">Edit Attendance</a>
+            
+            
+        </div>
+        <div class="span9">
+            <h3>E-Mail</h3>
+            {% if m.meetingannounce_set.count %}
+                <strong> Emails Sent:</strong>
+                {% for announce in m.meetingannounce_set.all %}
+                <div class="accordion" id="accordion{{ forloop.counter0 }}">
+                    <div class="accordion-group">
+                        <div class="accordion-heading">
+                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion{{ forloop.counter0 }}" href="#collapse{{ forloop.counter0 }}">
+                                ({{ announce.added }})
+                            </a>
+                        </div>
+                        <div id="collapse{{ forloop.counter0 }}" class="accordion-body collapse">
+                            <div class="accordion-inner">
+                            Subj: {{ announce.subject }}
+                            Msg: {{ announce.message }}
+                            Sent To: {{ announce.email_to }}
+                            {% for event in announce.events.all %}
+                                {{ event }}
                             {% endfor %}
-                        {% else %}
-                            None Set 
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a class="btn" href="#">Setup&amp;CCs</a>
-                    </td>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            <br />
+            <a class="btn" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a> <br/>
+            {% else %}
+            <a class="btn btn-primary" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span12">
+            <h3>This Week's Upcoming Events</h3>
+            <table class="table">
+                <tr>        
+                    <th>Name</th>
+                    <th>Services</th>
+                    <th>Setup Start</th>
+                    <th>Setup Completed By</th>
+                    <th>CC's</th>
+                    <th></th>
                 </tr>
-            {% endfor %}
+                {% for e in events %}
+                    <tr>
+                        <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
+                        <td>
+                            {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
+                            {% if e.sound %} {{ e.sound.shortname }} {% endif %}
+                            {% if e.projection %} {{ e.projection.shortname }} {% endif %}
+                            {% if e.otherservices %} {{ e.otherservices.shortname }} {% endif %}
+                        </td>
+                        <td>{{ e.datetime_setup_start }}</td>
+                        <td>{{ e.datetime_setup_complete }}</td>
+
+                        <td>
+                            {% if e.crew_chief.count %}
+                                {% for c in e.crew_chief.all %}
+                                    <a href="{% url "members.views.detail" c.id %}">{{ c.first_name }} {{ c.last_name }}</a>&nbsp;
+                                {% endfor %}
+                            {% else %}
+                                None Set 
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a class="btn btn-inverse" href="{% url "meeting-updateevent" m.id e.id %}">Setup Time &amp; Crew Chiefs</a>
+                        </td>
+                    </tr>
+                {% endfor %}
             </table>
+            <h3>Future Events (next week)</h3>
+            <table class="table">
+                <tr>        
+                    <th>Name</th>
+                    <th>Services</th>
+                    <th>Setup Start</th>
+                    <th>Setup Completed By</th>
+                    <th>CC's</th>
+                    <th></th>
+                </tr>
+                {% for e in future %}
+                    <tr>
+                        <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
+                        <td>
+                            {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
+                            {% if e.sound %} {{ e.sound.shortname }} {% endif %}
+                            {% if e.projection %} {{ e.projection.shortname }} {% endif %}
+                            {% if e.otherservices %} {{ e.otherservices.shortname }} {% endif %}
+                        </td>
+                        <td>{{ e.datetime_setup_start }}</td>
+                        <td>{{ e.datetime_setup_complete }}</td>
+
+                        <td>
+                            {% if e.crew_chief.count %}
+                                {% for c in e.crew_chief.all %}
+                                    <a href="{% url "members.views.detail" a.id %}">{{ c.first_name }} {{ c.last_name }}</a>&nbsp;
+                                {% endfor %}
+                            {% else %}
+                                None Set 
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a class="btn btn-inverse" href="{% url "meeting-updateevent" m.id e.id %}">Setup Time &amp; Crew Chiefs</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
     </div>
 {% endblock %}

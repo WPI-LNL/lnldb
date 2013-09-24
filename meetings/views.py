@@ -9,6 +9,7 @@ from django.template import Context,RequestContext
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 
+from events.forms import EventMeetingForm
 from events.models import Event
 
 from meetings.forms import MeetingAdditionForm as MAF
@@ -49,6 +50,7 @@ def viewattendance(request,id):
     context['m'] = m
     
     now = datetime.datetime.now()
+    now = m.datetime
     yest = now + datetime.timedelta(days=-1)
     morethanaweek = now + datetime.timedelta(days=7,hours=12)
     
@@ -59,6 +61,24 @@ def viewattendance(request,id):
     future = Event.objects.filter(datetime_start__gte=morethanaweek)
     context['future'] = future
     return render_to_response('meeting_view.html', context)
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+def updateevent(request,meetingid,eventid):
+    context = RequestContext(request)
+    context['msg'] = "Update Event"
+    event = get_object_or_404(Event,pk=eventid)
+    if request.method == 'POST':
+        formset = EventMeetingForm(request.POST,instance=event)
+        if formset.is_valid():
+            formset.save()
+            return HttpResponseRedirect(reverse('meetings.views.viewattendance',args=(meetingid,)))
+        else:
+            context['formset'] = formset
+    else:
+        formset = EventMeetingForm(instance=event)
+        context['formset'] = formset
+    return render_to_response('form_crispy.html', context)
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')

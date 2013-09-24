@@ -3,48 +3,56 @@
     <div class="row-fluid">
         <div class="span12">
             <div class="hero-unit">
-                <h2> {{u}} </h2>
-                <table class="table">
-                    <tr>
-                        <th>Status</th>
-                        <td>{{ u.status }}</td>
-                    </tr>
-                    <tr>
-                        <th>Events CCd:</th>
-                        <td>{{u.crewchief.count}}</td>
-                    </tr>
-                    <tr>
-                        <th>Events Participated:</th>
-                        <td>{{u.crew.count}}</td>
-                    </tr>
-                    <tr>
-                        <th>Films CC'd</th>
-                        <td>TODO</td>
-                    </tr>
-                    <tr>
-                        <th>Meeting Attendance Count</th>
-                        <td>{{ u.meeting_set.count }}</td>
-                    </tr>
-
-                </table>
-                <h3>Last 3 CC'd Events <a href="#">(All)</a></h3>
-                <ul class="unstyled"> 
-                    {% for event in u.crewchief.all %}
-                        {% if not forloop.counter > 3 %}
-                            <li><a href="{% url "events.views.list.viewevent" event.id %}">{{ event }}</a></li>
-                        {% endif %}
-                    {% endfor %}
-                </ul>
-                
-                <h3>Last 3 Participated Events <a href="#">(All)</a></h3>
-                <ul class="unstyled"> 
-                    {% for event in u.crew.all %}
-                        {% if not forloop.counter > 3 %}
-                            <li><a href="{% url "events.views.list.viewevent" event.id %}">{{ event }}</a></li>
-                        {% endif %}
-                    {% endfor %}
-                </ul>
+                <h1> {{u}} </h1>
+                {% if u.first_name %}
+                    {{ u.first_name }} {{ u.last_name }}
+                {% endif %}
             </div>
         </div>
     </div>
+    <div class="row-fluid">
+        <div class="span4">
+            <h3>Stats</h3>
+            <table class="table">
+                <tr>
+                    <th>Status</th>
+                    <td>{{ u.status }}</td>
+                </tr>
+                <tr>
+                    <th>Events CCd:</th>
+                    <td>{{u.crewchiefx.count}}</td>
+                </tr>
+                <tr>
+                    <th>Events Participated:</th>
+                    <td>{{u.crewx.count}}</td>
+                </tr>
+                <tr>
+                    <th>Films CC'd</th>
+                    <td>TODO</td>
+                </tr>
+                <tr>
+                    <th>Meeting Attendance Count</th>
+                    <td>{{ u.meeting_set.count }}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="span4">
+            <h3>Events CC'd</h3>
+            <ul class="unstyled"> 
+                {% for event in u.crewchiefx.all %}
+                    <li><a href="{% url "events-detail" event.id %}">{{ event }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="span4">
+            <h3>Events Participated</h3>
+            <ul class="unstyled"> 
+                {% for event in u.crewx.all %}
+                    <li><a href="{% url "events-detail" event.id %}">{{ event }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+    </div>
+     
 {% endblock %}

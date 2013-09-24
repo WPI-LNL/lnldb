@@ -11,9 +11,121 @@
     <div class="row-fluid">
         <div class="span12">
             <div class="hero-unit">
-                 {{org }}
-                 <a class="btn" href="{% url "events.views.orgs.addeditorgs" org.id %}">Edit</a>
+                 <h1>{{org }}</h1>
+                 {% if org.shortname %}
+                 ({{ org.shortname }})
+                 {% endif %}
+                 <a class="btn btn-large btn-primary" href="{% url "events.views.orgs.addeditorgs" org.id %}">Edit</a>
             </div>
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span3">
+            <h3>Contact</h3>
+            <table>
+                <tr>
+                    <th>Address</th>
+                    <td>{{org.address}}</td>
+                </tr>
+                <tr>
+                    <th>Phone</th>
+                    <td>{{ org.phone }}</td>
+                </tr>
+                <tr>
+                    <th>Exec Email </th>
+                    <td><a href="mailto:{{ org.exec_email }}">{{ org.exec_email }}</a></td>
+                </tr>
+                <tr>
+                    <th>Normal Email </th>
+                    <td><a href="mailto:{{ org.email }}"> {{ org.email }}</a> </td>
+                </tr>
+                <tr>
+                    <th>User in charge </th>
+                    <td> {{ org.user_in_charge }} </td>
+                </tr>
+            
+            </table>
+        </div>
+        <div class="span3">
+            <h3>Money</h3>
+            <table>
+                <tr>
+                    <th> Fund </th>
+                    <td> {{ org.fund }}</td>
+                </tr>
+                <tr>
+                    <th> Organization </th>
+                    <td> {{ org.organization }}</td>
+                </tr>
+                <tr>
+                    <th> Account </th>
+                    <td> {{ org.account }}</td>
+                </tr>
+            
+            </table>
+        </div>
+        <div class="span3">
+            <h3>Associated Users</h3>
+            <ul class="unstyled">
+                {% for u in org.associated_users.all %}
+                    <li>{{ u }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="span3">
+            <h3>Associated Orgs</h3>
+            <ul class="unstyled">
+                {% for o in org.associated_orgs.all %}
+                <li><a href="{% url "admin-orgdetail" o.id %}">{{o}}</a></li>
+                {% empty %}
+                <li>No Associated Orgs</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span12">
+        <h3>Events</h3>
+        <table class="table table-compact">
+            <thead>
+                <th>
+                    Event Name
+                </th>
+                <th>
+                    Date Ended
+                </th>
+                <th>
+                    Location
+                </th>
+                <th>
+                    Services
+                </th>
+                <th>
+                    Status
+                </th>
+            </thead>
+            {% for e in org.event_set.all %}
+            <tr>
+                <td>
+                    <a href="{% url "events.views.flow.viewevent" e.id %}">{{ e }}</a>
+                </td>
+                <td>
+                    {{ e.datetime_end }}
+                </td>
+                <td>
+                    {{ e.location }}
+                </td>
+                <td>
+                    {% for s in e.allservices %}
+                    <i class="{{ s.i }}" title="{{s.title}}"></i>
+                    {% endfor %}
+                </td>
+                <td>
+                    {{ e.status }}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
         </div>
     </div>
 {% endblock %}
