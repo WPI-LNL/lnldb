@@ -1,8 +1,5 @@
-{% extends 'base.html' %}
+{% extends 'base_admin.html' %}
 {% load bootstrap_toolkit %}
-{% block nav %}
-    {% include "admin.nav.html" %}
-{% endblock %}
 {% block content %}
     <h1>Meeting for {{ m.datetime }}</h1>
     <div class="hero-unit">

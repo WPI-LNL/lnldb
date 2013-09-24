@@ -1,0 +1,8 @@
+<!DOCTYPE html>
+{% extends 'base.html' %}
+{% block nav %}
+    {% include "admin.nav.html" %}
+{% endblock %}
+{% block overrides %}
+<link href="{{ STATIC_URL }}css/bootstrap-admin.css" rel="stylesheet">
+{% endblock %}
