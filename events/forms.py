@@ -348,7 +348,7 @@ class LightingForm(forms.Form):
         self.helper.layout = Layout(
             Fieldset(
                 'Basics', ### title
-                InlineRadios('lighting',),
+                InlineRadios('lighting',title="test"),
                 Field('requirements', css_class="span8"),
                 ),
             Fieldset(
@@ -363,13 +363,13 @@ class LightingForm(forms.Form):
     lighting = forms.ModelChoiceField(
             empty_label=None,
             queryset = Lighting.objects.all(),
-            widget = forms.RadioSelect(attrs={'class':'radio'}),
+            widget = forms.RadioSelect(attrs={'class':'radio itt'}),
         )   
 
     requirements = forms.CharField(
             widget=forms.Textarea,
             #widget=BootstrapTextInput(prepend='P',),
-            label = "Addtl Lighting Requirements",
+            label = "Lighting Requirements",
             required=False
         )
 
