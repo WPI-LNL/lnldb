@@ -108,7 +108,8 @@ urlpatterns = patterns('',
     url(r'^lnadmin/inventory/cat/(?P<category>[a-zA-Z0-9_.-]+)/$', 'inventory.views.cat'),
     url(r'^lnadmin/inventory/cat/(?P<category>[a-zA-Z0-9_.-]+)/(?P<subcategory>[a-zA-Z0-9_.-]+)$', 'inventory.views.subcat'),
         
-    url(r'^lnadmin/inventory/d/(?P<id>[0-9a-f]+)/$', 'inventory.views.detail'),
+    url(r'^lnadmin/inventory/d/(?P<id>[0-9a-f]+)/$', 'inventory.views.detail', name="inv-detail"),
+    url(r'^lnadmin/inventory/d/(?P<id>[0-9a-f]+)/addentry/$', 'inventory.views.addentry', name="inv-new-entry"),
         
     #members
     url(r'^lnadmin/members/officers/$', 'members.views.officers'),

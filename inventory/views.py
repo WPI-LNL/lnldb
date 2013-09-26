@@ -8,11 +8,12 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
 from events.forms import WorkorderSubmit,CrewAssign,OrgForm
-from inventory.forms import InvForm
+from inventory.models import Equipment,Category,SubCategory
+from inventory.forms import InvForm,EntryForm
 
 import datetime,time
 
-from inventory.models import Equipment,Category,SubCategory
+
 SUCCESS_MSG_INV = "Successfully added new inventory Item"
 def view(request):
     context = RequestContext(request)
@@ -63,7 +64,7 @@ def add(request):
             context['formset'] = formset
     else:
         msg = "New Inventory"
-        formset = InvForm
+        formset = InvForm()
         
         context['formset'] = formset
         context['msg'] = msg
@@ -86,3 +87,27 @@ def detail(request,id):
     context['e'] = e 
     
     return render_to_response('invdetail.html', context)
+
+def addentry(request,id):
+    context = RequestContext(request)
+    msg = "New Maintenance Entry"
+    context['msg'] = msg
+    
+    inv = get_object_or_404(Equipment,pk=id)
+    
+    if request.method == 'POST': 
+        formset = EntryForm(request.user,inv,request.POST)
+        if formset.is_valid():
+            formset.save()
+            return HttpResponseRedirect(reverse('inv-detail', args=(id,)))
+        
+        else:
+            context['formset'] = formset
+    else:
+        
+        formset = EntryForm(request.user,inv)
+        
+        context['formset'] = formset
+        
+    
+    return render_to_response('form_crispy.html', context)

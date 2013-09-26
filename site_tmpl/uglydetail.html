@@ -1,4 +1,6 @@
 {% extends 'base_admin.html' %}
+{% load at_user_linking %}
+{% load markup %}
 {% block content %}
     <div class="row-fluid">
         <div class="span12">
@@ -76,7 +78,7 @@
                             </tr>
                             <tr>
                                 <th>Posted Description</th>
-                                <td>{{event.description}}</td>
+                                <td>{{ event.description|mduserlink|markdown }}</td>
                             </tr>
                         </table>
                         {% if not event.approved %}

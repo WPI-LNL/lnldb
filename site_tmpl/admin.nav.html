@@ -1,3 +1,4 @@
+{% load lineage %}
 <div class="navbar navbar-inverse navbar-fixed-top">
     <div class="navbar-inner">
         <div class="container-fluid">
@@ -12,8 +13,8 @@
               Logged in as <a href="{% url "events.views.my.my" %}" class="navbar-link"> {{user}}</a>
             </p>
             <ul class="nav nav-pills">
-                <li class="active"><a href="{% url "events.views.indices.admin" %}">Home</a></li>
-                <li class="dropdown">
+                <li class="{% ancestor '/lnadmin/$' %}"><a href="{% url "events.views.indices.admin" %}">Home</a></li>
+                <li class="{% ancestor '/lnadmin/events/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Events <b class="caret"></b>
                     </a>
@@ -32,7 +33,7 @@
                                 <li><a href="{% url "events.views.list.closed" %}">Closed Workorders</a></li>
                     </ul>
                 </li>
-                <li class="dropdown">
+                <li class="{% ancestor '/lnadmin/clients/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Clients
                         <b class="caret"></b>
@@ -42,7 +43,7 @@
                         <li><a href="{% url "events.views.orgs.addeditorgs" %}">Add Clients</a></li>
                     </ul>
                 </li>
-                <li class="dropdown">
+                <li class="{% ancestor '/lnadmin/members/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Members
                         <b class="caret"></b>
@@ -55,7 +56,7 @@
                         <li><a href="{% url "members.views.away" %}">Inactive</a></li>
                     </ul>
                 </li>
-                <li class="dropdown">
+                <li class="{% ancestor '/lnadmin/meetings/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown"  href="#">
                         Meetings
                         <b class="caret"></b>
@@ -65,7 +66,7 @@
                           <li><a href="{% url "meetings.views.newattendance" %}">New Meeting</a></li>
                     </ul>
                 </li>
-                <li class="dropdown">
+                <li class="{% ancestor '/lnadmin/inventory/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Inventory
                         <b class="caret"></b>
@@ -81,7 +82,7 @@
                          </li>
                     </ul>
                 </li>
-                <li class="dropdown">
+                <li class="{% ancestor '/lnadmin/projection/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Projection
                         <b class="caret"></b>

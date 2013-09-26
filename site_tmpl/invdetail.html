@@ -1,5 +1,6 @@
 {% extends 'base_admin.html' %}
-
+{% load at_user_linking %}
+{% load markup %}
 {% block extrajs %}
     $(document).ready(function () {
         $('.collapse').collapse('hide');
@@ -11,63 +12,82 @@
     <div class="row-fluid">
         <div class="span12">
             <div class="hero-unit">
-                <h2> {{e}} Details </h2>
-                <table class="table">
-                    <tr>
-                        <th>Category/SubCategory:</th>
-                        <td>{{e.subcategory.category}}/{{e.subcategory}}</td>
-                    </tr>
-                    <tr>
-                        <th>Desc:</th>
-                        <td>{{e.description}}</td>
-                    </tr>
-                    <tr>
-                        <th>Purchase Date:</th>
-                        <td>{{e.purchase_date}}</td>
-                    </tr>
-                    <tr>
-                        <th>Purchase Price:</th>
-                        <td>${{e.purchase_price}}</td>
-                    </tr>
-                    <tr>
-                        <th>Model No.:</th>
-                        <td>{{e.model_number}}</td>
-                    </tr>
-                    <tr>
-                        <th>Serial No.:</th>
-                        <td>{{e.serial_number}}</td>
-                    </tr>
-                    <tr>
-                        <th>Road Case:</th>
-                        <td>{{e.road_case}}</td>
-                    </tr>
-                    <tr>
-                        <th>Model No.:</th>
-                        <td>{{e.manufacturer}}</td>
-                    </tr>
-                    <tr>
-                        <th>Home</th>
-                        <td>{{e.home}}</td>
-                    </tr>
-                    <tr>
-                        <th>Status:</th>
-                        <td>{{e.status}}</td>
-                    </tr>         
-                </table>
-                <h3>Last Five Maint Entries</h3>
-                <table class="table">
-                {% for entry in e.equipmentmaintentry_set.all|slice:":5" %}
-                    <tr>
-                        <td>{{ entry.desc }}</td>
-                        <td>{{ entry.date }}</td>
-                        <td>{{ entry.user }}</td>
-                        <td><i class="{{ entry.status.iconclass }}" title="{{entry.status}}"></i></td>
-                    </tr>
-                {% empty %}
-                    No Entries
-                {% endfor %}
-                </table>
+                <h2> {{e}} Information </h2>
+                <p class="lead">
+                    <a href="{% url "inventory.views.cat" e.subcategory.category %}">{{e.subcategory.category }}</a>
+                    / 
+                    <a href="{% url "inventory.views.subcat" e.subcategory.category e.subcategory %}">{{e.subcategory }}</a>
+                </p>
             </div>
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span3">
+            <h3> General Information </h3>
+            <table class="table">
+                <tr>
+                    <th>Purchase Date:</th>
+                    <td>{{e.purchase_date}}</td>
+                </tr>
+                <tr>
+                    <th>Purchase Price:</th>
+                    <td>${{e.purchase_cost}}</td>
+                </tr>
+                <tr>
+                    <th>Model No.:</th>
+                    <td>{{e.model_number}}</td>
+                </tr>
+                <tr>
+                    <th>Serial No.:</th>
+                    <td>{{e.serial_number}}</td>
+                </tr>
+                <tr>
+                    <th>Road Case:</th>
+                    <td>{{e.road_case}}</td>
+                </tr>
+                <tr>
+                    <th>Model No.:</th>
+                    <td>{{e.manufacturer}}</td>
+                </tr>
+                <tr>
+                    <th>Home</th>
+                    <td>{{e.home}}</td>
+                </tr>
+                <tr>
+                    <th>Status:</th>
+                    <td>{{e.status}}</td>
+                </tr>         
+            </table>
+        </div>
+        <div class="span3">
+            <h3> Description </h3>
+            {{e.description}}
+            </div>
+        <div class="span6">
+            <div class="pull-right">
+                <a class="btn btn-large" href="{% url "inv-new-entry" e.id %}">New Entry</a>
+            </div>
+            <h3> Maintenance History </h3>
+            <table class="table">
+                    {% for entry in e.equipmentmaintentry_set.all %}
+                        <tr data-toggle="collapse" data-target="#entry{{entry.id}}">
+                            <td>{{ entry.desc }}</td>
+                            <td>{{ entry.date }}</td>
+                            <td>{{ entry.user }}</td>
+                            <td>
+                                <i class="{{ entry.status.iconclass }}" title="{{entry.status}}"></i> 
+                                <i class="icon-search"></i>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="4">
+                                <div class="collapse" id="entry{{entry.id}}">{{entry.entry|mduserlink|markdown }}</div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        No Entries
+                    {% endfor %}
+            </table>
         </div>
     </div>
 {% endblock %}

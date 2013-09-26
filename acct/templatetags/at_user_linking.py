@@ -11,7 +11,7 @@ import re
 
 register = template.Library()
 
-regex = re.compile(r'\@(?P<username>[\w]+) ')
+regex = re.compile(r'@(?P<username>[\w]+) ')
 
 @register.filter
 @stringfilter
