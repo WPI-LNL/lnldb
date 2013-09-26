@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 
 def officers(request):
     context = RequestContext(request)
-    users = User.objects.filter(groups__name='Officer').order_by('username')
+    users = User.objects.filter(groups__name='Officer').order_by('last_name')
     
     context['users'] = users
     context['h2'] = "Officer List"
@@ -17,7 +17,7 @@ def officers(request):
 
 def active(request):
     context = RequestContext(request)
-    users = User.objects.filter(groups__name='Active').order_by('username')
+    users = User.objects.filter(groups__name='Active').order_by('last_name')
     
     context['users'] = users
     context['h2'] = "Active Members"
@@ -26,7 +26,7 @@ def active(request):
 
 def associate(request):
     context = RequestContext(request)
-    users = User.objects.filter(groups__name='Associate').order_by('username')
+    users = User.objects.filter(groups__name='Associate').order_by('last_name')
     
     context['users'] = users
     context['h2'] = "Associate Members"
@@ -35,7 +35,7 @@ def associate(request):
 
 def alum(request):
     context = RequestContext(request)
-    users = User.objects.filter(groups__name='Alumni').order_by('username')
+    users = User.objects.filter(groups__name='Alumni').order_by('last_name')
     
     context['users'] = users
     context['h2'] = "Alumni Members"
@@ -45,7 +45,7 @@ def alum(request):
 
 def away(request):
     context = RequestContext(request)
-    users = User.objects.filter(groups__name='Away').order_by('username')
+    users = User.objects.filter(groups__name='Away').order_by('last_name')
     
     context['users'] = users
     context['h2'] = "Inactive Members"
