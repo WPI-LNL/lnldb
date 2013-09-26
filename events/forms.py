@@ -17,7 +17,9 @@ from events.fields import ExtraSelectorField
 
 from bootstrap_toolkit.widgets import BootstrapDateInput, BootstrapTextInput, BootstrapUneditableInput
 
+from django.core.exceptions import ValidationError
 import datetime
+import pytz
 
 from ajax_select import make_ajax_field
 from ajax_select.fields import AutoCompleteSelectMultipleField,AutoCompleteSelectField
@@ -445,6 +447,19 @@ class ScheduleForm(forms.Form):
     setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Setup Completed By")
     event_start = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Event Starts")
     event_end = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Event Ends")
+    
+    def clean(self):
+        cleaned_data = super(ScheduleForm, self).clean()
+        
+        setup_complete = cleaned_data.get("setup_complete")
+        event_start = cleaned_data.get("event_start")
+        event_end = cleaned_data.get("event_end")
+        if event_start > event_end:
+            raise ValidationError('You cannot start after you finish')
+        if setup_complete > event_start:
+            raise ValidationError('You cannot setup after you finish')
+        if setup_complete < datetime.datetime.now(pytz.utc):
+            raise ValidationError('Stop trying to time travel')
     
     
 #helpers for the formwizard
