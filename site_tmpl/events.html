@@ -41,32 +41,34 @@
         <th> Crew Chief </th>
         <th> Light <i class="icon-fire"></i></th>
         <th> Sound <i class="icon-volume-up"></i></th>
-        <th> Power <i class="icon-off"></i></th>
         <th> Projection <i class="icon-film"></i></th>
-        <th> &nbsp;</th>
+        <th> Other Services <i class="icon-off"></i></th>
         <th> &nbsp;</th>
     </tr>
     {% for event in events %}
             <tr>
                 <td><a href="{% url "events.views.flow.viewevent" event.id %}">{{event.event_name}}</a></td>
                 <td>{{event.datetime_start}}</td>
-                <td>{{event.group.name}}</td>
+                <td>
+                    {% for org in event.org.all %}
+                    <a href="{% url "admin-orgdetail" org.id %}">{{org.name}}</a>
+                    {% endfor %}
+                </td>
                 <td>{{event.location}}</td>
-                <td>{% for cc in event.crew_chief.all %}<a href="{% url "members.views.detail" cc.id %}">{{cc}}</a> {% endfor %}</td>
+                <td>{% for cc in event.crew_chief.all %}<a href="{% url "members.views.detail" cc.id %}">{{cc}}</a> {% empty %} None Assigned {% endfor %}</td>
                 <td>
-                    {% if event.lights %} L{{ event.l }} {% endif %}
+                    {% if event.lighting %} {{ event.lighting.shortname }} {% endif %}
                 </td>
                 <td>
-                    {% if event.sound %} S{{ event.s }} {% endif %}
+                    {% if event.sound %} {{ event.sound.shortname }} {% endif %}
                 </td>
                 <td>
-                    {% if event.power %} Y {% else %} N {% endif %}
+                    {% if event.projection %} {{ event.projection.longname }} {% else %} N {% endif %}
                 </td>
                 <td>
-                    {% if event.projecct %} {{ event.projection }} {% else %} N {% endif %}
+                    {% if event.otherservices.count %} Y {% else %} N {% endif %}
                 </td>
-                <td> <a class="btn btn-mini" href="{% url "events.views.flow.assigncrew" event.id %}">Crew</a></td>
-                <td> <a class="btn btn-mini" href="{% url "events.views.flow.viewevent" event.id %}">Details</a></td>
+                <td> <a href="{% url "events.views.flow.assigncrew" event.id %}">Crew</a></td>
             </tr>
     {% endfor %}
 </table>

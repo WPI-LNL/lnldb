@@ -3,7 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 # Create your models here.
 from django.core.exceptions import ValidationError
-import datetime
+import datetime,pytz
 
 PROJECTIONS = (
     ('16','16mm'),
@@ -263,8 +263,8 @@ class Event(models.Model):
             raise ValidationError('You cannot start after you finish')
         if self.datetime_setup_complete > self.datetime_start:
             raise ValidationError('You cannot setup after you finish')
-        if self.datetime_setup_complete < datetime.datetime.now():
-            raise ValidationError('Stop trying to time travel')
+        #if self.datetime_setup_complete < datetime.datetime.now(pytz.utc):
+            #raise ValidationError('Stop trying to time travel')
     
     def usercanseeevent(self,user):
         

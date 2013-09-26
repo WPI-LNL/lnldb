@@ -26,19 +26,22 @@ def approval(request,id):
     
     if request.method == 'POST':
         form = EventApprovalForm(request.POST,instance=event)
-        e = form.save(commit=False)
-        e.approved = True
-        e.approved_on = datetime.datetime.now()
-        e.approved_by = request.user
-        e.save()
-        # confirm with user
-        messages.add_message(request, messages.INFO, 'Approved Event')
+        if form.is_valid():
+            e = form.save(commit=False)
+            e.approved = True
+            e.approved_on = datetime.datetime.now()
+            e.approved_by = request.user
+            e.save()
+            # confirm with user
+            messages.add_message(request, messages.INFO, 'Approved Event')
         
-        return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
+            return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
+        else:
+            context['formset'] = form
     else:
         form = EventApprovalForm(instance=event)
         context['formset'] = form
-        return render_to_response('form_crispy.html', context) 
+    return render_to_response('form_crispy.html', context) 
     
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
