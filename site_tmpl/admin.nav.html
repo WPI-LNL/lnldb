@@ -92,6 +92,18 @@
                         <li><a href="#">Update Projectionist</a></li>
                     </ul>
                 </li>
+                <li class="{% ancestor '/lnadmin/misc/' %} dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                        Misc
+                        <b class="caret"></b>
+                      </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">Access Log</a>
+                        <li class="divider"></li>
+                        <li><a href="{% url "users-contact" %}">Contact Users</a></li>
+                        <li><a href="{% url "users-limbo" %}">Unafiliated Users</a></li>
+                    </ul>
+                </li>
                  <!-- paste menu bar text above here --> 
             </ul>
             </div><!--/.nav-collapse -->

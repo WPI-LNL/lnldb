@@ -7,6 +7,9 @@
                 {% if u.first_name %}
                     {{ u.first_name }} {{ u.last_name }}
                 {% endif %}
+                <div class="pull-right">
+                    <a class="btn btn-info btn-large" href="{% url "memberupdate" u.id %}">Modify</a>
+                </div>
             </div>
         </div>
     </div>

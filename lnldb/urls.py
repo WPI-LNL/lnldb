@@ -13,6 +13,7 @@ admin.autodiscover()
 
 #cbv imports
 from acct.views import AcctUpdate,LNLUpdate
+from members.views import UserUpdate
 
 #event wizard form defenitions
 
@@ -134,6 +135,11 @@ urlpatterns = patterns('',
     url(r'^lnadmin/members/alum/$', 'members.views.alum'),
     url(r'^lnadmin/members/away/$', 'members.views.away'),
     url(r'^lnadmin/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail', name="memberdetail"),
+    url(r'^lnadmin/members/edit/(?P<pk>[0-9a-f]+)/$', UserUpdate.as_view(), name="memberupdate"),
+    
+    #misc
+    url(r'^lnadmin/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
+    url(r'^lnadmin/misc/users/unsorted/$', 'members.views.limbousers',name="users-limbo"),
         
     #meetings
     url(r'^lnadmin/meetings/new/$', 'meetings.views.newattendance',name="meeting-new"),
