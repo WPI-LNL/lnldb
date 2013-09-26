@@ -82,7 +82,7 @@
                             </tr>
                         </table>
                         {% if not event.approved %}
-                        <a class="btn" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
+                        <a class="btn btn-primary btn-large" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
                         {% endif %}
                     </div>
                     <div id="services" class="tab-pane">
