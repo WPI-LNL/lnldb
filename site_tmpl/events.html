@@ -1,6 +1,37 @@
 {% extends 'base_admin.html' %}
 {% block content %}    
 <h2>{{h2}}</h2>
+<div class="accordion" id="accordion{{ forloop.counter0 }}">
+    <div class="accordion-group">
+        <div class="accordion-heading">
+            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion{{ forloop.counter0 }}" href="#collapse{{ forloop.counter0 }}">
+                Filter <i class="icon-search"></i>
+            </a>
+        </div>
+        <div id="collapse{{ forloop.counter0 }}" class="accordion-body collapse">
+            <div class="accordion-inner">
+            {% include "js_datepick.tmpl" %}
+            <script type="text/javascript">
+            $(document).ready(function () {
+                $( "#filterform" ).submit(function( event ) {
+                    var baseurl = "{{baseurl}}";
+                    var start = $("#fstart").val();
+                    var end = $("#fend").val();
+                    var target = baseurl + start + "/" + end + "/"
+                    window.location.href = target
+                    event.preventDefault();
+                    });
+                });
+            </script>
+            <form id="filterform" class="form-inline">
+                <input id="fstart" class="input-large datepick" type="text" title="Start" name="start" placeholder="Start" value="{{start}}">
+                <input id="fend" class="input-large datepick" type="text" title="End" name="end" placeholder="End" value="{{end}}">
+                <input class="btn btn-info" type="submit" value="submit">
+            </form>
+            </div>
+        </div>
+    </div>
+</div>
 <table class="table table-striped table-bordered">
     <tr> 
         <th> Event Name </th>
