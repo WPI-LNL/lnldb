@@ -116,7 +116,7 @@ urlpatterns = patterns('',
     url(r'^lnadmin/members/associate/$', 'members.views.associate'),
     url(r'^lnadmin/members/alum/$', 'members.views.alum'),
     url(r'^lnadmin/members/away/$', 'members.views.away'),
-    url(r'^lnadmin/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail'),
+    url(r'^lnadmin/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail', name="memberdetail"),
         
     #meetings
     url(r'^lnadmin/meetings/new/$', 'meetings.views.newattendance',name="meeting-new"),
