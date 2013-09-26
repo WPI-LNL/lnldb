@@ -143,17 +143,40 @@ class EventApprovalForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
         self.helper.layout = Layout(
-            Field('description',label="Description (optional)"),
-            HTML('<p class="muted">This will describe the event to your CCs</p>'),
+            TabHolder(
+                Tab(
+                    "Standard Fields",
+                    Field('description',label="Description (optional)",css_class="span6"),
+                    HTML('<p class="muted">This will describe the event to your CCs</p>'),
+                    Field('datetime_start',label="Event Start",css_class="dtp"),
+                    Field('datetime_end',label="Event End",css_class="dtp"),
+                    #Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
+                    Field('datetime_setup_complete',label="Setup Finish",css_class="dtp"),
+                        ),
+                Tab(
+                    "Services",
+                    Field('lighting'),
+                    Field('sound'),
+                    Field('projection'),
+                    Field('otherservices'),
+                    ),
+            ),
             FormActions(
                 Submit('save', 'Approve Event'),
-            )
+            ),
         )
         super(EventApprovalForm,self).__init__(*args,**kwargs)
         
     class Meta:
         model = Event
-        fields = ['description',]
+        fields = ['description','datetime_start','datetime_end','datetime_setup_complete','lighting','sound','projection','otherservices']
+        
+    datetime_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
+    datetime_end =  forms.SplitDateTimeField(initial=datetime.datetime.now())
+    #datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
+    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
+    
+    
 class EventMeetingForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
@@ -176,6 +199,8 @@ class EventMeetingForm(forms.ModelForm):
     datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
     crew_chief = AutoCompleteSelectMultipleField('Users',required=False)
     crew = AutoCompleteSelectMultipleField('Users',required=False)
+    
+    
 class InternalEventForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()

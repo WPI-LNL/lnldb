@@ -18,6 +18,7 @@ import datetime
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def approval(request,id):
     context = RequestContext(request)
+    context['msg'] = "Approve Event"
     event = get_object_or_404(Event,pk=id)
     if event.approved:
         return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(event.id,)))
