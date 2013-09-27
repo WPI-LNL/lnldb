@@ -178,7 +178,11 @@ class Service(models.Model):
     longname = models.CharField(max_length=64)
     base_cost = models.DecimalField(max_digits=8,decimal_places=2)
     addtl_cost = models.DecimalField(max_digits=8,decimal_places=2)
-    category = models.ForeignKey('Category')    
+    category = models.ForeignKey('Category') 
+    
+    #for the workorder form. Nice And Pretty Descriptions
+    help_desc = models.TextField(null=True,blank=True)
+    
     def __unicode__(self):
         return self.longname
     

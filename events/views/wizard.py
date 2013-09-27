@@ -1,7 +1,12 @@
 # Create your views here.
 
 from events.forms import named_event_tmpls
+from events.forms import CAT_LIGHTING, CAT_SOUND
+from events.forms import LIGHT_EXTRAS, SOUND_EXTRAS
+
 from events.models import Event
+from events.models import Lighting,Sound,Projection,Service
+from events.models import Extra
 
 from django.contrib.formtools.wizard.views import NamedUrlSessionWizardView
 from django.core.urlresolvers import reverse
@@ -64,6 +69,7 @@ class EventWizard(NamedUrlSessionWizardView):
         context = RequestContext(self.request)
         return render_to_response('wizard_finished.html',context)
     
+    #fills in form info on the first step
     def get_form_initial(self, step):
         initial = self.initial_dict.get(step, {})
         if step == "contact": #contact
@@ -71,12 +77,28 @@ class EventWizard(NamedUrlSessionWizardView):
             first_last = "%s %s" % (u.first_name, u.last_name)
             initial.update({'email': u.email,"name":first_last,"phone":u.profile.phone})
         return initial
+    
+    #gives the form the user object to limit available orgs
     def get_form_kwargs(self, step):
         user = self.request.user
         if step == 'organization':
             return {'user':user}
         else:
             return {}
-    
+        
+    def get_context_data(self, form, **kwargs):
+        context = super(EventWizard, self).get_context_data(form=form, **kwargs)
+        if self.steps.current == 'lighting':
+            context.update({'help_objs': Lighting.objects.all() })
+            context.update({'help_name': "Lighting"})
+            context.update({'extras': LIGHT_EXTRAS})
+        if self.steps.current == 'sound':
+            context.update({'help_objs': Sound.objects.all() })
+            context.update({'help_name': "Sound"})
+            context.update({'extras': SOUND_EXTRAS})
+        if self.steps.current == 'projection':
+            context.update({'help_objs': Projection.objects.all() })
+            context.update({'help_name': "Projection"})
+        return context
     def get_template_names(self):
         return [named_event_tmpls[self.steps.current]]
