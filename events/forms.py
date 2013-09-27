@@ -385,7 +385,7 @@ class LightingForm(forms.Form):
         )
         super(LightingForm,self).__init__(*args,**kwargs)
         for extra in LIGHT_EXTRAS:
-            self.fields["e_%s" % extra.id] = ValueSelectField(label=extra.name,initial=0)
+            self.fields["e_%s" % extra.id] = ValueSelectField(label=extra.name,initial=0,required=False)
             
     lighting = forms.ModelChoiceField(
             empty_label=None,
@@ -420,7 +420,7 @@ class SoundForm(forms.Form):
         )
         super(SoundForm,self).__init__(*args,**kwargs)
         for extra in SOUND_EXTRAS:
-            self.fields["e_%s" % extra.id] = ValueSelectField(label=extra.name,initial=0)
+            self.fields["e_%s" % extra.id] = ValueSelectField(label=extra.name,initial=0,required=False)
     sound = forms.ModelChoiceField(
             empty_label=None,
             queryset = Sound.objects.all(),

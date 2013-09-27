@@ -29,7 +29,8 @@ class ValueSelectWidget(forms.MultiWidget):
     def __init__(self,widgets=None, *args, **kwargs):
         widgets = (
             forms.TextInput(attrs={'value':0}),
-            forms.CheckboxInput()
+            #forms.CheckboxInput() # i forgot what this was for
+            forms.HiddenInput()
             )
         super(ValueSelectWidget,self).__init__(widgets=widgets, *args, **kwargs)
     def  decompress(self,value):
