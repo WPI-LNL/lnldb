@@ -95,13 +95,17 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/open/$', 'events.views.list.openworkorders', name="open"),
     url(r'^lnadmin/events/open/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.openworkorders'),
     url(r'^lnadmin/events/open/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', 'events.views.list.openworkorders'),
-    
+
+    url(r'^lnadmin/events/unbilled/$', 'events.views.list.unbilled',name="unbilled"),
+    url(r'^lnadmin/events/unbilled/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unbilled'),
+    url(r'^lnadmin/events/unbilled/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unbilled'),    
     url(r'^lnadmin/events/paid/$', 'events.views.list.paid',name="paid"),
     url(r'^lnadmin/events/paid/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.paid'),
     url(r'^lnadmin/events/paid/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', 'events.views.list.paid'),
     url(r'^lnadmin/events/unpaid/$', 'events.views.list.unpaid',name="unpaid"),
     url(r'^lnadmin/events/unpaid/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unpaid'),
     url(r'^lnadmin/events/unpaid/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unpaid'),
+    
     url(r'^lnadmin/events/closed/$', 'events.views.list.closed',name="closed"), 
     url(r'^lnadmin/events/closed/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.closed'),
     url(r'^lnadmin/events/closed/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', 'events.views.list.closed'),
