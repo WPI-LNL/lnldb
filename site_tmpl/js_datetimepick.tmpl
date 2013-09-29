@@ -3,7 +3,9 @@
 <link href="{{ STATIC_URL }}css/datepicker.css" rel="stylesheet">
 <link href="{{ STATIC_URL }}css/timepicker.css" rel="stylesheet">
 <style>
-    .day {color:#111;}
+    .day,.switch,.next,.prev {color:#111;}
+    .dow { color:#333;}
+    
 </style>
 <script type="text/javascript">
     $(document).ready(function () {
@@ -18,7 +20,7 @@
                 minuteStep: 30,
                 showInputs: true,
                 disableFocus: true,
-                showMeridian: true,
+                showMeridian: false,
                 defaultTime: '12:00 PM',
                 
             });
