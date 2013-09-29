@@ -12,7 +12,10 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,MultiField,Field,HTML,Hidden,Reset
 from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions,PrependedText
 
-from events.models import Event,Organization,Category,Extra,Location,Lighting,Sound,Projection,Service,Billing,CCReport
+from events.models import Event,Organization,Category
+from events.models import Extra,Location,Lighting,Sound,Projection,Service
+from events.models import Billing,CCReport,Hours
+
 from events.widgets import ExtraSelectorWidget,ValueSelectField
 from events.fields import ExtraSelectorField
 
@@ -329,6 +332,65 @@ class ReportForm(forms.ModelForm):
         model = CCReport
         fields = ('report','for_service_cat')
         
+        
+class MKHoursForm(forms.ModelForm):
+    def __init__(self,event,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+                django_msgs,
+                Hidden('event',event.id),
+                Field('user'),
+                Field('hours'),
+                FormActions(
+                    Submit('save', 'Save changes'),
+                    Reset('reset','Reset Form'),
+                )
+        )
+        super(MKHoursForm,self).__init__(*args,**kwargs)
+    class Meta:
+        model = Hours
+    user = AutoCompleteSelectField('Users',required=False,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+        
+class EditHoursForm(forms.ModelForm):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+                django_msgs,
+                Field('hours'),
+                FormActions(
+                    Submit('save', 'Save changes'),
+                )
+        )
+        super(EditHoursForm,self).__init__(*args,**kwargs)
+        
+    class Meta:
+        model = Hours 
+        fields = ('hours',)
+    
+#__        __         _                 _           
+#\ \      / /__  _ __| | _____  _ __ __| | ___ _ __ 
+ #\ \ /\ / / _ \| '__| |/ / _ \| '__/ _` |/ _ \ '__|
+  #\ V  V / (_) | |  |   < (_) | | | (_| |  __/ |   
+   #\_/\_/ \___/|_|  |_|\_\___/|_|  \__,_|\___|_|   
+                                                   
+ #_____                            _                  _ 
+#|  ___|__  _ __ _ __ _____      _(_)______ _ _ __ __| |
+#| |_ / _ \| '__| '_ ` _ \ \ /\ / / |_  / _` | '__/ _` |
+#|  _| (_) | |  | | | | | \ V  V /| |/ / (_| | | | (_| |
+#|_|  \___/|_|  |_| |_| |_|\_/\_/ |_/___\__,_|_|  \__,_|
+                                                       
+ #_____                        
+#|  ___|__  _ __ _ __ ___  ___ 
+#| |_ / _ \| '__| '_ ` _ \/ __|
+#|  _| (_) | |  | | | | | \__ \
+#|_|  \___/|_|  |_| |_| |_|___/
+                              
         
 #FormWizard Forms
 class ContactForm(forms.Form):

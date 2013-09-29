@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Hours for <em>{{event}}</em></h1>
+    <table class="table">
+    <thead>
+        <th>Member</th>
+        <th>Hours</th>
+        <th></th>
+    </thead>
+    {% for hour in hours %}
+        <tr>
+            <td>{{ hour.user.get_full_name }}</td>
+            <td>{{ hour.hours }}</td>
+            <td><a href="{% url "my-cchours-edit" event.id hour.user.id %}">Update</a>
+        </tr>
+    {% endfor %}
+    </table>
+    <a class="btn btn-primary btn-large" href="{% url "my-cchours-mk" event.id %}">Add More</a>
+{% endblock %}

@@ -3,8 +3,10 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
-from events.models import Event,Organization,CCReport
-from events.forms import ReportForm
+from django.contrib.auth.models import User
+
+from events.models import Event,Organization,CCReport,Hours
+from events.forms import ReportForm,MKHoursForm,EditHoursForm
 
 import datetime,time
 
@@ -122,14 +124,69 @@ def ccreport(request,eventid):
     return render_to_response('mycrispy.html', context)
     
 @login_required
-def hours(request,eventid):
+def hours_list(request,eventid):
     context = RequestContext(request)
     user = request.user
     
     event = user.crewchiefx.filter(pk=eventid)
     
     if not event:
-        return HttpResponse("This Event Must not Have been yours")
-        
+        return HttpResponse("You must not have cc'd this event")
     event = event[0]
-    return HttpResponse('k')
+    context['event'] = event
+    
+    hours = event.hours.all()
+    context['hours'] = hours
+        
+    
+    return render_to_response('myhours.html', context)
+
+def hours_mk(request,eventid):
+    context = RequestContext(request)
+    
+    user = request.user
+    event = user.crewchiefx.filter(pk=eventid)
+    if not event:
+        return HttpResponse("You must not have cc'd this event")
+    event = event[0]
+    context['msg'] = "Hours for '%s'" % event.event_name
+    if request.method == 'POST':
+        formset = MKHoursForm(event,request.POST)
+        if formset.is_valid():
+            formset.save()
+            return HttpResponseRedirect(reverse('my-cchours',args=(event.id,)))
+        else:
+            context['formset'] = formset
+            
+    else:
+        formset = MKHoursForm(event)
+        
+        context['formset'] = formset
+        
+    return render_to_response('mycrispy.html', context)
+
+def hours_edit(request,eventid,userid):
+    context = RequestContext(request)
+    user = request.user
+    event = user.crewchiefx.filter(pk=eventid)
+    if not event:
+        return HttpResponse("You must not have cc'd this event")
+    event = event[0]
+    
+    hours = get_object_or_404(Hours,event=event,user_id=userid)
+    u = get_object_or_404(User,pk=userid)
+    context['msg'] = "Hours for '%s' on '%s'" % (u,event.event_name)
+    if request.method == 'POST':
+        formset = EditHoursForm(request.POST,instance=hours)
+        if formset.is_valid():
+            formset.save()
+            return HttpResponseRedirect(reverse('my-cchours',args=(event.id,)))
+        else:
+            context['formset'] = formset
+            
+    else:
+        formset = EditHoursForm(instance=hours)
+        
+        context['formset'] = formset
+        
+    return render_to_response('mycrispy.html', context)

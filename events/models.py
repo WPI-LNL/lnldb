@@ -483,4 +483,7 @@ class Hours(models.Model):
     user = models.ForeignKey(User,related_name="hours")
     hours = models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)
     
+    class Meta:
+        unique_together = ('event','user')
+    
     

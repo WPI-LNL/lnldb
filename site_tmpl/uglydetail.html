@@ -235,6 +235,7 @@
                     
                 </div>
                 <div id="reports" class="tab-pane">
+                    <h2>Reports</h2>
                     {% for report in event.ccreport_set.all %}
                         <h3>Report by {{report.crew_chief }}</h3> 
                         <em class="muted pull-right">
@@ -258,6 +259,19 @@
                         {% endfor %}
                         </ul>
                     {% endif %}
+                    <h2> Hours </h2>
+                    <table class="table">
+                        <thead>
+                            <th>Member</th>
+                            <th>Hours</th>
+                        </thead>
+                        {% for hour in event.hours.all %}
+                            <tr>
+                                <td>{{ hour.user.get_full_name }}</td>
+                                <td>{{ hour.hours }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
                 </div>
                 <div id="billing" class="tab-pane">
                     <table class="table">
