@@ -3,216 +3,282 @@
 {% load markup %}
 {% block content %}
     <div class="row-fluid">
-        <div class="span12">
+        <div class="span4">
             <h1> {{event }}:</h1>
-            <div class="hero-unit">
-                <ul class="nav nav-tabs">
-                    <li class="active"><a href="#home" data-toggle="tab">Detail</a></li>
-                    <li><a href="#services" data-toggle="tab">Services</a></li>
-                    <li><a href="#crew" data-toggle="tab">Crew</a></li>
-                    <li><a href="#reports" data-toggle="tab">Reports</a></li>
-                </ul>
-                
-                <div class="tab-content">
-                    <div id="home" class="tab-pane active">
-                        <table class="table">
-                            <tr>
-                                <th>Submitted on</th>
-                                <td>{{ event.submitted_on }} </td>
-                            </tr>
-                            <tr>
-                                <th>Submitted by</th>
-                                <td>{{event.submitted_by}}</td>
-                            </tr>
-                            <tr>
-                                <th>Submitted from</th>
-                                <td>{{event.submitted_ip}}</td>
-                            </tr>
-                            <tr>
-                                <th>Approved by/on</th>
-                                <td>
-                                    {% if event.approved_by %} 
-                                        {{ event.approved_by }} on {{ event.approved_on }}      
-                                    {% else %}
-                                        Needs Approval 
-                                    {% endif %}
-                            </tr>
-                            <tr>
-                                <th>Cancelled by/on</th>
-                                <td>
-                                    {% if event.cancelled_by %} 
-                                        {{ event.cancelled_by }} on {{ event.cancelled_on }}      
-                                    {% else %}
-                                        N/A 
-                                    {% endif %}
-                            </tr>
-                            <tr>
-                                <th>Closed by/on</th>
-                                <td>
-                                    {% if event.closed_by %} 
-                                        {{ event.closed_by }} on {{ event.closed_on }}      
-                                    {% else %}
-                                        N/A
-                                    {% endif %}
-                            </tr>
-                            <tr>
-                                <th>Start</th>
-                                <td>{{event.datetime_start }}</td>
-                            </tr>
-                            <tr>
-                                <th>End</th>
-                                <td>{{event.datetime_end}}</td>
-                            </tr>
+        </div>
+        <div class="span4">
+            <h3>Status: {{ event.status }}</h3>
+        </div>
+        <div class="span4">
+            <h3>Actions:
+            {% if not event.approved or event.cancelled %}
+            <div class="btn-group">
+                <a class="btn btn-success btn-large" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
+                <a class="btn btn-danger btn-large" href="{% url "events.views.flow.approval" event.id %}">Cancel</a>
+            </div>
+            {% elif not event.paid and event.over %}
+            <a class="btn btn-primary btn-large" href="{% url "event-mkbilling" event.id %}">Create Bill</a>
+            {% elif event.paid and not event.closed %} 
+            <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
+            {% else %}
+            None Available
+            {% endif %}
+            </h3>
 
-                            <tr>
-                                <th>Setup Start</th>
-                                <td>{{event.datetime_setup_start}}</td>
-                            </tr>
-                            <tr>
-                                <th>Setup Completion</th>
-                                <td>{{event.datetime_setup_complete}}</td>
-                            </tr>
-                            <tr>
-                                <th>Location</th>
-                                <td>{{event.location}}</td>
-                            </tr>
-                            <tr>
-                                <th>Posted Description</th>
-                                <td>{{ event.description|mduserlink|markdown }}</td>
-                            </tr>
-                        </table>
-                        {% if not event.approved %}
-                        <a class="btn btn-primary btn-large" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
+            <!-- CloseModal -->
+            <div id="closeModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="closeModalLabel" aria-hidden="true">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h3 id="closeModalLabel">Sure?</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Once this event is closed it's closed.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+                    <a class="btn btn-primary" href="{% url "event-close" event.id %}">Yes I'm Sure</a>
+                </div>
+            </div>
+            
+            
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span12">
+            <ul class="nav nav-tabs">
+                <li class="active"><a href="#home" data-toggle="tab">Detail</a></li>
+                <li><a href="#services" data-toggle="tab">Services</a></li>
+                <li><a href="#crew" data-toggle="tab">Crew</a></li>
+                <li><a href="#reports" data-toggle="tab">Reports</a></li>
+                <li><a href="#billing" data-toggle="tab">Billing</a></li>
+            </ul>
+            
+            <div class="tab-content">
+                <div id="home" class="tab-pane active">
+                    <table class="table">
+                        <tr>
+                            <th>Submitted on</th>
+                            <td>{{ event.submitted_on }} </td>
+                        </tr>
+                        <tr>
+                            <th>Submitted by</th>
+                            <td>{{event.submitted_by}}</td>
+                        </tr>
+                        <tr>
+                            <th>Submitted from</th>
+                            <td>{{event.submitted_ip}}</td>
+                        </tr>
+                        <tr>
+                            <th>Approved by/on</th>
+                            <td>
+                                {% if event.approved_by %} 
+                                    {{ event.approved_by }} on {{ event.approved_on }}      
+                                {% else %}
+                                    Needs Approval 
+                                {% endif %}
+                        </tr>
+                        <tr>
+                            <th>Cancelled by/on</th>
+                            <td>
+                                {% if event.cancelled_by %} 
+                                    {{ event.cancelled_by }} on {{ event.cancelled_on }}      
+                                {% else %}
+                                    N/A 
+                                {% endif %}
+                        </tr>
+                        <tr>
+                            <th>Closed by/on</th>
+                            <td>
+                                {% if event.closed_by %} 
+                                    {{ event.closed_by }} on {{ event.closed_on }}      
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                        </tr>
+                        <tr>
+                            <th>Start</th>
+                            <td>{{event.datetime_start }}</td>
+                        </tr>
+                        <tr>
+                            <th>End</th>
+                            <td>{{event.datetime_end}}</td>
+                        </tr>
+
+                        <tr>
+                            <th>Setup Start</th>
+                            <td>{{event.datetime_setup_start}}</td>
+                        </tr>
+                        <tr>
+                            <th>Setup Completion</th>
+                            <td>{{event.datetime_setup_complete}}</td>
+                        </tr>
+                        <tr>
+                            <th>Location</th>
+                            <td>{{event.location}}</td>
+                        </tr>
+                        <tr>
+                            <th>Posted Description</th>
+                            <td>{{ event.description|mduserlink|markdown }}</td>
+                        </tr>
+                    </table>
+
+                </div>
+                <div id="services" class="tab-pane">
+                    <h2>Total Billing Amount</h2>
+                    ${{ event.cost_total }}
+                    {% if event.lighting %}
+                        <h2> Lighting Services </h2>
+                        <h3>Level:</h3> {{ event.lighting }} (${{ event.lighting.base_cost }})
+                        <h3>Requirements:</h3>
+                            <pre>{{ event.lighting_reqs }}</pre>
+                        {% if event.extras_lighting %}
+                        <h3>Extras:</h3>
+                            <table class="table">
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Quantity</th>
+                                    <th>Cost</th>
+                                    <th>Total</th>
+                                </tr>
+                                {% for e in event.extras_lighting %}
+                                    <tr>
+                                        <td>{{ e.extra }} </td>
+                                        <td>{{ e.quant }} </td>
+                                        <td>${{ e.cost }} </td>
+                                        <td>${{ e.totalcost }} </td>
+                                    </tr>
+                                {% endfor %}
+                                <tr class="info">
+                                    <td colspan="3">Total:</td>
+                                    <td>${{ event.cost_lighting_extras }}</td>
+                                </tr>
+                            </table>
                         {% endif %}
-                    </div>
-                    <div id="services" class="tab-pane">
-                        <h2>Total Billing Amount</h2>
-                        ${{ event.cost_total }}
-                        {% if event.lighting %}
-                            <h2> Lighting Services </h2>
-                            <h3>Level:</h3> {{ event.lighting }} (${{ event.lighting.base_cost }})
-                            <h3>Requirements:</h3>
-                                <pre>{{ event.lighting_reqs }}</pre>
-                            {% if event.extras_lighting %}
+                    {% endif %}
+                    
+                    {% if event.sound %}
+                        <h2> Sound Services </h2>
+                        <h3>Level:</h3> {{ event.sound }} (${{ event.sound.base_cost }})
+                        <h3>Requirements:</h3>
+                            <pre>{{ event.sound_reqs }}</pre>
+                        {% if event.extras_sound %}
+                        <h3>Extras:</h3>
+                            <table class="table">
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Quantity</th>
+                                    <th>Cost</th>
+                                    <th>Total</th>
+                                </tr>
+                                {% for e in event.extras_sound %}
+                                    <tr>
+                                        <td>{{ e.extra }}</td>
+                                        <td>{{ e.quant }}</td>
+                                        <td>${{ e.cost }} </td>
+                                        <td>${{ e.totalcost }} </td>
+                                    </tr>
+                                {% endfor %}
+                                <tr class="info">
+                                    <td colspan="3">Total:</td>
+                                    <td>${{ event.cost_sound_extras }}</td>
+                                </tr>
+                            </table>
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% if event.projection %}
+                        <h2> Projection Services </h2>
+                        <h3>Level:</h3> {{ event.projection }} (${{ event.projection.base_cost }})
+                        <h3>Requirements:</h3>
+                            <pre>{{ event.proj_reqs }}</pre>
+                        {% if event.extras_projection %}
                             <h3>Extras:</h3>
-                                <table class="table">
+                            <table class="table">
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Quantity</th>
+                                    <th>Cost</th>
+                                    <th>Total</th>
+                                </tr>
+                                {% for e in event.extras_projection %}
                                     <tr>
-                                        <th>Item</th>
-                                        <th>Quantity</th>
-                                        <th>Cost</th>
-                                        <th>Total</th>
+                                        <td>{{ e.extra }}</td>
+                                        <td>{{ e.quant }}</td>
+                                        <td>${{ e.cost }} </td>
+                                        <td>${{ e.totalcost }} </td>
                                     </tr>
-                                    {% for e in event.extras_lighting %}
-                                        <tr>
-                                            <td>{{ e.extra }} </td>
-                                            <td>{{ e.quant }} </td>
-                                            <td>${{ e.cost }} </td>
-                                            <td>${{ e.totalcost }} </td>
-                                        </tr>
-                                    {% endfor %}
-                                    <tr class="info">
-                                        <td colspan="3">Total:</td>
-                                        <td>${{ event.cost_lighting_extras }}</td>
-                                    </tr>
-                                </table>
-                            {% endif %}
+                                {% endfor %}
+                                <tr class="info">
+                                    <td colspan="3">Total:</td>
+                                    <td>${{ event.cost_projection_extras }}</td>
+                                </tr>
+                            </table>
                         {% endif %}
-                        
-                        {% if event.sound %}
-                            <h2> Sound Services </h2>
-                            <h3>Level:</h3> {{ event.sound }} (${{ event.sound.base_cost }})
-                            <h3>Requirements:</h3>
-                                <pre>{{ event.sound_reqs }}</pre>
-                            {% if event.extras_sound %}
-                            <h3>Extras:</h3>
-                                <table class="table">
-                                    <tr>
-                                        <th>Item</th>
-                                        <th>Quantity</th>
-                                        <th>Cost</th>
-                                        <th>Total</th>
-                                    </tr>
-                                    {% for e in event.extras_sound %}
-                                        <tr>
-                                            <td>{{ e.extra }}</td>
-                                            <td>{{ e.quant }}</td>
-                                            <td>${{ e.cost }} </td>
-                                            <td>${{ e.totalcost }} </td>
-                                        </tr>
-                                    {% endfor %}
-                                    <tr class="info">
-                                        <td colspan="3">Total:</td>
-                                        <td>${{ event.cost_sound_extras }}</td>
-                                    </tr>
-                                </table>
-                            {% endif %}
-                        {% endif %}
-                        
-                        {% if event.projection %}
-                            <h2> Projection Services </h2>
-                            <h3>Level:</h3> {{ event.projection }} (${{ event.projection.base_cost }})
-                            <h3>Requirements:</h3>
-                                <pre>{{ event.proj_reqs }}</pre>
-                            {% if event.extras_projection %}
-                                <h3>Extras:</h3>
-                                <table class="table">
-                                    <tr>
-                                        <th>Item</th>
-                                        <th>Quantity</th>
-                                        <th>Cost</th>
-                                        <th>Total</th>
-                                    </tr>
-                                    {% for e in event.extras_projection %}
-                                        <tr>
-                                            <td>{{ e.extra }}</td>
-                                            <td>{{ e.quant }}</td>
-                                            <td>${{ e.cost }} </td>
-                                            <td>${{ e.totalcost }} </td>
-                                        </tr>
-                                    {% endfor %}
-                                    <tr class="info">
-                                        <td colspan="3">Total:</td>
-                                        <td>${{ event.cost_projection_extras }}</td>
-                                    </tr>
-                                </table>
-                            {% endif %}
-                        {% endif %}
-                    </div>
-                    <div id="crew" class="tab-pane">
-                        <a class="btn btn-large pull-right" href="{% url "events.views.flow.assigncc" event.id %}">Modify</a>
-                        <h2> Crew Chief(s) </h2>
-                        <ul>
-                            {% for cc in event.crew_chief.all %}
-                            <li>{{ cc }}</li>
-                            {% endfor %}
-                        </ul>
-                        
-                        <a class="btn btn-large pull-right" href="{% url "events.views.flow.assigncrew" event.id %}">Modify</a>
-                        <h2> Crew </h2>
-                        <ul>
-                            {% for c in event.crew.all %}
-                            <li>{{ c }}</li>
-                            {% endfor %}
-                        </ul>
-                        
-                    </div>
-                    <div id="reports" class="tab-pane">
-                        {% for report in event.ccreport_set.all %}
-                            <h3>Report by {{report.crew_chief }}</h3> <em class="muted pull-right">posted on {{ report.created_on }}</em>
-                            <blockquote>
-                                {{ report.report }}
-                                <small>{% for cat in report.for_service_cat.all %} {{cat}} {% endfor %}</small>
-                            </blockquote>
-                        {% empty %}
-                            No Reports
+                    {% endif %}
+                </div>
+                <div id="crew" class="tab-pane">
+                    <a class="btn btn-large pull-right" href="{% url "events.views.flow.assigncc" event.id %}">Modify</a>
+                    <h2> Crew Chief(s) </h2>
+                    <ul>
+                        {% for cc in event.crew_chief.all %}
+                        <li>{{ cc }}</li>
                         {% endfor %}
-                        {% if event.crew_needing_reports %}
-                            <h3> Crew Chiefs Needing Reports </h3>
-                            {% for crew in event.crew_needing_reports %}
-                                {{ crew }}<br />
-                            {% endfor %}
-                        {% endif %}
-                    </div>
+                    </ul>
+                    
+                    <a class="btn btn-large pull-right" href="{% url "events.views.flow.assigncrew" event.id %}">Modify</a>
+                    <h2> Crew </h2>
+                    <ul>
+                        {% for c in event.crew.all %}
+                        <li>{{ c }}</li>
+                        {% endfor %}
+                    </ul>
+                    
+                </div>
+                <div id="reports" class="tab-pane">
+                    {% for report in event.ccreport_set.all %}
+                        <h3>Report by {{report.crew_chief }}</h3> <em class="muted pull-right">posted on {{ report.created_on }}</em>
+                        <blockquote>
+                            {{ report.report }}
+                            <small>{% for cat in report.for_service_cat.all %} {{cat}} {% endfor %}</small>
+                        </blockquote>
+                    {% empty %}
+                        <h2>No Reports Submitted </h2>
+                    {% endfor %}
+                    {% if event.crew_needing_reports %}
+                        <h3> Crew Chiefs Needing Reports </h3>
+                        <ul>
+                        {% for crew in event.crew_needing_reports %}
+                            <li>{{ crew }}</li>
+                        {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                <div id="billing" class="tab-pane">
+                    <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date Billed</th>
+                            <th>Date Paid</th>
+                            <th>Amount</th>
+                            <th>&nbsp;</th>
+                        </tr>
+                    </thead>
+                    {% for billing in event.billings.all %}
+                        <tr>
+                            <td>{{ billing.date_billed }}</td>
+                            <td>{{ billing.date_paid }}</td>
+                            <td>{{ billing.amount }}</td>
+                            <td>
+                                {% if not event.closed %}
+                                <a class="btn btn-link" href="{% url "event-updbilling" event.id billing.id %}">Update</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                    
+                    <h2> No Bills Posted </h2>
+                    {% endfor %}
+                    </table>
                 </div>
             </div>
         </div>

@@ -200,7 +200,8 @@ class Billing(models.Model):
     event = models.ForeignKey('Event',related_name="billings")
     amount = models.DecimalField(max_digits=8,decimal_places=2)
 
-    
+    class Meta:
+        ordering = ("-date_billed","date_paid")
 class Event(models.Model):
     
     objects = models.Manager()
@@ -335,10 +336,27 @@ class Event(models.Model):
             return "Cancelled"
         elif self.closed:
             return "Closed"
-        elif self.approved:
+        elif self.approved and self.datetime_setup_complete > datetime.datetime.now(pytz.utc):
             return "Approved"
         else:
-            return "Open"
+            if self.paid:
+                return "Paid"
+            elif self.unpaid:
+                return "Awaiting Payment"
+            else:
+                return "Open"
+        
+    @property
+    def unpaid(self):
+        return self.billings.filter(date_paid__isnull=True,date_billed__isnull=False)
+    @property
+    def paid(self):
+        return self.billings.filter(date_paid__isnull=False).exists()
+    
+    @property
+    def over(self):
+        return self.datetime_end < datetime.datetime.now(pytz.utc)
+    
     ### Extras And Money
     @property
     def extras_lighting(self):

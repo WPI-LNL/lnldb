@@ -13,4 +13,8 @@ class OfficerMixin(object):
     def dispatch(self, request, *args, **kwargs):
         return super(OfficerMixin, self).dispatch(request, *args, **kwargs)
     
-    
+class SetFormMsgMixin(object):
+    def get_context_data(self, **kwargs):
+        context = super(SetFormMsgMixin, self).get_context_data(**kwargs)
+        context['msg'] = self.msg
+        return context

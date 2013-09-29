@@ -7,12 +7,15 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 
-from events.forms import EventApprovalForm
+from events.forms import EventApprovalForm, BillingForm
 from events.forms import CrewAssign,CrewChiefAssign
-from events.models import Event,Organization
+from events.models import Event,Organization,Billing
 from helpers.challenges import is_officer
 
 import datetime
+
+from django.views.generic import UpdateView,CreateView
+from helpers.mixins import LoginRequiredMixin, OfficerMixin, SetFormMsgMixin
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
@@ -42,6 +45,21 @@ def approval(request,id):
         form = EventApprovalForm(instance=event)
         context['formset'] = form
     return render_to_response('form_crispy.html', context) 
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
+def close(request,id):
+    context = RequestContext(request)
+    context['msg'] = "Closing Event"
+    event = get_object_or_404(Event,pk=id)
+    
+    event.closed = True
+    event.closed_by = request.user
+    event.closed_on = datetime.datetime.now()
+    
+    event.save()
+    
+    return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(event.id,)))
     
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
@@ -120,3 +138,41 @@ def viewevent(request,id):
     context['event'] = event
     
     return render_to_response('uglydetail.html', context)
+
+class BillingCreate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,CreateView):
+    model = Billing
+    form_class = BillingForm
+    template_name = "form_crispy_cbv.html"
+    msg = "New Bill"
+    
+    def get_form_kwargs(self):
+        # pass "user" keyword argument with the current user to your form
+        kwargs = super(BillingCreate, self).get_form_kwargs()
+        kwargs['event'] = self.kwargs['event']
+        return kwargs
+
+    def form_valid(self,form):
+        messages.success(self.request,"Bill Created!", extra_tags='success')
+        return super(BillingCreate,self).form_valid(form)
+    
+    def get_success_url(self):
+        return reverse("events-detail",args=(self.kwargs['event'],))
+    
+class BillingUpdate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,UpdateView):
+    model = Billing
+    form_class = BillingForm
+    template_name = "form_crispy_cbv.html"
+    msg = "Update Bill"
+    
+    def get_form_kwargs(self):
+        # pass "user" keyword argument with the current user to your form
+        kwargs = super(BillingUpdate, self).get_form_kwargs()
+        kwargs['event'] = self.kwargs['event']
+        return kwargs
+
+    def form_valid(self,form):
+        messages.success(self.request,"Billing Updated!", extra_tags='success')
+        return super(BillingUpdate,self).form_valid(form)
+    
+    def get_success_url(self):
+        return reverse("events-detail",args=(self.kwargs['event'],))

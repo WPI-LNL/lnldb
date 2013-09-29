@@ -21,6 +21,8 @@ class OrgAdmin(admin.ModelAdmin):
 class LocAdmin(admin.ModelAdmin):
     list_filter = ('show_in_wo_form',)
     actions = [enable_show_in_wo_form,disable_show_in_wo_form]
+
+admin.site.register(Billing)
 admin.site.register(Location,LocAdmin)
 admin.site.register(Event,EventAdmin)
 admin.site.register(CCReport)

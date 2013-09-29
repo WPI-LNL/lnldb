@@ -14,14 +14,10 @@ admin.autodiscover()
 #cbv imports
 from acct.views import AcctUpdate,LNLUpdate
 from members.views import UserUpdate
-
+from events.views.flow import BillingCreate,BillingUpdate
 #event wizard form defenitions
 
-
 from django.contrib.auth.decorators import login_required
-
-
-
 event_wizard = EventWizard.as_view(
     named_event_forms,
     url_name = 'event_step',
@@ -82,9 +78,12 @@ urlpatterns = patterns('',
     
     #events
     url(r'^lnadmin/events/view/(?P<id>[0-9a-f]+)/$', 'events.views.flow.viewevent', name="events-detail"),        
-    url(r'^lnadmin/events/mk/', 'events.views.mkedrm.eventnew'),
-    url(r'^lnadmin/events/edit/(?P<id>[0-9a-f]+)/$','events.views.mkedrm.eventnew'),
-    url(r'^lnadmin/events/approve/(?P<id>[0-9a-f]+)/$', 'events.views.flow.approval'), 
+    url(r'^lnadmin/events/mk/', 'events.views.mkedrm.eventnew', name="event-new"),
+    url(r'^lnadmin/events/edit/(?P<id>[0-9a-f]+)/$','events.views.mkedrm.eventnew', name="event-edit"),
+    url(r'^lnadmin/events/approve/(?P<id>[0-9a-f]+)/$', 'events.views.flow.approval', name="event-approve"), 
+    url(r'^lnadmin/events/close/(?P<id>[0-9a-f]+)/$', 'events.views.flow.close', name="event-close"), 
+    url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/mk/$', BillingCreate.as_view(), name="event-mkbilling"), 
+    url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/update/(?P<pk>[0-9]+)/$', BillingUpdate.as_view(), name="event-updbilling"), 
     
     url(r'^lnadmin/events/upcoming/$', 'events.views.list.upcoming', name="upcoming"),
     url(r'^lnadmin/events/upcoming/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.upcoming'),

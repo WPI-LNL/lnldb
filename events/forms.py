@@ -8,10 +8,10 @@ from helpers.form_fields import django_msgs
 from django.core.urlresolvers import reverse
 
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,MultiField,Field,HTML
-from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions
+from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,MultiField,Field,HTML,Hidden,Reset
+from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions,PrependedText
 
-from events.models import Event,Organization,Category,Extra,Location,Lighting,Sound,Projection,Service
+from events.models import Event,Organization,Category,Extra,Location,Lighting,Sound,Projection,Service,Billing
 from events.widgets import ExtraSelectorWidget,ValueSelectField
 from events.fields import ExtraSelectorField
 
@@ -285,7 +285,27 @@ class ExternalOrgUpdateForm(forms.ModelForm):
         model = Organization
         fields = ('address','phone','associated_users')
         
+class BillingForm(forms.ModelForm):
+    def __init__(self,event,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+                django_msgs,
+                Hidden('event',event),
+                PrependedText('date_billed','<i class="icon-calendar"></i>',css_class="datepick"),
+                PrependedText('date_paid','<i class="icon-calendar"></i>',css_class="datepick"),
+                PrependedText('amount', '<strong>$</strong>'),
+                FormActions(
+                    Submit('save', 'Save changes'),
+                    Reset('reset','Reset Form'),
+                )
+            )
+        super(BillingForm,self).__init__(*args,**kwargs)
         
+    class Meta:
+        model = Billing
         
         
         
