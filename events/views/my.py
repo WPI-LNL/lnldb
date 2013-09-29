@@ -3,7 +3,8 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
-from events.models import Event,Organization
+from events.models import Event,Organization,CCReport
+from events.forms import ReportForm
 
 import datetime,time
 
@@ -65,9 +66,18 @@ def myevents(request):
     context = RequestContext(request)
 
     user = request.user
+    context['user'] = user
+    
+    if user.groups.exclude(name__in=["Contact"]).exists():
+        member = True
+    else:
+        member = False
+        
+    context['member'] = member
 
     return render_to_response('myevents.html', context)
 
+@login_required
 def myeventdetail(request,id):
     context = RequestContext(request)
     event = get_object_or_404(Event,pk=id)
@@ -80,5 +90,46 @@ def myeventdetail(request,id):
         return render_to_response('eventdetail.html', context)
     
     
+@login_required
+def ccreport(request,eventid):
+    context = RequestContext(request)
+    context['msg'] = "Crew Chief Report"
+        
+    user = request.user
     
+    event = user.crewchiefx.filter(pk=eventid)
     
+    if not event:
+        return HttpResponse("This Event Must not Have been yours")
+        
+    event = event[0]
+    
+    report,created = CCReport.objects.get_or_create(event=event, crew_chief=user)
+    
+    if request.method == 'POST':
+        formset = ReportForm(request.POST,instance=report)
+        if formset.is_valid():
+            formset.save()
+            return HttpResponseRedirect(reverse('my-events'))
+        else:
+            context['formset'] = formset
+            
+    else:
+        formset = ReportForm(instance=report)
+        
+        context['formset'] = formset
+        
+    return render_to_response('mycrispy.html', context)
+    
+@login_required
+def hours(request,eventid):
+    context = RequestContext(request)
+    user = request.user
+    
+    event = user.crewchiefx.filter(pk=eventid)
+    
+    if not event:
+        return HttpResponse("This Event Must not Have been yours")
+        
+    event = event[0]
+    return HttpResponse('k')

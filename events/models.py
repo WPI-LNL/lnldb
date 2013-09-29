@@ -174,6 +174,8 @@ class Category(models.Model):
     
     def __unicode__(self):
         return self.name
+    
+    
 class Service(models.Model):
     shortname = models.CharField(max_length=2)
     longname = models.CharField(max_length=64)
@@ -193,7 +195,7 @@ class Sound(Service):
     pass
 class Projection(Service):
     pass
-
+    
 class Billing(models.Model):
     date_billed = models.DateField()
     date_paid = models.DateField(null=True,blank=True)
@@ -202,6 +204,8 @@ class Billing(models.Model):
 
     class Meta:
         ordering = ("-date_billed","date_paid")
+        
+        
 class Event(models.Model):
     
     objects = models.Manager()
@@ -422,8 +426,11 @@ class CCReport(models.Model):
     report = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
-    for_service_cat = models.ManyToManyField(Category)
+    for_service_cat = models.ManyToManyField(Category,verbose_name="Services")
     
+    @property
+    def pretty_cat_list(self):
+        return ", ".join([x.name for x in self.for_service_cat.all()])
     
 #class OrgFund(models.Model):
     #fund = models.IntegerField()
@@ -470,6 +477,10 @@ class Organization(models.Model):
         ordering = ['name']
     
     
-
-
-
+# stats and the like
+class Hours(models.Model):
+    event = models.ForeignKey('Event',related_name="hours")
+    user = models.ForeignKey(User,related_name="hours")
+    hours = models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)
+    
+    

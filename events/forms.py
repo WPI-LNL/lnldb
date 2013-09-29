@@ -5,13 +5,14 @@ from django.db.models import Q
 
 from django.contrib.auth.models import User
 from helpers.form_fields import django_msgs
+from helpers.form_text import markdown_at_msgs
 from django.core.urlresolvers import reverse
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,MultiField,Field,HTML,Hidden,Reset
 from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions,PrependedText
 
-from events.models import Event,Organization,Category,Extra,Location,Lighting,Sound,Projection,Service,Billing
+from events.models import Event,Organization,Category,Extra,Location,Lighting,Sound,Projection,Service,Billing,CCReport
 from events.widgets import ExtraSelectorWidget,ValueSelectField
 from events.fields import ExtraSelectorField
 
@@ -307,8 +308,26 @@ class BillingForm(forms.ModelForm):
     class Meta:
         model = Billing
         
-        
-        
+class ReportForm(forms.ModelForm):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+                django_msgs,
+                Field('report',css_class="span10"),
+                markdown_at_msgs,
+                Field('for_service_cat',label="Services"),
+                FormActions(
+                    Submit('save', 'Save changes'),
+                    Reset('reset','Reset Form'),
+                )
+        )
+        super(ReportForm,self).__init__(*args,**kwargs)
+    class Meta:
+        model = CCReport
+        fields = ('report','for_service_cat')
         
         
 #FormWizard Forms

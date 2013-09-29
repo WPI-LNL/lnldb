@@ -1,8 +1,80 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h1>Thanks</h1>
-for submitting your event.
-
-We'll get back to you soon.
+    {% if member %}
+        {% if user.crewchiefx.count %}
+            <h1> <a href="{% url "events.views.my.my" %}">My</a> CC'd Events </h1>
+            <table class="table table-striped table-bordered">
+                <tr> 
+                    <th>Name </th>
+                    <th>Date </th>
+                    <th>Location </th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+                {% for event in user.crewchiefx.all %}
+                        <tr>
+                            <td>{{event.event_name}} {{ event.id }}</td>
+                            <td title="{{event.datetime_end}}">{{event.datetime_end|timesince}} Ago</td>
+                            <td>{{event.location}}</td>
+                            <td>{{ event.status }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a class="btn btn-primary" href="{% url 'my-ccreport' event.id %}">CC Report</a>
+                                    <a class="btn btn-info">Crew Hours</a>
+                                </div>
+                            </td>
+                        </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">You dont have any events.</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% endif %}
+    <h1> <a href="{% url "events.views.my.my" %}">My</a> Involved Events </h1>
+    <table class="table table-striped table-bordered">
+        <tr> 
+            <th>Name </th>
+            <th>Date </th>
+            <th>Location </th>
+            <th></th>
+        </tr>
+        {% for event in user.crewx.all %}
+                <tr>
+                    <td>{{event.event_name}}</td>
+                    <td title="{{event.datetime_end}}">{{event.datetime_end|timesince}} Ago</td>
+                    <td>{{event.location}}</td>
+                    <td><a class="btn">Repeat</a>
+                </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">You dont have any events.</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+    {% if user.submitter.count %}
+        <h1> <a href="{% url "events.views.my.my" %}">My</a> Submitted Events </h1>
+        <table class="table table-striped table-bordered">
+            <tr> 
+                <th>Name </th>
+                <th>Date </th>
+                <th>Location </th>
+                <th>Status</th>
+            </tr>
+            {% for event in user.submitter.all %}
+                    <tr>
+                        <td>{{event.event_name}}</td>
+                        <td title="{{event.datetime_end}}">{{event.datetime_end|timesince}} Ago</td>
+                        <td>{{event.location}}</td>
+                        <td>{{ event.status }}</a>
+                    </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4">You haven't submitted any events</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
 {% endblock %}

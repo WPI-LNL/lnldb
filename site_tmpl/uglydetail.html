@@ -236,10 +236,16 @@
                 </div>
                 <div id="reports" class="tab-pane">
                     {% for report in event.ccreport_set.all %}
-                        <h3>Report by {{report.crew_chief }}</h3> <em class="muted pull-right">posted on {{ report.created_on }}</em>
+                        <h3>Report by {{report.crew_chief }}</h3> 
+                        <em class="muted pull-right">
+                            Posted on {{ report.created_on }} <br />
+                            {% if report.created_on != report.updated_on %}
+                                Last Updated: {{ report.updated_on }}
+                            {% endif %}
+                        </em>
                         <blockquote>
-                            {{ report.report }}
-                            <small>{% for cat in report.for_service_cat.all %} {{cat}} {% endfor %}</small>
+                            {{ report.report|mduserlink|markdown }}
+                            <small>For {{ report.pretty_cat_list }}</small>
                         </blockquote>
                     {% empty %}
                         <h2>No Reports Submitted </h2>
