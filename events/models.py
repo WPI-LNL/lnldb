@@ -126,12 +126,13 @@ class EventManager(models.Manager):
             proj_reqs = proj_reqs,
             
             #otherservices = otherservices_l, 
-            otherservice_reqs = otherdescription
+            #otherservice_reqs = otherdescription
             
             )
         event.org.add(group)
         if otherservices_l:
             event.otherservices.add(*otherservices_l) #* because its a list yo.
+            event.otherservice_reqs = otherdescription
         event.save()
         return event
             

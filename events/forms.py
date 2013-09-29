@@ -458,7 +458,7 @@ class ScheduleForm(forms.Form):
         self.helper.layout = Layout(
             Fieldset(
                 'Setup', ### title
-                Field('setup_start',css_class="dtp"),
+                #Field('setup_start',css_class="dtp"),
                 Field('setup_complete',css_class="dtp"),
                 ),
             Fieldset(
@@ -485,6 +485,8 @@ class ScheduleForm(forms.Form):
             raise ValidationError('You cannot setup after you finish')
         if setup_complete < datetime.datetime.now(pytz.utc):
             raise ValidationError('Stop trying to time travel')
+        
+        return cleaned_data
     
     
 #helpers for the formwizard
@@ -494,8 +496,8 @@ named_event_forms = (
     ('select',SelectForm),
     ('lighting',LightingForm),
     ('sound',SoundForm),
-    ('other',ServiceForm),
     ('projection',ProjectionForm),
+    ('other',ServiceForm),
     ('schedule',ScheduleForm),
 )
 
@@ -505,7 +507,7 @@ named_event_tmpls= {
     'select':'eventform/select.html',
     'lighting':'eventform/lighting.html',
     'sound':'eventform/sound.html',
-    'other':'eventform/other.html',
     'projection':'eventform/projection.html',
+    'other':'eventform/other.html',
     'schedule':'eventform/schedule.html',
 }
