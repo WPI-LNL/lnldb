@@ -2,6 +2,9 @@
 <script type="text/javascript" src="{{ STATIC_URL }}js/bootstrap-timepicker.js"></script>
 <link href="{{ STATIC_URL }}css/datepicker.css" rel="stylesheet">
 <link href="{{ STATIC_URL }}css/timepicker.css" rel="stylesheet">
+<style>
+    .day {color:#111;}
+</style>
 <script type="text/javascript">
     $(document).ready(function () {
         $(".dtp").parent().find(":first-child").addClass('datepick')
@@ -12,11 +15,11 @@
         $(".dtp").parent().find(":last-child").addClass('timepick');
         $(".timepick").timepicker(
             {
-                minuteStep: 10,
-                showInputs: false,
+                minuteStep: 30,
+                showInputs: true,
                 disableFocus: true,
-                showMeridian: false,
-                defaultTime:false
+                showMeridian: true,
+                defaultTime: '12:00 PM',
                 
             });
         });
