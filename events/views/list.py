@@ -22,10 +22,10 @@ def datefilter(eventqs,context,start=None,end=None):
         context['start'] = start
         try:
             startdate = datetime.datetime.strptime(start, '%Y-%m-%d')
-            eventqs = events.filter(datetime_start__gte=startdate)
+            eventqs = eventqs.filter(datetime_start__gte=startdate)
             
         except:
-            pass
+            raise
     else:
         eventqs = eventqs.filter(datetime_start__gte=today)
         
@@ -36,7 +36,7 @@ def datefilter(eventqs,context,start=None,end=None):
             eventqs = eventqs.filter(datetime_end__lte=enddate)
             
         except:
-            pass
+            raise
     else:
         eventqs = eventqs.filter(datetime_end__lte=weekfromnow)
     
