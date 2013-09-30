@@ -13,6 +13,9 @@ class Meeting(models.Model):
     def __unicode__(self):
         return "Meeting For %s" % self.datetime.date()
     
+    class Meta:
+        ordering = ('-datetime',)
+    
 class MeetingAnnounce(models.Model):
     meeting = models.ForeignKey(Meeting)
     events = models.ManyToManyField(Event,related_name="meetingannouncements")

@@ -256,7 +256,7 @@ class InternalEventForm(forms.ModelForm):
             queryset = Location.objects.all()
         )
     datetime_setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now()),
-    person_name = AutoCompleteSelectField('Users',required=False,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    #person_name = AutoCompleteSelectField('Users',required=False,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
     org = AutoCompleteSelectMultipleField('Orgs',required=False)
     
     datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())

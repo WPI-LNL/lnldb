@@ -1,4 +1,6 @@
 {% extends 'base_admin.html' %}
+{% load at_user_linking %}
+{% load markup %}
 {% load bootstrap_toolkit %}
 {% block content %}
     <div class="hero-unit">
@@ -11,7 +13,8 @@
             <ul>
             {% for a in m.attendance.all %}
                 <li><a href="{% url "members.views.detail" a.id %}">{{a.first_name }} {{a.last_name }}</a></li>
-            
+            {% empty %}
+                <small>Nobody is here I guess.</small>
             {% endfor %}
             </ul>
             <a class="btn btn-primary" href="{% url "meetings.views.editattendance" m.id %}">Edit Attendance</a>
@@ -63,7 +66,7 @@
                     <th></th>
                 </tr>
                 {% for e in events %}
-                    <tr>
+                    <tr data-toggle="collapse" data-target="#entry{{e.id}}">
                         <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
                         <td>
                             {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
@@ -87,6 +90,13 @@
                             <a class="btn btn-inverse" href="{% url "meeting-updateevent" m.id e.id %}">Setup Time &amp; Crew Chiefs</a>
                         </td>
                     </tr>
+                    <tr>
+                        <td colspan="6">
+                            <div class="collapse" id="entry{{e.id}}">
+                            {{ e.description|mduserlink|markdown }}
+                            </div>
+                        </td>
+                    </tr>
                 {% endfor %}
             </table>
             <h3>Future Events (next week)</h3>
@@ -100,7 +110,7 @@
                     <th></th>
                 </tr>
                 {% for e in future %}
-                    <tr>
+                    <tr data-toggle="collapse" data-target="#entry{{e.id}}">
                         <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
                         <td>
                             {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
@@ -122,6 +132,13 @@
                         </td>
                         <td>
                             <a class="btn btn-inverse" href="{% url "meeting-updateevent" m.id e.id %}">Setup Time &amp; Crew Chiefs</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="6">
+                            <div class="collapse" id="entry{{e.id}}">
+                            {{ e.description|mduserlink|markdown }}
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}
