@@ -569,10 +569,13 @@ class ScheduleForm(forms.Form):
                 ),
         )
         super(ScheduleForm,self).__init__(*args,**kwargs)
+    today = datetime.datetime.today()
+    noon = datetime.time(12)
+    noontoday = datetime.datetime.combine(today,noon)
     #setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Setup Completed By")
-    event_start = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Event Starts")
-    event_end = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Event Ends")
+    setup_complete = forms.SplitDateTimeField(initial=noontoday,label="Setup Completed By")
+    event_start = forms.SplitDateTimeField(initial=noontoday,label="Event Starts")
+    event_end = forms.SplitDateTimeField(initial=noontoday,label="Event Ends")
     
     def clean(self):
         cleaned_data = super(ScheduleForm, self).clean()
