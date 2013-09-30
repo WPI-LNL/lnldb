@@ -16,7 +16,7 @@
                 <a class="btn btn-success btn-large" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
                 <a class="btn btn-danger btn-large" href="{% url "events.views.flow.approval" event.id %}">Cancel</a>
             </div>
-            {% elif not event.paid and event.over %}
+            {% elif not event.paid and event.over and not event.closed %}
             <a class="btn btn-primary btn-large" href="{% url "event-mkbilling" event.id %}">Create Bill</a>
             {% elif event.paid and not event.closed %} 
             <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
@@ -221,7 +221,7 @@
                     <h2> Crew Chief(s) </h2>
                     <ul>
                         {% for cc in event.crew_chief.all %}
-                        <li>{{ cc }}</li>
+                        <li><a href="{% url "memberdetail" cc.id %}">{{ cc }}</a></li>
                         {% endfor %}
                     </ul>
                     
@@ -229,7 +229,7 @@
                     <h2> Crew </h2>
                     <ul>
                         {% for c in event.crew.all %}
-                        <li>{{ c }}</li>
+                        <li><a href="{% url "memberdetail" c.id %}">{{ c }}</a></li>
                         {% endfor %}
                     </ul>
                     
@@ -255,7 +255,7 @@
                         <h3> Crew Chiefs Needing Reports </h3>
                         <ul>
                         {% for crew in event.crew_needing_reports %}
-                            <li>{{ crew }}</li>
+                            <li><a href="{% url "memberdetail" crew.id %}">{{ crew }}</a></li>
                         {% endfor %}
                         </ul>
                     {% endif %}

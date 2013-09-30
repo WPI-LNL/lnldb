@@ -13,8 +13,11 @@ from members.forms import MemberForm
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
+
 from helpers.challenges import is_officer
 from helpers.mixins import LoginRequiredMixin, OfficerMixin
+
+from events.models import Event
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
@@ -103,6 +106,9 @@ def detail(request,id):
     user = get_object_or_404(User,pk=id)
     
     context['u'] = user
+    
+    moviesccd = Event.objects.filter(crew_chief__id=id,projection__isnull=False)
+    context['moviesccd'] = moviesccd
     return render_to_response('userdetail.html', context)
 
 

@@ -19,7 +19,7 @@
             <table class="table">
                 <tr>
                     <th>Status</th>
-                    <td>{{ u.groups.all }}</td>
+                    <td>{% for g in u.groups.all %}{{g }} {% endfor %}</td>
                 </tr>
                 <tr>
                     <th>Events CCd:</th>
@@ -31,7 +31,7 @@
                 </tr>
                 <tr>
                     <th>Films CC'd</th>
-                    <td>TODO</td>
+                    <td>{{ moviesccd.count }}</td>
                 </tr>
                 <tr>
                     <th>Meeting Attendance Count</th>
@@ -54,7 +54,7 @@
                 </tr>
                 <tr>
                     <th>MDC</th>
-                    <td>TODO</td>
+                    <td>{{u.profile.mdc}}</td>
                 </tr>
             </table>
         </div>
