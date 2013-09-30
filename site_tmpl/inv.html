@@ -46,13 +46,7 @@
                 <td><a href="{% url "inventory.views.cat" i.subcategory.category %}">{{i.subcategory.category }}</a></td>
                 <td><a href="{% url "inventory.views.subcat" i.subcategory.category i.subcategory %}">{{i.subcategory }}</a></td>
                 <td>
-                    {% if i.equip_status == "AV" %}
-                        <i class="icon-ok" title="available"></i>
-                    {% elif i.equip_status == "UR" %}
-                        <i class="icon-wrench" title="under repair"></i>
-                    {% elif i.equip_status == "RE" %}
-                        <i class="icon-remove" title="retired"></i>
-                    {% endif %}
+                    <i class="{{ i.status.iconclass }}" title="{{ i.status}}"></i> 
                 </th>
             </tr>
     {% endfor %}

@@ -209,6 +209,7 @@ class InternalEventForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
         self.helper.layout = Layout(
+            django_msgs,
             TabHolder(
                 Tab(
                     'Name And Location',

@@ -268,13 +268,13 @@ class Event(models.Model):
     crew_chief = models.ManyToManyField(User,null=True,blank=True,related_name='crewchiefx')
     crew = models.ManyToManyField(User,null=True,blank=True,related_name='crewx')
     
-    def clean(self):
-        if self.datetime_start > self.datetime_end:
-            raise ValidationError('You cannot start after you finish')
-        if self.datetime_setup_complete > self.datetime_start:
-            raise ValidationError('You cannot setup after you finish')
-        #if self.datetime_setup_complete < datetime.datetime.now(pytz.utc):
-            #raise ValidationError('Stop trying to time travel')
+    #def clean(self):
+        #if self.datetime_start > self.datetime_end:
+            #raise ValidationError('You cannot start after you finish')
+        #if self.datetime_setup_complete > self.datetime_start:
+            #raise ValidationError('You cannot setup after you finish')
+        ##if self.datetime_setup_complete < datetime.datetime.now(pytz.utc):
+            ##raise ValidationError('Stop trying to time travel')
     
     def usercanseeevent(self,user):
         
