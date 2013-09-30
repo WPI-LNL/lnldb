@@ -267,7 +267,7 @@
                         </thead>
                         {% for hour in event.hours.all %}
                             <tr>
-                                <td>{{ hour.user.get_full_name }}</td>
+                                <td><a href="{% url "memberdetail" hour.user.id %}">{{ hour.user.get_full_name }}</a></td>
                                 <td>{{ hour.hours }}</td>
                             </tr>
                         {% endfor %}

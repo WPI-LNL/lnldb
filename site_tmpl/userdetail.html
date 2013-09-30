@@ -19,7 +19,7 @@
             <table class="table">
                 <tr>
                     <th>Status</th>
-                    <td>{{ u.status }}</td>
+                    <td>{{ u.groups.all }}</td>
                 </tr>
                 <tr>
                     <th>Events CCd:</th>
@@ -27,7 +27,7 @@
                 </tr>
                 <tr>
                     <th>Events Participated:</th>
-                    <td>{{u.crewx.count}}</td>
+                    <td>{{u.hours.count}}</td>
                 </tr>
                 <tr>
                     <th>Films CC'd</th>
@@ -36,6 +36,25 @@
                 <tr>
                     <th>Meeting Attendance Count</th>
                     <td>{{ u.meeting_set.count }}</td>
+                </tr>
+            </table>
+            <h3> Contact </h3>
+            <table class="table">
+                <tr>
+                    <th>WPI Box</th>
+                    <td>{{ u.profile.wpibox }}</td>
+                </tr>
+                <tr>
+                    <th>Phone</th>
+                    <td>{{ u.profile.phone }}</td>
+                </tr>
+                <tr>
+                    <th>Address</th>
+                    <td>{{u.profile.address}}</td>
+                </tr>
+                <tr>
+                    <th>MDC</th>
+                    <td>TODO</td>
                 </tr>
             </table>
         </div>
@@ -50,8 +69,8 @@
         <div class="span4">
             <h3>Events Participated</h3>
             <ul class="unstyled"> 
-                {% for event in u.crewx.all %}
-                    <li><a href="{% url "events-detail" event.id %}">{{ event }}</a></li>
+                {% for h in u.hours.all %}
+                    <li><a href="{% url "events-detail" h.event.id %}">{{ h.event }}:</a> {{ h.hours }}h</li>
                 {% endfor %}
             </ul>
         </div>
