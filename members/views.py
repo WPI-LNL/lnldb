@@ -123,3 +123,6 @@ class UserUpdate(OfficerMixin,LoginRequiredMixin,UpdateView):
     def form_valid(self,form):
         messages.success(self.request,"Account Info Saved!", extra_tags='success')
         return super(UserUpdate,self).form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('memberdetail',args=(self.object.id,))
