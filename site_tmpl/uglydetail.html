@@ -124,96 +124,47 @@
 
                 </div>
                 <div id="services" class="tab-pane">
-                    <h2>Total Billing Amount</h2>
-                    ${{ event.cost_total }}
+                    
                     {% if event.lighting %}
-                        <h2> Lighting Services </h2>
-                        <h3>Level:</h3> {{ event.lighting }} (${{ event.lighting.base_cost }})
+                        <h2>Lighting Services ({{ event.lighting }})</h2>
                         <h3>Requirements:</h3>
                             <pre>{{ event.lighting_reqs }}</pre>
                         {% if event.extras_lighting %}
                         <h3>Extras:</h3>
-                            <table class="table">
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Quantity</th>
-                                    <th>Cost</th>
-                                    <th>Total</th>
-                                </tr>
+                            <ul>
                                 {% for e in event.extras_lighting %}
-                                    <tr>
-                                        <td>{{ e.extra }} </td>
-                                        <td>{{ e.quant }} </td>
-                                        <td>${{ e.cost }} </td>
-                                        <td>${{ e.totalcost }} </td>
-                                    </tr>
+                                    <li>{{ e.extra }} x{{ e.quant }}</li>
                                 {% endfor %}
-                                <tr class="info">
-                                    <td colspan="3">Total:</td>
-                                    <td>${{ event.cost_lighting_extras }}</td>
-                                </tr>
-                            </table>
+                            </ul>
                         {% endif %}
                     {% endif %}
                     
                     {% if event.sound %}
-                        <h2> Sound Services </h2>
-                        <h3>Level:</h3> {{ event.sound }} (${{ event.sound.base_cost }})
+                        <h2> Sound Services ({{ event.sound }})</h2>
                         <h3>Requirements:</h3>
                             <pre>{{ event.sound_reqs }}</pre>
                         {% if event.extras_sound %}
                         <h3>Extras:</h3>
-                            <table class="table">
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Quantity</th>
-                                    <th>Cost</th>
-                                    <th>Total</th>
-                                </tr>
+                            <ul>
                                 {% for e in event.extras_sound %}
-                                    <tr>
-                                        <td>{{ e.extra }}</td>
-                                        <td>{{ e.quant }}</td>
-                                        <td>${{ e.cost }} </td>
-                                        <td>${{ e.totalcost }} </td>
-                                    </tr>
+                                    <li>{{ e.extra }} x{{ e.quant }}</li>
                                 {% endfor %}
-                                <tr class="info">
-                                    <td colspan="3">Total:</td>
-                                    <td>${{ event.cost_sound_extras }}</td>
-                                </tr>
-                            </table>
+                            </ul>
                         {% endif %}
                     {% endif %}
                     
                     {% if event.projection %}
-                        <h2> Projection Services </h2>
-                        <h3>Level:</h3> {{ event.projection }} (${{ event.projection.base_cost }})
+                        <h2> Projection Services ({{ event.projection }})</h2>
                         <h3>Requirements:</h3>
                             <pre>{{ event.proj_reqs }}</pre>
-                        {% if event.extras_projection %}
-                            <h3>Extras:</h3>
-                            <table class="table">
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Quantity</th>
-                                    <th>Cost</th>
-                                    <th>Total</th>
-                                </tr>
-                                {% for e in event.extras_projection %}
-                                    <tr>
-                                        <td>{{ e.extra }}</td>
-                                        <td>{{ e.quant }}</td>
-                                        <td>${{ e.cost }} </td>
-                                        <td>${{ e.totalcost }} </td>
-                                    </tr>
-                                {% endfor %}
-                                <tr class="info">
-                                    <td colspan="3">Total:</td>
-                                    <td>${{ event.cost_projection_extras }}</td>
-                                </tr>
-                            </table>
-                        {% endif %}
+                    {% endif %}
+                    {% if event.otherservices.exists %}
+                        <h2> Other Services </h2>
+                        <ul>
+                            {% for s in event.otherservices.all %}
+                                <li>{{ s }}</li>
+                            {% endfor %}
+                        </ul>
                     {% endif %}
                 </div>
                 <div id="crew" class="tab-pane">
@@ -274,6 +225,66 @@
                     </table>
                 </div>
                 <div id="billing" class="tab-pane">
+                    <h2>Price Breakdown</h2>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Cost</th>
+                            </tr>
+                        </thead>
+                        {% if event.lighting %}
+                        <tr class="success">
+                            <td>{{event.lighting}}</td>
+                            <td>${{ event.lighting.base_cost }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if event.extras_lighting.exists %}
+                        {% for extra in event.extras_lighting %}
+                        <tr>
+                            <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
+                            <td>${{ extra.totalcost }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                        
+                        {% if event.sound %}
+                        <tr class="success">
+                            <td>{{event.sound}}</td>
+                            <td>${{ event.sound.base_cost }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if event.extras_sound.exists %}
+                        {% for extra in event.extras_sound %}
+                        <tr>
+                            <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
+                            <td>${{ extra.totalcost }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                        
+                        {% if event.projection %}
+                        <tr class="success">
+                            <td>{{event.projection}}</td>
+                            <td>${{ event.projection.base_cost }}</td>
+                        </tr>
+                        {% endif %}
+                        
+                        {% if event.otherservices.exists %}
+                            {% for service in event.otherservices.all %}
+                                <tr class="success">
+                                    <td>{{ service }}</td>
+                                    <td>${{ service.base_cost }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        <tr class="info">
+                            <td>Total</td>
+                            <td>${{ event.cost_total }}</td>
+                        </tr>
+                    </table>
+                    <h2> Bills </h2>
                     <table class="table">
                     <thead>
                         <tr>
