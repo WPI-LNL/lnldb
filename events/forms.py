@@ -160,8 +160,11 @@ class EventApprovalForm(forms.ModelForm):
                 Tab(
                     "Services",
                     Field('lighting'),
+                    Field('lighting_reqs'),
                     Field('sound'),
+                    Field('sound_reqs'),
                     Field('projection'),
+                    Field('proj_reqs'),
                     Field('otherservices'),
                     ),
             ),
