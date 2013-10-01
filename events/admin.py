@@ -10,6 +10,7 @@ def disable_show_in_wo_form(modeladmin, request, queryset):
     queryset.update(show_in_wo_form=False)
 disable_show_in_wo_form.short_description = "Make locations NOT show up in Workorder form"    
 
+#modeladmins
 class EventAdmin(admin.ModelAdmin):
     filter_horizontal = ('crew','crew_chief','org')
     
@@ -19,11 +20,12 @@ class OrgAdmin(admin.ModelAdmin):
     search_fields = ['name','shortname','email','exec_email']
 
 class LocAdmin(admin.ModelAdmin):
-    list_filter = ('show_in_wo_form',)
+    list_filter = ('show_in_wo_form','building')
     actions = [enable_show_in_wo_form,disable_show_in_wo_form]
 
 admin.site.register(Billing)
 admin.site.register(Hours)
+admin.site.register(Building)
 admin.site.register(Location,LocAdmin)
 admin.site.register(Event,EventAdmin)
 admin.site.register(CCReport)

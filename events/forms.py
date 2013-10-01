@@ -17,7 +17,7 @@ from events.models import Extra,Location,Lighting,Sound,Projection,Service
 from events.models import Billing,CCReport,Hours
 
 from events.widgets import ExtraSelectorWidget,ValueSelectField
-from events.fields import ExtraSelectorField
+from events.fields import ExtraSelectorField,GroupedModelChoiceField
 
 from bootstrap_toolkit.widgets import BootstrapDateInput, BootstrapTextInput, BootstrapUneditableInput
 
@@ -459,8 +459,15 @@ class SelectForm(forms.Form):
             required = True
         )
     
-    location = forms.ModelChoiceField(
-            queryset = Location.objects.filter(show_in_wo_form=True     )
+    #location = forms.ModelChoiceField(
+            #queryset = Location.objects.filter(show_in_wo_form=True)
+        #)
+    
+    # soon to be a 
+    location = GroupedModelChoiceField(
+            queryset = Location.objects.filter(show_in_wo_form=True),
+            group_by_field = "building",
+            group_label = lambda group: group,
         )
     
     

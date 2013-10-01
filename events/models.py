@@ -138,10 +138,22 @@ class EventManager(models.Manager):
             
 ### MODELS
 
+class Building(models.Model):
+    name = models.CharField(max_length=128)
+    shortname = models.CharField(max_length=4)
+    
+    def __unicode__(self):
+        #return "<Building (%s,%s)>" % (self.name, self.shortname)
+        return self.name
+    
+    class Meta:
+        ordering = ['name']
+    
 class Location(models.Model):
     name = models.CharField(max_length=64)
     setup_only = models.BooleanField(default=False)
     show_in_wo_form = models.BooleanField(default=True)
+    building = models.ForeignKey(Building)
     
     def __unicode__(self):
         return self.name
