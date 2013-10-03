@@ -91,6 +91,11 @@ def upcoming(request,start=None,end=None):
 def incoming(request,start=None,end=None):
     context = RequestContext(request)
     
+    today = datetime.date.today()
+    start = today.strftime('%Y-%m-%d')
+    end = today + datetime.timedelta(days=365.25)
+    end = end.strftime('%Y-%m-%d')
+    
     events = Event.objects.filter(approved=False).filter(closed=False)
     events,context = datefilter(events,context,start,end)
     
