@@ -299,11 +299,11 @@ class BillingForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
         self.helper.form_action = ""
+        
         self.helper.layout = Layout(
                 django_msgs,
-                Hidden('event',event),
+                Hidden('event',event.id),
                 PrependedText('date_billed','<i class="icon-calendar"></i>',css_class="datepick"),
-                PrependedText('date_paid','<i class="icon-calendar"></i>',css_class="datepick"),
                 PrependedText('amount', '<strong>$</strong>'),
                 FormActions(
                     Submit('save', 'Save changes'),
@@ -311,6 +311,32 @@ class BillingForm(forms.ModelForm):
                 )
             )
         super(BillingForm,self).__init__(*args,**kwargs)
+        
+        self.fields['amount'].initial = str(event.cost_total)
+        
+    class Meta:
+        model = Billing
+        
+class BillingUpdateForm(forms.ModelForm):
+    def __init__(self,event,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        
+        self.helper.layout = Layout(
+                django_msgs,
+                Hidden('event',event.id),
+                PrependedText('date_paid','<i class="icon-calendar"></i>',css_class="datepick"),
+                PrependedText('amount', '<strong>$</strong>'),
+                FormActions(
+                    Submit('save', 'Save changes'),
+                    Reset('reset','Reset Form'),
+                )
+            )
+        super(BillingUpdateForm,self).__init__(*args,**kwargs)
+        
+        self.fields['amount'].initial = str(event.cost_total)
         
     class Meta:
         model = Billing

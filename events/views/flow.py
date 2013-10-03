@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 
-from events.forms import EventApprovalForm, BillingForm
+from events.forms import EventApprovalForm, BillingForm, BillingUpdateForm
 from events.forms import CrewAssign,CrewChiefAssign
 from events.models import Event,Organization,Billing
 from helpers.challenges import is_officer
@@ -148,7 +148,8 @@ class BillingCreate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,CreateView):
     def get_form_kwargs(self):
         # pass "user" keyword argument with the current user to your form
         kwargs = super(BillingCreate, self).get_form_kwargs()
-        kwargs['event'] = self.kwargs['event']
+        event = get_object_or_404(Event,pk=self.kwargs['event'])
+        kwargs['event'] = event
         return kwargs
 
     def form_valid(self,form):
@@ -160,14 +161,15 @@ class BillingCreate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,CreateView):
     
 class BillingUpdate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,UpdateView):
     model = Billing
-    form_class = BillingForm
+    form_class = BillingUpdateForm
     template_name = "form_crispy_cbv.html"
     msg = "Update Bill"
     
     def get_form_kwargs(self):
         # pass "user" keyword argument with the current user to your form
         kwargs = super(BillingUpdate, self).get_form_kwargs()
-        kwargs['event'] = self.kwargs['event']
+        event = get_object_or_404(Event,pk=self.kwargs['event'])
+        kwargs['event'] = event
         return kwargs
 
     def form_valid(self,form):
