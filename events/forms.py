@@ -467,7 +467,7 @@ class SelectForm(forms.Form):
     location = GroupedModelChoiceField(
             queryset = Location.objects.filter(show_in_wo_form=True),
             group_by_field = "building",
-            group_label = lambda group: group,
+            group_label = lambda group: group.name,
         )
     
     
@@ -571,7 +571,11 @@ class ScheduleForm(forms.Form):
             Fieldset(
                 'Setup', ### title
                 #Field('setup_start',css_class="dtp"),
-                Field('setup_complete',css_class="dtp"),
+                Div(
+                    HTML('<div class="pull-left"><a class="btn btn-mini btn-primary" href="#" id="samedate"><i class="icon-arrow-down icon-white"></i>&nbsp;<i class="icon-calendar icon-white"></i></a></div>'),
+                    Field('setup_complete',css_class="dtp"),
+                    
+                    ),
                 ),
             Fieldset(
                 'Event', ### title

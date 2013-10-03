@@ -3,4 +3,13 @@
 
 {% block extras %}
 {% include 'js_datetimepick.tmpl' %}
+<script>
+    $(document).ready(function () {
+        $("#samedate").click(function(){
+            var date = $("#id_schedule-setup_complete_0").val();
+            $("#id_schedule-event_start_0").val(date);
+            $("#id_schedule-event_end_0").val(date);
+        });
+    });
+</script>
 {% endblock %}
