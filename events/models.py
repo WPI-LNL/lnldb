@@ -159,7 +159,7 @@ class Location(models.Model):
         return self.name
 
     class Meta:
-        ordering = ['name']
+        ordering = ['building','name']
 class ExtraInstance(models.Model):
     event = models.ForeignKey('Event')
     extra = models.ForeignKey('Extra')
