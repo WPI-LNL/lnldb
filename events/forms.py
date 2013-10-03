@@ -146,12 +146,14 @@ class IOrgForm(forms.ModelForm):
 class EventApprovalForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
             TabHolder(
                 Tab(
                     "Standard Fields",
                     Field('description',label="Description (optional)",css_class="span6"),
-                    HTML('<p class="muted">This will describe the event to your CCs</p>'),
+                    HTML('<p class="muted offset2">This will describe the event to your CCs</p>'),
+                    markdown_at_msgs,
                     Field('datetime_start',label="Event Start",css_class="dtp"),
                     Field('datetime_end',label="Event End",css_class="dtp"),
                     #Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
@@ -160,12 +162,13 @@ class EventApprovalForm(forms.ModelForm):
                 Tab(
                     "Services",
                     Field('lighting'),
-                    Field('lighting_reqs'),
+                    Field('lighting_reqs',css_class="span8"),
                     Field('sound'),
-                    Field('sound_reqs'),
+                    Field('sound_reqs',css_class="span8"),
                     Field('projection'),
-                    Field('proj_reqs'),
+                    Field('proj_reqs',css_class="span8"),
                     Field('otherservices'),
+                    Field('otherservice_reqs',css_class="span8")
                     ),
             ),
             FormActions(
@@ -176,7 +179,7 @@ class EventApprovalForm(forms.ModelForm):
         
     class Meta:
         model = Event
-        fields = ['description','datetime_start','datetime_end','datetime_setup_complete','lighting','sound','projection','otherservices']
+        fields = ['description','datetime_start','datetime_end','datetime_setup_complete','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs']
         
     datetime_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
     datetime_end =  forms.SplitDateTimeField(initial=datetime.datetime.now())

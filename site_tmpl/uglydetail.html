@@ -1,5 +1,6 @@
 {% extends 'base_admin.html' %}
 {% load at_user_linking %}
+{% load at_event_linking %}
 {% load markup %}
 {% block content %}
     <div class="row-fluid">
@@ -118,7 +119,7 @@
                         </tr>
                         <tr>
                             <th>Posted Description</th>
-                            <td>{{ event.description|mduserlink|markdown }}</td>
+                            <td>{{ event.description|mduserlink|mdeventlink|markdown }}</td>
                         </tr>
                     </table>
 
