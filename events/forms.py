@@ -469,7 +469,7 @@ class SelectForm(forms.Form):
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Fieldset(
-                'Name',
+                'Name and Location',
                 'eventname',
                 'location'
             ),
@@ -571,15 +571,40 @@ class SoundForm(forms.Form):
         )
     
 class ProjectionForm(forms.Form):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Fieldset(
+                'Basics', ### title
+                'projection',
+                Field('requirements', css_class="span8"),
+                ),
+
+        )
+        super(ProjectionForm,self).__init__(*args,**kwargs)
     projection = forms.ModelChoiceField(
-            queryset = Projection.objects.all()
+            empty_label=None,
+            queryset = Projection.objects.all(),
+            widget = forms.RadioSelect(attrs={'class':'radio'}),
         )   
     requirements = forms.CharField(
             widget=forms.Textarea,
             label = "Projection Requirements",
+            required = False
         )
     
 class ServiceForm(forms.Form):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Fieldset(
+                'Basics', ### title
+                'services',
+                Field('otherservice_reqs', css_class="span8"),
+                ),
+
+        )
+        super(ServiceForm,self).__init__(*args,**kwargs)
     services = forms.ModelMultipleChoiceField(
             queryset = Service.objects.filter(category__name__in=["Misc","Power"]),
             widget = forms.CheckboxSelectMultiple(attrs={'class':'checkbox'}),
