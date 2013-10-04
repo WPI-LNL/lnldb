@@ -82,6 +82,7 @@ urlpatterns = patterns('',
     
     #events
     url(r'^lnadmin/events/view/(?P<id>[0-9a-f]+)/$', 'events.views.flow.viewevent', name="events-detail"),        
+    url(r'^lnadmin/events/view/(?P<id>[0-9a-f]+)/pdf/$', 'pdfs.views.generate_event_pdf', name="events-pdf"),        
     url(r'^lnadmin/events/mk/', 'events.views.mkedrm.eventnew', name="event-new"),
     url(r'^lnadmin/events/edit/(?P<id>[0-9a-f]+)/$','events.views.mkedrm.eventnew', name="event-edit"),
     url(r'^lnadmin/events/approve/(?P<id>[0-9a-f]+)/$', 'events.views.flow.approval', name="event-approve"), 

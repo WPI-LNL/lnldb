@@ -347,6 +347,19 @@ class Event(models.Model):
         return foo
     
     @property
+    def eventservices(self):
+        foo = []
+        if self.lighting:
+            foo.append(self.lighting)
+        if self.sound:
+            foo.append(self.sound)
+        if self.projection:
+            foo.append(self.projection)
+        if self.otherservices:
+            foo.extend([s for s in self.otherservices.all()])
+        return foo
+    
+    @property
     def status(self):
         if self.cancelled:
             return "Cancelled"
