@@ -49,3 +49,28 @@ def generate_event_pdf(request, id):
     pdf = file.read()
     file.close()            # Don't forget to close the file handle
     return HttpResponse(pdf, mimetype='application/pdf')
+
+
+def generate_event_pdf_multi(request, ids=None):
+    if not ids:
+        return HttpResponse("Should probably give some ids to return pdfs for..")
+    # Prepare IDs
+    idlist = ids.split(',')
+    # Prepare context
+    data = {}
+    events = Event.objects.filter(pk__in=idlist)
+    data['events'] = events
+
+    # Render html content through html template with context
+    template = get_template('pdf_templates/events.html')
+    html  = template.render(Context(data))
+
+    # Write PDF to file
+    file = open(os.path.join(settings.MEDIA_ROOT, 'event-multi.pdf'), "w+b")
+    pisaStatus = pisa.CreatePDF(html, dest=file, link_callback = link_callback)
+
+    # Return PDF document through a Django HTTP response
+    file.seek(0)
+    pdf = file.read()
+    file.close()            # Don't forget to close the file handle
+    return HttpResponse(pdf, mimetype='application/pdf')

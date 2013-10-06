@@ -82,6 +82,7 @@ def upcoming(request,start=None,end=None):
     context['h2'] = "Upcoming Workorders"
     context['events'] = events
     context['baseurl'] = reverse("upcoming")
+    context['pdfurl'] = reverse('events-pdf-multi-empty')
     
     return render_to_response('events.html', context)
 
@@ -106,6 +107,8 @@ def incoming(request,start=None,end=None):
     context['h2'] = "Incoming Workorders"
     context['events'] = events
     context['baseurl'] = reverse("incoming")
+    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    
     return render_to_response('events.html', context)
 
 
@@ -124,6 +127,8 @@ def openworkorders(request,start=None,end=None):
     context['h2'] = "Open Workorders"
     context['events'] = events
     context['baseurl'] = reverse("open")
+    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    
     return render_to_response('events.html', context)
 
 @login_required
@@ -142,6 +147,8 @@ def unbilled(request,start=None,end=None):
     context['h2'] = "Paid Workorders"
     context['events'] = events
     context['baseurl'] = reverse("paid")
+    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    
     return render_to_response('events.html', context)
 
 
@@ -164,6 +171,8 @@ def paid(request,start=None,end=None):
     context['h2'] = "Paid Workorders"
     context['events'] = events
     context['baseurl'] = reverse("paid")
+    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    
     return render_to_response('events.html', context)
 
 
@@ -185,6 +194,8 @@ def unpaid(request,start=None,end=None):
     context['h2'] = "UnPaid Workorders"
     context['events'] = events
     context['baseurl'] = reverse("unpaid")
+    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    
     return render_to_response('events.html', context)    
 
 
@@ -203,6 +214,8 @@ def closed(request,start=None,end=None):
     context['h2'] = "Closed Workorders"
     context['events'] = events
     context['baseurl'] = reverse("closed")
+    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    
     return render_to_response('events.html', context)       
 
 

@@ -1,9 +1,11 @@
 {% extends 'base_admin.html' %}
+{% block extras %}
+{% include 'js_event_checkboxes.tmpl' %}
+{% endblock %}
 {% block content %}    
 <div class="row-fluid">
     <div class="span12">
         <h2>{{h2}}</h2>
-        
     </div>
 </div>
 <div class="row-fluid">
@@ -49,6 +51,9 @@
                             
                         </ul>
                         {% endif %}
+                        <hr>
+                            <a href="#" class="btn btn-warning" id="showselect">PDF Select</a>
+                            <a href="#" class="btn hide btn-inverse" id="submitselect">Submit Selections</a>
                     </div>
                 </div>
             </div>
@@ -93,7 +98,10 @@
                         <td>
                             {% if event.otherservices.count %} Y {% else %} N {% endif %}
                         </td>
-                        <td> <a href="{% url "events.views.flow.assigncrew" event.id %}">Crew</a></td>
+                        <td class="tasks">
+                            <span class="crewtask"><a href="{% url "events.views.flow.assigncrew" event.id %}">Crew</a></span>
+                            <input type="checkbox" class="hide eventselect" value="{{ event.id }}"> 
+                        </td>
                     </tr>
             {% endfor %}
         </table>

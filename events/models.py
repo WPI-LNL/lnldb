@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 # Create your models here.
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import reverse
 import datetime,pytz
 
 PROJECTIONS = (
@@ -288,6 +289,11 @@ class Event(models.Model):
         ##if self.datetime_setup_complete < datetime.datetime.now(pytz.utc):
             ##raise ValidationError('Stop trying to time travel')
     
+    def firstorg(self):
+        return self.org.all()[0]
+    
+    def ccreport_url(self):
+        return reverse("my-ccreport",args=(self.id,))
     def usercanseeevent(self,user):
         
         if user in self.crew_chief.all():
@@ -488,8 +494,9 @@ class Organization(models.Model):
     
     last_updated = models.DateTimeField(auto_now=True)
 
+    @property
     def fopal(self):
-        return self.fund, self.organization, self.account
+        return "%s-%s-%s" % (self.fund, self.organization, self.account)
 
     def __unicode__(self):
         return self.name

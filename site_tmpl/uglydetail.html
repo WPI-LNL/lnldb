@@ -22,7 +22,7 @@
             {% elif event.paid and not event.closed %} 
             <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
             {% else %}
-            None Available
+            <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
             {% endif %}
             </h3>
 

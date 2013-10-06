@@ -1,5 +1,6 @@
 {% extends 'base_admin.html' %}
 {% load at_user_linking %}
+{% load at_event_linking %}
 {% load markup %}
 {% load bootstrap_toolkit %}
 {% block content %}
@@ -93,7 +94,7 @@
                     <tr>
                         <td colspan="6">
                             <div class="collapse" id="entry{{e.id}}">
-                            {{ e.description|mduserlink|markdown }}
+                            {{ e.description|mduserlink|mdeventlink|markdown }}
                             </div>
                         </td>
                     </tr>
@@ -137,7 +138,7 @@
                     <tr>
                         <td colspan="6">
                             <div class="collapse" id="entry{{e.id}}">
-                            {{ e.description|mduserlink|markdown }}
+                            {{ e.description|mduserlink|mdeventlink|markdown }}
                             </div>
                         </td>
                     </tr>
