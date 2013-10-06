@@ -3,9 +3,178 @@
 {% block body %}
 <div>
     {% for event in events %}
+
         {% for service in event.eventservices %}
-            <h1>{{ event }}</h1>
-            <div>{{ service }}</div>
+            <div class="heading">
+                <center>WPI Lens and Lights Work Order</center>
+            </div>
+            <div class="subheading">
+                <center>Student Activities Office - WPI - 100 Institute Road - Worcester, MA - 01609-2280 <br />
+                508-831-5595 - Fax: 508-831-6045 - lnl@wpi.edu - http://lnl.wpi.edu/</center>
+            </div>
+            <hr>
+            <table>
+                <tr>
+                    <td class="tdleft">
+                        <h3>Contact</h3>
+                        <ul class="unstyled">
+                            <li>{% for org in event.org.all %}{{ org.name }}, {% endfor %}</li>
+                            <li>{{ event.person_name }}</li>
+                            <li>{{ event.contact_phone }}</li>
+                            <li>{{ event.contact_email }}</li>
+                            <li>{{ event.contact_addr }}</li>
+                        </ul>
+                    </td>
+                    <td class="tdright">
+                        <h3>Billing</h3>
+                        <ul class="unstyled">
+                            <li>{{ event.firstorg.name }}</li>
+                            <li>{{ event.firstorg.exec_email }}</li>
+                            <li>{{ event.firstorg.phone }}</li>
+                            <li>{{ event.firstorg.address }}</li>
+                            <li>{{ event.firstorg.fopal }}</li>
+                        </ul>
+                    </td>
+                </tr>
+            </table>
+            <hr>
+            <table>
+                <tr>
+                    <th class="tdl41">
+                        Event Name
+                    </th>
+                    <td class="tdl42">
+                        {{ event }}
+                    </td>
+                    <td class="tdright" rowspan="9">
+                        <h5>Event Description</h5>
+                        {{ event.description }}
+                        <h5>Service Description</h5>
+                        {% if service.category.name == "Lighting" %}
+                            {{ event.lighting_reqs }}
+                        {% elif service.category.name == "Sound" %}
+                            {{ event.sound_reqs }}
+                        {% elif service.category.name == "Projection" %}
+                            {{ event.proj_reqs }}
+                        {% else %}
+                            {{ event.otherservice_reqs }}
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Location
+                    </th>
+                    <td class="tdl42">
+                        {{ event.location }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Event Type
+                    </th>
+                    <td class="tdl42">
+                        {{ service }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Setup Date
+                    </th>
+                    <td class="tdl42">
+                        {{ event.datetime_setup_complete.date }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Setup Time
+                    </th>
+                    <td class="tdl42">
+                        {{ event.datetime_setup_complete.time }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Start Date
+                    </th>
+                    <td class="tdl42">
+                        {{ event.datetime_start.date }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Start Time
+                    </th>
+                    <td class="tdl42">
+                        {{ event.datetime_start.time }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        End Date
+                    </td>
+                    <td class="tdl42">
+                        {{ event.datetime_end.date }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        End Time
+                    </th>
+                    <td class="tdl42">
+                        {{ event.datetime_end.time }}
+                    </td>
+                </tr>
+            </table>
+            <hr>
+            <table>
+                <tr>
+                    <td class="tdleft">
+                        <strong>Setup Start</strong>
+                        <hr>
+                        <strong>CC</strong>
+                        <hr>
+                        <strong>Crew</strong>
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                    </td>
+                    
+                    <td class="tdright">
+                        <strong>Crew Chief Report</strong> <br />
+                        We live in the future so this can all be done digitally @: 
+                        
+                        http://lnl.wpi.edu{{ event.ccreport_url }}
+                        
+                    </td>
+                </tr>
+            </table>
+                      
+            
             {% if not forloop.last %}
             <div><pdf:nextpage /></div>
             {% endif %}
