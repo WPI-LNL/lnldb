@@ -79,7 +79,7 @@ def orglist(request):
     orgs = Organization.objects.filter(user_in_charge=request.user)
     context['orgs'] = orgs
     
-    return render_to_response('ext_orgs.html',context)
+    return render_to_response('myorgsincharge.html',context)
 
 
 @login_required
@@ -148,6 +148,8 @@ def org_mkxfer(request,id):
         context['formset'] = formset
         
     return render_to_response('mycrispy.html', context)
+
+@login_required
 def org_acceptxfer(request,idstr):
     context = RequestContext(request)
     transfer = get_object_or_404(OrganizationTransfer,uuid=idstr)

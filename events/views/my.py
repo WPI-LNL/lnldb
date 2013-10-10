@@ -141,6 +141,7 @@ def hours_list(request,eventid):
     
     return render_to_response('myhours.html', context)
 
+@login_required
 def hours_mk(request,eventid):
     context = RequestContext(request)
     
@@ -165,6 +166,7 @@ def hours_mk(request,eventid):
         
     return render_to_response('mycrispy.html', context)
 
+@login_required
 def hours_edit(request,eventid,userid):
     context = RequestContext(request)
     user = request.user
