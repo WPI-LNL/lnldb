@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from events.models import Event
 # Create your models here.
 
+from uuidfield import UUIDField
 
 class Meeting(models.Model):
     datetime = models.DateTimeField()
@@ -24,6 +25,8 @@ class MeetingAnnounce(models.Model):
     email_to = models.ForeignKey('TargetEmailList')
     
     added = models.DateTimeField(auto_now_add=True)
+    uuid = UUIDField(auto=True,editable=False, null=True,blank=True)
+    
     
 class TargetEmailList(models.Model):
     name = models.CharField(max_length=16)

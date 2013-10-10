@@ -12,7 +12,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,MultiField,Field,HTML,Hidden,Reset
 from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions,PrependedText
 
-from events.models import Event,Organization,Category
+from events.models import Event,Organization,Category,OrganizationTransfer
 from events.models import Extra,Location,Lighting,Sound,Projection,Service
 from events.models import Billing,CCReport,Hours
 
@@ -272,7 +272,8 @@ class InternalEventForm(forms.ModelForm):
     datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now())
         
         
-        
+### External Organization forms
+
 class ExternalOrgUpdateForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
@@ -296,6 +297,35 @@ class ExternalOrgUpdateForm(forms.ModelForm):
         model = Organization
         fields = ('address','phone','associated_users')
         
+class OrgXFerForm(forms.ModelForm):
+    def __init__(self,org,user,*args,**kwargs):
+        
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.layout = Layout(
+                django_msgs,
+                'new_user_in_charge',
+                Hidden('org',org.id),
+                Hidden('old_user_in_charge',user.id),
+                HTML('<p class="muted">This form will transfer ownership of this Organization to another user associated with the Organization. A confirmation E-Mail will be sent with a link to confirm the transfer.</p>'),
+                FormActions(
+                    Submit('save', 'Submit Transfer'),
+                )
+        )
+        super(OrgXFerForm,self).__init__(*args,**kwargs)
+        
+        self.fields['new_user_in_charge'].queryset = org.associated_users.all().exclude(id=user.id)
+        
+    #new_user_in_charge = AutoCompleteSelectField('Users', required=True, plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
+    class Meta:
+        model = OrganizationTransfer
+        fields = ('new_user_in_charge',)
+        
+
+#### Internal Billing forms
+
 class BillingForm(forms.ModelForm):
     def __init__(self,event,*args,**kwargs):
         self.helper = FormHelper()
@@ -344,6 +374,8 @@ class BillingUpdateForm(forms.ModelForm):
     class Meta:
         model = Billing
         
+        
+### CC Facing Forms
 class ReportForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()

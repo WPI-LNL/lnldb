@@ -18,6 +18,9 @@ class OrgAdmin(admin.ModelAdmin):
     list_display = ('name','shortname','email','exec_email','email_exec','email_normal','user_in_charge')
     filter_horizontal = ('associated_users','associated_orgs')
     search_fields = ['name','shortname','email','exec_email']
+    
+class OTAdmin(admin.ModelAdmin):
+    list_display = ('org','old_user_in_charge','new_user_in_charge','created','expiry','completed_on','completed','is_expired','uuid')
 
 class LocAdmin(admin.ModelAdmin):
     list_filter = ('show_in_wo_form','building')
@@ -30,6 +33,7 @@ admin.site.register(Location,LocAdmin)
 admin.site.register(Event,EventAdmin)
 admin.site.register(CCReport)
 admin.site.register(Organization,OrgAdmin)
+admin.site.register(OrganizationTransfer,OTAdmin)
 admin.site.register(Extra)
 admin.site.register(ExtraInstance)
 

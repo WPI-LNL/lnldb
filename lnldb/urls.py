@@ -15,6 +15,7 @@ admin.autodiscover()
 from acct.views import AcctUpdate,LNLUpdate
 from members.views import UserUpdate
 from events.views.flow import BillingCreate,BillingUpdate
+from emails.views import MeetingAnnounceView
 #event wizard form defenitions
 
 from django.contrib.auth.decorators import login_required
@@ -65,6 +66,8 @@ urlpatterns = patterns('',
     url(r'^my/orgs/$', 'events.views.my.myorgs'),
     url(r'^my/orgs/incharge/$', 'events.views.orgs.orglist',name="my-orgs-incharge-list"),
     url(r'^my/orgs/incharge/(?P<id>[0-9a-f]+)/$', 'events.views.orgs.orgedit', name="my-orgs-incharge-edit"),
+    url(r'^my/orgs/transfer/(?P<id>[0-9]+)/$', 'events.views.orgs.org_mkxfer', name="my-orgs-xfer"),
+    url(r'^my/orgs/transfer/(?P<idstr>[0-9a-f]+)/$', 'events.views.orgs.org_acceptxfer', name="my-orgs-acceptxfer"),
     url(r'^my/acct/$', AcctUpdate.as_view(), name="my-acct"),
     url(r'^my/events/$', 'events.views.my.myevents', name = "my-events"),
     url(r'^my/events/(?P<id>[0-9]+)$', 'events.views.my.myeventdetail',name="my-event-detail"),
@@ -162,9 +165,15 @@ urlpatterns = patterns('',
     #projection
     url(r'^lnadmin/projection/list/$', 'projection.views.plist'),
 
+    #emails 
+    url(r'^email/announce/(?P<slug>[0-9a-f]+)/',MeetingAnnounceView.as_view(),name="email-view-announce"),
+    
+    #special urls
     url(r'^NOTOUCHING/$', 'data.views.fuckoffkitty'),
     url(r'^lnldb/fuckoffkitty/', RedirectView.as_view(url="/NOTOUCHING/")),
     url(r'^(?P<slug>[-\w]+)/$', 'pages.views.page'),
         
     url(r'^lnadmin/(?P<msg>\w+)/$', 'events.views.indices.admin'),
+    
+    
 )

@@ -5,10 +5,6 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
-#email
-from django.template.loader import render_to_string
-from django.core.mail import EmailMultiAlternatives
-
 from events.forms import EventMeetingForm
 from events.models import Event
 
@@ -26,21 +22,8 @@ from helpers.challenges import is_officer
 
 import datetime
 
-DEFAULT_FROM_ADDR = 'LnL <lnl@wpi.edu>'
-
-def generate_email(notice):
-    subject = notice.subject
-    from_email = DEFAULT_FROM_ADDR
-    to_email = notice.email_to.email
-    
-    cont_html = render_to_string('email_tmpl/html.html')
-    cont_text = notice.message
-    
-    email = EmailMultiAlternatives(subject,cont_text,from_email,[to_email])
-    email.attach_alternative(cont_html, "text/html")
-    
-    return email
-
+from emails.generators import generate_notice_email as generate_email
+from emails.generators import DEFAULT_FROM_ADDR
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')

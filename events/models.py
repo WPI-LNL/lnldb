@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 import datetime,pytz
 
+from uuidfield import UUIDField
+
 PROJECTIONS = (
     ('16','16mm'),
     ('35','35mm'),
@@ -507,6 +509,25 @@ class Organization(models.Model):
     
     class Meta:
         ordering = ['name']
+        
+        
+class OrganizationTransfer(models.Model):
+    new_user_in_charge = models.ForeignKey(User,related_name="xfer_new")
+    old_user_in_charge = models.ForeignKey(User,related_name="xfer_old")
+    org = models.ForeignKey(Organization)
+    uuid = UUIDField(auto=True) #for the link
+    created = models.DateTimeField(auto_now_add=True,auto_now=True)
+    completed_on = models.DateTimeField(null=True,blank=True)
+    expiry = models.DateTimeField(null=True,blank=True)
+    completed = models.BooleanField(default=False)
+    
+    @property
+    def is_expired(self):
+        if self.completed:
+            return True
+        elif datetime.datetime.now(pytz.utc) > self.expiry:
+            return True
+        return False
     
     
 # stats and the like
