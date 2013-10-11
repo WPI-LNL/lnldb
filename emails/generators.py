@@ -20,15 +20,16 @@ def generate_notice_email(notice):
     return email
 
 
-def generate_notice_cc_email(meeting):
-    subject = "Lens and Lights Crew List for %s" % meeting.datetime.date
+def generate_notice_cc_email(notice):
+    subject = "Lens and Lights Crew List for %s" % notice.meeting.datetime.date
     from_email = DEFAULT_FROM_ADDR
     to_email = "lnl@wpi.edu"
     
     context = {}
+    context['object'] = notice
 
     cont_html = render_to_string('emails/email_notice_cc.html',context)
-    cont_html = render_to_string('emails/email_notice_cc.txt',context)
+    cont_text = render_to_string('emails/email_notice_cc.txt',context)
     
     email = EmailMultiAlternatives(subject,cont_text,from_email,[to_email])
     email.attach_alternative(cont_html, "text/html")

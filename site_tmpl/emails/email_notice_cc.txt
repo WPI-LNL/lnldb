@@ -1,7 +1,5 @@
 Meeting Notice for {{ object.meeting.datetime.date }}
 
-{{ object.message }}
-
 Events
 
 {% for e in object.events.all %}

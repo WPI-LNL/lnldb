@@ -12,6 +12,7 @@ from meetings.forms import MeetingAdditionForm as MAF
 from meetings.models import Meeting
 
 from meetings.forms import AnnounceSendForm as ASF
+from meetings.forms import AnnounceCCSendForm as ACCSF
 from meetings.models import AnnounceSend
 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -23,6 +24,7 @@ from helpers.challenges import is_officer
 import datetime
 
 from emails.generators import generate_notice_email as generate_email
+from emails.generators import generate_notice_cc_email
 from emails.generators import DEFAULT_FROM_ADDR
 
 @login_required
@@ -137,6 +139,35 @@ def mknotice(request,id):
     
     else:
         formset = ASF(meeting)
+        context['formset'] = formset
+        context['msg'] = "New Meeting Notice"
+    return render_to_response('form_crispy.html',context)
+
+
+def mkccnotice(request,id):
+    context = RequestContext(request)
+    
+    meeting = get_object_or_404(Meeting,pk=id)
+    
+    if request.method == 'POST':
+        formset = ACCSF(meeting,request.POST)
+        if formset.is_valid():
+            notice = formset.save()
+            email = generate_notice_cc_email(notice)
+            res = email.send()
+            if res == 1:
+                notice.sent_success = True
+            else:
+                notice.sent_success = False
+                
+            notice.save()
+            
+            return HttpResponseRedirect(reverse('meetings.views.viewattendance',args=(meeting.id,)))
+        else:
+            context['formset'] = formset
+    
+    else:
+        formset = ACCSF(meeting)
         context['formset'] = formset
         context['msg'] = "New Meeting Notice"
     return render_to_response('form_crispy.html',context)

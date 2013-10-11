@@ -3,7 +3,7 @@ from django.forms import Form, ModelForm
 
 import datetime
 
-from meetings.models import Meeting,MeetingAnnounce
+from meetings.models import Meeting,MeetingAnnounce,CCNoticeSend
 from events.models import Event
 
 from ajax_select import make_ajax_field
@@ -38,7 +38,7 @@ class MeetingAdditionForm(forms.ModelForm):
 class AnnounceSendForm(forms.ModelForm):
     def __init__(self,meeting,*args,**kwargs):
         super(AnnounceSendForm,self).__init__(*args,**kwargs)
-        now = datetime.datetime.now()
+        now = meeting.datetime
         twodaysago = now + datetime.timedelta(days=-3)
         
         self.fields["events"].queryset = Event.objects.filter(datetime_setup_start__gte=twodaysago)
@@ -57,3 +57,26 @@ class AnnounceSendForm(forms.ModelForm):
         
     class Meta:
         model = MeetingAnnounce
+       
+       
+class AnnounceCCSendForm(forms.ModelForm):
+    def __init__(self,meeting,*args,**kwargs):
+        now = meeting.datetime
+        twodaysago = now + datetime.timedelta(days=-3)
+        
+        
+        self.helper = FormHelper()
+        self.helper.form_class = 'form-horizontal'
+        self.helper.layout = Layout(
+            Hidden('meeting',meeting.id),
+            'events',
+            FormActions(
+                Submit('save', 'Save changes'),
+                ),
+            )
+        super(AnnounceCCSendForm,self).__init__(*args,**kwargs)
+
+        self.fields["events"].queryset = Event.objects.filter(datetime_setup_start__gte=twodaysago)
+        
+    class Meta:
+        model = CCNoticeSend

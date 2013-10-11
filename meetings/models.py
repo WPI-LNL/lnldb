@@ -48,5 +48,7 @@ class MeetingType(models.Model):
     
 class CCNoticeSend(models.Model):
     meeting = models.ForeignKey(Meeting,related_name="meetingccnotices")
+    events = models.ManyToManyField(Event,related_name="meetingccnoticeevents")
     sent_at = models.DateTimeField(auto_now_add=True)
     sent_success = models.BooleanField(default=False)
+    uuid = UUIDField(auto=True,editable=False, null=True,blank=True)

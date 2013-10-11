@@ -1,6 +1,6 @@
 {% extends "emails/email_base.html" %}
 {% block perma %}
-<a href="{% url "email-view-announce" object.uuid %}" class="cm-webversion">View Online</a>
+<a href="{% url "email-view-announce-cc" object.uuid %}" class="cm-webversion">View Online</a>
 {% endblock %}
 
 {% block unsub %}
@@ -11,10 +11,8 @@
     <tbody>
         <tr>
             <td class="w580" width="580">
-                <p align="left" class="article-title">Meeting Notice for {{ object.meeting.datetime.date }}</p>
                 <div align="left" class="article-content">
                     
-                    <p>{{ object.message }}</p>
                     <p align="left" class="article-title">Events</p>
                     <table>
                     
@@ -27,9 +25,9 @@
                         <td>{{ e.location }}</td>
                     </tr>
                     <tr>
-                        <td>
+                        <td colspan="5">
                             {% for cc in e.crew_chief.all %}
-                                {{ cc }}
+                                CC: {{ cc.get_full_name }}
                             {% endfor %}
                         </td>
                     </tr>
