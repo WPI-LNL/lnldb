@@ -1,0 +1,46 @@
+{% extends "emails/email_base.html" %}
+{% block perma %}
+<a href="{% url "email-view-announce" object.uuid %}" class="cm-webversion">View Online</a>
+{% endblock %}
+
+{% block unsub %}
+{% endblock %}
+
+{% block content %}
+<table class="w580" width="580" cellpadding="0" cellspacing="0" border="0">
+    <tbody>
+        <tr>
+            <td class="w580" width="580">
+                <p align="left" class="article-title">Meeting Notice for {{ object.meeting.datetime.date }}</p>
+                <div align="left" class="article-content">
+                    
+                    <p>{{ object.message }}</p>
+                    <p align="left" class="article-title">Events</p>
+                    <table>
+                    
+                    {% for e in object.events.all %}
+                    <tr>
+                        <td>{{ e.datetime_start|date:"m-d D" }}</td>
+                        <td>{{ e.event_name }}</td>
+                        <td>{% for s in e.eventservices %}{{ s.shortname }}&nbsp;{% endfor %}</td>
+                        <td>{{ e.datetime_start.time }}- {{ e.datetime_end.time }}</td>
+                        <td>{{ e.location }}</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            {% for cc in e.crew_chief.all %}
+                                {{ cc }}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </table>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="w580" width="580" height="10"></td>
+        </tr>
+        </tbody>
+</table>
+{% endblock %}

@@ -45,3 +45,8 @@ class MeetingType(models.Model):
     name = models.CharField(max_length=32)
     def __unicode__(self):
         return self.name
+    
+class CCNoticeSend(models.Model):
+    meeting = models.ForeignKey(Meeting,related_name="meetingccnotices")
+    sent_at = models.DateTimeField(auto_now_add=True)
+    sent_success = models.BooleanField(default=False)
