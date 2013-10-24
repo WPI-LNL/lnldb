@@ -13,6 +13,7 @@ from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,M
 from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions,PrependedText
 
 from projection.models import Projectionist
+from ajax_select.fields import AutoCompleteSelectField
 
 class ProjectionistUpdateForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
@@ -35,3 +36,27 @@ class ProjectionistUpdateForm(forms.ModelForm):
     class Meta:
         model = Projectionist
         fields = ('pit_level','license_number','license_expiry')
+        
+class ProjectionistForm(forms.ModelForm):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal" 
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.layout = Layout(
+                django_msgs,
+                'user',
+                'pit_level',
+                'license_number',
+                Field('license_expiry',css_class="datepick"),
+                FormActions(
+                    Submit('save', 'Save changes'),
+                )
+        )
+        super(ProjectionistForm,self).__init__(*args,**kwargs)
+        self.fields['user'].queryset = User.objects.exclude(projectionist__isnull=False)
+    
+    user =AutoCompleteSelectField('Users', required=True, plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
+    class Meta:
+        model = Projectionist
+        fields = ('user','pit_level','license_number','license_expiry')

@@ -18,6 +18,7 @@ from events.views.flow import BillingCreate,BillingUpdate
 from emails.views import MeetingAnnounceView
 from emails.views import MeetingAnnounceCCView
 from projection.views import ProjectionUpdate
+from projection.views import ProjectionCreate
 #event wizard form defenitions
 
 from django.contrib.auth.decorators import login_required
@@ -168,6 +169,7 @@ urlpatterns = patterns('',
     #projection
     url(r'^lnadmin/projection/list/$', 'projection.views.plist', name="projection-list"),
     url(r'^lnadmin/projection/update/(?P<pk>[0-9a-f]+)/$', ProjectionUpdate.as_view(), name="projection-update"),
+    url(r'^lnadmin/projection/mk/$', ProjectionCreate.as_view(), name="projection-create"),
 
     #emails 
     url(r'^email/announce/(?P<slug>[0-9a-f]+)/',MeetingAnnounceView.as_view(),name="email-view-announce"),
