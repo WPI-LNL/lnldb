@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1><a href="{% url "events.views.my.my" %}">My</a> Orgs you are in charge of</h1>
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>
+                Org Name
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    {% for org in orgs %}
+            <tr>
+                <td><a href="{% url 'my-orgs-incharge-edit' org.id %}">{{org}}</a></td>
+                <td><a href="{% url 'my-orgs-xfer' org.id %}">Transfer Ownership</a>
+            </tr>
+    {% empty %}
+        <tr>
+            <td colspan="2">You aren't in charge of any orgs, sorry :(</td>
+        </tr>
+    {% endfor %}
+</table>
+{% endblock %}

@@ -18,10 +18,10 @@
                     
                     {% for e in object.events.all %}
                     <tr>
-                        <td>{{ e.datetime_start|date:"m-d D" }}</td>
+                        <td>{{ e.datetime_setup_start|date:"m-d D" }}</td>
                         <td>{{ e.event_name }}</td>
                         <td>{% for s in e.eventservices %}{{ s.shortname }}&nbsp;{% endfor %}</td>
-                        <td>{{ e.datetime_start.time }}- {{ e.datetime_end.time }}</td>
+                        <td>{{ e.datetime_setup_start.time }}
                         <td>{{ e.location }}</td>
                     </tr>
                     <tr>
