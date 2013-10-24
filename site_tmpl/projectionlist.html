@@ -6,12 +6,20 @@
     <tr> 
         <th> User Name </th>
         <th> Class </th>
+        <th> License Expiry </th>
+        <th> License Number </th>
     </tr>
     {% for user in users %}
             <tr>
-                <td>{{ user }}</td>
+                <td><a href="{% url "projection-update" user.projectionist.id %}">{{ user }}</a></td>
                 <td>
                     {{ user.projectionist.pit_level }}
+                </td>
+                <td>
+                    {{ user.projectionist.license_expiry }}
+                </td>
+                <td>
+                    {{ user.projectionist.license_number }}
                 </td>
             </tr>
     {% endfor %}

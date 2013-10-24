@@ -17,6 +17,7 @@ from members.views import UserUpdate
 from events.views.flow import BillingCreate,BillingUpdate
 from emails.views import MeetingAnnounceView
 from emails.views import MeetingAnnounceCCView
+from projection.views import ProjectionUpdate
 #event wizard form defenitions
 
 from django.contrib.auth.decorators import login_required
@@ -163,9 +164,10 @@ urlpatterns = patterns('',
     url(r'^lnadmin/meetings/view/(\d+)/(\d+)/$', 'meetings.views.updateevent',name="meeting-updateevent"),
     url(r'^lnadmin/meetings/edit/(\d+)/$', 'meetings.views.editattendance',name="meeting-edit"),
     url(r'^lnadmin/meetings/notice/(\d+)/$', 'meetings.views.mknotice',name="meeting-email"),
-    url(r'^lnadmin/meetings/noticecc/(\d+)/$', 'meetings.views.mkccnotice',name="meeting-cc-email"),
+    url(r'^lnadmin/meetings/noticecc/(\d+)/$', 'meetings.views.mkccnotice',name="meeting-cc-email"),\
     #projection
-    url(r'^lnadmin/projection/list/$', 'projection.views.plist'),
+    url(r'^lnadmin/projection/list/$', 'projection.views.plist', name="projection-list"),
+    url(r'^lnadmin/projection/update/(?P<pk>[0-9a-f]+)/$', ProjectionUpdate.as_view(), name="projection-update"),
 
     #emails 
     url(r'^email/announce/(?P<slug>[0-9a-f]+)/',MeetingAnnounceView.as_view(),name="email-view-announce"),
