@@ -116,3 +116,7 @@ def generate_event_start_end_emails():
         
     else:
         print "no events starting/ending"
+        
+        
+# Cron Example
+# * * * * * ~/bin/python ~/lnldb/manage.py send_start_end
