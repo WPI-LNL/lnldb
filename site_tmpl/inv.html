@@ -43,8 +43,8 @@
     {% for i in inv  %}
             <tr>
                 <td><a href="{% url "inventory.views.detail" i.id %}">{{i}}</a></td>
-                <td><a href="{% url "inventory.views.cat" i.subcategory.category %}">{{i.subcategory.category }}</a></td>
-                <td><a href="{% url "inventory.views.subcat" i.subcategory.category i.subcategory %}">{{i.subcategory }}</a></td>
+                <td><a href="{% url "inventory.views.cat" i.subcategory.category.id %}">{{i.subcategory.category }}</a></td>
+                <td><a href="{% url "inventory.views.subcat" i.subcategory.category.id i.subcategory.id %}">{{i.subcategory }}</a></td>
                 <td>
                     <i class="{{ i.status.iconclass }}" title="{{ i.status}}"></i> 
                 </th>

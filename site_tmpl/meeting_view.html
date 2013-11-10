@@ -125,7 +125,7 @@
                         <td>
                             {% if e.crew_chief.count %}
                                 {% for c in e.crew_chief.all %}
-                                    <a href="{% url "members.views.detail" a.id %}">{{ c.first_name }} {{ c.last_name }}</a>&nbsp;
+                                    <a href="{% url "members.views.detail" c.id %}">{{ c.first_name }} {{ c.last_name }}</a>&nbsp;
                                 {% endfor %}
                             {% else %}
                                 None Set 
