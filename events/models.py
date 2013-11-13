@@ -307,7 +307,7 @@ class Event(models.Model):
             for org in eventorgs:
                 if org.user_in_charge == user:
                     return True
-                elif user in org.associated_users:
+                elif user in org.associated_users.all():
                     return True
                     
             
