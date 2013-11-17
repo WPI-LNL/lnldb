@@ -116,6 +116,7 @@ def generate_event_start_end_emails():
         
     else:
         #print "no events starting/ending"
+        pass
         
         
 # Cron Example
