@@ -107,11 +107,14 @@ def newattendance(request):
         if formset.is_valid():
             m = formset.save()
             return HttpResponseRedirect(reverse('meetings.views.viewattendance',args=(m.id,)))
+        else:
+            context['formset'] = formset
+            context['msg'] = "New Meeting (Errors In Form)"
     else:
         formset = MAF()
         context['formset'] = formset
         context['msg'] = "New Meeting"
-        return render_to_response('form_crispy.html', context)
+    return render_to_response('form_crispy.html', context)
 
 
 @login_required
