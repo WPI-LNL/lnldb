@@ -53,11 +53,6 @@ def plist_detail(request):
     return render_to_response('projectionlist_detail.html', context)
 
 
-class PITInline(InlineFormSet):
-    model = PitInstance
-
-
-
 def projection_update(request,id):
     projectionist = get_object_or_404(Projectionist,pk=id)
     context = RequestContext(request)
