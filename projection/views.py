@@ -11,9 +11,6 @@ from django.views.generic.edit import CreateView
 from django.views.generic.edit import FormView
 
 
-from extra_views import CreateWithInlinesView, UpdateWithInlinesView, InlineFormSet
-from extra_views.generic import GenericInlineFormSet
-
 from projection.models import Projectionist,PitInstance,PITLevel
 from projection.forms import ProjectionistUpdateForm
 from projection.forms import ProjectionistForm
