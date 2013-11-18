@@ -1,0 +1,55 @@
+
+{% extends 'base_admin.html' %}
+{% block content %}
+<div class="pull-right">
+    <a class="btn btn-warning btn-large" href="{% url "projection-list" %}"><i class="icon-th-large icon-white"></i>&nbsp;Standard List</a>
+    <a class="btn btn-info btn-large" href="{% url "projection-bulk-update" %}"><i class="icon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
+</div>
+<h2> {{ h2 }} </h2>
+<h3> Projectionists In Training </h3>
+<table class="table table-striped table-bordered table-condensed">
+    <tr> 
+        <th> User Name </th>
+        {% for level in levels %}
+        <th> {{ level }} </th>
+        {% endfor %}
+    </tr>
+    {% for user in unlicensed_users %}
+        {% if user.expired %}
+            <tr class="error" title="Expired"> 
+        {% elif user.expiring %}
+            <tr class="warning" title="Expiring Soon">
+        {% else %}
+            <tr>
+        {% endif %}
+                
+                <td><a href="{% url "projection-update" user.id %}">{{ user }}</a></td>
+                {% for level in levels %}
+                    <td align="center" style="text-align: center" >
+                    {% if level.name_short in user.validlevels.keys %}
+                    <strong>X</strong>
+                    {% else %}
+                    {% endif %}
+                    </td>
+                {% endfor %}
+            </td>
+            </tr>
+    {% endfor %}
+    
+</table>
+<h3> Licensed Projectionists </h3>
+<ul>
+{% for user in licensed_users %}
+<li><a href="{% url "projection-update" user.id %}">{{ user }}</a></li>
+{% endfor %}
+</ul>
+
+<h3> Alumni Projectionists </h3>
+<ul>
+{% for user in alumni_users %}
+<li><a href="{% url "projection-update" user.id %}">{{ user }}</a></li>
+{% endfor %}
+</ul>
+<a class="btn btn-large btn-primary" href="{% url "projection-create" %}">Create</a>
+
+{% endblock %}

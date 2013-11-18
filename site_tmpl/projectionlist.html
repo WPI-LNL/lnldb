@@ -1,6 +1,10 @@
 
 {% extends 'base_admin.html' %}
 {% block content %}
+<div class="pull-right">
+    <a class="btn btn-warning btn-large" href="{% url "projection-list-detail" %}"><i class="icon-th icon-white"></i>&nbsp;Detailed List</a>
+    <a class="btn btn-info btn-large" href="{% url "projection-bulk-update" %}"><i class="icon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
+</div>
 <h2> {{ h2 }} </h2>
 <table class="table table-striped table-bordered">
     <tr> 
@@ -10,18 +14,26 @@
         <th> License Number </th>
     </tr>
     {% for user in users %}
+        {% if user.expired %}
+            <tr class="error" title="Expired"> 
+        {% elif user.expiring %}
+            <tr class="warning" title="Expiring Soon">
+        {% else %}
             <tr>
-                <td><a href="{% url "projection-update" user.projectionist.id %}">{{ user }}</a></td>
+        {% endif %}
+                <td><a href="{% url "projection-update" user.id %}">{{ user }}</a></td>
                 <td>
-                    {{ user.projectionist.pit_level }}
+                    {{ user.level.pit_level }}
                 </td>
                 <td>
-                    {{ user.projectionist.license_expiry }}
+                    {{ user.license_expiry }}
                 </td>
                 <td>
-                    {{ user.projectionist.license_number }}
+                    {{ user.license_number }}
                 </td>
             </tr>
     {% endfor %}
+    
 </table>
+<a class="btn btn-large btn-primary" href="{% url "projection-create" %}">Create</a>
 {% endblock %}

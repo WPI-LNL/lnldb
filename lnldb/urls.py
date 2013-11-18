@@ -17,8 +17,8 @@ from members.views import UserUpdate
 from events.views.flow import BillingCreate,BillingUpdate
 from emails.views import MeetingAnnounceView
 from emails.views import MeetingAnnounceCCView
-from projection.views import ProjectionUpdate
 from projection.views import ProjectionCreate
+from projection.views import BulkUpdateView
 #event wizard form defenitions
 
 from django.contrib.auth.decorators import login_required
@@ -168,7 +168,10 @@ urlpatterns = patterns('',
     url(r'^lnadmin/meetings/noticecc/(\d+)/$', 'meetings.views.mkccnotice',name="meeting-cc-email"),\
     #projection
     url(r'^lnadmin/projection/list/$', 'projection.views.plist', name="projection-list"),
-    url(r'^lnadmin/projection/update/(?P<pk>[0-9a-f]+)/$', ProjectionUpdate.as_view(), name="projection-update"),
+    url(r'^lnadmin/projection/list/detail/$', 'projection.views.plist_detail', name="projection-list-detail"),
+    url(r'^lnadmin/projection/bulk/$', BulkUpdateView.as_view(), name="projection-bulk-update"),
+    #url(r'^lnadmin/projection/update/(?P<pk>[0-9a-f]+)/$', ProjectionUpdate.as_view(), name="projection-update"),
+    url(r'^lnadmin/projection/update/(?P<id>[0-9a-f]+)/$', "projection.views.projection_update", name="projection-update"),
     url(r'^lnadmin/projection/mk/$', ProjectionCreate.as_view(), name="projection-create"),
 
     #emails 

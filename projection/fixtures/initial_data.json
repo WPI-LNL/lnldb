@@ -1,0 +1,83 @@
+[
+{
+   "pk": 1, 
+   "model": "projection.pitlevel", 
+   "fields": {
+      "name_short": "P1", 
+      "ordering": 0, 
+      "name_long": "PIT1"
+   }
+},
+{
+   "pk": 2, 
+   "model": "projection.pitlevel", 
+   "fields": {
+      "name_short": "P2", 
+      "ordering": 1, 
+      "name_long": "PIT2"
+   }
+},
+{
+   "pk": 3, 
+   "model": "projection.pitlevel", 
+   "fields": {
+      "name_short": "P3", 
+      "ordering": 2, 
+      "name_long": "PIT3"
+   }
+},
+{
+   "pk": 4, 
+   "model": "projection.pitlevel", 
+   "fields": {
+      "name_short": "P4", 
+      "ordering": 3, 
+      "name_long": "PIT4"
+   }
+},
+{
+   "pk": 5, 
+   "model": "projection.pitlevel", 
+   "fields": {
+      "name_short": "P5", 
+      "ordering": 4, 
+      "name_long": "PIT5"
+   }
+},
+{
+   "pk": 6, 
+   "model": "projection.pitlevel", 
+   "fields": {
+      "name_short": "P6", 
+      "ordering": 5, 
+      "name_long": "PIT6"
+   }
+},
+{
+   "pk": 7, 
+   "model": "projection.pitlevel", 
+   "fields": {
+      "name_short": "PP", 
+      "ordering": 7, 
+      "name_long": "Past Practical"
+   }
+},
+{
+   "pk": 8, 
+   "model": "projection.pitlevel", 
+   "fields": {
+      "name_short": "L", 
+      "ordering": 8, 
+      "name_long": "Licensed"
+   }
+},
+{
+   "pk": 9, 
+   "model": "projection.pitlevel", 
+   "fields": {
+      "name_short": "PW", 
+      "ordering": 6, 
+      "name_long": "Written Test"
+   }
+}
+]

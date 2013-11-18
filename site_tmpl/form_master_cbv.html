@@ -1,0 +1,27 @@
+{% extends 'base_admin.html' %}
+{% load bootstrap_toolkit %}
+
+
+{% block content %}
+    <div class="row-fluid">
+        <div class="span12">
+            <div class="hero-unit">
+                <h2> {{msg }} </h2>
+                <form class="form-horizontal" method="post" action="">
+                {% csrf_token %}              
+                {{form|as_bootstrap:"vertical"}}
+                <button type="submit" class="btn btn-success">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extras %}
+
+<script type="text/javascript" src="{{ STATIC_URL }}js/jquery-ui.js"></script>
+<link href="{{ STATIC_URL }}css/ajax_select.css" rel="stylesheet">
+<script type="text/javascript" src="{{ STATIC_URL }}/js/ajax_select.js"></script>
+
+{% include "js_datepick.tmpl" %}
+{% endblock %}
