@@ -172,5 +172,5 @@ def mkccnotice(request,id):
     else:
         formset = ACCSF(meeting)
         context['formset'] = formset
-        context['msg'] = "New Meeting Notice"
+        context['msg'] = "CC Meeting Notice"
     return render_to_response('form_crispy.html',context)
