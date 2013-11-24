@@ -124,6 +124,7 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
     'django.contrib.markup',
+    'django_cas',
     
     'events',
     'inventory',
@@ -132,9 +133,11 @@ INSTALLED_APPS = (
     'acct',
     'pages',
     'meetings',
+    'emails',
     
     'bootstrap_toolkit',
     'crispy_forms',
+    'lineage',
     
     'ajax_select',
     
@@ -183,8 +186,29 @@ AJAX_SELECT_BOOTSTRAP = False
 #AJAX_SELECT_INLINES = 'staticfiles'
 
 AJAX_LOOKUP_CHANNELS = {
-    #'Twitter' : {'model':'gff_people.Person', 'search_field':'Twitter'}
-    #'Items' : {'model':'purchases.Item', 'search_field':'iname'}, # old method
     'Users' : ('acct.lookups', 'UserLookup'),
     'Orgs' : ('events.lookups', 'OrgLookup'),
 }
+
+from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
+
+TEMPLATE_CONTEXT_PROCESSORS = TCP + ('django.core.context_processors.request',)
+
+
+# email stuff
+SEND_EMAIL_ORG_TRANSFER = True
+SEND_START_END_EMAILS = True
+
+EMAIL_TARGET_START_END = "gmp@h4xmb.org"
+EMAIL_KEY_START_END = None
+
+LOGIN_URL = "/acct/login/"
+LOGIN_REDIRECT_URL = "/my/"
+
+# Local Settings Imports
+try:
+    local_settings_file = open("%s/%s" % ("lnldb", "local_settings.py")) 
+    local_settings_script = local_settings_file.read()
+    exec local_settings_script
+except IOError, e:
+    print "Unable to open local settings! %s" % e
