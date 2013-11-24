@@ -14,15 +14,16 @@
                 </tr>
                 {% for event in user.crewchiefx.all %}
                         <tr>
-                            <td>{{event.event_name}} {{ event.id }}</td>
+                            <td>{{event.event_name}}</td>
                             <td title="{{event.datetime_end}}">{{event.datetime_end|timesince}} Ago</td>
                             <td>{{event.location}}</td>
                             <td>{{ event.status }}</td>
-                            <td>
+                            <td>{% if not event.closed %}
                                 <div class="btn-group">
                                     <a class="btn btn-primary" href="{% url 'my-ccreport' event.id %}">CC Report</a>
                                     <a class="btn btn-info" href="{% url 'my-cchours' event.id %}">Crew Hours</a>
                                 </div>
+                                {% endif %}
                             </td>
                         </tr>
                 {% empty %}
@@ -45,7 +46,7 @@
                     <td>{{event.event_name}}</td>
                     <td title="{{event.datetime_end}}">{{event.datetime_end|timesince}} Ago</td>
                     <td>{{event.location}}</td>
-                    <td><a class="btn">Repeat</a>
+                    <td>{# <a class="btn">Repeat</a> ADD ME BACK LATER#}</td>
                 </tr>
         {% empty %}
         <tr>
