@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block nav %}
+    {% include "my.nav.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container marketing" style="text-align:center;">
+    <div class="span5">
+        <h2> Login </h2>
+        <form class="form" method="post" action="{% url "django.contrib.auth.views.login" %}">
+        {% csrf_token %}
+        {{ form.username.label_tag }}
+        {{ form.username }}
+
+        {{ form.password.label_tag }}
+        {{ form.password }}
+        <input type="hidden" name="next" value="{{next}}">
+        <div class="footer">
+            <button type="submit" name="re_event" class="btn btn-large btn-block btn-primary">Sign In</button>
+        </div>
+        </form>
+    </div>
+    <div class="span5">
+        <h2> LNLDB </h2>
+        <p class="lead"> Authentication has changed, LNL is no longer using WPI's Central Authentication System. If you haven't already use the below link to set your password. </p>
+        <a href="{% url "django.contrib.auth.views.password_reset" %}"> Reset your password </a>
+        
+    </div>
+</div>
+
+{% endblock %}
