@@ -11,6 +11,8 @@ from reportlab.pdfgen import canvas
 
 from events.models import Event
 
+from django.utils import timezone
+
 # Convert HTML URIs to absolute system paths so xhtml2pdf can access those resources
 def link_callback(uri, rel):
     # use short variable names
@@ -52,6 +54,9 @@ def generate_event_pdf(request, id):
 
 
 def generate_event_pdf_multi(request, ids=None):
+    #this shoud fix UTC showing up in PDFs
+    timezone.activate(timezone.get_current_timezone())
+
     if not ids:
         return HttpResponse("Should probably give some ids to return pdfs for..")
     # Prepare IDs
