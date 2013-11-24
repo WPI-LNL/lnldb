@@ -4,12 +4,12 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
-from django.contrib.auth.models import User
-
 from django.views.generic import UpdateView
 
 from members.forms import MemberForm
+from members.models import StatusChange
 
+from django.contrib.auth.models import User
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
@@ -118,9 +118,18 @@ class UserUpdate(OfficerMixin,LoginRequiredMixin,UpdateView):
     form_class = MemberForm
     template_name = "form_crispy_cbv.html"
     
-    #def get_object(self,queryset=None):
-        #return User.objects.get(pk=pk)
     def form_valid(self,form):
+        user = self.get_object()
+        
+        # if the groups have changed,
+        if 'groups' in form.changed_data:
+            newgroups = form.cleaned_data['groups']
+            # create tracking instance
+            s = StatusChange.objects.create(member=user)
+            s.groups.add(*newgroups)
+            s.save()
+        #x= dir(newgroups)
+        
         messages.success(self.request,"Account Info Saved!", extra_tags='success')
         return super(UserUpdate,self).form_valid(form)
     

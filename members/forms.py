@@ -22,7 +22,7 @@ class MemberForm(forms.ModelForm):
             'last_name',
             'groups',
             FormActions(
-                Submit('save', 'Update Event and Return'),
+                Submit('save', 'Update Member and Return'),
             )
         )
         super(MemberForm,self).__init__(*args,**kwargs)
