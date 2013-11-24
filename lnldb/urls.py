@@ -62,7 +62,7 @@ urlpatterns = patterns('',
     #(r'^accounts/logout/$', 'django_cas.views.logout'),
     #maybe we do
     url(r'^acct/login/$', 'django.contrib.auth.views.login'),#, {'template_name': 'registration/login.html'}),
-    url(r'^acct/logout/$', 'django.contrib.auth.views.logout'),
+    url(r'^acct/logout/$', 'django.contrib.auth.views.logout',{'template_name': 'registration/logout.html'}),
     url(r'^acct/reset/$', 'django.contrib.auth.views.password_reset',{'template_name': 'registration/reset_password.html'}),
     url(r'^acct/reset/confirm/(?P<uidb36>[0-9A-Za-z]+)-(?P<token>.+)/$$', 'django.contrib.auth.views.password_reset_confirm', {'template_name': 'registration/reset_password_form.html'}),
     url(r'^acct/reset/done/$', 'django.contrib.auth.views.password_reset_done', {'template_name': 'registration/reset_password_sent.html'}),
