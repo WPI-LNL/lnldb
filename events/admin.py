@@ -8,7 +8,15 @@ enable_show_in_wo_form.short_description = "Make locations show up in workorder 
 
 def disable_show_in_wo_form(modeladmin, request, queryset):
     queryset.update(show_in_wo_form=False)
-disable_show_in_wo_form.short_description = "Make locations NOT show up in Workorder form"    
+disable_show_in_wo_form.short_description = "Make locations NOT show up in Workorder form"
+
+def enable_setup_only(modeladmin,request,queryset):
+    queryset.update(setup_only=True)
+enable_setup_only.short_description = "Set Location as a Setup Location"
+    
+def disable_setup_only(modeladmin,request,queryset):
+    queryset.update(setup_only=False)
+disable_setup_only.short_description = "UN-Set Location as a Setup Location"
 
 #modeladmins
 class EventAdmin(admin.ModelAdmin):
