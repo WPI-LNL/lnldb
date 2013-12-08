@@ -234,10 +234,17 @@ class InternalEventForm(forms.ModelForm):
                     ),
                 Tab(
                     'Scheduling',
-                    Field('datetime_setup_start',css_class='dtp'),
-                    Field('datetime_setup_complete',css_class='dtp'),
-                    Field('datetime_start',css_class='dtp'),
-                    Field('datetime_end',css_class='dtp'),
+                    Div(
+                        Div(Field('datetime_setup_complete',css_class='dtp',title="Setup Completed By"),css_class="padleft"),
+                        ),
+                    Div(
+                        HTML('<div class="pull-left pushdown"><br /><a class="btn btn-primary" href="#" id="samedate1" title="Cascade Dates"><i class="icon-resize-small icon-white"></i>&nbsp;<i class="icon-calendar icon-white"></i></a></div>'),
+                        Div(Field('datetime_start',css_class='dtp'),css_class="padleft"),
+                        ),
+                    Div(
+                        HTML('<div class="pull-left pushdown"><br /><a class="btn btn-primary" href="#" id="samedate2" title="Cascade Dates"><i class="icon-resize-small icon-white"></i>&nbsp;<i class="icon-calendar icon-white"></i></a></div>'),
+                        Div(Field('datetime_end',css_class='dtp'),css_class="padleft"),
+                        ),
                 ),
                 Tab(
                     'Lighting',
