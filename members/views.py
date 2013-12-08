@@ -17,7 +17,7 @@ from django.contrib import messages
 from helpers.challenges import is_officer
 from helpers.mixins import LoginRequiredMixin, OfficerMixin
 
-from events.models import Event
+from events.models import Event,Projection,EventCCInstance 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
@@ -108,7 +108,13 @@ def detail(request,id):
     context['u'] = user
     
     moviesccd = Event.objects.filter(crew_chief__id=id,projection__isnull=False)
-    context['moviesccd'] = moviesccd
+    
+    # for the new style too
+    p = Projection.objects.all()
+    p_ids = [i.id for i in p]
+    moviesccd2 = EventCCInstance.objects.filter(service__in=p_ids,crew_chief=user)
+    
+    context['moviesccd'] = moviesccd.count() + moviesccd2.count()
     return render_to_response('userdetail.html', context)
 
 
