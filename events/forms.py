@@ -1,7 +1,11 @@
 from django import forms
 from django.forms import Form, ModelForm, TextInput
 from django.forms.extras.widgets import SelectDateWidget
+from django.forms.models import inlineformset_factory
 from django.db.models import Q
+
+from django.utils.functional import curry
+
 
 from django.contrib.auth.models import User
 from helpers.form_fields import django_msgs
@@ -13,7 +17,7 @@ from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,M
 from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions,PrependedText
 
 from events.models import Event,Organization,Category,OrganizationTransfer
-from events.models import Extra,Location,Lighting,Sound,Projection,Service
+from events.models import Extra,Location,Lighting,Sound,Projection,Service,EventCCInstance
 from events.models import Billing,CCReport,Hours
 
 from events.widgets import ExtraSelectorWidget,ValueSelectField
@@ -438,6 +442,39 @@ class EditHoursForm(forms.ModelForm):
         model = Hours 
         fields = ('hours',)
     
+class CCIForm(forms.ModelForm):
+    def __init__(self,event,*args,**kwargs):
+        self.event = event
+        self.helper = FormHelper()
+        self.helper.form_class = "form-inline"
+        self.helper.template = 'bootstrap/table_inline_formset.html'
+        self.helper.form_tag = False
+        self.helper.layout = Layout( 
+            Field('crew_chief',placeholder="Crew Chief",title=""),
+            Field('service'),
+            Field('setup_location'),
+            Field('setup_start',css_class="dtp"),
+            HTML('<hr>'),
+        )
+        super(CCIForm,self).__init__(*args,**kwargs)
+        
+        #x = self.instance.event.lighting
+        self.fields['service'].queryset = Service.objects.filter(Q(id__in=[event.lighting.id])|Q(id=event.sound.id)|Q(id=event.projection.id)|Q(id__in=[i.id for i in event.otherservices.all()]))
+    class Meta:
+        model = EventCCInstance
+        
+    crew_chief = AutoCompleteSelectField('Users',required=False,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now()) 
+    setup_location = GroupedModelChoiceField(
+            queryset = Location.objects.filter(setup_only=True),
+            group_by_field = "building", 
+            group_label = lambda group: group.name,
+        )
+#CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3,form=CCIForm)
+
+#usage
+#CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3)
+#CrewChiefFS.form = staticmethod(curry(CCIForm, event=request.event))
 #__        __         _                 _           
 #\ \      / /__  _ __| | _____  _ __ __| | ___ _ __ 
  #\ \ /\ / / _ \| '__| |/ / _ \| '__/ _` |/ _ \ '__|

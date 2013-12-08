@@ -10,6 +10,8 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from helpers.challenges import is_officer
 
+from raven.contrib.django.raven_compat.models import client
+
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def eventnew(request,id=None):
@@ -35,6 +37,7 @@ def eventnew(request,id=None):
             return HttpResponseRedirect(reverse('events.views.list.viewevent',args=(res.id,)))
             #return HttpResponseRedirect(reverse('house.views.chores.choredetail',kwargs={'id':res.id}))
         else:
+            client.captureMessage(form.errors)
             context['formset'] = form
     else:
         form = IEF(instance=instance)

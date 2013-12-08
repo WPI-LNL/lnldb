@@ -23,7 +23,7 @@
                 </tr>
                 <tr>
                     <th>Events CCd:</th>
-                    <td>{{u.crewchiefx.count}}</td>
+                    <td>{{u.crewchiefx.count|add:u.ccinstances.count}}</td>
                 </tr>
                 <tr>
                     <th>Events Participated:</th>
@@ -31,7 +31,7 @@
                 </tr>
                 <tr>
                     <th>Films CC'd</th>
-                    <td>{{ moviesccd.count }}</td>
+                    <td>{{ moviesccd }}</td>
                 </tr>
                 <tr>
                     <th>Meeting Attendance Count</th>
@@ -61,6 +61,9 @@
         <div class="span4">
             <h3>Events CC'd</h3>
             <ul class="unstyled"> 
+                {% for event in u.ccinstances.all %}
+                    <li><a href="{% url "events-detail" event.event.id %}">{{ event.event }}</a></li>
+                {% endfor %}
                 {% for event in u.crewchiefx.all %}
                     <li><a href="{% url "events-detail" event.id %}">{{ event }}</a></li>
                 {% endfor %}

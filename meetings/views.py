@@ -5,8 +5,13 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
-from events.forms import EventMeetingForm
-from events.models import Event
+
+from django.forms.models import inlineformset_factory
+from django.utils.functional import curry
+
+
+from events.forms import EventMeetingForm,CCIForm
+from events.models import Event,EventCCInstance
 
 from meetings.forms import MeetingAdditionForm as MAF
 from meetings.models import Meeting
@@ -53,17 +58,22 @@ def updateevent(request,meetingid,eventid):
     context = RequestContext(request)
     context['msg'] = "Update Event"
     event = get_object_or_404(Event,pk=eventid)
+    context['event'] = event.event_name
+    
+    CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3)
+    CrewChiefFS.form = staticmethod(curry(CCIForm, event=event))
+    
     if request.method == 'POST':
-        formset = EventMeetingForm(request.POST,instance=event)
+        formset = CrewChiefFS(request.POST,instance=event,prefix="main")
         if formset.is_valid():
             formset.save()
             return HttpResponseRedirect(reverse('meetings.views.viewattendance',args=(meetingid,)))
         else:
             context['formset'] = formset
     else:
-        formset = EventMeetingForm(instance=event)
+        formset = CrewChiefFS(instance=event,prefix="main")
         context['formset'] = formset
-    return render_to_response('form_crispy.html', context)
+    return render_to_response('formset_crispy_helpers.html', context)
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')

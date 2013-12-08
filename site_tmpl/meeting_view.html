@@ -81,9 +81,10 @@
                         <td>{{ e.datetime_setup_complete }}</td>
 
                         <td>
-                            {% if e.crew_chief.count %}
-                                {% for c in e.crew_chief.all %}
-                                    <a href="{% url "members.views.detail" c.id %}">{{ c.first_name }} {{ c.last_name }}</a>&nbsp;
+                            {% if e.ccinstances.count %}
+                                {% for c in e.ccinstances.all %}
+                                    <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>{% if not forloop.last %},{% endif %}&nbsp;
+                                    
                                 {% endfor %}
                             {% else %}
                                 None Set 
@@ -125,9 +126,10 @@
                         <td>{{ e.datetime_setup_complete }}</td>
 
                         <td>
-                            {% if e.crew_chief.count %}
-                                {% for c in e.crew_chief.all %}
-                                    <a href="{% url "members.views.detail" c.id %}">{{ c.first_name }} {{ c.last_name }}</a>&nbsp;
+                            {% if e.ccinstances.count %}
+                                {% for c in e.ccinstances.all %}
+                                    <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>&nbsp;
+                                    {% if not forloop.last %},{% endif %}
                                 {% endfor %}
                             {% else %}
                                 None Set 

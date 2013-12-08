@@ -1,0 +1,53 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="row-fluid">
+        <div class="span12">
+                <h2> {{msg }} Crew Chiefs for "{{ event }}"</h2>
+                <form method="post" action="" class="form-inline">
+                {% csrf_token %}
+                {{ formset.management_form }}
+                <table class="table table-striped" valign="top">
+                    <tr>
+                        <th>Setup Location </th>
+                        <th>Setup Time </th>
+                        <th>Service</th>
+                        <th>Crew Chief</th>
+                        <th>Delete?</th>
+                    </tr>
+                {% for form in formset %}
+                    {% if form.errors %}
+                    <tr class="warning">
+                        <td>{% for e in form.setup_location.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.setup_start.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.service.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.crew_chief.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.DELETE.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td>{{ form.id }}{{ form.setup_location }} </td>
+                        <td class="dtptable">{{ form.setup_start }} </td>
+                        <td>{{ form.service }}</td>
+                        <td>{{ form.crew_chief }} </td>
+                        <td>{{ form.DELETE }} </td>
+                    </tr>
+                {% endfor %}
+                </table>
+                
+                <div class="form-actions"><input name="save" value="Save changes" class="btn btn-primary" id="submit-id-save" type="submit"> </div>
+                </form>
+                
+        </div>
+    </div>
+{% endblock %}
+
+{% block extras %}
+
+{% include "js_datetimepick.tmpl" %}
+{% endblock %}
+
+{% block finalsay %}
+
+{% endblock %}

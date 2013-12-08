@@ -9,6 +9,8 @@
 </style>
 <script type="text/javascript">
     $(document).ready(function () {
+        $(".dtptable").find(":first-child").addClass('datepick')
+        $(".dtptable").find(":last-child").addClass('timepick');
         $(".dtp").parent().find(":first-child").addClass('datepick')
         $(".datepick").datepicker({
                 format: 'yyyy-mm-dd',

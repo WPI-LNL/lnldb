@@ -540,3 +540,13 @@ class Hours(models.Model):
         unique_together = ('event','user')
     
     
+# this is the crewchief instance for a particular event
+class EventCCInstance(models.Model):
+    # the pair
+    event = models.ForeignKey('Event', related_name="ccinstances")
+    crew_chief = models.ForeignKey(User, related_name="ccinstances")
+    
+    # the service
+    service = models.ForeignKey(Service,related_name = "ccinstances")
+    setup_location = models.ForeignKey(Location, related_name="ccinstances")
+    setup_start = models.DateTimeField(null=True,blank=True)
