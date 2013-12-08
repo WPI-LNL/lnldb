@@ -82,7 +82,7 @@
                         Setup Date
                     </th>
                     <td class="tdl42">
-                        {{ event.datetime_setup_complete.date }}
+                        {{ event.datetime_setup_complete|localtime|date }}
                     </td>
                 </tr>
                 <tr>
@@ -98,7 +98,7 @@
                         Start Date
                     </th>
                     <td class="tdl42">
-                        {{ event.datetime_start.date }}
+                        {{ event.datetime_start|localtime|date }}
                     </td>
                 </tr>
                 <tr>
@@ -114,7 +114,7 @@
                         End Date
                     </td>
                     <td class="tdl42">
-                        {{ event.datetime_end.date }}
+                        {{ event.datetime_end|localtime|date }}
                     </td>
                 </tr>
                 <tr>
