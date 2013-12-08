@@ -269,15 +269,16 @@ class InternalEventForm(forms.ModelForm):
         super(InternalEventForm,self).__init__(*args,**kwargs)
     class Meta:
         model = Event
+        fields = ('event_name','location','description','person_name','org','datetime_setup_complete','datetime_start','datetime_end','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs',)
 
-    location = forms.ModelChoiceField(
-            queryset = Location.objects.all()
+    location = GroupedModelChoiceField(
+            queryset = Location.objects.filter(show_in_wo_form=True),
+            group_by_field = "building",
+            group_label = lambda group: group.name,
         )
-    datetime_setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now()),
     #person_name = AutoCompleteSelectField('Users',required=False,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
     org = AutoCompleteSelectMultipleField('Orgs',required=False)
     
-    datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
     datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
     datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
     datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now())

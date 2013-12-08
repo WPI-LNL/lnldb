@@ -33,11 +33,17 @@ def eventnew(request,id=None):
         )
         
         if form.is_valid():
-            res = form.save()
-            return HttpResponseRedirect(reverse('events.views.list.viewevent',args=(res.id,)))
-            #return HttpResponseRedirect(reverse('house.views.chores.choredetail',kwargs={'id':res.id}))
+            if instance:
+                res = form.save()
+            else:
+                res = form.save(commit=False)
+                res.submitted_by = request.user
+                res.submitted_ip = request.META.get('REMOTE_ADDR')
+                res.save()
+                form.save_m2m()
+            return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(res.id,)))
         else:
-            client.captureMessage(form.errors)
+            context['e'] = form.errors
             context['formset'] = form
     else:
         form = IEF(instance=instance)

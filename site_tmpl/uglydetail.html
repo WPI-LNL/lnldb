@@ -16,11 +16,17 @@
             <div class="btn-group">
                 <a class="btn btn-success btn-large" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
                 <a class="btn btn-danger btn-large" href="{% url "events.views.flow.approval" event.id %}">Cancel</a>
+                <a class="btn btn-warning btn-large" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
             </div>
             {% elif not event.paid and event.over and not event.closed %}
-            <a class="btn btn-primary btn-large" href="{% url "event-mkbilling" event.id %}">Create Bill</a>
+            <div class="btn-group">
+                <a class="btn btn-primary btn-large" href="{% url "event-mkbilling" event.id %}">Create Bill</a>
+                <a class="btn btn-warning btn-large" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
+            </div>
             {% elif event.paid and not event.closed %} 
-            <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
+            <div class="btn-group">
+                <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
+            </div>
             {% else %}
             <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
             {% endif %}
