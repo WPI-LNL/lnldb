@@ -86,7 +86,7 @@ def myeventdetail(request,id):
     
     u = request.user
     if not event.usercanseeevent(u):
-        pass
+        return HttpResponse("You can't see this event, sorry")
     else:
         context['event'] = event
         return render_to_response('eventdetail.html', context)

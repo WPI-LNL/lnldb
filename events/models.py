@@ -310,7 +310,10 @@ class Event(models.Model):
                 elif user in org.associated_users.all():
                     return True
                     
-            
+            instances = self.ccinstances.all()
+            for i in instances:
+                if user = i.crew_chief:
+                    return True
         return False
         
     def return_orgs_and_associates(self):
