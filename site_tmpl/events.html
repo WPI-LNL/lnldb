@@ -85,7 +85,19 @@
                             {% endfor %}
                         </td>
                         <td>{{event.location}}</td>
-                        <td>{% for cc in event.crew_chief.all %}<a href="{% url "members.views.detail" cc.id %}">{{cc}}</a> {% empty %} None Assigned {% endfor %}</td>
+                        <td>
+                            {% if event.crew_chief.count %}
+                                {% for cc in event.crew_chief.all %}
+                                    <a href="{% url "members.views.detail" cc.id %}">{{cc}}{% if not forloop.last %},{% endif %} </a>
+                                {% endfor %}
+                            {% elif event.ccinstances.count %}
+                                {% for cc in event.ccinstances.all %}
+                                    <a href="{% url "members.views.detail" cc.crew_chief.id %}">{{cc.crew_chief}}{% if not forloop.last %},{% endif %} </a>
+                                {% endfor %}
+                            {% else %}
+                                None Assigned
+                            {% endif %}
+                            
                         <td>
                             {% if event.lighting %} {{ event.lighting.shortname }} {% endif %}
                         </td>

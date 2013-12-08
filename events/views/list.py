@@ -61,8 +61,18 @@ def paginate_helper(queryset,page,count=DEFAULT_ENTRY_COUNT):
         
     return pag_qs
 
+
+# helper function to return start and end for open/closed/unpaid (goes back 180 days by default)
+def get_farback_date_range_plus_next_week(delta=180):
+    today = datetime.date.today()
+    end = today + datetime.timedelta(days=7)
+    end = end.strftime('%Y-%m-%d')
+    start = today - datetime.timedelta(days=delta)
+    start = start.strftime('%Y-%m-%d')
+    
+    return start,end
+
 ### EVENT VIEWS
-# these more or less do what they say on the tin. Might need some work and refinement
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def upcoming(request,start=None,end=None):
@@ -115,6 +125,9 @@ def incoming(request,start=None,end=None):
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def openworkorders(request,start=None,end=None):
+    
+    if not start and not end:
+        start,end = get_farback_date_range_plus_next_week()
     context = RequestContext(request)
     
     events = Event.objects.filter(closed=False)
@@ -181,6 +194,9 @@ def paid(request,start=None,end=None):
 def unpaid(request,start=None,end=None):
     context = RequestContext(request)
     
+    if not start and not end:
+        start,end = get_farback_date_range_plus_next_week()
+    
     today = datetime.date.today()
     now = time.time()
     #events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now()).filter(date_setup_start__lte=today)
@@ -203,6 +219,9 @@ def unpaid(request,start=None,end=None):
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def closed(request,start=None,end=None):
     context = RequestContext(request)
+    
+    if not start and not end:
+        start,end = get_farback_date_range_plus_next_week()
      
     events = Event.objects.filter(closed=True)
     events,context = datefilter(events,context,start,end)
