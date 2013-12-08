@@ -89,7 +89,7 @@ def upcoming(request,start=None,end=None):
     page = request.GET.get('page')
     events = paginate_helper(events,page)
     
-    context['h2'] = "Upcoming Workorders"
+    context['h2'] = "Upcoming Events"
     context['events'] = events
     context['baseurl'] = reverse("upcoming")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
@@ -114,7 +114,7 @@ def incoming(request,start=None,end=None):
     events = paginate_helper(events,page)
 
     
-    context['h2'] = "Incoming Workorders"
+    context['h2'] = "Incoming Events"
     context['events'] = events
     context['baseurl'] = reverse("incoming")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
@@ -137,7 +137,7 @@ def openworkorders(request,start=None,end=None):
     events = paginate_helper(events,page)
 
     
-    context['h2'] = "Open Workorders"
+    context['h2'] = "Open Events"
     context['events'] = events
     context['baseurl'] = reverse("open")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
@@ -157,7 +157,7 @@ def unbilled(request,start=None,end=None):
     events = paginate_helper(events,page)
 
     
-    context['h2'] = "Paid Workorders"
+    context['h2'] = "Paid Events"
     context['events'] = events
     context['baseurl'] = reverse("paid")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
@@ -181,7 +181,7 @@ def paid(request,start=None,end=None):
     events = paginate_helper(events,page)
 
     
-    context['h2'] = "Paid Workorders"
+    context['h2'] = "Paid Events"
     context['events'] = events
     context['baseurl'] = reverse("paid")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
@@ -207,7 +207,7 @@ def unpaid(request,start=None,end=None):
     events = paginate_helper(events,page)
 
     
-    context['h2'] = "UnPaid Workorders"
+    context['h2'] = "UnPaid Events"
     context['events'] = events
     context['baseurl'] = reverse("unpaid")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
@@ -230,7 +230,7 @@ def closed(request,start=None,end=None):
     events = paginate_helper(events,page)
     
     
-    context['h2'] = "Closed Workorders"
+    context['h2'] = "Closed Events"
     context['events'] = events
     context['baseurl'] = reverse("closed")
     context['pdfurl'] = reverse('events-pdf-multi-empty')

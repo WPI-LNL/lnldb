@@ -19,10 +19,10 @@
                         Events <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a href="{% url "events.views.mkedrm.eventnew" %}">Add Events</a></li>
-                        <li><a href="{% url "events.views.list.incoming" %}">Incoming Workorders</a></li>
+                        <li><a href="{% url "events.views.mkedrm.eventnew" %}">Add Event</a></li>
+                        <li><a href="{% url "events.views.list.incoming" %}">Incoming Events</a></li>
                         <li><a href="{% url "events.views.list.upcoming" %}">Upcoming Events</a></li>
-                        <li><a href="{% url "events.views.list.openworkorders" %}">View Open Workorders</a></li>
+                        <li><a href="{% url "events.views.list.openworkorders" %}">View Open Events</a></li>
                             <li class="dropdown-submenu">
                                 <a tabindex="-1" href="#">Event Payments</a>
                                 <ul class="dropdown-menu">
@@ -31,7 +31,7 @@
                                     <li><a href="{% url "events.views.list.paid" %}">Events Paid</a></li>
                                 </ul>
                             </li>
-                                <li><a href="{% url "events.views.list.closed" %}">Closed Workorders</a></li>
+                                <li><a href="{% url "events.views.list.closed" %}">Closed Events</a></li>
                     </ul>
                 </li>
                 <li class="{% ancestor '/lnadmin/clients/' %} dropdown">
