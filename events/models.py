@@ -312,7 +312,7 @@ class Event(models.Model):
                     
             instances = self.ccinstances.all()
             for i in instances:
-                if user = i.crew_chief:
+                if user == i.crew_chief:
                     return True
         return False
         
