@@ -22,6 +22,7 @@
             <div class="btn-group">
                 <a class="btn btn-primary btn-large" href="{% url "event-mkbilling" event.id %}">Create Bill</a>
                 <a class="btn btn-warning btn-large" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
+                <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
             </div>
             {% elif event.paid and not event.closed %} 
             <div class="btn-group">
