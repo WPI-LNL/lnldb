@@ -28,8 +28,11 @@
             <div class="btn-group">
                 <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
             </div>
+            {% elif event.closed %}
+            <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
             {% else %}
             <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
+            <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
             {% endif %}
             </h3>
 
