@@ -449,7 +449,7 @@ class EditHoursForm(forms.ModelForm):
     class Meta:
         model = Hours 
         fields = ('hours',)
-    
+
 class CCIForm(forms.ModelForm):
     def __init__(self,event,*args,**kwargs):
         self.event = event
@@ -467,7 +467,23 @@ class CCIForm(forms.ModelForm):
         super(CCIForm,self).__init__(*args,**kwargs)
         
         #x = self.instance.event.lighting
-        self.fields['service'].queryset = Service.objects.filter(Q(id__in=[event.lighting.id])|Q(id=event.sound.id)|Q(id=event.projection.id)|Q(id__in=[i.id for i in event.otherservices.all()]))
+        self.fields['service'].queryset = self.get_qs_from_event(event)
+        
+    def get_qs_from_event(self,event):
+        if event.lighting:
+            lighting_id = event.lighting.id
+        else:
+            lighting_id = None
+        if event.sound:
+            sound_id = event.sound.id
+        else:
+            sound_id = None
+        if event.projection:
+            proj_id = event.projection.id
+        else:
+            proj_id = None
+            
+        return Service.objects.filter(Q(id__in=[lighting_id])|Q(id__in=[sound_id])|Q(id__in=[proj_id])|Q(id__in=[i.id for i in event.otherservices.all()]))
     class Meta:
         model = EventCCInstance
         
