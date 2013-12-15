@@ -1,0 +1,56 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<h2> Access Log </h2>
+<table class="table table-striped table-bordered">
+    <tr> 
+        <th> User Name </th>
+        <th> User IP </th>
+        <th> URI </th>
+        <th> TimeStamp </th>
+    </tr>
+    {% for access in accesses %}
+            <tr>
+                <td><a href="{% url "projection-update" access.user.id %}">{{ access.user }}</a></td>
+                <td>
+                    {{ access.user_ip }}
+                </td>
+                <td>
+                    {{ access.requested_uri }}
+                </td>
+                <td>
+                    {{ access.timestamp }}
+                </td>
+            </tr>
+    {% endfor %}
+    
+</table>
+<div class="row-fluid">
+    <div class="span6 offset5">
+        <div class="pagination pagination-small">
+            <ul class="pager">
+                {% if accesses.has_previous %}
+                    <li class="previous">
+                    <a href="?page={{ accesses.previous_page_number }}">&larr; Newer</a>
+                {% else %}
+                    <li class="previous disabled">
+                    <a href="#" >&larr; Newer</a>
+                {% endif %}
+                
+                </li>
+                <li class="current">
+                    <a href="#">Page {{ accesses.number }} of {{ accesses.paginator.num_pages }}.</a>
+                </li>
+                
+                {% if accesses.has_next %}
+                    <li class="next">
+                    <a href="?page={{ accesses.next_page_number }}">Older &rarr;</a>
+                {% else %}
+                    <li class="next disabled">
+                    <a href="#">Older &rarr;</a>
+                {% endif %}
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
