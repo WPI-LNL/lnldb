@@ -232,7 +232,7 @@ class Event(models.Model):
     
     event_name = models.CharField(max_length=128)
     #Person
-    person_name = models.CharField(max_length=128,null=True,blank=True,verbose_name="Name")
+    person_name = models.CharField(max_length=128,null=True,blank=True,verbose_name="Client")
     org = models.ManyToManyField('Organization',null=True,blank=True)
     contact_email = models.CharField(max_length=256,null=True,blank=True)
     contact_addr = models.TextField(null=True,blank=True)
