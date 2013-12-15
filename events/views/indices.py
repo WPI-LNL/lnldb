@@ -8,6 +8,8 @@ from django.template import Context,RequestContext
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 
+from django.utils import timezone
+
 from events.forms import WorkorderSubmit,CrewAssign,OrgForm
 from events.models import Event,Organization
 from helpers.challenges import is_officer
@@ -54,7 +56,8 @@ def admin(request,msg=None):
     context = RequestContext(request)
     context['msg'] = msg
     
-    today = datetime.datetime.now()
+    tz = timezone.get_current_timezone()
+    today = datetime.datetime.now(tz)
     # get today's events 
     starting = Event.objects.filter(datetime_start__year=today.year,datetime_start__month=today.month,datetime_start__day=today.day)
     context['starting'] = starting
@@ -67,7 +70,7 @@ def admin(request,msg=None):
     et =  Event.objects.filter(datetime_end__year=today.year,datetime_end__month=today.month,datetime_end__day=today.day)
     context['et'] = et
     
-    context['now'] = today
+    context['tznow'] = today
     
     return render_to_response('admin.html', context) 
 
