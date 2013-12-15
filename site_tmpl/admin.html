@@ -1,5 +1,5 @@
-<!DOCTYPE html>
 {% extends 'base_admin.html' %}
+{% load tz %}
 {% block content %}
       <div class="row-fluid">
 
@@ -24,17 +24,17 @@
                     <tr>
                         <td>{{ e }}</td>
                         <td>
-                            {% if e.datetime_start > now %}
-                            {{ e.datetime_start|timeuntil }} From Now
+                            {% if e.datetime_start|localtime > tznow %}
+                            {{ e.datetime_start|timeuntil }} from now
                             {% else %}
-                            {{ e.datetime_start|timesince }} Ago
+                            {{ e.datetime_start|timesince }} ago
                             {% endif %}
                         </td>
                         <td>
-                            {% if e.datetime_emd <= now %}
-                            {{ e.datetime_end|timeuntil }} from now
+                            {% if tznow > e.datetime_end|localtime %}
+                                {{ e.datetime_end|timesince }} ago
                             {% else %}
-                            {{ e.datetime_end|timesince }} Ago
+                                {{ e.datetime_end|timeuntil }} from now
                             {% endif %}
                         </td>
                     </tr>
@@ -48,10 +48,18 @@
                     <tr>
                         <td>{{ e }}</td>
                         <td>
-                            {{ e.datetime_start|timesince }} Ago
+                            {% if e.datetime_start|localtime > tznow %}
+                            {{ e.datetime_start|timeuntil }} from now
+                            {% else %}
+                            {{ e.datetime_start|timesince }} ago
+                            {% endif %}
                         </td>
                         <td>
-                            {{ e.datetime_end|timeuntil }} from now
+                            {% if tznow > e.datetime_end|localtime %}
+                                {{ e.datetime_end|timesince }} ago
+                            {% else %}
+                                {{ e.datetime_end|timeuntil }} from now
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -65,10 +73,18 @@
                     <tr>
                         <td>{{ e }}</td>
                         <td>
-                            {{ e.datetime_start|timesince }} Ago
+                            {% if e.datetime_start|localtime > tznow %}
+                            {{ e.datetime_start|timeuntil }} from now
+                            {% else %}
+                            {{ e.datetime_start|timesince }} ago
+                            {% endif %}
                         </td>
                         <td>
-                            {{ e.datetime_end|timesince}} from now
+                            {% if tznow > e.datetime_end|localtime %}
+                                {{ e.datetime_end|timesince }} ago
+                            {% else %}
+                                {{ e.datetime_end|timeuntil }} from now
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
