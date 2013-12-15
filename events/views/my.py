@@ -99,12 +99,12 @@ def ccreport(request,eventid):
         
     user = request.user
     
-    event = user.crewchiefx.filter(pk=eventid)
+    event = user.ccinstances.filter(event__pk=eventid)
     
     if not event:
         return HttpResponse("This Event Must not Have been yours")
         
-    event = event[0]
+    event = event[0].event
     
     report,created = CCReport.objects.get_or_create(event=event, crew_chief=user)
     
@@ -128,11 +128,11 @@ def hours_list(request,eventid):
     context = RequestContext(request)
     user = request.user
     
-    event = user.crewchiefx.filter(pk=eventid)
+    event = user.ccinstances.filter(event__pk=eventid)
     
     if not event:
         return HttpResponse("You must not have cc'd this event")
-    event = event[0]
+    event = event[0].event
     context['event'] = event
     
     hours = event.hours.all()
@@ -146,10 +146,10 @@ def hours_mk(request,eventid):
     context = RequestContext(request)
     
     user = request.user
-    event = user.crewchiefx.filter(pk=eventid)
+    event = user.ccinstances.filter(event__pk=eventid)
     if not event:
         return HttpResponse("You must not have cc'd this event")
-    event = event[0]
+    event = event[0].event
     context['msg'] = "Hours for '%s'" % event.event_name
     if request.method == 'POST':
         formset = MKHoursForm(event,request.POST)
@@ -170,10 +170,10 @@ def hours_mk(request,eventid):
 def hours_edit(request,eventid,userid):
     context = RequestContext(request)
     user = request.user
-    event = user.crewchiefx.filter(pk=eventid)
+    event = user.ccinstances.filter(event__pk=eventid)
     if not event:
         return HttpResponse("You must not have cc'd this event")
-    event = event[0]
+    event = event[0].event
     
     hours = get_object_or_404(Hours,event=event,user_id=userid)
     u = get_object_or_404(User,pk=userid)
