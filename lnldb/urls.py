@@ -186,6 +186,7 @@ urlpatterns = patterns('',
     url(r'^email/announcecc/(?P<slug>[0-9a-f]+)/',MeetingAnnounceCCView.as_view(),name="email-view-announce-cc"),
     
     #special urls
+    url(r'^lnadmin/accesslog/$', 'data.views.access_log', name="access-log"),
     url(r'^NOTOUCHING/$', 'data.views.fuckoffkitty'),
     url(r'^lnldb/fuckoffkitty/', RedirectView.as_view(url="/NOTOUCHING/")),
     url(r'^(?P<slug>[-\w]+)/$', 'pages.views.page'),
