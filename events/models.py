@@ -275,6 +275,7 @@ class Event(models.Model):
     cancelled = models.BooleanField(default=False)
     cancelled_on = models.DateTimeField(null=True,blank=True)
     cancelled_by = models.ForeignKey(User,related_name="eventcancellations",null=True,blank=True)
+    cancelled_reason = models.TextField(null=True,blank=True)
     
     payment_amount = models.IntegerField(blank=True,null=True,default=None)
     paid = models.BooleanField(default=False)

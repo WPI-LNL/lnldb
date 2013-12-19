@@ -189,8 +189,21 @@ class EventApprovalForm(forms.ModelForm):
     datetime_end =  forms.SplitDateTimeField(initial=datetime.datetime.now())
     #datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
     datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    
-    
+
+class EventDenialForm(forms.ModelForm):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.layout = Layout(
+                Field('cancelled_reason',label="Reason For Cancellation (optional)",css_class="span6"),
+                FormActions(
+                    Submit('save', 'Deny Event'),
+                ),
+            )
+        super(EventDenialForm,self).__init__(*args,**kwargs)
+    class Meta:
+        model = Event
+        fields = ('cancelled_reason',)
 class EventMeetingForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()

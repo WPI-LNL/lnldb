@@ -12,10 +12,12 @@
         </div>
         <div class="span4">
             <h3>Actions:
-            {% if not event.approved or event.cancelled %}
+            {% if event.cancelled %}
+            <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
+            {% elif not event.approved or not event.cancelled %}
             <div class="btn-group">
                 <a class="btn btn-success btn-large" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
-                <a class="btn btn-danger btn-large" href="{% url "events.views.flow.approval" event.id %}">Cancel</a>
+                <a class="btn btn-danger btn-large" href="{% url "events.views.flow.denial" event.id %}">Cancel</a>
                 <a class="btn btn-warning btn-large" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
             </div>
             {% elif not event.paid and event.over and not event.closed %}
@@ -28,7 +30,7 @@
             <div class="btn-group">
                 <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
             </div>
-            {% elif event.closed %}
+            {% elif event.closed or event.cancelled %}
             <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
             {% else %}
             <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
