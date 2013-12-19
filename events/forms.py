@@ -481,6 +481,7 @@ class CCIForm(forms.ModelForm):
         
         #x = self.instance.event.lighting
         self.fields['service'].queryset = self.get_qs_from_event(event)
+        self.fields['setup_start'].initial = self.event.datetime_setup_complete
         
     def get_qs_from_event(self,event):
         if event.lighting:
