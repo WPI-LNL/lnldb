@@ -429,7 +429,7 @@ class MKHoursForm(forms.ModelForm):
         super(MKHoursForm,self).__init__(*args,**kwargs)
     class Meta:
         model = Hours
-    user = AutoCompleteSelectField('Users',required=False,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    user = AutoCompleteSelectField('Users',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
         
 class EditHoursForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
@@ -487,7 +487,7 @@ class CCIForm(forms.ModelForm):
     class Meta:
         model = EventCCInstance
         
-    crew_chief = AutoCompleteSelectField('Users',required=False,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    crew_chief = AutoCompleteSelectField('Users',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
     setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now()) 
     setup_location = GroupedModelChoiceField(
             queryset = Location.objects.filter(setup_only=True),
