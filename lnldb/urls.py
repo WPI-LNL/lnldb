@@ -5,6 +5,8 @@ from events.forms import named_event_forms
 from events.views.wizard import EventWizard
 from events.views.wizard import show_lighting_form_condition,show_sound_form_condition,show_projection_form_condition,show_other_services_form_condition
 
+from django.views.generic.base import TemplateView
+
 from ajax_select import urls as ajax_select_urls
 
 # Uncomment the next two lines to enable the admin:
@@ -186,6 +188,7 @@ urlpatterns = patterns('',
     url(r'^email/announcecc/(?P<slug>[0-9a-f]+)/',MeetingAnnounceCCView.as_view(),name="email-view-announce-cc"),
     
     #special urls
+    url(r'^status/', TemplateView.as_view(template_name="status_page.html")),
     url(r'^lnadmin/accesslog/$', 'data.views.access_log', name="access-log"),
     url(r'^NOTOUCHING/$', 'data.views.fuckoffkitty'),
     url(r'^lnldb/fuckoffkitty/', RedirectView.as_view(url="/NOTOUCHING/")),
