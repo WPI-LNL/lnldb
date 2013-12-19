@@ -1,6 +1,6 @@
 {% extends "emails/email_base.html" %}
 {% block perma %}
-<a href="{% url "email-view-announce-cc" object.uuid %}" class="cm-webversion">View Online</a>
+<a href="http://lnl.wpi.edu/email/announcecc/{{object.uuid}}/" class="cm-webversion">View Online</a>
 {% endblock %}
 
 {% block unsub %}
