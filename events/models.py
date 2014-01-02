@@ -350,7 +350,7 @@ class Event(models.Model):
         foo = []
         if self.lighting:
             foo.append({"i":"icon-fire","title":"lighting"})
-        if self.sound:O
+        if self.sound:
             foo.append({"i":"icon-volume-up","title":"sound"})
         if self.projection:
             foo.append({"i":"icon-film","title":"projection"})
