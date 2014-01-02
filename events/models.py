@@ -350,7 +350,7 @@ class Event(models.Model):
         foo = []
         if self.lighting:
             foo.append({"i":"icon-fire","title":"lighting"})
-        if self.sound:
+        if self.sound:O
             foo.append({"i":"icon-volume-up","title":"sound"})
         if self.projection:
             foo.append({"i":"icon-film","title":"projection"})
@@ -487,7 +487,7 @@ class Organization(models.Model):
 
     fund = models.IntegerField()
     organization = models.IntegerField()
-    account = models.IntegerField(default=71973)
+    account = models.IntegerField(default=0)
     
     user_in_charge = models.ForeignKey(User,related_name='orgowner')
     associated_users = models.ManyToManyField(User,related_name='orgusers')
