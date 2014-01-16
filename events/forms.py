@@ -395,9 +395,11 @@ class BillingUpdateForm(forms.ModelForm):
         super(BillingUpdateForm,self).__init__(*args,**kwargs)
         
         self.fields['amount'].initial = str(event.cost_total)
+        self.fields['date_paid'].initial = datetime.date.today()
         
     class Meta:
         model = Billing
+        fields = ('date_paid','amount')
         
         
 ### CC Facing Forms
