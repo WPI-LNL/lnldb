@@ -38,7 +38,8 @@
                     <td>{{ u.meeting_set.count }}</td>
                 </tr>
             </table>
-            <h3> Contact </h3>
+            <div class="pull-right"><a href="{% url "membercontact" u.profile.id %}" class="btn">Edit</a></div>
+            <h3> Contact</h3>
             <table class="table">
                 <tr>
                     <th>WPI Box</th>

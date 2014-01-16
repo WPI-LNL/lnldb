@@ -16,6 +16,7 @@ admin.autodiscover()
 #cbv imports
 from acct.views import AcctUpdate,LNLUpdate
 from members.views import UserUpdate
+from members.views import MemberUpdate
 from events.views.flow import BillingCreate,BillingUpdate
 from emails.views import MeetingAnnounceView
 from emails.views import MeetingAnnounceCCView
@@ -161,7 +162,8 @@ urlpatterns = patterns('',
     url(r'^lnadmin/members/alum/$', 'members.views.alum'),
     url(r'^lnadmin/members/away/$', 'members.views.away'),
     url(r'^lnadmin/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail', name="memberdetail"),
-    url(r'^lnadmin/members/edit/(?P<pk>[0-9a-f]+)/$', UserUpdate.as_view(), name="memberupdate"),
+    url(r'^lnadmin/members/edit/(?P<pk>[0-9a-f]+)/$', UserUpdate.as_view(), name="memberupdate"), 
+    url(r'^lnadmin/members/editcontact/(?P<pk>[0-9a-f]+)/$', MemberUpdate.as_view(), name="membercontact"),
     
     #misc
     url(r'^lnadmin/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),

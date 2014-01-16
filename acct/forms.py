@@ -62,5 +62,5 @@ class ProfileAcct(forms.ModelForm):
         super(ProfileAcct,self).__init__(*args,**kwargs)
     class Meta:
         model = Profile
-        exclude = ("user",)
+        exclude = ("user","locked")
         

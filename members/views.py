@@ -7,7 +7,10 @@ from django.template import Context,RequestContext
 from django.views.generic import UpdateView
 
 from members.forms import MemberForm
+from members.forms import MemberContact
 from members.models import StatusChange
+
+from acct.models import Profile
 
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import permission_required
@@ -141,3 +144,18 @@ class UserUpdate(OfficerMixin,LoginRequiredMixin,UpdateView):
     
     def get_success_url(self):
         return reverse('memberdetail',args=(self.object.id,))
+    
+class MemberUpdate(OfficerMixin,LoginRequiredMixin,UpdateView):
+    model = Profile
+    form_class = MemberContact
+    template_name = "form_crispy_cbv.html"
+    
+    def form_valid(self,form):
+        messages.success(self.request,"Account Info Saved!", extra_tags='success')
+        return super(MemberUpdate,self).form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('memberdetail',args=(self.object.user.id,))
+
+    
+    

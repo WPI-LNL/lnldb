@@ -11,6 +11,7 @@ class Profile(models.Model):
     addr = models.TextField(null=True,blank=True)
     mdc = models.CharField(max_length=32,null=True,blank=True)
     
+    locked = models.BooleanField(default=False)
     @property
     def fullname(self):
         return self.user.first_name + " " + self.user.last_name
