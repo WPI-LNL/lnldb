@@ -207,7 +207,7 @@ def unpaid(request,start=None,end=None):
     events = paginate_helper(events,page)
 
     
-    context['h2'] = "UnPaid Events"
+    context['h2'] = "Pending Payments"
     context['events'] = events
     context['baseurl'] = reverse("unpaid")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
