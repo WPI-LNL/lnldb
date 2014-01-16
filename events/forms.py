@@ -92,14 +92,14 @@ class CrewChiefAssign(forms.ModelForm):
         
         
 class CrewAssign(forms.ModelForm):
-    crew = make_ajax_field(Event,'crew','Users',plugin_options = {'minLength':3})
+    crew = make_ajax_field(Event,'crew','Members',plugin_options = {'minLength':3})
     #crewchief = make_ajax_field(Event,'crew_chief','Users',plugin_options = {'minLength':3})
     class Meta:
         model = Event
         fields = ("crew",)
 
 class CrewChiefAssign(forms.ModelForm):
-    crew_chief = make_ajax_field(Event,'crew_chief','Users',plugin_options = {'minLength':3})
+    crew_chief = make_ajax_field(Event,'crew_chief','Members',plugin_options = {'minLength':3})
     class Meta:
         model = Event
         fields = ("crew_chief",)
@@ -225,7 +225,7 @@ class EventMeetingForm(forms.ModelForm):
     datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
     datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
     crew_chief = AutoCompleteSelectMultipleField('Users',required=False)
-    crew = AutoCompleteSelectMultipleField('Users',required=False)
+    crew = AutoCompleteSelectMultipleField('3',required=False)
     
     
 class InternalEventForm(forms.ModelForm):
@@ -501,7 +501,7 @@ class CCIForm(forms.ModelForm):
     class Meta:
         model = EventCCInstance
         
-    crew_chief = AutoCompleteSelectField('Users',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    crew_chief = AutoCompleteSelectField('Members',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
     setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now()) 
     setup_location = GroupedModelChoiceField(
             queryset = Location.objects.filter(setup_only=True),
