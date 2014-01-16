@@ -411,7 +411,6 @@ class ReportForm(forms.ModelForm):
                 django_msgs,
                 Field('report',css_class="span10"),
                 markdown_at_msgs,
-                Field('for_service_cat',label="Services"),
                 FormActions(
                     Submit('save', 'Save Changes'),
                     Reset('reset','Reset Form'),
@@ -420,7 +419,7 @@ class ReportForm(forms.ModelForm):
         super(ReportForm,self).__init__(*args,**kwargs)
     class Meta:
         model = CCReport
-        fields = ('report','for_service_cat')
+        fields = ('report',)
         
         
 class MKHoursForm(forms.ModelForm):
