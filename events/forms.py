@@ -136,7 +136,7 @@ class IOrgForm(forms.ModelForm):
                 )
             ),
             FormActions(
-                Submit('save', 'Save changes'),
+                Submit('save', 'Save Changes'),
             )
         )
         super(IOrgForm,self).__init__(*args,**kwargs)
@@ -276,7 +276,7 @@ class InternalEventForm(forms.ModelForm):
                     )
             ),
             FormActions(
-                Submit('save', 'Save changes'),
+                Submit('save', 'Save Changes'),
             )
         )
         super(InternalEventForm,self).__init__(*args,**kwargs)
@@ -312,7 +312,7 @@ class ExternalOrgUpdateForm(forms.ModelForm):
                 'phone',
                 'associated_users',
                 FormActions(
-                    Submit('save', 'Save changes'),
+                    Submit('save', 'Save Changes'),
                 )
         )
         super(ExternalOrgUpdateForm,self).__init__(*args,**kwargs)
@@ -364,7 +364,7 @@ class BillingForm(forms.ModelForm):
                 PrependedText('date_billed','<i class="icon-calendar"></i>',css_class="datepick"),
                 PrependedText('amount', '<strong>$</strong>'),
                 FormActions(
-                    Submit('save', 'Save changes'),
+                    Submit('save', 'Save Changes'),
                     Reset('reset','Reset Form'),
                 )
             )
@@ -388,7 +388,7 @@ class BillingUpdateForm(forms.ModelForm):
                 PrependedText('date_paid','<i class="icon-calendar"></i>',css_class="datepick"),
                 PrependedText('amount', '<strong>$</strong>'),
                 FormActions(
-                    Submit('save', 'Save changes'),
+                    Submit('save', 'Save Changes'),
                     Reset('reset','Reset Form'),
                 )
             )
@@ -413,7 +413,7 @@ class ReportForm(forms.ModelForm):
                 markdown_at_msgs,
                 Field('for_service_cat',label="Services"),
                 FormActions(
-                    Submit('save', 'Save changes'),
+                    Submit('save', 'Save Changes'),
                     Reset('reset','Reset Form'),
                 )
         )
@@ -435,7 +435,7 @@ class MKHoursForm(forms.ModelForm):
                 Field('user'),
                 Field('hours'),
                 FormActions(
-                    Submit('save', 'Save changes'),
+                    Submit('save', 'Save Changes'),
                     Reset('reset','Reset Form'),
                 )
         )
@@ -454,7 +454,7 @@ class EditHoursForm(forms.ModelForm):
                 django_msgs,
                 Field('hours'),
                 FormActions(
-                    Submit('save', 'Save changes'),
+                    Submit('save', 'Save Changes'),
                 )
         )
         super(EditHoursForm,self).__init__(*args,**kwargs)

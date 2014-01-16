@@ -27,7 +27,7 @@ class UserAcct(forms.ModelForm):
                 'last_name',
                 
                 FormActions(
-                    Submit('save', 'Save changes'),
+                    Submit('save', 'Save Changes'),
                     HTML('&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;Click here to modify your <a href="%s">Contact Information</a>' % reverse('my-lnl')),
                 )
         )
@@ -55,7 +55,7 @@ class ProfileAcct(forms.ModelForm):
                 'phone',
                 'addr',
                 FormActions(
-                    Submit('save', 'Save changes'),
+                    Submit('save', 'Save Changes'),
                     HTML('&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;Click here to modify your <a href="%s">user information</a>' % reverse('my-acct')),
                 )
         )

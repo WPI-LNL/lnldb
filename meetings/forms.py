@@ -22,7 +22,7 @@ class MeetingAdditionForm(forms.ModelForm):
             'attendance',
             'meeting_type',
             FormActions(
-                Submit('save', 'Save changes'),
+                Submit('save', 'Save Changes'),
             )
         )
         super(MeetingAdditionForm,self).__init__(*args,**kwargs)
@@ -51,7 +51,7 @@ class AnnounceSendForm(forms.ModelForm):
             'message',
             'email_to',
             FormActions(
-                Submit('save', 'Save changes'),
+                Submit('save', 'Save Changes'),
                 )
             )
         
@@ -71,7 +71,7 @@ class AnnounceCCSendForm(forms.ModelForm):
             Hidden('meeting',meeting.id),
             'events',
             FormActions(
-                Submit('save', 'Save changes'),
+                Submit('save', 'Save Changes'),
                 ),
             )
         super(AnnounceCCSendForm,self).__init__(*args,**kwargs)

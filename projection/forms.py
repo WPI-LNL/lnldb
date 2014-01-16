@@ -51,7 +51,7 @@ class ProjectionistForm(forms.ModelForm):
                 'license_number',
                 Field('license_expiry',css_class="datepick"),
                 FormActions(
-                    Submit('save', 'Save changes'),
+                    Submit('save', 'Save Changes'),
                 )
         )
         super(ProjectionistForm,self).__init__(*args,**kwargs)
@@ -87,7 +87,7 @@ class BulkUpdateForm(forms.Form):
             Field('date',css_class="datepick"),
             Field('pit_level'),
             FormActions(
-                Submit('save', 'Save changes'),
+                Submit('save', 'Save Changes'),
             )
         )
         super(BulkUpdateForm,self).__init__(*args,**kwargs)
