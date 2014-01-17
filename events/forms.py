@@ -144,7 +144,7 @@ class IOrgForm(forms.ModelForm):
         model = Organization
     #associated_orgs = make_ajax_field(Organization,'associated_orgs','Orgs',plugin_options = {'minLength':2})
     #associated_users = make_ajax_field(Organization,'associated_users','Users',plugin_options = {'minLength':3})
-    #user_in_charge = AutoCompleteSelectField('Users')
+    user_in_charge = AutoCompleteSelectField('Users')
     associated_orgs = AutoCompleteSelectMultipleField('Orgs',required=False)
     associated_users = AutoCompleteSelectMultipleField('Users',required=False)
 class EventApprovalForm(forms.ModelForm):
