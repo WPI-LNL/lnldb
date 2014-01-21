@@ -91,4 +91,4 @@ def create_projectionist(sender, instance, created, **kwargs):
     if created:
         Projectionist.objects.create(user=instance)
 
-post_save.connect(create_projectionist, sender=User)
+#post_save.connect(create_projectionist, sender=User)
