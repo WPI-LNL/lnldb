@@ -95,7 +95,7 @@ def myeventdetail(request,id):
 @login_required
 def ccreport(request,eventid):
     context = RequestContext(request)
-    context['msg'] = "Crew Chief Report"
+    
         
     user = request.user
     
@@ -105,6 +105,8 @@ def ccreport(request,eventid):
         return HttpResponse("This Event Must not Have been yours")
         
     event = event[0].event
+    x = event.ccinstances.filter(crew_chief=user)
+    context['msg'] = "Crew Chief Report for '<em>%s</em>' (%s)" % (event,",".join([str(i.service) for i in x]))
     
     report,created = CCReport.objects.get_or_create(event=event, crew_chief=user)
     
