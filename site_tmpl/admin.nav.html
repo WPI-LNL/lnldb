@@ -10,7 +10,7 @@
             <a class="brand" href="{% url "events.views.indices.index" %}">LNLDB</a>
             <div class="nav-collapse collapse">
             <p class="navbar-text pull-right">
-              Logged in as <a href="{% url "events.views.my.my" %}" class="navbar-link"> {{user}}</a>
+              Logged in as <a href="{% url "events.views.my.my" %}" class="navbar-link"> {{user}} &middot; <a href="/logout">Log Out</a></a>
             </p>
             <ul class="nav nav-pills">
                 <li class="{% ancestor '/lnadmin/$' %}"><a href="{% url "events.views.indices.admin" %}">Home</a></li>
