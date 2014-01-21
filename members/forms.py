@@ -44,8 +44,9 @@ class MemberContact(forms.ModelForm):
                 Fieldset(
                 "Information",
                 'wpibox',
-                'phone',
+                Field('phone',css_class="bfh-phone",data_format="(ddd) ddd dddd"),
                 'addr',
+                'mdc',
                 ),
                 Fieldset(
                 "Settings",

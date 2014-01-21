@@ -52,7 +52,7 @@ class ProfileAcct(forms.ModelForm):
                 django_msgs,
                 
                 'wpibox',
-                'phone',
+                Field('phone',css_class="bfh-phone",data_format="(ddd) ddd dddd"),
                 'addr',
                 FormActions(
                     Submit('save', 'Save Changes'),
