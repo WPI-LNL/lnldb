@@ -157,9 +157,9 @@ def unbilled(request,start=None,end=None):
     events = paginate_helper(events,page)
 
     
-    context['h2'] = "Paid Events"
+    context['h2'] = "Events to be billed"
     context['events'] = events
-    context['baseurl'] = reverse("paid")
+    context['baseurl'] = reverse("unbilled")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     
     return render_to_response('events.html', context)
