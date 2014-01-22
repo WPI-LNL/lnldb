@@ -17,7 +17,7 @@ from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,M
 from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions,PrependedText
 
 from events.models import Event,Organization,Category,OrganizationTransfer
-from events.models import Extra,Location,Lighting,Sound,Projection,Service,EventCCInstance
+from events.models import Extra,Location,Lighting,Sound,Projection,Service,EventCCInstance,EventAttachment
 from events.models import Billing,CCReport,Hours
 
 from events.widgets import ExtraSelectorWidget,ValueSelectField
@@ -509,6 +509,44 @@ class CCIForm(forms.ModelForm):
             group_by_field = "building", 
             group_label = lambda group: group.name,
         )
+    
+class AttachmentForm(forms.ModelForm):
+    def __init__(self,event,*args,**kwargs):
+        self.event = event
+        self.helper = FormHelper()
+        self.helper.form_class = "form-inline"
+        self.helper.template = 'bootstrap/table_inline_formset.html'
+        self.helper.form_tag = False
+        self.helper.layout = Layout( 
+            Field('for_service'),
+            Field('attachment'),
+            Field('note'),
+            HTML('<hr>'),
+        )
+        super(AttachmentForm,self).__init__(*args,**kwargs)
+        
+        #x = self.instance.event.lighting
+        self.fields['for_service'].queryset = self.get_qs_from_event(event)
+        
+    def get_qs_from_event(self,event):
+        if event.lighting:
+            lighting_id = event.lighting.id
+        else:
+            lighting_id = None
+        if event.sound:
+            sound_id = event.sound.id
+        else:
+            sound_id = None
+        if event.projection:
+            proj_id = event.projection.id
+        else:
+            proj_id = None
+            
+        return Service.objects.filter(Q(id__in=[lighting_id])|Q(id__in=[sound_id])|Q(id__in=[proj_id])|Q(id__in=[i.id for i in event.otherservices.all()]))
+    class Meta:
+        model = EventAttachment
+        fields = ('for_service','attachment','note')
+        
 #CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3,form=CCIForm)
 
 #usage

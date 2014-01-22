@@ -19,10 +19,16 @@ def disable_setup_only(modeladmin,request,queryset):
 disable_setup_only.short_description = "UN-Set Location as a Setup Location"
 
 #modeladmins
+class EventBillingInline(admin.TabularInline):
+    model = Billing
 class EventCCInline(admin.TabularInline):
     model = EventCCInstance
+
+class EventAttachmentInline(admin.TabularInline):
+    model = EventAttachment
+    
 class EventAdmin(admin.ModelAdmin):
-    inlines = [EventCCInline,]
+    inlines = [EventCCInline,EventAttachmentInline,EventBillingInline]
     filter_horizontal = ('crew','crew_chief','org')
     
 class OrgAdmin(admin.ModelAdmin):

@@ -554,3 +554,13 @@ class EventCCInstance(models.Model):
     service = models.ForeignKey(Service,related_name = "ccinstances")
     setup_location = models.ForeignKey(Location, related_name="ccinstances")
     setup_start = models.DateTimeField(null=True,blank=True)
+
+# for riders, etc
+def attachment_file_name(instance, filename):
+    return '/'.join(['eventuploads', str(instance.event.id), filename])
+
+class EventAttachment(models.Model):
+    event = models.ForeignKey('Event', related_name="attachments")
+    for_service = models.ForeignKey(Service, null=True, blank=True, related_name="attachments")
+    attachment = models.FileField(upload_to=attachment_file_name) 
+    note = models.TextField(null=True, blank=True)

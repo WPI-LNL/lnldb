@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block extras %}
+{% include "js_phonelimit.tmpl" %}
+{% endblock %}
+
+{% block content %}    
+    <h2> <a href="{% url "events.views.my.my" %}">My</a> Files for '<em>{{event }}</em>'</h2>
+    <table class="table">
+        <tr>
+            <th>Service</th>
+            <th>Notes</th>
+            <th>File Name</th>
+            <th></th>
+        </tr>
+        {% for a in event.attachments.all %}
+        <tr>
+            <td>{{ a.for_service }}</td>
+            <td>{{ a.note }}</td>
+            <td>{{ a.attachment.name }}</td>
+            <td><a class="btn" href="{{ a.attachment.url }}">Link</a></td>
+        </tr>
+        
+        
+        {% empty %}
+        <tr><td colspan="4">No files have been uploaded</td></tr>
+        {% endfor %}
+    </table>
+{% endblock %}
