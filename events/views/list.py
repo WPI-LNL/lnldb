@@ -81,6 +81,11 @@ def upcoming(request,start=None,end=None):
     if limit = False, then it'll show all upcoming events that are more than a week away.
     """
     context = RequestContext(request)
+    if not start and not end:
+        today = datetime.date.today()
+        start = today.strftime('%Y-%m-%d')
+        end = today + datetime.timedelta(days=180)
+        end = end.strftime('%Y-%m-%d')
     
     #events = Event.objects.filter(approved=True).filter(closed=False).filter(paid=False).filter(datetime_start__gte=today)
     events = Event.objects.filter(approved=True).filter(closed=False)#.filter(paid=False)
