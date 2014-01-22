@@ -9,10 +9,11 @@ from django.contrib import messages
 
 from django.forms.models import inlineformset_factory
 from django.utils.functional import curry
+from django.db.models import Q
 
 from events.forms import EventApprovalForm,EventDenialForm, BillingForm, BillingUpdateForm
-from events.forms import CrewAssign,CrewChiefAssign, CCIForm
-from events.models import Event,Organization,Billing,EventCCInstance
+from events.forms import CrewAssign,CrewChiefAssign, CCIForm, AttachmentForm
+from events.models import Event,Organization,Billing,EventCCInstance,EventAttachment,Service
 from helpers.challenges import is_officer
 
 import datetime
@@ -165,6 +166,33 @@ def assigncc(request,id):
         context['formset'] = formset
         
     return render_to_response('formset_crispy_helpers.html', context)
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
+def assignattach(request,id):
+    context = RequestContext(request)
+    context['msg'] = "Attachments"
+    
+    event = get_object_or_404(Event,pk=id)
+    context['event'] = event
+    
+    AttachmentFS = inlineformset_factory(Event,EventAttachment,extra=1)
+    AttachmentFS.form = staticmethod(curry(AttachmentForm, event=event))
+    
+    if request.method == 'POST':
+        formset = AttachmentFS(request.POST,request.FILES,instance=event)
+        if formset.is_valid():
+            formset.save()
+            return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(event.id,)))
+        else:
+            context['formset'] = formset
+            
+    else:
+        formset = AttachmentFS(instance=event)
+        
+        context['formset'] = formset
+        
+    return render_to_response('formset_crispy_attachments.html', context)
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')

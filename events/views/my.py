@@ -92,6 +92,14 @@ def myeventdetail(request,id):
         return render_to_response('eventdetail.html', context)
     
     
+    
+@login_required
+def eventfiles(request,eventid):
+    context = RequestContext(request)
+    event = get_object_or_404(Event,pk=eventid)
+    
+    context['event'] = event
+    return render_to_response('myeventfiles.html',context)
 @login_required
 def ccreport(request,eventid):
     context = RequestContext(request)
@@ -102,7 +110,7 @@ def ccreport(request,eventid):
     event = user.ccinstances.filter(event__pk=eventid)
     
     if not event:
-        return HttpResponse("This Event Must not Have been yours")
+        return HttpResponse("This Event Must not Have been yours, or is closed")
         
     event = event[0].event
     x = event.ccinstances.filter(crew_chief=user)
@@ -133,7 +141,7 @@ def hours_list(request,eventid):
     event = user.ccinstances.filter(event__pk=eventid)
     
     if not event:
-        return HttpResponse("You must not have cc'd this event")
+        return HttpResponse("You must not have cc'd this event, or it's closed")
     event = event[0].event
     context['event'] = event
     
@@ -150,7 +158,7 @@ def hours_mk(request,eventid):
     user = request.user
     event = user.ccinstances.filter(event__pk=eventid)
     if not event:
-        return HttpResponse("You must not have cc'd this event")
+        return HttpResponse("You must not have cc'd this event, or is closed")
     event = event[0].event
     context['msg'] = "Hours for '%s'" % event.event_name
     if request.method == 'POST':
@@ -174,7 +182,7 @@ def hours_edit(request,eventid,userid):
     user = request.user
     event = user.ccinstances.filter(event__pk=eventid)
     if not event:
-        return HttpResponse("You must not have cc'd this event")
+        return HttpResponse("You must not have cc'd this event, or it's closed")
     event = event[0].event
     
     hours = get_object_or_404(Hours,event=event,user_id=userid)
