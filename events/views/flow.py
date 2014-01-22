@@ -66,6 +66,8 @@ def denial(request,id):
             e.cancelled = True
             e.cancelled_on = datetime.datetime.now()
             e.cancelled_by = request.user
+            e.closed_by = request.user
+            e.closed_on = datetime.datetime.now()
             e.save()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Denied Event')
