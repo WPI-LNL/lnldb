@@ -63,10 +63,10 @@
             <h3>Events CC'd</h3>
             <ul class="unstyled"> 
                 {% for event in u.ccinstances.all %}
-                    <li><a href="{% url "events-detail" event.event.id %}">{{ event.event }}</a></li>
+                    <li><a href="{% url "events-detail" event.event.id %}">{{ event.event }}</a> ({{ event.datetime_start }})</li>
                 {% endfor %}
                 {% for event in u.crewchiefx.all %}
-                    <li><a href="{% url "events-detail" event.id %}">{{ event }}</a></li>
+                    <li><a href="{% url "events-detail" event.id %}">{{ event }}</a> ({{ event.datetime_start }})</li>
                 {% endfor %}
             </ul>
         </div>
