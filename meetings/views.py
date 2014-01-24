@@ -157,6 +157,8 @@ def mknotice(request,id):
     return render_to_response('form_crispy.html',context)
 
 
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def mkccnotice(request,id):
     context = RequestContext(request)
     

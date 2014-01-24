@@ -18,7 +18,7 @@
                     <p align="left" class="article-title">Events</p>
                     <table>
                     
-                    {% for e in object.events.all %}
+                    {% for e in object.events.all reversed %}
                     <tr>
                         <td>{{ e.datetime_start|date:"m-d D" }}</td>
                         <td>{{ e.event_name }}</td>
