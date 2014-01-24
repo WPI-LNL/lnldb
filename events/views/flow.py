@@ -18,8 +18,10 @@ from helpers.challenges import is_officer
 
 import datetime
 
-from django.views.generic import UpdateView,CreateView
+from django.views.generic import UpdateView,CreateView, DeleteView
 from helpers.mixins import LoginRequiredMixin, OfficerMixin, SetFormMsgMixin
+
+from django.core.exceptions import ValidationError
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
@@ -241,5 +243,21 @@ class BillingUpdate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,UpdateView):
         messages.success(self.request,"Billing Updated!", extra_tags='success')
         return super(BillingUpdate,self).form_valid(form)
     
+    def get_success_url(self):
+        return reverse("events-detail",args=(self.kwargs['event'],))
+    
+class BillingDelete(OfficerMixin,LoginRequiredMixin,DeleteView):
+    model = Billing
+    template_name = "form_delete_cbv.html"
+    msg = "Deleted Bill"
+    
+    def get_object(self, queryset=None):
+        """ Hook to ensure object isn't closed """
+        obj = super(BillingDelete, self).get_object()
+        if obj.event.closed:
+            raise ValidationError("Event is closed")
+        else:
+            return obj
+        
     def get_success_url(self):
         return reverse("events-detail",args=(self.kwargs['event'],))

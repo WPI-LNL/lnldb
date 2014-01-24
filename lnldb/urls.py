@@ -17,7 +17,7 @@ admin.autodiscover()
 from acct.views import AcctUpdate,LNLUpdate
 from members.views import UserUpdate
 from members.views import MemberUpdate
-from events.views.flow import BillingCreate,BillingUpdate
+from events.views.flow import BillingCreate,BillingUpdate,BillingDelete
 from emails.views import MeetingAnnounceView
 from emails.views import MeetingAnnounceCCView
 from projection.views import ProjectionCreate
@@ -109,6 +109,7 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/close/(?P<id>[0-9a-f]+)/$', 'events.views.flow.close', name="event-close"), 
     url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/mk/$', BillingCreate.as_view(), name="event-mkbilling"), 
     url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/update/(?P<pk>[0-9]+)/$', BillingUpdate.as_view(), name="event-updbilling"), 
+    url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/rm/(?P<pk>[0-9]+)/$', BillingDelete.as_view(), name="event-rmbilling"), 
     
     url(r'^lnadmin/events/upcoming/$', 'events.views.list.upcoming', name="upcoming"),
     url(r'^lnadmin/events/upcoming/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.upcoming'),
