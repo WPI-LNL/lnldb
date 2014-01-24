@@ -315,6 +315,13 @@
                             {% endfor %}
                         {% endif %}
                         
+                        {% if event.discount_applied %}
+                        <tr class="warning">
+                                    <td>15% Discount Applied</td>
+                                    <td>-${{ event.discount_value}}</td>
+                                </tr>
+                        {% endif %}
+                        
                         <tr class="info">
                             <td>Total</td>
                             <td>${{ event.cost_total }}</td>
@@ -338,6 +345,7 @@
                             <td>
                                 {% if not event.closed %}
                                 <a class="btn btn-link" href="{% url "event-updbilling" event.id billing.id %}">Update</a>
+                                <a class="btn btn-link" href="{% url "event-rmbilling" event.id billing.id %}">Delete</a>
                                 {% endif %}
                             </td>
                         </tr>

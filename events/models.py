@@ -461,8 +461,19 @@ class Event(models.Model):
             return True
         else:
             return False
+    
+    @property
+    def cost_total_pre_discount(self):
+        return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total
+    
+    @property
+    def discount_value(self):
+        if self.discount_applied:
+            return float(self.cost_total_pre_discount) * .15
+        else:
+            return 0.0
         
-        
+    
     @property
     def cost_total(self):
         if self.discount_applied:
