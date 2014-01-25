@@ -73,6 +73,17 @@ def away(request):
     users = User.objects.filter(groups__name='Away').order_by('last_name')
     
     context['users'] = users
+    context['h2'] = "Away Members"
+    
+    return render_to_response('users.html', context)
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
+def inactive(request):
+    context = RequestContext(request)
+    users = User.objects.filter(groups__name='Inactive').order_by('last_name')
+    
+    context['users'] = users
     context['h2'] = "Inactive Members"
     
     return render_to_response('users.html', context)
