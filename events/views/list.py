@@ -92,6 +92,7 @@ def upcoming(request,start=None,end=None):
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
+    events = events.order_by('datetime_start')
     events = paginate_helper(events,page)
     
     context['h2'] = "Upcoming Events"
