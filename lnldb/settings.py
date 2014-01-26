@@ -215,9 +215,6 @@ DEALER_TYPE = 'git'
 DEALER_PATH = '/home/lnldb/lnldb/'
 DEALER_BACKENDS = ('git')
 
-RAVEN_CONFIG = {
-    'dsn': 'http://db5d942b28264ed993cfc1a3c09b59ca:6484f14bdf1a44e79ff4c5635d13316f@sentry.housega.me/7',
-}
 # Local Settings Imports
 try:
     local_settings_file = open(here('local_settings.py'), 'r')
