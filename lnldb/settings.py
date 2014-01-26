@@ -1,6 +1,7 @@
 # Django settings for lnldb project.
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
+here = lambda *x: os.path.join(os.path.abspath(os.path.dirname(__file__)), *x)
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -13,10 +14,10 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
         'NAME': 'lnldb',                      # Or path to database file if using sqlite3.
-        'USER': 'lnldb',                      # Not used with sqlite3.
-        'PASSWORD': 'buttsex',                  # Not used with sqlite3.
+        'USER': '',                      # Not used with sqlite3.
+        'PASSWORD': '',                  # Not used with sqlite3.
         'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
         'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
     }
@@ -134,6 +135,7 @@ INSTALLED_APPS = (
     'pages',
     'meetings',
     'emails',
+    'members',
     
     'bootstrap_toolkit',
     'crispy_forms',
@@ -142,6 +144,7 @@ INSTALLED_APPS = (
     'ajax_select',
     
     'south',
+    'raven.contrib.django.raven_compat',
 )
 
 TEMPLATE_CONTEXT_PROCESSESORS = TCP + (
@@ -188,11 +191,12 @@ AJAX_SELECT_BOOTSTRAP = False
 AJAX_LOOKUP_CHANNELS = {
     'Users' : ('acct.lookups', 'UserLookup'),
     'Orgs' : ('events.lookups', 'OrgLookup'),
+    'Members' : ('acct.lookups', 'MemberLookup'),
 }
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 
-TEMPLATE_CONTEXT_PROCESSORS = TCP + ('django.core.context_processors.request',)
+TEMPLATE_CONTEXT_PROCESSORS = TCP + ('django.core.context_processors.request','dealer.contrib.django.staff.context_processor')
 
 
 # email stuff
@@ -205,9 +209,17 @@ EMAIL_KEY_START_END = None
 LOGIN_URL = "/acct/login/"
 LOGIN_REDIRECT_URL = "/my/"
 
+# GIT REV
+DEALER_TYPE = 'git'
+DEALER_PATH = '/home/lnldb/lnldb/'
+DEALER_BACKENDS = ('git')
+
+RAVEN_CONFIG = {
+    'dsn': 'http://db5d942b28264ed993cfc1a3c09b59ca:6484f14bdf1a44e79ff4c5635d13316f@sentry.housega.me/7',
+}
 # Local Settings Imports
 try:
-    local_settings_file = open("%s/%s" % ("lnldb", "local_settings.py")) 
+    local_settings_file = open(here('local_settings.py'), 'r')
     local_settings_script = local_settings_file.read()
     exec local_settings_script
 except IOError, e:
