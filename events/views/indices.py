@@ -9,12 +9,15 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 
 from django.utils import timezone
+from django.conf import settings
+from django.db.models import Q
 
 from events.forms import WorkorderSubmit,CrewAssign,OrgForm
 from events.models import Event,Organization
 from helpers.challenges import is_officer
 
 import datetime
+
 
 ### FRONT 3 PAGES
 def index(request):
@@ -56,20 +59,25 @@ def admin(request,msg=None):
     context = RequestContext(request)
     context['msg'] = msg
     
+    if settings.LANDING_TIMEDELTA:
+        delta = settings.LANDING_TIMEDELTA
+    else:
+        delta = 48
+        
     tz = timezone.get_current_timezone()
+    
+    # fuzzy delta
     today = datetime.datetime.now(tz)
-    # get today's events 
-    starting = Event.objects.filter(datetime_start__year=today.year,datetime_start__month=today.month,datetime_start__day=today.day)
-    context['starting'] = starting
+    today_min = datetime.datetime.combine(today.date(), datetime.time.min)
     
-    #in progress
-    ip = Event.objects.filter(datetime_start__lte=today,datetime_end__gte=today)
-    context['ip'] = ip
+    end = today + datetime.timedelta(hours=delta)
+    end_max = datetime.datetime.combine(end.date(), datetime.time.max)
     
-    #ended
-    et =  Event.objects.filter(datetime_end__year=today.year,datetime_end__month=today.month,datetime_end__day=today.day)
-    context['et'] = et
+    # get upcoming and ongoing events
+    events = Event.objects.filter(Q(datetime_start__range=(today_min,end_max))|Q(datetime_end__gte=today_min)).order_by('datetime_start')
+    context['events'] = events
     
+        
     context['tznow'] = today
     
     return render_to_response('admin.html', context) 
