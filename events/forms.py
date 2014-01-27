@@ -596,7 +596,6 @@ class OrgForm(forms.Form):
         user = kwargs.pop('user')
         
         super(OrgForm,self).__init__(*args,**kwargs)
-        self.fields['group'].queryset = Organization.objects.filter(Q(user_in_charge=user)|Q(associated_users__in=[user.id])).distinct()
         
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -605,12 +604,8 @@ class OrgForm(forms.Form):
                 'group',
                 HTML('<span class="muted">If the organization you are looking for does not show up in the list, please contact the person in charge and tell them to use <a target="_blank" href="%s">this page</a> to grant you access</span>' % reverse('my-orgs-incharge-list')),
         )
-        super(OrgForm,self).__init__(*args,**kwargs)
-    group = forms.ModelChoiceField(queryset = Organization.objects.all(),label="Organization")
-    #group_address = forms.CharField(
-            #widget=forms.Textarea,
-            #label = "Group Address",
-        #)
+
+    group = AutoCompleteSelectField('UserLimitedOrgs', required=True, plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}",'minLength':2})
 
 
 class SelectForm(forms.Form):

@@ -192,6 +192,7 @@ AJAX_SELECT_BOOTSTRAP = False
 AJAX_LOOKUP_CHANNELS = {
     'Users' : ('acct.lookups', 'UserLookup'),
     'Orgs' : ('events.lookups', 'OrgLookup'),
+    'UserLimitedOrgs' : ('events.lookups', 'UserLimitedOrgLookup'),
     'Members' : ('acct.lookups', 'MemberLookup'),
 }
 
