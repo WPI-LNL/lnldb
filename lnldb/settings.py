@@ -201,6 +201,11 @@ from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 TEMPLATE_CONTEXT_PROCESSORS = TCP + ('django.core.context_processors.request','dealer.contrib.django.staff.context_processor')
 
 
+# Various Other Settings
+
+# Number of hours to show on the admin landing
+LANDING_TIMEDELTA = 72 
+
 # email stuff
 SEND_EMAIL_ORG_TRANSFER = True
 SEND_START_END_EMAILS = True

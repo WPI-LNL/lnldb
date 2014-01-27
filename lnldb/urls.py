@@ -1,6 +1,11 @@
 from django.conf.urls import patterns, include, url
 
-from events.forms import OrgForm,ContactForm,LightingForm,SoundForm,ProjectionForm
+from events.forms import OrgForm
+from events.forms import ContactForm
+from events.forms import LightingForm
+from events.forms import SoundForm
+from events.forms import ProjectionForm
+
 from events.forms import named_event_forms
 from events.views.wizard import EventWizard
 from events.views.wizard import show_lighting_form_condition,show_sound_form_condition,show_projection_form_condition,show_other_services_form_condition
