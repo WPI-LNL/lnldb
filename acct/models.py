@@ -6,9 +6,9 @@ from django.db.models.signals import post_save
 class Profile(models.Model):
     user = models.OneToOneField(User)
     
-    wpibox = models.IntegerField(null=True,blank=True,verbose_name="WPI Box")
+    wpibox = models.IntegerField(null=True,blank=True,verbose_name="WPI Box Number")
     phone = models.CharField(max_length=24,null=True,blank=True, verbose_name="Phone Number")
-    addr = models.TextField(null=True,blank=True, verbose_name="Address")
+    addr = models.TextField(null=True,blank=True, verbose_name="Address / Office Location")
     mdc = models.CharField(max_length=32,null=True,blank=True, verbose_name="MDC")
     
     locked = models.BooleanField(default=False)
