@@ -73,6 +73,9 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </a>
+          <p class="navbar-text pull-right">
+          Logged in as <a href="{% url "events.views.my.my" %}" class="navbar-link"> {{user}} &middot; <a href="/logout">Log Out</a></a>
+          </p>
           <a class="brand" href="{% url "events.views.indices.index" %}">Lens and Lights Database</a>
         
         </div>
