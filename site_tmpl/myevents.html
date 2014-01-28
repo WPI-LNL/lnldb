@@ -15,7 +15,13 @@
                 {% for instance in user.ccinstances.all %}
                         <tr>
                             <td>{{instance.event.event_name}}</td>
-                            <td title="{{event.datetime_end}}">{{instance.event.datetime_end|timesince}} Ago</td>
+                            <td title="{{instance.event.datetime_end}}">
+                                {% if instance.event.datetime_end > now %}
+                                    {{instance.event.datetime_end|timeuntil}} from now 
+                                {% else %}
+                                    {{instance.event.datetime_end|timesince}} Ago 
+                                {% endif %}
+                            </td>
                             <td>{{ instance.event.location}}</td>
                             <td>{{ instance.event.status }}</td>
                             <td>{% if not instance.event.closed %}
@@ -47,7 +53,13 @@
         {% for instance in user.ccinstances.all %}
                 <tr>
                     <td>{{instance.event.event_name}}</td>
-                    <td title="{{event.datetime_end}}">{{instance.event.datetime_end|timesince}} Ago</td>
+                    <td title="{{instance.event.datetime_end}}">
+                        {% if instance.event.datetime_end > now %}
+                            {{instance.event.datetime_end|timeuntil}} from now 
+                        {% else %}
+                            {{instance.event.datetime_end|timesince}} Ago 
+                        {% endif %}
+                    </td>
                     <td>{{instance.event.location}}</td>
                     <td>{# <a class="btn">Repeat</a> ADD ME BACK LATER#}</td>
                 </tr>
@@ -70,7 +82,13 @@
             {% for event in user.submitter.all %}
                     <tr>
                         <td>{{event.event_name}}</td>
-                        <td title="{{event.datetime_end}}">{{event.datetime_end|timesince}} Ago</td>
+                        <td title="{{event.datetime_end}}">
+                            {% if event.datetime_end > now %}
+                                {{event.datetime_end|timeuntil}} from now 
+                            {% else %}
+                                {{event.datetime_end|timesince}} Ago 
+                            {% endif %}
+                        </td>
                         <td>{{event.location}}</td>
                         <td>{{ event.status }}</a>
                     </tr>

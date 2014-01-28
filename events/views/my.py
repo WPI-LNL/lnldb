@@ -9,6 +9,7 @@ from events.models import Event,Organization,CCReport,Hours
 from events.forms import ReportForm,MKHoursForm,EditHoursForm
 
 import datetime,time
+from django.utils import timezone
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from helpers.challenges import is_lnlmember
@@ -69,6 +70,9 @@ def myevents(request):
 
     user = request.user
     context['user'] = user
+    
+    now = datetime.datetime.now(timezone.get_current_timezone())
+    context['now'] = now
     
     if user.groups.exclude(name__in=["Contact"]).exists():
         member = True
