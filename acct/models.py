@@ -19,6 +19,10 @@ class Profile(models.Model):
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
+        # if not email, this solves issue #138
+        if not instance.email:
+            instance.email = "%s@wpi.edu" % instance.username 
+            instance.save()
 
 post_save.connect(create_user_profile, sender=User)
 
