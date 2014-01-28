@@ -105,6 +105,7 @@ class EventManager(models.Manager):
         
         event =  self.create(
             submitted_by = wiz.request.user,
+            contact = wiz.request.user
             submitted_ip = wiz.request.META['REMOTE_ADDR'],
             event_name = event_name,
             
@@ -232,8 +233,9 @@ class Event(models.Model):
     
     event_name = models.CharField(max_length=128)
     #Person
-    person_name = models.CharField(max_length=128,null=True,blank=True,verbose_name="Client")
-    org = models.ManyToManyField('Organization',null=True,blank=True)
+    person_name = models.CharField(max_length=128,null=True,blank=True,verbose_name="Contact_name")
+    contact = models.ForeignKey(User,null=True,blank=True, verbose_name = "Contact")
+    org = models.ManyToManyField('Organization',null=True,blank=True, verbose_name="Client")
     contact_email = models.CharField(max_length=256,null=True,blank=True)
     contact_addr = models.TextField(null=True,blank=True)
     contact_phone = models.CharField(max_length=32,null=True,blank=True)
@@ -502,8 +504,8 @@ class CCReport(models.Model):
 class Organization(models.Model):
     name = models.CharField(max_length=128,unique=True)
     shortname = models.CharField(max_length=8,null=True,blank=True)
-    email = models.EmailField(null=True,blank=True)
-    exec_email = models.EmailField(null=True,blank=True)
+    email = models.EmailField(null=True,blank=True, verbose_name="normal_email_unused")
+    exec_email = models.EmailField(null=True,blank=True, verbose_name="EMail")
     
     email_exec = models.BooleanField(default=True)
     email_normal = models.BooleanField(default=False)
@@ -538,6 +540,8 @@ class Organization(models.Model):
     
     class Meta:
         ordering = ['name']
+        verbose_name = "Client"
+        verbose_name_plural = "Clients"
         
         
 class OrganizationTransfer(models.Model):
@@ -588,4 +592,4 @@ class EventAttachment(models.Model):
     event = models.ForeignKey('Event', related_name="attachments")
     for_service = models.ForeignKey(Service, null=True, blank=True, related_name="attachments")
     attachment = models.FileField(upload_to=attachment_file_name) 
-    note = models.TextField(null=True, blank=True)
+    note = models.TextField(null=True, blank=True, default="")

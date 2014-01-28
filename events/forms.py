@@ -107,21 +107,20 @@ class CrewChiefAssign(forms.ModelForm):
 class IOrgForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
             TabHolder(
                 Tab(
                     'Contact',
                     Field('name'),
-                    'email',
                     'exec_email',
                     'address',
                     'phone',
                 ),
                 Tab(
                     'Options',
-                    'email_exec',
-                    'email_normal',
                     'associated_orgs',
+                    Field('personal',)
                 ),
                 Tab(
                     'Money',
@@ -242,7 +241,8 @@ class InternalEventForm(forms.ModelForm):
                 ),
                 Tab(
                     'Contact',
-                    'person_name',
+                    #'person_name',
+                    'contact',
                     'org',
                     ),
                 Tab(
@@ -282,7 +282,7 @@ class InternalEventForm(forms.ModelForm):
         super(InternalEventForm,self).__init__(*args,**kwargs)
     class Meta:
         model = Event
-        fields = ('event_name','location','description','person_name','org','datetime_setup_complete','datetime_start','datetime_end','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs',)
+        fields = ('event_name','location','description','contact','org','datetime_setup_complete','datetime_start','datetime_end','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs',)
 
     location = GroupedModelChoiceField(
             queryset = Location.objects.filter(show_in_wo_form=True),
@@ -604,6 +604,7 @@ class OrgForm(forms.Form):
                 'group',
                 HTML('<span class="muted">If the organization you are looking for does not show up in the list, please contact the person in charge and tell them to use <a target="_blank" href="%s">this page</a> to grant you access</span>' % reverse('my-orgs-incharge-list')),
         )
+        super(OrgForm,self).__init__(*args,**kwargs)
 
     group = AutoCompleteSelectField('UserLimitedOrgs', required=True, plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}",'minLength':2})
 
