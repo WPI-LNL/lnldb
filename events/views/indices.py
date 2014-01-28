@@ -74,7 +74,7 @@ def admin(request,msg=None):
     end_max = datetime.datetime.combine(end.date(), datetime.time.max)
     
     # get upcoming and ongoing events
-    events = Event.objects.filter(Q(datetime_start__range=(today_min,end_max))|Q(datetime_end__gte=today_min)).order_by('datetime_start')
+    events = Event.objects.filter(Q(datetime_start__range=(today_min,end_max))|Q(datetime_end__gte=today_min)).order_by('datetime_start').filter(approved=True)
     context['events'] = events
     
         
