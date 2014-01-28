@@ -105,7 +105,7 @@ class EventManager(models.Manager):
         
         event =  self.create(
             submitted_by = wiz.request.user,
-            contact = wiz.request.user
+            contact = wiz.request.user,
             submitted_ip = wiz.request.META['REMOTE_ADDR'],
             event_name = event_name,
             
