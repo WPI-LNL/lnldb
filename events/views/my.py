@@ -115,6 +115,8 @@ def ccreport(request,eventid):
     
     if not event:
         return HttpResponse("This Event Must not Have been yours, or is closed")
+    if not event.reports_editable:
+        return HttpResponse("The deadline for report submission and hours has past...")
         
     event = event[0].event
     x = event.ccinstances.filter(crew_chief=user)
@@ -163,6 +165,8 @@ def hours_mk(request,eventid):
     event = user.ccinstances.filter(event__pk=eventid)
     if not event:
         return HttpResponse("You must not have cc'd this event, or is closed")
+    if not event.reports_editable:
+        return HttpResponse("The deadline for report submission and hours has past...")
     event = event[0].event
     context['msg'] = "Hours for '%s'" % event.event_name
     if request.method == 'POST':
@@ -187,6 +191,8 @@ def hours_edit(request,eventid,userid):
     event = user.ccinstances.filter(event__pk=eventid)
     if not event:
         return HttpResponse("You must not have cc'd this event, or it's closed")
+    if not event.reports_editable:
+        return HttpResponse("The deadline for report submission and hours has past...")
     event = event[0].event
     
     hours = get_object_or_404(Hours,event=event,user_id=userid)

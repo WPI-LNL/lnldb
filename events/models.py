@@ -1,12 +1,21 @@
 from django.db import models
 #from events.managers import EventManager
+from django.conf import settings
 from django.contrib.auth.models import User
 # Create your models here.
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
+
+from django.utils import timezone
 import datetime,pytz
 
 from uuidfield import UUIDField
+
+# if settings unset, have sane defaults
+if settings.CCR_DAY_DELTA:
+    CCR_DELTA = settings.CCR_DAY_DELTA
+else:
+    CCR_DELTA = 7
 
 PROJECTIONS = (
     ('16','16mm'),
@@ -346,6 +355,25 @@ class Event(models.Model):
         
         return self.crew_chief.filter(id__in=k)
         #return k
+        
+    @property
+    def reports_editable(self):
+        
+        tz = timezone.get_current_timezone()
+        
+        end = self.datetime_start
+        
+        end_min = datetime.datetime.combine(end.date(),datetime.time.min)
+        end_min = tz.localize(end_min)
+        
+        end_plus_time = end + datetime.timedelta(days=CCR_DELTA)
+        now = datetime.datetime.now(timezone.get_current_timezone())
+        
+        if now < end_plus_time:
+            return True
+        else:
+            return False
+        
         
     @property
     def allservices(self):

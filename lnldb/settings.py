@@ -206,6 +206,9 @@ TEMPLATE_CONTEXT_PROCESSORS = TCP + ('django.core.context_processors.request','d
 # Number of hours to show on the admin landing
 LANDING_TIMEDELTA = 72 
 
+# Number of days to pass before crew chief reports are no longer able to be written.
+CCR_DAY_DELTA = 7
+
 # email stuff
 SEND_EMAIL_ORG_TRANSFER = True
 SEND_START_END_EMAILS = True
