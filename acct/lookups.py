@@ -25,7 +25,7 @@ class MemberLookup(LookupChannel):
     model = User
     
     def get_query(self,q,request):
-        return User.objects.filter(Q(username__icontains=q)|Q(first_name__icontains=q)|Q(last_name__icontains=q)).filter(Q(groups__name="Alumni")|Q(groups__name="Active")|Q(groups__name="Officer"))
+        return User.objects.filter(Q(username__icontains=q)|Q(first_name__icontains=q)|Q(last_name__icontains=q)).filter(Q(groups__name="Alumni")|Q(groups__name="Active")|Q(groups__name="Officer")).distinct()
     
     def get_result(self,obj):
         return obj.first_name + " " + obj.last_name
