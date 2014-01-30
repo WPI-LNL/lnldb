@@ -122,8 +122,8 @@ def generate_event_start_end_emails():
 # Cron Example
 # * * * * * ~/bin/python ~/lnldb/manage.py send_start_end
 
-
-# self service forms
+#### Self Service EMails
+# Self service org email
 def generate_selfservice_notice_email(context):
     subject = "Self Service Form Submission"
     from_email = DEFAULT_FROM_ADDR
@@ -131,6 +131,20 @@ def generate_selfservice_notice_email(context):
     
     cont_html = render_to_string('emails/email_selfservice.html',context)
     cont_text = render_to_string('emails/email_selfservice.txt',context)
+    
+    email = EmailMultiAlternatives(subject,cont_text,from_email,[to_email])
+    email.attach_alternative(cont_html, "text/html")
+    
+    return email
+
+# Self service member email
+def generate_selfmember_notice_email(context):
+    subject = "Self Service Member Request Submission"
+    from_email = DEFAULT_FROM_ADDR
+    to_email = settings.EMAIL_TARGET_S
+    
+    cont_html = render_to_string('emails/email_selfmember.html',context)
+    cont_text = render_to_string('emails/email_selfmember.txt',context)
     
     email = EmailMultiAlternatives(subject,cont_text,from_email,[to_email])
     email.attach_alternative(cont_html, "text/html")

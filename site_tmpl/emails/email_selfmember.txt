@@ -1,0 +1,7 @@
+Self Service Membership Request Form Filled
+
+Requesting User: {{ user }}
+Requesting User's Email: {{ user.email }}
+Requesting IP: {{ submitted_ip }}
+
+This user has requested to be marked an LNL member
