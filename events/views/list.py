@@ -8,6 +8,7 @@ from django.template import Context,RequestContext
 from events.models import Event,Organization
 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
 
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
