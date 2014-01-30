@@ -348,7 +348,32 @@ class OrgXFerForm(forms.ModelForm):
         model = OrganizationTransfer
         fields = ('new_user_in_charge',)
         
-
+class SelfServiceOrgRequestForm(forms.Form):
+    def __init__(self,*args,**kwargs):
+        
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.layout = Layout(
+                django_msgs,
+                'client_name',
+                'email',
+                'address',
+                Field('phone',css_class="bfh-phone",data_format="(ddd) ddd dddd"),
+                'fund_info',
+                FormActions(
+                    Submit('save', 'Submit Request'),
+                )
+        )
+        super(SelfServiceOrgRequestForm,self).__init__(*args,**kwargs)
+    
+    client_name = forms.CharField(max_length=128, label= "Client Name")
+    email = forms.EmailField()
+    address = forms.CharField(widget=forms.Textarea)
+    phone = forms.CharField(max_length=15)
+    fund_info = forms.CharField()
+    
 #### Internal Billing forms
 
 class BillingForm(forms.ModelForm):
@@ -603,7 +628,7 @@ class OrgForm(forms.Form):
         self.fields['group'].queryset = Organization.objects.filter(Q(user_in_charge=user)|Q(associated_users__in=[user.id])).distinct()
         self.helper.layout = Layout(
                 'group',
-                HTML('<span class="muted">If the organization you are looking for does not show up in the list, please contact the person in charge and tell them to use <a target="_blank" href="%s">this page</a> to grant you access</span>' % reverse('my-orgs-incharge-list')),
+                HTML('<span class="muted">If the client account you are looking for does not show up in the list, please contact the person in charge of the account using <a target="_blank" href="%s">this link</a> and request authorization to submit workorder son their behalf. If you are attempting to create an client account which does not exist please click <a target="_blank" href="%s">this link</a></span>' % (reverse('my-orgs-incharge-list'),reverse('selfserivceorg'))),
         )
         #super(OrgForm,self).__init__(*args,**kwargs)
     group = forms.ModelChoiceField(queryset = Organization.objects.all(),label="Organization")

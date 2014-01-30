@@ -6,13 +6,15 @@ from django.template import Context,RequestContext
 from django.contrib.auth.models import User
 
 from events.models import Event,Organization,CCReport,Hours
-from events.forms import ReportForm,MKHoursForm,EditHoursForm
+from events.forms import ReportForm,MKHoursForm,EditHoursForm,SelfServiceOrgRequestForm
 
 import datetime,time
 from django.utils import timezone
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from helpers.challenges import is_lnlmember
+
+from emails.generators import generate_selfservice_notice_email
 
 ### USER FACING SHIT
 @login_required
@@ -61,6 +63,36 @@ def myorgs(request):
     context['orgs'] = orgs
     return render_to_response('myorgs.html', context)
 
+@login_required 
+def myorgform(request):
+    """ Organization Creation Request Form"""
+    context = RequestContext(request)
+    context['msg'] = "Client Request"
+    if request.method == "POST":
+        form = SelfServiceOrgRequestForm(request.POST)
+        if form.is_valid():
+            email_context = {}
+            email_context['client_name'] = form.cleaned_data['client_name']
+            email_context['email'] = form.cleaned_data['email']
+            email_context['address'] = form.cleaned_data['address']
+            email_context['phone'] = form.cleaned_data['phone']
+            email_context['fund_info'] = form.cleaned_data['fund_info']
+            email_context['user'] = request.user
+            email_context['submitted_ip'] = request.META['REMOTE_ADDR']
+            email = generate_selfservice_notice_email(email_context)
+            email.send()
+            return render_to_response('org.service.html', context)
+        else:
+            context['formset'] = form
+            return render_to_response('mycrispy.html', context)
+    else:
+        form = SelfServiceOrgRequestForm()
+        context['formset'] = form
+    
+        return render_to_response('mycrispy.html', context)
+        
+
+# lnl facing
 
 @login_required
 #@user_passes_test(is_lnlmember, login_url='/lnldb/fuckoffkitty/')

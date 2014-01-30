@@ -1,0 +1,35 @@
+{% extends "emails/email_base.html" %}
+{% block perma %}
+{% endblock %}
+
+{% block unsub %}
+{% endblock %}
+
+{% block content %}
+<table class="w580" width="580" cellpadding="0" cellspacing="0" border="0">
+    <tbody>
+        <tr>
+            <td class="w580" width="580">
+                <p align="left" class="article-title">Self Service Client Request Form Filled</p>
+                <div align="left" class="article-content">
+                    
+                    <p>
+                    Requesting User: {{ user }} <br />
+                    Requesting User's Email: {{ user.email }} <br />
+                    Requesting IP: {{ submitted_ip }} <br />
+                    </p>
+                    <p align="left" class="article-title">Client Information</p>
+                    Client Name: {{ client_name }} <br />
+                    Client EMail: {{ email }} <br />
+                    Client Address: {{ address }} <br />
+                    Client Phone: {{ phone }} <br />
+                    Client FOI: {{ fund_info }} <br />
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="w580" width="580" height="10"></td>
+        </tr>
+        </tbody>
+</table>
+{% endblock %}
