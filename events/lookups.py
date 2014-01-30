@@ -9,7 +9,7 @@ class OrgLookup(LookupChannel):
     model = Organization
     
     def get_query(self,q,request):
-        return Organization.objects.filter(Q(name__icontains=q))
+        return Organization.objects.filter(Q(name__icontains=q)).filter(archived=False)
     
     def get_result(self,obj):
         return obj.name
