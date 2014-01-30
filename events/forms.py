@@ -115,7 +115,7 @@ class IOrgForm(forms.ModelForm):
                     Field('name'),
                     'exec_email',
                     'address',
-                    'phone',
+                    Field('phone',css_class="bfh-phone",data_format="(ddd) ddd dddd"),
                 ),
                 Tab(
                     'Options',
@@ -309,7 +309,7 @@ class ExternalOrgUpdateForm(forms.ModelForm):
                 django_msgs,
                 
                 'address',
-                'phone',
+                Field('phone',css_class="bfh-phone",data_format="(ddd) ddd dddd"),
                 'associated_users',
                 FormActions(
                     Submit('save', 'Save Changes'),
@@ -582,7 +582,7 @@ class ContactForm(forms.Form):
                 
                 'name',
                 'email',
-                'phone',
+                Field('phone',css_class="bfh-phone",data_format="(ddd) ddd dddd"),
                 HTML('<span class="muted">To avoid entering this information again, update your <a target="_blank" href="%s">contact information</a></span>' % reverse('my-lnl')),
         )
         super(ContactForm,self).__init__(*args,**kwargs)

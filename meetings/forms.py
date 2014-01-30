@@ -28,7 +28,7 @@ class MeetingAdditionForm(forms.ModelForm):
         )
         super(MeetingAdditionForm,self).__init__(*args,**kwargs)
     attendance = AutoCompleteSelectMultipleField('Users',required=False)
-    location = forms.ModelChoiceField(queryset = Location.objects.filter(available_for_meeting=True),label="Location", required=False)
+    location = forms.ModelChoiceField(queryset = Location.objects.filter(available_for_meetings=True),label="Location", required=False)
     
     class Meta:
         model = Meeting
