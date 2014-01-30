@@ -82,7 +82,7 @@
                         </tr>
                         <tr>
                             <th>Event Contact Name</th>
-                            <td><a href="{% url "memberdetail" event.contact.id %}">{{ event.contact }}</a></td>
+                            <td>{% if event.contact %}<a href="{% url "memberdetail" event.contact.id %}">{{ event.contact }}</a>{% else %}No Contact Set {% endif %}</td>
                         </tr>
                         <tr>
                             <th>Event Contact Phone</th>
