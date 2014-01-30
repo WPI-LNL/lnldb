@@ -27,7 +27,7 @@ def vieworgs(request):
     #todo add filters
     context = RequestContext(request)
     
-    orgs = Organization.objects.all()
+    orgs = Organization.objects.filter(archived=False)
     
     context['orgs'] = orgs
     

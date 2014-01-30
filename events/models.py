@@ -529,7 +529,7 @@ class CCReport(models.Model):
     #organization = models.IntegerField()
     #account = models.IntegerField(default=71973)
     
-class Organization(models.Model):
+class Organization(models.Model): #AKA Client
     name = models.CharField(max_length=128,unique=True)
     shortname = models.CharField(max_length=8,null=True,blank=True)
     email = models.EmailField(null=True,blank=True, verbose_name="normal_email_unused")
@@ -547,13 +547,14 @@ class Organization(models.Model):
     user_in_charge = models.ForeignKey(User,related_name='orgowner')
     associated_users = models.ManyToManyField(User,related_name='orgusers')
     
-    associated_orgs = models.ManyToManyField("self",null=True,blank=True)
+    associated_orgs = models.ManyToManyField("self",null=True,blank=True, verbose_name="Associated Clients")
     
     
     notes = models.TextField(null=True,blank=True)
     personal = models.BooleanField(default=False)
     
     last_updated = models.DateTimeField(auto_now=True)
+    archived = models.BooleanField(default=False)
 
     @property
     def fopal(self):
