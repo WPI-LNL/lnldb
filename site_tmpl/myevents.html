@@ -33,6 +33,7 @@
                                     {% if instance.event.attachments.count %}
                                     <a class="btn btn-info"  href="{% url 'my-eventfiles' instance.event.id %}">Files</a>
                                     {% endif %}
+                                    <a class="btn btn-inverse"  href="{% url 'my-events-pdf' instance.event.id %}">Workorder PDF </a>
                                 </div>
                             </td>
                         </tr>
