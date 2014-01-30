@@ -102,7 +102,7 @@ def upcoming(request,start=None,end=None):
             end = end.strftime('%Y-%m-%d')
     
     #events = Event.objects.filter(approved=True).filter(closed=False).filter(paid=False).filter(datetime_start__gte=today)
-    events = Event.objects.filter(approved=True).filter(closed=False)#.filter(paid=False)
+    events = Event.objects.filter(approved=True).filter(Q(closed=False)|Q(cancelled=False))#.filter(paid=False)
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
@@ -127,7 +127,7 @@ def incoming(request,start=None,end=None):
         end = today + datetime.timedelta(days=365.25)
         end = end.strftime('%Y-%m-%d')
     
-    events = Event.objects.filter(approved=False).filter(closed=False)
+    events = Event.objects.filter(approved=False).filter(Q(closed=False)|Q(cancelled=False))
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
@@ -150,7 +150,7 @@ def openworkorders(request,start=None,end=None):
         start,end = get_farback_date_range_plus_next_week()
     context = RequestContext(request)
     
-    events = Event.objects.filter(closed=False)
+    events = Event.objects.filter(Q(closed=False)|Q(cancelled=False))
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
@@ -170,7 +170,7 @@ def unbilled(request,start=None,end=None):
     context = RequestContext(request)
     
     #events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(billings__isnull=True).filter(closed=False)
+    events = Event.objects.filter(billings__isnull=True).filter(Q(closed=False)|Q(cancelled=False))
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
@@ -191,7 +191,7 @@ def paid(request,start=None,end=None):
     context = RequestContext(request)
     
     #events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(billings__date_paid__isnull=False).filter(closed=False)
+    events = Event.objects.filter(billings__date_paid__isnull=False).filter(Q(closed=False)|Q(cancelled=False))
     events,context = datefilter(events,context,start,end)
     
     #if events:
@@ -220,7 +220,7 @@ def unpaid(request,start=None,end=None):
     today = datetime.date.today()
     now = time.time()
     #events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now()).filter(date_setup_start__lte=today)
-    events = Event.objects.filter(billings__date_paid__isnull=True,billings__date_billed__isnull=False).filter(closed=False)
+    events = Event.objects.filter(billings__date_paid__isnull=True,billings__date_billed__isnull=False).filter(Q(closed=False)|Q(cancelled=False))
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
