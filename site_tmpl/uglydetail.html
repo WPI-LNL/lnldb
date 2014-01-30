@@ -140,7 +140,6 @@
                 </div>
                 <div id="schedule" class="tab-pane">
                     <table class="table">
-                        {{ event.ccinstances.all }}
                         {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
                         <tr>
                             <th>Setup For {{ cc.service }}</th>
