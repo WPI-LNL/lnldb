@@ -4,13 +4,16 @@
 {% load markup %}
 {% block content %}
     <div class="row-fluid">
-        <div class="span4">
+        <div class="span3">
             <h1> {{event }}:</h1>
         </div>
-        <div class="span4">
+        <div class="span3">
             <h3>Status: {{ event.status }}</h3>
         </div>
-        <div class="span4">
+        <div class="span3">
+            <h3>Client{% if event.org.count > 1 %}s{% endif %}: {% for org in event.org.all %}<a href="{% url "admin-orgdetail" org.id %}">{{ org.retname }}</a> &nbsp;{% endfor %}</h3>
+        </div>
+        <div class="span3">
             <h3>Actions:
             {% if event.cancelled %}
             <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
@@ -62,6 +65,7 @@
         <div class="span12">
             <ul class="nav nav-tabs">
                 <li class="active"><a href="#home" data-toggle="tab">Detail</a></li>
+                <li><a href="#schedule" data-toggle="tab">Schedule</a></li>
                 <li><a href="#services" data-toggle="tab">Services</a></li>
                 <li><a href="#crew" data-toggle="tab">Crew</a></li>
                 <li><a href="#reports" data-toggle="tab">Reports</a></li>
@@ -73,12 +77,32 @@
                 <div id="home" class="tab-pane active">
                     <table class="table">
                         <tr>
-                            <th>Submitted on</th>
-                            <td>{{ event.submitted_on }} </td>
+                            <th>Posted Description</th>
+                            <td>{{ event.description|mduserlink|mdeventlink|markdown }}</td>
+                        </tr>
+                        <tr>
+                            <th>Event Contact Name</th>
+                            <td><a href="{% url "memberdetail" event.contact.id %}">{{ event.contact }}</a></td>
+                        </tr>
+                        <tr>
+                            <th>Event Contact Phone</th>
+                            <td>{{ event.contact.profile.phone }}</td>
+                        </tr>
+                        <tr>
+                            <th>Event Contact Email</th>
+                            <td>{{ event.contact.email }}</td>
+                        </tr>
+                        <tr>
+                            <th>Location</th>
+                            <td>{{event.location}} <em>({{ event.location.building }})</em></td>
                         </tr>
                         <tr>
                             <th>Submitted by</th>
-                            <td>{{event.submitted_by}}</td>
+                            <td><a href="{% url "memberdetail" event.submitted_by.id %}">{{event.submitted_by}}</a></td> 
+                        </tr>
+                        <tr>
+                            <th>Submitted on</th>
+                            <td>{{ event.submitted_on }} </td>
                         </tr>
                         <tr>
                             <th>Submitted from</th>
@@ -111,6 +135,22 @@
                                     N/A
                                 {% endif %}
                         </tr>
+                    </table>
+
+                </div>
+                <div id="schedule" class="tab-pane">
+                    <table class="table">
+                        {{ event.ccinstances.all }}
+                        {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
+                        <tr>
+                            <th>Setup For {{ cc.service }}</th>
+                            <td>{{cc.setup_start}}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr>
+                            <th>Setup Completion</th>
+                            <td>{{event.datetime_setup_complete}}</td>
+                        </tr>
                         <tr>
                             <th>Start</th>
                             <td>{{event.datetime_start }}</td>
@@ -119,28 +159,9 @@
                             <th>End</th>
                             <td>{{event.datetime_end}}</td>
                         </tr>
-
-                        <tr>
-                            <th>Setup Start</th>
-                            <td>{{event.datetime_setup_start}}</td>
-                        </tr>
-                        <tr>
-                            <th>Setup Completion</th>
-                            <td>{{event.datetime_setup_complete}}</td>
-                        </tr>
-                        <tr>
-                            <th>Location</th>
-                            <td>{{event.location}}</td>
-                        </tr>
-                        <tr>
-                            <th>Posted Description</th>
-                            <td>{{ event.description|mduserlink|mdeventlink|markdown }}</td>
-                        </tr>
                     </table>
-
                 </div>
                 <div id="services" class="tab-pane">
-                    
                     {% if event.lighting %}
                         <h2>Lighting Services ({{ event.lighting }})</h2>
                         <h3>Requirements:</h3>

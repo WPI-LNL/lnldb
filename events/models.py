@@ -567,6 +567,10 @@ class Organization(models.Model): #AKA Client
     def eventcount(self):
         return self.event_set.count()
     
+    @property
+    def retname(self):
+        return self.shortname or self.name
+    
     class Meta:
         ordering = ['name']
         verbose_name = "Client"
