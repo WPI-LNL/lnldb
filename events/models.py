@@ -164,8 +164,12 @@ class Building(models.Model):
     
 class Location(models.Model):
     name = models.CharField(max_length=64)
+    # booleans
     setup_only = models.BooleanField(default=False)
     show_in_wo_form = models.BooleanField(default=True,verbose_name="Active Location")
+    available_for_meetings = models.BooleanField(default=False)
+    
+    #
     building = models.ForeignKey(Building)
     
     def __unicode__(self):

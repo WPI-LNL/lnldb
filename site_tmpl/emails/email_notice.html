@@ -11,7 +11,7 @@
     <tbody>
         <tr>
             <td class="w580" width="580">
-                <p align="left" class="article-title">Meeting Notice for {{ object.meeting.datetime.date }}</p>
+                <p align="left" class="article-title">Meeting Notice for {{ object.meeting.datetime.date }}{% if object.meeting.location %} at {{ object.meeting.location }} {% endif %}</p>
                 <div align="left" class="article-content">
                     
                     <p>{{ object.message }}</p>

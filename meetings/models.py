@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-from events.models import Event
+from events.models import Event, Location
 # Create your models here.
 
 from uuidfield import UUIDField
@@ -10,6 +10,7 @@ class Meeting(models.Model):
     datetime = models.DateTimeField()
     attendance = models.ManyToManyField(User,null=True,blank=True)
     meeting_type = models.ForeignKey('MeetingType',default=1)
+    location = models.ForeignKey('events.Location',null=True,blank=True)
     
     def __unicode__(self):
         return "Meeting For %s" % self.datetime.date()

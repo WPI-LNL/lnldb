@@ -4,7 +4,7 @@ from django.forms import Form, ModelForm
 import datetime
 
 from meetings.models import Meeting,MeetingAnnounce,CCNoticeSend
-from events.models import Event
+from events.models import Event,Location
 
 from ajax_select import make_ajax_field
 from ajax_select.fields import AutoCompleteSelectMultipleField,AutoCompleteSelectField
@@ -21,12 +21,14 @@ class MeetingAdditionForm(forms.ModelForm):
             'datetime',
             'attendance',
             'meeting_type',
+            'location',
             FormActions(
                 Submit('save', 'Save Changes'),
             )
         )
         super(MeetingAdditionForm,self).__init__(*args,**kwargs)
     attendance = AutoCompleteSelectMultipleField('Users',required=False)
+    location = forms.ModelChoiceField(queryset = Location.objects.filter(available_for_meeting=True),label="Location", required=False)
     
     class Meta:
         model = Meeting
