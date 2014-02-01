@@ -352,13 +352,18 @@ class Event(models.Model):
     def crew_needing_reports(self):
         #chiefs = self.crew_chief.values_list('id','first_name','last_name')
         #chiefs_with_lists = self.ccreport_set.values_list('crew_chief__id','crew_chief__first_name','crew_chief__last_name').distinct()
-        chiefs = self.crew_chief.values_list('id')
-        chiefs_with_lists = self.ccreport_set.values_list('crew_chief').distinct()
+        reports = self.ccreport_set.all().values_list('crew_chief',flat=True)
+        chiefs = self.ccinstances.all()
+        pending = chiefs.exclude(crew_chief__in=reports)
         
-        k =  [u[0] for u in chiefs if u not in chiefs_with_lists]
+        #chiefspending 
+        #chiefs = self.crew_chief.values_list('id')
+        #chiefs_with_lists = self.ccreport_set.values_list('crew_chief').distinct()
         
-        return self.crew_chief.filter(id__in=k)
-        #return k
+        #k =  [u[0] for u in chiefs if u not in chiefs_with_lists]
+        
+        #return self.crew_chief.filter(id__in=k)
+        return pending
         
     @property
     def reports_editable(self):

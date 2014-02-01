@@ -275,13 +275,13 @@
                         </blockquote> 
                         
                     {% empty %}
-                        <h2>No Reports Submitted </h2>
+                        <h3>No Reports Submitted </h3>
                     {% endfor %}
                     {% if event.crew_needing_reports %}
-                        <h3> Crew Chiefs Needing Reports </h3>
+                        <h4> Crew Chiefs Needing Reports </h4>
                         <ul>
                         {% for crew in event.crew_needing_reports %}
-                            <li><a href="{% url "memberdetail" crew.id %}">{{ crew }}</a></li>
+                            <li><a href="{% url "memberdetail" crew.crew_chief.id %}">{{ crew.crew_chief.get_full_name }}</a></li>
                         {% endfor %}
                         </ul>
                     {% endif %}
