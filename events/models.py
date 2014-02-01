@@ -451,6 +451,7 @@ class Event(models.Model):
             
         return extras+servicecost
     
+    
     @property
     def extras_sound(self):
         return self.extrainstance_set.filter(extra__category__name="Sound")
@@ -468,6 +469,7 @@ class Event(models.Model):
             servicecost = 0
             
         return extras+servicecost
+    
     
     @property
     def extras_projection(self):
@@ -487,6 +489,21 @@ class Event(models.Model):
             
         return extras+servicecost
     
+    
+    @property
+    def extras_other(self):
+        return self.extrainstance_set.filter(extra__category__name="Misc")
+    
+    @property
+    def cost_other_extras(self):
+        return sum([x.totalcost for x in self.extras_other])
+    
+    @property
+    def extras_total(self):
+        extrascost = self.cost_other_extras
+        return extrascost
+    
+    
     @property
     def discount_applied(self):
         services = (self.sound, self.projection, self.lighting) 
@@ -498,7 +515,7 @@ class Event(models.Model):
     
     @property
     def cost_total_pre_discount(self):
-        return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total
+        return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total
     
     @property
     def discount_value(self):
@@ -511,10 +528,10 @@ class Event(models.Model):
     @property
     def cost_total(self):
         if self.discount_applied:
-            total = self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total
+            total = self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total
             return float(total) * .85
         else:
-            return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total
+            return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total
     
 class CCReport(models.Model):
     crew_chief = models.ForeignKey(User)

@@ -17,7 +17,7 @@ from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,M
 from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions,PrependedText
 
 from events.models import Event,Organization,Category,OrganizationTransfer
-from events.models import Extra,Location,Lighting,Sound,Projection,Service,EventCCInstance,EventAttachment
+from events.models import Extra,Location,Lighting,Sound,Projection,Service,EventCCInstance,EventAttachment, ExtraInstance
 from events.models import Billing,CCReport,Hours
 
 from events.widgets import ExtraSelectorWidget,ValueSelectField
@@ -535,6 +535,7 @@ class CCIForm(forms.ModelForm):
             group_label = lambda group: group.name,
         )
     
+# Forms for Inline Formsets
 class AttachmentForm(forms.ModelForm):
     def __init__(self,event,*args,**kwargs):
         self.event = event
@@ -572,6 +573,16 @@ class AttachmentForm(forms.ModelForm):
         model = EventAttachment
         fields = ('for_service','attachment','note')
         
+class ExtraForm(forms.ModelForm):
+    class Meta:
+        model = ExtraInstance
+        fields = ('extra','quant')
+        
+    extra = GroupedModelChoiceField(
+            queryset = Extra.objects.all(),
+            group_by_field = "category",
+            group_label = lambda group: group.name,
+        ) 
 #CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3,form=CCIForm)
 
 #usage

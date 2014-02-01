@@ -161,6 +161,7 @@
                     </table>
                 </div>
                 <div id="services" class="tab-pane">
+                    <div class="pull-right"><a class="btn btn-large" href="{% url "eventextras" event.id %}">Modify Extras</a></div>
                     {% if event.lighting %}
                         <h2>Lighting Services ({{ event.lighting }})</h2>
                         <h3>Requirements:</h3>
@@ -193,7 +194,16 @@
                         <h2> Projection Services ({{ event.projection }})</h2>
                         <h3>Requirements:</h3>
                             <pre>{{ event.proj_reqs }}</pre>
+                        {% if event.extras_projection %}
+                        <h3>Extras:</h3>
+                            <ul>
+                                {% for e in event.extras_projection %}
+                                    <li>{{ e.extra }} x{{ e.quant }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
                     {% endif %}
+                    
                     {% if event.otherservices.exists %}
                         <h2> Other Services </h2>
                         <ul>
@@ -202,6 +212,15 @@
                             {% endfor %}
                         </ul>
                     {% endif %}
+                    {% if event.extras_other %}
+                        <h3>Additional Extras:</h3>
+                            <ul>
+                                {% for e in event.extras_other %}
+                                    <li>{{ e.extra }} x{{ e.quant }}</li>
+                                {% endfor %}
+                            </ul>
+                    {% endif %}
+                    
                 </div>
                 <div id="crew" class="tab-pane">
                     <a class="btn btn-large pull-right" href="{% url "events.views.flow.assigncc" event.id %}">Modify</a>
@@ -282,6 +301,7 @@
                 </div>
                 <div id="billing" class="tab-pane">
                     <h2>Price Breakdown</h2>
+                    <style> .tdra { text-align: right; }</style>
                     <table class="table">
                         <thead>
                             <tr>
@@ -292,14 +312,14 @@
                         {% if event.lighting %}
                         <tr class="success">
                             <td>{{event.lighting}}</td>
-                            <td>${{ event.lighting.base_cost }}</td>
+                            <td class="tdra">${{ event.lighting.base_cost }}</td>
                         </tr>
                         {% endif %}
                         {% if event.extras_lighting.exists %}
                         {% for extra in event.extras_lighting %}
                         <tr>
                             <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
-                            <td>${{ extra.totalcost }}</td>
+                            <td class="tdra">${{ extra.totalcost }}</td>
                         </tr>
                         {% endfor %}
                         {% endif %}
@@ -307,14 +327,14 @@
                         {% if event.sound %}
                         <tr class="success">
                             <td>{{event.sound}}</td>
-                            <td>${{ event.sound.base_cost }}</td>
+                            <td class="tdra">${{ event.sound.base_cost }}</td>
                         </tr>
                         {% endif %}
                         {% if event.extras_sound.exists %}
                         {% for extra in event.extras_sound %}
                         <tr>
                             <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
-                            <td>${{ extra.totalcost }}</td>
+                            <td class="tdra">${{ extra.totalcost }}</td>
                         </tr>
                         {% endfor %}
                         {% endif %}
@@ -322,7 +342,7 @@
                         {% if event.projection %}
                         <tr class="success">
                             <td>{{event.projection}}</td>
-                            <td>${{ event.projection.base_cost }}</td>
+                            <td class="tdra">${{ event.projection.base_cost }}</td>
                         </tr>
                         {% endif %}
                         
@@ -330,21 +350,32 @@
                             {% for service in event.otherservices.all %}
                                 <tr class="success">
                                     <td>{{ service }}</td>
-                                    <td>${{ service.base_cost }}</td>
+                                    <td class="tdra">${{ service.base_cost }}</td>
                                 </tr>
                             {% endfor %}
                         {% endif %}
                         
+                        {% for e in event.extras_other %}
+                        <tr>
+                            <td>{{ e.extra }} <strong>x{{ e.quant }}</strong></td>
+                            <td class="tdra">${{ e.totalcost }}</td>
+                        </tr>
+                        {% endfor %}
+                        
                         {% if event.discount_applied %}
                         <tr class="warning">
+                            <td> Pre Discount Total </td>
+                            <td class="tdra">${{ event.cost_total_pre_discount }} </td>
+                        </tr>
+                        <tr class="warning">
                                     <td>15% Discount Applied</td>
-                                    <td>-${{ event.discount_value}}</td>
+                                    <td style="color:red;" class="tdra">-${{ event.discount_value|floatformat:2}}</td>
                                 </tr>
                         {% endif %}
                         
                         <tr class="info">
                             <td>Total</td>
-                            <td>${{ event.cost_total }}</td>
+                            <td>${{ event.cost_total|floatformat:2 }}</td>
                         </tr>
                     </table>
                     <h2> Bills </h2>

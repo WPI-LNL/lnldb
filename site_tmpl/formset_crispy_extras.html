@@ -4,30 +4,27 @@
 {% block content %}
     <div class="row-fluid">
         <div class="span12">
-                <h2> {{msg }} Crew Chiefs for "{{ event }}"</h2>
+                <h2> {{msg }} for "<em>{{ event }}</em>"</h2>
                 <form method="post" action="" class="form-inline" enctype="multipart/form-data">
                 {% csrf_token %}
                 {{ formset.management_form }}
                 <table class="table table-striped" valign="top">
                     <tr>
-                        <th>For Service </th>
-                        <th>Attachment </th>
-                        <th>Note</th>
+                        <th>Extra</th>
+                        <th>Quantity </th>
                         <th>Delete?</th>
                     </tr>
                 {% for form in formset %}
                     {% if form.errors %}
                     <tr class="warning">
-                        <td>{% for e in form.for_service.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.attachment.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.note.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.DELETE.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.extra.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.quant.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td></td>
                     </tr>
                     {% endif %}
                     <tr>
-                        <td>{{ form.id }}{{ form.for_service }} </td>
-                        <td>{{ form.attachment }} </td>
-                        <td>{{ form.note }}</td>
+                        <td>{{ form.id }}{{ form.extra }} </td>
+                        <td>{{ form.quant }} </td>
                         <td>{{ form.DELETE }} </td>
                     </tr>
                 {% endfor %}
