@@ -636,7 +636,8 @@ class OrgForm(forms.Form):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
-        self.fields['group'].queryset = Organization.objects.filter(Q(user_in_charge=user)|Q(associated_users__in=[user.id])).distinct()
+        # the org nl, is a special org that everyone has access to and is not listed.
+        self.fields['group'].queryset = Organization.objects.filter(Q(user_in_charge=user)|Q(associated_users__in=[user.id])|Q(shortname="nl")).distinct()
         self.helper.layout = Layout(
                 'group',
                 HTML('<span class="muted">If the client account you are looking for does not show up in the list, please contact the person in charge of the account using <a target="_blank" href="%s">this link</a> and request authorization to submit workorder son their behalf. If you are attempting to create an client account which does not exist please click <a target="_blank" href="%s">this link</a></span>' % (reverse('my-orgs-incharge-list'),reverse('selfserivceorg'))),
