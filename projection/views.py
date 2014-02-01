@@ -29,7 +29,7 @@ from helpers.mixins import LoginRequiredMixin, OfficerMixin
 def plist(request):
     
     context = RequestContext(request)
-    users = Projectionist.objects.all()
+    users = Projectionist.objects.all().order_by('user__last_name')
     
     context['users'] = users
     context['h2'] = "Projectionist List"
