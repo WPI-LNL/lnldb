@@ -278,10 +278,15 @@ class Event(models.Model):
     otherservices = models.ManyToManyField(Service,null=True,blank=True)
     otherservice_reqs = models.TextField(null=True,blank=True)
     setup_location = models.ForeignKey('Location',related_name="setuplocation",null=True,blank=True)
-    #Status Indicators
+    ##Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True,blank=True)
     approved_by = models.ForeignKey(User,related_name="eventapprovals",null=True,blank=True)
+    
+    #billing reviews
+    reviewed = models.BooleanField(default=False)
+    reviewed_on = models.DateTimeField(null=True,blank=True)
+    reviewed_by = models.ForeignKey(User,related_name="eventbillingreview",null=True,blank=True)
     
     closed = models.BooleanField(default=False)
     closed_on = models.DateTimeField(null=True,blank=True)

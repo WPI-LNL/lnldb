@@ -85,6 +85,35 @@ def denial(request,id):
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
+def review(request,id):
+    context = RequestContext(request)
+    context['h2'] = "Review Event for Billing"
+    event = get_object_or_404(Event,pk=id)
+    #if event.reviewed:
+        #return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(event.id,)))
+    
+    
+    #if request.method == 'POST':
+        #form = EventApprovalForm(request.POST,instance=event)
+        #if form.is_valid():
+            #e = form.save(commit=False)
+            #e.approved = True
+            #e.approved_on = datetime.datetime.now()
+            #e.approved_by = request.user
+            #e.save()
+            ## confirm with user
+            #messages.add_message(request, messages.INFO, 'Approved Event')
+        
+            #return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
+        #else:
+            #context['formset'] = form
+    #else:
+        #form = EventApprovalForm(instance=event)
+        #context['formset'] = form
+    return render_to_response('event_review.html', context) 
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def close(request,id):
     context = RequestContext(request)
     context['msg'] = "Closing Event"
