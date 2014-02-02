@@ -27,7 +27,7 @@ class UserLimitedOrgLookup(LookupChannel):
     
     def get_query(self,q,request):
         user = request.user
-        return Organization.objects.filter(Q(user_in_charge=user)|Q(associated_users__in=[user.id])|Q(associated_orgs__user_in_charge=user)|Q(associated_users__in=[user.id])).filter(Q(name__icontains=q)|Q(shortname__icontains=q))
+        return Organization.objects.filter(Q(user_in_charge=user)|Q(associated_users__in=[user.id])|Q(associated_orgs__user_in_charge=user)|Q(associated_users__in=[user.id])|Q(shortname="nl")).filter(Q(name__icontains=q)|Q(shortname__icontains=q))
     
     def get_result(self,obj):
         return obj.name

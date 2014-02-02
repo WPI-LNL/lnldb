@@ -18,6 +18,14 @@ def disable_setup_only(modeladmin,request,queryset):
     queryset.update(setup_only=False)
 disable_setup_only.short_description = "UN-Set Location as a Setup Location"
 
+def client_archive(modeladmin,request,queryset):
+    queryset.update(archived=True)
+client_archive.short_description = "Set As Archived"
+    
+def client_unarchive(modeladmin,request,queryset):
+    queryset.update(archived=False)
+client_unarchive.short_description = "UN-Set As Archived"
+
 #modeladmins
 class EventBillingInline(admin.TabularInline):
     model = Billing
@@ -30,11 +38,14 @@ class EventAttachmentInline(admin.TabularInline):
 class EventAdmin(admin.ModelAdmin):
     inlines = [EventCCInline,EventAttachmentInline,EventBillingInline]
     filter_horizontal = ('crew','crew_chief','org')
+    search_fields = ['event_name']
     
 class OrgAdmin(admin.ModelAdmin):
-    list_display = ('name','shortname','email','exec_email','email_exec','email_normal','user_in_charge')
+    list_display = ('name','shortname','email','exec_email','user_in_charge','archived')
+    list_filter = ('archived',)
     filter_horizontal = ('associated_users','associated_orgs')
     search_fields = ['name','shortname','email','exec_email']
+    actions = [client_archive,client_unarchive]
     
 class OTAdmin(admin.ModelAdmin):
     list_display = ('org','old_user_in_charge','new_user_in_charge','created','expiry','completed_on','completed','is_expired','uuid')
