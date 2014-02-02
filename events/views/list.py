@@ -16,7 +16,7 @@ from helpers.challenges import is_officer
 
 import datetime,time
 
-DEFAULT_ENTRY_COUNT = 15
+DEFAULT_ENTRY_COUNT = 40
 
 #generic date filtering
 def datefilter(eventqs,context,start=None,end=None):
