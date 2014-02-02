@@ -148,6 +148,7 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/crewchief/(?P<id>[0-9a-f]+)/$', 'events.views.flow.assigncc'),
     url(r'^lnadmin/events/attachments/(?P<id>[0-9a-f]+)/$', 'events.views.flow.assignattach', name="eventattachments"),
     url(r'^lnadmin/events/extras/(?P<id>[0-9a-f]+)/$', 'events.views.flow.extras', name="eventextras"),
+    url(r'^lnadmin/events/oneoff/(?P<id>[0-9a-f]+)/$', 'events.views.flow.oneoff', name="eventoneoff"),
     url(r'^lnadmin/events/rmcc/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$', 'events.views.flow.rmcc'),
     
     #orgs (clients)

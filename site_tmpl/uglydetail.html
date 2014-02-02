@@ -300,6 +300,10 @@
                     </table>
                 </div>
                 <div id="billing" class="tab-pane">
+                    <div class="pull-right btngroup">
+                        <a class="btn btn-large" href="{% url "eventextras" event.id %}">Modify Extras</a>
+                        <a class="btn btn-large" href="{% url "eventoneoff" event.id %}">Add OneOff Charges</a>
+                    </div>
                     <h2>Price Breakdown</h2>
                     <style> .tdra { text-align: right; }</style>
                     <table class="table">
@@ -372,6 +376,16 @@
                                     <td style="color:red;" class="tdra">-${{ event.discount_value|floatformat:2}}</td>
                                 </tr>
                         {% endif %}
+                        
+                        {% for oo in event.oneoffs %}
+                        <tr>
+                            <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
+                            <td {% if oo.negative %} style="color:red;" {% endif %}" class="tdra">
+                                {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        
                         
                         <tr class="info">
                             <td>Total</td>

@@ -196,7 +196,7 @@ class Extra(models.Model):
     services = models.ManyToManyField('Service')
     category = models.ForeignKey('Category')    
     def __unicode__(self):
-        return self.name
+        return "%s ($%s)" % (self.name, self.cost)
     
 class Category(models.Model):
     name = models.CharField(max_length=16)
@@ -508,6 +508,14 @@ class Event(models.Model):
         extrascost = self.cost_other_extras
         return extrascost
     
+    @property
+    def oneoffs(self):
+        return self.arbitraryfees.all()
+    
+    @property
+    def oneoff_total(self):
+        return sum([x.totalcost for x in self.oneoffs])
+    
     
     @property
     def discount_applied(self):
@@ -534,9 +542,9 @@ class Event(models.Model):
     def cost_total(self):
         if self.discount_applied:
             total = self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total
-            return float(total) * .85
+            return float(total) * .85 + float(self.oneoff_total)
         else:
-            return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total
+            return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total + self.oneoff_total
     
 class CCReport(models.Model):
     crew_chief = models.ForeignKey(User)
@@ -652,3 +660,24 @@ class EventAttachment(models.Model):
     for_service = models.ForeignKey(Service, null=True, blank=True, related_name="attachments")
     attachment = models.FileField(upload_to=attachment_file_name) 
     note = models.TextField(null=True, blank=True, default="")
+    
+class EventArbitrary(models.Model):
+    event = models.ForeignKey('Event', related_name="arbitraryfees")
+    key_name = models.CharField(max_length=64)
+    key_value = models.DecimalField(max_digits=8,decimal_places=2)
+    key_quantity = models.PositiveSmallIntegerField(default=1)
+    
+    @property
+    def totalcost(self):
+        return self.key_value * self.key_quantity
+    
+    @property
+    def negative(self):
+        if self.totalcost > 0:
+            return False
+        return True
+    
+    @property
+    def abs_cost(self):
+        return abs(self.totalcost)
+    
