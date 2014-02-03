@@ -165,13 +165,35 @@ def openworkorders(request,start=None,end=None):
     
     return render_to_response('events.html', context)
 
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+def unreviewed(request,start=None,end=None):
+    context = RequestContext(request)
+    
+    #events = Event.objects.filter(approved=True).filter(paid=True)
+    events = Event.objects.filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=False)
+    events,context = datefilter(events,context,start,end)
+    
+    page = request.GET.get('page')
+    events = paginate_helper(events,page)
+
+    
+    context['h2'] = "Events pending billing review"
+    context['events'] = events
+    context['baseurl'] = reverse("unbilled")
+    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    
+    return render_to_response('events.html', context)
+
+
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def unbilled(request,start=None,end=None):
     context = RequestContext(request)
     
     #events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(billings__isnull=True).filter(Q(closed=False)|Q(cancelled=False))
+    events = Event.objects.filter(billings__isnull=True).filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=True)
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
@@ -192,7 +214,7 @@ def paid(request,start=None,end=None):
     context = RequestContext(request)
     
     #events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(billings__date_paid__isnull=False).filter(Q(closed=False)|Q(cancelled=False))
+    events = Event.objects.filter(billings__date_paid__isnull=False).filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=True)
     events,context = datefilter(events,context,start,end)
     
     #if events:
@@ -221,7 +243,7 @@ def unpaid(request,start=None,end=None):
     today = datetime.date.today()
     now = time.time()
     #events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now()).filter(date_setup_start__lte=today)
-    events = Event.objects.filter(billings__date_paid__isnull=True,billings__date_billed__isnull=False).filter(Q(closed=False)|Q(cancelled=False))
+    events = Event.objects.filter(billings__date_paid__isnull=True,billings__date_billed__isnull=False).filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=True)
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
