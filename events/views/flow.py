@@ -11,7 +11,7 @@ from django.forms.models import inlineformset_factory
 from django.utils.functional import curry
 from django.db.models import Q
 
-from events.forms import EventApprovalForm,EventDenialForm, BillingForm, BillingUpdateForm
+from events.forms import EventApprovalForm,EventDenialForm, BillingForm, BillingUpdateForm, EventReviewForm
 from events.forms import CrewAssign,CrewChiefAssign, CCIForm, AttachmentForm, ExtraForm
 from events.models import Event,Organization,Billing,EventCCInstance,EventAttachment,Service,ExtraInstance,EventArbitrary
 from helpers.challenges import is_officer
@@ -30,6 +30,7 @@ def approval(request,id):
     context['msg'] = "Approve Event"
     event = get_object_or_404(Event,pk=id)
     if event.approved:
+        messages.add_message(request, messages.INFO, 'Event has already been approved!')
         return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(event.id,)))
     
     
@@ -59,6 +60,7 @@ def denial(request,id):
     context['msg'] = "Deny Event"
     event = get_object_or_404(Event,pk=id)
     if event.cancelled:
+        messages.add_message(request, messages.INFO, 'Event has already been cancelled!')
         return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(event.id,)))
     
     
@@ -89,27 +91,30 @@ def review(request,id):
     context = RequestContext(request)
     context['h2'] = "Review Event for Billing"
     event = get_object_or_404(Event,pk=id)
-    #if event.reviewed:
-        #return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(event.id,)))
     
-    
-    #if request.method == 'POST':
-        #form = EventApprovalForm(request.POST,instance=event)
-        #if form.is_valid():
-            #e = form.save(commit=False)
-            #e.approved = True
-            #e.approved_on = datetime.datetime.now()
-            #e.approved_by = request.user
-            #e.save()
-            ## confirm with user
-            #messages.add_message(request, messages.INFO, 'Approved Event')
+    if event.reviewed:
+        messages.add_message(request, messages.INFO, 'Event has already been reviewed!')
+        return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(event.id,)))
         
-            #return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
-        #else:
-            #context['formset'] = form
-    #else:
-        #form = EventApprovalForm(instance=event)
-        #context['formset'] = form
+    context['event'] = event
+    
+    if request.method == 'POST':
+        form = EventReviewForm(request.POST,instance=event)
+        if form.is_valid():
+            e = form.save(commit=False)
+            e.reviewed = True
+            e.reviewed_on = datetime.datetime.now()
+            e.reviewed_by = request.user
+            e.save()
+            # confirm with user
+            messages.add_message(request, messages.INFO, 'Event has been reviewed and is ready for billing!')
+        
+            return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
+        else:
+            context['formset'] = form
+    else:
+        form = EventReviewForm(instance=event)
+        context['formset'] = form
     return render_to_response('event_review.html', context) 
 
 @login_required

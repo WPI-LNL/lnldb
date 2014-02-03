@@ -1,0 +1,160 @@
+{% extends 'base_admin.html' %}
+{% load at_user_linking %}
+{% load at_event_linking %}
+{% load markup %}
+{% load crispy_forms_tags %}
+{% block content %}
+<h1>{{ h2 }}</h1>
+
+<div class="row-fluid">
+    <div class="span4">
+        <h2><em>"{{ event.event_name }}"</em></h2>
+    </div>
+    <div class="span4">
+        <h2>Contact: {% if event.contact %}<a href="{% url "memberdetail" event.contact.id %}">{{ event.contact.get_full_name }}</a>{% else %}No Contact Set {% endif %}</h2>
+    </div>
+    <div class="span4">
+        <h3>
+            Started:{{ event.datetime_start }} <br />
+            Ended:{{ event.datetime_end }}
+        </h3>
+    </div>
+</div>
+<hr>
+<div class="row-fluid">
+    <div class="span6">
+        <h3> Reports </h3> 
+        {% for report in event.ccreport_set.all %}
+            <h4>Report by {{report.crew_chief }}</h4> 
+            <em class="muted pull-right">
+                Posted on {{ report.created_on }} <br />
+                {% if report.created_on != report.updated_on %}
+                    Last Updated: {{ report.updated_on }}
+                {% endif %}
+            </em>
+            
+            <blockquote>
+                {{ report.report|mduserlink|markdown }}
+                {% comment %} <small>For {{ report.pretty_cat_list }}</small>{% endcomment %}
+            </blockquote> 
+        {% endfor %}
+        {% for crew in event.crew_needing_reports %}
+        {% if forloop.first %}<h3> Crew Needing Reports </h3> {% endif %}
+        {{ crew }}
+        {% endfor %}
+    </div>
+    <div class="span6">
+        <h3> Hours </h3>
+        <table class="table">
+            <thead>
+                <th>Member</th>
+                <th>Hours</th>
+            </thead>
+            {% for hour in event.hours.all %}
+                <tr>
+                    <td><a href="{% url "memberdetail" hour.user.id %}">{{ hour.user.get_full_name }}</a></td>
+                    <td>{{ hour.hours }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+<hr>
+<div class="row-fluid">
+    <div class="span12">
+        <h2>Price Breakdown</h2>
+            <style> .tdra { text-align: right; }</style>
+            <table class="table table-condensed">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Cost</th>
+                    </tr>
+                </thead>
+                {% if event.lighting %}
+                <tr class="success">
+                    <td>{{event.lighting}}</td>
+                    <td class="tdra">${{ event.lighting.base_cost }}</td>
+                </tr>
+                {% endif %}
+                {% if event.extras_lighting.exists %}
+                {% for extra in event.extras_lighting %}
+                <tr>
+                    <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
+                    <td class="tdra">${{ extra.totalcost }}</td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+                
+                {% if event.sound %}
+                <tr class="success">
+                    <td>{{event.sound}}</td>
+                    <td class="tdra">${{ event.sound.base_cost }}</td>
+                </tr>
+                {% endif %}
+                {% if event.extras_sound.exists %}
+                {% for extra in event.extras_sound %}
+                <tr>
+                    <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
+                    <td class="tdra">${{ extra.totalcost }}</td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+                
+                {% if event.projection %}
+                <tr class="success">
+                    <td>{{event.projection}}</td>
+                    <td class="tdra">${{ event.projection.base_cost }}</td>
+                </tr>
+                {% endif %}
+                
+                {% if event.otherservices.exists %}
+                    {% for service in event.otherservices.all %}
+                        <tr class="success">
+                            <td>{{ service }}</td>
+                            <td class="tdra">${{ service.base_cost }}</td>
+                        </tr>
+                    {% endfor %}
+                {% endif %}
+                
+                {% for e in event.extras_other %}
+                <tr>
+                    <td>{{ e.extra }} <strong>x{{ e.quant }}</strong></td>
+                    <td class="tdra">${{ e.totalcost }}</td>
+                </tr>
+                {% endfor %}
+                
+                {% if event.discount_applied %}
+                <tr class="warning">
+                    <td> Pre Discount Total </td>
+                    <td class="tdra">${{ event.cost_total_pre_discount }} </td>
+                </tr>
+                <tr class="warning">
+                            <td>15% Discount Applied</td>
+                            <td style="color:red;" class="tdra">-${{ event.discount_value|floatformat:2}}</td>
+                        </tr>
+                {% endif %}
+                
+                {% for oo in event.oneoffs %}
+                <tr>
+                    <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
+                    <td {% if oo.negative %} style="color:red;" {% endif %}" class="tdra">
+                        {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
+                    </td>
+                </tr>
+                {% endfor %}
+                
+                
+                <tr class="info">
+                    <td>Total</td>
+                    <td>${{ event.cost_total|floatformat:2 }}</td>
+                </tr>
+            </table>
+    </div>
+</div>
+
+
+
+{% crispy formset %}
+
+{% endblock %}

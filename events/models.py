@@ -249,6 +249,7 @@ class Event(models.Model):
     person_name = models.CharField(max_length=128,null=True,blank=True,verbose_name="Contact_name")
     contact = models.ForeignKey(User,null=True,blank=True, verbose_name = "Contact")
     org = models.ManyToManyField('Organization',null=True,blank=True, verbose_name="Client")
+    billing_org = models.ForeignKey('Organization',null=True, blank=True, related_name="billedevents")
     contact_email = models.CharField(max_length=256,null=True,blank=True)
     contact_addr = models.TextField(null=True,blank=True)
     contact_phone = models.CharField(max_length=32,null=True,blank=True)
@@ -352,7 +353,8 @@ class Event(models.Model):
     
     class Meta:
         ordering = ['-datetime_start']
-        
+            
+    ## Report Properties
     @property
     def crew_needing_reports(self):
         #chiefs = self.crew_chief.values_list('id','first_name','last_name')
@@ -388,7 +390,9 @@ class Event(models.Model):
         else:
             return False
         
-        
+    
+    
+    ## Service information for templates
     @property
     def allservices(self):
         foo = []
@@ -415,14 +419,17 @@ class Event(models.Model):
             foo.extend([s for s in self.otherservices.all()])
         return foo
     
+    ## Event Statuses
     @property
     def status(self):
         if self.cancelled:
             return "Cancelled"
         elif self.closed:
             return "Closed"
-        elif self.approved and self.datetime_setup_complete > datetime.datetime.now(pytz.utc):
+        elif self.approved and self.datetime_setup_complete > datetime.datetime.now(pytz.utc) and not self.reviewed:
             return "Approved"
+        elif not self.reviewed:
+            return "Awaiting Review"
         else:
             if self.paid:
                 return "Paid"
@@ -430,6 +437,7 @@ class Event(models.Model):
                 return "Awaiting Payment"
             else:
                 return "Open"
+            
         
     @property
     def unpaid(self):
@@ -442,7 +450,7 @@ class Event(models.Model):
     def over(self):
         return self.datetime_end < datetime.datetime.now(pytz.utc)
     
-    ### Extras And Money
+    ### Extras And Billing Calculations
     @property
     def extras_lighting(self):
         return self.extrainstance_set.filter(extra__category__name="Lighting")
@@ -551,6 +559,17 @@ class Event(models.Model):
         else:
             return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total + self.oneoff_total
     
+    # org to be billed
+    @property
+    def org_to_be_billed(self):
+        if not self.billing_org:
+            if self.org:
+                return e.org.all()[0]
+            else:
+                return None
+        else:
+            return self.billing_org
+        
 class CCReport(models.Model):
     crew_chief = models.ForeignKey(User)
     event = models.ForeignKey(Event)

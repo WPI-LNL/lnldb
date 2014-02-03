@@ -143,14 +143,16 @@ def ccreport(request,eventid):
         
     user = request.user
     
-    event = user.ccinstances.filter(event__pk=eventid)
+    uevent = user.ccinstances.filter(event__pk=eventid)
     
-    if not event:
+    if not uevent:
         return HttpResponse("This Event Must not Have been yours, or is closed")
+    
+    event = Event.objects.get(pk=eventid)
     if not event.reports_editable:
         return HttpResponse("The deadline for report submission and hours has past...")
         
-    event = event[0].event
+    event = uevent[0].event
     x = event.ccinstances.filter(crew_chief=user)
     context['msg'] = "Crew Chief Report for '<em>%s</em>' (%s)" % (event,",".join([str(i.service) for i in x]))
     

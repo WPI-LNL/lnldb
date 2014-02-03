@@ -295,8 +295,27 @@ class InternalEventForm(forms.ModelForm):
     datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
     datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
     datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now())
-        
-        
+     
+class EventReviewForm(forms.ModelForm):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-inline"
+        self.helper.layout = Layout(
+            HTML("<h5>If you'd like to override the billing org, please search for it below</h5>"),
+            Field('billing_org'),
+            FormActions(
+                HTML('<h4> Does this look good to you?</h4>'),
+                Submit('save', 'Yes', css_class='btn btn-large btn-danger'),
+                Button('cancel', 'No...', css_class='btn btn-large btn-success'),
+            ),
+        )
+        super(EventReviewForm,self).__init__(*args,**kwargs)
+    
+    class Meta:
+        model = Event
+        fields = ('billing_org',)
+    billing_org = AutoCompleteSelectField('Orgs',required=False, label="")
+    
 ### External Organization forms
 
 class ExternalOrgUpdateForm(forms.ModelForm):

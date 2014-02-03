@@ -15,18 +15,24 @@
         </div>
         <div class="span3">
             <h3>Actions:
-            {% if event.cancelled %}
+            {% if event.cancelled or event.closed %}
             <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
+            
             {% elif event.paid and not event.closed %} 
             <div class="btn-group">
                 <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
             </div>
-            {% elif event.approved and not event.paid and event.over and not event.closed %}
+            
+            {% elif not event.reviewed and event.approved %}
+            <a class="btn btn-success btn-large" href="{% url "events.views.flow.review" event.id %}">Review For Billing</a>
+            
+            {% elif event.approved and not event.paid and not event.closed %}
             <div class="btn-group">
                 <a class="btn btn-primary btn-large" href="{% url "event-mkbilling" event.id %}">Create Bill</a>
                 <a class="btn btn-warning btn-large" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
                 <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
             </div>
+
             {% elif not event.approved and not event.closed or not event.cancelled and not event.closed %}
             <div class="btn-group">
                 <a class="btn btn-success btn-large" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
@@ -34,9 +40,6 @@
                 <a class="btn btn-warning btn-large" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
             </div>
 
-           
-            {% elif event.closed or event.cancelled %}
-            <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
             {% else %}
             <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
             <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
@@ -135,6 +138,14 @@
                                     N/A
                                 {% endif %}
                         </tr>
+                        {% if event.reviewed %}
+                        <tr>
+                            <th>Reviewed for billing by/on</th>
+                            <td>
+                            {{ event.reviewed_by }} on {{ event.reviewed_on }}
+                            </td>
+                        </tr>
+                        {% endif %}
                     </table>
 
                 </div>

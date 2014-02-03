@@ -1,0 +1,50 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="row-fluid">
+        <div class="span12">
+                <h2> {{msg }} for "<em>{{ event }}</em>"</h2>
+                <form method="post" action="" class="form-inline" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ formset.management_form }}
+                <table class="table table-striped" valign="top">
+                    <tr>
+                        <th>Name</th>
+                        <th>Value </th>
+                        <th>Quantity</th>
+                        <th>Delete?</th>
+                    </tr>
+                {% for form in formset %}
+                    {% if form.errors %}
+                    <tr class="warning">
+                        <td>{% for e in form.key_name.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.key_value.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.key_quantity.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.DELETE.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td></td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td>{{ form.id }}{{ form.key_name }} </td>
+                        <td>{{ form.key_value }} </td>
+                        <td>{{ form.key_quantity }} </td>
+                        <td>{{ form.DELETE }} </td>
+                    </tr>
+                {% endfor %}
+                </table>
+                
+                <div class="form-actions"><input name="save" value="Save Changes" class="btn btn-primary" id="submit-id-save" type="submit"> </div>
+                </form>
+                
+        </div>
+    </div>
+{% endblock %}
+
+{% block extras %}
+{% include "js_datetimepick.tmpl" %}
+{% endblock %}
+
+{% block finalsay %}
+
+{% endblock %}
