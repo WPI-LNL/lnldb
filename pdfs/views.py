@@ -1,6 +1,7 @@
 import os
 import cStringIO as StringIO
 import ho.pisa as pisa
+
 from django.template.loader import get_template
 from django.template import Context
 from django.conf import settings
@@ -11,7 +12,10 @@ from reportlab.pdfgen import canvas
 
 from events.models import Event
 
+from projection.models import Projectionist,PITLevel
+
 from django.utils import timezone
+import datetime
 
 # Convert HTML URIs to absolute system paths so xhtml2pdf can access those resources
 def link_callback(uri, rel):
@@ -32,6 +36,35 @@ def link_callback(uri, rel):
         raise Exception('media URI must start with %s or %s' %  (sUrl, mUrl))
     return path
 
+def generate_projection_pdf(request):
+    data = {}
+    # prepare data
+    levels = PITLevel.objects.exclude(name_short__in=['PP','L']).order_by('ordering')
+    unlicensed_users = Projectionist.objects.exclude(pitinstances__pit_level__name_short__in=['PP','L'])
+    licensed_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP','L']).exclude(user__groups__name="Alumni")
+    alumni_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP','L']).filter(user__groups__name="Alumni")
+    now = datetime.datetime.now(timezone.get_current_timezone())
+    
+    data['now'] = now
+    data['unlicensed_users'] = unlicensed_users
+    data['licensed_users'] = licensed_users
+    data['alumni_users'] = alumni_users
+    data['levels'] = levels
+    
+    # Render html content through html template with context
+    template = get_template('pdf_templates/projection.html')
+    html  = template.render(Context(data))
+    
+    # write file
+    file = open(os.path.join(settings.MEDIA_ROOT, 'projection-%s.pdf' % now.date()), "w+b")
+    pisaStatus = pisa.CreatePDF(html, dest=file, link_callback = link_callback)
+    
+    # return doc
+    file.seek(0)
+    pdf = file.read()
+    file.close()            # Don't forget to close the file handle
+    return HttpResponse(pdf, mimetype='application/pdf')
+    
 def generate_event_pdf(request, id):
     # Prepare context
     data = {}
