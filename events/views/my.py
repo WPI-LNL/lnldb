@@ -196,12 +196,16 @@ def hours_mk(request,eventid):
     context = RequestContext(request)
     
     user = request.user
-    event = user.ccinstances.filter(event__pk=eventid)
-    if not event:
-        return HttpResponse("You must not have cc'd this event, or is closed")
+    uevent = user.ccinstances.filter(event__pk=eventid)
+    
+    if not uevent:
+        return HttpResponse("This Event Must not Have been yours, or is closed")
+    
+    event = Event.objects.get(pk=eventid)
     if not event.reports_editable:
         return HttpResponse("The deadline for report submission and hours has past...")
-    event = event[0].event
+        
+    event = uevent[0].event
     context['msg'] = "Hours for '%s'" % event.event_name
     if request.method == 'POST':
         formset = MKHoursForm(event,request.POST)

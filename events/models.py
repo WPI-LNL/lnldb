@@ -428,6 +428,8 @@ class Event(models.Model):
             return "Closed"
         elif self.approved and self.datetime_setup_complete > datetime.datetime.now(pytz.utc) and not self.reviewed:
             return "Approved"
+        elif not self.approved:
+            return "Awaiting Approval"
         elif not self.reviewed:
             return "Awaiting Review"
         else:

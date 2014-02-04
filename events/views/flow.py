@@ -99,7 +99,7 @@ def review(request,id):
     context['event'] = event
     
     if request.method == 'POST':
-        form = EventReviewForm(request.POST,instance=event)
+        form = EventReviewForm(request.POST,instance=event, event=event)
         if form.is_valid():
             e = form.save(commit=False)
             e.reviewed = True
@@ -113,7 +113,7 @@ def review(request,id):
         else:
             context['formset'] = form
     else:
-        form = EventReviewForm(instance=event)
+        form = EventReviewForm(instance=event,event=event)
         context['formset'] = form
     return render_to_response('event_review.html', context) 
 

@@ -130,6 +130,10 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/open/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.openworkorders'),
     url(r'^lnadmin/events/open/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', 'events.views.list.openworkorders'),
 
+    url(r'^lnadmin/events/unreviewed/$', 'events.views.list.unreviewed',name="unreviewed"),
+    url(r'^lnadmin/events/unreviewed/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unreviewed'),
+    url(r'^lnadmin/events/unreviewed/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unreviewed'),
+    
     url(r'^lnadmin/events/unbilled/$', 'events.views.list.unbilled',name="unbilled"),
     url(r'^lnadmin/events/unbilled/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unbilled'),
     url(r'^lnadmin/events/unbilled/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unbilled'),    

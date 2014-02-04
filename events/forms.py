@@ -92,11 +92,22 @@ class CrewChiefAssign(forms.ModelForm):
         
         
 class CrewAssign(forms.ModelForm):
-    crew = make_ajax_field(Event,'crew','Members',plugin_options = {'minLength':3})
-    #crewchief = make_ajax_field(Event,'crew_chief','Users',plugin_options = {'minLength':3})
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.layout = Layout(
+            Field('crew'),
+            FormActions(
+                Submit('save', 'Save Changes'),
+            )
+        )
+        super(CrewAssign,self).__init__(*args,**kwargs)
+
+
     class Meta:
         model = Event
         fields = ("crew",)
+    crew = make_ajax_field(Event,'crew','Members',plugin_options = {'minLength':3})
 
 class CrewChiefAssign(forms.ModelForm):
     crew_chief = make_ajax_field(Event,'crew_chief','Members',plugin_options = {'minLength':3})
@@ -298,6 +309,7 @@ class InternalEventForm(forms.ModelForm):
      
 class EventReviewForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
+        event = kwargs.pop('event')
         self.helper = FormHelper()
         self.helper.form_class = "form-inline"
         self.helper.layout = Layout(
@@ -305,8 +317,8 @@ class EventReviewForm(forms.ModelForm):
             Field('billing_org'),
             FormActions(
                 HTML('<h4> Does this look good to you?</h4>'),
-                Submit('save', 'Yes', css_class='btn btn-large btn-danger'),
-                Button('cancel', 'No...', css_class='btn btn-large btn-success'),
+                Submit('save', 'Yes!', css_class='btn btn-large btn-danger'),
+                HTML('<a class="btn btn-large btn-success" href="{%% url "events.views.flow.viewevent" %s %%}"> No... </a>' % event.id ), 
             ),
         )
         super(EventReviewForm,self).__init__(*args,**kwargs)

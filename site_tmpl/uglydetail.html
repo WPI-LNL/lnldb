@@ -7,13 +7,13 @@
         <div class="span3">
             <h1> {{event }}:</h1>
         </div>
-        <div class="span3">
+        <div class="span2">
             <h3>Status: {{ event.status }}</h3>
         </div>
         <div class="span3">
             <h3>Client{% if event.org.count > 1 %}s{% endif %}: {% for org in event.org.all %}<a href="{% url "admin-orgdetail" org.id %}">{{ org.retname }}</a> &nbsp;{% endfor %}</h3>
         </div>
-        <div class="span3">
+        <div class="span4">
             <h3>Actions:
             {% if event.cancelled or event.closed %}
             <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
@@ -21,16 +21,22 @@
             {% elif event.paid and not event.closed %} 
             <div class="btn-group">
                 <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
+                <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
             </div>
             
             {% elif not event.reviewed and event.approved %}
-            <a class="btn btn-success btn-large" href="{% url "events.views.flow.review" event.id %}">Review For Billing</a>
-            
-            {% elif event.approved and not event.paid and not event.closed %}
+            <div class="btn-group">
+                <a class="btn btn-success btn-large" href="{% url "events.views.flow.review" event.id %}">Review For Billing</a>
+                <a class="btn btn-warning btn-large" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
+                <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
+                <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
+            </div>
+            {% elif event.approved and not event.paid and not event.closed and event.reviewed %}
             <div class="btn-group">
                 <a class="btn btn-primary btn-large" href="{% url "event-mkbilling" event.id %}">Create Bill</a>
                 <a class="btn btn-warning btn-large" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
                 <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
+                <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
             </div>
 
             {% elif not event.approved and not event.closed or not event.cancelled and not event.closed %}
@@ -85,7 +91,7 @@
                         </tr>
                         <tr>
                             <th>Event Contact Name</th>
-                            <td>{% if event.contact %}<a href="{% url "memberdetail" event.contact.id %}">{{ event.contact }}</a>{% else %}No Contact Set {% endif %}</td>
+                            <td>{% if event.contact %}<a href="{% url "memberdetail" event.contact.id %}">{{ event.contact.get_full_name }}</a>{% else %}No Contact Set {% endif %}</td>
                         </tr>
                         <tr>
                             <th>Event Contact Phone</th>
@@ -101,7 +107,7 @@
                         </tr>
                         <tr>
                             <th>Submitted by</th>
-                            <td><a href="{% url "memberdetail" event.submitted_by.id %}">{{event.submitted_by}}</a></td> 
+                            <td><a href="{% url "memberdetail" event.submitted_by.id %}">{{event.submitted_by.get_full_name }}</a></td> 
                         </tr>
                         <tr>
                             <th>Submitted on</th>
@@ -115,7 +121,7 @@
                             <th>Approved by/on</th>
                             <td>
                                 {% if event.approved_by %} 
-                                    {{ event.approved_by }} on {{ event.approved_on }}      
+                                    <a href="{% url "memberdetail" event.approved_by.id %}">{{ event.approved_by.get_full_name }}</a> on {{ event.approved_on }}      
                                 {% else %}
                                     Needs Approval 
                                 {% endif %}
@@ -124,7 +130,7 @@
                             <th>Cancelled by/on</th>
                             <td>
                                 {% if event.cancelled_by %} 
-                                    {{ event.cancelled_by }} on {{ event.cancelled_on }}      
+                                    <a href="{% url "memberdetail" event.cancelled_by.id %}">{{ event.cancelled_by.get_full_name }}</a> on {{ event.cancelled_on }}      
                                 {% else %}
                                     N/A 
                                 {% endif %}
@@ -133,7 +139,7 @@
                             <th>Closed by/on</th>
                             <td>
                                 {% if event.closed_by %} 
-                                    {{ event.closed_by }} on {{ event.closed_on }}      
+                                    <a href="{% url "memberdetail" event.closed_by.id %}">{{ event.closed_by.get_full_name }}</a> on {{ event.closed_on }}      
                                 {% else %}
                                     N/A
                                 {% endif %}
@@ -142,7 +148,7 @@
                         <tr>
                             <th>Reviewed for billing by/on</th>
                             <td>
-                            {{ event.reviewed_by }} on {{ event.reviewed_on }}
+                            <a href="{% url "memberdetail" event.reviewed_by.id %}">{{ event.reviewed_by.get_full_name }}</a> on {{ event.reviewed_on }}
                             </td>
                         </tr>
                         {% endif %}
@@ -246,7 +252,7 @@
                         {% for cc in event.ccinstances.all %}
                         <tr>
                             <td>
-                                <a href="{% url "memberdetail" cc.crew_chief.id %}">{{ cc.crew_chief }}</a>
+                                <a href="{% url "memberdetail" cc.crew_chief.id %}">{{ cc.crew_chief.get_full_name }}</a>
                             </td>
                             <td>
                                 {{ cc.setup_location }}

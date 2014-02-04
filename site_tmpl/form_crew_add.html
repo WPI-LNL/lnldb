@@ -1,13 +1,12 @@
-{% extends 'base.html' %}
-{% load bootstrap_toolkit %}
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
 {% block nav %}
     {% include "admin.nav.html" %}
 {% endblock %}
 {% block content %}
     <div class="row-fluid">
         <div class="span12">
-            <div class="hero-unit">
-                <h2> {{msg }} </h2>
+                <h2> {{msg }} for "<em>{{ event.event_name }}</em>"</h2>
                 <h4>Current Crew </h4>
                 <table class="table">
                     {% for crew in event.crew.all %}
@@ -17,15 +16,12 @@
                         <td> {{ crew.first_name }} {{crew.last_name}} </td>
                         
                     </tr>
+                    {% empty %}
+                    <tr class="warning"><td> No Crew Set </td></tr>
                     {% endfor %}
                 </table>
                 <h4>Add More</h4>
-                <form class="form-inline" method="post" action="">
-                {% csrf_token %}              
-                {{formset|as_bootstrap:"inline"}}
-                <button type="submit" class="btn btn-success">Submit</button>
-                </form>
-            </div>
+                {% crispy formset %}
         </div>
     </div>
 {% endblock %}
