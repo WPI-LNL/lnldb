@@ -1,0 +1,51 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="row-fluid">
+        <div class="span12">
+                <h2> {{msg }} </h2>
+                <form method="post" action="" class="form-horizontal">
+                {% crispy form %}
+                <hr>
+                {{ formset.management_form }}
+                <table class="table table-striped" valign="top">
+                    <tr>
+                        <th>PIT Level</th>
+                        <th>Created On </th>
+                        <th>Valid</th>
+                        <th>Delete?</th>
+                    </tr>
+                {% for form in formset %}
+                    {% if form.errors %}
+                    <tr class="warning">
+                        <td>{% for e in form.pit_level.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.created_on.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.valid.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.DELETE.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td></td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td>{{ form.id }}{{ form.pit_level }} </td>
+                        <td>{{ form.created_on }} </td>
+                        <td>{{ form.valid }} </td>
+                        <td>{{ form.DELETE }} </td>
+                    </tr>
+                {% endfor %}
+                </table>
+                <div class="form-actions"><input name="save" value="Save changes" class="btn btn-primary" id="submit-id-save" type="submit"> </div>
+                </form>
+                
+        </div>
+    </div>
+{% endblock %}
+
+{% block extras %}
+
+{% include "js_datetimepick.tmpl" %}
+{% endblock %}
+
+{% block finalsay %}
+
+{% endblock %}
