@@ -6,13 +6,19 @@
 
 {% block content %}
 <div class="container marketing" style="text-align:center;">
-    <img src="{{ STATIC_URL}}/img/notouching.gif" /><br />
+<!--     <img src="{{ STATIC_URL}}/img/notouching.gif" /><br /> -->
+    <p class="lead">
+    You've ended up somewhere you probably shouldn't have.  <br />
+    If this is in error, it should be resolved soon enough <br />
+    </p>
+    <br />
+    Here are your details if you were wondering: <br />
     user: {{ kitty.user }} <br />
     ip: {{ kitty.user_ip }} <br />
     requested_url: {{ kitty.requested_uri }} <br />
     timestamp: {{ kitty.timestamp }} <br />
     <br />
-    <strong>You've been logged.</strong>
+    <span class="muted">The access you've attempted has been logged</span>
 </div>
 
 {% endblock %}
