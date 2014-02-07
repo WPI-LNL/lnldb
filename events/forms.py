@@ -328,7 +328,31 @@ class EventReviewForm(forms.ModelForm):
         model = Event
         fields = ('billing_org',)
     billing_org = AutoCompleteSelectField('Orgs',required=False, label="")
+
+
+class InternalReportForm(forms.ModelForm):
+    def __init__(self,event,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+                django_msgs,
+                Hidden('event',event.id),
+                Field('crew_chief'),
+                Field('report',css_class="span10"),
+                markdown_at_msgs,
+                FormActions(
+                    Submit('save', 'Save Changes'),
+                    Reset('reset','Reset Form'),
+                )
+        )
+        super(InternalReportForm,self).__init__(*args,**kwargs)
+    class Meta:
+        model = CCReport
     
+    crew_chief = AutoCompleteSelectField('Members',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+        
 ### External Organization forms
 
 class ExternalOrgUpdateForm(forms.ModelForm):

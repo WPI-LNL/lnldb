@@ -276,6 +276,11 @@
                     
                 </div>
                 <div id="reports" class="tab-pane">
+                    {% if not event.closed or not event.cancelled %}
+                        <div class="pull-right">
+                            <a clas="btn" href="{% url "event-mkccr" event.id%}">New</a>
+                        </div>
+                    {% endif %}
                     <h2>Reports</h2>
                     {% for report in event.ccreport_set.all %}
                         <h4>Report by {{report.crew_chief }}</h4> 
@@ -283,6 +288,10 @@
                             Posted on {{ report.created_on }} <br />
                             {% if report.created_on != report.updated_on %}
                                 Last Updated: {{ report.updated_on }}
+                            {% endif %}
+                            {% if not event.closed or not event.cancelled %}
+                            <br />
+                            <a href="{% url "event-updccr" event.id report.id %}">Edit</a>
                             {% endif %}
                         </em>
                         

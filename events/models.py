@@ -578,7 +578,7 @@ class CCReport(models.Model):
     report = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
-    for_service_cat = models.ManyToManyField(Category,verbose_name="Services")
+    for_service_cat = models.ManyToManyField(Category,verbose_name="Services",null=True,blank=True)
     
     @property
     def pretty_cat_list(self):

@@ -11,9 +11,9 @@ from django.forms.models import inlineformset_factory
 from django.utils.functional import curry
 from django.db.models import Q
 
-from events.forms import EventApprovalForm,EventDenialForm, BillingForm, BillingUpdateForm, EventReviewForm
+from events.forms import EventApprovalForm,EventDenialForm, BillingForm, BillingUpdateForm, EventReviewForm, InternalReportForm
 from events.forms import CrewAssign,CrewChiefAssign, CCIForm, AttachmentForm, ExtraForm
-from events.models import Event,Organization,Billing,EventCCInstance,EventAttachment,Service,ExtraInstance,EventArbitrary
+from events.models import Event,Organization,Billing,EventCCInstance,EventAttachment,Service,ExtraInstance,EventArbitrary, CCReport
 from helpers.challenges import is_officer
 
 import datetime
@@ -294,6 +294,49 @@ def viewevent(request,id):
     context['event'] = event
     
     return render_to_response('uglydetail.html', context)
+
+
+class CCRCreate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,CreateView):
+    model = CCReport
+    form_class = InternalReportForm
+    template_name = "form_crispy_cbv.html"
+    msg = "New Crew Chief Report"
+    
+    def get_form_kwargs(self):
+        kwargs = super(CCRCreate, self).get_form_kwargs()
+        event = get_object_or_404(Event,pk=self.kwargs['event'])
+        kwargs['event'] = event
+        return kwargs
+
+    def form_valid(self,form):
+        messages.success(self.request,"Crew Chief Report Created!", extra_tags='success')
+        return super(CCRCreate,self).form_valid(form)
+    
+    def get_success_url(self):
+        return reverse("events-detail",args=(self.kwargs['event'],))
+    
+class CCRUpdate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,UpdateView):
+    model = CCReport
+    form_class = InternalReportForm
+    template_name = "form_crispy_cbv.html"
+    msg = "Update Crew Chief Report"
+    
+    def get_form_kwargs(self):
+        kwargs = super(CCRUpdate, self).get_form_kwargs()
+        event = get_object_or_404(Event,pk=self.kwargs['event'])
+        kwargs['event'] = event
+        return kwargs
+
+    def form_valid(self,form):
+        messages.success(self.request,"Crew Chief Report Updated!", extra_tags='success')
+        return super(CCRUpdate,self).form_valid(form)
+    
+    def get_success_url(self):
+        return reverse("events-detail",args=(self.kwargs['event'],))
+
+
+
+
 
 class BillingCreate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,CreateView):
     model = Billing
