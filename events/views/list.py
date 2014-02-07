@@ -104,7 +104,7 @@ def upcoming(request,start=None,end=None):
             end = end.strftime('%Y-%m-%d')
     
     #events = Event.objects.filter(approved=True).filter(closed=False).filter(paid=False).filter(datetime_start__gte=today)
-    events = Event.objects.filter(approved=True).filter(Q(closed=False)|Q(cancelled=False))#.filter(paid=False)
+    events = Event.objects.filter(approved=True).exclude(Q(closed=True)|Q(cancelled=True))#.filter(paid=False)
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
@@ -153,7 +153,7 @@ def openworkorders(request,start=None,end=None):
         start,end = get_farback_date_range_plus_next_week()
     context = RequestContext(request)
     
-    events = Event.objects.filter(Q(closed=False)|Q(cancelled=False))
+    events = Event.objects.filter(approved=True).exclude(Q(closed=True)|Q(cancelled=True))
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
@@ -175,7 +175,7 @@ def unreviewed(request,start=None,end=None):
     
     now = datetime.datetime.now(pytz.utc)
     #events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=False).filter(datetime_end__lte=now)
+    events = Event.objects.exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=False).filter(datetime_end__lte=now)
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
@@ -202,7 +202,7 @@ def unbilled(request,start=None,end=None):
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
-    events = Event.objects.filter(billings__isnull=True).filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=True).order_by('datetime_start')
+    events = Event.objects.filter(billings__isnull=True).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True).order_by('datetime_start')
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
