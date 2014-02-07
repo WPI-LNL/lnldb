@@ -36,6 +36,9 @@ class UserAcct(forms.ModelForm):
         model = User
         
         fields = ('first_name','last_name')
+        
+    first_name = forms.CharField(label="First Name")
+    last_name = forms.CharField(label="Last Name")
 class UserProfileLimitd(forms.ModelForm):
     class Meta:
         model = Profile
