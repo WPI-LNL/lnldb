@@ -15,6 +15,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from helpers.challenges import is_officer
 
 import datetime,time
+import pytz
 
 DEFAULT_ENTRY_COUNT = 40
 
@@ -172,17 +173,18 @@ def openworkorders(request,start=None,end=None):
 def unreviewed(request,start=None,end=None):
     context = RequestContext(request)
     
+    now = datetime.datetime.now(pytz.utc)
     #events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=False)
+    events = Event.objects.filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=False).filter(datetime_end__lte=now)
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
     events = paginate_helper(events,page)
 
     
-    context['h2'] = "Events pending billing review"
+    context['h2'] = "Events Pending Billing Review"
     context['events'] = events
-    context['baseurl'] = reverse("unbilled")
+    context['baseurl'] = reverse("unreviewed")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     
     return render_to_response('events.html', context)
