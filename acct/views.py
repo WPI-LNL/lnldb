@@ -47,7 +47,7 @@ class LNLUpdate(UpdateView):
     
     
 def send_member_request(request):
-    if request.user.profile.is_lnl:
+    if not request.user.profile.is_lnl:
         context = {}
         context['user'] = request.user
         context['submitted_ip'] = request.META.get('REMOTE_ADDR')
