@@ -130,7 +130,7 @@ def incoming(request,start=None,end=None):
         end = today + datetime.timedelta(days=365.25)
         end = end.strftime('%Y-%m-%d')
     
-    events = Event.objects.filter(approved=False).filter(Q(closed=False)|Q(cancelled=False))
+    events = Event.objects.filter(approved=False).exclude(Q(closed=True)|Q(cancelled=True))
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
