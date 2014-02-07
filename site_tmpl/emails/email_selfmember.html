@@ -14,7 +14,7 @@
                 <div align="left" class="article-content">
                     
                     <p>
-                    Requesting User: {{ user }} <br />
+                    Requesting User: {{ user.get_full_name }}({{ user }}) <br />
                     Requesting User's Email: {{ user.email }} <br />
                     Requesting IP: {{ submitted_ip }} <br />
                     </p>

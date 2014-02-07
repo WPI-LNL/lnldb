@@ -1,6 +1,6 @@
 Self Service Membership Request Form Filled
 
-Requesting User: {{ user }}
+Requesting User: {{ user.get_full_name }} ({{ user }})
 Requesting User's Email: {{ user.email }}
 Requesting IP: {{ submitted_ip }}
 

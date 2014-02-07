@@ -12,6 +12,8 @@ from django.forms.models import inlineformset_factory
 from acct.forms import UserAcct,ProfileAcct,UserProfileFormSet
 from acct.models import Profile
 
+from emails.generators import generate_selfmember_notice_email
+
 
 class AcctUpdate(UpdateView):
     model = User
@@ -42,3 +44,19 @@ class LNLUpdate(UpdateView):
         
     def get_success_url(self):
         return reverse('my-lnl')
+    
+    
+def send_member_request(request):
+    if request.user.profile.is_lnl:
+        context = {}
+        context['user'] = request.user
+        context['submitted_ip'] = request.META.get('REMOTE_ADDR')
+        e = generate_selfmember_notice_email(context)
+        e.send()
+        messages.success(request,"LNL Member Request Sent", extra_tags='success')
+        
+        return HttpResponseRedirect(reverse("my-acct"))
+    else:
+        messages.success(request,"You're already an LNL Member", extra_tags='warning')
+        return HttpResponseRedirect(reverse("my-acct"))
+    

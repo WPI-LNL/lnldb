@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 # Create your models here.
@@ -15,6 +16,13 @@ class Profile(models.Model):
     @property
     def fullname(self):
         return self.user.first_name + " " + self.user.last_name
+    
+    @property
+    def is_lnl(self):
+        if self.user.groups.filter(Q(name="Alumni")|Q(name="Active")|Q(name="Officer")|Q(name="Associate")|Q(name="Away")|Q(name="Inactive")).exists():
+            return True
+        else:
+            return False
     
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
