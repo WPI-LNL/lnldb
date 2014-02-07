@@ -9,7 +9,7 @@
 <h1> <a href="{% url "events.views.my.my" %}">My</a> {{msg|safe}} </h1>
 
 <div class="hero-unit">
-{% if extra_text %}<p class="muted">{{ extra_text|safe }}<br /></p>{% endif %}
+{% if extra_text %}<p class="muted">{{ extra_text|safe }}<br /><br /></p>{% endif %}
 {% crispy formset %}
 </div>
 {% endblock %}
