@@ -124,7 +124,8 @@ def incoming(request,start=None,end=None):
     context = RequestContext(request)
     if not start and not end:
         today = datetime.date.today()
-        start = today.strftime('%Y-%m-%d')
+        start = today - datetime.timedelta(days=365.25)
+        start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=365.25)
         end = end.strftime('%Y-%m-%d')
     
