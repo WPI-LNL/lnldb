@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 
 from django.views.generic.edit import UpdateView
 from django.views.generic.edit import CreateView
+from django.views.generic.edit import DeleteView
 from django.views.generic.edit import FormView
 
 
@@ -73,6 +74,7 @@ def projection_update(request,id):
         formset = PITFormset(instance=projectionist,prefix="nested")
         context['form'] = form
         context['formset'] = formset
+        context['pk'] = id
         
     return render_to_response('form_crispy_projection.html',context)
     
@@ -121,3 +123,12 @@ class BulkUpdateView(OfficerMixin,LoginRequiredMixin,FormView):
         # It should return an HttpResponse.
         form.create_updates()
         return super(BulkUpdateView, self).form_valid(form)    
+    
+class ProjectionistDelete(OfficerMixin,LoginRequiredMixin,DeleteView):
+    model = Projectionist
+    template_name = "form_delete_cbv.html"
+    msg = "Deleted Projectionist"
+    
+            
+    def get_success_url(self):
+        return reverse("projection-list")

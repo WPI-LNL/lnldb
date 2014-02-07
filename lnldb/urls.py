@@ -27,6 +27,7 @@ from emails.views import MeetingAnnounceView
 from emails.views import MeetingAnnounceCCView
 from projection.views import ProjectionCreate
 from projection.views import BulkUpdateView
+from projection.views import ProjectionistDelete
 #event wizard form defenitions
 
 from django.contrib.auth.decorators import login_required
@@ -203,6 +204,7 @@ urlpatterns = patterns('',
     url(r'^lnadmin/projection/bulk/$', BulkUpdateView.as_view(), name="projection-bulk-update"),
     #url(r'^lnadmin/projection/update/(?P<pk>[0-9a-f]+)/$', ProjectionUpdate.as_view(), name="projection-update"),
     url(r'^lnadmin/projection/update/(?P<id>[0-9a-f]+)/$', "projection.views.projection_update", name="projection-update"),
+    url(r'^lnadmin/projection/rm/(?P<pk>[0-9a-f]+)/$', ProjectionistDelete.as_view(), name="projection-delete"),
     url(r'^lnadmin/projection/mk/$', ProjectionCreate.as_view(), name="projection-create"),
     url(r'^lnadmin/projection/list/detail/pdf/$', 'pdfs.views.generate_projection_pdf', name="events-pdf-multi"),
 

@@ -34,7 +34,10 @@
                     </tr>
                 {% endfor %}
                 </table>
-                <div class="form-actions"><input name="submit" value="Save changes" class="btn btn-primary" id="submit-id-save" type="submit"> </div>
+                    <div class="form-actions">
+                        <input name="submit" value="Save changes" class="btn btn-primary" id="submit-id-save" type="submit"> 
+                        {% if pk %}<a class="btn btn-danger" href="{% url "projection-delete" pk %}">Delete</a> {% endif %}
+                    </div>
                 </form>
                 
         </div>
