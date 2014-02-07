@@ -386,9 +386,10 @@ class SelfServiceOrgRequestForm(forms.Form):
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = 'post'
         self.helper.form_action = ''
+        self.helper.help_text_inline = True
         self.helper.layout = Layout(
                 django_msgs,
-                'client_name',
+                Field('client_name',help_text_inline=True),
                 'email',
                 'address',
                 Field('phone',css_class="bfh-phone",data_format="(ddd) ddd dddd"),
@@ -399,11 +400,11 @@ class SelfServiceOrgRequestForm(forms.Form):
         )
         super(SelfServiceOrgRequestForm,self).__init__(*args,**kwargs)
     
-    client_name = forms.CharField(max_length=128, label= "Client Name")
-    email = forms.EmailField()
-    address = forms.CharField(widget=forms.Textarea)
-    phone = forms.CharField(max_length=15)
-    fund_info = forms.CharField()
+    client_name = forms.CharField(max_length=128, label= "Client Name", help_text="EX: Lens & Lights")
+    email = forms.EmailField(help_text="EX: lnl@wpi.edu (This should be your exec board alias)")
+    address = forms.CharField(widget=forms.Textarea, help_text="EX: Campus Center 339")
+    phone = forms.CharField(max_length=15, help_text="EX: (508) - 867 - 5309" )
+    fund_info = forms.CharField(help_text="EX: 12345-6789-8765")
     
 #### Internal Billing forms
 

@@ -68,6 +68,7 @@ def myorgform(request):
     """ Organization Creation Request Form"""
     context = RequestContext(request)
     context['msg'] = "Client Request"
+    context['extra_text'] = 'Note: The information being requested here is not your personal information, this can be edited <a href="%s"> here </a>. This information should relate to the client account that is being requested and should only mirror your personal information if you are requesting a personal account be made.' % (reverse("my-acct"))
     if request.method == "POST":
         form = SelfServiceOrgRequestForm(request.POST)
         if form.is_valid():

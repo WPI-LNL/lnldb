@@ -1,9 +1,15 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
+{% block extras %}
+{% include "js_phonelimit.tmpl" %}
+{% endblock %}
+
 {% block content %}    
 <h1> <a href="{% url "events.views.my.my" %}">My</a> {{msg|safe}} </h1>
+
 <div class="hero-unit">
+{% if extra_text %}<p class="muted">{{ extra_text|safe }}<br /></p>{% endif %}
 {% crispy formset %}
 </div>
 {% endblock %}
