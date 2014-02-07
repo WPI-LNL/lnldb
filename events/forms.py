@@ -168,10 +168,11 @@ class EventApprovalForm(forms.ModelForm):
                     Field('description',label="Description (optional)",css_class="span6"),
                     HTML('<p class="muted offset2">This will describe the event to your CCs</p>'),
                     markdown_at_msgs,
+                    Field('datetime_setup_complete',label="Setup Finish",css_class="dtp"),
                     Field('datetime_start',label="Event Start",css_class="dtp"),
                     Field('datetime_end',label="Event End",css_class="dtp"),
                     #Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
-                    Field('datetime_setup_complete',label="Setup Finish",css_class="dtp"),
+                    
                         ),
                 Tab(
                     "Services",
@@ -195,10 +196,10 @@ class EventApprovalForm(forms.ModelForm):
         model = Event
         fields = ['description','datetime_start','datetime_end','datetime_setup_complete','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs']
         
-    datetime_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
-    datetime_end =  forms.SplitDateTimeField(initial=datetime.datetime.now())
+    datetime_start =  forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
+    datetime_end =  forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End")
     #datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
-    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
+    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Setup Completed")
 
 class EventDenialForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
@@ -303,9 +304,9 @@ class InternalEventForm(forms.ModelForm):
     contact = AutoCompleteSelectField('Users',required=False,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
     org = AutoCompleteSelectMultipleField('Orgs',required=False)
     
-    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now())
+    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Setup Completed")
+    datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Event Start")
+    datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Event End")
      
 class EventReviewForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
