@@ -194,7 +194,13 @@ def unbilled(request,start=None,end=None):
     context = RequestContext(request)
     
     #events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(billings__isnull=True).filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=True)
+    if not start and not end:
+        today = datetime.date.today()
+        start = today - datetime.timedelta(days=3652.5)
+        start = start.strftime('%Y-%m-%d')
+        end = today + datetime.timedelta(days=3652.5)
+        end = end.strftime('%Y-%m-%d')
+    events = Event.objects.filter(billings__isnull=True).filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=True).order_by('datetime_start')
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
