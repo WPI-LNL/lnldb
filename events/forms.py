@@ -495,13 +495,13 @@ class MKHoursForm(forms.ModelForm):
                 Field('hours'),
                 FormActions(
                     Submit('save', 'Save Changes'),
-                    Reset('reset','Reset Form'),
+                    #Reset('reset','Reset Form'),
                 )
         )
         super(MKHoursForm,self).__init__(*args,**kwargs)
     class Meta:
         model = Hours
-    user = AutoCompleteSelectField('Users',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    user = AutoCompleteSelectField('Members',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
         
 class EditHoursForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):

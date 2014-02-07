@@ -194,6 +194,7 @@ AJAX_LOOKUP_CHANNELS = {
     'Orgs' : ('events.lookups', 'OrgLookup'),
     'UserLimitedOrgs' : ('events.lookups', 'UserLimitedOrgLookup'),
     'Members' : ('acct.lookups', 'MemberLookup'),
+    'AssocMembers' : ('acct.lookups', 'AssocMemberLookup'),
 }
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
