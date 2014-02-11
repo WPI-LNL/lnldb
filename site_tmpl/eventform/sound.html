@@ -14,12 +14,15 @@
                 $(this).siblings().button('reset');
                 });
             $('.checkboxinput').addClass('btn');
+            var id_string = "#div_id_sound-";
+            {% include 'js_extras_select.tmpl' %}
             });
     </script>
     <style>
         li {float:left; margin: 3px; list-style-type:none}
         /* fix tiny button issue */
         .controls > .radio:first-child {padding-top:11px;}
+        .controls > .radio {padding-top:11px;}
         .btn {margin:2px}
     </style>
 {% endblock %}

@@ -15,6 +15,9 @@
                 });
             // checkboxes
             $('.checkboxinput').addClass('btn');
+            // set this before the extras selector
+            var id_string = "#div_id_lighting-";
+            {% include 'js_extras_select.tmpl' %}
             });
             
             
@@ -26,4 +29,5 @@
         .controls > .radio {padding-top:11px;}
         .btn {margin:2px}
     </style>
+    
 {% endblock %}

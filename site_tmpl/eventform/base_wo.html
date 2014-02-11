@@ -80,6 +80,9 @@
                 <div class="tab-pane" id="textras">
                     <table class="table table-bordered">
                         {% for e in extras %}
+                        <div class="hide">
+                            <div id="e_{{e.id }}" class="{% for s in e.services.all %}s_{{s.id}} {% endfor %}"></div>
+                        </div>
                         <tr>
                             <td>{{ e.name }} ({{e.desc}})</td>
                             <td>{{ e.cost }}</td>
