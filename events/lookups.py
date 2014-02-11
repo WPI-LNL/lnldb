@@ -25,6 +25,9 @@ class UserLimitedOrgLookup(LookupChannel):
     
     model = Organization
     
+    def check_auth(self, request):
+        return True
+    
     def get_query(self,q,request):
         user = request.user
         return Organization.objects.filter(Q(user_in_charge=user)|Q(associated_users__in=[user.id])|Q(associated_orgs__user_in_charge=user)|Q(associated_users__in=[user.id])|Q(shortname="nl")).filter(Q(name__icontains=q)|Q(shortname__icontains=q))
