@@ -758,8 +758,8 @@ class LightingForm(forms.Form):
                 ),
             Fieldset(
                 'Extras', ### title
-                *LIGHT_EXTRAS_NAMES
-                ),
+                *LIGHT_EXTRAS_NAMES,
+                css_class="extra_fs"),
         )
         super(LightingForm,self).__init__(*args,**kwargs)
         for extra in LIGHT_EXTRAS:
@@ -788,12 +788,13 @@ class SoundForm(forms.Form):
         self.helper.layout = Layout(
             Fieldset(
                 'Basics', ### title
-                'sound',
+                InlineRadios('sound'),
                 Field('requirements', css_class="span8"),
                 ),
             Fieldset(
                 'Extras', ### title
-                *SOUND_EXTRAS_NAMES
+                *SOUND_EXTRAS_NAMES,
+                css_class="extra_fs"
                 ),
         )
         super(SoundForm,self).__init__(*args,**kwargs)
@@ -802,7 +803,7 @@ class SoundForm(forms.Form):
     sound = forms.ModelChoiceField(
             empty_label=None,
             queryset = Sound.objects.all(),
-            widget = forms.RadioSelect(attrs={'class':'radio'}),
+            widget = forms.RadioSelect(attrs={'class':'radio itt'}),
         )   
     requirements = forms.CharField(
             widget=forms.Textarea,
