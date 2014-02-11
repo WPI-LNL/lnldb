@@ -227,12 +227,15 @@ def hours_mk(request,eventid):
 def hours_edit(request,eventid,userid):
     context = RequestContext(request)
     user = request.user
-    event = user.ccinstances.filter(event__pk=eventid)
-    if not event:
+    uevent = user.ccinstances.filter(event__pk=eventid)
+    
+    if not uevent:
         return HttpResponse("You must not have cc'd this event, or it's closed")
+    
+    event = Event.objects.get(pk=eventid)
     if not event.reports_editable:
         return HttpResponse("The deadline for report submission and hours has past...")
-    event = event[0].event
+    event = uevent[0].event
     
     hours = get_object_or_404(Hours,event=event,user_id=userid)
     u = get_object_or_404(User,pk=userid)
