@@ -7,6 +7,10 @@ class UserLookup(LookupChannel):
     
     model = User
     
+    def check_auth(self, request):
+        if request.user.groups.filter(Q(name="Alumni")|Q(name="Active")|Q(name="Officer")).exists():
+            return True
+    
     def get_query(self,q,request):
         return User.objects.filter(Q(username__icontains=q)|Q(first_name__icontains=q)|Q(last_name__icontains=q))
     
@@ -24,6 +28,10 @@ class MemberLookup(LookupChannel):
     
     model = User
     
+    def check_auth(self, request):
+        if request.user.groups.filter(Q(name="Alumni")|Q(name="Active")|Q(name="Officer")).exists():
+            return True
+    
     def get_query(self,q,request):
         return User.objects.filter(Q(username__icontains=q)|Q(first_name__icontains=q)|Q(last_name__icontains=q)).filter(Q(groups__name="Alumni")|Q(groups__name="Active")|Q(groups__name="Officer")).distinct()
     
@@ -40,6 +48,10 @@ class MemberLookup(LookupChannel):
 class AssocMemberLookup(LookupChannel):
     
     model = User
+    
+    def check_auth(self, request):
+        if request.user.groups.filter(Q(name="Alumni")|Q(name="Active")|Q(name="Officer")).exists():
+            return True
     
     def get_query(self,q,request):
         return User.objects.filter(Q(username__icontains=q)|Q(first_name__icontains=q)|Q(last_name__icontains=q)).filter(Q(groups__name="Associate")|Q(groups__name="Alumni")|Q(groups__name="Active")|Q(groups__name="Officer")).distinct()
