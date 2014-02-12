@@ -1,4 +1,6 @@
 {% extends "emails/email_base.html" %}
+{% load tz %}
+
 {% block perma %}
 <a href="http://lnl.wpi.edu/email/announcecc/{{object.uuid}}/" class="cm-webversion">View Online</a>
 {% endblock %}
