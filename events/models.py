@@ -146,6 +146,13 @@ class EventManager(models.Manager):
         if otherservices_l:
             event.otherservices.add(*otherservices_l) #* because its a list yo.
             event.otherservice_reqs = otherdescription
+            
+        #raise
+        #
+        for e in lighting_extras:
+            event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
+        for e in sound_extras:
+            event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
         event.save()
         return event
             
