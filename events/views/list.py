@@ -173,6 +173,13 @@ def openworkorders(request,start=None,end=None):
 def unreviewed(request,start=None,end=None):
     context = RequestContext(request)
     
+    if not start and not end:
+        today = datetime.date.today()
+        start = today - datetime.timedelta(days=180)
+        start = start.strftime('%Y-%m-%d')
+        end = today + datetime.timedelta(days=180)
+        end = end.strftime('%Y-%m-%d')
+        
     now = datetime.datetime.now(pytz.utc)
     #events = Event.objects.filter(approved=True).filter(paid=True)
     events = Event.objects.exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=False).filter(datetime_end__lte=now)
