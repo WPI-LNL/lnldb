@@ -221,7 +221,7 @@ SEND_START_END_EMAILS = True
 EMAIL_TARGET_START_END = "gmp@h4xmb.org"
 EMAIL_KEY_START_END = None
 
-LOGIN_URL = "/acct/login/"
+LOGIN_URL = "/local/login/"
 LOGIN_REDIRECT_URL = "/my/"
 
 # GIT REV

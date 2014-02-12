@@ -74,8 +74,12 @@
             <span class="icon-bar"></span>
           </a>
           <p class="navbar-text pull-right">
-          Logged in as <a href="{% url "events.views.my.my" %}" class="navbar-link"> {{user}} &middot; <a href="/logout">Log Out</a></a>
-          </p>
+                {% if user.is_authenticated %}
+                Logged in as <a href="#" class="navbar-link">{{ user }}</a> &middot; <a href="/local/logout">Log Out</a>
+                {% else %}
+                <a href="/local/login"> Log In </a>
+                {% endif %}
+            </p>
           <a class="brand" href="{% url "events.views.indices.index" %}">Lens and Lights Database</a>
         
         </div>
