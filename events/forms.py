@@ -38,13 +38,16 @@ CAT_PROJ = Category.objects.get(name="Projection")
 
 LIGHT_EXTRAS = Extra.objects.filter(category=CAT_LIGHTING)
 LIGHT_EXTRAS_ID_NAME = LIGHT_EXTRAS.values_list('id','name')
-#LIGHT_EXTRAS_NAMES = [[v[1],HTML("br")] for v in LIGHT_EXTRAS_ID_NAME]
 LIGHT_EXTRAS_NAMES = ["e_%s" % v[0] for v in LIGHT_EXTRAS_ID_NAME]
 
 SOUND_EXTRAS = Extra.objects.filter(category=CAT_SOUND)
 SOUND_EXTRAS_ID_NAME = SOUND_EXTRAS.values_list('id','name')
-#SOUND_EXTRAS_NAMES = [[v[1],HTML("br")] for v in SOUND_EXTRAS_ID_NAME]
 SOUND_EXTRAS_NAMES = ["e_%s" % v[0] for v in SOUND_EXTRAS_ID_NAME]
+
+PROJ_EXTRAS = Extra.objects.filter(category=CAT_PROJ)
+PROJ_EXTRAS_ID_NAME = PROJ_EXTRAS.values_list('id','name')
+PROJ_EXTRAS_NAMES = ["e_%s" % v[0] for v in PROJ_EXTRAS_ID_NAME]
+
 
 JOBTYPES = (
     (0,'Lighting'),
@@ -800,6 +803,7 @@ class SoundForm(forms.Form):
         super(SoundForm,self).__init__(*args,**kwargs)
         for extra in SOUND_EXTRAS:
             self.fields["e_%s" % extra.id] = ValueSelectField(label=extra.name,initial=0,required=False)
+            
     sound = forms.ModelChoiceField(
             empty_label=None,
             queryset = Sound.objects.all(),
@@ -820,9 +824,18 @@ class ProjectionForm(forms.Form):
                 'projection',
                 Field('requirements', css_class="span8"),
                 ),
+            Fieldset(
+                'Extras', ### title
+                *PROJ_EXTRAS_NAMES,
+                css_class="extra_fs"
+                ),
+
 
         )
         super(ProjectionForm,self).__init__(*args,**kwargs)
+        for extra in PROJ_EXTRAS:
+            self.fields["e_%s" % extra.id] = ValueSelectField(label=extra.name,initial=0,required=False)
+            
     projection = forms.ModelChoiceField(
             empty_label=None,
             queryset = Projection.objects.all(),

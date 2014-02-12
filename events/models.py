@@ -77,6 +77,7 @@ class EventManager(models.Manager):
         #setup buckets for our extras
         lighting_extras = []
         sound_extras = []
+        projection_extras = []
         
         event_methods = event_details['eventtypes']
         event_name = event_details['eventname']
@@ -101,6 +102,10 @@ class EventManager(models.Manager):
             elif emethod == '2': #projection
                 level,proj_reqs = consume_event_method(details,'projection')
                 projection = level
+                
+                for k in details:
+                    projection_extras.append((k[2:],details[k]))
+                    
             elif emethod == '3': #other
                 otherservices_l = details.pop('services')
                 otherdescription = details.pop('otherservice_reqs')
@@ -152,6 +157,8 @@ class EventManager(models.Manager):
         for e in lighting_extras:
             event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
         for e in sound_extras:
+            event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
+        for e in projection_extras:
             event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
         event.save()
         return event
