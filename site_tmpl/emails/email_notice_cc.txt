@@ -1,7 +1,8 @@
+{% load tz %}
 Meeting Notice for {{ object.meeting.datetime.date }}
 
 Events
 
 {% for e in object.events.all %}
-    {{ e.datetime_start|date:"m-d D" }}\t {{ e.event_name }}\t {% for s in e.eventservices %}{{ s.shortname }}&nbsp;{% endfor %}\t {{ e.datetime_start.time }}- {{ e.datetime_end.time }}\t {{ e.location }}\t {% for cc in e.crew_chief.all %} {{ cc }}{% endfor %}\t
+    {{ e.datetime_start|localtime|date:"m-d D" }}\t {{ e.event_name }}\t {% for s in e.eventservices %}{{ s.shortname }}&nbsp;{% endfor %}\t {{ e.datetime_start|localtime|time:"TIME_FORMAT" }}- {{ e.datetime_end|localtime|time:"TIME_FORMAT" }}\t {{ e.location }}\t {% for cc in e.crew_chief.all %} {{ cc }}{% endfor %}\t
 {% endfor %}
