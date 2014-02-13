@@ -46,7 +46,7 @@
                     <td class="tdl42">
                         {{ event }}
                     </td>
-                    <td class="tdright" rowspan="9">
+                    <td class="tdright" rowspan="11">
                         <h5>Event Description</h5>
                         {{ event.description }}
                         <h5>Service Description</h5>
@@ -125,11 +125,13 @@
                         {{ event.datetime_end|localtime|time:"TIME_FORMAT" }}
                     </td>
                 </tr>
-            </table>
-            <hr>
-            <table>
                 <tr>
-                    <td class="tdleft">
+                    <td  colspan="2">
+                        <hr>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="tdleft" colspan="2">
                         <strong>Setup Start</strong>
                         <hr>
                         <strong>CC</strong>
@@ -160,17 +162,10 @@
                         <hr>
                         &nbsp;
                         <hr>
-                        &nbsp;
-                        <hr>
+                        Submit Reports @  lnl.wpi.edu/my/
                     </td>
                     
-                    <td class="tdright">
-                        <strong>Crew Chief Report</strong> <br />
-                        We live in the future so this can all be done digitally @: 
-                        
-                        http://lnl.wpi.edu{{ event.ccreport_url }}
-                        
-                    </td>
+                    
                 </tr>
             </table>
                       
