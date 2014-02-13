@@ -314,6 +314,7 @@ class CCRCreate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,CreateView):
     
     def get_success_url(self):
         return reverse("events-detail",args=(self.kwargs['event'],))
+
     
 class CCRUpdate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,UpdateView):
     model = CCReport
@@ -335,7 +336,22 @@ class CCRUpdate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,UpdateView):
         return reverse("events-detail",args=(self.kwargs['event'],))
 
 
-
+class CCRDelete(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,DeleteView):
+    model = CCReport
+    template_name = "form_delete_cbv.html"
+    msg = "Deleted Crew Chief Report"
+    
+    def get_object(self, queryset=None):
+        """ Hook to ensure object isn't closed """
+        obj = super(CCRDelete, self).get_object()
+        if obj.event.closed:
+            raise ValidationError("Event is closed")
+        else:
+            return obj
+        
+    def get_success_url(self):
+        return reverse("events-detail",args=(self.kwargs['event'],))
+    
 
 
 class BillingCreate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,CreateView):

@@ -291,7 +291,8 @@
                             {% endif %}
                             {% if not event.closed or not event.cancelled %}
                             <br />
-                            <a href="{% url "event-updccr" event.id report.id %}">Edit</a>
+                            <a href="{% url "event-updccr" event.id report.id %}">Edit</a> / 
+                            <a href="{% url "event-rmccr" event.id report.id %}">Delete</a>
                             {% endif %}
                         </em>
                         

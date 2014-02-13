@@ -352,7 +352,7 @@ class InternalReportForm(forms.ModelForm):
                 markdown_at_msgs,
                 FormActions(
                     Submit('save', 'Save Changes'),
-                    Reset('reset','Reset Form'),
+                    #Reset('reset','Reset Form'),
                 )
         )
         super(InternalReportForm,self).__init__(*args,**kwargs)
