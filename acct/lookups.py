@@ -12,7 +12,8 @@ class UserLookup(LookupChannel):
             return True
     
     def get_query(self,q,request):
-        return User.objects.filter(Q(username__icontains=q)|Q(first_name__icontains=q)|Q(last_name__icontains=q))
+        for term in q.split():
+            return User.objects.filter(Q(username__icontains=term)|Q(first_name__icontains=term)|Q(last_name__icontains=term))
     
     def get_result(self,obj):
         return obj.first_name + " " + obj.last_name
@@ -33,7 +34,8 @@ class MemberLookup(LookupChannel):
             return True
     
     def get_query(self,q,request):
-        return User.objects.filter(Q(username__icontains=q)|Q(first_name__icontains=q)|Q(last_name__icontains=q)).filter(Q(groups__name="Alumni")|Q(groups__name="Active")|Q(groups__name="Officer")).distinct()
+        for term in q.split():
+            return User.objects.filter(Q(username__icontains=term)|Q(first_name__icontains=term)|Q(last_name__icontains=term)).filter(Q(groups__name="Alumni")|Q(groups__name="Active")|Q(groups__name="Officer")).distinct()
     
     def get_result(self,obj):
         return obj.first_name + " " + obj.last_name
@@ -54,7 +56,8 @@ class AssocMemberLookup(LookupChannel):
             return True
     
     def get_query(self,q,request):
-        return User.objects.filter(Q(username__icontains=q)|Q(first_name__icontains=q)|Q(last_name__icontains=q)).filter(Q(groups__name="Associate")|Q(groups__name="Alumni")|Q(groups__name="Active")|Q(groups__name="Officer")).distinct()
+        for term in q.split():
+            return User.objects.filter(Q(username__icontains=term)|Q(first_name__icontains=term)|Q(last_name__icontains=term)).filter(Q(groups__name="Associate")|Q(groups__name="Alumni")|Q(groups__name="Active")|Q(groups__name="Officer")).distinct()
     
     def get_result(self,obj):
         return obj.first_name + " " + obj.last_name
