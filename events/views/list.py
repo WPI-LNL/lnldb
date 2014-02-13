@@ -39,7 +39,7 @@ def datefilter(eventqs,context,start=None,end=None):
         context['end'] = end
         try:
             enddate = datetime.datetime.strptime(end, '%Y-%m-%d')
-            eventqs = eventqs.filter(datetime_start__lte=enddate)
+            eventqs = eventqs.filter(datetime_end__lte=enddate)
             
         except:
             raise
