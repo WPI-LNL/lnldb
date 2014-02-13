@@ -203,8 +203,8 @@ urlpatterns = patterns('',
     url(r'^lnadmin/meetings/notice/(\d+)/$', 'meetings.views.mknotice',name="meeting-email"),
     url(r'^lnadmin/meetings/noticecc/(\d+)/$', 'meetings.views.mkccnotice',name="meeting-cc-email"),\
     #projection
-    url(r'^lnadmin/projection/list/$', 'projection.views.plist', name="projection-list"),
-    url(r'^lnadmin/projection/list/detail/$', 'projection.views.plist_detail', name="projection-list-detail"),
+    url(r'^lnadmin/projection/list/$', 'projection.views.plist_detail', name="projection-list-detail"),
+    url(r'^lnadmin/projection/list/other/$', 'projection.views.plist', name="projection-list"),
     url(r'^lnadmin/projection/bulk/$', BulkUpdateView.as_view(), name="projection-bulk-update"),
     #url(r'^lnadmin/projection/update/(?P<pk>[0-9a-f]+)/$', ProjectionUpdate.as_view(), name="projection-update"),
     url(r'^lnadmin/projection/update/(?P<id>[0-9a-f]+)/$', "projection.views.projection_update", name="projection-update"),
