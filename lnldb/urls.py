@@ -23,7 +23,7 @@ from acct.views import AcctUpdate,LNLUpdate
 from members.views import UserUpdate
 from members.views import MemberUpdate
 from events.views.flow import BillingCreate,BillingUpdate,BillingDelete
-from events.views.flow import CCRCreate, CCRUpdate
+from events.views.flow import CCRCreate, CCRUpdate, CCRDelete
 from emails.views import MeetingAnnounceView
 from emails.views import MeetingAnnounceCCView
 from projection.views import ProjectionCreate
@@ -123,6 +123,7 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/rm/(?P<pk>[0-9]+)/$', BillingDelete.as_view(), name="event-rmbilling"), 
     url(r'^lnadmin/events/view/(?P<event>[0-9]+)/ccr/mk/$', CCRCreate.as_view(), name="event-mkccr"), 
     url(r'^lnadmin/events/view/(?P<event>[0-9]+)/ccr/update/(?P<pk>[0-9]+)/$', CCRUpdate.as_view(), name="event-updccr"), 
+    url(r'^lnadmin/events/view/(?P<event>[0-9]+)/ccr/rm/(?P<pk>[0-9]+)/$', CCRDelete.as_view(), name="event-rmccr"), 
     
     
     url(r'^lnadmin/events/upcoming/$', 'events.views.list.upcoming', name="upcoming"),
