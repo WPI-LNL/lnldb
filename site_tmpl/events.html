@@ -85,7 +85,7 @@
                             <a href="{% url "admin-orgdetail" org.id %}">{{org.name}}</a>
                             {% endfor %}
                         </td>
-                        <td>{{event.location}}</td>
+                        <td>{{event.location}} ({{event.location.building.shortname}})</td>
                         <td>
                             {% if event.crew_chief.count %}
                                 {% for cc in event.crew_chief.all %}
@@ -106,7 +106,7 @@
                             {% if event.sound %} {{ event.sound.shortname }} {% endif %}
                         </td>
                         <td>
-                            {% if event.projection %} {{ event.projection.longname }} {% else %} N {% endif %}
+                            {% if event.projection %} {{ event.projection.longname }}  {% endif %}
                         </td>
                         <td>
                             {% if event.otherservices.count %} Y {% else %} N {% endif %}
