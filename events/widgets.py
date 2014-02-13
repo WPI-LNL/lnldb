@@ -43,7 +43,7 @@ class ValueSelectWidget(forms.MultiWidget):
 class ValueSelectField(forms.MultiValueField):
     def __init__(self,fields=None,widget=None,*args,**kwargs):
         fields = (
-            forms.IntegerField(),
+            forms.IntegerField(min_value=0,),
             forms.BooleanField()
         )
         widget = ValueSelectWidget()

@@ -197,7 +197,7 @@ class Location(models.Model):
 class ExtraInstance(models.Model):
     event = models.ForeignKey('Event')
     extra = models.ForeignKey('Extra')
-    quant = models.IntegerField()
+    quant = models.PositiveIntegerField()
     
     @property
     def totalcost(self):
