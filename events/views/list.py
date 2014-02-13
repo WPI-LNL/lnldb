@@ -150,7 +150,11 @@ def incoming(request,start=None,end=None):
 def openworkorders(request,start=None,end=None):
     
     if not start and not end:
-        start,end = get_farback_date_range_plus_next_week()
+        today = datetime.date.today()
+        start = today - datetime.timedelta(days=3652.5)
+        start = start.strftime('%Y-%m-%d')
+        end = today + datetime.timedelta(days=3652.5)
+        end = end.strftime('%Y-%m-%d')
     context = RequestContext(request)
     
     events = Event.objects.filter(approved=True).exclude(Q(closed=True)|Q(cancelled=True))
