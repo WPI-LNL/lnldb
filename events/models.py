@@ -155,11 +155,14 @@ class EventManager(models.Manager):
         #raise
         #
         for e in lighting_extras:
-            event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
+            if int(e[1][0]):
+                event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
         for e in sound_extras:
-            event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
+            if int(e[1][0]):
+                event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
         for e in projection_extras:
-            event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
+            if int(e[1][0]):
+                event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
         event.save()
         return event
             
