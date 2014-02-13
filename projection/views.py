@@ -65,7 +65,7 @@ def projection_update(request,id):
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
-            return HttpResponseRedirect(reverse("projection-list"))
+            return HttpResponseRedirect(reverse("projection-list-detail"))
         else:
             context['form'] = form
             context['formset'] = formset
@@ -131,4 +131,4 @@ class ProjectionistDelete(OfficerMixin,LoginRequiredMixin,DeleteView):
     
             
     def get_success_url(self):
-        return reverse("projection-list")
+        return reverse("projection-list-detail")
