@@ -288,7 +288,12 @@ class InternalEventForm(forms.ModelForm):
                     'Projection',
                     'projection',
                     'proj_reqs'
-                    )
+                    ),
+                Tab(
+                    'Other Services',
+                    'otherservices',
+                    'otherservice_reqs'
+                    ),
             ),
             FormActions(
                 Submit('save', 'Save Changes'),
@@ -297,7 +302,7 @@ class InternalEventForm(forms.ModelForm):
         super(InternalEventForm,self).__init__(*args,**kwargs)
     class Meta:
         model = Event
-        fields = ('event_name','location','description','contact','org','datetime_setup_complete','datetime_start','datetime_end','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs',)
+        fields = ('event_name','location','description','contact','org','datetime_setup_complete','datetime_start','datetime_end','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs')
 
     location = GroupedModelChoiceField(
             queryset = Location.objects.filter(show_in_wo_form=True),
