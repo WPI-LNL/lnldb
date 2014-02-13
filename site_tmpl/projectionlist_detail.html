@@ -41,14 +41,40 @@
 <h3> Licensed Projectionists </h3>
 <ul>
 {% for user in licensed_users %}
-<li><a href="{% url "projection-update" user.id %}">{{ user }}</a></li>
-{% endfor %}
+    <li>
+    
+        <a href="{% url "projection-update" user.id %}">{{ user }}</a>
+        {% if user.expired %}
+            <span class="badge badge-important" title="Expired">Expired</span>
+        {% elif user.expiring %}
+            <span class="badge badge-warning" title="Expiring Soon">Expiring Soon</span>
+        {% else %}
+            <span>
+        {% endif %}
+
+    
+    
+    </li>
+    {% endfor %}
 </ul>
 
 <h3> Alumni Projectionists </h3>
 <ul>
 {% for user in alumni_users %}
-<li><a href="{% url "projection-update" user.id %}">{{ user }}</a></li>
+    <li>
+    
+        <a href="{% url "projection-update" user.id %}">{{ user }}</a>
+        {% if user.expired %}
+            <span class="badge badge-important" title="Expired">Expired</span>
+        {% elif user.expiring %}
+            <span class="badge badge-warning" title="Expiring Soon">Expiring Soon</span>
+        {% else %}
+            <span>
+        {% endif %}
+
+    
+    
+    </li>
 {% endfor %}
 </ul>
 <a class="btn btn-large btn-primary" href="{% url "projection-create" %}">Create</a>
