@@ -533,7 +533,7 @@ class MKHoursForm(forms.ModelForm):
         super(MKHoursForm,self).__init__(*args,**kwargs)
     class Meta:
         model = Hours
-    user = AutoCompleteSelectField('Members',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    user = AutoCompleteSelectField('AssocMembers',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
         
 class EditHoursForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
