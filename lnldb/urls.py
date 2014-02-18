@@ -105,6 +105,7 @@ urlpatterns = patterns('',
     url(r'^workorder/$', login_wrapped_wo, name='event'),
     #
     url(r'^lnadmin/$', 'events.views.indices.admin'),
+    url(r'^lnadmin/status/$', 'events.views.indices.dbg_land'),
     url(r'^lnadmin/lookups/', include(ajax_select_urls)),
     
     #events

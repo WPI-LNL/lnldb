@@ -82,3 +82,8 @@ def admin(request,msg=None):
     
     return render_to_response('admin.html', context) 
 
+@login_required
+#@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+def dbg_land(request):
+    context['meta'] = request.META
+    return HttpResponse(request.META)
