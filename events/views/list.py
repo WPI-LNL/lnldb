@@ -234,7 +234,7 @@ def paid(request,start=None,end=None):
     context = RequestContext(request)
     
     #events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(billings__date_paid__isnull=False).filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=True)
+    events = Event.objects.filter(billings__date_paid__isnull=False).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True)
     events,context = datefilter(events,context,start,end)
     
     #if events:
@@ -263,7 +263,7 @@ def unpaid(request,start=None,end=None):
     today = datetime.date.today()
     now = time.time()
     #events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now()).filter(date_setup_start__lte=today)
-    events = Event.objects.filter(billings__date_paid__isnull=True,billings__date_billed__isnull=False).filter(Q(closed=False)|Q(cancelled=False)).filter(reviewed=True)
+    events = Event.objects.filter(billings__date_paid__isnull=True,billings__date_billed__isnull=False).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True)
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
