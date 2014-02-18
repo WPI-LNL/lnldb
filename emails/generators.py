@@ -12,6 +12,7 @@ from django.conf import settings
 
 EMAIL_KEY_START_END = settings.EMAIL_KEY_START_END
 EMAIL_TARGET_START_END = settings.EMAIL_TARGET_START_END
+DEFAULT_TO_ADDR = settings.DEFAULT_TO_ADDR
 
 def generate_notice_email(notice):
     subject = notice.subject
@@ -33,7 +34,7 @@ def generate_notice_email(notice):
 def generate_notice_cc_email(notice):
     subject = "Lens and Lights Crew List for %s" % notice.meeting.datetime.date()
     from_email = DEFAULT_FROM_ADDR
-    to_email = "lnl@wpi.edu"
+    to_email = DEFAULT_TO_ADDR
     
     context = {}
     context['object'] = notice

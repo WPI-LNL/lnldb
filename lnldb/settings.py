@@ -211,9 +211,9 @@ LANDING_TIMEDELTA = 72
 CCR_DAY_DELTA = 7
 
 # email stuff
-EMAIL_TARGET_VP = "lnl-vp@wpi.edu"
-EMAIL_TARGET_S = "gmp@gmp.pw"
-#EMAIL_TARGET_S = "lnl-s@wpi.edu"
+DEFAULT_TO_ADDR = "lnl@wpi.edu"
+EMAIL_TARGET_VP = "lnl-vp@wpi.edu" 
+EMAIL_TARGET_S = "lnl-s@wpi.edu"
 
 SEND_EMAIL_ORG_TRANSFER = True
 SEND_START_END_EMAILS = True
