@@ -551,7 +551,7 @@ class Event(models.Model):
     
     @property
     def discount_applied(self):
-        services = (self.sound, self.projection, self.lighting) 
+        services = (self.sound, self.lighting) 
         service_count = sum([1 for s in services if s])
         if service_count > 1:
             return True
@@ -565,7 +565,7 @@ class Event(models.Model):
     @property
     def discount_value(self):
         if self.discount_applied:
-            return float(self.cost_total_pre_discount) * .15
+            return float(self.cost_sound_total + self.cost_lighting_total) * .15
         else:
             return 0.0
         
@@ -573,8 +573,9 @@ class Event(models.Model):
     @property
     def cost_total(self):
         if self.discount_applied:
-            total = self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total
-            return float(total) * .85 + float(self.oneoff_total)
+            total_to_discount = self.cost_sound_total + self.cost_lighting_total
+            total_to_not_discount =  self.cost_projection_total + self.extras_total
+            return float(total_to_discount) * .85 + float(self.oneoff_total) + float(total_to_not_discount)
         else:
             return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total + self.oneoff_total
     
