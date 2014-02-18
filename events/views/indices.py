@@ -17,6 +17,7 @@ from events.models import Event,Organization
 from helpers.challenges import is_officer
 
 import datetime
+import os
 
 
 ### FRONT 3 PAGES
@@ -86,5 +87,6 @@ def admin(request,msg=None):
 #@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def dbg_land(request):
     context = RequestContext(request)
+    context['env'] = os.environ
     context['meta'] = request.META
-    return HttpResponse("<pre>%s</pre>" % request.META)
+    return HttpResponse("<pre>-%s</pre>" % request.META.items())
