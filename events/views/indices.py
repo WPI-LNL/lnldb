@@ -89,4 +89,4 @@ def dbg_land(request):
     context = RequestContext(request)
     context['env'] = os.environ
     context['meta'] = request.META
-    return HttpResponse("<pre>-%s</pre>" % request.META.items())
+    return HttpResponse("<pre>-%s</pre>" % os.environ.items())
