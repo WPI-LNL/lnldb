@@ -85,5 +85,6 @@ def admin(request,msg=None):
 @login_required
 #@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def dbg_land(request):
+    context = RequestContext(request)
     context['meta'] = request.META
-    return HttpResponse(request.META)
+    return HttpResponse("<pre>%s</pre>" % request.META)
