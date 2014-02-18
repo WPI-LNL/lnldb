@@ -47,8 +47,8 @@ def viewattendance(request,id):
     upcoming = Event.objects.filter(datetime_start__gte=yest,datetime_start__lte=morethanaweek)
     context['events'] = upcoming
     
-    
-    future = Event.objects.filter(datetime_start__gte=morethanaweek).order_by('datetime_start')
+    lessthantwoweeks = morethanaweek + datetime.timedelta(days=7)
+    future = Event.objects.filter(datetime_start__gte=morethanaweek, datetime_start__lte=lessthantwoweeks).order_by('datetime_start')
     context['future'] = future
     return render_to_response('meeting_view.html', context)
 

@@ -59,6 +59,8 @@ class AnnounceSendForm(forms.ModelForm):
         
     class Meta:
         model = MeetingAnnounce
+        
+    events = forms.ModelMultipleChoiceField(queryset=Event.objects.all(),required=False)
        
        
 class AnnounceCCSendForm(forms.ModelForm):
@@ -82,3 +84,5 @@ class AnnounceCCSendForm(forms.ModelForm):
         
     class Meta:
         model = CCNoticeSend
+        
+    events = forms.ModelMultipleChoiceField(queryset=Event.objects.all(),required=False)

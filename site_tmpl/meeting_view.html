@@ -48,12 +48,12 @@
                 </div>
                 {% endfor %}
             <br />
-            <a class="btn" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a> <br/>
+            <a class="btn" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
             <a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>
             {% else %}
             <a class="btn btn-primary" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
             {% endif %}
-            <a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>
+            <!--<a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>-->
         </div>
     </div>
     <div class="row-fluid">
