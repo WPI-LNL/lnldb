@@ -52,7 +52,7 @@ class OTAdmin(admin.ModelAdmin):
 
 class LocAdmin(admin.ModelAdmin):
     list_filter = ('show_in_wo_form','building')
-    actions = [enable_show_in_wo_form,disable_show_in_wo_form]
+    actions = [enable_show_in_wo_form,disable_show_in_wo_form,enable_setup_only,disable_setup_only]
 
 admin.site.register(Billing)
 admin.site.register(Hours)
