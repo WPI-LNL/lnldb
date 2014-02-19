@@ -53,3 +53,5 @@ class CCNoticeSend(models.Model):
     sent_at = models.DateTimeField(auto_now_add=True)
     sent_success = models.BooleanField(default=False)
     uuid = UUIDField(auto=True,editable=False, null=True,blank=True)
+    
+    addtl_message = models.TextField(null=True, blank=True, verbose_name="Additional Message")

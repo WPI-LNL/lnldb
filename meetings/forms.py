@@ -73,9 +73,10 @@ class AnnounceCCSendForm(forms.ModelForm):
         self.helper.form_class = 'form-horizontal'
         self.helper.layout = Layout(
             Hidden('meeting',meeting.id),
-            'events',
+            Field('events',css_class="span6"),
+            Field('addtl_message',css_class="span6"),
             FormActions(
-                Submit('save', 'Save Changes'),
+                Submit('save', 'Send'),
                 ),
             )
         super(AnnounceCCSendForm,self).__init__(*args,**kwargs)

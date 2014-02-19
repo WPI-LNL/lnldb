@@ -1,5 +1,6 @@
 {% extends "emails/email_base.html" %}
 {% load tz %}
+{% load markup %}
 
 {% block perma %}
 <a href="http://lnl.wpi.edu/email/announcecc/{{object.uuid}}/" class="cm-webversion">View Online</a>
@@ -9,10 +10,10 @@
 {% endblock %}
 
 {% block content %}
-<table class="w580" width="580" cellpadding="0" cellspacing="0" border="0">
+<table class="w960" width="960" cellpadding="10" cellspacing="0" border="0">
     <tbody>
         <tr>
-            <td class="w580" width="580">
+            <td class="w960" width="960">
                 <div align="left" class="article-content">
                     
                     <p align="left" class="article-title">Events</p>
@@ -34,12 +35,22 @@
                         </td>
                     </tr>
                     {% endfor %}
+                    <br />
+                    {% if object.addtl_message %}
+                    <tr>
+                        <td colspan="5">
+                        <h5>Additional Information </h5>
+                        {{ object.addtl_message|markdown }}
+                        
+                        </td>
+                    </tr>
+                    {% endif %}
                     </table>
                 </div>
             </td>
         </tr>
         <tr>
-            <td class="w580" width="580" height="10"></td>
+            <td class="w960" width="960" height="10"></td>
         </tr>
         </tbody>
 </table>
