@@ -66,7 +66,7 @@ class AnnounceSendForm(forms.ModelForm):
 class AnnounceCCSendForm(forms.ModelForm):
     def __init__(self,meeting,*args,**kwargs):
         now = meeting.datetime
-        twodaysago = now + datetime.timedelta(days=-3)
+        twodaysago = now + datetime.timedelta(days=-4)
         
         
         self.helper = FormHelper()
@@ -81,7 +81,7 @@ class AnnounceCCSendForm(forms.ModelForm):
             )
         super(AnnounceCCSendForm,self).__init__(*args,**kwargs)
 
-        self.fields["events"].queryset = Event.objects.filter(datetime_setup_start__gte=twodaysago)
+        self.fields["events"].queryset = Event.objects.filter(datetime_setup_complete__gte=twodaysago)
         
     class Meta:
         model = CCNoticeSend
