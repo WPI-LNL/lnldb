@@ -82,7 +82,8 @@ urlpatterns = patterns('',
     #user facing shit
     url(r'^my/$', 'events.views.my.my', name="my"),
     url(r'^my/contact/$', LNLUpdate.as_view(), name="my-lnl"),
-    url(r'^my/workorders/$', 'events.views.my.mywo'),
+    url(r'^my/workorders/$', 'events.views.my.mywo', name="my-wo"),
+    url(r'^my/workorders/attach/(?P<id>[0-9]+)/$', 'events.views.flow.assignattach_external', name="my-wo-attach"),
     url(r'^my/orgs/$', 'events.views.my.myorgs'),
     url(r'^my/orgs/form/$', 'events.views.my.myorgform', name="selfserivceorg"),
     url(r'^my/orgs/incharge/$', 'events.views.orgs.orglist',name="my-orgs-incharge-list"),
@@ -195,6 +196,7 @@ urlpatterns = patterns('',
     url(r'^lnadmin/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
     url(r'^lnadmin/misc/users/unsorted/$', 'members.views.limbousers',name="users-limbo"),
     url(r'^lnadmin/misc/users/add/$', LNLAdd.as_view(),name="users-add"),
+    url(r'^lnadmin/search$', "events.views.indices.event_search",name="events-search"),
     
         
     #meetings

@@ -109,6 +109,12 @@
                         <li><a href="{% url "users-add" %}">Add User</a></li>
                     </ul>
                 </li>
+                <li>
+                    <form class="navbar-search pull-left" action="{% url "events-search" %}" method="POST">
+                        {% csrf_token %}
+                        <input type="text" class="search-query" name="q" placeholder="Search Events" value="{{q}}">
+                    </form>
+                </li>
                  <!-- paste menu bar text above here --> 
             </ul>
             </div><!--/.nav-collapse -->

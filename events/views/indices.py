@@ -89,4 +89,20 @@ def dbg_land(request):
     context = RequestContext(request)
     context['env'] = os.environ
     context['meta'] = request.META
-    return HttpResponse("<pre>-%s</pre>" % os.environ.items())
+    return HttpResponse("<pre>-%s</pre>" % request.META.items())
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+def event_search(request):
+    context = RequestContext(request)
+    if request.POST:
+        try:
+            q = request.POST['q']
+            context['q'] = q
+            e = Event.objects.filter(Q(event_name__icontains=q)|Q(description__icontains=q))
+            context['events'] = e
+            return render_to_response('events_search_results.html', context) 
+        except:
+            pass
+    return render_to_response('events_search_results.html', context)
+            
