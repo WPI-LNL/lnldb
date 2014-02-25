@@ -82,6 +82,7 @@ class EventManager(models.Manager):
         event_methods = event_details['eventtypes']
         event_name = event_details['eventname']
         location = event_details['location']
+        general_description = event_details['general_description']
         event_location = location
         
         #event_methods
@@ -134,6 +135,7 @@ class EventManager(models.Manager):
             datetime_end = event_end,
             
             location = event_location,
+            description = general_description,
             
             lighting = lighting,
             sound = sound,

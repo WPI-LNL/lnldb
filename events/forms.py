@@ -718,8 +718,9 @@ class SelectForm(forms.Form):
         self.helper.layout = Layout(
             Fieldset(
                 'Name and Location',
-                'eventname',
-                'location'
+                Field('eventname',css_class="span6"),
+                Field('location',css_class="span6"),
+                Field('general_description',css_class="span6"),
             ),
             Fieldset(
                 'Services',
@@ -752,6 +753,10 @@ class SelectForm(forms.Form):
             label = "",
             required = True
             
+        )
+    general_description = forms.CharField(
+            widget = forms.Textarea(),
+            help_text = "A general overview of the event",
         )
 
     
