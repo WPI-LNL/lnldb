@@ -724,4 +724,11 @@ class EventArbitrary(models.Model):
     @property
     def abs_cost(self):
         return abs(self.totalcost)
-    
+
+
+### SIGNALS IMPORT, DO NOT TOUCH
+from events.signals import email_cc_notification
+from events.signals import email_billing_create
+from events.signals import email_billing_marked_paid
+from events.signals import email_billing_delete
+from events.signals import initial_user_create_notify

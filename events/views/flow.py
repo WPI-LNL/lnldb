@@ -3,6 +3,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
+from django.conf import settings
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
@@ -10,6 +11,8 @@ from django.contrib import messages
 from django.forms.models import inlineformset_factory
 from django.utils.functional import curry
 from django.db.models import Q
+
+from emails.generators import DefaultLNLEmailGenerator as DLEG
 
 from events.forms import EventApprovalForm,EventDenialForm, BillingForm, BillingUpdateForm, EventReviewForm, InternalReportForm
 from events.forms import CrewAssign,CrewChiefAssign, CCIForm, AttachmentForm, ExtraForm
@@ -44,6 +47,10 @@ def approval(request,id):
             e.save()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Approved Event')
+            
+            email_body = 'Your event "%s" has been approved!' % event.event_name
+            email = DLEG(subject="Event Approved", to_emails = [settings.EMAIL_TARGET_VP,e.contact.email], body=email_body)
+            email.send()
         
             return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
         else:
@@ -76,6 +83,10 @@ def denial(request,id):
             e.save()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Denied Event')
+            
+            email_body = 'Your event "%s" has been denied! <br />Reason: "%s"' % (event.event_name, event.cancelled_reason)
+            email = DLEG(subject="Event Denied", to_emails = [settings.EMAIL_TARGET_VP,e.contact.email], body=email_body) 
+            email.send()
         
             return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
         else:

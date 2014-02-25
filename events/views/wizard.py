@@ -4,10 +4,13 @@ from events.forms import named_event_tmpls
 from events.forms import CAT_LIGHTING, CAT_SOUND
 from events.forms import LIGHT_EXTRAS, SOUND_EXTRAS
 
+from emails.generators import DefaultLNLEmailGenerator as DLEG
+
 from events.models import Event
 from events.models import Lighting,Sound,Projection,Service
 from events.models import Extra
 
+from django.conf import settings
 from django.contrib.formtools.wizard.views import NamedUrlSessionWizardView
 from django.core.urlresolvers import reverse
 
@@ -65,7 +68,9 @@ class EventWizard(NamedUrlSessionWizardView):
         #return HttpResponse([form.cleaned_data for form in form_list])
         event = Event.event_mg.consume_workorder_formwiz(form_list,self)
         #return HttpResponseRedirect(reverse('events.views.my.myeventdetail',args=(event.id,)))
-        
+        email_body = "You have successfully submitted an event titled %s" % event.event_name
+        email = DLEG(subject="New Event Submitted", to_emails = [settings.EMAIL_TARGET_VP,event.contact.email], body=email_body)
+        email.send()
         context = RequestContext(self.request)
         return render_to_response('wizard_finished.html',context)
     

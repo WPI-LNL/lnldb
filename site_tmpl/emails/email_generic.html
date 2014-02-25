@@ -1,0 +1,26 @@
+{% extends "emails/email_base.html" %}
+{% load tz %}
+{% block perma %}
+{% endblock %}
+
+{% block unsub %}
+{% endblock %}
+
+{% block content %}
+<table class="w960" width="960" cellpadding="10" cellspacing="0" border="0">
+    <tbody>
+        <tr>
+            <td class="w960" width="960">
+                <p align="left" class="article-title">{{ subject }}</p>
+                <div align="left" class="article-content">
+                    
+                    <p> {{  body|safe }} </p>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="w960" width="960" height="10"></td>
+        </tr>
+        </tbody>
+</table>
+{% endblock %}

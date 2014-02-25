@@ -213,8 +213,12 @@ CCR_DAY_DELTA = 7
 
 # email stuff
 DEFAULT_TO_ADDR = "lnl@wpi.edu"
+EMAIL_TARGET_P = "lnl-p@wpi.edu"
 EMAIL_TARGET_VP = "lnl-vp@wpi.edu" 
 EMAIL_TARGET_S = "lnl-s@wpi.edu"
+EMAIL_TARGET_T = "lnl-t@wpi.edu"
+EMAIL_TARGET_TD = "lnl-td@wpi.edu"
+EMAIL_TARGET_W = "lnl-w@wpi.edu"
 
 SEND_EMAIL_ORG_TRANSFER = True
 SEND_START_END_EMAILS = True

@@ -151,3 +151,30 @@ def generate_selfmember_notice_email(context):
     email.attach_alternative(cont_html, "text/html")
     
     return email
+
+class DefaultLNLEmailGenerator(object): # yay classes
+    def __init__(self, 
+                subject="LNL Notice", 
+                to_emails=[settings.DEFAULT_TO_ADDR], 
+                from_email=DEFAULT_FROM_ADDR,
+                context = {},
+                template_basename = "emails/email_generic",
+                build_html = True,
+                body = None
+                ):
+        context['subject'] = subject
+        if body:
+            context['body'] = body
+        
+        template_txt = "%s.txt" % template_basename
+        content_txt = render_to_string(template_txt, context)
+        
+        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails)
+        
+        if build_html:
+            template_html = "%s.html" % template_basename
+            content_html = render_to_string(template_html, context)
+            self.email.attach_alternative(content_html, "text/html")
+    
+    def send(self):
+        self.email.send()
