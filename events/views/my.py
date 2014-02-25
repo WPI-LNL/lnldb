@@ -104,6 +104,10 @@ def myevents(request):
     user = request.user
     context['user'] = user
     
+    
+    totalhours = sum([x.hours for x in user.hours.all()])
+    context['totalhours'] = totalhours
+    
     now = datetime.datetime.now(timezone.get_current_timezone())
     context['now'] = now
     

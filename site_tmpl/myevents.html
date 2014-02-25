@@ -51,9 +51,9 @@
             <th>Name </th>
             <th>Date </th>
             <th>Location </th>
-            <th></th>
+            <th>Hours</th>
         </tr>
-        {% for instance in user.ccinstances.all %}
+        {% for instance in user.hours.all %}
                 <tr>
                     <td>{{instance.event.event_name}}</td>
                     <td title="{{instance.event.datetime_end}}">
@@ -64,8 +64,14 @@
                         {% endif %}
                     </td>
                     <td>{{instance.event.location}}</td>
-                    <td>{# <a class="btn">Repeat</a> ADD ME BACK LATER#}</td>
+                    <td>{{ instance.hours }}</td>
                 </tr>
+            {% if forloop.last %}
+                <tr class="info">
+                    <td colspan="3">Total </td>
+                    <td>{{ totalhours }}</td>
+                </tr>
+            {% endif %}
         {% empty %}
         <tr>
             <td colspan="4">You dont have any events.</td>
