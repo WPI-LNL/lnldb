@@ -39,11 +39,15 @@ class UserAcct(forms.ModelForm):
         
     first_name = forms.CharField(label="First Name")
     last_name = forms.CharField(label="Last Name")
+    
+    
 class UserProfileLimitd(forms.ModelForm):
     class Meta:
         model = Profile
         
 UserProfileFormSet = inlineformset_factory(User, Profile)
+
+
 
 class ProfileAcct(forms.ModelForm):
     def __init__(self,*args,**kwargs):
@@ -66,4 +70,33 @@ class ProfileAcct(forms.ModelForm):
     class Meta:
         model = Profile
         exclude = ("user","locked")
+
+
+## for adding new users
+class UserAddForm(forms.ModelForm):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.form_class = "form-horizontal"
+
+        self.helper.layout = Layout(
+                django_msgs,
+                
+                'username',
+                'email',
+                'first_name',
+                'last_name',
+                
+                FormActions(
+                    Submit('save', 'Save Changes'),
+                )
+        )
+        super(UserAddForm,self).__init__(*args,**kwargs)
+    class Meta:
+        model = User
         
+        fields = ('username','email','first_name','last_name')
+        
+    first_name = forms.CharField(label="First Name")
+    last_name = forms.CharField(label="Last Name")

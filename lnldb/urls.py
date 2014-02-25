@@ -19,7 +19,7 @@ from django.contrib import admin
 admin.autodiscover()
 
 #cbv imports
-from acct.views import AcctUpdate,LNLUpdate
+from acct.views import AcctUpdate,LNLUpdate, LNLAdd
 from members.views import UserUpdate
 from members.views import MemberUpdate
 from events.views.flow import BillingCreate,BillingUpdate,BillingDelete
@@ -104,7 +104,7 @@ urlpatterns = patterns('',
     url(r'^workorder/(?P<step>.+)/$', login_wrapped_wo, name='event_step'),
     url(r'^workorder/$', login_wrapped_wo, name='event'),
     #
-    url(r'^lnadmin/$', 'events.views.indices.admin'),
+    url(r'^lnadmin/$', 'events.views.indices.admin', name="lnadmin"),
     url(r'^lnadmin/status/$', 'events.views.indices.dbg_land'),
     url(r'^lnadmin/lookups/', include(ajax_select_urls)),
     
@@ -194,6 +194,8 @@ urlpatterns = patterns('',
     #misc
     url(r'^lnadmin/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
     url(r'^lnadmin/misc/users/unsorted/$', 'members.views.limbousers',name="users-limbo"),
+    url(r'^lnadmin/misc/users/add/$', LNLAdd.as_view(),name="users-add"),
+    
         
     #meetings
     url(r'^lnadmin/meetings/new/$', 'meetings.views.newattendance',name="meeting-new"),
