@@ -706,6 +706,7 @@ class EventAttachment(models.Model):
     for_service = models.ForeignKey(Service, null=True, blank=True, related_name="attachments")
     attachment = models.FileField(upload_to=attachment_file_name) 
     note = models.TextField(null=True, blank=True, default="")
+    externally_uploaded = models.BooleanField(default=False)
     
 class EventArbitrary(models.Model):
     event = models.ForeignKey('Event', related_name="arbitraryfees")

@@ -455,6 +455,7 @@
                             <th>Service</th>
                             <th>Notes</th>
                             <th>File Name</th>
+                            <th>Client Upload?</th>
                             <th></th>
                         </tr>
                         {% for a in event.attachments.all %}
@@ -462,6 +463,7 @@
                             <td>{{ a.for_service }}</td>
                             <td>{{ a.note }}</td>
                             <td>{{ a.attachment.name }}</td>
+                            <td>{{ a.externally_uploaded }} </td>
                             <td><a class="btn" href="{{ a.attachment.url }}">Link</a></td>
                         </tr>
                         

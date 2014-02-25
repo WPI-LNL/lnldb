@@ -602,7 +602,7 @@ class CCIForm(forms.ModelForm):
     
 # Forms for Inline Formsets
 class AttachmentForm(forms.ModelForm):
-    def __init__(self,event,*args,**kwargs):
+    def __init__(self,event,externally_uploaded=False,*args,**kwargs):
         self.event = event
         self.helper = FormHelper()
         self.helper.form_class = "form-inline"
@@ -611,7 +611,8 @@ class AttachmentForm(forms.ModelForm):
         self.helper.layout = Layout( 
             Field('for_service'),
             Field('attachment'),
-            Field('note'),
+            Field('note', size="2"),
+            Hidden('externally_uploaded',externally_uploaded),
             HTML('<hr>'),
         )
         super(AttachmentForm,self).__init__(*args,**kwargs)
@@ -637,6 +638,7 @@ class AttachmentForm(forms.ModelForm):
     class Meta:
         model = EventAttachment
         fields = ('for_service','attachment','note')
+        
         
 class ExtraForm(forms.ModelForm):
     class Meta:

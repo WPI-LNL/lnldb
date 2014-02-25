@@ -242,6 +242,40 @@ def assignattach(request,id):
     return render_to_response('formset_crispy_attachments.html', context)
 
 @login_required
+def assignattach_external(request,id):
+    context = RequestContext(request)
+    context['msg'] = "Attachments"
+    
+    event = get_object_or_404(Event,pk=id)
+    if event.over or event.closed or event.cancelled:
+        return HttpResponse("Event does not allow attachment upload at this time")
+        
+    context['event'] = event
+    
+    AttachmentFS = inlineformset_factory(Event,EventAttachment,extra=1)
+    #AttachmentFS.queryset = AttachmentFS.queryset.filter(externally_uploaded=True)
+    AttachmentFS.form = staticmethod(curry(AttachmentForm, event=event, externally_uploaded=True))
+    
+    if request.method == 'POST':
+        formset = AttachmentFS(request.POST,request.FILES,instance=event, queryset = EventAttachment.objects.filter(externally_uploaded=True))
+        if formset.is_valid():
+            f = formset.save(commit=False)
+            for i in f:
+                i.externally_uploaded = True
+                i.save()
+            return HttpResponseRedirect(reverse('my-wo',))
+        else:
+            context['formset'] = formset
+            
+    else:
+        formset = AttachmentFS(instance=event, queryset = EventAttachment.objects.filter(externally_uploaded=True))
+        
+        context['formset'] = formset
+        
+    return render_to_response('formset_crispy_attachments.html', context)
+
+
+@login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def extras(request,id):
     """ This form is for adding extras to an event """

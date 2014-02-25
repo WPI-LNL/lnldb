@@ -9,20 +9,27 @@
         <th>Name </th>
         <th>Date </th>
         <th>Location </th>
-        <th></th>
+        <th>Status</th>
+        <th>Actions</th>
     </tr>
     </thead>
     {% for org,events in events.items %} 
-        <thead><tr ><th colspan="4">{{ org }}</th></tr></thead>
+        <thead><tr ><th colspan="5">{{ org }}</th></tr></thead>
         {% for event in events %}
             <tr class="info">
                 <td>{{event.event_name}}</td>
                 <td title="{{event.datetime_end}}">{{event.datetime_end|timesince}} Ago</td>
                 <td>{{event.location}}</td>
-                <td>{# <a class="btn">Repeat </a> #}</td>
+                <td>{{ event.status }}</td>
+                <td> 
+                    {% if not event.closed and not event.cancelled and not event.over %}
+                    <a class="btn btn-primary" href="{% url "events.views.flow.assignattach_external" event.id %}">Attachments</a>
+                    {% endif %}
+                    {# <a class="btn">Repeat </a> #}
+                </td>
             </tr>
         {% endfor %}
     {% endfor %}
 </table>
 
-{% endblock %}
+{% endblock %}assignattach_external
