@@ -71,6 +71,11 @@ class EventWizard(NamedUrlSessionWizardView):
         email_body = "You have successfully submitted an event titled %s" % event.event_name
         email = DLEG(subject="New Event Submitted", to_emails = [settings.EMAIL_TARGET_VP,event.contact.email], body=email_body)
         email.send()
+        
+        if event.projection:
+            email2_body = 'The event "%s" has a request for projection' % event.event_name
+            email2 = DLEG(subject="New Event Submitted w/ Projection", to_emails = [settings.EMAIL_TARGET_HP], body=email_body2)
+            email2.send()
         context = RequestContext(self.request)
         return render_to_response('wizard_finished.html',context)
     
