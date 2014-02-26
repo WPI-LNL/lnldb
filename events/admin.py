@@ -35,8 +35,11 @@ class EventCCInline(admin.TabularInline):
 class EventAttachmentInline(admin.TabularInline):
     model = EventAttachment
     
+class EventHoursInline(admin.TabularInline):
+    model = Hours
+    
 class EventAdmin(admin.ModelAdmin):
-    inlines = [EventCCInline,EventAttachmentInline,EventBillingInline]
+    inlines = [EventCCInline,EventHoursInline,EventAttachmentInline,EventBillingInline]
     filter_horizontal = ('crew','crew_chief','org')
     search_fields = ['event_name']
     
