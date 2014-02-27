@@ -16,7 +16,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,MultiField,Field,HTML,Hidden,Reset
 from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions,PrependedText
 
-from events.models import Event,Organization,Category,OrganizationTransfer
+from events.models import Event,Organization,Category,OrganizationTransfer, OrgBillingVerificationEvent
 from events.models import Extra,Location,Lighting,Sound,Projection,Service,EventCCInstance,EventAttachment, ExtraInstance
 from events.models import Billing,CCReport,Hours
 
@@ -160,6 +160,25 @@ class IOrgForm(forms.ModelForm):
     user_in_charge = AutoCompleteSelectField('Users')
     associated_orgs = AutoCompleteSelectMultipleField('Orgs',required=False)
     associated_users = AutoCompleteSelectMultipleField('Users',required=False)
+    
+class IOrgVerificationForm(forms.ModelForm):
+    def __init__(self,org,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.layout = Layout(
+            Field('date',css_class="datepick"),
+            Field('verified_by'),
+            Field('note', size="5"),
+            Hidden("org",org.id),
+            FormActions(
+                Submit('save', 'Verify'),
+            )
+        )
+        super(IOrgVerificationForm,self).__init__(*args,**kwargs)
+    class Meta:
+        model = OrgBillingVerificationEvent
+        
+    verified_by = AutoCompleteSelectField('Officers')
 class EventApprovalForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
@@ -758,7 +777,7 @@ class SelectForm(forms.Form):
         )
     general_description = forms.CharField(
             widget = forms.Textarea(),
-            help_text = "A general overview of the event",
+            help_text = 'Please use this space to provide general information or special request regarding your event such as staging configuration or that there is an intermission fro dinner at a specific time. Specific requirements and/or requests for the Sound/Lights/Projection portion of your event such as "We need 3 wireless handheld microphones." will be asked for on a later page.',
         )
 
     
