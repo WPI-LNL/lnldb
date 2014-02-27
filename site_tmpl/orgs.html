@@ -6,6 +6,7 @@
         <th>Client Name</th>
         <th>Email</th>
         <th>User in charge</th>
+        <th>FOPAL String</th>
         <th>Personal / Individual</th>
     </thead>
     {% for org in orgs %}
@@ -13,6 +14,7 @@
             <td><a href="{% url "events.views.orgs.orgdetail" org.id %}">{{org}}</a></td>
             <td>{{ org.exec_email }}</td>
             <td>{{ org.user_in_charge }}</td>
+            <td>{{ org.fopal }}</td>
             <td>{{ org.personal }}</td>
         </tr>
     {% endfor %}
