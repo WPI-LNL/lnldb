@@ -49,6 +49,7 @@ PROJ_EXTRAS_ID_NAME = PROJ_EXTRAS.values_list('id','name')
 PROJ_EXTRAS_NAMES = ["e_%s" % v[0] for v in PROJ_EXTRAS_ID_NAME]
 
 
+
 JOBTYPES = (
     (0,'Lighting'),
     (1,'Sound'),
@@ -692,7 +693,9 @@ class ExtraForm(forms.ModelForm):
 #|  _| (_) | |  | | | | | \__ \
 #|_|  \___/|_|  |_| |_| |_|___/
                               
-        
+SERVICE_INFO_HELP_TEXT = """
+Note: Any riders or documentation provided to you from the artist/performer which may help LnL determine the technical needs of your event may be attached to this request once it is submitted by going to your LnL account and select "Previous WorkOrders".
+"""
 #FormWizard Forms
 class ContactForm(forms.Form):
     def __init__(self,*args,**kwargs):
@@ -809,7 +812,8 @@ class LightingForm(forms.Form):
             widget=forms.Textarea,
             #widget=BootstrapTextInput(prepend='P',),
             label = "Lighting Requirements",
-            required=False
+            help_text = SERVICE_INFO_HELP_TEXT,
+            required=False,
         )
 
     #extras = ExtraSelectorField(choices=LIGHT_EXTRAS.values_list('id','name'))
@@ -843,7 +847,8 @@ class SoundForm(forms.Form):
     requirements = forms.CharField(
             widget=forms.Textarea,
             label = "Sound Requirements",
-            required=False
+            required=False,
+            help_text = SERVICE_INFO_HELP_TEXT,
         )
     
 class ProjectionForm(forms.Form):
@@ -875,7 +880,8 @@ class ProjectionForm(forms.Form):
     requirements = forms.CharField(
             widget=forms.Textarea,
             label = "Projection Requirements",
-            required = False
+            required = False,
+            help_text = SERVICE_INFO_HELP_TEXT,
         )
     
 class ServiceForm(forms.Form):
