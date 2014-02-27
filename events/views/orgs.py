@@ -5,12 +5,17 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
-from events.models import Event,Organization,OrganizationTransfer
-from events.forms import IOrgForm,ExternalOrgUpdateForm,OrgXFerForm
+from events.models import Event,Organization,OrganizationTransfer,OrgBillingVerificationEvent
+from events.forms import IOrgForm,ExternalOrgUpdateForm,OrgXFerForm,IOrgVerificationForm
 
+from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.views.generic import CreateView
+
 from helpers.challenges import is_officer
+from helpers.mixins import LoginRequiredMixin, OfficerMixin, SetFormMsgMixin
+
 
 import datetime,time,uuid,pytz
 
@@ -178,3 +183,21 @@ def org_acceptxfer(request,idstr):
         context['msgclass'] = "alert-error"
         
     return render_to_response('mytransfer.html', context)
+
+class OrgVerificationCreate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,CreateView):
+    model = OrgBillingVerificationEvent
+    form_class = IOrgVerificationForm
+    template_name = "form_crispy_cbv.html"
+    msg = "Mark Client billing as valid"
+    
+    def get_form_kwargs(self):
+        kwargs = super(OrgVerificationCreate, self).get_form_kwargs()
+        org = get_object_or_404(Organization,pk=self.kwargs['org'])
+        kwargs['org'] = org
+        return kwargs
+    def form_valid(self,form):
+        messages.success(self.request,"Org Marked as Validated", extra_tags='success')
+        return super(OrgVerificationCreate,self).form_valid(form)
+    
+    def get_success_url(self):
+        return reverse("admin-orgdetail",args=(self.kwargs['org'],))

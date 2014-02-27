@@ -24,6 +24,7 @@ from members.views import UserUpdate
 from members.views import MemberUpdate
 from events.views.flow import BillingCreate,BillingUpdate,BillingDelete
 from events.views.flow import CCRCreate, CCRUpdate, CCRDelete
+from events.views.orgs import OrgVerificationCreate
 from emails.views import MeetingAnnounceView
 from emails.views import MeetingAnnounceCCView
 from projection.views import ProjectionCreate
@@ -173,6 +174,7 @@ urlpatterns = patterns('',
     #orgs (clients)
     url(r'^lnadmin/clients/$', 'events.views.orgs.vieworgs', name="admin-orglist"),
     url(r'^lnadmin/clients/(\d+)/$', 'events.views.orgs.orgdetail', name="admin-orgdetail"),
+    url(r'^lnadmin/clients/(?P<org>\d+)/verify/$', OrgVerificationCreate.as_view(), name="admin-org-verify"),
     url(r'^lnadmin/clients/add/$', 'events.views.orgs.addeditorgs', name="admin-orgadd"),
     url(r'^lnadmin/clients/edit/(\d+)/$', 'events.views.orgs.addeditorgs',name="admin-orgedit"),
         

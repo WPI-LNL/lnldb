@@ -61,7 +61,20 @@
                     <th> Account </th>
                     <td> {{ org.account }}</td>
                 </tr>
-            
+                <tr>
+                    <td colspan="2">
+                        {% if org.verifications.exists %}
+                        <p class="muted text-muted">
+                        Last verified by: {{ org.verifications.latest.verified_by }} on {{ org.verifications.latest.date }}
+                        </p>
+
+                        {% else %}
+                        <p class="muted text-muted">No verification created</p>
+                        {% endif %}
+                        <a href="{% url "admin-org-verify" org.id %}">Create Verification</a>
+                    </td>
+                </tr>
+                
             </table>
         </div>
         <div class="span3">

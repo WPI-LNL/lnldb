@@ -4,8 +4,10 @@
 {% block content %}
     <div class="row-fluid">
         <div class="span12">
+            <div class="pull-right"><p class="lead">{{ extra }}</p></div>
                 <h2> {{msg }} </h2>
                 {% crispy form %}
+                
         </div>
     </div>
 {% endblock %}

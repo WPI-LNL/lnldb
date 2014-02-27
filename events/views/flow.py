@@ -405,6 +405,14 @@ class BillingCreate(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,CreateView):
     template_name = "form_crispy_cbv.html"
     msg = "New Bill"
     
+    def get_context_data(self, **kwargs):
+        context = super(BillingCreate, self).get_context_data(**kwargs)
+        event = get_object_or_404(Event,pk=self.kwargs['event'])
+        orgs = event.org.all()
+        orgstrings = ",".join(["%s's billing account was last verified: %s" % (o.name, o.verifications.latest().date if o.verifications.exists() else "Never") for o in orgs])
+        context['extra'] = orgstrings
+        return context
+    
     def get_form_kwargs(self):
         # pass "user" keyword argument with the current user to your form
         kwargs = super(BillingCreate, self).get_form_kwargs()

@@ -8,6 +8,7 @@ from django.core.urlresolvers import reverse
 
 from django.utils import timezone
 import datetime,pytz
+import decimal
 
 from uuidfield import UUIDField
 
@@ -551,7 +552,7 @@ class Event(models.Model):
         if self.services_other:
             servicecost = self.cost_other_services
         else:
-            servicecost = 0.00
+            servicecost = decimal.Decimal("0.00")
         extrascost = self.cost_other_extras
         return extrascost + servicecost
     

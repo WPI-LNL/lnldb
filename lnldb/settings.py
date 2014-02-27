@@ -194,6 +194,7 @@ AJAX_LOOKUP_CHANNELS = {
     'Users' : ('acct.lookups', 'UserLookup'),
     'Orgs' : ('events.lookups', 'OrgLookup'),
     'UserLimitedOrgs' : ('events.lookups', 'UserLimitedOrgLookup'),
+    'Officers' : ('acct.lookups', 'OfficerLookup'),
     'Members' : ('acct.lookups', 'MemberLookup'),
     'AssocMembers' : ('acct.lookups', 'AssocMemberLookup'),
 }
