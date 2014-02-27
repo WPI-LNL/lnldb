@@ -528,6 +528,14 @@ class Event(models.Model):
             
         return extras+servicecost
     
+    @property
+    def services_other(self):
+        return self.otherservices.all()
+    
+    @property
+    def cost_other_services(self):
+        return sum([x.base_cost for x in self.services_other])
+    
     
     @property
     def extras_other(self):
@@ -537,10 +545,15 @@ class Event(models.Model):
     def cost_other_extras(self):
         return sum([x.totalcost for x in self.extras_other])
     
+    
     @property
     def extras_total(self):
+        if self.services_other:
+            servicecost = self.cost_other_services
+        else:
+            servicecost = 0.00
         extrascost = self.cost_other_extras
-        return extrascost
+        return extrascost + servicecost
     
     @property
     def oneoffs(self):
@@ -674,6 +687,16 @@ class OrganizationTransfer(models.Model):
         elif datetime.datetime.now(pytz.utc) > self.expiry:
             return True
         return False
+    
+class OrgBillingVerificationEvent(models.Model):
+    org = models.ForeignKey(Organization, related_name="verifications")
+    date = models.DateField()
+    verified_by = models.ForeignKey(User, related_name="verification_events")
+    note = models.TextField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-date','-id']
+        get_latest_by = 'id'
     
     
 # stats and the like
