@@ -8,14 +8,14 @@
 <div class="container marketing" style="text-align:center;">
     <div class="row">
         <div class="span3">
-            <img class="img-circle" src="http://placehold.it/140x140" />
+            <img class="img-circle" src="{{ STATIC_URL }}img/Account.gif" />
             <h2> My Account </h2>
             <a href="{% url "my-acct" %}" class="btn btn-large btn-primary">Modify Account</a>
         </div>
 
         
         <div class="span3">
-            <img class="img-circle" src="http://placehold.it/140x140" />
+            <img class="img-circle" src="{{ STATIC_URL }}img/WorkOrders.gif" />
             <h2> WorkOrders </h2>
             <div class="btn-group">
                 <a href="/workorder" class="btn btn-large btn-primary">New</a>
@@ -25,14 +25,14 @@
 
         
         <div class="span3">
-            <img class="img-circle" src="http://placehold.it/140x140" />
+            <img class="img-circle" src="{{ STATIC_URL }}img/Org.gif" />
             <h2> My Orgs </h2>
             <a href="{% url "events.views.my.myorgs" %}" class="btn btn-large btn-primary">Associated Orgs</a>
         </div>
 
         {% if is_lnl %}
         <div class="span3">
-            <img class="img-circle" src="http://placehold.it/140x140" />
+            <img class="img-circle" src="{{ STATIC_URL }}img/MyEvents.gif" />
             <h2> My Events </h2>
             <a href="{% url "events.views.my.myevents" %}" class="btn btn-large btn-primary">View Events</a>
             
