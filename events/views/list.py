@@ -328,4 +328,12 @@ def closed(request,start=None,end=None):
     return render_to_response('events.html', context)       
 
 
+
+def public_facing(request):
+    context = RequestContext(request)
+    now = datetime.datetime.now(pytz.utc)
+    events = Event.objects.filter(approved=True, closed=False, cancelled=False).filter(datetime_end__gte=now)
+    context['h2'] = "Active Events"
+    context['events'] = events
     
+    return render_to_response("events_public.html", context)

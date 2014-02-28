@@ -171,6 +171,8 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/oneoff/(?P<id>[0-9a-f]+)/$', 'events.views.flow.oneoff', name="eventoneoff"),
     url(r'^lnadmin/events/rmcc/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$', 'events.views.flow.rmcc'),
     
+    url(r'^list/$', 'events.views.list.public_facing'),
+    
     #orgs (clients)
     url(r'^lnadmin/clients/$', 'events.views.orgs.vieworgs', name="admin-orglist"),
     url(r'^lnadmin/clients/(\d+)/$', 'events.views.orgs.orgdetail', name="admin-orgdetail"),

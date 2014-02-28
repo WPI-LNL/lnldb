@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block extras %}
+{% include 'js_event_checkboxes.tmpl' %}
+{% endblock %}
+{% block content %}    
+<div class="row-fluid">
+    <div class="span12">
+        <h2>{{h2}}</h2>
+    </div>
+</div>
+<div class="row-fluid">
+    <div class="span12">
+        <table class="table table-striped table-bordered">
+            <tr> 
+                <th> Event Name </th>
+                <th> Location </th>
+                <th> Setup Location(s) </th>
+                <th> Setup Start Times </th>
+                <th> Event Start </th>
+                <th> Event End </th>
+                <th> Crew Chiefs </th>
+                <th> &nbsp;</th>
+            </tr>
+            {% for event in events %}
+                    <tr>
+                        <td>{{event.event_name}}</td>
+                        <td>{{event.location}} ({{event.location.building }})</td>
+                        <td>
+                            {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
+                            <strong>{{cc.service.shortname }}</strong> {{cc.setup_location }}  <br />
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
+                            {{cc.setup_start }}  <br />
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {{ event.datetime_start }}
+                        <td>
+                            {{ event.datetime_end }}
+                        </td>
+                        <td>
+                            {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
+                            <strong>{{cc.service.shortname }}</strong> {{cc.crew_chief.get_full_name }}  <br />
+                            {% endfor %}
+                        </td>
+                        <td class="tasks">
+                            <span class="crewtask"><a href="{% url "events-pdf" event.id %}">PDF</a></span>
+                        </td>
+                    </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endblock %}
