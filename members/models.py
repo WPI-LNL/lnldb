@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 
 # Create your models here.
 
@@ -11,10 +11,23 @@ class StatusChange(models.Model):
     groups = models.ManyToManyField(Group,related_name="statuschange")
     date = models.DateTimeField(auto_now_add=True)
     
+    @property
+    def group_list(self):
+        return ",".join(x.name[0:3] for x in self.groups.all())
     
-#def update_status(sender,instance,created,raw,using,update_fields,**kwargs):
-    #if not created:
+    class Meta:
+        ordering = ["-date"]
+    
+def update_status(sender,instance,**kwargs):
+    if instance.id:
+        old = User.objects.get(pk=instance.id)
+        oldgroups = old.groups.values_list('id',flat=True)
+        newgroups = instance.groups.values_list('id',flat=True)
+        if newgroups != oldgroups:
+            s = StatusChange.objects.create(member=instance)
+            s.groups = instance.groups.all()
+            s.save()
         #print update_fields
         #adfad
         
-#post_save.connect(update_status,sender=User)
+pre_save.connect(update_status,sender=User)
