@@ -19,7 +19,6 @@
                 <th> Event Start </th>
                 <th> Event End </th>
                 <th> Crew Chiefs </th>
-                <th> &nbsp;</th>
             </tr>
             {% for event in events %}
                     <tr>
@@ -44,9 +43,6 @@
                             {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
                             <strong>{{cc.service.shortname }}</strong> {{cc.crew_chief.get_full_name }}  <br />
                             {% endfor %}
-                        </td>
-                        <td class="tasks">
-                            <span class="crewtask"><a href="{% url "my-events-pdf" event.id %}">PDF</a></span>
                         </td>
                     </tr>
             {% endfor %}
