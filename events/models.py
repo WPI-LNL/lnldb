@@ -325,6 +325,9 @@ class Event(models.Model):
     crew_chief = models.ManyToManyField(User,null=True,blank=True,related_name='crewchiefx')
     crew = models.ManyToManyField(User,null=True,blank=True,related_name='crewx')
     
+    # other fields
+    internal_notes = models.TextField(null=True,blank=True)
+    
     #def clean(self):
         #if self.datetime_start > self.datetime_end:
             #raise ValidationError('You cannot start after you finish')

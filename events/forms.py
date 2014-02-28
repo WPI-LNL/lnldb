@@ -190,6 +190,7 @@ class EventApprovalForm(forms.ModelForm):
                     "Standard Fields",
                     Field('description',label="Description (optional)",css_class="span6"),
                     HTML('<p class="muted offset2">This will describe the event to your CCs</p>'),
+                    Field('internal_notes', label="Internal Notes", css_class="span6"),
                     markdown_at_msgs,
                     Field('datetime_setup_complete',label="Setup Finish",css_class="dtp"),
                     Field('datetime_start',label="Event Start",css_class="dtp"),
@@ -272,7 +273,8 @@ class InternalEventForm(forms.ModelForm):
                     'Name And Location',
                     'event_name',
                     'location',
-                    'description',
+                    Field('description', css_class="span6"),
+                    Field('internal_notes', css_class="span6"),
                 ),
                 Tab(
                     'Contact',
@@ -322,7 +324,7 @@ class InternalEventForm(forms.ModelForm):
         super(InternalEventForm,self).__init__(*args,**kwargs)
     class Meta:
         model = Event
-        fields = ('event_name','location','description','contact','org','datetime_setup_complete','datetime_start','datetime_end','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs')
+        fields = ('event_name','location','description','internal_notes','contact','org','datetime_setup_complete','datetime_start','datetime_end','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs')
 
     location = GroupedModelChoiceField(
             queryset = Location.objects.filter(show_in_wo_form=True),

@@ -151,6 +151,10 @@
                             <a href="{% url "memberdetail" event.reviewed_by.id %}">{{ event.reviewed_by.get_full_name }}</a> on {{ event.reviewed_on }}
                             </td>
                         </tr>
+                        <tr>
+                            <th>Internal Notes</th>
+                            <td>{% if event.internal_notes %}{{ event.internal_notes|mduserlink|mdeventlink|markdown }}{% else %} None {% endif %}</td>
+                        </tr>
                         {% endif %}
                     </table>
 
