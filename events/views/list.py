@@ -260,6 +260,9 @@ def unbilled_projection(request,start=None,end=None):
 def paid(request,start=None,end=None):
     context = RequestContext(request)
     
+    if not start and not end:
+        start,end = get_farback_date_range_plus_next_week()
+        
     #events = Event.objects.filter(approved=True).filter(paid=True)
     events = Event.objects.filter(billings__date_paid__isnull=False).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True)
     events,context = datefilter(events,context,start,end)
