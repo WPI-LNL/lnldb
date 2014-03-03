@@ -30,7 +30,7 @@ class AcctUpdate(LoginRequiredMixin,UpdateView):
         return super(AcctUpdate,self).form_valid(form)
         
     def get_success_url(self):
-        return reverse('my')
+        return reverse('my-acct')
     
 class LNLUpdate(LoginRequiredMixin,UpdateView):
     model = Profile
