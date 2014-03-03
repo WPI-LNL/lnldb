@@ -28,7 +28,7 @@ def email_cc_notification(sender, instance, created, **kwargs):
 @receiver(post_save, sender = Billing)     
 def email_billing_create(sender, instance, created, **kwargs):
     """ Sends an email to the client to notify of a bill being created """
-    if created:
+    if created and not instance.opt_out_initial_email:
         i = instance
         email_body = """
             A New LNL bill has been posted for "%s" on %s for the amount of $%s
@@ -42,7 +42,7 @@ def email_billing_create(sender, instance, created, **kwargs):
 def email_billing_marked_paid(sender, instance, created, **kwargs):
     """ Sends an email to the client to notify of a bill having been paid """
     if not created:
-        if instance.date_paid:
+        if instance.date_paid and not instance.opt_out_update_email: 
             i = instance
             email_body = """
             Thank you for paying the bill for "%s" on %s for the amount of $%s
@@ -53,13 +53,14 @@ def email_billing_marked_paid(sender, instance, created, **kwargs):
             
 @receiver(pre_delete, sender = Billing)
 def email_billing_delete(sender,instance, **kwargs):
-    i = instance
-    email_body = """
-        The bill for the amount of $%s on "%s" has been deleted
-        """ % (i.amount, i.event.event_name,)
-            
-    e = DLEG(subject = "LNL Billing Deletion Notification", to_emails = [i.event.contact.email, settings.EMAIL_TARGET_T], body=email_body)
-    e.send()
+    if not instance.opt_out_update_email:
+        i = instance
+        email_body = """
+            The bill for the amount of $%s on "%s" has been deleted
+            """ % (i.amount, i.event.event_name,)
+                
+        e = DLEG(subject = "LNL Billing Deletion Notification", to_emails = [i.event.contact.email, settings.EMAIL_TARGET_T], body=email_body)
+        e.send()
     
 @receiver(post_save, sender = User)
 def initial_user_create_notify(sender, instance, created, **kwargs):

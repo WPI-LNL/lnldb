@@ -250,6 +250,10 @@ class Billing(models.Model):
     date_paid = models.DateField(null=True,blank=True)
     event = models.ForeignKey('Event',related_name="billings")
     amount = models.DecimalField(max_digits=8,decimal_places=2)
+    
+    # bools
+    opt_out_initial_email = models.BooleanField(default=False)
+    opt_out_update_email = models.BooleanField(default=False)
 
     class Meta:
         ordering = ("-date_billed","date_paid")

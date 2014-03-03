@@ -475,6 +475,8 @@ class BillingForm(forms.ModelForm):
                 Hidden('event',event.id),
                 PrependedText('date_billed','<i class="icon-calendar"></i>',css_class="datepick"),
                 PrependedText('amount', '<strong>$</strong>'),
+                Field('opt_out_initial_email'),
+                Field('opt_out_update_email'),
                 FormActions(
                     Submit('save', 'Save Changes'),
                     Reset('reset','Reset Form'),
@@ -499,6 +501,7 @@ class BillingUpdateForm(forms.ModelForm):
                 Hidden('event',event.id),
                 PrependedText('date_paid','<i class="icon-calendar"></i>',css_class="datepick"),
                 PrependedText('amount', '<strong>$</strong>'),
+                Field('opt_out_update_email'),
                 FormActions(
                     Submit('save', 'Save Changes'),
                     Reset('reset','Reset Form'),
@@ -511,7 +514,7 @@ class BillingUpdateForm(forms.ModelForm):
         
     class Meta:
         model = Billing
-        fields = ('date_paid','amount')
+        fields = ('date_paid','amount','opt_out_update_email')
         
         
 ### CC Facing Forms
