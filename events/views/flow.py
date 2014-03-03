@@ -272,7 +272,7 @@ def assignattach_external(request,id):
         
         context['formset'] = formset
         
-    return render_to_response('formset_crispy_attachments.html', context)
+    return render_to_response('formset_crispy_attachments_ext.html', context)
 
 
 @login_required
