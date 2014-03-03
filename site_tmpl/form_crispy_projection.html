@@ -47,7 +47,18 @@
 {% block extras %}
 
 {% include "js_datetimepick.tmpl" %}
+<script type="text/javascript">
+$(document).ready(function () { 
+    $("#resetdate").click(function(){
+        $("#id_main-license_expiry").val(function() {
+        return "";
+        });
+    });
+});
+</script>
+
 {% endblock %}
+
 
 {% block finalsay %}
 

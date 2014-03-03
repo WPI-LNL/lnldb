@@ -30,6 +30,7 @@ class ProjectionistUpdateForm(forms.ModelForm):
                 
                 #'pit_level',
                 'license_number',
+                HTML('<div class="pull-right"><a id="resetdate" class="btn btn-large btn-warning">Reset Date</a></div>'),
                 Field('license_expiry',css_class="datepick"),
         )
         super(ProjectionistUpdateForm,self).__init__(*args,**kwargs)
@@ -104,3 +105,22 @@ class BulkUpdateForm(forms.Form):
         
         
 PITFormset = inlineformset_factory(Projectionist,PitInstance,extra=1,form=InstanceForm)#,formset=ProjectionistUpdateForm)
+
+
+### ITS TIME FOR A WIZAAAAAAARD
+class BulkCreateForm(forms.Form):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Field('contact'),
+            Field('billing'),
+            Field('date_first', css_class="datepick", label = "Date of first movie of first term"),
+            Field('date_second', css_class="datepick", label = "Date of first movie of second term"),
+            FormActions(
+                Submit('save', 'Save Changes'),
+            )
+        )
+        super(BulkCreateForm,self).__init__(*args,**kwargs)
+        
+    contact = AutoCompleteSelectField('Users', required=True, plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
+    billing = AutoCompleteSelectField('Orgs', required=True, plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
