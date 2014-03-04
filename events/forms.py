@@ -195,6 +195,7 @@ class EventApprovalForm(forms.ModelForm):
                     Field('datetime_setup_complete',label="Setup Finish",css_class="dtp"),
                     Field('datetime_start',label="Event Start",css_class="dtp"),
                     Field('datetime_end',label="Event End",css_class="dtp"),
+                    Field('billed_by_semester', label="Billed by semester (for films)"),
                     #Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
                     
                         ),
@@ -218,7 +219,7 @@ class EventApprovalForm(forms.ModelForm):
         
     class Meta:
         model = Event
-        fields = ['description','datetime_start','datetime_end','datetime_setup_complete','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs']
+        fields = ['description','datetime_start','datetime_end','billed_by_semester','datetime_setup_complete','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs']
         
     datetime_start =  forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
     datetime_end =  forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End")
@@ -275,6 +276,7 @@ class InternalEventForm(forms.ModelForm):
                     'location',
                     Field('description', css_class="span6"),
                     Field('internal_notes', css_class="span6"),
+                    Field('billed_by_semester'),
                 ),
                 Tab(
                     'Contact',
@@ -324,7 +326,7 @@ class InternalEventForm(forms.ModelForm):
         super(InternalEventForm,self).__init__(*args,**kwargs)
     class Meta:
         model = Event
-        fields = ('event_name','location','description','internal_notes','contact','org','datetime_setup_complete','datetime_start','datetime_end','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs')
+        fields = ('event_name','location','description','internal_notes','billed_by_semester','contact','org','datetime_setup_complete','datetime_start','datetime_end','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs')
 
     location = GroupedModelChoiceField(
             queryset = Location.objects.filter(show_in_wo_form=True),
