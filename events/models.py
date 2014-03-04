@@ -331,6 +331,7 @@ class Event(models.Model):
     
     # other fields
     internal_notes = models.TextField(null=True,blank=True)
+    billed_by_semester = models.BooleanField(default=False)
     
     #def clean(self):
         #if self.datetime_start > self.datetime_end:

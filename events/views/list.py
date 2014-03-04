@@ -213,7 +213,7 @@ def unbilled(request,start=None,end=None):
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
-    events = Event.objects.filter(billings__isnull=True).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True).exclude(Q(projection__isnull=False)&Q(sound__isnull=True)|Q(projection__isnull=False)&Q(lighting__isnull=True)).order_by('datetime_start')
+    events = Event.objects.filter(billings__isnull=True).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True).filter(billed_by_semester=False).order_by('datetime_start')
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
@@ -230,7 +230,7 @@ def unbilled(request,start=None,end=None):
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
-def unbilled_projection(request,start=None,end=None):
+def unbilled_semester(request,start=None,end=None):
     context = RequestContext(request)
     
     #events = Event.objects.filter(approved=True).filter(paid=True)
@@ -240,7 +240,7 @@ def unbilled_projection(request,start=None,end=None):
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
-    events = Event.objects.filter(billings__isnull=True).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True).filter(Q(projection__isnull=False)&Q(sound__isnull=True)|Q(projection__isnull=False)&Q(lighting__isnull=True)).order_by('datetime_start')
+    events = Event.objects.filter(billings__isnull=True).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True).filter(billed_by_semester=True).order_by('datetime_start')
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
@@ -249,7 +249,7 @@ def unbilled_projection(request,start=None,end=None):
     
     context['h2'] = "Events to be Billed (Films)"
     context['events'] = events
-    context['baseurl'] = reverse("unbilled-projection")
+    context['baseurl'] = reverse("unbilled-semester")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     
     return render_to_response('events.html', context)

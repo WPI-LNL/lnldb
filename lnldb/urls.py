@@ -148,9 +148,9 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/unbilled/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unbilled'),
     url(r'^lnadmin/events/unbilled/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unbilled'),
     
-    url(r'^lnadmin/events/unbilledprojection/$', 'events.views.list.unbilled_projection',name="unbilled-projection"),
-    url(r'^lnadmin/events/unbilledprojection/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unbilled_projection'),
-    url(r'^lnadmin/events/unbilledprojection/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unbilled_projection'),    
+    url(r'^lnadmin/events/unbilledsemester/$', 'events.views.list.unbilled_semester',name="unbilled-semester"),
+    url(r'^lnadmin/events/unbilledsemester/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unbilled_semester'),
+    url(r'^lnadmin/events/unbilledsemester/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unbilled_semester'),
     
     url(r'^lnadmin/events/paid/$', 'events.views.list.paid',name="paid"),
     url(r'^lnadmin/events/paid/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.paid'),
