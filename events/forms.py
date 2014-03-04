@@ -75,6 +75,25 @@ PROJ_CHOICES = (
     (35,'35mm'),
     ('d','Digital'),    
 )
+
+# gets a set of services from a given event
+def get_qs_from_event(event):
+    if event.lighting:
+        lighting_id = event.lighting.id
+    else:
+        lighting_id = None
+    if event.sound:
+        sound_id = event.sound.id
+    else:
+        sound_id = None
+    if event.projection:
+        proj_id = event.projection.id
+    else:
+        proj_id = None
+        
+    return Service.objects.filter(Q(id__in=[lighting_id])|Q(id__in=[sound_id])|Q(id__in=[proj_id])|Q(id__in=[i.id for i in event.otherservices.all()]))
+    
+
 class WorkorderSubmit(ModelForm):
     class Meta:
         model = Event
@@ -552,12 +571,14 @@ class MKHoursForm(forms.ModelForm):
                 Hidden('event',event.id),
                 Field('user'),
                 Field('hours'),
+                Field('service'),
                 FormActions(
                     Submit('save', 'Save Changes'),
                     #Reset('reset','Reset Form'),
                 )
         )
         super(MKHoursForm,self).__init__(*args,**kwargs)
+        self.fields['service'].queryset = get_qs_from_event(event)
     class Meta:
         model = Hours
     user = AutoCompleteSelectField('AssocMembers',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
@@ -598,24 +619,10 @@ class CCIForm(forms.ModelForm):
         super(CCIForm,self).__init__(*args,**kwargs)
         
         #x = self.instance.event.lighting
-        self.fields['service'].queryset = self.get_qs_from_event(event)
+        self.fields['service'].queryset = get_qs_from_event(event)
         self.fields['setup_start'].initial = self.event.datetime_setup_complete
         
-    def get_qs_from_event(self,event):
-        if event.lighting:
-            lighting_id = event.lighting.id
-        else:
-            lighting_id = None
-        if event.sound:
-            sound_id = event.sound.id
-        else:
-            sound_id = None
-        if event.projection:
-            proj_id = event.projection.id
-        else:
-            proj_id = None
-            
-        return Service.objects.filter(Q(id__in=[lighting_id])|Q(id__in=[sound_id])|Q(id__in=[proj_id])|Q(id__in=[i.id for i in event.otherservices.all()]))
+    
     class Meta:
         model = EventCCInstance
         
@@ -645,23 +652,9 @@ class AttachmentForm(forms.ModelForm):
         super(AttachmentForm,self).__init__(*args,**kwargs)
         
         #x = self.instance.event.lighting
-        self.fields['for_service'].queryset = self.get_qs_from_event(event)
+        self.fields['for_service'].queryset = get_qs_from_event(event)
         
-    def get_qs_from_event(self,event):
-        if event.lighting:
-            lighting_id = event.lighting.id
-        else:
-            lighting_id = None
-        if event.sound:
-            sound_id = event.sound.id
-        else:
-            sound_id = None
-        if event.projection:
-            proj_id = event.projection.id
-        else:
-            proj_id = None
-            
-        return Service.objects.filter(Q(id__in=[lighting_id])|Q(id__in=[sound_id])|Q(id__in=[proj_id])|Q(id__in=[i.id for i in event.otherservices.all()]))
+    
     class Meta:
         model = EventAttachment
         fields = ('for_service','attachment','note')

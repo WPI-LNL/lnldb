@@ -711,11 +711,12 @@ class OrgBillingVerificationEvent(models.Model):
 # stats and the like
 class Hours(models.Model):
     event = models.ForeignKey('Event',related_name="hours")
+    service = models.ForeignKey('Service', related_name="hours", null=True, blank=True)
     user = models.ForeignKey(User,related_name="hours")
     hours = models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)
     
     class Meta:
-        unique_together = ('event','user')
+        unique_together = ('event','user','service')
     
     
 # this is the crewchief instance for a particular event

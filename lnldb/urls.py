@@ -99,6 +99,7 @@ urlpatterns = patterns('',
     url(r'^my/events/(?P<eventid>[0-9]+)/files/$', 'events.views.my.eventfiles',name="my-eventfiles"),
     url(r'^my/events/(?P<eventid>[0-9]+)/report/$', 'events.views.my.ccreport',name="my-ccreport"),
     url(r'^my/events/(?P<eventid>[0-9]+)/hours/$', 'events.views.my.hours_list',name="my-cchours"),
+    url(r'^my/events/(?P<eventid>[0-9]+)/hours/bulk/$', 'events.views.my.hours_bulk',name="my-cchours-bulk"),
     url(r'^my/events/(?P<eventid>[0-9]+)/hours/mk/$', 'events.views.my.hours_mk',name="my-cchours-mk"),
     url(r'^my/events/(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', 'events.views.my.hours_edit',name="my-cchours-edit"),
     #workorders

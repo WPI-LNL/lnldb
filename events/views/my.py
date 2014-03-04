@@ -4,6 +4,9 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
 from django.contrib.auth.models import User
+from django.forms.models import inlineformset_factory
+from django.utils.functional import curry
+from django.db.models import Q
 
 from events.models import Event,Organization,CCReport,Hours
 from events.forms import ReportForm,MKHoursForm,EditHoursForm,SelfServiceOrgRequestForm
@@ -258,3 +261,39 @@ def hours_edit(request,eventid,userid):
         context['formset'] = formset
         
     return render_to_response('mycrispy.html', context)
+
+@login_required
+def hours_bulk(request,eventid):
+    context = RequestContext(request)
+    user = request.user
+    uevent = user.ccinstances.filter(event__pk=eventid)
+    
+    if not uevent:
+        return HttpResponse("You must not have cc'd this event, or it's closed")
+    
+    event = Event.objects.get(pk=eventid)
+    if not event.reports_editable:
+        return HttpResponse("The deadline for report submission and hours has past...")
+    event = uevent[0].event
+    
+    context['msg'] = "Bulk Hours Entry"
+    
+    context['event'] = event
+    
+    FS = inlineformset_factory(Event,Hours,extra=15)
+    FS.form = staticmethod(curry(MKHoursForm, event=event))
+    
+    if request.method == 'POST':
+        formset = FS(request.POST,instance=event)
+        if formset.is_valid():
+            formset.save()
+            return HttpResponseRedirect(reverse('my-cchours',args=(event.id,)))
+        else:
+            context['formset'] = formset
+            
+    else:
+        formset = FS(instance=event)
+        
+        context['formset'] = formset
+        
+    return render_to_response('formset_hours_bulk.html', context)
