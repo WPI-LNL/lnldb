@@ -452,6 +452,8 @@
                     <h2> No Bills Posted </h2>
                     {% endfor %}
                     </table>
+                    <h3>Internal Notes</h3>
+                    <p>{% if event.internal_notes %}{{ event.internal_notes|mduserlink|mdeventlink|markdown }}{% else %} None {% endif %}</p>
                 </div>
                 <div id="files" class="tab-pane">
                     <div class="pull-right">{% if not event.closed %}<a class="btn btn-warning" href="{% url "eventattachments" event.id %}">Edit</a>{% endif %}</div>
