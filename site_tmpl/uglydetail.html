@@ -152,6 +152,10 @@
                             </td>
                         </tr>
                         <tr>
+                            <th>Billed by semester</th>
+                            <td> {{ event.billed_by_semester }} </td>
+                        </tr>
+                        <tr>
                             <th>Internal Notes</th>
                             <td>{% if event.internal_notes %}{{ event.internal_notes|mduserlink|mdeventlink|markdown }}{% else %} None {% endif %}</td>
                         </tr>
