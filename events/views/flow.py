@@ -49,7 +49,7 @@ def approval(request,id):
             messages.add_message(request, messages.INFO, 'Approved Event')
             
             email_body = 'Your event "%s" has been approved!' % event.event_name
-            email = DLEG(subject="Event Approved", to_emails = [settings.EMAIL_TARGET_VP,e.contact.email], body=email_body)
+            email = DLEG(subject="Event Approved", to_emails = [e.contact.email], body=email_body, bcc=[settings.EMAIL_TARGET_VP])
             email.send()
         
             return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
@@ -85,7 +85,7 @@ def denial(request,id):
             messages.add_message(request, messages.INFO, 'Denied Event')
             
             email_body = 'Your event "%s" has been denied! <br />Reason: "%s"' % (event.event_name, event.cancelled_reason)
-            email = DLEG(subject="Event Denied", to_emails = [settings.EMAIL_TARGET_VP,e.contact.email], body=email_body) 
+            email = DLEG(subject="Event Denied", to_emails = [e.contact.email], body=email_body, bcc=[settings.EMAIL_TARGET_VP]) 
             email.send()
         
             return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))

@@ -69,7 +69,7 @@ class EventWizard(NamedUrlSessionWizardView):
         event = Event.event_mg.consume_workorder_formwiz(form_list,self)
         #return HttpResponseRedirect(reverse('events.views.my.myeventdetail',args=(event.id,)))
         email_body = "You have successfully submitted an event titled %s" % event.event_name
-        email = DLEG(subject="New Event Submitted", to_emails = [settings.EMAIL_TARGET_VP,event.contact.email], body=email_body)
+        email = DLEG(subject="New Event Submitted", to_emails = [event.contact.email], body=email_body, bcc=[settings.EMAIL_TARGET_VP])
         email.send()
         
         if event.projection:
