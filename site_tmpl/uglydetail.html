@@ -321,11 +321,13 @@
                         <thead>
                             <th>Member</th>
                             <th>Hours</th>
+                            <th>Service</th>
                         </thead>
                         {% for hour in event.hours.all %}
                             <tr>
                                 <td><a href="{% url "memberdetail" hour.user.id %}">{{ hour.user.get_full_name }}</a></td>
                                 <td>{{ hour.hours }}</td>
+                                <td>{{ hour.service }}</td>
                             </tr>
                         {% endfor %}
                     </table>
