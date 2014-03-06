@@ -77,13 +77,18 @@
                             {% if e.projection %} {{ e.projection.shortname }} {% endif %}
                             {% if e.otherservices %} {{ e.otherservices.shortname }} {% endif %}
                         </td>
-                        <td>{{ e.datetime_setup_start }}</td>
+                        <td>
+                            {% for c in e.ccinstances.all %}
+                                <strong>{{ c.service.shortname }}</strong> : 
+                                {{ c.setup_start }}<br />
+                            {% endfor %}
+                        </td>
                         <td>{{ e.datetime_setup_complete }}</td>
 
                         <td>
                             {% if e.ccinstances.count %}
                                 {% for c in e.ccinstances.all %}
-                                    <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>{% if not forloop.last %},{% endif %}&nbsp;
+                                    <strong>{{ c.service.shortname }}</strong> : <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>{% if not forloop.last %}<br />{% endif %}
                                     
                                 {% endfor %}
                             {% else %}
