@@ -21,16 +21,19 @@
                     
                     {% for e in object.events.all %}
                     <tr>
-                        <td>{{ e.datetime_setup_start|localtime|date:"m-d D" }}</td>
-                        <td>{{ e.event_name }}</td>
-                        <td>{% for s in e.eventservices %}{{ s.shortname }}&nbsp;{% endfor %}</td>
+                        <td><strong>{{ e.event_name }}</strong></td>
+                        <td>Starting : {{ e.datetime_start|localtime }}</td>
+                        <td></td>
                         <td>{{ e.datetime_setup_start.time|localtime|time:"TIME_FORMAT" }}
                         <td>{{ e.location }}</td>
                     </tr>
                     <tr>
                         <td colspan="5">
-                            {% for cc in e.crew_chief.all %}
-                                CC: {{ cc.get_full_name }}
+                            Setup Information <br />
+                            {% for c in e.ccinstances.all %}
+                                    <strong>{{ c.service.shortname }}</strong> @ {{ c.setup_start }}: 
+                                    {{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}
+                                    {% if not forloop.last %}<br />{% endif %}
                             {% endfor %}
                         </td>
                     </tr>
