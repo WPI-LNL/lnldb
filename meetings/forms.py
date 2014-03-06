@@ -43,8 +43,9 @@ class AnnounceSendForm(forms.ModelForm):
         super(AnnounceSendForm,self).__init__(*args,**kwargs)
         now = meeting.datetime
         twodaysago = now + datetime.timedelta(days=-3)
+        aweekfromnow = now + datetime.timedelta(days=8)
         
-        self.fields["events"].queryset = Event.objects.filter(datetime_setup_complete__gte=twodaysago)
+        self.fields["events"].queryset = Event.objects.filter(datetime_setup_complete__gte=twodaysago,datetime_setup_complete__lte=aweekfromnow)
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         self.helper.layout = Layout(
