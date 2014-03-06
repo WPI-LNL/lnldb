@@ -353,7 +353,7 @@ class InternalEventForm(forms.ModelForm):
             group_label = lambda group: group.name,
         )
     contact = AutoCompleteSelectField('Users',required=False,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
-    org = AutoCompleteSelectMultipleField('Orgs',required=False)
+    org = AutoCompleteSelectMultipleField('Orgs',required=False, label = "Client")
     
     datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Setup Completed")
     datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Event Start")
