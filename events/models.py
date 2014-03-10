@@ -466,7 +466,7 @@ class Event(models.Model):
             elif self.unpaid:
                 return "Awaiting Payment"
             else:
-                return "To be Billed" # used to be "Open" git #245
+                return "To Be Billed" # used to be "Open" git #245
             
         
     @property
