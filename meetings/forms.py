@@ -42,8 +42,8 @@ class AnnounceSendForm(forms.ModelForm):
     def __init__(self,meeting,*args,**kwargs):
         super(AnnounceSendForm,self).__init__(*args,**kwargs)
         now = meeting.datetime
-        twodaysago = now + datetime.timedelta(days=-3)
-        aweekfromnow = now + datetime.timedelta(days=8)
+        twodaysago = now + datetime.timedelta(days=-4)
+        aweekfromnow = now + datetime.timedelta(days=9)
         
         self.fields["events"].queryset = Event.objects.filter(datetime_setup_complete__gte=twodaysago,approved=True,datetime_setup_complete__lte=aweekfromnow).exclude(Q(closed=True)|Q(cancelled=True))
         self.helper = FormHelper()
@@ -69,7 +69,7 @@ class AnnounceCCSendForm(forms.ModelForm):
     def __init__(self,meeting,*args,**kwargs):
         now = meeting.datetime
         twodaysago = now + datetime.timedelta(days=-4)
-        aweekfromnow = now + datetime.timedelta(days=8)
+        aweekfromnow = now + datetime.timedelta(days=9)
         
         
         self.helper = FormHelper()
