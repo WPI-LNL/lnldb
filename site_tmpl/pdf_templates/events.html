@@ -54,13 +54,27 @@
                         <h5>Service Description</h5>
                         {% if service.category.name == "Lighting" %}
                             {{ event.lighting_reqs }}
+                            {% if event.attachment_for_lighting %}
+                            <br />
+                            ~-~-~-ATTACHMENT AVAILABLE FOR LIGHTING-~-~-~
+                            {% endif %}
+                            
                         {% elif service.category.name == "Sound" %}
                             {{ event.sound_reqs }}
+                            {% if event.attachment_for_sound %}
+                            <br />
+                            ~-~-~-ATTACHMENT AVAILABLE FOR SOUND-~-~-~
+                            {% endif %}
                         {% elif service.category.name == "Projection" %}
                             {{ event.proj_reqs }}
+                            {% if event.attachment_for_projection %}
+                            <br />
+                            ~-~-~-ATTACHMENT AVAILABLE FOR PROJECTION-~-~-~
+                            {% endif %}
                         {% else %}
                             {{ event.otherservice_reqs }}
                         {% endif %}
+                        <br />
                     </td>
                 </tr>
                 <tr>

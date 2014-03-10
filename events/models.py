@@ -614,6 +614,31 @@ class Event(models.Model):
         else:
             return self.billing_org
         
+    #figuring out where to show ATTACHMENT AVAILABLE
+    @property
+    def attachment_for_lighting(self):
+        if self.lighting:
+            for a in self.attachments.all():
+                if self.lighting.service_ptr in a.for_service.all():
+                    return True
+        return False
+    
+    @property
+    def attachment_for_sound(self):
+        if self.sound:
+            for a in self.attachments.all():
+                if self.sound.service_ptr in a.for_service.all():
+                    return True
+        return False
+    
+    @property
+    def attachment_for_projection(self):
+        if self.projection:
+            for a in self.attachments.all():
+                if self.projection.service_ptr in a.for_service.all():
+                    return True
+        return False
+        
 class CCReport(models.Model):
     crew_chief = models.ForeignKey(User)
     event = models.ForeignKey(Event)
