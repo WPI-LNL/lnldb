@@ -24,29 +24,55 @@
         </div>
         <div class="span9">
             <h3>E-Mail</h3>
-            {% if m.meetingannounce_set.count %}
+            {% if m.meetingannounce_set.count or m.meetingccnotices.count %}
                 <strong> Emails Sent:</strong>
-                {% for announce in m.meetingannounce_set.all %}
-                <div class="accordion" id="accordion{{ forloop.counter0 }}">
+                
+                <div class="accordion" id="accordion0">
+                    
+                    {% for announce in m.meetingannounce_set.all %}
                     <div class="accordion-group">
                         <div class="accordion-heading">
-                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion{{ forloop.counter0 }}" href="#collapse{{ forloop.counter0 }}">
+                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion0" href="#collapsea{{ forloop.counter0 }}">
                                 ({{ announce.added }})
                             </a>
                         </div>
-                        <div id="collapse{{ forloop.counter0 }}" class="accordion-body collapse">
+                        <div id="collapsea{{ forloop.counter0 }}" class="accordion-body collapse">
                             <div class="accordion-inner">
-                            Subj: {{ announce.subject }}
-                            Msg: {{ announce.message }}
-                            Sent To: {{ announce.email_to }}
+                            Subj: {{ announce.subject }} <br />
+                            Msg: {{ announce.message }} <br />
+                            Sent To: {{ announce.email_to }} <br /><br />
+                            Events: <br/>
                             {% for event in announce.events.all %}
-                                {{ event }}
+                                {{ event }}<br />
                             {% endfor %}
+                            <br/>
+                            <a href="{% url "email-view-announce" announce.uuid %}" class="cm-webversion">View Online</a>
                             </div>
                         </div>
                     </div>
+                    {% endfor %}
+                    {% for announce in m.meetingccnotices.all %}
+                    <div class="accordion-group">
+                        <div class="accordion-heading">
+                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion0" href="#collapseb{{ forloop.counter0 }}">
+                                CC ({{ announce.sent_at }})
+                            </a>
+                        </div>
+                        <div id="collapseb{{ forloop.counter0 }}" class="accordion-body collapse">
+                            <div class="accordion-inner">
+                            <strong>Msg: {{ announce.addtl_message }}</strong> <Br />
+                            Events: <br/>
+                            {% for event in announce.events.all %}
+                                <em>{{ event }}</em><br/>
+                            {% endfor %}
+                            <a href="{% url "email-view-announce-cc" announce.uuid %}" class="cm-webversion">View Online</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    </div>
                 </div>
-                {% endfor %}
+                
             <br />
             <a class="btn" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
             <a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>
