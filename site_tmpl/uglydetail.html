@@ -155,11 +155,11 @@
                             <th>Billed by semester</th>
                             <td> {{ event.billed_by_semester }} </td>
                         </tr>
+                        {% endif %}
                         <tr>
                             <th>Internal Notes</th>
                             <td>{% if event.internal_notes %}{{ event.internal_notes|mduserlink|mdeventlink|markdown }}{% else %} None {% endif %}</td>
                         </tr>
-                        {% endif %}
                     </table>
 
                 </div>
@@ -472,7 +472,12 @@
                         </tr>
                         {% for a in event.attachments.all %}
                         <tr>
-                            <td>{{ a.for_service }}</td>
+                            <td>
+                                {% for s in a.for_service.all %}
+                                {{ s }}{% if not forloop.last %},{% endif %}
+                                {% empty %}
+                                {% endfor %}
+                            </td>
                             <td>{{ a.note }}</td>
                             <td>{{ a.attachment.name }}</td>
                             <td>{{ a.externally_uploaded }} </td>

@@ -15,7 +15,12 @@
         </tr>
         {% for a in event.attachments.all %}
         <tr>
-            <td>{{ a.for_service }}</td>
+            <td>
+                {% for s in a.for_service.all %}
+                {{ s }}{% if not forloop.last %},{% endif %}
+                {% empty %}
+                {% endfor %}
+            </td>
             <td>{{ a.note }}</td>
             <td>{{ a.attachment.name }}</td>
             <td><a class="btn" href="{{ a.attachment.url }}">Link</a></td>
