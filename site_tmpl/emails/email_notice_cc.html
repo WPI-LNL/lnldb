@@ -17,25 +17,43 @@
                 <div align="left" class="article-content">
                     
                     <p align="left" class="article-title">Events</p>
-                    <table>
+                    <table class="w960" width="940" >
                     
                     {% for e in object.events.all %}
                     <tr>
                         <td><strong>{{ e.event_name }}</strong></td>
                         <td>Starting : {{ e.datetime_start|localtime }}</td>
-                        <td></td>
-                        <td>{{ e.datetime_setup_start.time|localtime|time:"TIME_FORMAT" }}
+                        <td colspan="2">Setup Completed: {{ e.datetime_setup_complete|localtime|time:"TIME_FORMAT" }}</td>
                         <td>{{ e.location }}</td>
                     </tr>
                     <tr>
                         <td colspan="5">
-                            Setup Information <br />
+                            <em>Setup Information </em><br />
+                        </td>
+                    <tr>
+                    </tr>
+                        <td colspan="1">
                             {% for c in e.ccinstances.all %}
-                                    <strong>{{ c.service.shortname }}</strong> @ {{ c.setup_start }}: 
-                                    {{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}
-                                    {% if not forloop.last %}<br />{% endif %}
+                            <strong>{{ c.service.shortname }}</strong> @ {{ c.setup_location }}
+                            <br />
+                                {% endfor %}
+                        </td>
+                        <td colspan="1">
+                        {% for c in e.ccinstances.all %}
+                        {{ c.setup_start }}
+                            <br />
+                        {% endfor %}
+                        
+                        </td>
+                        <td colspan="4">
+                            {% for c in e.ccinstances.all %}
+                            CC: {{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}
+                            <br />
                             {% endfor %}
                         </td>
+                    </tr>
+                    <tr>
+                        <td colspan="5">{% if not forloop.last %}<hr>{% endif %}</td>
                     </tr>
                     {% endfor %}
                     <br />

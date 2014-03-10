@@ -17,14 +17,14 @@
                     
                     <p>{{ object.message }}</p>
                     <p align="left" class="article-title">Events</p>
-                    <table>
+                    <table class="w960" width="940" cellpadding="5">
                     
                     {% for e in object.events.all reversed %}
                     <tr>
                         <td>{{ e.datetime_start|localtime|date:"m-d D" }}</td>
                         <td>{{ e.event_name }}</td>
                         <td>{% for s in e.eventservices %}{{ s.shortname }}&nbsp;{% endfor %}</td>
-                        <td>{{ e.datetime_start|localtime|time:"TIME_FORMAT" }}- {{ e.datetime_end|localtime|time:"TIME_FORMAT" }}</td>
+                        <td>{{ e.datetime_start|localtime|time:"TIME_FORMAT" }} - {{ e.datetime_end|localtime|time:"TIME_FORMAT" }}</td>
                         <td>{{ e.location }}</td>
                     </tr>
                     {% endfor %}
