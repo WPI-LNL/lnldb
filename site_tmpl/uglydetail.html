@@ -286,7 +286,7 @@
                 <div id="reports" class="tab-pane">
                     {% if not event.closed or not event.cancelled %}
                         <div class="pull-right">
-                            <a clas="btn" href="{% url "event-mkccr" event.id%}">New</a>
+                            <a class="btn btn-large" href="{% url "event-mkccr" event.id%}">New</a>
                         </div>
                     {% endif %}
                     <h2>Reports</h2>
@@ -320,6 +320,7 @@
                         {% endfor %}
                         </ul>
                     {% endif %}
+                    <div class="pull-right"><a class="btn btn-large" href="{% url "admin-cchours-bulk" event.id %}">Edit</a></div>
                     <h2> Hours </h2>
                     <table class="table">
                         <thead>

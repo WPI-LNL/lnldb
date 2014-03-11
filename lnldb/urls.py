@@ -167,6 +167,9 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/crew/(?P<id>[0-9a-f]+)/$', 'events.views.flow.assigncrew'),
     url(r'^lnadmin/events/rmcrew/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$', 'events.views.flow.rmcrew'),
     url(r'^lnadmin/events/crewchief/(?P<id>[0-9a-f]+)/$', 'events.views.flow.assigncc'),
+    
+    url(r'^lnadmin/events/(?P<id>[0-9]+)/hours/bulk/$', 'events.views.flow.hours_bulk_admin',name="admin-cchours-bulk"),
+    
     url(r'^lnadmin/events/attachments/(?P<id>[0-9a-f]+)/$', 'events.views.flow.assignattach', name="eventattachments"),
     url(r'^lnadmin/events/extras/(?P<id>[0-9a-f]+)/$', 'events.views.flow.extras', name="eventextras"),
     url(r'^lnadmin/events/oneoff/(?P<id>[0-9a-f]+)/$', 'events.views.flow.oneoff', name="eventoneoff"),

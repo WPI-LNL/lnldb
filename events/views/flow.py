@@ -15,8 +15,8 @@ from django.db.models import Q
 from emails.generators import DefaultLNLEmailGenerator as DLEG
 
 from events.forms import EventApprovalForm,EventDenialForm, BillingForm, BillingUpdateForm, EventReviewForm, InternalReportForm
-from events.forms import CrewAssign,CrewChiefAssign, CCIForm, AttachmentForm, ExtraForm
-from events.models import Event,Organization,Billing,EventCCInstance,EventAttachment,Service,ExtraInstance,EventArbitrary, CCReport
+from events.forms import CrewAssign,CrewChiefAssign, CCIForm, AttachmentForm, ExtraForm,MKHoursForm
+from events.models import Event,Organization,Billing,EventCCInstance,EventAttachment,Service,ExtraInstance,EventArbitrary, CCReport, Hours
 from helpers.challenges import is_officer
 
 import datetime
@@ -176,7 +176,36 @@ def assigncrew(request,id):
         context['formset'] = formset
         
     return render_to_response('form_crew_add.html', context)
+
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
+def hours_bulk_admin(request,id):
+    context = RequestContext(request)
+    user = request.user
     
+    context['msg'] = "Bulk Hours Entry"
+    event = get_object_or_404(Event,pk=id)
+    
+    context['event'] = event
+    
+    FS = inlineformset_factory(Event,Hours,extra=15)
+    FS.form = staticmethod(curry(MKHoursForm, event=event))
+    
+    if request.method == 'POST':
+        formset = FS(request.POST,instance=event)
+        if formset.is_valid():
+            formset.save()
+            return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(event.id,)))
+        else:
+            context['formset'] = formset
+            
+    else:
+        formset = FS(instance=event)
+        
+        context['formset'] = formset
+        
+    return render_to_response('formset_hours_bulk.html', context)    
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def rmcc(request,id,user):
