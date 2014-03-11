@@ -238,7 +238,7 @@ class EventApprovalForm(forms.ModelForm):
         
     class Meta:
         model = Event
-        fields = ['description','datetime_start','datetime_end','billed_by_semester','datetime_setup_complete','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs']
+        fields = ['description','internal_notes','datetime_start','datetime_end','billed_by_semester','datetime_setup_complete','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs']
         
     datetime_start =  forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
     datetime_end =  forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End")
@@ -367,6 +367,7 @@ class EventReviewForm(forms.ModelForm):
         self.helper.layout = Layout(
             HTML("<h5>If you'd like to override the billing org, please search for it below</h5>"),
             Field('billing_org'),
+            Field('internal_notes', css_class="span6", size="15"),
             FormActions(
                 HTML('<h4> Does this look good to you?</h4>'),
                 Submit('save', 'Yes!', css_class='btn btn-large btn-danger'),
@@ -377,7 +378,7 @@ class EventReviewForm(forms.ModelForm):
     
     class Meta:
         model = Event
-        fields = ('billing_org',)
+        fields = ('billing_org','internal_notes')
     billing_org = AutoCompleteSelectField('Orgs',required=False, label="")
 
 
