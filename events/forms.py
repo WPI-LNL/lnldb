@@ -933,7 +933,7 @@ class ScheduleForm(forms.Form):
     noon = datetime.time(12)
     noontoday = datetime.datetime.combine(today,noon)
     #setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    setup_complete = forms.SplitDateTimeField(initial=noontoday,label="Setup Completed By",  input_time_formats=valid_time_formats)
+    setup_complete = forms.SplitDateTimeField(initial=noontoday,label="Setup Completed By",  input_time_formats=valid_time_formats, required=True)
     event_start = forms.SplitDateTimeField(initial=noontoday,label="Event Starts", input_time_formats=valid_time_formats)
     event_end = forms.SplitDateTimeField(initial=noontoday,label="Event Ends", input_time_formats=valid_time_formats)
     
@@ -943,6 +943,8 @@ class ScheduleForm(forms.Form):
         setup_complete = cleaned_data.get("setup_complete")
         event_start = cleaned_data.get("event_start")
         event_end = cleaned_data.get("event_end")
+        if not setup_complete or not event_start or not event_end:
+            raise ValidationError('Please enter in a valid time in each field')
         if event_start > event_end:
             raise ValidationError('You cannot start after you finish')
         if setup_complete > event_start:
