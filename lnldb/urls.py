@@ -10,6 +10,9 @@ from events.forms import named_event_forms
 from events.views.wizard import EventWizard
 from events.views.wizard import show_lighting_form_condition,show_sound_form_condition,show_projection_form_condition,show_other_services_form_condition
 
+from projection.forms import BulkCreateForm
+from projection.forms import DateEntryFormSetBase
+
 from django.views.generic.base import TemplateView
 
 from ajax_select import urls as ajax_select_urls
@@ -32,7 +35,9 @@ from projection.views import BulkUpdateView
 from projection.views import ProjectionistDelete
 #event wizard form defenitions
 
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
+from helpers.challenges import is_officer
+
 event_wizard = EventWizard.as_view(
     named_event_forms,
     url_name = 'event_step',
@@ -45,11 +50,12 @@ event_wizard = EventWizard.as_view(
         }
     )
 
-#hacky as hell
+
+
+#hacky as hell, but it secures our wizards
 @login_required
 def login_wrapped_wo(request,**kwargs):
     return event_wizard(request,**kwargs)
-
 
 #generics
 from django.views.generic.base import RedirectView
@@ -230,6 +236,9 @@ urlpatterns = patterns('',
     url(r'^lnadmin/projection/rm/(?P<pk>[0-9a-f]+)/$', ProjectionistDelete.as_view(), name="projection-delete"),
     url(r'^lnadmin/projection/mk/$', ProjectionCreate.as_view(), name="projection-create"),
     url(r'^lnadmin/projection/list/detail/pdf/$', 'pdfs.views.generate_projection_pdf', name="events-pdf-multi"),
+    
+    url(r'^lnadmin/projection/bulkevents/$', 'projection.views.bulk_projection', name="projection_bulk2"),
+    
 
     #emails 
     url(r'^email/announce/(?P<slug>[0-9a-f]+)/',MeetingAnnounceView.as_view(),name="email-view-announce"),

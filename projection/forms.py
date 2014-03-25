@@ -111,11 +111,13 @@ PITFormset = inlineformset_factory(Projectionist,PitInstance,extra=1,form=Instan
 class BulkCreateForm(forms.Form):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "GET"
         self.helper.layout = Layout(
             Field('contact'),
             Field('billing'),
-            Field('date_first', css_class="datepick", label = "Date of first movie of first term"),
-            Field('date_second', css_class="datepick", label = "Date of first movie of second term"),
+            Field('date_first', css_class="datepick", ),
+            Field('date_second', css_class="datepick", ),
             FormActions(
                 Submit('save', 'Save Changes'),
             )
@@ -124,3 +126,28 @@ class BulkCreateForm(forms.Form):
         
     contact = AutoCompleteSelectField('Users', required=True, plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
     billing = AutoCompleteSelectField('Orgs', required=True, plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
+    date_first = forms.DateField(label = "Date of first movie of first term")
+    date_second = forms.DateField(label = "Date of first movie of second term")
+    
+class DateEntryFormSetBase(forms.Form):
+    def __init__(self, *args,**kwargs):
+        # pop the date out of the iterator here
+        #x = kwargs.keys()
+        
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.layout = Layout(
+            Field('date'),
+            Field('name'),
+            Field('matinee'),
+        )
+        
+        super(DateEntryFormSetBase,self).__init__(*args,**kwargs)
+        
+        self.fields['date'].widget.attrs['readonly'] = True
+        #self.fields["date"].initial = dateobj
+        
+    date = forms.DateField()
+    name = forms.CharField(required=False)
+    matinee = forms.BooleanField(required=False)
+    
