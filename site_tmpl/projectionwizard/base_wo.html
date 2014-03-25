@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load bootstrap_toolkit %}
+{% load markdown_deux_tags %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+
+{% block head %}
+{{ wizard.form.media }}
+{% endblock %}
+
+{% block overrides %}
+<link href="{{ STATIC_URL }}css/bootstrap-admin.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}css/bootstrap-responsive.css" rel="stylesheet">
+{# lol don't question it #}
+{% endblock %}
+
+
+{% block extras %}
+{% endblock %}
+
+
+{% block content %}
+<div class="row-fluid">
+    <div class="span10 offset1">
+        <h2>Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}: {{ wizard.steps.current|title }}</h2>
+        {% if help_name %}
+        <div class="pull-right">    
+            <a href="#helpmodal" role="button" class="btn btn-primary btn-large" data-toggle="modal">Need Help?</a>
+        </div>
+        {% endif %}
+        <form class="form-horizontal" action="" method="post">{% csrf_token %}
+        <table>
+        
+        {{ wizard.management_form }}
+        {% block formcontent %}
+        {% if wizard.form.forms %}
+            {{ wizard.form.management_form }}
+            {% for form in wizard.form.forms %}
+                {{ form|as_bootstrap }}
+            {% endfor %}
+        {% else %}
+            {% crispy wizard.form %}
+        {% endif %}
+        {% endblock %}
+        </table>
+        <br />
+        {% if wizard.steps.prev %}
+        <button class="btn btn-info btn-large" name="wizard_goto_step" type="submit" value="{{ wizard.steps.first }}">{% trans "First step" %}</button>
+        <button class="btn btn-info btn-large" name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}">{% trans "Previous step" %}</button>
+        <!-- <input name="wizard_goto_step" class="btn btn-primary  btn-large" type="submit" value="prev"/> -->
+        {% endif %}
+        {% if not wizard.steps.last == wizard.steps.current %}
+        <input class="btn btn-primary  btn-large" type="submit" value="{% trans "Next Step" %}"/>
+        {% else %}
+        <input class="btn btn-primary  btn-large" type="submit" value="{% trans "Finish" %}"/>
+        {% endif %}
+        </form>
+        
+    </div>
+
+    {# Help Modal #}
+
+    <div id="helpmodal" class="modal hide fade" style="width:80%;left:10%;margin-left:auto;margin-right:auto;">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h3>{{ help_name }} Help</h3>
+            {% if extras %}
+            <ul class="nav nav-tabs" id="myTab">
+                <li class="active"><a href="#tservice" data-toggle="tab">Service Levels</a></li>
+                <li><a href="#textras" data-toggle="tab">Extras</a></li>
+            </ul>
+            {% endif %}
+        </div>
+        <div class="modal-body">
+            <div class="tab-content">
+                <div class="tab-pane active" id="tservice">
+                    {% for o in help_objs %}
+                    <p>{{ o.help_desc|markdown }}</p>
+                    {% endfor %}
+                </div>
+                {% if extras %}
+                <div class="tab-pane" id="textras">
+                    <table class="table table-bordered">
+                        {% for e in extras %}
+                        <div class="hide">
+                            <div id="e_{{e.id }}" class="{% for s in e.services.all %}s_{{s.id}} {% endfor %}"></div>
+                        </div>
+                        <tr>
+                            <td>{{ e.name }} ({{e.desc}})</td>
+                            <td>{{ e.cost }}</td>
+                            
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a href="#" data-dismiss="modal" aria-hidden="true" class="btn">Back</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends 'base_admin.html' %}
+
+{% block content %}
+<div class="row-fluid">
+    <div class="span12">
+            <h2> Events Added </h2>
+            
+            <ul>
+            {% for event in result %}
+                <li>
+                    <a href="{% url "events.views.flow.viewevent" event.id %}">{{event.event_name}}</a>
+                </li>
+            {% endfor %}
+            </ul>
+            
+        </div>
+    </div>
+
+{% endblock %}
