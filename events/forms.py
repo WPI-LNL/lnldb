@@ -32,6 +32,8 @@ import pytz
 from ajax_select import make_ajax_field
 from ajax_select.fields import AutoCompleteSelectMultipleField,AutoCompleteSelectField
 
+valid_time_formats = ['%H:%M', '%I:%M%p', '%I:%M %p']
+
 CAT_LIGHTING = Category.objects.get(name="Lighting")
 CAT_SOUND = Category.objects.get(name="Sound")
 CAT_PROJ = Category.objects.get(name="Projection")
@@ -931,9 +933,9 @@ class ScheduleForm(forms.Form):
     noon = datetime.time(12)
     noontoday = datetime.datetime.combine(today,noon)
     #setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    setup_complete = forms.SplitDateTimeField(initial=noontoday,label="Setup Completed By")
-    event_start = forms.SplitDateTimeField(initial=noontoday,label="Event Starts")
-    event_end = forms.SplitDateTimeField(initial=noontoday,label="Event Ends")
+    setup_complete = forms.SplitDateTimeField(initial=noontoday,label="Setup Completed By",  input_time_formats=valid_time_formats)
+    event_start = forms.SplitDateTimeField(initial=noontoday,label="Event Starts", input_time_formats=valid_time_formats)
+    event_end = forms.SplitDateTimeField(initial=noontoday,label="Event Ends", input_time_formats=valid_time_formats)
     
     def clean(self):
         cleaned_data = super(ScheduleForm, self).clean()
