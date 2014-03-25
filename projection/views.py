@@ -171,8 +171,8 @@ def bulk_projection(request):
             #date_2 = datetime.datetime.strptime(datestr_2,"%Y-%m-%d")
 
             
-            end_of_term_1 = date_1 + datetime.timedelta(days=5) # 56
-            end_of_term_2 = date_2 + datetime.timedelta(days=6)
+            end_of_term_1 = date_1 + datetime.timedelta(days=56)
+            end_of_term_2 = date_2 + datetime.timedelta(days=66)
             
             range_1 = []
             iterator_1 = date_1
@@ -273,18 +273,21 @@ def bulk_projection(request):
                     context['form'] = filled
                     return render_to_response("form_crispy_bulk_projection_entries.html",context)
             else:
-                #pass the errors back
+                #pass back the empty form
+                context['msg'] = "Bulk Movie Addition"
                 context['formset'] = formbulk
                 
                 return render_to_response("form_crispy_bulk_projection_entries.html",context)
         else:
             # here we only have our params
-            context['form'] = form_params
+            context['msg'] = "Bulk Movie Addition (Errors)"
+            context['formset'] = formbulk
             return render_to_response("form_crispy.html",context)
     else:
         # here we have nothing
         form = BulkCreateForm()
         context['formset'] = form
+        context['msg'] = "Bulk Movie Addition"
         return render_to_response("form_crispy.html",context)
         
 

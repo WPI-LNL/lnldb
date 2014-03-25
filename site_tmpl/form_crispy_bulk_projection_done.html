@@ -10,6 +10,8 @@
                 <li>
                     <a href="{% url "events.views.flow.viewevent" event.id %}">{{event.event_name}}</a>
                 </li>
+            {% empty %}
+            No Events Added
             {% endfor %}
             </ul>
             

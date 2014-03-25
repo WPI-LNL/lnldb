@@ -237,7 +237,7 @@ urlpatterns = patterns('',
     url(r'^lnadmin/projection/mk/$', ProjectionCreate.as_view(), name="projection-create"),
     url(r'^lnadmin/projection/list/detail/pdf/$', 'pdfs.views.generate_projection_pdf', name="events-pdf-multi"),
     
-    url(r'^lnadmin/projection/bulkevents/$', 'projection.views.bulk_projection', name="projection_bulk2"),
+    url(r'^lnadmin/projection/bulkevents/$', 'projection.views.bulk_projection', name="projection-bulk2"),
     
 
     #emails 
