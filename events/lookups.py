@@ -8,6 +8,9 @@ class OrgLookup(LookupChannel):
     
     model = Organization
     
+    def check_auth(self, request):
+        return request.user.is_authenticated()
+    
     def get_query(self,q,request):
         return Organization.objects.filter(Q(name__icontains=q)).filter(archived=False)
     
