@@ -19,7 +19,7 @@
                     <p align="left" class="article-title">Events</p>
                     <table class="w960" width="940" cellpadding="5">
                     
-                    {% for e in object.events.all reversed %}
+                    {% for e in object.events.reverse_ordered_events %}
                     <tr>
                         <td>{{ e.datetime_start|localtime|date:"m-d D" }}</td>
                         <td>{{ e.event_name }}</td>

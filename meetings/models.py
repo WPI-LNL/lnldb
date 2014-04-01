@@ -28,6 +28,10 @@ class MeetingAnnounce(models.Model):
     added = models.DateTimeField(auto_now_add=True)
     uuid = UUIDField(auto=True,editable=False, null=True,blank=True)
     
+    @property
+    def reverse_ordered_events(self):
+        return self.events.order_by('datetime_start')
+    
     
 class TargetEmailList(models.Model):
     name = models.CharField(max_length=16)
@@ -55,3 +59,7 @@ class CCNoticeSend(models.Model):
     uuid = UUIDField(auto=True,editable=False, null=True,blank=True)
     
     addtl_message = models.TextField(null=True, blank=True, verbose_name="Additional Message")
+    
+    @property
+    def reverse_ordered_events(self):
+        return self.events.order_by('datetime_start')

@@ -16,10 +16,24 @@
             <td class="w960" width="960">
                 <div align="left" class="article-content">
                     
-                    <p align="left" class="article-title">Events</p>
-                    <table class="w960" width="940" >
                     
-                    {% for e in object.events.all %}
+                    <table class="w960" width="940" >
+                    {% if object.addtl_message %}
+                    <tr>
+                        <td colspan="5">
+                        <p align="left" class="article-title">Additional Information</p>
+                        {{ object.addtl_message|markdown }}
+                        
+                        </td>
+                    </tr>
+                    {% endif %}
+                    
+                    <tr>
+                        <td colspan="5">
+                            <p align="left" class="article-title">Events</p>
+                        </td>
+                    </tr>
+                    {% for e in object.reverse_ordered_events %}
                     <tr>
                         <td><strong>{{ e.event_name }}</strong></td>
                         <td>Starting : {{ e.datetime_start|localtime }}</td>
@@ -57,15 +71,7 @@
                     </tr>
                     {% endfor %}
                     <br />
-                    {% if object.addtl_message %}
-                    <tr>
-                        <td colspan="5">
-                        <p align="left" class="article-title">Additional Information</p>
-                        {{ object.addtl_message|markdown }}
-                        
-                        </td>
-                    </tr>
-                    {% endif %}
+                    
                     </table>
                 </div>
             </td>
