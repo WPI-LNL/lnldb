@@ -12,7 +12,7 @@ class OrgLookup(LookupChannel):
         return request.user.is_authenticated()
     
     def get_query(self,q,request):
-        return Organization.objects.filter(Q(name__icontains=q)).filter(archived=False)
+        return Organization.objects.filter(Q(name__icontains=q)|Q(shortname__icontains=q)).filter(archived=False)
     
     def get_result(self,obj):
         return obj.name
