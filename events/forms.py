@@ -209,9 +209,9 @@ class EventApprovalForm(forms.ModelForm):
             TabHolder(
                 Tab(
                     "Standard Fields",
-                    Field('description',label="Description (optional)",css_class="span6"),
+                    Field('description',label="Description (optional)",css_class="col-md-6"),
                     HTML('<p class="muted offset2">This will describe the event to your CCs</p>'),
-                    Field('internal_notes', label="Internal Notes", css_class="span6"),
+                    Field('internal_notes', label="Internal Notes", css_class="col-md-6"),
                     markdown_at_msgs,
                     Field('datetime_setup_complete',label="Setup Finish",css_class="dtp"),
                     Field('datetime_start',label="Event Start",css_class="dtp"),
@@ -223,13 +223,13 @@ class EventApprovalForm(forms.ModelForm):
                 Tab(
                     "Services",
                     Field('lighting'),
-                    Field('lighting_reqs',css_class="span8"),
+                    Field('lighting_reqs',css_class="col-md-8"),
                     Field('sound'),
-                    Field('sound_reqs',css_class="span8"),
+                    Field('sound_reqs',css_class="col-md-8"),
                     Field('projection'),
-                    Field('proj_reqs',css_class="span8"),
+                    Field('proj_reqs',css_class="col-md-8"),
                     Field('otherservices'),
-                    Field('otherservice_reqs',css_class="span8")
+                    Field('otherservice_reqs',css_class="col-md-8")
                     ),
             ),
             FormActions(
@@ -252,7 +252,7 @@ class EventDenialForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
-                Field('cancelled_reason',label="Reason For Cancellation (optional)",css_class="span6"),
+                Field('cancelled_reason',label="Reason For Cancellation (optional)",css_class="col-md-6"),
                 FormActions(
                     Submit('save', 'Deny Event'),
                 ),
@@ -295,8 +295,8 @@ class InternalEventForm(forms.ModelForm):
                     'Name And Location',
                     'event_name',
                     'location',
-                    Field('description', css_class="span6"),
-                    Field('internal_notes', css_class="span6"),
+                    Field('description', css_class="col-md-6"),
+                    Field('internal_notes', css_class="col-md-6"),
                     Field('billed_by_semester'),
                 ),
                 Tab(
@@ -311,11 +311,11 @@ class InternalEventForm(forms.ModelForm):
                         Div(Field('datetime_setup_complete',css_class='dtp',title="Setup Completed By"),css_class="padleft"),
                         ),
                     Div(
-                        HTML('<div class="pull-left pushdown"><br /><a class="btn btn-primary" href="#" id="samedate1" title="Cascade Dates"><i class="icon-resize-small icon-white"></i>&nbsp;<i class="icon-calendar icon-white"></i></a></div>'),
+                        HTML('<div class="pull-left pushdown"><br /><a class="btn btn-primary" href="#" id="samedate1" title="Cascade Dates"><i class="glyphicon glyphicon-resize-small icon-white"></i>&nbsp;<i class="glyphicon glyphicon-calendar icon-white"></i></a></div>'),
                         Div(Field('datetime_start',css_class='dtp'),css_class="padleft"),
                         ),
                     Div(
-                        HTML('<div class="pull-left pushdown"><br /><a class="btn btn-primary" href="#" id="samedate2" title="Cascade Dates"><i class="icon-resize-small icon-white"></i>&nbsp;<i class="icon-calendar icon-white"></i></a></div>'),
+                        HTML('<div class="pull-left pushdown"><br /><a class="btn btn-primary" href="#" id="samedate2" title="Cascade Dates"><i class="glyphicon glyphicon-resize-small icon-white"></i>&nbsp;<i class="glyphicon glyphicon-calendar icon-white"></i></a></div>'),
                         Div(Field('datetime_end',css_class='dtp'),css_class="padleft"),
                         ),
                 ),
@@ -369,11 +369,11 @@ class EventReviewForm(forms.ModelForm):
         self.helper.layout = Layout(
             HTML("<h5>If you'd like to override the billing org, please search for it below</h5>"),
             Field('billing_org'),
-            Field('internal_notes', css_class="span6", size="15"),
+            Field('internal_notes', css_class="col-md-6", size="15"),
             FormActions(
                 HTML('<h4> Does this look good to you?</h4>'),
-                Submit('save', 'Yes!', css_class='btn btn-large btn-danger'),
-                HTML('<a class="btn btn-large btn-success" href="{%% url "events.views.flow.viewevent" %s %%}"> No... </a>' % event.id ), 
+                Submit('save', 'Yes!', css_class='btn btn-lg btn-danger'),
+                HTML('<a class="btn btn-lg btn-success" href="{%% url "events.views.flow.viewevent" %s %%}"> No... </a>' % event.id ), 
             ),
         )
         super(EventReviewForm,self).__init__(*args,**kwargs)
@@ -394,7 +394,7 @@ class InternalReportForm(forms.ModelForm):
                 django_msgs,
                 Hidden('event',event.id),
                 Field('crew_chief'),
-                Field('report',css_class="span10"),
+                Field('report',css_class="col-md-10"),
                 markdown_at_msgs,
                 FormActions(
                     Submit('save', 'Save Changes'),
@@ -444,7 +444,7 @@ class OrgXFerForm(forms.ModelForm):
                 'new_user_in_charge',
                 Hidden('org',org.id),
                 Hidden('old_user_in_charge',user.id),
-                HTML('<p class="muted">This form will transfer ownership of this Organization to another user associated with the Organization. A confirmation E-Mail will be sent with a link to confirm the transfer.</p>'),
+                HTML('<p class="text-muted">This form will transfer ownership of this Organization to another user associated with the Organization. A confirmation E-Mail will be sent with a link to confirm the transfer.</p>'),
                 FormActions(
                     Submit('save', 'Submit Transfer'),
                 )
@@ -497,7 +497,7 @@ class BillingForm(forms.ModelForm):
         self.helper.layout = Layout(
                 django_msgs,
                 Hidden('event',event.id),
-                PrependedText('date_billed','<i class="icon-calendar"></i>',css_class="datepick"),
+                PrependedText('date_billed','<i class="glyphicon glyphicon-calendar"></i>',css_class="datepick"),
                 PrependedText('amount', '<strong>$</strong>'),
                 Field('opt_out_initial_email'),
                 Field('opt_out_update_email'),
@@ -523,7 +523,7 @@ class BillingUpdateForm(forms.ModelForm):
         self.helper.layout = Layout(
                 django_msgs,
                 Hidden('event',event.id),
-                PrependedText('date_paid','<i class="icon-calendar"></i>',css_class="datepick"),
+                PrependedText('date_paid','<i class="glyphicon glyphicon-calendar"></i>',css_class="datepick"),
                 PrependedText('amount', '<strong>$</strong>'),
                 Field('opt_out_update_email'),
                 FormActions(
@@ -550,7 +550,7 @@ class ReportForm(forms.ModelForm):
         self.helper.form_action = ""
         self.helper.layout = Layout(
                 django_msgs,
-                Field('report',css_class="span10"),
+                Field('report',css_class="col-md-10"),
                 markdown_at_msgs,
                 FormActions(
                     Submit('save', 'Save Changes'),
@@ -632,7 +632,7 @@ class CCIForm(forms.ModelForm):
     crew_chief = AutoCompleteSelectField('Members',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
     setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now()) 
     setup_location = GroupedModelChoiceField(
-            queryset = Location.objects.filter(setup_only=True),
+            queryset = Location.objects.filter(Q(setup_only=True)|Q(show_in_wo_form=True)),
             group_by_field = "building", 
             group_label = lambda group: group.name,
         )
@@ -705,13 +705,16 @@ class ContactForm(forms.Form):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
                 django_msgs,
                 
                 'name',
                 'email',
                 Field('phone',css_class="bfh-phone",data_format="(ddd) ddd dddd"),
-                HTML('<span class="muted">To avoid entering this information again, update your <a target="_blank" href="%s">contact information</a></span>' % reverse('my-lnl')),
+                HTML('<span class="text-muted">To avoid entering this information again, update your <a target="_blank" href="%s">contact information</a></span>' % reverse('my-lnl')),
         )
         super(ContactForm,self).__init__(*args,**kwargs)
     name = forms.CharField()
@@ -728,11 +731,14 @@ class OrgForm(forms.Form):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-8'
         # the org nl, is a special org that everyone has access to and is not listed.
         self.fields['group'].queryset = Organization.objects.filter(Q(user_in_charge=user)|Q(associated_users__in=[user.id])|Q(shortname="nl")).distinct()
         self.helper.layout = Layout(
                 'group',
-                HTML('<span class="muted">If the client account you are looking for does not show up in the list, please contact the person in charge of the account using <a target="_blank" href="%s">this link</a> and request authorization to submit workorder son their behalf. If you are attempting to create an client account which does not exist please click <a target="_blank" href="%s">this link</a></span>' % (reverse('my-orgs-incharge-list'),reverse('selfserivceorg'))),
+                HTML('<span class="text-muted">If the client account you are looking for does not show up in the list, please contact the person in charge of the account using <a target="_blank" href="%s">this link</a> and request authorization to submit workorder son their behalf. If you are attempting to create an client account which does not exist please click <a target="_blank" href="%s">this link</a></span>' % (reverse('my-orgs-incharge-list'),reverse('selfserivceorg'))),
         )
         #super(OrgForm,self).__init__(*args,**kwargs)
     group = forms.ModelChoiceField(queryset = Organization.objects.all(),label="Organization")
@@ -742,12 +748,17 @@ class OrgForm(forms.Form):
 class SelectForm(forms.Form):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
             Fieldset(
                 'Name and Location',
-                Field('eventname',css_class="span6"),
-                Field('location',css_class="span6"),
-                Field('general_description',css_class="span6"),
+                Field('eventname',css_class="col-md-6"),
+                Field('location',css_class="col-md-6"),
+                Field('general_description',css_class="col-md-6"),
             ),
             Fieldset(
                 'Services',
@@ -790,11 +801,14 @@ class SelectForm(forms.Form):
 class LightingForm(forms.Form):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
             Fieldset(
                 'Basics', ### title
                 InlineRadios('lighting',title="test"),
-                Field('requirements', css_class="span8"),
+                Field('requirements', css_class="col-md-8"),
                 ),
             Fieldset(
                 'Extras', ### title
@@ -826,11 +840,14 @@ class LightingForm(forms.Form):
 class SoundForm(forms.Form):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
             Fieldset(
                 'Basics', ### title
                 InlineRadios('sound'),
-                Field('requirements', css_class="span8"),
+                Field('requirements', css_class="col-md-8"),
                 ),
             Fieldset(
                 'Extras', ### title
@@ -857,11 +874,14 @@ class SoundForm(forms.Form):
 class ProjectionForm(forms.Form):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
             Fieldset(
                 'Basics', ### title
-                'projection',
-                Field('requirements', css_class="span8"),
+                InlineRadios('projection'),
+                Field('requirements', css_class="col-md-8"),
                 ),
             Fieldset(
                 'Extras', ### title
@@ -890,11 +910,14 @@ class ProjectionForm(forms.Form):
 class ServiceForm(forms.Form):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
             Fieldset(
                 'Basics', ### title
                 'services',
-                Field('otherservice_reqs', css_class="span8"),
+                Field('otherservice_reqs', css_class="col-md-8"),
                 ),
 
         )
@@ -912,12 +935,15 @@ class ServiceForm(forms.Form):
 class ScheduleForm(forms.Form):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-5'
         self.helper.layout = Layout(
             Fieldset(
                 'Setup', ### title
                 #Field('setup_start',css_class="dtp"),
                 Div(
-                    HTML('<div class="pull-left"><a class="btn btn-mini btn-primary" href="#" id="samedate"><i class="icon-arrow-down icon-white"></i>&nbsp;<i class="icon-calendar icon-white"></i></a></div>'),
+                    HTML('<div class="pull-left"><a class="btn btn-xs btn-primary" href="#" id="samedate"><i class="glyphicon glyphicon-arrow-down icon-white"></i>&nbsp;<i class="glyphicon glyphicon-calendar icon-white" title="Cascade"></i></a></div>'),
                     Field('setup_complete',css_class="dtp"),
                     
                     ),

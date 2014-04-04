@@ -54,7 +54,7 @@ class OTAdmin(admin.ModelAdmin):
     list_display = ('org','old_user_in_charge','new_user_in_charge','created','expiry','completed_on','completed','is_expired','uuid')
 
 class LocAdmin(admin.ModelAdmin):
-    list_filter = ('show_in_wo_form','building')
+    list_filter = ('show_in_wo_form','building','setup_only')
     actions = [enable_show_in_wo_form,disable_show_in_wo_form,enable_setup_only,disable_setup_only]
 
 admin.site.register(Billing)
