@@ -217,7 +217,7 @@ def bulk_projection(request):
                         # only populate db entries if the name has been filled
                         if name:
                             # first lets hammer out some details
-                            name = "TESTINGNAME.%s" % name #REMOVE ME LATER
+
                             kwargs['event_name'] = name
                             # get stuff from our bulk create form...
                             contact = formbulk.cleaned_data.get('contact')
@@ -230,7 +230,7 @@ def bulk_projection(request):
                             kwargs['submitted_by'] = request.user
                             kwargs['submitted_ip'] = request.META['REMOTE_ADDR']
                             
-                            l = Location.objects.filter(name__icontains="Booth-Fuller")[0] # change to settings later
+                            l = Location.objects.filter(name__icontains="Perreault Hall U")[0] # change to settings later (the u is for upper)
                             kwargs['location'] = l
                             # matinee determines the time
                             if matinee:
@@ -256,6 +256,7 @@ def bulk_projection(request):
                             # we'll assume its a digital projection "dp" event at this point
                             s = ProjService.objects.get(shortname="dp")
                             kwargs['projection'] = s
+                            kwargs['billed_by_semester'] = True
                             #return HttpResponse(kwargs.values())
                             
                             #here's where this kwargs assignment pays off.
