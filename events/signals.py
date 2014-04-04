@@ -9,19 +9,26 @@ from emails.generators import DefaultLNLEmailGenerator as DLEG
 from events.models import Billing
 from events.models import EventCCInstance
 
-
+from pdfs.views import generate_pdfs_standalone
 @receiver(post_save, sender = EventCCInstance)
 def email_cc_notification(sender, instance, created, **kwargs):
     """ Sends an email to a crew cheif to notify them of being made one """
     if created:
         i = instance
+        
+        # generate our pdf
+        event = i.event
+        pdf_handle = generate_pdfs_standalone([event.id])
+        filename = "%s.workorder.pdf" % event.id
+        attachments = [{"file_handle":pdf_handle, "name": filename}]
+        
         local = timezone.localtime(i.setup_start)
         local_formatted = local.strftime("%A %B %d at %I:%M %p")
         email_body = """
             You\'ve been added as a crew chief to the event "%s". <br / >
             You have signed up to be crew chief for %s, with your setup starting on %s in the %s
             """ % (i.event.event_name, i.service, local_formatted, i.setup_location, )
-        e = DLEG(subject = "Crew Chief Add Notification", to_emails = [instance.crew_chief.email], body=email_body)
+        e = DLEG(subject = "Crew Chief Add Notification", to_emails = [instance.crew_chief.email], body=email_body, attachments=attachments)
         e.send()
         
 

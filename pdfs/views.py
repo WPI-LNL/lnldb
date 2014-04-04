@@ -85,7 +85,26 @@ def generate_event_pdf(request, id):
     file.close()            # Don't forget to close the file handle
     return HttpResponse(pdf, mimetype='application/pdf')
 
-
+def generate_pdfs_standalone(ids=[]):
+    # returns a standalone pdf, for sending via email
+    timezone.activate(timezone.get_current_timezone())
+    
+    data = {}
+    events = Event.objects.filter(pk__in=ids)
+    data['events'] = events
+    
+    template = get_template('pdf_templates/events.html')
+    html  = template.render(Context(data))
+    
+    file = open(os.path.join(settings.MEDIA_ROOT, 'event-multi.pdf'), "w+b")
+    pisaStatus = pisa.CreatePDF(html, dest=file, link_callback = link_callback)
+    
+    file.seek(0)
+    pdf = file.read()
+    file.close()
+    
+    return pdf
+    
 def generate_event_pdf_multi(request, ids=None):
     #this shoud fix UTC showing up in PDFs
     timezone.activate(timezone.get_current_timezone())

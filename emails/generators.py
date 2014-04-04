@@ -163,6 +163,7 @@ class DefaultLNLEmailGenerator(object): # yay classes
                 body = None,
                 bcc = [],
                 cc = [],
+                attachments = [],
                 ):
         context['subject'] = subject
         if body:
@@ -172,7 +173,9 @@ class DefaultLNLEmailGenerator(object): # yay classes
         content_txt = render_to_string(template_txt, context)
         print bcc
         self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=bcc)
-        
+        for a in attachments:
+            self.email.attach(a['name'], a['file_handle'], "application/pdf")
+            
         if build_html:
             template_html = "%s.html" % template_basename
             content_html = render_to_string(template_html, context)
