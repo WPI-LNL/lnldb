@@ -109,6 +109,8 @@ class EventWizard(NamedUrlSessionWizardView):
         if self.steps.current == 'projection':
             context.update({'help_objs': Projection.objects.all() })
             context.update({'help_name': "Projection"})
+        percent = int(self.steps.step1 / float(self.steps.count) * 100)
+        context.update({"percentage":percent})
         return context
     def get_template_names(self):
         return [named_event_tmpls[self.steps.current]]

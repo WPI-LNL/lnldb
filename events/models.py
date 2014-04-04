@@ -57,6 +57,7 @@ class EventManager(models.Manager):
         contact_email = contact_fields['email']
         contact_phone = contact_fields['phone']
         person_name = contact_fields['name']
+        person_name_first, person_name_last = person_name.split(' ',1)
         
         #group stuff
         group = org_fields['group']
@@ -112,6 +113,16 @@ class EventManager(models.Manager):
                 otherservices_l = details.pop('services')
                 otherdescription = details.pop('otherservice_reqs')
         
+        
+        # update contact
+        u = wiz.request.user
+        u.email=contact_email
+        u.first_name = person_name_first
+        u.last_name = person_name_last
+        u.save()
+        u.profile.phone = contact_phone
+        u.profile.save()
+                 
         #scheduling
         
         #setup_start = event_schedule['setup_start']
@@ -425,13 +436,13 @@ class Event(models.Model):
     def allservices(self):
         foo = []
         if self.lighting:
-            foo.append({"i":"icon-fire","title":"lighting"})
+            foo.append({"i":"glyphicon glyphicon-fire","title":"lighting"})
         if self.sound:
-            foo.append({"i":"icon-volume-up","title":"sound"})
+            foo.append({"i":"glyphicon glyphicon-volume-up","title":"sound"})
         if self.projection:
-            foo.append({"i":"icon-film","title":"projection"})
+            foo.append({"i":"glyphicon glyphicon-film","title":"projection"})
         if self.otherservices:
-            foo.append({"i":"icon-tasks","title":"other services"})
+            foo.append({"i":"glyphicon glyphicon-tasks","title":"other services"})
         return foo
     
     @property
