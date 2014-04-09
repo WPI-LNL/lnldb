@@ -197,7 +197,7 @@ class Location(models.Model):
     name = models.CharField(max_length=64)
     # booleans
     setup_only = models.BooleanField(default=False)
-    show_in_wo_form = models.BooleanField(default=True,verbose_name="Active Location")
+    show_in_wo_form = models.BooleanField(default=True,verbose_name="Event Location")
     available_for_meetings = models.BooleanField(default=False)
     
     #
@@ -765,6 +765,9 @@ class EventCCInstance(models.Model):
     service = models.ForeignKey(Service,related_name = "ccinstances")
     setup_location = models.ForeignKey(Location, related_name="ccinstances")
     setup_start = models.DateTimeField(null=True,blank=True)
+    
+    class Meta:
+        ordering = ("-event__datetime_start",)
 
 # for riders, etc
 def attachment_file_name(instance, filename):
