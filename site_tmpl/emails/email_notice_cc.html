@@ -37,7 +37,7 @@
                     <tr>
                         <td><strong>{{ e.event_name }}</strong></td>
                         <td>Starting : {{ e.datetime_start|localtime }}</td>
-                        <td colspan="2">Setup Completed: {{ e.datetime_setup_complete|localtime|time:"TIME_FORMAT" }}</td>
+                        <td colspan="2">Setup By: {{ e.datetime_setup_complete|localtime|time:"TIME_FORMAT" }}</td>
                         <td>{{ e.location }}</td>
                     </tr>
                     <tr>
