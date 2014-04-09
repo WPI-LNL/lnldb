@@ -85,23 +85,30 @@ def upcoming(request,start=None,end=None):
     context = RequestContext(request)
     if not start and not end:
         today = datetime.date.today()
-        start = today.strftime('%Y-%m-%d')
+        start = today - datetime.timedelta(days=1)
+        start = start.strftime('%Y-%m-%d')
+        end = today + datetime.timedelta(days=8)
+        end = end.strftime('%Y-%m-%d')
         
-        wd = today.weekday()
-        if wd == 2: # if today is weds
-            end = today + datetime.timedelta(days=7)
-            end = end.strftime('%Y-%m-%d')
-        elif wd < 2:
-            delta = 2 - wd + 1
-            end = today + datetime.timedelta(days=delta)
-            end = end.strftime('%Y-%m-%d')
-        else:
-            # fex
-            # thurs == 3
-            # 7 - 3 + 2 = 6 days = weds
-            delta = 7 - wd + 2 
-            end = today + datetime.timedelta(days=delta)
-            end = end.strftime('%Y-%m-%d')
+        # KEEPING THIS JUST IN CASE
+        #today = datetime.date.today()
+        #start = today.strftime('%Y-%m-%d')
+        
+        #wd = today.weekday()
+        #if wd == 2: # if today is weds
+            #end = today + datetime.timedelta(days=7)
+            #end = end.strftime('%Y-%m-%d')
+        #elif wd < 2:
+            #delta = 2 - wd + 1
+            #end = today + datetime.timedelta(days=delta)
+            #end = end.strftime('%Y-%m-%d')
+        #else:
+            ## fex
+            ## thurs == 3
+            ## 7 - 3 + 2 = 6 days = weds
+            #delta = 7 - wd + 2 
+            #end = today + datetime.timedelta(days=delta)
+            #end = end.strftime('%Y-%m-%d')
     
     #events = Event.objects.filter(approved=True).filter(closed=False).filter(paid=False).filter(datetime_start__gte=today)
     events = Event.objects.filter(approved=True).exclude(Q(closed=True)|Q(cancelled=True))#.filter(paid=False)
