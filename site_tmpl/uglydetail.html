@@ -3,52 +3,52 @@
 {% load at_event_linking %}
 {% load markdown_deux_tags %}
 {% block content %}
-    <div class="row-fluid">
-        <div class="span3">
+    <div class="row">
+        <div class="col-md-3">
             <h1> {{event }}:</h1>
         </div>
-        <div class="span2">
+        <div class="col-md-2">
             <h3>Status: {{ event.status }}</h3>
         </div>
-        <div class="span3">
+        <div class="col-md-3">
             <h3>Client{% if event.org.count > 1 %}s{% endif %}: {% for org in event.org.all %}<a href="{% url "admin-orgdetail" org.id %}">{{ org.retname }}</a> &nbsp;{% endfor %}</h3>
         </div>
-        <div class="span4">
+        <div class="col-md-4">
             <h3>Actions:
             {% if event.cancelled or event.closed %}
-            <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
+            <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
             
             {% elif event.paid and not event.closed %} 
             <div class="btn-group">
-                <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
-                <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
+                <a class="btn btn-default btn-lg" href="#closeModal" role="button" data-toggle="modal">Close</a>
+                <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
             </div>
             
             {% elif not event.reviewed and event.approved %}
             <div class="btn-group">
-                <a class="btn btn-success btn-large" href="{% url "events.views.flow.review" event.id %}">Review For Billing</a>
-                <a class="btn btn-warning btn-large" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
-                <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
-                <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
+                <a class="btn btn-success btn-lg" href="{% url "events.views.flow.review" event.id %}">Review For Billing</a>
+                <a class="btn btn-warning btn-lg" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
+                <a class="btn btn-default btn-lg" href="#closeModal" role="button" data-toggle="modal">Close</a>
+                <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
             </div>
             {% elif event.approved and not event.paid and not event.closed and event.reviewed %}
             <div class="btn-group">
-                <a class="btn btn-primary btn-large" href="{% url "event-mkbilling" event.id %}">Create Bill</a>
-                <a class="btn btn-warning btn-large" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
-                <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
-                <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
+                <a class="btn btn-primary btn-lg" href="{% url "event-mkbilling" event.id %}">Create Bill</a>
+                <a class="btn btn-warning btn-lg" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
+                <a class="btn btn-default btn-lg" href="#closeModal" role="button" data-toggle="modal">Close</a>
+                <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
             </div>
 
             {% elif not event.approved and not event.closed or not event.cancelled and not event.closed %}
             <div class="btn-group">
-                <a class="btn btn-success btn-large" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
-                <a class="btn btn-danger btn-large" href="{% url "events.views.flow.denial" event.id %}">Cancel</a>
-                <a class="btn btn-warning btn-large" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
+                <a class="btn btn-success btn-lg" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
+                <a class="btn btn-danger btn-lg" href="{% url "events.views.flow.denial" event.id %}">Cancel</a>
+                <a class="btn btn-warning btn-lg" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
             </div>
 
             {% else %}
-            <a class="btn btn-info btn-large" href="{% url "events-pdf" event.id %}">PDF</a>
-            <a class="btn btn-inverse btn-large" href="#closeModal" role="button" data-toggle="modal">Close</a>
+            <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
+            <a class="btn btn-default btn-lg" href="#closeModal" role="button" data-toggle="modal">Close</a>
             {% endif %}
             </h3>
 
@@ -62,7 +62,7 @@
                     <p>Once this event is closed it's closed.</p>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+                    <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Cancel</button>
                     <a class="btn btn-primary" href="{% url "event-close" event.id %}">Yes I'm Sure</a>
                 </div>
             </div>
@@ -70,8 +70,8 @@
             
         </div>
     </div>
-    <div class="row-fluid">
-        <div class="span12">
+    <div class="row">
+        <div class="col-md-12">
             <ul class="nav nav-tabs">
                 <li class="active"><a href="#home" data-toggle="tab">Detail</a></li>
                 <li><a href="#schedule" data-toggle="tab">Schedule</a></li>
@@ -186,7 +186,7 @@
                     </table>
                 </div>
                 <div id="services" class="tab-pane">
-                    <div class="pull-right"><a class="btn btn-large" href="{% url "eventextras" event.id %}">Modify Extras</a></div>
+                    <div class="pull-right"><a class="btn btn-lg" href="{% url "eventextras" event.id %}">Modify Extras</a></div>
                     {% if event.lighting %}
                         <h2>Lighting Services ({{ event.lighting }})</h2>
                         <h3>Requirements:</h3>
@@ -248,7 +248,7 @@
                     
                 </div>
                 <div id="crew" class="tab-pane">
-                    <a class="btn btn-large pull-right" href="{% url "events.views.flow.assigncc" event.id %}">Modify</a>
+                    <a class="btn btn-lg pull-right" href="{% url "events.views.flow.assigncc" event.id %}">Modify</a>
                     <h2> Crew Chief(s) </h2>
                     <table class="table">
                         <tr>
@@ -274,7 +274,7 @@
                         {% endfor %}
                     </table>
                     {% comment %}
-                    <a class="btn btn-large pull-right" href="{% url "events.views.flow.assigncrew" event.id %}">Modify</a>
+                    <a class="btn btn-lg pull-right" href="{% url "events.views.flow.assigncrew" event.id %}">Modify</a>
                     <h2> Crew </h2>
                     <ul>
                         {% for c in event.crew.all %}
@@ -287,13 +287,13 @@
                 <div id="reports" class="tab-pane">
                     {% if not event.closed or not event.cancelled %}
                         <div class="pull-right">
-                            <a class="btn btn-large" href="{% url "event-mkccr" event.id%}">New</a>
+                            <a class="btn btn-lg" href="{% url "event-mkccr" event.id%}">New</a>
                         </div>
                     {% endif %}
                     <h2>Reports</h2>
                     {% for report in event.ccreport_set.all %}
                         <h4>Report by {{report.crew_chief }}</h4> 
-                        <em class="muted pull-right">
+                        <em class="text-muted pull-right">
                             Posted on {{ report.created_on }} <br />
                             {% if report.created_on != report.updated_on %}
                                 Last Updated: {{ report.updated_on }}
@@ -321,7 +321,7 @@
                         {% endfor %}
                         </ul>
                     {% endif %}
-                    <div class="pull-right"><a class="btn btn-large" href="{% url "admin-cchours-bulk" event.id %}">Edit</a></div>
+                    <div class="pull-right"><a class="btn btn-lg" href="{% url "admin-cchours-bulk" event.id %}">Edit</a></div>
                     <h2> Hours </h2>
                     <table class="table">
                         <thead>
@@ -340,8 +340,8 @@
                 </div>
                 <div id="billing" class="tab-pane">
                     <div class="pull-right btngroup">
-                        <a class="btn btn-large" href="{% url "eventextras" event.id %}">Modify Extras</a>
-                        <a class="btn btn-large" href="{% url "eventoneoff" event.id %}">Add OneOff Charges</a>
+                        <a class="btn btn-lg" href="{% url "eventextras" event.id %}">Modify Extras</a>
+                        <a class="btn btn-lg" href="{% url "eventoneoff" event.id %}">Add OneOff Charges</a>
                     </div>
                     <h2>Price Breakdown</h2>
                     <style> .tdra { text-align: right; }</style>
@@ -483,7 +483,7 @@
                             <td>{{ a.note }}</td>
                             <td>{{ a.attachment.name }}</td>
                             <td>{{ a.externally_uploaded }} </td>
-                            <td><a class="btn" href="{{ a.attachment.url }}">Link</a></td>
+                            <td><a class="btn btn-default" href="{{ a.attachment.url }}">Link</a></td>
                         </tr>
                         
                         
