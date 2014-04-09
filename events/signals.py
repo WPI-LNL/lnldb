@@ -8,6 +8,7 @@ from django.utils import timezone
 from emails.generators import DefaultLNLEmailGenerator as DLEG
 from events.models import Billing
 from events.models import EventCCInstance
+from django.utils.text import slugify
 
 from pdfs.views import generate_pdfs_standalone
 @receiver(post_save, sender = EventCCInstance)
@@ -19,7 +20,7 @@ def email_cc_notification(sender, instance, created, **kwargs):
         # generate our pdf
         event = i.event
         pdf_handle = generate_pdfs_standalone([event.id])
-        filename = "%s.workorder.pdf" % event.id
+        filename = "%s.workorder.pdf" % slugify(event.name)
         attachments = [{"file_handle":pdf_handle, "name": filename}]
         
         local = timezone.localtime(i.setup_start)
