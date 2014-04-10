@@ -236,6 +236,19 @@ DEALER_TYPE = 'git'
 DEALER_PATH = '/home/lnldb/lnldb/'
 DEALER_BACKENDS = ('git')
 
+# crispy_forms
+CRISPY_TEMPLATE_PACK = 'bootstrap3'
+
+#markdown deux configuration
+MARKDOWN_DEUX_STYLES = {
+    "default": {
+        "extras": {
+            "code-friendly": None,
+        },
+        "safe_mode": False,
+    },
+}
+
 # Local Settings Imports
 try:
     local_settings_file = open(here('local_settings.py'), 'r')

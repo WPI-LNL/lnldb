@@ -27,7 +27,9 @@ def email_cc_notification(sender, instance, created, **kwargs):
         local_formatted = local.strftime("%A %B %d at %I:%M %p")
         email_body = """
             You\'ve been added as a crew chief to the event "%s". <br / >
-            You have signed up to be crew chief for %s, with your setup starting on %s in the %s
+            You have signed up to be crew chief for %s, with your setup starting on %s in the %s <br />
+            <br />
+            Please note that the attached Workorder PDF contains all services relating to the event, not just your assigned service.
             """ % (i.event.event_name, i.service, local_formatted, i.setup_location, )
         e = DLEG(subject = "Crew Chief Add Notification", to_emails = [instance.crew_chief.email], body=email_body, attachments=attachments)
         e.send()
