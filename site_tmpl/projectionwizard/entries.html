@@ -6,7 +6,7 @@
     <script type="text/javascript">
         $(document).ready(function () {
             
-            $('.radio').addClass("btn btn-warning btn-large");
+            $('.radio').addClass("btn btn-warning btn-lg");
             $('.radio input').hide();
             $('.radio').button();
             $('input:checked').parent().button('toggle');
@@ -48,9 +48,9 @@
         <tr class="warning">
             aaa
             <td>{% for e in form.non_field_errors %} {{ e }}  {% endfor %}
-            {% for e in form.date.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
-            <td>{% for e in form.name.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
-            <td>{% for e in form.matinee.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+            {% for e in form.date.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+            <td>{% for e in form.name.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+            <td>{% for e in form.matinee.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
         </tr>
         {% endif %}
         <tr>

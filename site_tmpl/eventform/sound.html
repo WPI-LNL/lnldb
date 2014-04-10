@@ -4,16 +4,18 @@
     <script type="text/javascript">
         $(document).ready(function () {
             
-            $('.radio').addClass("btn btn-warning btn-large");
-            $('.radio input').hide()
-            $('.radio').button();
+            $('.radio-inline').addClass("btn btn-warning btn-lg");
+            $('.radio-inline input').hide();
+            $('.radio-inline').button();
             $('input:checked').parent().button('toggle');
-            $('.radio').parent().attr("data-toggle","buttons-radio")
+            $('.radio').parent().attr("data-toggle","buttons").parent().addClass('btn-group')
             $('.radio').parent().mousedown(function () {
                 $(this).button('toggle');
-                $(this).siblings().button('reset');
+                $(this).siblings().removeClass('active');
                 });
+            // checkboxes
             $('.checkboxinput').addClass('btn');
+            // set this before the extras selector
             var id_string = "#div_id_sound-";
             {% include 'js_extras_select.tmpl' %}
             });

@@ -5,11 +5,11 @@
     <script type="text/javascript">
         $(document).ready(function () {
             
-            $('.checkbox').addClass("btn btn-warning btn-large");
-            $('.checkbox input ').hide()
-            $('.checkbox').parent().button();
+            $('.checkbox-inline').addClass("btn btn-warning btn-lg");
+            $('.checkbox-inline input ').hide()
+            $('.checkbox-inline').parent().button();
             $('input:checked').parent().button('toggle');
-            $('.checkbox').mousedown(function () {
+            $('.checkbox-inline').mousedown(function () {
                 $(this).button('toggle');
                 });
             });

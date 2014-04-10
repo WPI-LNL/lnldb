@@ -1,24 +1,25 @@
 // for on load
-$(".extra_fs .control-group").each(function() {
-        $(this).addClass("muted");
+$(".extra_fs .form-group").each(function() {
+        $(this).addClass("text-muted");
     });
 
-$(".inline").change(function(){
-    var service_id = $(this).children("input:radio").val();
+$(".radio").change(function(){
+//     var service_id = $(this).children("input:radio").val();
+    var service_id = $(this).val();
     var service_str = ".s_" + service_id;
     console.log(service_str);
     
     // clear selections
-    $(".extra_fs .control-group").each(function() {
-        $(this).removeClass("success");
-        $(this).addClass("muted");
+    $(".extra_fs .form-group").each(function() {
+        $(this).removeClass("has-success has-feedback");
+        $(this).addClass("text-muted");
     });
     // update selections
     $(service_str).each(function() {
         target_id = id_string + $(this).attr('id');
         console.log(target_id);
-        $(target_id).addClass("success");
-        $(target_id).removeClass("muted");
+        $(target_id).addClass("has-success has-feedback");
+        $(target_id).removeClass("text-muted");
     });
     //.attr('id');
     //console.log(x);

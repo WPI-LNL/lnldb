@@ -9,31 +9,36 @@
         <meta name="description" content="">
         <meta name="author" content="">
         
-        <link href="{{ STATIC_URL }}css/bootstrap.css" rel="stylesheet">
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
         <link href="{{ STATIC_URL }}css/datepicker.css" rel="stylesheet"  type="text/css">
-        <link href="{{ STATIC_URL }}css/timepicker.css" rel="stylesheet"  type="text/css">
+        <link href="{{ STATIC_URL }}css/bootstrap-timepicker.min.css" rel="stylesheet"  type="text/css">
+        
+<!--         <link href="{{ STATIC_URL }}css/bootstrap-responsive.css" rel="stylesheet"> -->
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+        <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+        <script src="{{ STATIC_URL }}js/bootstrap-datepicker.js"></script>
+        <script src="{{ STATIC_URL }}js/bootstrap-timepicker.min.js"></script>
+        
+        <script src="{{ STATIC_URL }}ajax_select/js/ajax_select.js"></script>
+        <link href='{{ STATIC_URL }}ajax_select/css/ajax_select.css' rel="stylesheet" type="text/css">
+        <link href="{{ STATIC_URL }}css/jquery-ui.css" rel="stylesheet">
+<!--         <link href="{{ STATIC_URL }}css/style.css" rel="stylesheet"> -->
         <style type="text/css">
         body {
             padding-top: 60px;
             padding-bottom: 40px;
         }
-        .sidebar-nav {
+        .navbar-collapse.in {
+            overflow-y: visible;
+        }
+        /*.sidebar-nav {
             padding: 9px 0;
         }
         .dropdown-backdrop {
         position: static;
-        }
+        }*/
         </style>
-        <link href="{{ STATIC_URL }}css/bootstrap-responsive.css" rel="stylesheet">
-        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-        <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
-        <script src="{{ STATIC_URL }}js/bootstrap.js"></script>
-        <script src="{{ STATIC_URL }}js/bootstrap-datepicker.js"></script>
-        <script src="{{ STATIC_URL }}js/bootstrap-timepicker.js"></script>
-        
-        <script src="{{ STATIC_URL }}ajax_select/js/ajax_select.js"></script>
-        <link href='{{ STATIC_URL }}ajax_select/css/ajax_select.css' rel="stylesheet" type="text/css">
-        <link href="{{ STATIC_URL }}css/jquery-ui.css" rel="stylesheet">
         {% block overrides %}
         {% endblock %}
 
@@ -69,18 +74,18 @@
       <div class="navbar-inner">
         <div class="container-fluid">
           <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
+            <span class="glyphicon glyphicon-bar"></span>
+            <span class="glyphicon glyphicon-bar"></span>
+            <span class="glyphicon glyphicon-bar"></span>
           </a>
           <p class="navbar-text pull-right">
                 {% if user.is_authenticated %}
-                Logged in as <a href="#" class="navbar-link">{{ user }}</a> &middot; <a href="/local/logout">Log Out</a>
+                Logged in as <a href="/my/" class="navbar-link">{{ user }}</a> &middot; <a href="/local/logout">Log Out</a>
                 {% else %}
                 <a href="/local/login"> Log In </a>
                 {% endif %}
             </p>
-          <a class="brand" href="{% url "events.views.indices.index" %}">Lens and Lights Database</a>
+          <a class="navbar-brand" href="{% url "events.views.indices.index" %}">Lens and Lights Database</a>
         
         </div>
       </div>
@@ -96,8 +101,10 @@
             </div>
             {% endfor %}
         {% endif %}
-      {% block content %}
-      {% endblock %}
+        <div class="container-fluid">
+        {% block content %}
+        {% endblock %}
+        </div>
 
       <footer>
         <p>&copy; WPI Lens and Lights &middot; <a href="/list">Want to get involved?</a>

@@ -11,24 +11,24 @@
 }
 </style>
 <div class="container marketing" style="text-align:center;">
-    <div class="row row-fluid">
-        <div class="span5 offset1">
+    <div class="row">
+        <div class="col-md-5 offset1">
             <h2> Login via WPI CAS </h2>
             <p class="lead"> If you are currently part of the WPI Community, Please login to the application via CAS, otherwise log in with the form on the right</p>
 <!--             <div id="spacer">&nbsp;</div> -->
-            <a class="btn btn-large btn-block btn-primary" href="{% url "django_cas.views.login" %}"> CAS Login</a>
+            <a class="btn btn-lg btn-block btn-primary" href="{% url "django_cas.views.login" %}"> CAS Login</a>
         </div>
-        <div class="span5">
+        <div class="col-md-5">
             <h2> Login </h2>
             <form class="form-horizontal" method="post" action="{% url "django.contrib.auth.views.login" %}">
             {% csrf_token %}
-            <div class="control-group">
+            <div class="form-group">
                 <label class="control-label" for="username">{{form.username.label_tag}}</label>
                 <div class="controls">
                                 {{ form.username }}
                 </div>
             </div>
-            <div class="control-group">
+            <div class="form-group">
                 <label class="control-label" for="password">{{form.password.label_tag}}</label>
                 <div class="controls">
                                 {{ form.password }}
@@ -36,14 +36,14 @@
             </div>
             <input type="hidden" name="next" value="{{next}}">
             <div class="footer">
-                <button type="submit" name="re_event" class="btn btn-large btn-block btn-info">Sign In</button>
+                <button type="submit" name="re_event" class="btn btn-lg btn-block btn-info">Sign In</button>
             </div>
             <p class="muted text-muted"><a href="{% url "django.contrib.auth.views.password_reset" %}"> Forgot your password? </a></p>
             </form>
         </div>
         
         {% comment %}
-        <div class="span5">
+        <div class="col-md-5">
             <h2> LNLDB </h2>
             <p class="lead"> Authentication has changed, LNL is no longer using WPI's Central Authentication System. If you haven't already use the below link to set your password. </p>
             <a href="{% url "django.contrib.auth.views.password_reset" %}"> Reset your password </a>

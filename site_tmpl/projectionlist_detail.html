@@ -2,9 +2,9 @@
 {% extends 'base_admin.html' %}
 {% block content %}
 <div class="pull-right">
-    <a class="btn btn-warning btn-large" href="{% url "projection-list" %}"><i class="icon-th-large icon-white"></i>&nbsp;Standard List</a>
-    <a class="btn btn-info btn-large" href="{% url "projection-bulk-update" %}"><i class="icon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
-    <a class="btn btn-info btn-large" href="{% url "events-pdf-multi" %}"><i class="icon-print icon-white"></i>PDF</a>
+    <a class="btn btn-warning btn-lg" href="{% url "projection-list" %}"><i class="glyphicon glyphicon-th-large icon-white"></i>&nbsp;Standard List</a>
+    <a class="btn btn-info btn-lg" href="{% url "projection-bulk-update" %}"><i class="glyphicon glyphicon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
+    <a class="btn btn-info btn-lg" href="{% url "events-pdf-multi" %}"><i class="glyphicon glyphicon-print icon-white"></i>PDF</a>
 </div>
 <h2> {{ h2 }} </h2>
 <h3> Projectionists In Training </h3>
@@ -77,6 +77,6 @@
     </li>
 {% endfor %}
 </ul>
-<a class="btn btn-large btn-primary" href="{% url "projection-create" %}">Create</a>
+<a class="btn btn-lg btn-primary" href="{% url "projection-create" %}">Create</a>
 
 {% endblock %}

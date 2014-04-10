@@ -6,18 +6,18 @@
 {% block content %}
 <h1>{{ h2 }}</h1>
 
-<div class="row-fluid">
-    <div class="span4">
+<div class="row">
+    <div class="col-md-4">
         <h2><em>"{{ event.event_name }}"</em></h2>
     </div>
-    <div class="span4">
+    <div class="col-md-4">
         <h2>
             Contact: {% if event.contact %}<a href="{% url "memberdetail" event.contact.id %}">{{ event.contact.get_full_name }}</a>{% else %}No Contact Set {% endif %}
             <br/>
-            Client(s) {% for org in event.org.all %}<span class="muted"><a href="{% url "admin-orgdetail" org.id %}">{{ org.retname }} </a>Last Verified: {% if org.verifications.exists %} {{ org.verifications.latest.date }} {% else %} Never {% endif %}</span>{% endfor %}
+            Client(s) {% for org in event.org.all %}<span class="text-muted"><a href="{% url "admin-orgdetail" org.id %}">{{ org.retname }} </a>Last Verified: {% if org.verifications.exists %} {{ org.verifications.latest.date }} {% else %} Never {% endif %}</span>{% endfor %}
         </h2>
     </div>
-    <div class="span4">
+    <div class="col-md-4">
         <h3>
             Started: {{ event.datetime_start }} <br />
             Ended: {{ event.datetime_end }}
@@ -25,12 +25,12 @@
     </div>
 </div>
 <hr>
-<div class="row-fluid">
-    <div class="span6">
+<div class="row">
+    <div class="col-md-6">
         <h3> Reports </h3> 
         {% for report in event.ccreport_set.all %}
             <h4>Report by {{report.crew_chief }}</h4> 
-            <em class="muted pull-right">
+            <em class="text-muted pull-right">
                 Posted on {{ report.created_on }} <br />
                 {% if report.created_on != report.updated_on %}
                     Last Updated: {{ report.updated_on }}
@@ -47,7 +47,7 @@
         {{ crew.crew_chief.get_full_name }} -email remind button-
         {% endfor %}
     </div>
-    <div class="span6">
+    <div class="col-md-6">
         <h3> Hours </h3>
         <table class="table">
             <thead>
@@ -64,8 +64,8 @@
     </div>
 </div>
 <hr>
-<div class="row-fluid">
-    <div class="span12">
+<div class="row">
+    <div class="col-md-12">
         <h2>Price Breakdown</h2>
             <style> .tdra { text-align: right; }</style>
             <table class="table table-condensed">

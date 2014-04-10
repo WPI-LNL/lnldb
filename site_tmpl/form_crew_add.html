@@ -4,15 +4,15 @@
     {% include "admin.nav.html" %}
 {% endblock %}
 {% block content %}
-    <div class="row-fluid">
-        <div class="span12">
+    <div class="row">
+        <div class="col-md-12">
                 <h2> {{msg }} for "<em>{{ event.event_name }}</em>"</h2>
                 <h4>Current Crew </h4>
                 <table class="table">
                     {% for crew in event.crew.all %}
                     
                     <tr>
-                        <td> <a href="{% url "events.views.flow.rmcrew" event.id crew.id %}"><i class="icon-remove"></i></a>
+                        <td> <a href="{% url "events.views.flow.rmcrew" event.id crew.id %}"><i class="glyphicon glyphicon-remove"></i></a>
                         <td> {{ crew.first_name }} {{crew.last_name}} </td>
                         
                     </tr>

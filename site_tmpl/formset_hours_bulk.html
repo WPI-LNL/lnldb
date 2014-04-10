@@ -2,8 +2,8 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
-    <div class="row-fluid">
-        <div class="span12">
+    <div class="row">
+        <div class="col-md-12">
                 <h2> {{msg }} Crew Chiefs for "{{ event }}"</h2>
                 <form method="post" action="" class="form-inline" enctype="multipart/form-data">
                 {% csrf_token %}
@@ -21,10 +21,10 @@
                         <td>{% for e in form.non_field_errors %}
                         {{ e }}
                         {% endfor %}
-                        {% for e in form.user.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.hours.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.service.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.DELETE.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        {% for e in form.user.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.hours.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.service.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.DELETE.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                     </tr>
                     {% endif %}
                     <tr>

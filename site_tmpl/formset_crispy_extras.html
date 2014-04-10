@@ -2,8 +2,8 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
-    <div class="row-fluid">
-        <div class="span12">
+    <div class="row">
+        <div class="col-md-12">
                 <h2> {{msg }} for "<em>{{ event }}</em>"</h2>
                 <form method="post" action="" class="form-inline" enctype="multipart/form-data">
                 {% csrf_token %}
@@ -17,8 +17,8 @@
                 {% for form in formset %}
                     {% if form.errors %}
                     <tr class="warning">
-                        <td>{% for e in form.extra.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.quant.errors %} {{ e }} <i class="icon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.extra.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.quant.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                         <td></td>
                     </tr>
                     {% endif %}

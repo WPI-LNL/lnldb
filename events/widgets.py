@@ -13,8 +13,8 @@ class ExtraSelectorWidget(widgets.MultiWidget):
     def render(self,name,value,attrs=None):
         output = []
         for id,zname in self._choices:
-            #output.append('<div class="control-group"><label class="control-label" for="inputEmail">%s</label><div class="controls"><input type="text" name="extra_%s"></input></div></div>' % (zname,id))
-            output.append('<div><input class="input-mini" type="text" name="extra_%s" value=0></input><span class="help-inline">%s</span></div><i class="icon-plus"></i>' % (id,zname))
+            #output.append('<div class="form-group"><label class="control-label" for="inputEmail">%s</label><div class="controls"><input type="text" name="extra_%s"></input></div></div>' % (zname,id))
+            output.append('<div><input class="input-mini" type="text" name="extra_%s" value=0></input><span class="help-inline">%s</span></div><i class="glyphicon glyphicon-plus"></i>' % (id,zname))
         return mark_safe(self.format_output(output))
     
     def decompress(self,value):

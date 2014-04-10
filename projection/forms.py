@@ -30,7 +30,7 @@ class ProjectionistUpdateForm(forms.ModelForm):
                 
                 #'pit_level',
                 'license_number',
-                HTML('<div class="pull-right"><a id="resetdate" class="btn btn-large btn-warning">Reset Date</a></div>'),
+                HTML('<div class="pull-right"><a id="resetdate" class="btn btn-lg btn-warning">Reset Date</a></div>'),
                 Field('license_expiry',css_class="datepick"),
         )
         super(ProjectionistUpdateForm,self).__init__(*args,**kwargs)

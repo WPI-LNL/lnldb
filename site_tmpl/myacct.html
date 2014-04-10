@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block content %}    
-<div class="pull-right muted">
+<div class="pull-right text-muted">
     
     {% if object.profile.is_lnl %} 
     
@@ -19,7 +19,7 @@
 </div>
 <h1> <a href="{% url "events.views.my.my" %}">My</a> Account </h1>
 
-<div class="hero-unit">
+<div class="jumbotron">
 {% crispy form %}
 </div>
 {% endblock %}

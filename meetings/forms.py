@@ -50,7 +50,7 @@ class AnnounceSendForm(forms.ModelForm):
         self.helper.form_class = 'form-horizontal'
         self.helper.layout = Layout(
             Hidden('meeting',meeting.id),
-            Field('events',css_class="span6",size="15"),
+            Field('events',css_class="col-md-6",size="15"),
             'subject',
             'message',
             'email_to',
@@ -76,8 +76,8 @@ class AnnounceCCSendForm(forms.ModelForm):
         self.helper.form_class = 'form-horizontal'
         self.helper.layout = Layout(
             Hidden('meeting',meeting.id),
-            Field('events',css_class="span6",size="15"),
-            Field('addtl_message',css_class="span6"),
+            Field('events',css_class="col-md-6",size="15"),
+            Field('addtl_message',css_class="col-md-6"),
             FormActions(
                 Submit('save', 'Send'),
                 ),

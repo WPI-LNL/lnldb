@@ -4,16 +4,16 @@
     {% include "admin.nav.html" %}
 {% endblock %}
 {% block content %}
-    <div class="row-fluid">
-        <div class="span12">
-            <div class="hero-unit">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="jumbotron">
                 <h2> {{msg }} </h2>
                 <h4>Current CC </h4>
                 <table class="table">
                     {% for crew in event.crew_chief.all %}
                     
                     <tr>
-                        <td> <a href="{% url "events.views.flow.rmcc" event.id crew.id %}"><i class="icon-remove"></i></a>
+                        <td> <a href="{% url "events.views.flow.rmcc" event.id crew.id %}"><i class="glyphicon glyphicon-remove"></i></a>
                         <td> {{ crew.first_name }} {{crew.last_name}} </td>
                         
                     </tr>

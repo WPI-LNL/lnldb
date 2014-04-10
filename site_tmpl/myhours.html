@@ -18,7 +18,7 @@
         </tr>
     {% endfor %}
     </table>
-    <a class="btn btn-primary btn-large" href="{% url "my-cchours-bulk" event.id %}">Bulk Add</a>
-    <a class="btn btn-warning btn-large" href="{% url "my-cchours-mk" event.id %}">Single Add</a>
-    <a class="btn btn-warning btn-large" href="{% url "my-events" %}">Done</a>
+    <a class="btn btn-primary btn-lg" href="{% url "my-cchours-bulk" event.id %}">Bulk Add</a>
+    <a class="btn btn-warning btn-lg" href="{% url "my-cchours-mk" event.id %}">Single Add</a>
+    <a class="btn btn-warning btn-lg" href="{% url "my-events" %}">Done</a>
 {% endblock %}

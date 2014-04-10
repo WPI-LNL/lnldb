@@ -3,22 +3,27 @@
 
 {% block content %}
     
-    <link href="{{ STATIC_URL }}css/{{page.carousel_css}}-carousel.css" rel="stylesheet">
+<!--     <link href="{{ STATIC_URL }}css/{{page.carousel_css}}-carousel.css" rel="stylesheet"> -->
     
     
     {% if page.imgs.all %}
-    <div id="myCarousel" class="carousel slide">
-        <div class="carousel-inner">
+    <div id="lnlCarousel" class="carousel slide" data-ride="carousel">
+      <!-- Indicators -->
+      <ol class="carousel-indicators">
         {% for img in page.imgs.all %}
-            <div class="item {% if forloop.counter == 1 %}active {%endif %}">
-            <img src="{{ MEDIA_URL }}{{img.img}}" alt="">
+        <li data-target="#lnlCarousel" data-slide-to="{{ forloop.counter }}" class="{% if forloop.counter == 1 %}active {%endif %}"></li>
+        {% endfor %}
+      </ol>
+      <div class="carousel-inner">
+      {% for img in page.imgs.all %}
+        <div class="item {% if forloop.counter == 1 %}active {%endif %}">
+          <img src="{{ MEDIA_URL }}{{img.img}}" alt="">
+          <div class="container">
             {% if img.href %}
-            <div class="container">
-                <div class="carousel-caption">
-                <h1>{{ img.href }}</h1>
-                <p class="lead">{{ img.href_desc }}</p>
-                <a class="btn btn-large btn-primary" href="{% url "pages.views.page" img.href.slug %}">{{ img.href_words }}</a>
-                </div>
+            <div class="carousel-caption">
+              <h1>{{ img.href }}</h1>
+              <p>{{ img.href_desc }}</p>
+              <p><a class="btn btn-lg btn-primary" href="{% url "pages.views.page" img.href.slug %}">{{ img.href_words }}</a></p>
             </div>
             {% else %}
             <div class="carousel-caption">
@@ -26,22 +31,21 @@
                 <p>{{ img.href_desc }}</p>
                 </div>
             {% endif %}
-            </div>
-        
-        {% endfor %}
+          </div>
         </div>
-        {% if page.imgs.count != 1 %}
-        <a class="left carousel-control" href="#myCarousel" data-slide="prev">‹</a>
-        <a class="right carousel-control" href="#myCarousel" data-slide="next">›</a>
-        {% endif %}
-    </div>
+        {% endfor %}
+      </div>
+      <a class="left carousel-control" href="#lnlCarousel" data-slide="prev"><span class="glyphicon glyphicon-chevron-left"></span></a>
+      <a class="right carousel-control" href="#lnlCarousel" data-slide="next"><span class="glyphicon glyphicon-chevron-right"></span></a>
+    </div><!-- /.carousel -->
     {% else %}
+    <div class="carousel-spacer"></div>
     {% endif %}
     
     
     <div class="container">
     {% if page.body_in_hero %}
-    <div class="hero-unit">
+    <div class="jumbotron">
     {% endif %}
     
     {{ page.body|markdown }} <BR />
@@ -60,7 +64,7 @@
       !function ($) {
         $(function(){
           // carousel demo
-          $('#myCarousel').carousel()
+          $('#lnlCarousel').carousel()
         })
       }(window.jQuery)
 </script>

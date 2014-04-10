@@ -10,8 +10,8 @@
 {% endblock %}
 
 {% block overrides %}
-<link href="{{ STATIC_URL }}css/bootstrap-admin.css" rel="stylesheet">
-<link href="{{ STATIC_URL }}css/bootstrap-responsive.css" rel="stylesheet">
+<!-- <link href="{{ STATIC_URL }}css/bootstrap-admin.css" rel="stylesheet"> -->
+<!-- <link href="{{ STATIC_URL }}css/bootstrap-responsive.css" rel="stylesheet"> -->
 {# lol don't question it #}
 {% endblock %}
 
@@ -21,12 +21,12 @@
 
 
 {% block content %}
-<div class="row-fluid">
-    <div class="span10 offset1">
+<div class="row">
+    <div class="col-md-10 offset1">
         <h2>Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}: {{ wizard.steps.current|title }}</h2>
         {% if help_name %}
         <div class="pull-right">    
-            <a href="#helpmodal" role="button" class="btn btn-primary btn-large" data-toggle="modal">Need Help?</a>
+            <a href="#helpmodal" role="button" class="btn btn-primary btn-lg" data-toggle="modal">Need Help?</a>
         </div>
         {% endif %}
         <form class="form-horizontal" action="" method="post">{% csrf_token %}
@@ -46,14 +46,14 @@
         </table>
         <br />
         {% if wizard.steps.prev %}
-        <button class="btn btn-info btn-large" name="wizard_goto_step" type="submit" value="{{ wizard.steps.first }}">{% trans "First step" %}</button>
-        <button class="btn btn-info btn-large" name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}">{% trans "Previous step" %}</button>
-        <!-- <input name="wizard_goto_step" class="btn btn-primary  btn-large" type="submit" value="prev"/> -->
+        <button class="btn btn-info btn-lg" name="wizard_goto_step" type="submit" value="{{ wizard.steps.first }}">{% trans "First step" %}</button>
+        <button class="btn btn-info btn-lg" name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}">{% trans "Previous step" %}</button>
+        <!-- <input name="wizard_goto_step" class="btn btn-primary  btn-lg" type="submit" value="prev"/> -->
         {% endif %}
         {% if not wizard.steps.last == wizard.steps.current %}
-        <input class="btn btn-primary  btn-large" type="submit" value="{% trans "Next Step" %}"/>
+        <input class="btn btn-primary  btn-lg" type="submit" value="{% trans "Next Step" %}"/>
         {% else %}
-        <input class="btn btn-primary  btn-large" type="submit" value="{% trans "Finish" %}"/>
+        <input class="btn btn-primary  btn-lg" type="submit" value="{% trans "Finish" %}"/>
         {% endif %}
         </form>
         
@@ -98,7 +98,7 @@
             </div>
         </div>
         <div class="modal-footer">
-            <a href="#" data-dismiss="modal" aria-hidden="true" class="btn">Back</a>
+            <a href="#" data-dismiss="modal" aria-hidden="true" class="btn btn-default">Back</a>
         </div>
     </div>
 </div>

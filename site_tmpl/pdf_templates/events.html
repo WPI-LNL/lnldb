@@ -17,7 +17,7 @@
                 <tr>
                     <td class="tdleft">
                         <h3>Contact</h3>
-                        <ul class="unstyled">
+                        <ul class="list-unstyled">
                             <li>{% for org in event.org.all %}{{ org.name }}, {% endfor %}</li>
                             <li>{{ event.person_name }}</li>
                             <li>{{ event.contact_phone }}</li>
@@ -27,7 +27,7 @@
                     </td>
                     <td class="tdright">
                         <h3>Billing</h3>
-                        <ul class="unstyled">
+                        <ul class="list-unstyled">
                             <li>{{ event.firstorg.name }}</li>
                             <li>{{ event.firstorg.exec_email }}</li>
                             <li>{{ event.firstorg.phone }}</li>

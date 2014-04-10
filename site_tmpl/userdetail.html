@@ -1,20 +1,20 @@
 {% extends 'base_admin.html' %}
 {% block content %}
-    <div class="row-fluid">
-        <div class="span12">
-            <div class="hero-unit">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="jumbotron">
                 <h1> {{u}} </h1>
                 {% if u.first_name %}
                     {{ u.first_name }} {{ u.last_name }}
                 {% endif %}
                 <div class="pull-right">
-                    <a class="btn btn-info btn-large" href="{% url "memberupdate" u.id %}">Modify</a>
+                    <a class="btn btn-info btn-lg" href="{% url "memberupdate" u.id %}">Modify</a>
                 </div>
             </div>
         </div>
     </div>
-    <div class="row-fluid">
-        <div class="span4">
+    <div class="row">
+        <div class="col-md-4">
             <h3>Stats</h3>
             <table class="table">
                 <tr>
@@ -38,7 +38,7 @@
                     <td>{{ u.meeting_set.count }}</td>
                 </tr>
             </table>
-            <div class="pull-right"><a href="{% url "membercontact" u.profile.id %}" class="btn">Edit</a></div>
+            <div class="pull-right"><a href="{% url "membercontact" u.profile.id %}" class="btn btn-default">Edit</a></div>
             <h3> Contact</h3>
             <table class="table">
                 <tr>
@@ -59,9 +59,9 @@
                 </tr>
             </table>
         </div>
-        <div class="span4">
+        <div class="col-md-4">
             <h3>Events CC'd</h3>
-            <ul class="unstyled"> 
+            <ul class="list-unstyled"> 
                 {% for event in u.ccinstances.all %}
                     <li><a href="{% url "events-detail" event.event.id %}">{{ event.event }}</a> ({{ event.event.datetime_start }})</li>
                 {% endfor %}
@@ -70,11 +70,11 @@
                 {% endfor %}
             </ul>
         </div>
-        <div class="span4">
+        <div class="col-md-4">
             <h3>Events Participated</h3>
-            <ul class="unstyled"> 
+            <ul class="list-unstyled"> 
                 {% for h in u.hours.all %}
-                    <li><a href="{% url "events-detail" h.event.id %}">{{ h.event }}:</a> {{ h.hours }}h</li>
+                    <li><a href="{% url "events-detail" h.event.id %}">{{ h.event }} {% if h.service %} ({{h.service.shortname  }}) {% else %} (N/A) {% endif %}:</a> {{ h.hours }}h</li>
                 {% endfor %}
             </ul>
         </div>
@@ -110,7 +110,7 @@
             </table>
         </div>
         <div class="modal-footer">
-            <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+            <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Close</button>
         </div>
     </div>
 {% endblock %}
