@@ -28,17 +28,17 @@
                         <li><a href="{% url "events.views.list.incoming" %}">Incoming Events</a></li>
                         <li><a href="{% url "events.views.list.upcoming" %}">Upcoming Events</a></li>
                         <li><a href="{% url "events.views.list.openworkorders" %}">View Open Events</a></li>
-                            <li class="dropdown-submenu">
-                                <a tabindex="-1" href="#">Event Payments</a>
-                                <ul class="dropdown-menu">
-                                    <li><a href="{% url "events.views.list.unreviewed" %}">Events Pending Review</a></li>
-                                    <li><a href="{% url "events.views.list.unbilled" %}">Events to be Billed</a></li>
-                                    <li><a href="{% url "events.views.list.unbilled_semester" %}">Events to be Billed - Semester (Films)</a></li>
-                                    <li><a href="{% url "events.views.list.unpaid" %}">Events Billed, Pending Payment</a></li>
-                                    <li><a href="{% url "events.views.list.paid" %}">Events Paid</a></li>
-                                </ul>
-                            </li>
-                                <li><a href="{% url "events.views.list.closed" %}">Closed Events</a></li>
+                        <li><a href="{% url "events.views.list.closed" %}">Closed Events</a></li>
+                        <li role="presentation" class="divider"></li>
+                        <li role="presentation" class="dropdown-header">Event Payments</li>    
+                        
+                        <li><a href="{% url "events.views.list.unreviewed" %}">Events Pending Review</a></li>
+                        <li><a href="{% url "events.views.list.unbilled" %}">Events to be Billed</a></li>
+                        <li><a href="{% url "events.views.list.unbilled_semester" %}">Events to be Billed - Semester (Films)</a></li>
+                        <li><a href="{% url "events.views.list.unpaid" %}">Events Billed, Pending Payment</a></li>
+                        <li><a href="{% url "events.views.list.paid" %}">Events Paid</a></li>
+                        
+                        
                     </ul>
                 </li>
                 <li class="{% ancestor '/lnadmin/clients/' %} dropdown">

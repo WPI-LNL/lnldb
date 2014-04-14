@@ -82,35 +82,39 @@
     </div>
      
     <div id="statusmodal" class="modal hide fade">
-        <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-            <h3 id="StatusModalLabel">Status Change History</h3>
-        </div>
-        <div class="modal-body">
-            <table class="table">
-                <tr>
-                    <th>Changed From</th>
-                    <th> Changed On </th>
-                </tr>
-                {% for sc in u.statuschange.all %}
-            
-                <tr>
-                    <td> 
-                        {% for g in  sc.groups.all %}
-                            {{ g }}
-                            {% if not forloop.last %}, {% endif %}
-                        {% endfor %}
-                    </td>
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h3 id="StatusModalLabel">Status Change History</h3>
+                </div>
+                <div class="modal-body">
+                    <table class="table">
+                        <tr>
+                            <th>Changed From</th>
+                            <th> Changed On </th>
+                        </tr>
+                        {% for sc in u.statuschange.all %}
                     
-                    <td> {{ sc.date }}
-                </tr>
-            
-            
-                {% endfor %}
-            </table>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Close</button>
+                        <tr>
+                            <td> 
+                                {% for g in  sc.groups.all %}
+                                    {{ g }}
+                                    {% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </td>
+                            
+                            <td> {{ sc.date }}
+                        </tr>
+                    
+                    
+                        {% endfor %}
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Close</button>
+                </div>
+            </div>
         </div>
     </div>
 {% endblock %}

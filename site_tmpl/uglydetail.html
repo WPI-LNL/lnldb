@@ -53,17 +53,21 @@
             </h3>
 
             <!-- CloseModal -->
-            <div id="closeModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="closeModalLabel" aria-hidden="true">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                    <h3 id="closeModalLabel">Sure?</h3>
-                </div>
-                <div class="modal-body">
-                    <p>Once this event is closed it's closed.</p>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Cancel</button>
-                    <a class="btn btn-primary" href="{% url "event-close" event.id %}">Yes I'm Sure</a>
+            <div id="closeModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="closeModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                            <h3 id="closeModalLabel">Sure?</h3>
+                        </div>
+                        <div class="modal-body">
+                            <p>Once this event is closed it's closed.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Cancel</button>
+                            <a class="btn btn-primary" href="{% url "event-close" event.id %}">Yes I'm Sure</a>
+                        </div>
+                    </div>
                 </div>
             </div>
             
