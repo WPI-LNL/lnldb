@@ -6,59 +6,11 @@
 <div class="row">
     <div class="col-md-12">
         <h2>{{h2}}</h2>
+        {% if msg %}<div class="alert alert-danger">{{ msg }}</div>{% endif %}
     </div>
 </div>
 <div class="row">
     <div class="col-md-12">
-        {% comment %}<div class="panel-group" id="accordion{{ forloop.counter0 }}">
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion{{ forloop.counter0 }}" href="#collapse{{ forloop.counter0 }}">
-                        Filter <i class="glyphicon glyphicon-search"></i>
-                    </a>
-                </div>
-                <div id="collapse{{ forloop.counter0 }}" class="panel-collapse collapse">
-                    <div class="panel-body">
-                        {% include "js_datepick.tmpl" %}
-                        <script type="text/javascript">
-                        $(document).ready(function () {
-                            $( "#filterform" ).submit(function( event ) {
-                                var baseurl = "{{baseurl}}";
-                                var start = $("#fstart").val();
-                                var end = $("#fend").val();
-                                var target = baseurl + start + "/" + end + "/"
-                                window.location.href = target
-                                event.preventDefault();
-                                });
-                            });
-                        </script>
-                        <form id="filterform" class="form-inline">
-                            <input id="fstart" class="input-large datepick" type="text" title="Start" name="start" placeholder="Start" value="{{start}}">
-                            <input id="fend" class="input-large datepick" type="text" title="End" name="end" placeholder="End" value="{{end}}">
-                            <input class="btn btn-info" type="submit" value="submit">
-                        </form>
-                        {% if start and end %}
-                        <hr>
-                        <ul class="nav nav-pills">
-                            <li class="disabled"><a href="#">View This Range as</a></li>
-                            <li><a href="{% url "events.views.list.incoming" start end %}">Incoming</a></li>
-                            <li><a href="{% url "events.views.list.upcoming" start end %}">Upcoming</a></li>
-                            <li><a href="{% url "events.views.list.openworkorders" start end %}">Open</a></li>
-                            <li><a href="{% url "events.views.list.unreviewed" start end %}">Unreviewed</a></li>
-                            <li><a href="{% url "events.views.list.unbilled" start end %}">Unbilled</a></li>
-                            <li><a href="{% url "events.views.list.unpaid" start end %}">Billed/UnPaid</a></li>
-                            <li><a href="{% url "events.views.list.paid" start end %}">Paid</a></li>
-                            <li><a href="{% url "events.views.list.closed" start end %}">Closed</a></li>
-                            
-                        </ul>
-                        {% endif %}
-                        <hr>
-                            <a href="#" class="btn btn-warning" id="showselect">PDF Select</a>
-                            <a href="#" class="btn hide btn-default" id="submitselect">Submit Selections</a>
-                    </div>
-                </div>
-            </div>
-        </div>{% endcomment %}
         <form class="form-search" action="{% url "events-search" %}" method="POST" role="form">
             <div class="input-group">
                 {% csrf_token %}
@@ -68,6 +20,7 @@
                 </span>
             </div>
         </form>
+        <hr>
     </div>
 </div>
 <div class="row">
@@ -127,35 +80,6 @@
                     </tr>
             {% endfor %}
         </table>
-    </div>
-</div>
-<div class="row">
-    <div class="col-md-6 offset5">
-        <div class="pagination pagination-small">
-            <ul class="pager">
-                {% if events.has_previous %}
-                    <li class="previous">
-                    <a href="?page={{ events.previous_page_number }}">&larr; Newer</a>
-                {% else %}
-                    <li class="previous disabled">
-                    <a href="#" >&larr; Newer</a>
-                {% endif %}
-                
-                </li>
-                <li class="current">
-                    <a href="#">Page {{ events.number }} of {{ events.paginator.num_pages }}.</a>
-                </li>
-                
-                {% if events.has_next %}
-                    <li class="next">
-                    <a href="?page={{ events.next_page_number }}">Older &rarr;</a>
-                {% else %}
-                    <li class="next disabled">
-                    <a href="#">Older &rarr;</a>
-                {% endif %}
-                </li>
-            </ul>
-        </div>
     </div>
 </div>
 {% endblock %}

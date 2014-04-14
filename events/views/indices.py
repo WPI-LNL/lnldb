@@ -99,8 +99,11 @@ def event_search(request):
         try:
             q = request.POST['q']
             context['q'] = q
-            e = Event.objects.filter(Q(event_name__icontains=q)|Q(description__icontains=q))
-            context['events'] = e
+            if len(q) < 3:
+                context['msg'] = "Search Query Too Short, please try something longer"
+            else:
+                e = Event.objects.filter(Q(event_name__icontains=q)|Q(description__icontains=q))
+                context['events'] = e
             return render_to_response('events_search_results.html', context) 
         except:
             pass

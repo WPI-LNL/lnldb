@@ -25,32 +25,28 @@
     
 </table>
 <div class="row">
-    <div class="col-md-6 offset5">
-        <div class="pagination pagination-small">
-            <ul class="pager">
-                {% if accesses.has_previous %}
-                    <li class="previous">
-                    <a href="?page={{ accesses.previous_page_number }}">&larr; Newer</a>
-                {% else %}
-                    <li class="previous disabled">
-                    <a href="#" >&larr; Newer</a>
-                {% endif %}
-                
-                </li>
-                <li class="current">
-                    <a href="#">Page {{ accesses.number }} of {{ accesses.paginator.num_pages }}.</a>
-                </li>
-                
-                {% if accesses.has_next %}
-                    <li class="next">
-                    <a href="?page={{ accesses.next_page_number }}">Older &rarr;</a>
-                {% else %}
-                    <li class="next disabled">
-                    <a href="#">Older &rarr;</a>
-                {% endif %}
-                </li>
-            </ul>
-        </div>
-    </div>
+    <ul class="pager">
+        {% if accesses.has_previous %}
+            <li class="previous">
+            <a href="?page={{ accesses.previous_page_number }}">&larr; Newer</a>
+        {% else %}
+            <li class="previous disabled">
+            <a href="#" >&larr; Newer</a>
+        {% endif %}
+        
+        </li>
+        <li class="current">
+            <a href="#">Page {{ accesses.number }} of {{ accesses.paginator.num_pages }}.</a>
+        </li>
+        
+        {% if accesses.has_next %}
+            <li class="next">
+            <a href="?page={{ accesses.next_page_number }}">Older &rarr;</a>
+        {% else %}
+            <li class="next disabled">
+            <a href="#">Older &rarr;</a>
+        {% endif %}
+        </li>
+    </ul>
 </div>
 {% endblock %}
