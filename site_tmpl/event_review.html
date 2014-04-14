@@ -27,7 +27,7 @@
 <hr>
 <div class="row">
     <div class="col-md-6">
-        <h3> Reports </h3> 
+        <h2> Reports </h2> 
         {% for report in event.ccreport_set.all %}
             <h4>Report by {{report.crew_chief }}</h4> 
             <em class="text-muted pull-right">
@@ -42,13 +42,19 @@
                 {% comment %} <small>For {{ report.pretty_cat_list }}</small>{% endcomment %}
             </blockquote> 
         {% endfor %}
+        <table class="table table-condensed">
         {% for crew in event.crew_needing_reports %}
-        {% if forloop.first %}<h3> Crew Needing Reports </h3> {% endif %}
-        {{ crew.crew_chief.get_full_name }} -email remind button-
+        {% if forloop.first %}<h4> Crew Needing Reports </h4> {% endif %}
+        
+        <tr>
+            <td>{{ crew.crew_chief.get_full_name }}</td>
+            <td><a class="btn btn-warning btn-default btn-xs" href={% url "event-review-remind" id=event.id uid=crew.crew_chief.id %}>Remind</div></td>
+        </tr>
         {% endfor %}
+        </table>
     </div>
     <div class="col-md-6">
-        <h3> Hours </h3>
+        <h2> Hours </h2>
         <table class="table">
             <thead>
                 <th>Member</th>

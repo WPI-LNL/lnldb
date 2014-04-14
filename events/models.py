@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 # Create your models here.
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
+from django import forms
 
 from django.utils import timezone
 import datetime,pytz
@@ -167,11 +168,16 @@ class EventManager(models.Manager):
             event.otherservice_reqs = otherdescription
             
         #raise
-        #
+        # int(e[1][1]) is int(True) if its valid, which returns 1
         for e in lighting_extras:
-            if len(e[1]) and int(e[1][0]):
+            if len(e[1]) and int(e[1][1]): # for checkbox
+                event.extrainstance_set.create(extra_id=e[0],quant=1)
+            elif len(e[1]) and int(e[1][0]):
                 event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
+                
         for e in sound_extras:
+            if len(e[1]) and int(e[1][0]): # for checkbox 
+                event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
             if len(e[1]) and int(e[1][0]):
                 event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
         for e in projection_extras:
@@ -226,8 +232,18 @@ class Extra(models.Model):
     desc = models.TextField()
     services = models.ManyToManyField('Service')
     category = models.ForeignKey('Category')    
+    disappear = models.BooleanField(default=False, help_text="Disappear this extra instead of disable")
+    checkbox = models.BooleanField(default=False, help_text="Use a checkbox instead of an integer entry")
+    
     def __unicode__(self):
         return "%s ($%s)" % (self.name, self.cost)
+    
+    @property
+    def formfield(self):
+        if self.checkbox:
+            return (forms.BooleanField(),)
+        else:
+            return (forms.IntegerField(min_value=0,),)
     
 class Category(models.Model):
     name = models.CharField(max_length=16)
@@ -768,6 +784,12 @@ class EventCCInstance(models.Model):
     
     class Meta:
         ordering = ("-event__datetime_start",)
+
+# A log of CC Report Reminders Sent
+class ReportReminder(models.Model):
+    event = models.ForeignKey('Event', related_name="ccreportreminders")
+    crew_chief = models.ForeignKey(User, related_name="ccreportreminders")
+    sent = models.DateTimeField(auto_now_add=True)
 
 # for riders, etc
 def attachment_file_name(instance, filename):
