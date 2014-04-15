@@ -44,14 +44,20 @@ def mywo(request):
     
     user = request.user
     orgs = user.orgusers.get_query_set()
+    ic_orgs = user.orgowner.get_query_set()
     
-    events = Event.objects.filter(org__in=orgs)
+    ##combined = orgs|ic_orgs
+    #combined = ic_orgs
+    values = orgs.distinct().values_list('id',flat=True)
+    
+    events = Event.objects.filter(org__in=values)
     l = {}
     for org in orgs:
         l[org.name] = Event.objects.filter(org=org)
     
     #context['events'] = events
     context['events'] = l
+    context['owned'] = ic_orgs.values_list('name',flat=True)
     return render_to_response('mywo.html', context)
 
 

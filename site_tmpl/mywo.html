@@ -25,6 +25,9 @@
                     {% if not event.closed and not event.cancelled and not event.over %}
                     <a class="btn btn-primary" href="{% url "events.views.flow.assignattach_external" event.id %}">Attachments</a>
                     {% endif %}
+                    {% if org in owned %}
+                    <a class="btn btn-default"  href="{% url 'my-events-pdf' event.id %}">Workorder PDF </a>
+                    {% endif %}
                     {# <a class="btn btn-default">Repeat </a> #}
                 </td>
             </tr>

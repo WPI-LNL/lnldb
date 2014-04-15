@@ -17,6 +17,8 @@ from projection.models import Projectionist,PITLevel
 from django.utils import timezone
 import datetime
 
+from django.contrib.auth.decorators import login_required
+
 # Convert HTML URIs to absolute system paths so xhtml2pdf can access those resources
 def link_callback(uri, rel):
     # use short variable names
@@ -65,6 +67,7 @@ def generate_projection_pdf(request):
     file.close()            # Don't forget to close the file handle
     return HttpResponse(pdf, mimetype='application/pdf')
     
+@login_required
 def generate_event_pdf(request, id):
     # Prepare context
     data = {}
