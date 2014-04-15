@@ -1,4 +1,4 @@
 {% load tz %}
 {{ subject }}
 
-{{ body|linebreaksbr|safe }}
+{{ body|safe }}

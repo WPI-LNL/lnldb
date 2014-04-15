@@ -16,8 +16,11 @@ from emails.generators import DefaultLNLEmailGenerator as DLEG
 
 from events.forms import EventApprovalForm,EventDenialForm, BillingForm, BillingUpdateForm, EventReviewForm, InternalReportForm
 from events.forms import CrewAssign,CrewChiefAssign, CCIForm, AttachmentForm, ExtraForm,MKHoursForm
-from events.models import Event,Organization,Billing,EventCCInstance,EventAttachment,Service,ExtraInstance,EventArbitrary, CCReport, Hours
+from events.models import Event,Organization,Billing,EventCCInstance,EventAttachment,Service,ExtraInstance,EventArbitrary, CCReport, Hours, ReportReminder
 from helpers.challenges import is_officer
+
+from django.utils.text import slugify
+from pdfs.views import generate_pdfs_standalone
 
 import datetime
 
@@ -84,7 +87,7 @@ def denial(request,id):
             # confirm with user
             messages.add_message(request, messages.INFO, 'Denied Event')
             
-            email_body = 'Your event "%s" has been denied! <br />Reason: "%s"' % (event.event_name, event.cancelled_reason)
+            email_body = 'Your event "%s" has been denied! \n Reason: "%s"' % (event.event_name, event.cancelled_reason)
             email = DLEG(subject="Event Denied", to_emails = [e.contact.email], body=email_body, bcc=[settings.EMAIL_TARGET_VP]) 
             email.send()
         
@@ -127,6 +130,33 @@ def review(request,id):
         form = EventReviewForm(instance=event,event=event)
         context['formset'] = form
     return render_to_response('event_review.html', context) 
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING')
+def reviewremind(request,id,uid):
+    context = RequestContext(request)
+    
+    event = get_object_or_404(Event,pk=id)
+    if event.closed or event.reviewed:
+        return HttpResponse("Event Closed")
+    
+    cci = event.ccinstances.filter(crew_chief_id=uid)
+    if cci:
+        # only do heavy lifting if we need to
+        
+        pdf_handle = generate_pdfs_standalone([event.id])
+        filename = "%s.workorder.pdf" % slugify(event.event_name)
+        attachments = [{"file_handle":pdf_handle, "name": filename}]
+        
+        cci = cci[0]
+        ReportReminder.objects.create(event=cci.event, crew_chief=cci.crew_chief)
+        email_body = 'This is a reminder that you have a pending crew chief report for "%s" \n Please Visit %s%s to complete it' % (event.event_name,request.get_host(),reverse("my-ccreport", args=[event.id]))
+        email = DLEG(subject="LNL Crew Chief Report Reminder EMail", to_emails = [cci.crew_chief.email], body=email_body, attachments=attachments) 
+        email.send()
+        messages.add_message(request, messages.INFO, 'Reminder Sent')
+        return HttpResponseRedirect(reverse('event-review',args=(event.id,)))
+    else:
+        return HttpResponse("Bad Call")
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
