@@ -3,7 +3,9 @@
         $("#showselect").click(function(){
             $(".tasks .crewtask").empty();
             $(".eventselect").show();
+            $(".eventselect").removeClass('hide');
             $("#submitselect").show();
+            $("#submitselect").removeClass('hide');
         });
         $("#submitselect").click(function(){
             var selectedids = $("input[type='checkbox']:checked").map(
