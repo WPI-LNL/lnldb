@@ -48,6 +48,8 @@ class AnnounceSendForm(forms.ModelForm):
         self.fields["events"].queryset = Event.objects.filter(datetime_setup_complete__gte=twodaysago,approved=True,datetime_setup_complete__lte=aweekfromnow).exclude(Q(closed=True)|Q(cancelled=True))
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-5'
         self.helper.layout = Layout(
             Hidden('meeting',meeting.id),
             Field('events',css_class="col-md-6",size="15"),
@@ -74,10 +76,13 @@ class AnnounceCCSendForm(forms.ModelForm):
         
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-5'
         self.helper.layout = Layout(
             Hidden('meeting',meeting.id),
             Field('events',css_class="col-md-6",size="15"),
             Field('addtl_message',css_class="col-md-6"),
+            Field('email_to',css_class="col-md-6"),
             FormActions(
                 Submit('save', 'Send'),
                 ),

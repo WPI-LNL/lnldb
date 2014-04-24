@@ -6,6 +6,10 @@ from events.models import Event, Location
 
 from uuidfield import UUIDField
 
+
+def get_default_email():
+    return TargetEmailList.objects.get(email="lnlnews@wpi.edu")
+
 class Meeting(models.Model):
     datetime = models.DateTimeField()
     attendance = models.ManyToManyField(User,null=True,blank=True)
@@ -57,6 +61,8 @@ class CCNoticeSend(models.Model):
     sent_at = models.DateTimeField(auto_now_add=True)
     sent_success = models.BooleanField(default=False)
     uuid = UUIDField(auto=True,editable=False, null=True,blank=True)
+    
+    email_to = models.ForeignKey('TargetEmailList', default=get_default_email)
     
     addtl_message = models.TextField(null=True, blank=True, verbose_name="Additional Message")
     
