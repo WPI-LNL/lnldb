@@ -12,7 +12,16 @@ $(".radio").change(function(){
     // clear selections
     $(".extra_fs .form-group").each(function() {
         $(this).removeClass("has-success has-feedback");
-        $(this).addClass("text-muted");
+        $(this).addClass("text-muted disabled");
+        $(this).show()
+        // hide the fields that should be hidden
+        $(this).find("[disappear='True']").parent().parent().hide()
+        $(this).find("[disappear='True']").each(function() {
+            $(this).val(0);
+//             console.log("THIS")
+//             console.log(this)
+            $(this).attr('checked', false);
+        });
     });
     // update selections
     $(service_str).each(function() {
@@ -20,6 +29,7 @@ $(".radio").change(function(){
         console.log(target_id);
         $(target_id).addClass("has-success has-feedback");
         $(target_id).removeClass("text-muted");
+        $(target_id).find("[disappear='True']").parent().parent().show()
     });
     //.attr('id');
     //console.log(x);

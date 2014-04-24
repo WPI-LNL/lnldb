@@ -56,6 +56,10 @@ class OTAdmin(admin.ModelAdmin):
 class LocAdmin(admin.ModelAdmin):
     list_filter = ('show_in_wo_form','building','setup_only')
     actions = [enable_show_in_wo_form,disable_show_in_wo_form,enable_setup_only,disable_setup_only]
+    
+class ExtraAdmin(admin.ModelAdmin):
+    list_display = ('name','cost','category','disappear','checkbox')
+    list_filter = ('category','disappear','checkbox')
 
 admin.site.register(Billing)
 admin.site.register(Hours)
@@ -65,7 +69,7 @@ admin.site.register(Event,EventAdmin)
 admin.site.register(CCReport)
 admin.site.register(Organization,OrgAdmin)
 admin.site.register(OrganizationTransfer,OTAdmin)
-admin.site.register(Extra)
+admin.site.register(Extra,ExtraAdmin)
 admin.site.register(ExtraInstance)
 
 admin.site.register(Lighting)

@@ -817,7 +817,7 @@ class LightingForm(forms.Form):
         )
         super(LightingForm,self).__init__(*args,**kwargs)
         for extra in LIGHT_EXTRAS:
-            self.fields["e_%s" % extra.id] = ValueSelectField(label=extra.name,initial=0,required=False)
+            self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox, disappear=extra.disappear, label=extra.name,initial=0,required=False)
             
     lighting = forms.ModelChoiceField(
             empty_label=None,
@@ -857,7 +857,7 @@ class SoundForm(forms.Form):
         )
         super(SoundForm,self).__init__(*args,**kwargs)
         for extra in SOUND_EXTRAS:
-            self.fields["e_%s" % extra.id] = ValueSelectField(label=extra.name,initial=0,required=False)
+            self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox, disappear=extra.disappear, label=extra.name,initial=0,required=False)
             
     sound = forms.ModelChoiceField(
             empty_label=None,
@@ -893,7 +893,7 @@ class ProjectionForm(forms.Form):
         )
         super(ProjectionForm,self).__init__(*args,**kwargs)
         for extra in PROJ_EXTRAS:
-            self.fields["e_%s" % extra.id] = ValueSelectField(label=extra.name,initial=0,required=False)
+            self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox, disappear=extra.disappear, label=extra.name,initial=0,required=False)
             
     projection = forms.ModelChoiceField(
             empty_label=None,

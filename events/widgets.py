@@ -26,11 +26,20 @@ class ExtraSelectorWidget(widgets.MultiWidget):
 ###attempt2
 #
 class ValueSelectWidget(forms.MultiWidget):
-    def __init__(self,widgets=None, *args, **kwargs):
+    def __init__(self,widgets=None, hidetext=False, disappear=False, *args, **kwargs):
+        if hidetext: 
+            textattrs={'value':0,'class': 'hide', "disappear":disappear}
+            checkattrs={"disappear":disappear}
+        else: 
+            textattrs={'value':0,"disappear":disappear}
+            checkattrs={'class': 'hide',"disappear":disappear}
+            
+        
+        
         widgets = (
-            forms.TextInput(attrs={'value':0}),
-            #forms.CheckboxInput() # i forgot what this was for
-            forms.HiddenInput()
+            forms.TextInput(attrs=textattrs),
+            forms.CheckboxInput(attrs=checkattrs) # i forgot what this was for
+            
             )
         super(ValueSelectWidget,self).__init__(widgets=widgets, *args, **kwargs)
     def  decompress(self,value):
@@ -41,12 +50,13 @@ class ValueSelectWidget(forms.MultiWidget):
             return [None,None]
         
 class ValueSelectField(forms.MultiValueField):
-    def __init__(self,fields=None,widget=None,*args,**kwargs):
+    def __init__(self,fields=None,widget=None,hidetext=False,disappear=False,*args,**kwargs):
+        #if not fields:
         fields = (
             forms.IntegerField(min_value=0,),
             forms.BooleanField()
         )
-        widget = ValueSelectWidget()
+        widget = ValueSelectWidget(hidetext=hidetext, disappear=disappear)
         super(ValueSelectField,self).__init__(fields=fields,widget=widget, *args, **kwargs)
     def compress(self,data_list):
         return data_list
