@@ -67,7 +67,9 @@ def updateevent(request,meetingid,eventid):
         formset = CrewChiefFS(request.POST,instance=event,prefix="main")
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('meetings.views.viewattendance',args=(meetingid,)))
+            url = reverse('meetings.views.viewattendance',args=(meetingid,))
+            url_plus_nav = url + "#events"
+            return HttpResponseRedirect(url_plus_nav)
         else:
             context['formset'] = formset
     else:

@@ -8,177 +8,220 @@
     <h1>Meeting for {{ m.datetime.date }}</h1>
     </div>
     <div class="row">
-        <div class="col-md-3">
-    
-            <h3>Attendance:</h3>
-            <ul>
-            {% for a in m.attendance.all %}
-                <li><a href="{% url "members.views.detail" a.id %}">{{a.first_name }} {{a.last_name }}</a></li>
-            {% empty %}
-                <small>Nobody is here I guess.</small>
-            {% endfor %}
+        <div class="col-md-1">
+            <ul class="nav nav-pills nav-stacked" id="meetingtabs">
+            <li class="active"><a href="#attendance" data-toggle="tab">Attendance</a></li>
+            <li><a href="#emails" data-toggle="tab">EMail</a></li>
+            <li><a href="#events" data-toggle="tab">Events</a></li>
             </ul>
-            <a class="btn btn-primary" href="{% url "meetings.views.editattendance" m.id %}">Edit Attendance</a>
-            
-            
         </div>
-        <div class="col-md-9">
-            <h3>E-Mail</h3>
-            {% if m.meetingannounce_set.count or m.meetingccnotices.count %}
-                <strong> Emails Sent:</strong>
-                
-                <div class="panel-group" id="accordion0">
-                    
-                    {% for announce in m.meetingannounce_set.all %}
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion0" href="#collapsea{{ forloop.counter0 }}">
-                                ({{ announce.added }})
-                            </a>
-                        </div>
-                        <div id="collapsea{{ forloop.counter0 }}" class="panel-collapse collapse">
-                            <div class="panel-body">
-                            Subj: {{ announce.subject }} <br />
-                            Msg: {{ announce.message }} <br />
-                            Sent To: {{ announce.email_to }} <br /><br />
-                            Events: <br/>
-                            {% for event in announce.events.all %}
-                                {{ event }}<br />
-                            {% endfor %}
-                            <br/>
-                            <a href="{% url "email-view-announce" announce.uuid %}" class="cm-webversion">View Online</a>
-                            </div>
-                        </div>
-                    </div>
+        <div class="col-md-10">
+            <div class="tab-content">
+                <div class="tab-pane active" id="attendance">
+                    <h3>Attendance:</h3>
+                    <ul>
+                    {% for a in m.attendance.all %}
+                        <li><a href="{% url "members.views.detail" a.id %}">{{a.first_name }} {{a.last_name }}</a></li>
+                    {% empty %}
+                        <small>Nobody is here I guess.</small>
                     {% endfor %}
-                    {% for announce in m.meetingccnotices.all %}
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion0" href="#collapseb{{ forloop.counter0 }}">
-                                CC ({{ announce.sent_at }})
-                            </a>
-                        </div>
-                        <div id="collapseb{{ forloop.counter0 }}" class="panel-collapse collapse">
-                            <div class="panel-body">
-                            <strong>Msg: {{ announce.addtl_message }}</strong> <Br />
-                            Events: <br/>
-                            {% for event in announce.events.all %}
-                                <em>{{ event }}</em><br/>
-                            {% endfor %}
-                            <a href="{% url "email-view-announce-cc" announce.uuid %}" class="cm-webversion">View Online</a>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                    </div>
+                    </ul>
+                    <a class="btn btn-primary" href="{% url "meetings.views.editattendance" m.id %}">Edit Attendance</a>
                 </div>
                 
-            <br />
-            <a class="btn btn-default" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
-            <a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>
-            {% else %}
-            <a class="btn btn-primary" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
-            {% endif %}
-            <!--<a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>-->
+                
+                
+                <div class="tab-pane" id="emails">
+                    <h3>E-Mail</h3>
+                    {% if m.meetingannounce_set.count or m.meetingccnotices.count %}
+                        <strong> Emails Sent:</strong>
+                        
+                        <div class="panel-group" id="accordion0">
+                            
+                            {% for announce in m.meetingannounce_set.all %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion0" href="#collapsea{{ forloop.counter0 }}">
+                                        ({{ announce.added }})
+                                    </a>
+                                </div>
+                                <div id="collapsea{{ forloop.counter0 }}" class="panel-collapse collapse">
+                                    <div class="panel-body">
+                                    Subj: {{ announce.subject }} <br />
+                                    Msg: {{ announce.message }} <br />
+                                    Sent To: {{ announce.email_to }} <br /><br />
+                                    Events: <br/>
+                                    {% for event in announce.events.all %}
+                                        {{ event }}<br />
+                                    {% endfor %}
+                                    <br/>
+                                    <a href="{% url "email-view-announce" announce.uuid %}" class="cm-webversion">View Online</a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% for announce in m.meetingccnotices.all %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion0" href="#collapseb{{ forloop.counter0 }}">
+                                        CC ({{ announce.sent_at }})
+                                    </a>
+                                </div>
+                                <div id="collapseb{{ forloop.counter0 }}" class="panel-collapse collapse">
+                                    <div class="panel-body">
+                                    <strong>Msg: {{ announce.addtl_message }}</strong> <Br />
+                                    Events: <br/>
+                                    {% for event in announce.events.all %}
+                                        <em>{{ event }}</em><br/>
+                                    {% endfor %}
+                                    <a href="{% url "email-view-announce-cc" announce.uuid %}" class="cm-webversion">View Online</a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            </div>
+                
+                        
+                    <br />
+                    <a class="btn btn-default" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
+                    <a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>
+                    {% else %}
+                    <a class="btn btn-primary" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
+                    {% endif %}
+                    <!--<a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>-->
+                </div>
+                
+                
+                
+                <div class="tab-pane" id="events">
+                <h3>This Week's Upcoming Events</h3>
+                    <table class="table">
+                        <tr>        
+                            <th>Name</th>
+                            <th>Services</th>
+                            <th>Setup Start</th>
+                            <th>Setup Completed By</th>
+                            <th>CC's</th>
+                            <th></th>
+                        </tr>
+                        {% for e in events %}
+                            <tr data-toggle="collapse" data-target="#entry{{e.id}}">
+                                <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
+                                <td>
+                                    {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
+                                    {% if e.sound %} {{ e.sound.shortname }} {% endif %}
+                                    {% if e.projection %} {{ e.projection.shortname }} {% endif %}
+                                    {% if e.otherservices %} {{ e.otherservices.shortname }} {% endif %}
+                                </td>
+                                <td>
+                                    {% for c in e.ccinstances.all %}
+                                        <strong>{{ c.service.shortname }}</strong> : 
+                                        {{ c.setup_start }}<br />
+                                    {% endfor %}
+                                </td>
+                                <td>{{ e.datetime_setup_complete }}</td>
+
+                                <td>
+                                    {% if e.ccinstances.count %}
+                                        {% for c in e.ccinstances.all %}
+                                            <strong>{{ c.service.shortname }}</strong> : <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>{% if not forloop.last %}<br />{% endif %}
+                                            
+                                        {% endfor %}
+                                    {% else %}
+                                        None Set 
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a class="btn btn-default" href="{% url "meeting-updateevent" m.id e.id %}">Setup Time &amp; Crew Chiefs</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="6">
+                                    <div class="collapse" id="entry{{e.id}}">
+                                    {{ e.description|mduserlink|mdeventlink|markdown }}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                    <h3>Future Events (next week)</h3>
+                    <table class="table">
+                        <tr>        
+                            <th>Name</th>
+                            <th>Services</th>
+                            <th>Setup Start</th>
+                            <th>Setup Completed By</th>
+                            <th>CC's</th>
+                            <th></th>
+                        </tr>
+                        {% for e in future %}
+                            <tr data-toggle="collapse" data-target="#entry{{e.id}}">
+                                <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
+                                <td>
+                                    {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
+                                    {% if e.sound %} {{ e.sound.shortname }} {% endif %}
+                                    {% if e.projection %} {{ e.projection.shortname }} {% endif %}
+                                    {% if e.otherservices %} {{ e.otherservices.shortname }} {% endif %}
+                                </td>
+                                <td>{{ e.datetime_setup_start }}</td>
+                                <td>{{ e.datetime_setup_complete }}</td>
+
+                                <td>
+                                    {% if e.ccinstances.count %}
+                                        {% for c in e.ccinstances.all %}
+                                            <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>&nbsp;
+                                            {% if not forloop.last %},{% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        None Set 
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a class="btn btn-default" href="{% url "meeting-updateevent" m.id e.id %}">Setup Time &amp; Crew Chiefs</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="6">
+                                    <div class="collapse" id="entry{{e.id}}">
+                                    {{ e.description|mduserlink|mdeventlink|markdown }}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
+    
+            
+            
+            
+
     <div class="row">
         <div class="col-md-12">
-            <h3>This Week's Upcoming Events</h3>
-            <table class="table">
-                <tr>        
-                    <th>Name</th>
-                    <th>Services</th>
-                    <th>Setup Start</th>
-                    <th>Setup Completed By</th>
-                    <th>CC's</th>
-                    <th></th>
-                </tr>
-                {% for e in events %}
-                    <tr data-toggle="collapse" data-target="#entry{{e.id}}">
-                        <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
-                        <td>
-                            {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
-                            {% if e.sound %} {{ e.sound.shortname }} {% endif %}
-                            {% if e.projection %} {{ e.projection.shortname }} {% endif %}
-                            {% if e.otherservices %} {{ e.otherservices.shortname }} {% endif %}
-                        </td>
-                        <td>
-                            {% for c in e.ccinstances.all %}
-                                <strong>{{ c.service.shortname }}</strong> : 
-                                {{ c.setup_start }}<br />
-                            {% endfor %}
-                        </td>
-                        <td>{{ e.datetime_setup_complete }}</td>
-
-                        <td>
-                            {% if e.ccinstances.count %}
-                                {% for c in e.ccinstances.all %}
-                                    <strong>{{ c.service.shortname }}</strong> : <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>{% if not forloop.last %}<br />{% endif %}
-                                    
-                                {% endfor %}
-                            {% else %}
-                                None Set 
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a class="btn btn-default" href="{% url "meeting-updateevent" m.id e.id %}">Setup Time &amp; Crew Chiefs</a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="6">
-                            <div class="collapse" id="entry{{e.id}}">
-                            {{ e.description|mduserlink|mdeventlink|markdown }}
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </table>
-            <h3>Future Events (next week)</h3>
-            <table class="table">
-                <tr>        
-                    <th>Name</th>
-                    <th>Services</th>
-                    <th>Setup Start</th>
-                    <th>Setup Completed By</th>
-                    <th>CC's</th>
-                    <th></th>
-                </tr>
-                {% for e in future %}
-                    <tr data-toggle="collapse" data-target="#entry{{e.id}}">
-                        <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
-                        <td>
-                            {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
-                            {% if e.sound %} {{ e.sound.shortname }} {% endif %}
-                            {% if e.projection %} {{ e.projection.shortname }} {% endif %}
-                            {% if e.otherservices %} {{ e.otherservices.shortname }} {% endif %}
-                        </td>
-                        <td>{{ e.datetime_setup_start }}</td>
-                        <td>{{ e.datetime_setup_complete }}</td>
-
-                        <td>
-                            {% if e.ccinstances.count %}
-                                {% for c in e.ccinstances.all %}
-                                    <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>&nbsp;
-                                    {% if not forloop.last %},{% endif %}
-                                {% endfor %}
-                            {% else %}
-                                None Set 
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a class="btn btn-default" href="{% url "meeting-updateevent" m.id e.id %}">Setup Time &amp; Crew Chiefs</a>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="6">
-                            <div class="collapse" id="entry{{e.id}}">
-                            {{ e.description|mduserlink|mdeventlink|markdown }}
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </table>
+            <hr>
         </div>
     </div>
+{% endblock %}
+
+{% block extras %}
+<script>
+$(document).ready(function () {
+    $('#meetingtabs a').click(function (e) {
+        e.preventDefault();
+        $(this).tab('show');
+    });
+
+    // store the currently selected tab in the hash value
+    $("ul.nav-pills > li > a").on("shown.bs.tab", function (e) {
+        var id = $(e.target).attr("href").substr(1);
+        window.location.hash = id;
+    });
+
+    // on load of the page: switch to the currently selected tab
+    var hash = window.location.hash;
+    $('#meetingtabs a[href="' + hash + '"]').tab('show');
+    });
+</script>
 {% endblock %}
