@@ -67,9 +67,8 @@ def updateevent(request,meetingid,eventid):
         formset = CrewChiefFS(request.POST,instance=event,prefix="main")
         if formset.is_valid():
             formset.save()
-            url = reverse('meetings.views.viewattendance',args=(meetingid,))
-            url_plus_nav = url + "#events"
-            return HttpResponseRedirect(url_plus_nav)
+            url = reverse('meetings.views.viewattendance',args=(meetingid,)) + "#events"
+            return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
     else:
@@ -87,7 +86,8 @@ def editattendance(request,id):
         formset = MAF(request.POST,instance=m)
         if formset.is_valid():
             m = formset.save()
-            return HttpResponseRedirect(reverse('meetings.views.viewattendance',args=(m.id,)))
+            url = reverse('meetings.views.viewattendance',args=(m.id,)) + "#attendance"
+            return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
     else:
@@ -147,8 +147,8 @@ def mknotice(request,id):
             else:
                 success = False
             AnnounceSend.objects.create(announce=notice,sent_success=success)
-            
-            return HttpResponseRedirect(reverse('meetings.views.viewattendance',args=(meeting.id,)))
+            url = reverse('meetings.views.viewattendance',args=(meeting.id,)) + "#emails"
+            return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
     
@@ -179,7 +179,8 @@ def mkccnotice(request,id):
                 
             notice.save()
             
-            return HttpResponseRedirect(reverse('meetings.views.viewattendance',args=(meeting.id,)))
+            url = reverse('meetings.views.viewattendance',args=(meeting.id,)) + "#emails"
+            return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
     
