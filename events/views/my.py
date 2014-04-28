@@ -9,7 +9,7 @@ from django.utils.functional import curry
 from django.db.models import Q
 
 from events.models import Event,Organization,CCReport,Hours
-from events.forms import ReportForm,MKHoursForm,EditHoursForm,SelfServiceOrgRequestForm
+from events.forms import ReportForm,MKHoursForm,EditHoursForm,SelfServiceOrgRequestForm,WorkorderRepeatForm
 
 import datetime,time
 from django.utils import timezone
@@ -57,8 +57,44 @@ def mywo(request):
     
     #context['events'] = events
     context['events'] = l
-    context['owned'] = ic_orgs.values_list('name',flat=True)
+    owned = ic_orgs.values_list('name',flat=True)
+    assoc = orgs.values_list('name',flat=True)
+    context['owned'] = list(set(owned + assoc))
     return render_to_response('mywo.html', context)
+
+@login_required
+def myworepeat(request,eventid):
+    context = RequestContext(request)
+    context['msg'] = "Workorder Repeat"
+    
+    event = get_object_or_404(Event,pk=eventid)
+    if request.method == "POST":
+        f = WorkorderRepeatForm(request.POST,instance=event)
+        if f.is_valid():
+            o = f.save(commit=False)
+            o.contact = request.user
+            # reset some fields for our standard workflow
+            o.id = None # for copy
+            o.closed = False
+            o.closed_on = None
+            o.closed_by = None
+            o.approved = False
+            o.approved_on = None
+            o.approved_by = None
+            o.cancelled = False
+            o.cancelled_on = None
+            o.cancelled_by = None
+            o.cancelled_reason = None
+            o.save()
+            return render_to_response('wizard_finished.html',context)
+        else:
+            context['formset'] = f
+            return render_to_response('mycrispy.html', context)
+    else:
+        f = WorkorderRepeatForm(instance=event)
+        context['formset'] = f
+        return render_to_response('mycrispy.html', context)
+    
 
 
 @login_required
@@ -102,7 +138,7 @@ def myorgform(request):
         return render_to_response('mycrispy.html', context)
         
 
-# lnl facing
+### lnl facing
 
 @login_required
 #@user_passes_test(is_lnlmember, login_url='/lnldb/fuckoffkitty/')
@@ -131,6 +167,7 @@ def myevents(request):
 
 @login_required
 def myeventdetail(request,id):
+    """ Shows detail for users event """
     context = RequestContext(request)
     event = get_object_or_404(Event,pk=id)
     
@@ -145,20 +182,26 @@ def myeventdetail(request,id):
     
 @login_required
 def eventfiles(request,eventid):
+    """ Files for an event"""
     context = RequestContext(request)
     event = get_object_or_404(Event,pk=eventid)
     
     context['event'] = event
     return render_to_response('myeventfiles.html',context)
+
+
+
+### Views Relating to Crew Chiefs
 @login_required
 def ccreport(request,eventid):
+    """ Submits a crew chief report """
     context = RequestContext(request)
     
         
     user = request.user
     
     uevent = user.ccinstances.filter(event__pk=eventid)
-    
+    # check that the event in question belongs to the user
     if not uevent:
         return HttpResponse("This Event Must not Have been yours, or is closed")
     
@@ -166,12 +209,15 @@ def ccreport(request,eventid):
     if not event.reports_editable:
         return HttpResponse("The deadline for report submission and hours has past...")
         
+    # get event
     event = uevent[0].event
     x = event.ccinstances.filter(crew_chief=user)
     context['msg'] = "Crew Chief Report for '<em>%s</em>' (%s)" % (event,",".join([str(i.service) for i in x]))
     
+    # create report
     report,created = CCReport.objects.get_or_create(event=event, crew_chief=user)
     
+    # standard save flow
     if request.method == 'POST':
         formset = ReportForm(request.POST,instance=report)
         if formset.is_valid():
@@ -189,6 +235,7 @@ def ccreport(request,eventid):
     
 @login_required
 def hours_list(request,eventid):
+    """ Lists a users' hours """
     context = RequestContext(request)
     user = request.user
     
@@ -207,6 +254,7 @@ def hours_list(request,eventid):
 
 @login_required
 def hours_mk(request,eventid):
+    """ Hour Entry Form for CC """
     context = RequestContext(request)
     
     user = request.user
@@ -238,6 +286,7 @@ def hours_mk(request,eventid):
 
 @login_required
 def hours_edit(request,eventid,userid):
+    """ Hour Entry Form for CC (editing)"""
     context = RequestContext(request)
     user = request.user
     uevent = user.ccinstances.filter(event__pk=eventid)
@@ -270,6 +319,7 @@ def hours_edit(request,eventid,userid):
 
 @login_required
 def hours_bulk(request,eventid):
+    """ Bulk Hours Entry Form """
     context = RequestContext(request)
     user = request.user
     uevent = user.ccinstances.filter(event__pk=eventid)

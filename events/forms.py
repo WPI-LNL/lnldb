@@ -95,7 +95,7 @@ def get_qs_from_event(event):
         
     return Service.objects.filter(Q(id__in=[lighting_id])|Q(id__in=[sound_id])|Q(id__in=[proj_id])|Q(id__in=[i.id for i in event.otherservices.all()]))
     
-
+### LNAdmin Forms
 class WorkorderSubmit(ModelForm):
     class Meta:
         model = Event
@@ -201,6 +201,9 @@ class IOrgVerificationForm(forms.ModelForm):
         model = OrgBillingVerificationEvent
         
     verified_by = AutoCompleteSelectField('Officers')
+    
+    
+### Flow Forms
 class EventApprovalForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
         self.helper = FormHelper()
@@ -678,6 +681,115 @@ class ExtraForm(forms.ModelForm):
 #usage
 #CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3)
 #CrewChiefFS.form = staticmethod(curry(CCIForm, event=request.event))
+
+### Workorder Forms
+
+# Workorder Repeat Form
+class WorkorderRepeatForm(forms.ModelForm):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.layout = Layout(
+            Field('location'),
+            Field('event_name'),
+            TabHolder(
+                Tab(
+                    "Main Information",
+                    Field('description',label="Description (optional)",css_class="col-md-6"),
+                    Field('datetime_setup_complete',label="Setup Finish",css_class="dtp"),
+                    Field('datetime_start',label="Event Start",css_class="dtp"),
+                    Field('datetime_end',label="Event End",css_class="dtp"),
+                        ),
+                Tab(
+                    "Lighting",
+                    InlineRadios('lighting',title="Lighting", empty_label=None),
+                    Field('lighting_reqs',css_class="col-md-8"),
+                    ),
+                Tab(
+                    "Sound",
+                    InlineRadios('sound', title="Sound"),
+                    Field('sound_reqs',css_class="col-md-8"),
+                    ),
+                Tab(
+                    "Projection",
+                    InlineRadios('projection', title="Projection"),
+                    Field('proj_reqs',css_class="col-md-8"),
+                    ),
+                Tab(
+                    "Additional Information",
+                    InlineCheckboxes('otherservices'),
+                    Field('otherservice_reqs',css_class="col-md-8")
+                    ),
+            ),
+            FormActions(
+                Submit('save', 'Repeat Event'),
+            ),
+        )
+        super(WorkorderRepeatForm,self).__init__(*args,**kwargs)
+    
+    datetime_setup_complete = forms.SplitDateTimeField(label="Setup Completed By",  input_time_formats=valid_time_formats, required=True)
+    datetime_start = forms.SplitDateTimeField(label="Event Starts", input_time_formats=valid_time_formats)
+    datetime_end = forms.SplitDateTimeField(label="Event Ends", input_time_formats=valid_time_formats)
+    location = GroupedModelChoiceField(
+            queryset = Location.objects.filter(show_in_wo_form=True),
+            group_by_field = "building",
+            group_label = lambda group: group.name,
+        )
+    lighting = forms.ModelChoiceField(
+        empty_label=None,
+        queryset = Lighting.objects.all(),
+        widget = forms.RadioSelect(attrs={'class':'radio itt'}),
+        required=False
+    )   
+    sound = forms.ModelChoiceField(
+        empty_label=None,
+        queryset = Sound.objects.all(),
+        widget = forms.RadioSelect(attrs={'class':'radio itt'}),
+        required=False
+    )
+    projection = forms.ModelChoiceField(
+        empty_label=None,
+        queryset = Projection.objects.all(),
+        widget = forms.RadioSelect(attrs={'class':'radio itt'}),
+        required=False
+    )
+    otherservices = forms.ModelMultipleChoiceField(
+        queryset = Service.objects.filter(category__name__in=["Misc","Power"]),
+        widget = forms.CheckboxSelectMultiple(attrs={'class':'checkbox'}),
+        required=False
+    )
+        
+    class Meta:
+        model = Event
+        fields = ['location','event_name','description','datetime_start','datetime_end','datetime_setup_complete','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs']
+        
+    def clean(self): # custom validation
+        cleaned_data = super(WorkorderRepeatForm, self).clean()
+        
+        # time validation
+        setup_complete = cleaned_data.get("datetime_setup_complete")
+        event_start = cleaned_data.get("datetime_start")
+        event_end = cleaned_data.get("datetime_end")
+        
+        if not setup_complete or not event_start or not event_end:
+            raise ValidationError('Please enter in a valid time in each field')
+        if event_start > event_end:
+            raise ValidationError('You cannot start after you finish')
+        if setup_complete > event_start:
+            raise ValidationError('You cannot setup after you finish')
+        if setup_complete < datetime.datetime.now(pytz.utc):
+            raise ValidationError('Stop trying to time travel')
+        
+        # service exists validation
+        lighting = cleaned_data.get("lighting",None)
+        sound = cleaned_data.get("sound",None)
+        projection = cleaned_data.get("projection",None)
+        otherservices = cleaned_data.get("otherservices",None)
+        
+        if not ( lighting or sound or projection or not otherservices):
+            raise ValidationError('Please select at least one service, %s %s %s %s' % (lighting, sound, projection, otherservices))
+        
+        return cleaned_data    
 #__        __         _                 _           
 #\ \      / /__  _ __| | _____  _ __ __| | ___ _ __ 
  #\ \ /\ / / _ \| '__| |/ / _ \| '__/ _` |/ _ \ '__|

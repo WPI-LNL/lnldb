@@ -193,7 +193,7 @@ def unreviewed(request,start=None,end=None):
         
     now = datetime.datetime.now(pytz.utc)
     #events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=False).filter(datetime_end__lte=now)
+    events = Event.objects.exclude(Q(closed=True)|Q(cancelled=True)|Q(approved=False)).filter(reviewed=False).filter(datetime_end__lte=now)
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
