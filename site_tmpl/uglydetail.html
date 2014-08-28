@@ -95,7 +95,7 @@
                         </tr>
                         <tr>
                             <th>Event Contact Name</th>
-                            <td>{% if event.contact %}<a href="{% url "memberdetail" event.contact.id %}">{{ event.contact.get_full_name }}</a>{% else %}No Contact Set {% endif %}</td>
+                            <td>{% if event.contact %}<a href="{% url "memberdetail" event.contact.id %}">{{ event.contact.get_full_name }}</a>{% else %}{{ event.contact }} {% endif %}</td>
                         </tr>
                         <tr>
                             <th>Event Contact Phone</th>

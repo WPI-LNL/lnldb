@@ -42,6 +42,41 @@ class EventAdmin(admin.ModelAdmin):
     inlines = [EventCCInline,EventHoursInline,EventAttachmentInline,EventBillingInline]
     filter_horizontal = ('crew','crew_chief','org')
     search_fields = ['event_name']
+    readonly_fields = ['submitted_on']
+    fieldsets = (
+        ("Submitter Information", {
+            'fields': ('submitted_by', 'submitted_ip', 'submitted_on')
+        }),
+        ('Event And Contact Information', {
+            'fields': ('event_name','description','internal_notes', 'contact', 'org','billing_org')
+        }),
+        ('Scheduling & Location', {
+            'fields': ('datetime_setup_complete', 'datetime_start', 'datetime_end', 'location')
+        }),
+        ('Services', {
+            'fields': ('lighting', 'lighting_reqs', 'sound', 'sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs')
+        }),
+        ('Status Flags', {
+            'fields': ( 'billed_by_semester',
+                        ('approved', 'approved_on', 'approved_by'),
+                        ('reviewed','reviewed_on','reviewed_by'),
+                        ('closed','closed_on','closed_by'),
+                        ('cancelled','cancelled_on','cancelled_by'),
+                        'cancelled_reason',
+                       )
+        }),
+        ('OLD STYLE DEPRECATED FIELDS', {
+            'classes': ('collapse',),
+            'fields': ('person_name', # pulled from Contact field's object
+                       'contact_email', # pulled from Contact field's object
+                       'contact_addr', # pulled from Contact field's object
+                       'contact_phone', # pulled from Contact field's object
+                       'datetime_setup_start', # part of a CrewChiefInstance object
+                       'setup_location', # part of a CrewChiefInstance object
+                       'payment_amount' # Billing Object
+                       )
+        }),
+    )
     
 class OrgAdmin(admin.ModelAdmin):
     list_display = ('name','shortname','email','exec_email','user_in_charge','archived')

@@ -59,7 +59,7 @@ def mywo(request):
     context['events'] = l
     owned = ic_orgs.values_list('name',flat=True)
     assoc = orgs.values_list('name',flat=True)
-    context['owned'] = list(set(owned + assoc))
+    context['owned'] = list(set(list(owned) + list(assoc)))
     return render_to_response('mywo.html', context)
 
 @login_required

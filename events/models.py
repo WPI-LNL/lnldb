@@ -44,6 +44,7 @@ def consume_event_method(emethod,methodname):
     return level,reqs
 
 class EventManager(models.Manager):
+    """ This object consumes the output of the multi step workorder form """
     
     def consume_workorder_formwiz(self,form_fields,wiz):
         #rip errything out
@@ -189,6 +190,8 @@ class EventManager(models.Manager):
 ### MODELS
 
 class Building(models.Model):
+    """ Used to group locations together in forms """
+    
     name = models.CharField(max_length=128)
     shortname = models.CharField(max_length=4)
     
@@ -200,6 +203,7 @@ class Building(models.Model):
         ordering = ['name']
     
 class Location(models.Model):
+    """ A place where an event, event setup or meeting can happen"""
     name = models.CharField(max_length=64)
     # booleans
     setup_only = models.BooleanField(default=False)
@@ -215,6 +219,7 @@ class Location(models.Model):
     class Meta:
         ordering = ['building','name']
 class ExtraInstance(models.Model):
+    """ An instance of a given extra attached to an event """
     event = models.ForeignKey('Event')
     extra = models.ForeignKey('Extra')
     quant = models.PositiveIntegerField()
@@ -227,6 +232,7 @@ class ExtraInstance(models.Model):
         return self.extra.cost
     
 class Extra(models.Model):
+    """ An additional charge to be added to an event. """
     name = models.CharField(max_length=64)
     cost = models.DecimalField(max_digits=8,decimal_places=2)
     desc = models.TextField()
@@ -246,6 +252,7 @@ class Extra(models.Model):
             return (forms.IntegerField(min_value=0,),)
     
 class Category(models.Model):
+    """ A category """
     name = models.CharField(max_length=16)
     
     def __unicode__(self):
@@ -253,6 +260,10 @@ class Category(models.Model):
     
     
 class Service(models.Model):
+    """ 
+        Some chargable service that is added to an event,
+        lighting, sound, projection are examples
+    """ 
     shortname = models.CharField(max_length=2)
     longname = models.CharField(max_length=64)
     base_cost = models.DecimalField(max_digits=8,decimal_places=2)
@@ -273,6 +284,9 @@ class Projection(Service):
     pass
     
 class Billing(models.Model):
+    """
+        A billing instance that is sent to a client
+    """
     date_billed = models.DateField()
     date_paid = models.DateField(null=True,blank=True)
     event = models.ForeignKey('Event',related_name="billings")
@@ -287,6 +301,9 @@ class Billing(models.Model):
         
         
 class Event(models.Model):
+    """
+        An Event, What everything ends up pointing to
+    """
     
     objects = models.Manager()
     event_mg = EventManager()
@@ -297,16 +314,16 @@ class Event(models.Model):
     
     event_name = models.CharField(max_length=128)
     #Person
-    person_name = models.CharField(max_length=128,null=True,blank=True,verbose_name="Contact_name")
+    person_name = models.CharField(max_length=128,null=True,blank=True,verbose_name="Contact_name") #DEPRECATED
     contact = models.ForeignKey(User,null=True,blank=True, verbose_name = "Contact")
     org = models.ManyToManyField('Organization',null=True,blank=True, verbose_name="Client")
     billing_org = models.ForeignKey('Organization',null=True, blank=True, related_name="billedevents")
-    contact_email = models.CharField(max_length=256,null=True,blank=True)
-    contact_addr = models.TextField(null=True,blank=True)
-    contact_phone = models.CharField(max_length=32,null=True,blank=True)
+    contact_email = models.CharField(max_length=256,null=True,blank=True) #DEPRECATED
+    contact_addr = models.TextField(null=True,blank=True) #DEPRECATED
+    contact_phone = models.CharField(max_length=32,null=True,blank=True) #DEPRECATED
 
     #Dates & Times
-    datetime_setup_start = models.DateTimeField(null=True,blank=True)
+    datetime_setup_start = models.DateTimeField(null=True,blank=True) #DEPRECATED
     datetime_setup_complete = models.DateTimeField()
 
     datetime_start = models.DateTimeField()
@@ -329,7 +346,7 @@ class Event(models.Model):
     #NOT SHOWN
     otherservices = models.ManyToManyField(Service,null=True,blank=True)
     otherservice_reqs = models.TextField(null=True,blank=True)
-    setup_location = models.ForeignKey('Location',related_name="setuplocation",null=True,blank=True)
+    setup_location = models.ForeignKey('Location',related_name="setuplocation",null=True,blank=True) #DEPRECATED
     ##Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True,blank=True)
