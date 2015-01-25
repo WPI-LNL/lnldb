@@ -17,7 +17,7 @@ class Migration(SchemaMigration):
 
         # Adding field 'Meeting.meeting_type'
         db.add_column('meetings_meeting', 'meeting_type',
-                      self.gf('django.db.models.fields.related.ForeignKey')(default=0, to=orm['meetings.MeetingType']),
+                      self.gf('django.db.models.fields.related.ForeignKey')(default=None, to=orm['meetings.MeetingType']),
                       keep_default=False)
 
 
