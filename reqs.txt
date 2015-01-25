@@ -2,7 +2,13 @@
 Django==1.6
 Markdown==2.3.1
 PIL==1.1.7
-South==0.8.1
+## TODO: put version numbers for these
+South
+dealer
+mysql-python
+pisa
+pytz
+django-lineage
 django-appconf==0.6
 django-bootstrap-toolkit==2.10.6
 -e git://github.com/gmorell/django-cas2.git#egg=django_cas-dev
