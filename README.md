@@ -6,7 +6,7 @@ LNLDB runs under Python2.x and Django.
 ## To Install (Testing)
 1. Install required system packages (by reference of a barebones Debian build; adjust for your system)
 ```
-sudo apt-get install python2.7 python2.7-dev python-pip git mysql-server
+sudo apt-get install python2.7 python2.7-dev python-pip git mysql-server libmysqlclient-dev
 ```
 
 2. Get the sources
