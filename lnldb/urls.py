@@ -37,6 +37,7 @@ from projection.views import ProjectionistDelete
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from helpers.challenges import is_officer
+from django.conf import settings
 
 event_wizard = EventWizard.as_view(
     named_event_forms,
@@ -203,6 +204,8 @@ urlpatterns = patterns('',
     url(r'^lnadmin/inventory/d/(?P<id>[0-9a-f]+)/addentry/$', 'inventory.views.addentry', name="inv-new-entry"),
         
     #members
+    url(r'^list/mdc/raw/$', 'members.views.mdc_raw'),
+    url(r'^list/mdc/$', 'members.views.mdc'),
     url(r'^lnadmin/members/officers/$', 'members.views.officers'),
     url(r'^lnadmin/members/active/$', 'members.views.active'),
     url(r'^lnadmin/members/associate/$', 'members.views.associate'),

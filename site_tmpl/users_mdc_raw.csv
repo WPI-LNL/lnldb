@@ -1,0 +1,19 @@
+{% block content %}__File Format Version__,0x01
+
+
+__Feature__,"MDC Call List"
+
+__Record__,1 of 1 ("MDC Call List")
+
+__Section__,"General"
+
+__Field Name__, __Field Value__
+"List Alias","LNL"
+
+__Section__,"List"
+
+__Field Names__
+"Call ID","Call text"
+__Field Values__
+{% for user in users %}"{{ user.get_profile.mdc|slice:":4" }}","{{ user.last_name|upper|slice:":10" }} {{ user.first_name|upper|slice:":1" }}"
+{% endfor %}{% endblock %}
