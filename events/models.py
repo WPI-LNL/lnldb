@@ -690,7 +690,8 @@ class CCReport(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     for_service_cat = models.ManyToManyField(Category,verbose_name="Services",null=True,blank=True)
-    
+    def __unicode__(self):
+        return u'%s - %s' % (self.event, self.crew_chief)
     @property
     def pretty_cat_list(self):
         return ", ".join([x.name for x in self.for_service_cat.all()])
@@ -783,7 +784,8 @@ class Hours(models.Model):
     service = models.ForeignKey('Service', related_name="hours", null=True, blank=True)
     user = models.ForeignKey(User,related_name="hours")
     hours = models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)
-    
+    def __unicode__(self):
+        return u'%s (%s)' % (self.event, self.user)
     class Meta:
         unique_together = ('event','user','service')
     
