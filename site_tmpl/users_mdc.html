@@ -6,11 +6,13 @@
 <table class="table table-striped table-bordered" style="width:30%;">
     <tr> 
         <th> Full Name </th>
+        <th> Ugly Name </th>
         <th> MDC </th>
     </tr>
     {% for user in users %}
             <tr>
                 <td>{{ user.last_name }}, {{ user.first_name }}</td>
+                <td>{{ user.get_profile.mdc_name }}</td>
                 <td>{{ user.get_profile.mdc }}</td>
             </tr>
     {% endfor %}
