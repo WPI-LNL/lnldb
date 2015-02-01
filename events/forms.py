@@ -358,7 +358,7 @@ class InternalEventForm(forms.ModelForm):
             group_by_field = "building",
             group_label = lambda group: group.name,
         )
-    contact = AutoCompleteSelectField('Users',required=False,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    contact = AutoCompleteSelectField('Users',required=False)
     org = AutoCompleteSelectMultipleField('Orgs',required=False, label = "Client")
     
     datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Setup Completed")
@@ -409,7 +409,7 @@ class InternalReportForm(forms.ModelForm):
     class Meta:
         model = CCReport
     
-    crew_chief = AutoCompleteSelectField('Members',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    crew_chief = AutoCompleteSelectField('Members',required=True)
         
 ### External Organization forms
 
@@ -431,7 +431,7 @@ class ExternalOrgUpdateForm(forms.ModelForm):
         )
         super(ExternalOrgUpdateForm,self).__init__(*args,**kwargs)
         
-    associated_users = AutoCompleteSelectMultipleField('Users',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    associated_users = AutoCompleteSelectMultipleField('Users',required=True)
     class Meta:
         model = Organization
         fields = ('address','phone','associated_users')
@@ -634,7 +634,7 @@ class CCIForm(forms.ModelForm):
     class Meta:
         model = EventCCInstance
         
-    crew_chief = AutoCompleteSelectField('Members',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    crew_chief = AutoCompleteSelectField('Members',required=True)
     setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now()) 
     setup_location = GroupedModelChoiceField(
             queryset = Location.objects.filter(Q(setup_only=True)|Q(show_in_wo_form=True)),
