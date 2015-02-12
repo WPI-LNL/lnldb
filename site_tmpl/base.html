@@ -23,6 +23,20 @@
         <script src="{{ STATIC_URL }}ajax_select/js/ajax_select.js"></script>
         <link href='{{ STATIC_URL }}ajax_select/css/ajax_select.css' rel="stylesheet" type="text/css">
         <link href="{{ STATIC_URL }}css/jquery-ui.css" rel="stylesheet">
+        <script type="text/javascript">
+            $(document).ready(function () {
+                $(".dateinput").datepicker({
+                        format: 'yyyy-mm-dd',
+                    });
+                $(".timeinput").timepicker(
+                    {
+                        minuteStep: 15,
+                        showInputs: true,
+                        defaultTime: false,
+                        showMeridian: false
+                    });
+                });
+    </script>
 <!--         <link href="{{ STATIC_URL }}css/style.css" rel="stylesheet"> -->
         <style type="text/css">
         body {
