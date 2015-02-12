@@ -401,7 +401,9 @@ class Event(models.Model):
             for cc in ccs:
                 desc += cc.crew_chief.get_full_name() + " [" + cc.service.shortname + "], "
             desc = desc[:-2] + ".\n" # removes trailing comma
-        desc += self.description + "\n"
+        if self.description:
+            desc += self.description + "\n"
+        return desc
 
     def cal_location(self):
         return self.location.name
