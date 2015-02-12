@@ -378,7 +378,9 @@ class Event(models.Model):
     billed_by_semester = models.BooleanField(default=False)
     
     # nice breakout for workorder
-
+    @property
+    def contact_name(self):
+        return self.contact.profile.fullname
     @property
     def contact_phone(self):
         return self.contact.profile.phone 
