@@ -661,14 +661,15 @@ class Event(models.Model):
     
     @property
     def cost_total_pre_discount(self):
-        return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total
+        return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total + self.oneoff_total
     
     @property
     def discount_value(self):
         if self.discount_applied:
-            return float(self.cost_sound_total + self.cost_lighting_total) * .15
+            return decimal.Decimal(self.sound.base_cost + self.lighting.base_cost) * decimal.Decimal(".15")
         else:
-            return 0.0
+            return decimal.Decimal("0.0")
+    
     @property
     def pretty_title(self):
         name = ""
@@ -680,13 +681,7 @@ class Event(models.Model):
 
     @property
     def cost_total(self):
-        if self.discount_applied:
-            total_to_discount = self.cost_sound_total + self.cost_lighting_total
-            total_to_not_discount =  self.cost_projection_total + self.extras_total
-            return float(total_to_discount) * .85 + float(self.oneoff_total) + float(total_to_not_discount)
-        else:
-            return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total + self.oneoff_total
-
+        return self.cost_projection_total + self.cost_lighting_total - self.discount_value + self.cost_sound_total + self.extras_total + self.oneoff_total
     # org to be billed
     @property
     def org_to_be_billed(self):
