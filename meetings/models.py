@@ -23,7 +23,10 @@ class Meeting(models.Model):
         return ""
 
     def cal_location(self):
-        return self.location.name
+        if self.location:
+            return self.location.name
+        else:
+            return ""
 
     def cal_start(self):
         return self.datetime

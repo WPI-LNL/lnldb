@@ -401,7 +401,9 @@ class Event(models.Model):
             for cc in ccs:
                 desc += cc.crew_chief.get_full_name() + " [" + cc.service.shortname + "], "
             desc = desc[:-2] + ".\n" # removes trailing comma
-        desc += self.description + "\n"
+        if self.description:
+            desc += self.description + "\n"
+        return desc
 
     def cal_location(self):
         return self.location.name
@@ -847,7 +849,9 @@ class EventCCInstance(models.Model):
             desc += org.name + ", "
         desc = desc[:-2] + ".\n" # removes trailing comma
         desc += "Crew Chief: " + self.crew_chief.get_full_name() + "\n"
-        desc += self.event.description + "\n"
+        if self.event.description:
+            desc += self.event.description + "\n"
+        return desc
 
     def cal_location(self):
         return self.setup_location.name
@@ -856,7 +860,10 @@ class EventCCInstance(models.Model):
         return self.setup_start
 
     def cal_end(self):
-        return self.event.datetime_end
+        if self.event.datetime_setup_complete:
+            return self.event.datetime_setup_complete
+        else:
+            return self.event.datetime_start
 
     def cal_link(self):
         return "http://lnl.wpi.edu/lnadmin/events/view/" + str(self.event.id)

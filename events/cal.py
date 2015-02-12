@@ -27,8 +27,10 @@ class EventFeed(ICalFeed):
         return item.cal_name()
 
     def item_description(self, item):
-        return item.cal_desc()
-
+        if item.cal_desc():
+            return item.cal_desc()
+        else:
+            return ""
     def item_location(self, item):
         return item.cal_location()
 
