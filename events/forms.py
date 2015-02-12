@@ -27,6 +27,7 @@ from bootstrap_toolkit.widgets import BootstrapDateInput, BootstrapTextInput, Bo
 
 from django.core.exceptions import ValidationError
 import datetime
+import decimal
 import pytz
 
 from ajax_select import make_ajax_field
@@ -588,6 +589,7 @@ class MKHoursForm(forms.ModelForm):
     class Meta:
         model = Hours
     user = AutoCompleteSelectField('AssocMembers',required=True)
+    hours = forms.DecimalField(min_value = decimal.Decimal("0.00"))
         
 class EditHoursForm(forms.ModelForm):
     def __init__(self,*args,**kwargs):
