@@ -379,6 +379,9 @@ class Event(models.Model):
     
     # nice breakout for workorder
     @property
+    def person_name(self):
+        return self.contact_name
+    @property
     def contact_name(self):
         return self.contact.profile.fullname
     @property
