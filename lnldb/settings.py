@@ -142,7 +142,7 @@ INSTALLED_APPS = (
     'bootstrap_toolkit',
     'crispy_forms',
     'lineage',
-    
+    'django_bootstrap_calendar',
     'ajax_select',
     
     'south',
