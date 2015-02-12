@@ -7,6 +7,7 @@ django-appconf==0.6
 django-bootstrap-toolkit==2.10.6
 -e git://github.com/gmorell/django-cas2.git#egg=django_cas-dev
 -e git+https://github.com/progressive-cms/django-ajax-selects.git#egg=ajax_select
+-e git+https://github.com/jmerdich/django-bootstrap-calendar.git
 django-compressor==1.3
 django-crispy-forms==1.2.7
 django-uuidfield==0.4.0
