@@ -850,7 +850,9 @@ class EventCCInstance(models.Model):
             desc += org.name + ", "
         desc = desc[:-2] + ".\n" # removes trailing comma
         desc += "Crew Chief: " + self.crew_chief.get_full_name() + "\n"
-        desc += self.event.description + "\n"
+        if self.event.description:
+            desc += self.event.description + "\n"
+        return desc
 
     def cal_location(self):
         return self.setup_location.name
