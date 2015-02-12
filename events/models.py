@@ -381,13 +381,13 @@ class Event(models.Model):
 
     @property
     def contact_phone(self):
-        return this.contact.profile.phone 
+        return self.contact.profile.phone 
     @property
     def contact_email(self):
-        return this.contact.profile.email
+        return self.contact.profile.email
     @property
     def contact_addr(self):
-        return this.contact.profile.addr
+        return self.contact.profile.addr
     
     #def clean(self):
         #if self.datetime_start > self.datetime_end:
