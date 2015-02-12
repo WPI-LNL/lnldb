@@ -23,7 +23,26 @@ class Profile(models.Model):
             return True
         else:
             return False
-    
+
+    @property
+    def mdc_name(self):
+        MAX_CHARS = 12
+        clean_first,clean_last="",""
+
+        #assume that Motorola can handle practically nothing. Yes, ugly, but I don't wanna regex 1000's of times
+        for char in self.user.first_name.upper().strip():
+            if ord(char) == ord(' ') or ord(char) == ord('-')\
+                    or ord('0') <= ord(char) <= ord('9') or ord('A') <= ord(char) <= ord('Z'):
+                clean_first += char
+        for char in self.user.last_name.upper().strip():
+            if ord(char) == ord(' ') or ord(char) == ord('-')\
+                    or ord('0') <= ord(char) <= ord('9') or ord('A') <= ord(char) <= ord('Z'):
+                clean_last += char
+
+        outstr = clean_last[:MAX_CHARS-2] + "," #leave room for at least an initial
+        outstr += clean_first[:MAX_CHARS-len(outstr)] # fill whatever's left with the first name
+        return outstr
+
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)

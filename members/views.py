@@ -23,6 +23,31 @@ from helpers.mixins import LoginRequiredMixin, OfficerMixin
 from events.models import Event,Projection,EventCCInstance 
 
 @login_required
+def mdc(request):
+    context = RequestContext(request)
+    users = User.objects.exclude(profile__mdc__isnull=True).exclude(profile__mdc='').order_by('last_name')
+
+
+    context['users'] = users
+    context['h2'] = "Member MDC List"
+
+    return render_to_response('users_mdc.html', context)
+
+@login_required
+def mdc_raw(request):
+    context = RequestContext(request)
+    users = User.objects.exclude(profile__mdc__isnull=True).exclude(profile__mdc='').order_by('last_name')
+
+
+    context['users'] = users
+
+    response = render_to_response('users_mdc_raw.csv', context)
+    response['Content-Disposition'] = 'attachment; filename="lnl_mdc.csv"'
+    response['Content-Type'] = 'text/csv'
+    return response
+
+
+@login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def officers(request):
     context = RequestContext(request)
