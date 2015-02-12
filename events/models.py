@@ -377,6 +377,18 @@ class Event(models.Model):
     internal_notes = models.TextField(null=True,blank=True)
     billed_by_semester = models.BooleanField(default=False)
     
+    # nice breakout for workorder
+
+    @property
+    def contact_phone(self):
+        return this.contact.profile.phone 
+    @property
+    def contact_email(self):
+        return this.contact.profile.email
+    @property
+    def contact_addr(self):
+        return this.contact.profile.addr
+    
     #def clean(self):
         #if self.datetime_start > self.datetime_end:
             #raise ValidationError('You cannot start after you finish')
