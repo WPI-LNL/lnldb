@@ -43,6 +43,15 @@
                  overflow-y: auto;
                  overflow-x: hidden;
              }
+             .event-list .event-status-cancelled{
+                 text-decoration: line-through;
+             }
+             .event-list .event-status-awaiting-approval .event-name a:before{
+                 content: "[Awaiting Approval] ";
+             }
+             .event-list .event-status-awaiting-review .event-name a:before{
+                 content: "[Awaiting Review] ";
+             }
         </style>
         {% block overrides %}
         {% endblock %}
