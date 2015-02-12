@@ -863,7 +863,10 @@ class EventCCInstance(models.Model):
         return self.setup_start
 
     def cal_end(self):
-        return self.event.datetime_setup_complete
+        if self.event.datetime_setup_complete:
+            return self.event.datetime_setup_complete
+        else:
+            return self.event.datetime_start
 
     def cal_link(self):
         return "http://lnl.wpi.edu/lnadmin/events/view/" + str(self.event.id)
