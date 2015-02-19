@@ -2,7 +2,7 @@
 
 from events.forms import named_event_tmpls
 from events.forms import CAT_LIGHTING, CAT_SOUND
-from events.forms import LIGHT_EXTRAS, SOUND_EXTRAS
+from events.forms import LIGHT_EXTRAS, SOUND_EXTRAS, PROJ_EXTRAS
 
 from emails.generators import DefaultLNLEmailGenerator as DLEG
 
@@ -109,6 +109,7 @@ class EventWizard(NamedUrlSessionWizardView):
         if self.steps.current == 'projection':
             context.update({'help_objs': Projection.objects.all() })
             context.update({'help_name': "Projection"})
+            context.update({'extras': PROJ_EXTRAS})
         percent = int(self.steps.step1 / float(self.steps.count) * 100)
         context.update({"percentage":percent})
         return context
