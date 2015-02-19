@@ -5,7 +5,7 @@ from events.models import Event, Location
 # Create your models here.
 
 from uuidfield import UUIDField
-
+from datetime import timedelta
 
 def get_default_email():
     return TargetEmailList.objects.get(email="lnlnews@wpi.edu")
@@ -15,7 +15,31 @@ class Meeting(models.Model):
     attendance = models.ManyToManyField(User,null=True,blank=True)
     meeting_type = models.ForeignKey('MeetingType',default=1)
     location = models.ForeignKey('events.Location',null=True,blank=True)
-    
+
+    def cal_name(self):
+        return "Meeting - " +  self.meeting_type.name
+
+    def cal_desc(self):
+        return ""
+
+    def cal_location(self):
+        if self.location:
+            return self.location.name
+        else:
+            return ""
+
+    def cal_start(self):
+        return self.datetime
+
+    def cal_end(self):
+        return self.datetime + timedelta(hours=1)
+
+    def cal_link(self):
+        return "http://lnl.wpi.edu/lnadmin/meetings/view/" + str(self.id)
+
+    def cal_guid(self):
+        return "mtg" + str(self.id) + "@lnldb"
+
     def __unicode__(self):
         return "Meeting For %s" % self.datetime.date()
     
@@ -42,7 +66,7 @@ class TargetEmailList(models.Model):
     email = models.EmailField()
     
     def __unicode__(self):
-        return "<EmailList (%s)>" % self.email
+        return "%s (%s)" % (self.name, self.email)
     
 class AnnounceSend(models.Model):
     announce = models.ForeignKey(MeetingAnnounce)

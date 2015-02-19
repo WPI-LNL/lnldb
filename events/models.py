@@ -377,6 +377,23 @@ class Event(models.Model):
     internal_notes = models.TextField(null=True,blank=True)
     billed_by_semester = models.BooleanField(default=False)
     
+    # nice breakout for workorder
+    @property
+    def person_name(self):
+        return self.contact_name
+    @property
+    def contact_name(self):
+        return self.contact.profile.fullname
+    @property
+    def contact_phone(self):
+        return self.contact.profile.phone 
+    @property
+    def contact_email(self):
+        return self.contact.profile.email
+    @property
+    def contact_addr(self):
+        return self.contact.profile.addr
+    
     #def clean(self):
         #if self.datetime_start > self.datetime_end:
             #raise ValidationError('You cannot start after you finish')
@@ -384,7 +401,42 @@ class Event(models.Model):
             #raise ValidationError('You cannot setup after you finish')
         ##if self.datetime_setup_complete < datetime.datetime.now(pytz.utc):
             ##raise ValidationError('Stop trying to time travel')
-    
+    # implementing calendars
+    def cal_name(self):
+        return self.event_name
+
+    def cal_desc(self):
+        desc = ""
+        desc += "Requested by "
+        orgs = self.org.all()
+        for org in orgs:
+            desc += org.name + ", "
+        desc = desc[:-2] + ".\n" # removes trailing comma
+        ccs = self.ccinstances.all()
+        if len(ccs) > 0:
+            desc += "Crew Chiefs: "
+            for cc in ccs:
+                desc += cc.crew_chief.get_full_name() + " [" + cc.service.shortname + "], "
+            desc = desc[:-2] + ".\n" # removes trailing comma
+        if self.description:
+            desc += self.description + "\n"
+        return desc
+
+    def cal_location(self):
+        return self.location.name
+
+    def cal_start(self):
+        return self.datetime_start
+
+    def cal_end(self):
+        return self.datetime_end
+
+    def cal_link(self):
+        return "http://lnl.wpi.edu/lnadmin/events/view/" + str(self.id)
+
+    def cal_guid(self):
+        return "event" + str(self.id) + "@lnldb"
+
     def firstorg(self):
         return self.org.all()[0]
     
@@ -628,25 +680,27 @@ class Event(models.Model):
     
     @property
     def cost_total_pre_discount(self):
-        return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total
+        return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total + self.oneoff_total
     
     @property
     def discount_value(self):
         if self.discount_applied:
-            return float(self.cost_sound_total + self.cost_lighting_total) * .15
+            return decimal.Decimal(self.sound.base_cost + self.lighting.base_cost) * decimal.Decimal(".15")
         else:
-            return 0.0
-        
+            return decimal.Decimal("0.0")
     
     @property
+    def pretty_title(self):
+        name = ""
+        if (self.lighting): name += "[" + self.lighting.shortname + "] "
+        if (self.projection): name += "[" + self.projection.shortname + "] "
+        if (self.sound): name += "[" + self.sound.shortname + "] "
+        name += self.event_name
+        return name
+
+    @property
     def cost_total(self):
-        if self.discount_applied:
-            total_to_discount = self.cost_sound_total + self.cost_lighting_total
-            total_to_not_discount =  self.cost_projection_total + self.extras_total
-            return float(total_to_discount) * .85 + float(self.oneoff_total) + float(total_to_not_discount)
-        else:
-            return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total + self.oneoff_total
-    
+        return self.cost_projection_total + self.cost_lighting_total - self.discount_value + self.cost_sound_total + self.extras_total + self.oneoff_total
     # org to be billed
     @property
     def org_to_be_billed(self):
@@ -690,7 +744,8 @@ class CCReport(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     for_service_cat = models.ManyToManyField(Category,verbose_name="Services",null=True,blank=True)
-    
+    def __unicode__(self):
+        return u'%s - %s' % (self.event, self.crew_chief)
     @property
     def pretty_cat_list(self):
         return ", ".join([x.name for x in self.for_service_cat.all()])
@@ -783,7 +838,8 @@ class Hours(models.Model):
     service = models.ForeignKey('Service', related_name="hours", null=True, blank=True)
     user = models.ForeignKey(User,related_name="hours")
     hours = models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)
-    
+    def __unicode__(self):
+        return u'%s (%s)' % (self.event, self.user)
     class Meta:
         unique_together = ('event','user','service')
     
@@ -798,7 +854,40 @@ class EventCCInstance(models.Model):
     service = models.ForeignKey(Service,related_name = "ccinstances")
     setup_location = models.ForeignKey(Location, related_name="ccinstances")
     setup_start = models.DateTimeField(null=True,blank=True)
-    
+
+    def cal_name(self):
+        return self.event.event_name + " " +  self.service.shortname + " Setup"
+
+    def cal_desc(self):
+        desc = ""
+        desc += "Requested by "
+        orgs = self.event.org.all()
+        for org in orgs:
+            desc += org.name + ", "
+        desc = desc[:-2] + ".\n" # removes trailing comma
+        desc += "Crew Chief: " + self.crew_chief.get_full_name() + "\n"
+        if self.event.description:
+            desc += self.event.description + "\n"
+        return desc
+
+    def cal_location(self):
+        return self.setup_location.name
+
+    def cal_start(self):
+        return self.setup_start
+
+    def cal_end(self):
+        if self.event.datetime_setup_complete:
+            return self.event.datetime_setup_complete
+        else:
+            return self.event.datetime_start
+
+    def cal_link(self):
+        return "http://lnl.wpi.edu/lnadmin/events/view/" + str(self.event.id)
+
+    def cal_guid(self):
+        return "setup" + str(self.id) + "@lnldb"
+
     class Meta:
         ordering = ("-event__datetime_start",)
 

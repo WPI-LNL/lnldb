@@ -588,7 +588,7 @@ class MKHoursForm(forms.ModelForm):
         self.fields['service'].queryset = get_qs_from_event(event)
     class Meta:
         model = Hours
-    user = AutoCompleteSelectField('AssocMembers',required=True,plugin_options={'position':"{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"}"})
+    user = AutoCompleteSelectField('AssocMembers',required=True)
     hours = forms.DecimalField(min_value = decimal.Decimal("0.00"))
         
 class EditHoursForm(forms.ModelForm):
