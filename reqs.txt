@@ -25,6 +25,5 @@ wsgiref==0.1.2
 xhtml2pdf==0.0.6
 reportlab==2.7
 ## reportlab anything less than 3.
-dealer
 django-markdown-deux
 django-ical
