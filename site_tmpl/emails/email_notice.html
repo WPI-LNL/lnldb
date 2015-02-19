@@ -1,5 +1,6 @@
 {% extends "emails/email_base.html" %}
 {% load tz %}
+{% load markdown_deux_tags %}
 {% block perma %}
 <a href="http://lnl.wpi.edu/email/announce/{{object.uuid}}/" class="cm-webversion">View Online</a>
 {% endblock %}
@@ -15,7 +16,7 @@
                 <p align="left" class="article-title">Meeting Notice for {{ object.meeting.datetime.date }}{% if object.meeting.location %} at {{ object.meeting.location }} {% endif %}</p>
                 <div align="left" class="article-content">
                     
-                    <p>{{ object.message }}</p>
+                    <p>{{ object.message|markdown }}</p>
                     <p align="left" class="article-title">Events</p>
                     <table class="w960" width="940" cellpadding="5">
                     

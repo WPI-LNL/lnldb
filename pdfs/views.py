@@ -1,6 +1,6 @@
 import os
 import cStringIO as StringIO
-import ho.pisa as pisa
+from xhtml2pdf import pisa
 
 from django.template.loader import get_template
 from django.template import Context
@@ -10,7 +10,7 @@ from django.shortcuts import render_to_response, get_object_or_404
 from cgi import escape
 from reportlab.pdfgen import canvas
 
-from events.models import Event
+from events.models import Event, Category, ExtraInstance
 
 from projection.models import Projectionist,PITLevel
 
@@ -18,6 +18,7 @@ from django.utils import timezone
 import datetime
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.humanize.templatetags.humanize import intcomma
 
 # Convert HTML URIs to absolute system paths so xhtml2pdf can access those resources
 def link_callback(uri, rel):
@@ -65,7 +66,7 @@ def generate_projection_pdf(request):
     file.seek(0)
     pdf = file.read()
     file.close()            # Don't forget to close the file handle
-    return HttpResponse(pdf, mimetype='application/pdf')
+    return HttpResponse(pdf, content_type='application/pdf')
     
 @login_required
 def generate_event_pdf(request, id):
@@ -86,7 +87,40 @@ def generate_event_pdf(request, id):
     file.seek(0)
     pdf = file.read()
     file.close()            # Don't forget to close the file handle
-    return HttpResponse(pdf, mimetype='application/pdf')
+    return HttpResponse(pdf, content_type='application/pdf')
+
+def currency(dollars):
+    dollars = round(float(dollars), 2)
+    return "$%s%s" % (intcomma(int(dollars)), ("%0.2f" % dollars)[-3:])
+
+@login_required
+def generate_event_bill_pdf(request, id):
+    # Prepare context
+    data = {}
+    event = get_object_or_404(Event,pk=id)
+    data['event'] = event
+    cats = Category.objects.all()
+    extras = {}
+    for cat in cats:
+        e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
+        if len(e_for_cat) > 0:
+            extras[cat] = e_for_cat
+    data['extras'] = extras
+    print extras
+    # Render html content through html template with context
+    template = get_template('pdf_templates/bill-itemized.html')
+    html  = template.render(Context(data))
+
+    # Write PDF to file
+    file = open(os.path.join(settings.MEDIA_ROOT, 'pay-%s.pdf' % event.id), "w+b")
+    pisaStatus = pisa.CreatePDF(html, dest=file, link_callback = link_callback)
+
+    # Return PDF document through a Django HTTP response
+    file.seek(0)
+    pdf = file.read()
+    file.close()            # Don't forget to close the file handle
+    return HttpResponse(pdf, content_type='application/pdf')
+    #return HttpResponse(html)
 
 def generate_pdfs_standalone(ids=[]):
     # returns a standalone pdf, for sending via email
@@ -133,4 +167,4 @@ def generate_event_pdf_multi(request, ids=None):
     file.seek(0)
     pdf = file.read()
     file.close()            # Don't forget to close the file handle
-    return HttpResponse(pdf, mimetype='application/pdf')
+    return HttpResponse(pdf, content_type='application/pdf')
