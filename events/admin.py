@@ -67,11 +67,7 @@ class EventAdmin(admin.ModelAdmin):
         }),
         ('OLD STYLE DEPRECATED FIELDS', {
             'classes': ('collapse',),
-            'fields': ('person_name', # pulled from Contact field's object
-                       'contact_email', # pulled from Contact field's object
-                       'contact_addr', # pulled from Contact field's object
-                       'contact_phone', # pulled from Contact field's object
-                       'datetime_setup_start', # part of a CrewChiefInstance object
+            'fields': ('datetime_setup_start', # part of a CrewChiefInstance object
                        'setup_location', # part of a CrewChiefInstance object
                        'payment_amount' # Billing Object
                        )
