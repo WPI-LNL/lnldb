@@ -63,7 +63,7 @@ class TargetEmailList(models.Model):
     email = models.EmailField()
     
     def __unicode__(self):
-        return "<EmailList (%s)>" % self.email
+        return "%s (%s)" % (self.name, self.email)
     
 class AnnounceSend(models.Model):
     announce = models.ForeignKey(MeetingAnnounce)
