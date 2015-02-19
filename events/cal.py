@@ -72,8 +72,8 @@ def cal_json(request, *args, **kwargs):
             "title": event.cal_name(),
             "url": "#" + str(event.id),
             "class": '',
-            "start": datetime_to_timestamp(event.cal_start()),
-            "end": datetime_to_timestamp(event.cal_end())
+            "start": datetime_to_timestamp(event.cal_start()+datetime.timedelta(hours=-5)),
+            "end": datetime_to_timestamp(event.cal_end()+datetime.timedelta(hours=-5))
         }
         objects_body.append(field)
 
