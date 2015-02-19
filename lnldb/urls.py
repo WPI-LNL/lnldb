@@ -5,7 +5,7 @@ from events.forms import ContactForm
 from events.forms import LightingForm
 from events.forms import SoundForm
 from events.forms import ProjectionForm
-
+from events.cal import EventFeed
 from events.forms import named_event_forms
 from events.views.wizard import EventWizard
 from events.views.wizard import show_lighting_form_condition,show_sound_form_condition,show_projection_form_condition,show_other_services_form_condition
@@ -129,7 +129,8 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/deny/(?P<id>[0-9a-f]+)/$', 'events.views.flow.denial', name="event-deny"), 
     url(r'^lnadmin/events/review/(?P<id>[0-9a-f]+)/$', 'events.views.flow.review', name="event-review"),
     url(r'^lnadmin/events/review/(?P<id>[0-9a-f]+)/remind/(?P<uid>[0-9a-f]+)/$', 'events.views.flow.reviewremind', name="event-review-remind"),
-    url(r'^lnadmin/events/close/(?P<id>[0-9a-f]+)/$', 'events.views.flow.close', name="event-close"), 
+    url(r'^lnadmin/events/close/(?P<id>[0-9a-f]+)/$', 'events.views.flow.close', name="event-close"),
+    url(r'^lnadmin/events/view/(?P<id>[0-9]+)/billing/pdf/$', 'pdfs.views.generate_event_bill_pdf', name="events-pdf-bill"),
     url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/mk/$', BillingCreate.as_view(), name="event-mkbilling"), 
     url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/update/(?P<pk>[0-9]+)/$', BillingUpdate.as_view(), name="event-updbilling"), 
     url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/rm/(?P<pk>[0-9]+)/$', BillingDelete.as_view(), name="event-rmbilling"), 
@@ -184,7 +185,9 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/rmcc/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$', 'events.views.flow.rmcc'),
     
     url(r'^list/$', 'events.views.list.public_facing'),
-    
+    url(r'^list/feed.ics$', EventFeed()),
+    url(r'^list/json(/*?.*)*$', 'events.cal.cal_json'),
+
     #orgs (clients)
     url(r'^lnadmin/clients/$', 'events.views.orgs.vieworgs', name="admin-orglist"),
     url(r'^lnadmin/clients/(\d+)/$', 'events.views.orgs.orgdetail', name="admin-orgdetail"),
