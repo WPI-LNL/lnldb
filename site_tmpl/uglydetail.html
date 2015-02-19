@@ -393,6 +393,13 @@
                         </tr>
                         {% endif %}
                         
+                        {% for extra in event.extras_projection %}
+                        <tr>
+                            <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
+                            <td class="tdra">${{ extra.totalcost }}</td>
+                        </tr>
+                        {% endfor %}
+
                         {% if event.otherservices.exists %}
                             {% for service in event.otherservices.all %}
                                 <tr class="success">
