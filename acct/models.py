@@ -18,6 +18,10 @@ class Profile(models.Model):
         return self.user.first_name + " " + self.user.last_name
     
     @property
+    def email(self):
+        return self.user.email
+    
+    @property
     def is_lnl(self):
         if self.user.groups.filter(Q(name="Alumni")|Q(name="Active")|Q(name="Officer")|Q(name="Associate")|Q(name="Away")|Q(name="Inactive")).exists():
             return True
