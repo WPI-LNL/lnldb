@@ -55,7 +55,7 @@ def approval(request,id):
                 email = DLEG(subject="Event Approved", to_emails = [e.contact.email], body=email_body, bcc=[settings.EMAIL_TARGET_VP])
                 email.send()
             else:
-                messages.add_message(request, messages.INFO, 'No contact info on file for approval. Please give them the good news!")
+                messages.add_message(request, messages.INFO, 'No contact info on file for approval. Please give them the good news!')
         
             return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
         else:
@@ -93,7 +93,7 @@ def denial(request,id):
                 email = DLEG(subject="Event Denied", to_emails = [e.contact.email], body=email_body, bcc=[settings.EMAIL_TARGET_VP]) 
                 email.send()
             else:
-                messages.add_message(request, messages.INFO, 'No contact info on file for denial. Please give them the bad news.")
+                messages.add_message(request, messages.INFO, 'No contact info on file for denial. Please give them the bad news.')
             return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
         else:
             context['formset'] = form
