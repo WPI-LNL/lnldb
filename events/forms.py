@@ -299,8 +299,8 @@ class InternalEventForm(forms.ModelForm):
                     'Name And Location',
                     'event_name',
                     'location',
-                    Field('description', css_class="col-md-6"),
-                    Field('internal_notes', css_class="col-md-6"),
+                    Field('description'),
+                    Field('internal_notes'),
                     Field('billed_by_semester'),
                 ),
                 Tab(
