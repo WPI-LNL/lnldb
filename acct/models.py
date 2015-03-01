@@ -47,8 +47,8 @@ class Profile(models.Model):
         outstr += clean_first[:MAX_CHARS-len(outstr)] # fill whatever's left with the first name
         return outstr
 
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
+def create_user_profile(sender, instance, created, raw=False, **kwargs):
+    if created and not raw:
         Profile.objects.create(user=instance)
         # if not email, this solves issue #138
         if not instance.email:

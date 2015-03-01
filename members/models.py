@@ -18,8 +18,8 @@ class StatusChange(models.Model):
     class Meta:
         ordering = ["-date"]
     
-def update_status(sender,instance,**kwargs):
-    if instance.id:
+def update_status(sender,instance, raw=False, **kwargs):
+    if instance.id and not raw:
         old = User.objects.get(pk=instance.id)
         oldgroups = old.groups.values_list('id',flat=True)
         newgroups = instance.groups.values_list('id',flat=True)

@@ -10,7 +10,7 @@ class Migration(SchemaMigration):
     def forwards(self, orm):
         # Adding field 'CCNoticeSend.email_to'
         db.add_column(u'meetings_ccnoticesend', 'email_to',
-                      self.gf('django.db.models.fields.related.ForeignKey')(to=orm['meetings.TargetEmailList']),
+                      self.gf('django.db.models.fields.related.ForeignKey')(null=True, to=orm['meetings.TargetEmailList']),
                       keep_default=False)
 
 
