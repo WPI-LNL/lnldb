@@ -2,7 +2,15 @@
 {% block nav %}
     {% include "admin.nav.html" %}
 {% endblock %}
-
+Test.
+{% if messages %}
+ {% for message in messages %}
+    <div class="{% if message.tags %}{{ message.tags }}{% endif %}">
+        <button type="button" class="close" data-dismiss="alert"></button>
+        <b>{{ message }}</b>
+    </div>
+{% endfor %}
+{% endif %}
 {% block overrides %}
 
 {% comment %}
