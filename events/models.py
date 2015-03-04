@@ -177,8 +177,8 @@ class EventManager(models.Manager):
                 event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
                 
         for e in sound_extras:
-            if len(e[1]) and int(e[1][0]): # for checkbox 
-                event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
+            if len(e[1]) and int(e[1][1]): # for checkbox
+                event.extrainstance_set.create(extra_id=e[0],quant=1)
             if len(e[1]) and int(e[1][0]):
                 event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
         for e in projection_extras:
