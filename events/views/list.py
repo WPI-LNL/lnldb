@@ -220,7 +220,13 @@ def unbilled(request,start=None,end=None):
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
-    events = Event.objects.filter(billings__isnull=True).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True).filter(billed_by_semester=False).order_by('datetime_start')
+    Event._meta.get_all_field_names()
+    events = Event.objects.filter(billings__isnull=True)\
+        .exclude(Q(closed=True)|
+                 Q(cancelled=True))\
+        .filter(reviewed=True)\
+        .filter(billed_by_semester=False)\
+        .order_by('datetime_start')
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')

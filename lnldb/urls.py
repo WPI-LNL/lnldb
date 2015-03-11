@@ -191,10 +191,15 @@ urlpatterns = patterns('',
 
     #orgs (clients)
     url(r'^lnadmin/clients/$', 'events.views.orgs.vieworgs', name="admin-orglist"),
-    url(r'^lnadmin/clients/(\d+)/$', 'events.views.orgs.orgdetail', name="admin-orgdetail"),
+    url(r'^lnadmin/clients/(?P<id>[0-9]+)/$', 'events.views.orgs.orgdetail', name="admin-orgdetail"),
     url(r'^lnadmin/clients/(?P<org>\d+)/verify/$', OrgVerificationCreate.as_view(), name="admin-org-verify"),
     url(r'^lnadmin/clients/add/$', 'events.views.orgs.addeditorgs', name="admin-orgadd"),
     url(r'^lnadmin/clients/edit/(\d+)/$', 'events.views.orgs.addeditorgs',name="admin-orgedit"),
+    url(r'^lnadmin/clients/funds/edit/(?P<id>[0-9]+)/$', 'events.views.orgs.fund_edit',name="admin-fundedit"),
+    url(r'^lnadmin/clients/funds/add/$', 'events.views.orgs.fund_edit',name="admin-fundadd"),
+    url(r'^lnadmin/clients/funds/add/(?P<org>[0-9]+)/$', 'events.views.orgs.fund_edit',name="admin-fundaddorg"),
+
+
         
     #inventory 
     url(r'^lnadmin/inventory/view/$', 'inventory.views.view'),

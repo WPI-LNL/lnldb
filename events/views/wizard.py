@@ -74,6 +74,10 @@ class EventWizard(NamedUrlSessionWizardView):
         user = self.request.user
         if step == 'organization':
             return {'user':user}
+        elif step == 'select':
+            org_step = self.get_cleaned_data_for_step('organization')
+            if org_step:
+                return {'org':org_step.get('group')}
         else:
             return {}
         

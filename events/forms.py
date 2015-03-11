@@ -1,6 +1,7 @@
 from django import forms
-from django.forms import Form, ModelForm, TextInput
+from django.forms import Form, ModelForm, TextInput, ModelChoiceField
 from django.forms.extras.widgets import SelectDateWidget
+from django.forms.fields import ChoiceField
 from django.forms.models import inlineformset_factory
 from django.db.models import Q
 
@@ -16,7 +17,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout,Fieldset,Button,ButtonHolder,Submit,Div,MultiField,Field,HTML,Hidden,Reset
 from crispy_forms.bootstrap import AppendedText,InlineCheckboxes,InlineRadios,Tab,TabHolder,FormActions,PrependedText
 
-from events.models import Event,Organization,Category,OrganizationTransfer, OrgBillingVerificationEvent
+from events.models import Event,Organization,Category,OrganizationTransfer, OrgBillingVerificationEvent, Fund
 from events.models import Extra,Location,Lighting,Sound,Projection,Service,EventCCInstance,EventAttachment, ExtraInstance
 from events.models import Billing,CCReport,Hours
 
@@ -161,9 +162,7 @@ class IOrgForm(forms.ModelForm):
                 ),
                 Tab(
                     'Money',
-                    'fund',
-                    'organization',
-                    'account',
+                    'accounts'
                 ),
                 Tab(
                     'People',
@@ -183,6 +182,7 @@ class IOrgForm(forms.ModelForm):
     user_in_charge = AutoCompleteSelectField('Users')
     associated_orgs = AutoCompleteSelectMultipleField('Orgs',required=False)
     associated_users = AutoCompleteSelectMultipleField('Users',required=False)
+    accounts = AutoCompleteSelectMultipleField('Funds',required=False)
     
 class IOrgVerificationForm(forms.ModelForm):
     def __init__(self,org,*args,**kwargs):
@@ -220,6 +220,7 @@ class EventApprovalForm(forms.ModelForm):
                     Field('datetime_setup_complete',label="Setup Finish",css_class="dtp"),
                     Field('datetime_start',label="Event Start",css_class="dtp"),
                     Field('datetime_end',label="Event End",css_class="dtp"),
+                    Field('billing_fund'),
                     Field('billed_by_semester', label="Billed by semester (for films)"),
                     #Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
                     
@@ -244,8 +245,10 @@ class EventApprovalForm(forms.ModelForm):
         
     class Meta:
         model = Event
-        fields = ['description','internal_notes','datetime_start','datetime_end','billed_by_semester','datetime_setup_complete','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs']
-        
+        fields = ['description','internal_notes','datetime_start','datetime_end', 'billing_fund',
+                  'billed_by_semester','datetime_setup_complete','lighting','lighting_reqs',
+                  'sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs']
+    billing_fund = AutoCompleteSelectField("Funds")
     datetime_start =  forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
     datetime_end =  forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End")
     #datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
@@ -308,6 +311,7 @@ class InternalEventForm(forms.ModelForm):
                     #'person_name',
                     'contact',
                     'org',
+                    Field('billing_fund'),
                     ),
                 Tab(
                     'Scheduling',
@@ -351,7 +355,10 @@ class InternalEventForm(forms.ModelForm):
         super(InternalEventForm,self).__init__(*args,**kwargs)
     class Meta:
         model = Event
-        fields = ('event_name','location','description','internal_notes','billed_by_semester','contact','org','datetime_setup_complete','datetime_start','datetime_end','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs')
+        fields = ('event_name','location','description','internal_notes','billing_fund',
+                  'billed_by_semester','contact','org','datetime_setup_complete','datetime_start',
+                  'datetime_end','lighting','lighting_reqs','sound','sound_reqs','projection','proj_reqs',
+                  'otherservices','otherservice_reqs')
 
     location = GroupedModelChoiceField(
             queryset = Location.objects.filter(show_in_wo_form=True),
@@ -359,6 +366,7 @@ class InternalEventForm(forms.ModelForm):
             group_label = lambda group: group.name,
         )
     contact = AutoCompleteSelectField('Users',required=False)
+    billing_fund = AutoCompleteSelectField('Funds',required=False)
     org = AutoCompleteSelectMultipleField('Orgs',required=False, label = "Client")
     
     datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(),label="Setup Completed")
@@ -610,6 +618,30 @@ class EditHoursForm(forms.ModelForm):
         model = Hours 
         fields = ('hours',)
 
+class FopalForm(forms.ModelForm):
+    def __init__(self,*args,**kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+                django_msgs,
+                Field('name'),
+                Field('notes'),
+                Field('fund'),
+                Field('organization'),
+                Field('account'),
+                FormActions(
+                    Submit('save', 'Save Changes'),
+                )
+        )
+        super(FopalForm,self).__init__(*args,**kwargs)
+
+    class Meta:
+        model = Fund
+        fields = ('name','notes','fund','organization','account')
+
+
 class CCIForm(forms.ModelForm):
     def __init__(self,event,*args,**kwargs):
         self.event = event
@@ -839,9 +871,9 @@ class ContactForm(forms.Form):
 class OrgForm(forms.Form):
     def __init__(self,*args,**kwargs):
         user = kwargs.pop('user')
-        
+
         super(OrgForm,self).__init__(*args,**kwargs)
-        
+
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
@@ -860,32 +892,40 @@ class OrgForm(forms.Form):
 
 
 class SelectForm(forms.Form):
-    def __init__(self,*args,**kwargs):
+    def __init__(self,org=None,*args,**kwargs):
+        super(SelectForm,self).__init__(*args,**kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
+        print org
+        if org:
+            self.fields['fund'].queryset =  Fund.objects.filter(Q(orgfunds=org)|Q(name='None'))
         self.helper.layout = Layout(
             Fieldset(
                 'Name and Location',
                 Field('eventname',css_class="col-md-6"),
                 Field('location',css_class="col-md-6"),
                 Field('general_description',css_class="col-md-6"),
+                Field('fund'),
             ),
             Fieldset(
                 'Services',
                 InlineCheckboxes('eventtypes')
                 )
         )
-        super(SelectForm,self).__init__(*args,**kwargs)
-        
+
     eventname = forms.CharField(
             label = 'Event Name',
             required = True
         )
-    
+
+    fund = ModelChoiceField(
+        queryset= Fund.objects.filter(name='None')
+    )
+
     #location = forms.ModelChoiceField(
             #queryset = Location.objects.filter(show_in_wo_form=True)
         #)

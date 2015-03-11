@@ -77,7 +77,7 @@ class EventAdmin(admin.ModelAdmin):
 class OrgAdmin(admin.ModelAdmin):
     list_display = ('name','shortname','email','exec_email','user_in_charge','archived')
     list_filter = ('archived',)
-    filter_horizontal = ('associated_users','associated_orgs')
+    filter_horizontal = ('accounts', 'associated_users','associated_orgs')
     search_fields = ['name','shortname','email','exec_email']
     actions = [client_archive,client_unarchive]
     
@@ -92,6 +92,10 @@ class ExtraAdmin(admin.ModelAdmin):
     list_display = ('name','cost','category','disappear','checkbox')
     list_filter = ('category','disappear','checkbox')
 
+class FundAdmin(admin.ModelAdmin):
+    search_fields = ['name','notes','fund','account', 'organization']
+
+admin.site.register(Fund,FundAdmin)
 admin.site.register(Billing)
 admin.site.register(Hours)
 admin.site.register(Building)
