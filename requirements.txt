@@ -1,14 +1,12 @@
 
 Django==1.6
 Markdown==2.3.1
-PIL==1.1.7
-## TODO: put version numbers for these
+pillow
+#### TODO: put version numbers for these
 South
 dealer
-mysql-python
 pisa
 pytz
-reportlab==2.7
 django-lineage
 django-appconf==0.6
 django-bootstrap-toolkit==2.10.6
@@ -26,6 +24,5 @@ wsgiref==0.1.2
 xhtml2pdf==0.0.6
 reportlab==2.7
 ## reportlab anything less than 3.
-dealer
 django-markdown-deux
 django-ical

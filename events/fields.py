@@ -28,7 +28,7 @@ class GroupedModelChoiceField(forms.ModelChoiceField):
             self.group_label = lambda group: group
         else:
             self.group_label = group_label
-    
+
     def _get_choices(self):
         """
         Exactly as per ModelChoiceField except returns new iterator class
@@ -56,3 +56,15 @@ class GroupedModelChoiceIterator(forms.models.ModelChoiceIterator):
                     key=lambda row: getattr(row, self.field.group_by_field)):
                 yield (self.field.group_label(group), [self.choice(ch) for ch in choices])
                 #yield (self.field.group_label, [self.choice(ch) for ch in choices])
+
+#was going to use this for fancier grouped dropdowns. Leaving it here, but no calls to it
+def get_key(row, field):
+    if callable(field):
+        return field(row)
+
+    for f in field.split("__"):
+        row = getattr(row, f)
+    # because Managers don't use the freaking @property tag. WHY?
+    if callable(row):
+        row = row()
+    return row

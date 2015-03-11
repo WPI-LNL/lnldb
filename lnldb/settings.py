@@ -4,7 +4,7 @@ from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 import os
 here = lambda *x: os.path.join(os.path.abspath(os.path.dirname(__file__)), *x)
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
@@ -197,6 +197,8 @@ AJAX_LOOKUP_CHANNELS = {
     'Officers' : ('acct.lookups', 'OfficerLookup'),
     'Members' : ('acct.lookups', 'MemberLookup'),
     'AssocMembers' : ('acct.lookups', 'AssocMemberLookup'),
+    'Funds' : ('events.lookups', 'FundLookup'),
+    'FundsLimited' : ('events.lookups', 'FundLookupLimited')
 }
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP

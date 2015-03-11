@@ -6,6 +6,9 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django import forms
+from django.db.models.signals import pre_save
+from django.db.models.sql.datastructures import DateTime
+from django.dispatch import receiver
 
 from django.utils import timezone
 import datetime,pytz
@@ -87,6 +90,7 @@ class EventManager(models.Manager):
         event_name = event_details['eventname']
         location = event_details['location']
         general_description = event_details['general_description']
+        event_fund = event_details['fund']
         event_location = location
         
         #event_methods
@@ -150,7 +154,8 @@ class EventManager(models.Manager):
             
             location = event_location,
             description = general_description,
-            
+            billing_fund = event_fund,
+
             lighting = lighting,
             sound = sound,
             projection = projection,
@@ -177,8 +182,8 @@ class EventManager(models.Manager):
                 event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
                 
         for e in sound_extras:
-            if len(e[1]) and int(e[1][0]): # for checkbox 
-                event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
+            if len(e[1]) and int(e[1][1]): # for checkbox
+                event.extrainstance_set.create(extra_id=e[0],quant=1)
             if len(e[1]) and int(e[1][0]):
                 event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
         for e in projection_extras:
@@ -194,7 +199,7 @@ class Building(models.Model):
     
     name = models.CharField(max_length=128)
     shortname = models.CharField(max_length=4)
-    
+
     def __unicode__(self):
         #return "<Building (%s,%s)>" % (self.name, self.shortname)
         return self.name
@@ -318,6 +323,7 @@ class Event(models.Model):
     contact = models.ForeignKey(User,null=True,blank=True, verbose_name = "Contact")
     org = models.ManyToManyField('Organization',null=True,blank=True, verbose_name="Client")
     billing_org = models.ForeignKey('Organization',null=True, blank=True, related_name="billedevents")
+    billing_fund = models.ForeignKey('Fund', null=True, on_delete=models.SET_NULL, related_name="event_accounts")
     contact_email = models.CharField(max_length=256,null=True,blank=True) #DEPRECATED
     contact_addr = models.TextField(null=True,blank=True) #DEPRECATED
     contact_phone = models.CharField(max_length=32,null=True,blank=True) #DEPRECATED
@@ -706,7 +712,7 @@ class Event(models.Model):
     def org_to_be_billed(self):
         if not self.billing_org:
             if self.org:
-                return e.org.all()[0]
+                return self.org.all()[0]
             else:
                 return None
         else:
@@ -754,7 +760,34 @@ class CCReport(models.Model):
     #fund = models.IntegerField()
     #organization = models.IntegerField()
     #account = models.IntegerField(default=71973)
-    
+
+
+class Fund(models.Model):
+    fund = models.IntegerField()
+    organization = models.IntegerField()
+    account = models.IntegerField(default=71973)
+
+    name = models.CharField(max_length=128)
+    notes = models.TextField(null=True,blank=True)
+
+    #For future use. Dunno what to do with it yet.
+    last_used = models.DateField(null=True)
+
+    last_updated = models.DateField(null=True)
+
+    @property
+    def fopal(self):
+        return "%s-%s-%s" % (self.fund, self.organization, self.account)
+
+    def __unicode__(self):
+        return "%s (%s)" % (self.name,self.fopal)
+
+
+@receiver(pre_save, sender=Fund)
+def update_fund_time(sender, instance, **kwargs):
+    instance.last_updated = datetime.date.now(pytz.utc)
+
+
 class Organization(models.Model): #AKA Client
     name = models.CharField(max_length=128,unique=True)
     shortname = models.CharField(max_length=8,null=True,blank=True)
@@ -766,10 +799,8 @@ class Organization(models.Model): #AKA Client
     address = models.TextField(null=True,blank=True)
     phone = models.CharField(max_length=32)
 
-    fund = models.IntegerField()
-    organization = models.IntegerField()
-    account = models.IntegerField(default=0)
-    
+    accounts = models.ManyToManyField(Fund, related_name='orgfunds')
+
     user_in_charge = models.ForeignKey(User,related_name='orgowner')
     associated_users = models.ManyToManyField(User,related_name='orgusers')
     
@@ -783,8 +814,9 @@ class Organization(models.Model): #AKA Client
     archived = models.BooleanField(default=False)
 
     @property
-    def fopal(self):
-        return "%s-%s-%s" % (self.fund, self.organization, self.account)
+    def fopals(self):
+        return self.accounts.all().iterator().join(", ")
+
 
     def __unicode__(self):
         return self.name

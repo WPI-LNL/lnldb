@@ -50,10 +50,12 @@ def approval(request,id):
             e.save()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Approved Event')
-            
-            email_body = 'Your event "%s" has been approved!' % event.event_name
-            email = DLEG(subject="Event Approved", to_emails = [e.contact.email], body=email_body, bcc=[settings.EMAIL_TARGET_VP])
-            email.send()
+            if e.contact and e.contact.email:
+                email_body = 'Your event "%s" has been approved!' % event.event_name
+                email = DLEG(subject="Event Approved", to_emails = [e.contact.email], body=email_body, bcc=[settings.EMAIL_TARGET_VP])
+                email.send()
+            else:
+                messages.add_message(request, messages.INFO, 'No contact info on file for approval. Please give them the good news!')
         
             return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
         else:
@@ -86,11 +88,12 @@ def denial(request,id):
             e.save()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Denied Event')
-            
-            email_body = 'Your event "%s" has been denied! \n Reason: "%s"' % (event.event_name, event.cancelled_reason)
-            email = DLEG(subject="Event Denied", to_emails = [e.contact.email], body=email_body, bcc=[settings.EMAIL_TARGET_VP]) 
-            email.send()
-        
+            if e.contact and e.contact.email:
+                email_body = 'Your event "%s" has been denied! \n Reason: "%s"' % (event.event_name, event.cancelled_reason)
+                email = DLEG(subject="Event Denied", to_emails = [e.contact.email], body=email_body, bcc=[settings.EMAIL_TARGET_VP]) 
+                email.send()
+            else:
+                messages.add_message(request, messages.INFO, 'No contact info on file for denial. Please give them the bad news.')
             return HttpResponseRedirect(reverse('events.views.flow.viewevent',args=(e.id,)))
         else:
             context['formset'] = form

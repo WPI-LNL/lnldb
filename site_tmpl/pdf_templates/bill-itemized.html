@@ -38,13 +38,13 @@
             <table class="info">
                 <tr>
                     <td width="200"><b>Sponsoring Organizations:</b></td>
-                    <td>{% for org in event.org.all %}{{ org.name }}, {% endfor %}</td>
+                    <td>{{ event.org.all|join:", " }}</td>
                     <td width="100"><b>Event Start:</b></td>
                     <td>{{ event.datetime_start|localtime|date }}</td>
                 </tr>
                 <tr>
-                    <td><b>Billing Organization:</b></td>
-                    <td>{{ event.firstorg.name }} ({{ event.firstorg.fopal }})</td>
+                    <td><b>Billed Account:</b></td>
+                    <td>{{ event.billing_fund }}</td>
                     <td><b>Event End:</b></td>
                     <td>{{ event.datetime_end|localtime|date }}</td>
                 </tr>

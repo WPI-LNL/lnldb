@@ -12,9 +12,9 @@ from django.utils.text import slugify
 
 from pdfs.views import generate_pdfs_standalone
 @receiver(post_save, sender = EventCCInstance)
-def email_cc_notification(sender, instance, created, **kwargs):
+def email_cc_notification(sender, instance, created, raw=False, **kwargs):
     """ Sends an email to a crew cheif to notify them of being made one """
-    if created:
+    if created and not raw:
         i = instance
         
         # generate our pdf
@@ -36,9 +36,9 @@ def email_cc_notification(sender, instance, created, **kwargs):
         
 
 @receiver(post_save, sender = Billing)     
-def email_billing_create(sender, instance, created, **kwargs):
+def email_billing_create(sender, instance, created, raw=False, **kwargs):
     """ Sends an email to the client to notify of a bill being created """
-    if created and not instance.opt_out_initial_email:
+    if created and not instance.opt_out_initial_email and not raw:
         i = instance
         email_body = """
             A New LNL bill has been posted for "%s" on %s for the amount of $%s
@@ -49,9 +49,9 @@ def email_billing_create(sender, instance, created, **kwargs):
             
 
 @receiver(post_save, sender = Billing)
-def email_billing_marked_paid(sender, instance, created, **kwargs):
+def email_billing_marked_paid(sender, instance, created, raw=False,  **kwargs):
     """ Sends an email to the client to notify of a bill having been paid """
-    if not created:
+    if not created and not raw:
         if instance.date_paid and not instance.opt_out_update_email: 
             i = instance
             email_body = """
@@ -73,8 +73,8 @@ def email_billing_delete(sender,instance, **kwargs):
         e.send()
     
 @receiver(post_save, sender = User)
-def initial_user_create_notify(sender, instance, created, **kwargs):
-    if created:
+def initial_user_create_notify(sender, instance, created, raw=False, **kwargs):
+    if created and not raw:
         i = instance
         email_body = """
         A new user has joined LNLDB:

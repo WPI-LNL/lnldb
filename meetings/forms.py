@@ -74,7 +74,7 @@ class AnnounceCCSendForm(forms.ModelForm):
     def __init__(self,meeting,*args,**kwargs):
         now = meeting.datetime
         twodaysago = now + datetime.timedelta(days=-4)
-        aweekfromnow = now + datetime.timedelta(days=9)
+        aweekfromnow = now + datetime.timedelta(days=17)
         
         
         self.helper = FormHelper()

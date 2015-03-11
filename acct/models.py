@@ -18,6 +18,10 @@ class Profile(models.Model):
         return self.user.first_name + " " + self.user.last_name
     
     @property
+    def email(self):
+        return self.user.email
+    
+    @property
     def is_lnl(self):
         if self.user.groups.filter(Q(name="Alumni")|Q(name="Active")|Q(name="Officer")|Q(name="Associate")|Q(name="Away")|Q(name="Inactive")).exists():
             return True
@@ -43,8 +47,8 @@ class Profile(models.Model):
         outstr += clean_first[:MAX_CHARS-len(outstr)] # fill whatever's left with the first name
         return outstr
 
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
+def create_user_profile(sender, instance, created, raw=False, **kwargs):
+    if created and not raw:
         Profile.objects.create(user=instance)
         # if not email, this solves issue #138
         if not instance.email:
