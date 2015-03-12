@@ -785,7 +785,7 @@ class Fund(models.Model):
 
 @receiver(pre_save, sender=Fund)
 def update_fund_time(sender, instance, **kwargs):
-    instance.last_updated = datetime.date.now(pytz.utc)
+    instance.last_updated = datetime.date.today()
 
 
 class Organization(models.Model): #AKA Client
