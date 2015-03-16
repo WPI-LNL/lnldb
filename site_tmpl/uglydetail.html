@@ -348,6 +348,7 @@
                         <a class="btn btn-lg btn-info" href="{% url "eventoneoff" event.id %}">Add OneOff Charges</a>
                     </div>
                     <h2>Price Breakdown</h2>
+                    <h3>Charged from <a href="{% url 'admin-fundedit' event.billing_fund.id %}">{{ event.billing_fund }}</a></h3>
                     <style> .tdra { text-align: right; }</style>
                     <table class="table">
                         <thead>

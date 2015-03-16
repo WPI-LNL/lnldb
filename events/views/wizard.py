@@ -19,49 +19,30 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
 #CBV NuEventForm
-def show_lighting_form_condition(wizard):
-    cleaned_data = wizard.get_cleaned_data_for_step('select') or {}
-    types = cleaned_data.get('eventtypes')
+def show_generic_form_condition(wizard, index):
     try:
-        if '0' in types:
-            return True
-        else:
-            return False    
+        cleaned_data = wizard.get_cleaned_data_for_step('select') or {}
+        types = cleaned_data.get('eventtypes')
+        return index in types
     except:
         return False
 
+
+def show_lighting_form_condition(wizard):
+    return show_generic_form_condition(wizard, '0')
+
+
 def show_sound_form_condition(wizard):
-    cleaned_data = wizard.get_cleaned_data_for_step('select') or {}
-    types = cleaned_data.get('eventtypes')
-    try:
-        if '1' in types:
-            return True
-        else:
-            return False    
-    except:
-        return False
+    return show_generic_form_condition(wizard, '1')
+
     
 def show_projection_form_condition(wizard):
-    cleaned_data = wizard.get_cleaned_data_for_step('select') or {}
-    types = cleaned_data.get('eventtypes')
-    try:
-        if '2' in types:
-            return True
-        else:
-            return False    
-    except:
-        return False
+    return show_generic_form_condition(wizard, '2')
+
     
 def show_other_services_form_condition(wizard):
-    cleaned_data = wizard.get_cleaned_data_for_step('select') or {}
-    types = cleaned_data.get('eventtypes')
-    try:
-        if '3' in types:
-            return True
-        else:
-            return False    
-    except:
-        return False
+    return show_generic_form_condition(wizard, '3')
+
     
 class EventWizard(NamedUrlSessionWizardView):
     def done(self, form_list, **kwargs):
@@ -93,6 +74,10 @@ class EventWizard(NamedUrlSessionWizardView):
         user = self.request.user
         if step == 'organization':
             return {'user':user}
+        elif step == 'select':
+            org_step = self.get_cleaned_data_for_step('organization')
+            if org_step:
+                return {'org':org_step.get('group')}
         else:
             return {}
         

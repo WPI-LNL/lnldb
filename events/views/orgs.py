@@ -5,8 +5,8 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context,RequestContext
 
-from events.models import Event,Organization,OrganizationTransfer,OrgBillingVerificationEvent
-from events.forms import IOrgForm,ExternalOrgUpdateForm,OrgXFerForm,IOrgVerificationForm
+from events.models import Event,Organization,OrganizationTransfer,OrgBillingVerificationEvent, Fund
+from events.forms import IOrgForm,ExternalOrgUpdateForm,OrgXFerForm,IOrgVerificationForm, FopalForm
 
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
@@ -55,18 +55,56 @@ def addeditorgs(request,id=None):
         formset = IOrgForm(request.POST,instance=instance)
         if formset.is_valid():
             formset.save()
+            messages.add_message(request, messages.SUCCESS, 'Changes saved.')
             #return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
             return HttpResponseRedirect(reverse('events.views.orgs.vieworgs'))
-        
         else:
             context['formset'] = formset
+            messages.add_message(request,messages.WARNING,'Invalid Data. Please try again.')
     else:
-        
         formset = IOrgForm(instance=instance)
-        
         context['formset'] = formset
-        context['msg'] = msg
+
+    context['msg'] = msg
     
+    return render_to_response('form_crispy.html', context)
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+def fund_edit(request,id=None,org=None):
+    """form for adding an fund """
+    # need to fix this
+    context = RequestContext(request)
+    if id:
+        instance = get_object_or_404(Fund,pk=id)
+        msg = "Edit Fund"
+    else:
+        instance= None
+        msg = "New Fund"
+
+    if request.method == 'POST':
+        formset = FopalForm(request.POST,instance=instance)
+        if formset.is_valid():
+            instance = formset.save()
+            messages.add_message(request, messages.SUCCESS, 'Changes saved.')
+            if org:
+                try:
+                    org_instance = Organization.objects.get(pk=org)
+                    org_instance.accounts.add(instance)
+                    return HttpResponseRedirect(reverse('events.views.orgs.orgdetail',args=(org,)))
+                except:
+                    messages.add_message(request, messages.ERROR, 'Failed to add fund to organization.')
+            #return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
+            return HttpResponseRedirect(reverse('events.views.orgs.vieworgs'))
+        else:
+            context['formset'] = formset
+            messages.add_message(request,messages.WARNING,'Invalid Data. Please try again.')
+    else:
+        formset = FopalForm(instance=instance)
+        context['formset'] = formset
+
+    context['msg'] = msg
+
     return render_to_response('form_crispy.html', context)
 
 @login_required
