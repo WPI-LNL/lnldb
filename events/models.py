@@ -389,16 +389,20 @@ class Event(models.Model):
         return self.contact_name
     @property
     def contact_name(self):
-        return self.contact.profile.fullname
+        if self.contact and self.contact.profile:
+            return self.contact.profile.fullname
     @property
     def contact_phone(self):
-        return self.contact.profile.phone 
+        if self.contact and self.contact.profile:
+            return self.contact.profile.phone
     @property
     def contact_email(self):
-        return self.contact.profile.email
+        if self.contact and self.contact.profile:
+            return self.contact.profile.email
     @property
     def contact_addr(self):
-        return self.contact.profile.addr
+        if self.contact and self.contact.profile:
+            return self.contact.profile.addr
     
     #def clean(self):
         #if self.datetime_start > self.datetime_end:
@@ -501,7 +505,11 @@ class Event(models.Model):
         
         #return self.crew_chief.filter(id__in=k)
         return pending
-        
+
+    @property
+    def num_crew_needing_reports(self):
+        return len(self.crew_needing_reports)
+
     @property
     def reports_editable(self):
         
@@ -742,6 +750,25 @@ class Event(models.Model):
                 if self.projection.service_ptr in a.for_service.all():
                     return True
         return False
+
+    @property
+    def last_billed(self):
+        if self.billings:
+            return self.billings.order_by('-date_billed').first().date_billed
+
+    @property
+    def times_billed(self):
+        if self.billings:
+            return self.billings.count()
+
+    @property
+    def last_paid(self):
+        if self.billings:
+            return self.billings.order_by('-date_paid').first().date_billed
+
+    @property
+    def short_services(self):
+        return ", ".join(map(lambda m: m.shortname,self.eventservices))
         
 class CCReport(models.Model):
     crew_chief = models.ForeignKey(User)
