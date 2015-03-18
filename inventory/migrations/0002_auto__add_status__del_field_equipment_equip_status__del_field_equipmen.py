@@ -24,7 +24,7 @@ class Migration(SchemaMigration):
 
         # Adding field 'EquipmentMaintEntry.status'
         db.add_column('inventory_equipmentmaintentry', 'status',
-                      self.gf('django.db.models.fields.related.ForeignKey')(default=0.0, to=orm['inventory.Status']),
+                      self.gf('django.db.models.fields.related.ForeignKey')(default=None, null=True, to=orm['inventory.Status']),
                       keep_default=False)
 
 

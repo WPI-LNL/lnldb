@@ -8,15 +8,39 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Adding field 'CCNoticeSend.email_to'
-        db.add_column(u'meetings_ccnoticesend', 'email_to',
-                      self.gf('django.db.models.fields.related.ForeignKey')(null=True, to=orm['meetings.TargetEmailList']),
-                      keep_default=False)
+        # Deleting field 'Event.contact_email'
+        db.delete_column(u'events_event', 'contact_email')
+
+        # Deleting field 'Event.contact_phone'
+        db.delete_column(u'events_event', 'contact_phone')
+
+        # Deleting field 'Event.person_name'
+        db.delete_column(u'events_event', 'person_name')
+
+        # Deleting field 'Event.contact_addr'
+        db.delete_column(u'events_event', 'contact_addr')
 
 
     def backwards(self, orm):
-        # Deleting field 'CCNoticeSend.email_to'
-        db.delete_column(u'meetings_ccnoticesend', 'email_to_id')
+        # Adding field 'Event.contact_email'
+        db.add_column(u'events_event', 'contact_email',
+                      self.gf('django.db.models.fields.CharField')(max_length=256, null=True, blank=True),
+                      keep_default=False)
+
+        # Adding field 'Event.contact_phone'
+        db.add_column(u'events_event', 'contact_phone',
+                      self.gf('django.db.models.fields.CharField')(max_length=32, null=True, blank=True),
+                      keep_default=False)
+
+        # Adding field 'Event.person_name'
+        db.add_column(u'events_event', 'person_name',
+                      self.gf('django.db.models.fields.CharField')(max_length=128, null=True, blank=True),
+                      keep_default=False)
+
+        # Adding field 'Event.contact_addr'
+        db.add_column(u'events_event', 'contact_addr',
+                      self.gf('django.db.models.fields.TextField')(null=True, blank=True),
+                      keep_default=False)
 
 
     models = {
@@ -56,6 +80,16 @@ class Migration(SchemaMigration):
             'model': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
         },
+        u'events.billing': {
+            'Meta': {'ordering': "('-date_billed', 'date_paid')", 'object_name': 'Billing'},
+            'amount': ('django.db.models.fields.DecimalField', [], {'max_digits': '8', 'decimal_places': '2'}),
+            'date_billed': ('django.db.models.fields.DateField', [], {}),
+            'date_paid': ('django.db.models.fields.DateField', [], {'null': 'True', 'blank': 'True'}),
+            'event': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'billings'", 'to': u"orm['events.Event']"}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'opt_out_initial_email': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'opt_out_update_email': ('django.db.models.fields.BooleanField', [], {'default': 'False'})
+        },
         u'events.building': {
             'Meta': {'ordering': "['name']", 'object_name': 'Building'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
@@ -66,6 +100,16 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'Category'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '16'})
+        },
+        u'events.ccreport': {
+            'Meta': {'object_name': 'CCReport'},
+            'created_on': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'crew_chief': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"}),
+            'event': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['events.Event']"}),
+            'for_service_cat': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'to': u"orm['events.Category']", 'null': 'True', 'blank': 'True'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'report': ('django.db.models.fields.TextField', [], {}),
+            'updated_on': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'})
         },
         u'events.event': {
             'Meta': {'ordering': "['-datetime_start']", 'object_name': 'Event'},
@@ -82,9 +126,6 @@ class Migration(SchemaMigration):
             'closed_by': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'eventclosings'", 'null': 'True', 'to': u"orm['auth.User']"}),
             'closed_on': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
             'contact': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']", 'null': 'True', 'blank': 'True'}),
-            'contact_addr': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
-            'contact_email': ('django.db.models.fields.CharField', [], {'max_length': '256', 'null': 'True', 'blank': 'True'}),
-            'contact_phone': ('django.db.models.fields.CharField', [], {'max_length': '32', 'null': 'True', 'blank': 'True'}),
             'crew': ('django.db.models.fields.related.ManyToManyField', [], {'blank': 'True', 'related_name': "'crewx'", 'null': 'True', 'symmetrical': 'False', 'to': u"orm['auth.User']"}),
             'crew_chief': ('django.db.models.fields.related.ManyToManyField', [], {'blank': 'True', 'related_name': "'crewchiefx'", 'null': 'True', 'symmetrical': 'False', 'to': u"orm['auth.User']"}),
             'datetime_end': ('django.db.models.fields.DateTimeField', [], {}),
@@ -102,7 +143,6 @@ class Migration(SchemaMigration):
             'otherservice_reqs': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
             'otherservices': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'to': u"orm['events.Service']", 'null': 'True', 'blank': 'True'}),
             'payment_amount': ('django.db.models.fields.IntegerField', [], {'default': 'None', 'null': 'True', 'blank': 'True'}),
-            'person_name': ('django.db.models.fields.CharField', [], {'max_length': '128', 'null': 'True', 'blank': 'True'}),
             'proj_reqs': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
             'projection': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'projection'", 'null': 'True', 'to': u"orm['events.Projection']"}),
             'reviewed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
@@ -114,6 +154,58 @@ class Migration(SchemaMigration):
             'submitted_by': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'submitter'", 'to': u"orm['auth.User']"}),
             'submitted_ip': ('django.db.models.fields.IPAddressField', [], {'max_length': '15'}),
             'submitted_on': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'})
+        },
+        u'events.eventarbitrary': {
+            'Meta': {'object_name': 'EventArbitrary'},
+            'event': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'arbitraryfees'", 'to': u"orm['events.Event']"}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'key_name': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
+            'key_quantity': ('django.db.models.fields.PositiveSmallIntegerField', [], {'default': '1'}),
+            'key_value': ('django.db.models.fields.DecimalField', [], {'max_digits': '8', 'decimal_places': '2'})
+        },
+        u'events.eventattachment': {
+            'Meta': {'object_name': 'EventAttachment'},
+            'attachment': ('django.db.models.fields.files.FileField', [], {'max_length': '100'}),
+            'event': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'attachments'", 'to': u"orm['events.Event']"}),
+            'externally_uploaded': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'for_service': ('django.db.models.fields.related.ManyToManyField', [], {'blank': 'True', 'related_name': "'attachments'", 'null': 'True', 'symmetrical': 'False', 'to': u"orm['events.Service']"}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'note': ('django.db.models.fields.TextField', [], {'default': "''", 'null': 'True', 'blank': 'True'})
+        },
+        u'events.eventccinstance': {
+            'Meta': {'ordering': "('-event__datetime_start',)", 'object_name': 'EventCCInstance'},
+            'crew_chief': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'ccinstances'", 'to': u"orm['auth.User']"}),
+            'event': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'ccinstances'", 'to': u"orm['events.Event']"}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'service': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'ccinstances'", 'to': u"orm['events.Service']"}),
+            'setup_location': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'ccinstances'", 'to': u"orm['events.Location']"}),
+            'setup_start': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'})
+        },
+        u'events.extra': {
+            'Meta': {'object_name': 'Extra'},
+            'category': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['events.Category']"}),
+            'checkbox': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'cost': ('django.db.models.fields.DecimalField', [], {'max_digits': '8', 'decimal_places': '2'}),
+            'desc': ('django.db.models.fields.TextField', [], {}),
+            'disappear': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
+            'services': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['events.Service']", 'symmetrical': 'False'})
+        },
+        u'events.extrainstance': {
+            'Meta': {'object_name': 'ExtraInstance'},
+            'event': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['events.Event']"}),
+            'extra': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['events.Extra']"}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'quant': ('django.db.models.fields.PositiveIntegerField', [], {})
+        },
+        u'events.hours': {
+            'Meta': {'unique_together': "(('event', 'user', 'service'),)", 'object_name': 'Hours'},
+            'event': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'hours'", 'to': u"orm['events.Event']"}),
+            'hours': ('django.db.models.fields.DecimalField', [], {'null': 'True', 'max_digits': '7', 'decimal_places': '2', 'blank': 'True'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'service': ('django.db.models.fields.related.ForeignKey', [], {'blank': 'True', 'related_name': "'hours'", 'null': 'True', 'to': u"orm['events.Service']"}),
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'hours'", 'to': u"orm['auth.User']"})
         },
         u'events.lighting': {
             'Meta': {'object_name': 'Lighting', '_ormbases': [u'events.Service']},
@@ -150,9 +242,36 @@ class Migration(SchemaMigration):
             'shortname': ('django.db.models.fields.CharField', [], {'max_length': '8', 'null': 'True', 'blank': 'True'}),
             'user_in_charge': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'orgowner'", 'to': u"orm['auth.User']"})
         },
+        u'events.organizationtransfer': {
+            'Meta': {'object_name': 'OrganizationTransfer'},
+            'completed': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'completed_on': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
+            'created': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'auto_now_add': 'True', 'blank': 'True'}),
+            'expiry': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'new_user_in_charge': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'xfer_new'", 'to': u"orm['auth.User']"}),
+            'old_user_in_charge': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'xfer_old'", 'to': u"orm['auth.User']"}),
+            'org': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['events.Organization']"}),
+            'uuid': ('uuidfield.fields.UUIDField', [], {'unique': 'True', 'max_length': '32', 'blank': 'True'})
+        },
+        u'events.orgbillingverificationevent': {
+            'Meta': {'ordering': "['-date', '-id']", 'object_name': 'OrgBillingVerificationEvent'},
+            'date': ('django.db.models.fields.DateField', [], {}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'note': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
+            'org': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'verifications'", 'to': u"orm['events.Organization']"}),
+            'verified_by': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'verification_events'", 'to': u"orm['auth.User']"})
+        },
         u'events.projection': {
             'Meta': {'object_name': 'Projection', '_ormbases': [u'events.Service']},
             u'service_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['events.Service']", 'unique': 'True', 'primary_key': 'True'})
+        },
+        u'events.reportreminder': {
+            'Meta': {'object_name': 'ReportReminder'},
+            'crew_chief': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'ccreportreminders'", 'to': u"orm['auth.User']"}),
+            'event': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'ccreportreminders'", 'to': u"orm['events.Event']"}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'sent': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'})
         },
         u'events.service': {
             'Meta': {'object_name': 'Service'},
@@ -167,55 +286,7 @@ class Migration(SchemaMigration):
         u'events.sound': {
             'Meta': {'object_name': 'Sound', '_ormbases': [u'events.Service']},
             u'service_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['events.Service']", 'unique': 'True', 'primary_key': 'True'})
-        },
-        u'meetings.announcesend': {
-            'Meta': {'object_name': 'AnnounceSend'},
-            'announce': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['meetings.MeetingAnnounce']"}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'sent_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
-            'sent_success': ('django.db.models.fields.BooleanField', [], {'default': 'False'})
-        },
-        u'meetings.ccnoticesend': {
-            'Meta': {'object_name': 'CCNoticeSend'},
-            'addtl_message': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
-            'email_to': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['meetings.TargetEmailList']"}),
-            'events': ('django.db.models.fields.related.ManyToManyField', [], {'related_name': "'meetingccnoticeevents'", 'symmetrical': 'False', 'to': u"orm['events.Event']"}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'meeting': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'meetingccnotices'", 'to': u"orm['meetings.Meeting']"}),
-            'sent_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
-            'sent_success': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'uuid': ('uuidfield.fields.UUIDField', [], {'max_length': '32', 'unique': 'True', 'null': 'True', 'blank': 'True'})
-        },
-        u'meetings.meeting': {
-            'Meta': {'ordering': "('-datetime',)", 'object_name': 'Meeting'},
-            'attendance': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'to': u"orm['auth.User']", 'null': 'True', 'blank': 'True'}),
-            'datetime': ('django.db.models.fields.DateTimeField', [], {}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'location': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['events.Location']", 'null': 'True', 'blank': 'True'}),
-            'meeting_type': ('django.db.models.fields.related.ForeignKey', [], {'default': '1', 'to': u"orm['meetings.MeetingType']"})
-        },
-        u'meetings.meetingannounce': {
-            'Meta': {'object_name': 'MeetingAnnounce'},
-            'added': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
-            'email_to': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['meetings.TargetEmailList']"}),
-            'events': ('django.db.models.fields.related.ManyToManyField', [], {'related_name': "'meetingannouncements'", 'symmetrical': 'False', 'to': u"orm['events.Event']"}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'meeting': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['meetings.Meeting']"}),
-            'message': ('django.db.models.fields.TextField', [], {}),
-            'subject': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
-            'uuid': ('uuidfield.fields.UUIDField', [], {'max_length': '32', 'unique': 'True', 'null': 'True', 'blank': 'True'})
-        },
-        u'meetings.meetingtype': {
-            'Meta': {'object_name': 'MeetingType'},
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '32'})
-        },
-        u'meetings.targetemaillist': {
-            'Meta': {'object_name': 'TargetEmailList'},
-            'email': ('django.db.models.fields.EmailField', [], {'max_length': '75'}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '16'})
         }
     }
 
-    complete_apps = ['meetings']
+    complete_apps = ['events']

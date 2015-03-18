@@ -6,6 +6,9 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django import forms
+from django.db.models.signals import pre_save
+from django.db.models.sql.datastructures import DateTime
+from django.dispatch import receiver
 
 from django.utils import timezone
 import datetime,pytz
@@ -87,6 +90,7 @@ class EventManager(models.Manager):
         event_name = event_details['eventname']
         location = event_details['location']
         general_description = event_details['general_description']
+        event_fund = event_details['fund']
         event_location = location
         
         #event_methods
@@ -150,7 +154,8 @@ class EventManager(models.Manager):
             
             location = event_location,
             description = general_description,
-            
+            billing_fund = event_fund,
+
             lighting = lighting,
             sound = sound,
             projection = projection,
@@ -177,8 +182,8 @@ class EventManager(models.Manager):
                 event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
                 
         for e in sound_extras:
-            if len(e[1]) and int(e[1][0]): # for checkbox 
-                event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
+            if len(e[1]) and int(e[1][1]): # for checkbox
+                event.extrainstance_set.create(extra_id=e[0],quant=1)
             if len(e[1]) and int(e[1][0]):
                 event.extrainstance_set.create(extra_id=e[0],quant=e[1][0])
         for e in projection_extras:
@@ -194,7 +199,7 @@ class Building(models.Model):
     
     name = models.CharField(max_length=128)
     shortname = models.CharField(max_length=4)
-    
+
     def __unicode__(self):
         #return "<Building (%s,%s)>" % (self.name, self.shortname)
         return self.name
@@ -318,6 +323,7 @@ class Event(models.Model):
     contact = models.ForeignKey(User,null=True,blank=True, verbose_name = "Contact")
     org = models.ManyToManyField('Organization',null=True,blank=True, verbose_name="Client")
     billing_org = models.ForeignKey('Organization',null=True, blank=True, related_name="billedevents")
+    billing_fund = models.ForeignKey('Fund', null=True, on_delete=models.SET_NULL, related_name="event_accounts")
     contact_email = models.CharField(max_length=256,null=True,blank=True) #DEPRECATED
     contact_addr = models.TextField(null=True,blank=True) #DEPRECATED
     contact_phone = models.CharField(max_length=32,null=True,blank=True) #DEPRECATED
@@ -377,6 +383,27 @@ class Event(models.Model):
     internal_notes = models.TextField(null=True,blank=True)
     billed_by_semester = models.BooleanField(default=False)
     
+    # nice breakout for workorder
+    @property
+    def person_name(self):
+        return self.contact_name
+    @property
+    def contact_name(self):
+        if self.contact and self.contact.profile:
+            return self.contact.profile.fullname
+    @property
+    def contact_phone(self):
+        if self.contact and self.contact.profile:
+            return self.contact.profile.phone
+    @property
+    def contact_email(self):
+        if self.contact and self.contact.profile:
+            return self.contact.profile.email
+    @property
+    def contact_addr(self):
+        if self.contact and self.contact.profile:
+            return self.contact.profile.addr
+    
     #def clean(self):
         #if self.datetime_start > self.datetime_end:
             #raise ValidationError('You cannot start after you finish')
@@ -384,7 +411,42 @@ class Event(models.Model):
             #raise ValidationError('You cannot setup after you finish')
         ##if self.datetime_setup_complete < datetime.datetime.now(pytz.utc):
             ##raise ValidationError('Stop trying to time travel')
-    
+    # implementing calendars
+    def cal_name(self):
+        return self.event_name
+
+    def cal_desc(self):
+        desc = ""
+        desc += "Requested by "
+        orgs = self.org.all()
+        for org in orgs:
+            desc += org.name + ", "
+        desc = desc[:-2] + ".\n" # removes trailing comma
+        ccs = self.ccinstances.all()
+        if len(ccs) > 0:
+            desc += "Crew Chiefs: "
+            for cc in ccs:
+                desc += cc.crew_chief.get_full_name() + " [" + cc.service.shortname + "], "
+            desc = desc[:-2] + ".\n" # removes trailing comma
+        if self.description:
+            desc += self.description + "\n"
+        return desc
+
+    def cal_location(self):
+        return self.location.name
+
+    def cal_start(self):
+        return self.datetime_start
+
+    def cal_end(self):
+        return self.datetime_end
+
+    def cal_link(self):
+        return "http://lnl.wpi.edu/lnadmin/events/view/" + str(self.id)
+
+    def cal_guid(self):
+        return "event" + str(self.id) + "@lnldb"
+
     def firstorg(self):
         return self.org.all()[0]
     
@@ -443,7 +505,11 @@ class Event(models.Model):
         
         #return self.crew_chief.filter(id__in=k)
         return pending
-        
+
+    @property
+    def num_crew_needing_reports(self):
+        return len(self.crew_needing_reports)
+
     @property
     def reports_editable(self):
         
@@ -628,31 +694,33 @@ class Event(models.Model):
     
     @property
     def cost_total_pre_discount(self):
-        return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total
+        return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total + self.oneoff_total
     
     @property
     def discount_value(self):
         if self.discount_applied:
-            return float(self.cost_sound_total + self.cost_lighting_total) * .15
+            return decimal.Decimal(self.sound.base_cost + self.lighting.base_cost) * decimal.Decimal(".15")
         else:
-            return 0.0
-        
+            return decimal.Decimal("0.0")
     
     @property
+    def pretty_title(self):
+        name = ""
+        if (self.lighting): name += "[" + self.lighting.shortname + "] "
+        if (self.projection): name += "[" + self.projection.shortname + "] "
+        if (self.sound): name += "[" + self.sound.shortname + "] "
+        name += self.event_name
+        return name
+
+    @property
     def cost_total(self):
-        if self.discount_applied:
-            total_to_discount = self.cost_sound_total + self.cost_lighting_total
-            total_to_not_discount =  self.cost_projection_total + self.extras_total
-            return float(total_to_discount) * .85 + float(self.oneoff_total) + float(total_to_not_discount)
-        else:
-            return self.cost_projection_total + self.cost_lighting_total + self.cost_sound_total + self.extras_total + self.oneoff_total
-    
+        return self.cost_projection_total + self.cost_lighting_total - self.discount_value + self.cost_sound_total + self.extras_total + self.oneoff_total
     # org to be billed
     @property
     def org_to_be_billed(self):
         if not self.billing_org:
             if self.org:
-                return e.org.all()[0]
+                return self.org.all()[0]
             else:
                 return None
         else:
@@ -682,6 +750,25 @@ class Event(models.Model):
                 if self.projection.service_ptr in a.for_service.all():
                     return True
         return False
+
+    @property
+    def last_billed(self):
+        if self.billings:
+            return self.billings.order_by('-date_billed').first().date_billed
+
+    @property
+    def times_billed(self):
+        if self.billings:
+            return self.billings.count()
+
+    @property
+    def last_paid(self):
+        if self.billings:
+            return self.billings.order_by('-date_paid').first().date_billed
+
+    @property
+    def short_services(self):
+        return ", ".join(map(lambda m: m.shortname,self.eventservices))
         
 class CCReport(models.Model):
     crew_chief = models.ForeignKey(User)
@@ -690,7 +777,8 @@ class CCReport(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     for_service_cat = models.ManyToManyField(Category,verbose_name="Services",null=True,blank=True)
-    
+    def __unicode__(self):
+        return u'%s - %s' % (self.event, self.crew_chief)
     @property
     def pretty_cat_list(self):
         return ", ".join([x.name for x in self.for_service_cat.all()])
@@ -699,7 +787,34 @@ class CCReport(models.Model):
     #fund = models.IntegerField()
     #organization = models.IntegerField()
     #account = models.IntegerField(default=71973)
-    
+
+
+class Fund(models.Model):
+    fund = models.IntegerField()
+    organization = models.IntegerField()
+    account = models.IntegerField(default=71973)
+
+    name = models.CharField(max_length=128)
+    notes = models.TextField(null=True,blank=True)
+
+    #For future use. Dunno what to do with it yet.
+    last_used = models.DateField(null=True)
+
+    last_updated = models.DateField(null=True)
+
+    @property
+    def fopal(self):
+        return "%s-%s-%s" % (self.fund, self.organization, self.account)
+
+    def __unicode__(self):
+        return "%s (%s)" % (self.name,self.fopal)
+
+
+@receiver(pre_save, sender=Fund)
+def update_fund_time(sender, instance, **kwargs):
+    instance.last_updated = datetime.date.today()
+
+
 class Organization(models.Model): #AKA Client
     name = models.CharField(max_length=128,unique=True)
     shortname = models.CharField(max_length=8,null=True,blank=True)
@@ -711,10 +826,8 @@ class Organization(models.Model): #AKA Client
     address = models.TextField(null=True,blank=True)
     phone = models.CharField(max_length=32)
 
-    fund = models.IntegerField()
-    organization = models.IntegerField()
-    account = models.IntegerField(default=0)
-    
+    accounts = models.ManyToManyField(Fund, related_name='orgfunds')
+
     user_in_charge = models.ForeignKey(User,related_name='orgowner')
     associated_users = models.ManyToManyField(User,related_name='orgusers')
     
@@ -728,8 +841,9 @@ class Organization(models.Model): #AKA Client
     archived = models.BooleanField(default=False)
 
     @property
-    def fopal(self):
-        return "%s-%s-%s" % (self.fund, self.organization, self.account)
+    def fopals(self):
+        return self.accounts.all().iterator().join(", ")
+
 
     def __unicode__(self):
         return self.name
@@ -783,7 +897,8 @@ class Hours(models.Model):
     service = models.ForeignKey('Service', related_name="hours", null=True, blank=True)
     user = models.ForeignKey(User,related_name="hours")
     hours = models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)
-    
+    def __unicode__(self):
+        return u'%s (%s)' % (self.event, self.user)
     class Meta:
         unique_together = ('event','user','service')
     
@@ -798,7 +913,40 @@ class EventCCInstance(models.Model):
     service = models.ForeignKey(Service,related_name = "ccinstances")
     setup_location = models.ForeignKey(Location, related_name="ccinstances")
     setup_start = models.DateTimeField(null=True,blank=True)
-    
+
+    def cal_name(self):
+        return self.event.event_name + " " +  self.service.shortname + " Setup"
+
+    def cal_desc(self):
+        desc = ""
+        desc += "Requested by "
+        orgs = self.event.org.all()
+        for org in orgs:
+            desc += org.name + ", "
+        desc = desc[:-2] + ".\n" # removes trailing comma
+        desc += "Crew Chief: " + self.crew_chief.get_full_name() + "\n"
+        if self.event.description:
+            desc += self.event.description + "\n"
+        return desc
+
+    def cal_location(self):
+        return self.setup_location.name
+
+    def cal_start(self):
+        return self.setup_start
+
+    def cal_end(self):
+        if self.event.datetime_setup_complete:
+            return self.event.datetime_setup_complete
+        else:
+            return self.event.datetime_start
+
+    def cal_link(self):
+        return "http://lnl.wpi.edu/lnadmin/events/view/" + str(self.event.id)
+
+    def cal_guid(self):
+        return "setup" + str(self.id) + "@lnldb"
+
     class Meta:
         ordering = ("-event__datetime_start",)
 

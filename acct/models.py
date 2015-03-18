@@ -18,14 +18,37 @@ class Profile(models.Model):
         return self.user.first_name + " " + self.user.last_name
     
     @property
+    def email(self):
+        return self.user.email
+    
+    @property
     def is_lnl(self):
         if self.user.groups.filter(Q(name="Alumni")|Q(name="Active")|Q(name="Officer")|Q(name="Associate")|Q(name="Away")|Q(name="Inactive")).exists():
             return True
         else:
             return False
-    
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
+
+    @property
+    def mdc_name(self):
+        MAX_CHARS = 12
+        clean_first,clean_last="",""
+
+        #assume that Motorola can handle practically nothing. Yes, ugly, but I don't wanna regex 1000's of times
+        for char in self.user.first_name.upper().strip():
+            if ord(char) == ord(' ') or ord(char) == ord('-')\
+                    or ord('0') <= ord(char) <= ord('9') or ord('A') <= ord(char) <= ord('Z'):
+                clean_first += char
+        for char in self.user.last_name.upper().strip():
+            if ord(char) == ord(' ') or ord(char) == ord('-')\
+                    or ord('0') <= ord(char) <= ord('9') or ord('A') <= ord(char) <= ord('Z'):
+                clean_last += char
+
+        outstr = clean_last[:MAX_CHARS-2] + "," #leave room for at least an initial
+        outstr += clean_first[:MAX_CHARS-len(outstr)] # fill whatever's left with the first name
+        return outstr
+
+def create_user_profile(sender, instance, created, raw=False, **kwargs):
+    if created and not raw:
         Profile.objects.create(user=instance)
         # if not email, this solves issue #138
         if not instance.email:

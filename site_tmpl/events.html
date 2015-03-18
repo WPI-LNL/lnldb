@@ -1,4 +1,6 @@
 {% extends 'base_admin.html' %}
+{% load get_attribute %}
+{% load append_get %}
 {% block extras %}
 {% include 'js_event_checkboxes.tmpl' %}
 {% endblock %}
@@ -7,7 +9,7 @@
     <div class="col-md-12">
         <div class="pull-right">
             <a href="#" class="btn btn-warning" id="showselect">PDF Select</a>
-            <a href="#" class="btn hide btn-default" id="submitselect">Submit Selections</a>
+            <a href="#" class="btn hide btn-default eventselect" id="submitselect">Submit Selections</a>
         </div>
         <h2>{{h2}}</h2>
     </div>
@@ -45,14 +47,14 @@
                         <hr>
                         <ul class="nav nav-pills">
                             <li class="disabled"><a href="#">View This Range as</a></li>
-                            <li><a href="{% url "events.views.list.incoming" start end %}">Incoming</a></li>
-                            <li><a href="{% url "events.views.list.upcoming" start end %}">Upcoming</a></li>
-                            <li><a href="{% url "events.views.list.openworkorders" start end %}">Open</a></li>
-                            <li><a href="{% url "events.views.list.unreviewed" start end %}">Unreviewed</a></li>
-                            <li><a href="{% url "events.views.list.unbilled" start end %}">Unbilled</a></li>
-                            <li><a href="{% url "events.views.list.unpaid" start end %}">Billed/UnPaid</a></li>
-                            <li><a href="{% url "events.views.list.paid" start end %}">Paid</a></li>
-                            <li><a href="{% url "events.views.list.closed" start end %}">Closed</a></li>
+                            <li><a href="{% url "events.views.list.incoming" start end %}{% append_to_get page=1 %}">Incoming</a></li>
+                            <li><a href="{% url "events.views.list.upcoming" start end %}{% append_to_get page=1 %}">Upcoming</a></li>
+                            <li><a href="{% url "events.views.list.openworkorders" start end %}{% append_to_get page=1 %}">Open</a></li>
+                            <li><a href="{% url "events.views.list.unreviewed" start end %}{% append_to_get page=1 %}">Unreviewed</a></li>
+                            <li><a href="{% url "events.views.list.unbilled" start end %}{% append_to_get page=1 %}">Unbilled</a></li>
+                            <li><a href="{% url "events.views.list.unpaid" start end %}{% append_to_get page=1 %}">Billed/UnPaid</a></li>
+                            <li><a href="{% url "events.views.list.paid" start end %}{% append_to_get page=1 %}">Paid</a></li>
+                            <li><a href="{% url "events.views.list.closed" start end %}{% append_to_get page=1 %}">Closed</a></li>
                             
                         </ul>
                         {% endif %}
@@ -65,58 +67,103 @@
 </div>
 <div class="row">
     <div class="col-md-12">
-        <table class="table table-striped table-bordered">
-            <tr> 
-                <th> Event Name </th>
-                <th> Event Date </th>
-                <th> Organization </th>
-                <th> Location </th>
-                <th> Crew Chief </th>
-                <th> Light <i class="glyphicon glyphicon-fire"></i></th>
-                <th> Sound <i class="glyphicon glyphicon-volume-up"></i></th>
-                <th> Projection <i class="glyphicon glyphicon-film"></i></th>
-                <th> Other Services <i class="glyphicon glyphicon-off"></i></th>
-                <th> &nbsp;</th>
+        <table class="table table-striped table-bordered event-list">
+            <tr>
+                <td class="hide eventselect"></td>
+                {% for field in cols %}
+                    <th>{{ field.verbose_name | title }}
+                        {% if field.favicon %}
+                            <span class="glyphicon glyphicon-{{ field.favicon }}" aria-hidden="true"></span>
+                        {% endif %}
+                        {% if field.sortable %}
+                        <div class="btn-group flexfix" role="group"
+                             aria-label="{{ field.verbose_name | title }} Sorts">
+                            <a role="button" class="btn btn-default btn-xs"
+                               href="?sort={{ field.name }}"
+                               aria-label="Sort {{ field.verbose_name | title }} Ascending">
+                                <span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>
+                            </a>
+                            <a role="button" class="btn btn-default btn-xs"
+                               href="?sort=-{{ field.name }}"
+                               aria-label="Sort {{ field.verbose_name | title }} Descending">
+                                <span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>
+                            </a>
+                        </div>
+                    {% endif %}
+                    </th>
+                {% endfor %}
+
             </tr>
             {% for event in events %}
-                    <tr>
-                        <td><a href="{% url "events.views.flow.viewevent" event.id %}">{{event.event_name}}</a></td>
-                        <td>{{event.datetime_start}}</td>
-                        <td>
-                            {% for org in event.org.all %}
-                            <a href="{% url "admin-orgdetail" org.id %}">{{org.name}}</a>
-                            {% endfor %}
+                <tr class="event-status-{{ event.status | slugify }}">
+                        <td class="hide eventselect">
+                                <input type="checkbox" class="hide eventselect" value="{{ event.id }}">
                         </td>
-                        <td>{{event.location}} ({{event.location.building.shortname}})</td>
-                        <td>
-                            {% if event.crew_chief.count %}
-                                {% for cc in event.crew_chief.all %}
-                                    <a href="{% url "members.views.detail" cc.id %}">{{cc}}{% if not forloop.last %},{% endif %} </a>
+                    {% for field in cols %}
+                        {% if field.name == 'event_name' %}
+                            <td class="event-name"><a
+                                    href="{% url "events.views.flow.viewevent" event.id %}">{{ event.event_name }}</a>
+                            </td>
+
+                        {% elif field.name == 'org' %}
+                            <td class="event-orgs">
+                                {% for org in event.org.all %}
+                                    <a href="{% url "admin-orgdetail" org.id %}">{{ org.name }}</a>
                                 {% endfor %}
-                            {% elif event.ccinstances.count %}
-                                {% for cc in event.ccinstances.all %}
-                                    <a href="{% url "members.views.detail" cc.crew_chief.id %}">{{cc.crew_chief}}{% if not forloop.last %},{% endif %} </a>
-                                {% endfor %}
-                            {% else %}
-                                None Assigned
-                            {% endif %}
-                            
-                        <td>
-                            {% if event.lighting %} {{ event.lighting.shortname }} {% endif %}
-                        </td>
-                        <td>
-                            {% if event.sound %} {{ event.sound.shortname }} {% endif %}
-                        </td>
-                        <td>
-                            {% if event.projection %} {{ event.projection.longname }}  {% endif %}
-                        </td>
-                        <td>
-                            {% if event.otherservices.count %} Y {% else %} N {% endif %}
-                        </td>
-                        <td class="tasks">
-                            <span class="crewtask"><a href="{% url "events.views.flow.assigncrew" event.id %}">Crew</a></span>
-                            <input type="checkbox" class="hide eventselect" value="{{ event.id }}"> 
-                        </td>
+                            </td>
+
+                        {% elif field.name == 'location' %}
+                            <td class="event-loc">{{ event.location }} ({{ event.location.building.shortname }})</td>
+
+                        {% elif field.name == 'crew_chief' %}
+                            <td class="event-cc">
+                                {% if event.crew_chief.count %}
+                                    {% for cc in event.crew_chief.all %}
+                                        <a href="{% url "members.views.detail" cc.id %}">
+                                            {{ cc }}{% if not forloop.last %},{% endif %} </a>
+                                    {% endfor %}
+                                {% elif event.ccinstances.count %}
+                                    {% for cc in event.ccinstances.all %}
+                                        <a href="{% url "members.views.detail" cc.crew_chief.id %}">
+                                            {{ cc.crew_chief }}{% if not forloop.last %},{% endif %} </a>
+                                    {% endfor %}
+                                {% else %}
+                                    None Assigned
+                                {% endif %}
+                            </td>
+
+                        {% elif field.name == 'lighting' %}
+                            <td class="event-lighting">
+                                {% if event.lighting %} {{ event.lighting.shortname }} {% endif %}
+                            </td>
+
+                        {% elif field.name == 'sound' %}
+                            <td class="event-sound">
+                                {% if event.sound %} {{ event.sound.shortname }} {% endif %}
+                            </td>
+
+                        {% elif field.name == 'projection' %}
+                            <td class="event-proj">
+                                {% if event.projection %} {{ event.projection.longname }}  {% endif %}
+                            </td>
+
+                        {% elif field.name == 'other_services' %}
+                            <td class="event-other-serv">
+                                {% if event.otherservices.count %} Y {% else %} N {% endif %}
+                            </td>
+
+                        {% elif field.name == 'tasks' %}
+                            <td class="tasks">
+                                <span class="crewtask"><a
+                                        href="{% url "events.views.flow.assigncrew" event.id %}">Crew</a></span>
+                            </td>
+
+                        {% else %}
+                            <td class="{{ field.name }}">{{ event|getattribute:field.name }}</td>
+                        {% endif %}
+                    {% endfor %}
+
+
                     </tr>
             {% endfor %}
         </table>
@@ -126,7 +173,7 @@
     <ul class="pager">
         {% if events.has_previous %}
             <li class="previous">
-            <a href="?page={{ events.previous_page_number }}">&larr; Newer</a>
+            <a href="{% append_to_get page=events.previous_page_number %}">&larr; Newer</a>
         {% else %}
             <li class="previous disabled">
             <a href="#" >&larr; Newer</a>
@@ -139,7 +186,7 @@
         
         {% if events.has_next %}
             <li class="next">
-            <a href="?page={{ events.next_page_number }}">Older &rarr;</a>
+            <a href="{% append_to_get page=events.next_page_number %}">Older &rarr;</a>
         {% else %}
             <li class="next disabled">
             <a href="#">Older &rarr;</a>

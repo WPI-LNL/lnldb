@@ -5,7 +5,7 @@ from events.forms import ContactForm
 from events.forms import LightingForm
 from events.forms import SoundForm
 from events.forms import ProjectionForm
-
+from events.cal import EventFeed
 from events.forms import named_event_forms
 from events.views.wizard import EventWizard
 from events.views.wizard import show_lighting_form_condition,show_sound_form_condition,show_projection_form_condition,show_other_services_form_condition
@@ -37,6 +37,7 @@ from projection.views import ProjectionistDelete
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from helpers.challenges import is_officer
+from django.conf import settings
 
 event_wizard = EventWizard.as_view(
     named_event_forms,
@@ -129,7 +130,8 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/deny/(?P<id>[0-9a-f]+)/$', 'events.views.flow.denial', name="event-deny"), 
     url(r'^lnadmin/events/review/(?P<id>[0-9a-f]+)/$', 'events.views.flow.review', name="event-review"),
     url(r'^lnadmin/events/review/(?P<id>[0-9a-f]+)/remind/(?P<uid>[0-9a-f]+)/$', 'events.views.flow.reviewremind', name="event-review-remind"),
-    url(r'^lnadmin/events/close/(?P<id>[0-9a-f]+)/$', 'events.views.flow.close', name="event-close"), 
+    url(r'^lnadmin/events/close/(?P<id>[0-9a-f]+)/$', 'events.views.flow.close', name="event-close"),
+    url(r'^lnadmin/events/view/(?P<id>[0-9]+)/billing/pdf/$', 'pdfs.views.generate_event_bill_pdf', name="events-pdf-bill"),
     url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/mk/$', BillingCreate.as_view(), name="event-mkbilling"), 
     url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/update/(?P<pk>[0-9]+)/$', BillingUpdate.as_view(), name="event-updbilling"), 
     url(r'^lnadmin/events/view/(?P<event>[0-9]+)/billing/rm/(?P<pk>[0-9]+)/$', BillingDelete.as_view(), name="event-rmbilling"), 
@@ -184,13 +186,20 @@ urlpatterns = patterns('',
     url(r'^lnadmin/events/rmcc/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$', 'events.views.flow.rmcc'),
     
     url(r'^list/$', 'events.views.list.public_facing'),
-    
+    url(r'^list/feed.ics$', EventFeed()),
+    url(r'^list/json(/*?.*)*$', 'events.cal.cal_json'),
+
     #orgs (clients)
     url(r'^lnadmin/clients/$', 'events.views.orgs.vieworgs', name="admin-orglist"),
-    url(r'^lnadmin/clients/(\d+)/$', 'events.views.orgs.orgdetail', name="admin-orgdetail"),
+    url(r'^lnadmin/clients/(?P<id>[0-9]+)/$', 'events.views.orgs.orgdetail', name="admin-orgdetail"),
     url(r'^lnadmin/clients/(?P<org>\d+)/verify/$', OrgVerificationCreate.as_view(), name="admin-org-verify"),
     url(r'^lnadmin/clients/add/$', 'events.views.orgs.addeditorgs', name="admin-orgadd"),
     url(r'^lnadmin/clients/edit/(\d+)/$', 'events.views.orgs.addeditorgs',name="admin-orgedit"),
+    url(r'^lnadmin/clients/funds/edit/(?P<id>[0-9]+)/$', 'events.views.orgs.fund_edit',name="admin-fundedit"),
+    url(r'^lnadmin/clients/funds/add/$', 'events.views.orgs.fund_edit',name="admin-fundadd"),
+    url(r'^lnadmin/clients/funds/add/(?P<org>[0-9]+)/$', 'events.views.orgs.fund_edit',name="admin-fundaddorg"),
+
+
         
     #inventory 
     url(r'^lnadmin/inventory/view/$', 'inventory.views.view'),
@@ -203,6 +212,8 @@ urlpatterns = patterns('',
     url(r'^lnadmin/inventory/d/(?P<id>[0-9a-f]+)/addentry/$', 'inventory.views.addentry', name="inv-new-entry"),
         
     #members
+    url(r'^list/mdc/raw/$', 'members.views.mdc_raw'),
+    url(r'^list/mdc/$', 'members.views.mdc'),
     url(r'^lnadmin/members/officers/$', 'members.views.officers'),
     url(r'^lnadmin/members/active/$', 'members.views.active'),
     url(r'^lnadmin/members/associate/$', 'members.views.associate'),

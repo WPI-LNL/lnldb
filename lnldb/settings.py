@@ -4,7 +4,7 @@ from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 import os
 here = lambda *x: os.path.join(os.path.abspath(os.path.dirname(__file__)), *x)
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
@@ -15,12 +15,12 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'lnldb',                      # Or path to database file if using sqlite3.
-        'USER': '',                      # Not used with sqlite3.
-        'PASSWORD': '',                  # Not used with sqlite3.
-        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+        'ENGINE': 'django.db.backends.mysql', # SQLite does not work here; be sure to fill in server settings
+        'NAME': 'lnldb',                      # DB name on the host
+        'USER': '',                      # Username. Please use a unique user with limited permissions.
+        'PASSWORD': '',                  # And for the love of god, use a password.
+        'HOST': '',                      # Set to empty string for localhost.
+        'PORT': '',                      # Set to empty string for default.
     }
 }
 
@@ -142,7 +142,7 @@ INSTALLED_APPS = (
     'bootstrap_toolkit',
     'crispy_forms',
     'lineage',
-    
+    'django_bootstrap_calendar',
     'ajax_select',
     
     'south',
@@ -197,6 +197,8 @@ AJAX_LOOKUP_CHANNELS = {
     'Officers' : ('acct.lookups', 'OfficerLookup'),
     'Members' : ('acct.lookups', 'MemberLookup'),
     'AssocMembers' : ('acct.lookups', 'AssocMemberLookup'),
+    'Funds' : ('events.lookups', 'FundLookup'),
+    'FundsLimited' : ('events.lookups', 'FundLookupLimited')
 }
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP

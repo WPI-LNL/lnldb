@@ -1,6 +1,7 @@
 from django import forms
 from django.db.models import Q
 from django.forms import Form, ModelForm
+from django.forms.fields import DateTimeField, SplitDateTimeField
 
 import datetime
 
@@ -19,16 +20,18 @@ class MeetingAdditionForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         self.helper.layout = Layout(
-            'datetime',
-            'attendance',
             'meeting_type',
             'location',
+            'datetime',
+            'attendance',
             FormActions(
                 Submit('save', 'Save Changes'),
             )
         )
         super(MeetingAdditionForm,self).__init__(*args,**kwargs)
+
     attendance = AutoCompleteSelectMultipleField('Users',required=False)
+    datetime = SplitDateTimeField(required=True, initial=datetime.datetime.today())
     location = forms.ModelChoiceField(queryset = Location.objects.filter(available_for_meetings=True),label="Location", required=False)
     
     class Meta:
@@ -71,7 +74,7 @@ class AnnounceCCSendForm(forms.ModelForm):
     def __init__(self,meeting,*args,**kwargs):
         now = meeting.datetime
         twodaysago = now + datetime.timedelta(days=-4)
-        aweekfromnow = now + datetime.timedelta(days=9)
+        aweekfromnow = now + datetime.timedelta(days=17)
         
         
         self.helper = FormHelper()

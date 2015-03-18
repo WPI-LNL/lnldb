@@ -1,3 +1,8 @@
 *.pyc
 local_settings.py
 csvinfo/*
+env[(-l)(-d)]*/*
+runtime/*
+wheelhouse/*
+src/*
+.idea/*

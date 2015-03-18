@@ -1,23 +1,75 @@
 # Create your views here.
-
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
-from django.template import Context,RequestContext
+from django.shortcuts import render_to_response
+from django.template import RequestContext
 
-from events.models import Event,Organization
+from events.models import Event
 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 
-from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from helpers.challenges import is_officer
 
 import datetime,time
 import pytz
+import re
 
 DEFAULT_ENTRY_COUNT = 40
+
+
+class FakeField(object):
+    """
+    Means that there is some check for it in the template end or that the thing is a property instead of a field
+    """
+    def __init__(self, name, verbose_name=None, favicon=None, sortable=False):
+        self.name = name
+        if verbose_name == None:
+            self.verbose_name = " ".join(re.split("[-_ ]", name)).capitalize()
+        else:
+            self.verbose_name = verbose_name
+        self.sortable = sortable
+        self.favicon = favicon
+
+class FakeExtendedField(object):
+    """
+    Just a shim to make things clear, using getattr magic to make python think it's the original field
+    Use it if you want to change something about a field
+    """
+    def __getattr__(self, item):
+        return getattr(self.fieldref,item)
+
+    def __init__(self, name, favicon=None, verbose_name=None, sortable=True):
+        self.fieldref = Event._meta.get_field(name)
+        self.name = name
+        if verbose_name:
+            self.verbose_name = verbose_name
+        self.sortable = sortable
+        self.favicon = favicon
+
+
+
+def map_fields(cols):
+    """ Puts field names into actual fields (even if they don't exist) """
+
+    out_cols = []
+    all_names = Event._meta.get_all_field_names()
+
+    for col in cols:
+        if isinstance(col, FakeField):
+            out_cols.append(col)
+        elif isinstance(col, FakeExtendedField):
+            out_cols.append(col)
+        elif col in all_names:
+            out_cols.append(FakeExtendedField(col))
+        elif isinstance(col, tuple) and col[0] in all_names:
+            out_cols.append(FakeExtendedField(*col))
+        elif isinstance(col, tuple):
+            out_cols.append(FakeField(*col))  # expand entries in col
+        else:
+            out_cols.append(FakeField(str(col)))
+    return out_cols
+
 
 #generic date filtering
 def datefilter(eventqs,context,start=None,end=None):
@@ -50,8 +102,23 @@ def datefilter(eventqs,context,start=None,end=None):
 
 #paginator helper
 
-def paginate_helper(queryset,page,count=DEFAULT_ENTRY_COUNT):
-    paginator = Paginator(queryset,count)
+def paginate_helper(queryset,page,sort=None,count=DEFAULT_ENTRY_COUNT):
+    if sort and (sort in queryset.model._meta.get_all_field_names() or
+                     (sort[0] == '-' and sort[1:] in queryset.model._meta.get_all_field_names())):
+        post_sort = queryset.order_by(sort)
+    elif sort:
+        try:
+            if sort[0] == '-':
+                post_sort = sorted(queryset.all(), key=lambda m: getattr(m,sort[1:]),reverse=True)
+            else:
+                post_sort = sorted(queryset.all(), key=lambda m: getattr(m,sort))
+        except Exception as e:
+            print "Won't sort.", e
+            post_sort = queryset
+    else:
+        post_sort = queryset
+
+    paginator = Paginator(post_sort,count)
     try:
         pag_qs = paginator.page(page)
     except PageNotAnInteger:
@@ -87,7 +154,7 @@ def upcoming(request,start=None,end=None):
         today = datetime.date.today()
         start = today - datetime.timedelta(days=1)
         start = start.strftime('%Y-%m-%d')
-        end = today + datetime.timedelta(days=8)
+        end = today + datetime.timedelta(days=15)
         end = end.strftime('%Y-%m-%d')
         
         # KEEPING THIS JUST IN CASE
@@ -111,18 +178,24 @@ def upcoming(request,start=None,end=None):
             #end = end.strftime('%Y-%m-%d')
     
     #events = Event.objects.filter(approved=True).filter(closed=False).filter(paid=False).filter(datetime_start__gte=today)
-    events = Event.objects.filter(approved=True).exclude(Q(closed=True)|Q(cancelled=True))#.filter(paid=False)
+    events = Event.objects.filter(approved=True).exclude(Q(closed=True)|Q(cancelled=True)).distinct()#.filter(paid=False)
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
-    events = events.order_by('datetime_start')
-    events = paginate_helper(events,page)
-    
+    sort = request.GET.get('sort') or 'datetime_start'
+    events = paginate_helper(events,page,sort)
+
     context['h2'] = "Upcoming Events"
     context['events'] = events
     context['baseurl'] = reverse("upcoming")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    
+    context['cols'] = ['event_name',
+                       'org',
+                       'location',
+                       'crew_chief',
+                       FakeExtendedField('datetime_start', verbose_name="Starts At"),
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    context['cols'] = map_fields(context['cols']) #must use because there are strings
     return render_to_response('events.html', context)
 
 
@@ -137,18 +210,25 @@ def incoming(request,start=None,end=None):
         end = today + datetime.timedelta(days=365.25)
         end = end.strftime('%Y-%m-%d')
     
-    events = Event.objects.filter(approved=False).exclude(Q(closed=True)|Q(cancelled=True))
+    events = Event.objects.filter(approved=False).exclude(Q(closed=True)|Q(cancelled=True)).distinct()
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
-    events = paginate_helper(events,page)
-
+    sort = request.GET.get('sort') or '-submitted_on'
+    events = paginate_helper(events,page,sort)
     
     context['h2'] = "Incoming Events"
     context['events'] = events
     context['baseurl'] = reverse("incoming")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    
+    context['cols'] = ['event_name',
+                       'org',
+                       'location',
+                       'submitted_on',
+                       FakeExtendedField('datetime_start', verbose_name="Starts At"),
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+
+    context['cols'] = map_fields(context['cols']) #must use because there are strings
     return render_to_response('events.html', context)
 
 
@@ -164,18 +244,25 @@ def openworkorders(request,start=None,end=None):
         end = end.strftime('%Y-%m-%d')
     context = RequestContext(request)
     
-    events = Event.objects.filter(approved=True).exclude(Q(closed=True)|Q(cancelled=True))
+    events = Event.objects.filter(approved=True).exclude(Q(closed=True)|Q(cancelled=True)).distinct()
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
-    events = paginate_helper(events,page)
-
+    sort = request.GET.get('sort')
+    events = paginate_helper(events,page,sort)
     
     context['h2'] = "Open Events"
     context['events'] = events
     context['baseurl'] = reverse("open")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    
+    context['cols'] = ['event_name',
+                       'org',
+                       'location',
+                       'crew_chief',
+                      FakeExtendedField('datetime_start', verbose_name="Starting At"),
+                       FakeField('short_services', verbose_name="Services", sortable=False),
+                       FakeField('tasks')]
+    context['cols'] = map_fields(context['cols']) #must use because there are strings
     return render_to_response('events.html', context)
 
 
@@ -193,18 +280,32 @@ def unreviewed(request,start=None,end=None):
         
     now = datetime.datetime.now(pytz.utc)
     #events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.exclude(Q(closed=True)|Q(cancelled=True)|Q(approved=False)).filter(reviewed=False).filter(datetime_end__lte=now)
+    events = Event.objects.exclude(Q(closed=True)
+                                   |Q(cancelled=True)
+                                   |Q(approved=False))\
+        .filter(reviewed=False)\
+        .filter(datetime_end__lte=now)\
+        .order_by('datetime_start')\
+        .distinct()
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
-    events = paginate_helper(events,page)
-
+    sort = request.GET.get('sort')
+    events = paginate_helper(events,page,sort)
     
     context['h2'] = "Events Pending Billing Review"
     context['events'] = events
     context['baseurl'] = reverse("unreviewed")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    
+    context['cols'] = ['event_name',
+                       'org',
+                       'location',
+                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       'crew_chief',
+                       FakeField('num_crew_needing_reports', sortable=True, verbose_name="Missing Reports"),
+                       FakeField('short_services', verbose_name="Services", sortable=False),
+                       FakeField('tasks')]
+    context['cols'] = map_fields(context['cols']) #must use because there are strings
     return render_to_response('events.html', context)
 
 
@@ -220,18 +321,32 @@ def unbilled(request,start=None,end=None):
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
-    events = Event.objects.filter(billings__isnull=True).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True).filter(billed_by_semester=False).order_by('datetime_start')
+    Event._meta.get_all_field_names()
+    events = Event.objects.filter(billings__isnull=True)\
+        .exclude(Q(closed=True)|
+                 Q(cancelled=True))\
+        .filter(reviewed=True)\
+        .filter(billed_by_semester=False)\
+        .order_by('datetime_start')\
+        .distinct()
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
-    events = paginate_helper(events,page)
+    sort = request.GET.get('sort')
+    events = paginate_helper(events,page,sort)
 
     
     context['h2'] = "Events to be Billed"
     context['events'] = events
     context['baseurl'] = reverse("unbilled")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    
+    context['cols'] = ['event_name',
+                       'org',
+                       'location',
+                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       FakeField('num_crew_needing_reports', sortable=True, verbose_name="Missing Reports"),
+                       FakeField('short_services', verbose_name="Services", sortable=False),]
+    context['cols'] = map_fields(context['cols']) #must use because there are strings
     return render_to_response('events.html', context)
 
 
@@ -247,18 +362,30 @@ def unbilled_semester(request,start=None,end=None):
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
-    events = Event.objects.filter(billings__isnull=True).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True).filter(billed_by_semester=True).order_by('datetime_start')
+    events = Event.objects.filter(billings__isnull=True)\
+                          .exclude(Q(closed=True)
+                                  |Q(cancelled=True))\
+                          .filter(reviewed=True)\
+                          .filter(billed_by_semester=True)\
+                          .order_by('datetime_start')\
+                          .distinct()
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
-    events = paginate_helper(events,page)
-
+    sort = request.GET.get('sort')
+    events = paginate_helper(events,page,sort)
     
     context['h2'] = "Events to be Billed (Films)"
     context['events'] = events
     context['baseurl'] = reverse("unbilled-semester")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    
+    context['cols'] = ['event_name',
+                       'org',
+                       'location',
+                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       'crew_chief',
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    context['cols'] = map_fields(context['cols']) #must use because there are strings
     return render_to_response('events.html', context)
 
 
@@ -271,21 +398,32 @@ def paid(request,start=None,end=None):
         start,end = get_farback_date_range_plus_next_week()
         
     #events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(billings__date_paid__isnull=False).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True)
+    events = Event.objects.filter(billings__date_paid__isnull=False)\
+                          .exclude(Q(closed=True)
+                                  |Q(cancelled=True))\
+                          .filter(reviewed=True)\
+                          .distinct()
     events,context = datefilter(events,context,start,end)
     
     #if events:
     #    events = events.latest('billings__date_paid') #limit further
     
     page = request.GET.get('page')
-    events = paginate_helper(events,page)
-
+    sort = request.GET.get('sort')
+    events = paginate_helper(events,page,sort)
     
     context['h2'] = "Paid Events"
     context['events'] = events
     context['baseurl'] = reverse("paid")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    
+    context['cols'] = ['event_name',
+                       'org',
+                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       FakeField('last_billed',sortable=True),
+                       FakeField('last_paid', verbose_name="Paid On",sortable=True),
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    context['cols'] = map_fields(context['cols']) #must use because there are strings
+
     return render_to_response('events.html', context)
 
 
@@ -300,18 +438,29 @@ def unpaid(request,start=None,end=None):
     today = datetime.date.today()
     now = time.time()
     #events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now()).filter(date_setup_start__lte=today)
-    events = Event.objects.filter(billings__date_paid__isnull=True,billings__date_billed__isnull=False).exclude(Q(closed=True)|Q(cancelled=True)).filter(reviewed=True)
+    events = Event.objects.filter(billings__date_paid__isnull=True,
+                                  billings__date_billed__isnull=False)\
+        .exclude(Q(closed=True)|
+                 Q(cancelled=True))\
+        .filter(reviewed=True)\
+        .order_by('datetime_start').distinct()
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
-    events = paginate_helper(events,page)
-
+    sort = request.GET.get('sort')
+    events = paginate_helper(events,page,sort)
     
     context['h2'] = "Pending Payments"
     context['events'] = events
     context['baseurl'] = reverse("unpaid")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    
+    context['cols'] = ['event_name',
+                       'org',
+                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       FakeField('last_billed',sortable=True),
+                       FakeField('times_billed', sortable=True),
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    context['cols'] = map_fields(context['cols']) #must use because there are strings
     return render_to_response('events.html', context)    
 
 
@@ -327,14 +476,20 @@ def closed(request,start=None,end=None):
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
-    events = paginate_helper(events,page)
-    
+    sort = request.GET.get('sort')
+    events = paginate_helper(events,page,sort)
     
     context['h2'] = "Closed Events"
     context['events'] = events
     context['baseurl'] = reverse("closed")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    
+    context['cols'] = ['event_name',
+                       'org',
+                       'location',
+                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       'crew_chief',
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    context['cols'] = map_fields(context['cols']) #must use because there are strings
     return render_to_response('events.html', context)       
 
 
