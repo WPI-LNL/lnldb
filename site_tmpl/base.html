@@ -21,6 +21,7 @@
         <script src="{{ STATIC_URL }}js/bootstrap-timepicker.min.js"></script>
         
         <script src="{{ STATIC_URL }}ajax_select/js/ajax_select.js"></script>
+        <script src="{{ STATIC_URL }}js/flexmenu.min.js"></script>
         <link href='{{ STATIC_URL }}ajax_select/css/ajax_select.css' rel="stylesheet" type="text/css">
         <link href="{{ STATIC_URL }}css/jquery-ui.css" rel="stylesheet">
         <script type="text/javascript">
@@ -35,6 +36,7 @@
                         defaultTime: false,
                         showMeridian: false
                     });
+                $("ul.navbar-nav").flexMenu()
                 });
     </script>
 <!--         <link href="{{ STATIC_URL }}css/style.css" rel="stylesheet"> -->
@@ -65,6 +67,9 @@
             }
             .inlineflexfix {
                 display: inline-flex;
+            }
+            .navbar-nav {
+                float: none;
             }
         </style>
         {% block overrides %}
