@@ -71,6 +71,21 @@
             .navbar-nav {
                 float: none;
             }
+            .dropdown-menu .dropdown-toggle {
+                font-weight: bold;
+                cursor: default;
+            }
+            .dropdown-menu .dropdown-menu {
+                display: block;
+                position: relative;
+                border-left: none;
+                border-right: none;
+                box-shadow: none;
+                width: 100%;
+            }
+            .dropdown-menu .dropdown-menu li {
+                  display: block;
+            }
         </style>
         {% block overrides %}
         {% endblock %}
