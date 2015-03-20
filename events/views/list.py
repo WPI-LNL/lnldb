@@ -214,7 +214,7 @@ def incoming(request,start=None,end=None):
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
-    sort = request.GET.get('sort') or '-submitted_on'
+    sort = request.GET.get('sort') or 'datetime_start'
     events = paginate_helper(events,page,sort)
     
     context['h2'] = "Incoming Events"
@@ -224,8 +224,8 @@ def incoming(request,start=None,end=None):
     context['cols'] = ['event_name',
                        'org',
                        'location',
-                       'submitted_on',
                        FakeExtendedField('datetime_start', verbose_name="Starts At"),
+                       'submitted_on',
                        FakeField('short_services', verbose_name="Services", sortable=False)]
 
     context['cols'] = map_fields(context['cols']) #must use because there are strings
