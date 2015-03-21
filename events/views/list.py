@@ -90,7 +90,7 @@ def datefilter(eventqs,context,start=None,end=None):
     if end:
         context['end'] = end
         try:
-            enddate = datetime.datetime.strptime(end, '%Y-%m-%d')
+            enddate = datetime.datetime.strptime(end, '%Y-%m-%d') + datetime.timedelta(days=1) #make inclusive.
             eventqs = eventqs.filter(datetime_end__lte=enddate)
             
         except:
