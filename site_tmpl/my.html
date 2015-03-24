@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load staticfiles %}
 
 {% block nav %}
     {% include "my.nav.html" %}
@@ -8,31 +9,31 @@
 <div class="container marketing" style="text-align:center;">
     <div class="row">
         <div class="col-md-3">
-            <img class="img-circle" src="{{ STATIC_URL }}img/Account.gif" />
+            <img class="img-circle" src="{% static 'img/Account.gif' %}"/>
             <h2> My Account </h2>
             <a href="{% url "my-acct" %}" class="btn btn-lg btn-primary">Modify Account</a>
         </div>
 
         
         <div class="col-md-3">
-            <img class="img-circle" src="{{ STATIC_URL }}img/WorkOrders.gif" />
+            <img class="img-circle" src="{% static 'img/WorkOrders.gif' %}"/>
             <h2> WorkOrders </h2>
             <div class="btn-group">
-                <a href="/workorder" class="btn btn-lg btn-primary">New</a>
+                <a href="{% url 'event' %}" class="btn btn-lg btn-primary">New</a>
                 <a href="{% url "events.views.my.mywo" %}" class="btn btn-lg btn-primary">Previous</a>
             </div>
         </div>
 
         
         <div class="col-md-3">
-            <img class="img-circle" src="{{ STATIC_URL }}img/Org.gif" />
+            <img class="img-circle" src="{% static 'img/Org.gif' %}"/>
             <h2> My Orgs </h2>
             <a href="{% url "events.views.my.myorgs" %}" class="btn btn-lg btn-primary">Associated Orgs</a>
         </div>
 
         {% if is_lnl %}
         <div class="col-md-3">
-            <img class="img-circle" src="{{ STATIC_URL }}img/MyEvents.gif" />
+            <img class="img-circle" src="{% static 'img/MyEvents.gif' %}"/>
             <h2> My Events </h2>
             <a href="{% url "events.views.my.myevents" %}" class="btn btn-lg btn-primary">View Events</a>
             

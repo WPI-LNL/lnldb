@@ -2,28 +2,39 @@
 {% block nav %}
     {% include "admin.nav.html" %}
 {% endblock %}
-
+Test.
+{% if messages %}
+ {% for message in messages %}
+    <div class="{% if message.tags %}{{ message.tags }}{% endif %}">
+        <button type="button" class="close" data-dismiss="alert"></button>
+        <b>{{ message }}</b>
+    </div>
+{% endfor %}
+{% endif %}
 {% block overrides %}
 
 {% comment %}
-<!-- <link href="{{ STATIC_URL }}css/bootstrap-admin.css" rel="stylesheet"> -->
-<!-- <link href="{{ STATIC_URL }}css/bootstrap-responsive.css" rel="stylesheet"> -->
+<!-- <link href="{% static 'css/bootstrap-admin.css' %}" rel="stylesheet"> -->
+<!-- <link href="{% static 'css/bootstrap-responsive.css' %}" rel="stylesheet"> -->
 {# lol don't question it #}
 {% endcomment %}
 <style>
-    div#lnadmin-navbar-collapse-1.collapse ul.nav li a.dropdown-toggle,
-    div#lnadmin-navbar-collapse-1.collapse ul.nav li a,
-    div.navbar div.container-fluid div.navbar-header a.navbar-brand
+
+    .navbar-inverse .navbar-nav>.active>a
+    {
+        color: #EEE;
+    }
+    .navbar-inverse .navbar-nav>li>a,
+    .navbar-inverse .navbar-nav>li>a:hover,
+    .navbar-inverse .navbar-nav>li>a:focus,
+    .navbar-inverse .navbar-brand
     {
         color: #FFE303;
     }
-    div#lnadmin-navbar-collapse-1.collapse ul.nav li.active a.dropdown-toggle,
-    div#lnadmin-navbar-collapse-1.collapse ul.nav li.active a{
-        
-        color: #EEE;
-    }
-    div#lnadmin-navbar-collapse-1.collapse ul.nav li.dropdown ul.dropdown-menu li a {
-        color: #111;
+    @media(min-width: 768px) {
+        ul.nav ul.dropdown-menu li a {
+            color: #111;
+        }
     }
 </style>
 

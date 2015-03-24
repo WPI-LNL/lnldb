@@ -62,7 +62,7 @@
     {# Help Modal #}
 
     <div id="helpmodal" class="modal fade">
-        <div class="modal-dialog modal-lg" style="width:80%";>
+        <div class="modal-dialog modal-lg" style="width:80%;">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
@@ -78,7 +78,8 @@
                     <div class="tab-content">
                         <div class="tab-pane active" id="tservice">
                             {% for o in help_objs %}
-                            <p>{{ o.help_desc|markdown }}</p>
+                            <h2>{{ o.longname }} (${{ o.base_cost }})</h2>
+                            <p>{{  o.help_desc|markdown }}</p>
                             {% endfor %}
                         </div>
                         {% if extras %}
@@ -89,7 +90,7 @@
                                     <div id="e_{{e.id }}" class="{% for s in e.services.all %}s_{{s.id}} {% endfor %}"></div>
                                 </div>
                                 <tr>
-                                    <td>{{ e.name }} ({{e.desc}})</td>
+                                    <td><b>{{ e.name }}:</b> {{e.desc}}</td>
                                     <td>{{ e.cost }}</td>
                                     
                                 </tr>

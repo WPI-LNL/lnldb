@@ -9,20 +9,13 @@
         </div>
 
         <div class="row">
-            {% if is_officer %}
-            <div class="col-md-4">
-            {% else %}
-            <div class="col-md-6">
-            {% endif %}
+            <div {% if is_officer %}class="col-md-4" {% else %}class="col-md-6"{% endif %}>
                 <h2>Workorders</h2>
-                  <p><a class="btn btn-primary" href="/workorder">Submit A Workorder &raquo;</a></p>
+
+                <p><a class="btn btn-primary" href="{% url 'event' %}">Submit A Workorder &raquo;</a></p>
             </div><!--/span-->
 
-            {% if is_officer %}
-            <div class="col-md-4">
-            {% else %}
-            <div class="col-md-6">
-            {% endif %}
+            <div {% if is_officer %}class="col-md-4" {% else %}class="col-md-6"{% endif %}>
                 <h2>View Your Account</h2>
                 <p><a class="btn btn-success" href="{% url "events.views.my.my" %}">My Account &raquo;</a></p>
             </div><!--/span-->

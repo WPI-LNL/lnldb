@@ -1,86 +1,72 @@
 # Create your views here.
+import datetime
+
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
-from django.template import Context,RequestContext
-
-from django.contrib.auth.models import User
-
-from django.views.generic.edit import UpdateView
+from django.template import RequestContext
 from django.views.generic.edit import CreateView
 from django.views.generic.edit import DeleteView
 from django.views.generic.edit import FormView
-
-from functools import partial, wraps
-
 from events.models import Event
 from events.models import Projection as ProjService
 from events.models import Location
-
-from projection.models import Projectionist,PitInstance,PITLevel
+from projection.models import Projectionist, PITLevel
 from projection.forms import ProjectionistUpdateForm
 from projection.forms import ProjectionistForm
 from projection.forms import PITFormset
 from projection.forms import BulkUpdateForm
-
 from projection.forms import BulkCreateForm
-
 from projection.forms import DateEntryFormSetBase
-
-from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-
-from django.contrib.formtools.wizard.views import NamedUrlSessionWizardView
 from django.forms.formsets import formset_factory
-from django.utils.functional import curry
 from django.utils import timezone
-
 from helpers.challenges import is_officer
 from helpers.mixins import LoginRequiredMixin, OfficerMixin
 
-import datetime
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def plist(request):
-    
     context = RequestContext(request)
     users = Projectionist.objects.all().order_by('user__last_name')
-    
+
     context['users'] = users
     context['h2'] = "Projectionist List"
-    
+
     return render_to_response('projectionlist.html', context)
+
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def plist_detail(request):
-    
     context = RequestContext(request)
-    levels = PITLevel.objects.exclude(name_short__in=['PP','L']).order_by('ordering')
-    unlicensed_users = Projectionist.objects.exclude(pitinstances__pit_level__name_short__in=['PP','L'])
-    licensed_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP','L']).exclude(user__groups__name="Alumni")
-    alumni_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP','L']).filter(user__groups__name="Alumni")
-    
+    levels = PITLevel.objects.exclude(name_short__in=['PP', 'L']).order_by('ordering')
+    unlicensed_users = Projectionist.objects.exclude(pitinstances__pit_level__name_short__in=['PP', 'L'])
+    licensed_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP', 'L']).exclude(
+        user__groups__name="Alumni")
+    alumni_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP', 'L']).filter(
+        user__groups__name="Alumni")
+
     context['unlicensed_users'] = unlicensed_users
     context['licensed_users'] = licensed_users
     context['alumni_users'] = alumni_users
     context['levels'] = levels
     context['h2'] = "Projectionist List Detailed"
-    
+
     return render_to_response('projectionlist_detail.html', context)
+
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
-def projection_update(request,id):
-    projectionist = get_object_or_404(Projectionist,pk=id)
+def projection_update(request, id):
+    projectionist = get_object_or_404(Projectionist, pk=id)
     context = RequestContext(request)
     context['msg'] = "Updating Projectionist %s" % projectionist
-    
+
     if request.method == "POST":
-        form = ProjectionistUpdateForm(request.POST,instance=projectionist,prefix="main")
-        formset = PITFormset(request.POST,instance=projectionist,prefix="nested")
+        form = ProjectionistUpdateForm(request.POST, instance=projectionist, prefix="main")
+        formset = PITFormset(request.POST, instance=projectionist, prefix="nested")
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
@@ -89,17 +75,16 @@ def projection_update(request,id):
             context['form'] = form
             context['formset'] = formset
     else:
-        form = ProjectionistUpdateForm(instance=projectionist,prefix="main")
-        formset = PITFormset(instance=projectionist,prefix="nested")
+        form = ProjectionistUpdateForm(instance=projectionist, prefix="main")
+        formset = PITFormset(instance=projectionist, prefix="nested")
         context['form'] = form
         context['formset'] = formset
         context['pk'] = id
-        
-    return render_to_response('form_crispy_projection.html',context)
-    
-       
-    
-class ProjectionCreate(OfficerMixin,LoginRequiredMixin,CreateView):
+
+    return render_to_response('form_crispy_projection.html', context)
+
+
+class ProjectionCreate(OfficerMixin, LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super(ProjectionCreate, self).get_context_data(**kwargs)
         if self.request.POST:
@@ -111,13 +96,12 @@ class ProjectionCreate(OfficerMixin,LoginRequiredMixin,CreateView):
             f.helper.form_tag = False
             context['form'] = f
 
-        
         return context
-    
+
     def form_valid(self, form):
         context = self.get_context_data()
         pitform = context['formset']
-        
+
         if form.is_valid() and pitform.is_valid():
             self.object = form.save()
             pitform.instance = self.object
@@ -125,14 +109,15 @@ class ProjectionCreate(OfficerMixin,LoginRequiredMixin,CreateView):
             return HttpResponseRedirect(self.success_url)
         else:
             return self.render_to_response(self.get_context_data(form=form))
-    
+
     model = Projectionist
     template_name = "form_crispy_projection.html"
     form_class = ProjectionistForm
-    #success_url = reverse("projection-list")
+    # success_url = reverse("projection-list")
     success_url = "/lnadmin/projection/list"
 
-class BulkUpdateView(OfficerMixin,LoginRequiredMixin,FormView):
+
+class BulkUpdateView(OfficerMixin, LoginRequiredMixin, FormView):
     template_name = "form_crispy_cbv.html"
     form_class = BulkUpdateForm
     success_url = "/lnadmin/projection/list/"
@@ -141,25 +126,25 @@ class BulkUpdateView(OfficerMixin,LoginRequiredMixin,FormView):
         # This method is called when valid form data has been POSTed.
         # It should return an HttpResponse.
         form.create_updates()
-        return super(BulkUpdateView, self).form_valid(form)    
-    
-class ProjectionistDelete(OfficerMixin,LoginRequiredMixin,DeleteView):
+        return super(BulkUpdateView, self).form_valid(form)
+
+
+class ProjectionistDelete(OfficerMixin, LoginRequiredMixin, DeleteView):
     model = Projectionist
     template_name = "form_delete_cbv.html"
     msg = "Deleted Projectionist"
-    
-            
+
     def get_success_url(self):
         return reverse("projection-list-detail")
-    
-    
+
+
 ### Non-Wizard Projection Bulk View
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def bulk_projection(request):
     context = RequestContext(request)
     tz = timezone.get_current_timezone()
-    
+
     if request.GET:
         # always build the formset
         formbulk = BulkCreateForm(request.GET)
@@ -167,53 +152,51 @@ def bulk_projection(request):
             # create our new form and pass it back
             date_1 = formbulk.cleaned_data.get('date_first')
             date_2 = formbulk.cleaned_data.get('date_second')
-            #date_1 = datetime.datetime.strptime(datestr_1,"%Y-%m-%d")
+            # date_1 = datetime.datetime.strptime(datestr_1,"%Y-%m-%d")
             #date_2 = datetime.datetime.strptime(datestr_2,"%Y-%m-%d")
 
-            
             end_of_term_1 = date_1 + datetime.timedelta(days=56)
             end_of_term_2 = date_2 + datetime.timedelta(days=66)
-            
+
             range_1 = []
             iterator_1 = date_1
             while iterator_1 <= end_of_term_1:
-                if iterator_1.weekday() in [5,6]:
+                if iterator_1.weekday() in [5, 6]:
                     range_1.append(iterator_1)
-                
+
                 iterator_1 = iterator_1 + datetime.timedelta(days=1)
-                
+
             range_2 = []
             iterator_2 = date_2
             while iterator_2 <= end_of_term_2:
-                if iterator_2.weekday() in [5,6]:
+                if iterator_2.weekday() in [5, 6]:
                     range_2.append(iterator_2)
-                
+
                 iterator_2 = iterator_2 + datetime.timedelta(days=1)
-                
+
             ranges_combined = range_1 + range_2
-            
+
             # prepopulate things
             out = []
             for i in ranges_combined:
-                out.append({"date":i})
-                
-                
+                out.append({"date": i})
+
             formset = formset_factory(DateEntryFormSetBase, extra=0)
             form_params = formset(initial=out)
             context['form'] = form_params
-            
+
             # depending on the return, do other things.
             if request.POST:
                 # here we have our params and data
-                filled = formset(request.POST,initial=out)
+                filled = formset(request.POST, initial=out)
                 if filled.is_valid():
                     out = []
                     for form in filled.cleaned_data:
-                        kwargs = {} # this is super nice
+                        kwargs = {}  # this is super nice
                         date = form['date']
                         name = form['name']
                         matinee = form['matinee']
-                        
+
                         # only populate db entries if the name has been filled
                         if name:
                             # first lets hammer out some details
@@ -222,35 +205,36 @@ def bulk_projection(request):
                             # get stuff from our bulk create form...
                             contact = formbulk.cleaned_data.get('contact')
                             kwargs['contact'] = contact
-                            
+
                             billing = formbulk.cleaned_data.get('billing')
                             # used below in e.add(org)
-                            
+
                             # various other important things
                             kwargs['submitted_by'] = request.user
                             kwargs['submitted_ip'] = request.META['REMOTE_ADDR']
-                            
-                            l = Location.objects.filter(name__icontains="Perreault Hall U")[0] # change to settings later (the u is for upper)
+
+                            l = Location.objects.filter(name__icontains="Perreault Hall U")[
+                                0]  # change to settings later (the u is for upper)
                             kwargs['location'] = l
                             # matinee determines the time
                             if matinee:
-                                t_setupcomplete = datetime.time(13,30)
+                                t_setupcomplete = datetime.time(13, 30)
                                 t_starttime = datetime.time(14)
                                 t_endtime = datetime.time(17)
                             else:
-                                t_setupcomplete = datetime.time(19,30)
+                                t_setupcomplete = datetime.time(19, 30)
                                 t_starttime = datetime.time(20)
                                 t_endtime = datetime.time(23)
                             # then we combine our date and time objects, cast them as EST and stuff them into the kwargs
                             dt_setupcomplete = datetime.datetime.combine(date, t_setupcomplete)
                             dt_setupcomplete = tz.localize(dt_setupcomplete)
                             kwargs['datetime_setup_complete'] = dt_setupcomplete
-                            
+
                             dt_start = datetime.datetime.combine(date, t_starttime)
                             dt_start = tz.localize(dt_start)
                             kwargs['datetime_start'] = dt_start
-                            
-                            dt_end = datetime.datetime.combine(date,t_endtime)
+
+                            dt_end = datetime.datetime.combine(date, t_endtime)
                             dt_end = tz.localize(dt_end)
                             kwargs['datetime_end'] = dt_end
                             # we'll assume its a digital projection "dp" event at this point
@@ -258,7 +242,7 @@ def bulk_projection(request):
                             kwargs['projection'] = s
                             kwargs['billed_by_semester'] = True
                             #return HttpResponse(kwargs.values())
-                            
+
                             #here's where this kwargs assignment pays off.
                             e = Event.objects.create(**kwargs)
                             e.org.add(billing)
@@ -268,27 +252,27 @@ def bulk_projection(request):
                             pass
                     # after thats done
                     context['result'] = out
-                    return render_to_response("form_crispy_bulk_projection_done.html",context)
-                    
+                    return render_to_response("form_crispy_bulk_projection_done.html", context)
+
                 else:
                     context['form'] = filled
-                    return render_to_response("form_crispy_bulk_projection_entries.html",context)
+                    return render_to_response("form_crispy_bulk_projection_entries.html", context)
             else:
                 #pass back the empty form
                 context['msg'] = "Bulk Movie Addition"
                 context['formset'] = formbulk
-                
-                return render_to_response("form_crispy_bulk_projection_entries.html",context)
+
+                return render_to_response("form_crispy_bulk_projection_entries.html", context)
         else:
             # here we only have our params
             context['msg'] = "Bulk Movie Addition (Errors)"
             context['formset'] = formbulk
-            return render_to_response("form_crispy.html",context)
+            return render_to_response("form_crispy.html", context)
     else:
         # here we have nothing
         form = BulkCreateForm()
         context['formset'] = form
         context['msg'] = "Bulk Movie Addition"
-        return render_to_response("form_crispy.html",context)
+        return render_to_response("form_crispy.html", context)
         
 

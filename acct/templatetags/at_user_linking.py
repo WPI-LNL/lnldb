@@ -2,7 +2,6 @@
 # but built upon with the love of gabe
 from django import template
 from django.template.defaultfilters import stringfilter
-from django.conf import settings
 
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
@@ -12,6 +11,7 @@ import re
 register = template.Library()
 
 regex = re.compile(r'@(?P<username>[\w]+)')
+
 
 @register.filter
 @stringfilter
@@ -23,10 +23,12 @@ def userlink(value):
         r = m.groupdict()
         try:
             user = User.objects.get(username=r['username'])
-            new_value = new_value.replace(m.group(), '<a href="%s">@%s</a> ' % (reverse("memberdetail", args=(user.id,)),user.username))
+            new_value = new_value.replace(m.group(), '<a href="%s">@%s</a> ' % (
+                reverse("memberdetail", args=(user.id,)), user.username))
         except User.DoesNotExist:
             pass
-    return new_value 
+    return new_value
+
 
 @register.filter
 @stringfilter
@@ -40,7 +42,8 @@ def mduserlink(value):
         r = m.groupdict()
         try:
             user = User.objects.get(username=r['username'])
-            new_value = new_value.replace(m.group(), '[@%s](%s) ' % (user.username,reverse("memberdetail", args=(user.id,))))
+            new_value = new_value.replace(m.group(),
+                                          '[@%s](%s) ' % (user.username, reverse("memberdetail", args=(user.id,))))
         except User.DoesNotExist:
             pass
     return new_value 

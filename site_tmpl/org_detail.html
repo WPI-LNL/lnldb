@@ -36,7 +36,7 @@
                     <td><a href="mailto:{{ org.exec_email }}">{{ org.exec_email }}</a></td>
                 </tr>
                 <tr>
-                    <th>Normal Email </th>
+                    <th>Club Email </th>
                     <td><a href="mailto:{{ org.email }}"> {{ org.email }}</a> </td>
                 </tr>
                 <tr>
@@ -49,18 +49,15 @@
         <div class="col-md-3">
             <h3>Money</h3>
             <table>
-                <tr>
-                    <th> Fund </th>
-                    <td> {{ org.fund }}</td>
-                </tr>
-                <tr>
-                    <th> Organization </th>
-                    <td> {{ org.organization }}</td>
-                </tr>
-                <tr>
-                    <th> Account </th>
-                    <td> {{ org.account }}</td>
-                </tr>
+                {% for f in org.accounts.all %}
+                <tr><td>
+                    <b><a href="{% url 'admin-fundedit' f.id %}">{{ f }}</a></b>
+                    {% if f.notes %}{{ f.notes }}{% endif %}
+                </td></tr>
+                {% endfor %}
+                <tr><td>
+                    <b><a href="{% url 'admin-fundaddorg' org.id %}">[Add New]</a></b>
+                </td></tr>
                 <tr>
                     <td colspan="2">
                         {% if org.verifications.exists %}
@@ -101,6 +98,7 @@
         <h3>Events</h3>
         <table class="table table-compact">
             <thead>
+            <tr>
                 <th>
                     Event Name
                 </th>
@@ -116,6 +114,7 @@
                 <th>
                     Status
                 </th>
+            </tr>
             </thead>
             {% for e in org.event_set.all %}
             <tr>

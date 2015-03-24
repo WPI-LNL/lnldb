@@ -1,0 +1,123 @@
+{% extends "pdf_templates/pdf_base.html" %}
+{% load static %}
+{% load tz %}
+{% block body %}
+<!-- have mercy on the soul of the following html.
+
+    XHTML2PDF/Pisa supports a subset of HTML0 and CSS0. Everything is finicky, and anything past a single-
+        element selector is just asking for disaster. Also, nothing was displayed without a table. I'm taking a chance
+        just by writing this comment. FUCK THIS CODE.
+
+    Oh, also run ./manage.py collectstatic before testing, as it doesn't understand django's remapping of assets.
+-->
+<div>
+            <table>
+                <tr>
+                <td class="logo"><img id="logo-img" src="{% static 'img/pdf-lnl-logo.png' %}" width="200" height="150"></td>
+                <td class="lnl-contact">
+                <h2 class="contact-name">WPI Lens and Lights</h2>
+                <ul class="list-unstyled">
+                            <li>c/o Student Activities Office</li>
+                            <li>100 Institute Road</li>
+                            <li>Worcester, MA  01609-2280</li>
+                            <br>
+                            <li>Office: 508-831-5595</li>
+                            <li>Fax: 508-831-6045</li>
+                            <li><a href="mailto:lnl@wpi.edu" class="unstyled">lnl@wpi.edu</a></li>
+                            <li><a href="http://lnl.wpi.edu/" class="unstyled">http://lnl.wpi.edu/</a></li>
+                        </ul>
+
+                </td>
+                <td class="head">
+                    <h1 class="megatext">INVOICE</h1>
+                    <h2 class="subtext">{{ event }}</h2>
+                    <h2 class="subtext"><b>Invoice Date:</b> {% now "M. j, Y" %}</h2>
+                </td>
+                </tr>
+            </table>
+            <table class="info">
+                <tr>
+                    <td width="200"><b>Sponsoring Organizations:</b></td>
+                    <td>{{ event.org.all|join:", " }}</td>
+                    <td width="100"><b>Event Start:</b></td>
+                    <td>{{ event.datetime_start|localtime|date }}</td>
+                </tr>
+                <tr>
+                    <td><b>Billed Account:</b></td>
+                    <td>{{ event.billing_fund }}</td>
+                    <td><b>Event End:</b></td>
+                    <td>{{ event.datetime_end|localtime|date }}</td>
+                </tr>
+            </table>
+            <b class="info">Description:</b> {{ event.description }}
+            <hr>
+            <table class="line-items">
+                <tr>
+                    <th>Description</th>
+                    <th width="50">Cost</th>
+                </tr>
+                </table><hr>
+            <table class="line-items">
+                {% for service in event.eventservices %}
+                <tr>
+                    <td>{{service}}</td>
+                    <td class="align-right" width="50">$ {{ service.base_cost|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+
+                {% for cat, cat_e in extras.items %}
+                <tr>
+                    <td>{{ cat }} Extras</td>
+                    <td></td>
+                </tr>
+                {% for e in cat_e %}
+                <tr>
+                    <td>&nbsp;&nbsp;&nbsp;&nbsp;{{ e.extra }} [x{{ e.quant }}]</td>
+                    <td class="align-right">$ {{ e.totalcost|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+                {% if event.oneoffs %}
+                <tr>
+                    <td>Additional Fees</td>
+                    <td></td>
+                </tr>
+                {% for fee in event.oneoffs %}
+                <tr>
+
+                    <td>&nbsp;&nbsp;&nbsp;&nbsp;{{ fee.key_name }} [{{ fee.key_value|floatformat:2}}x{{ fee.key_quantity }}]</td>
+                    <td class="align-right">$ {{ fee.totalcost|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+                </table><hr>
+                {% if event.discount_applied %}
+        <table class="line-items">
+                <tr>
+                    <td>Subtotal</td>
+                    <td width="50" class="align-right">$ {{ event.cost_total_pre_discount|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td>Combo Event Discount</td>
+                    <td class="align-right">$ -{{ event.discount_value|floatformat:2 }}</td>
+                </tr>
+        </table><hr>
+        {% endif %}
+        <table class="line-items">
+                 <tr>
+                    <td><b>***EVENT TOTAL***</b></td>
+                    <td class="align-right" width="50"><b>$ {{ event.cost_total|floatformat:2 }}</b></td>
+                </tr>
+            </table>
+        <hr>
+<table class="center">
+    <tr><td>Please complete the attached IDT and return it to the Lens and Lights mailbox in the Student Activities Office.</td></tr>
+    <tr><td><p>If you have any questions concerning this invoice, contact our treasurer at <a class="unstyled" href="mailto:lnl-t@wpi.edu">lnl-t@wpi.edu</a>.</td></tr>
+    <tr>
+        <td>
+            <center>THANK YOU FOR YOUR BUSINESS!</center>
+        </td>
+    </tr>
+</table>
+    </div>
+{% endblock %}

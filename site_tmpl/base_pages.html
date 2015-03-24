@@ -1,256 +1,273 @@
 {% load markdown_deux_tags %}
+{% load staticfiles %}
+
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        {% block head %}
-        {% endblock %}
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="">
-        <meta name="author" content="">
-        <title>Lens and Lights at WPI</title>
+<head>
+    {% block head %}
+    {% endblock %}
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>Lens and Lights at WPI</title>
 
-        <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
-        <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-<!--         <link href="{{ STATIC_URL }}css/style.css" rel="stylesheet"> -->
-        <style type="text/css">
-        
+    <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <!--         <link href="{% static 'css/style.css' %}" rel="stylesheet"> -->
+    <style type="text/css">
+
         /* GLOBAL STYLES
 -------------------------------------------------- */
-/* Padding below the footer and lighter body text */
+        /* Padding below the footer and lighter body text */
 
-body {
-  padding-bottom: 40px;
-  color: #5a5a5a;
-}
+        body {
+            padding-bottom: 40px;
+            color: #5a5a5a;
+        }
+
+        /* CUSTOMIZE THE NAVBAR
+        -------------------------------------------------- */
+
+        /* Special class on .container surrounding .navbar, used for positioning it into place. */
+        .navbar-wrapper {
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            z-index: 20;
+        }
+
+        /* Flip around the padding for proper display in narrow viewports */
+        .navbar-wrapper .container {
+            padding-right: 0;
+            padding-left: 0;
+        }
+
+        .navbar-wrapper .navbar {
+            padding-right: 15px;
+            padding-left: 15px;
+        }
+
+        /* CUSTOMIZE THE CAROUSEL
+        -------------------------------------------------- */
+        /* Custom Spacer */
+        .carousel-spacer {
+            margin-bottom: 90px;
+        }
+
+        /* Carousel base class */
+        .carousel {
+            height: 700px;
+            margin-bottom: 60px;
+        }
+
+        /* Since positioning the image, we need to help out the caption */
+        .carousel-caption {
+            z-index: 10;
+        }
+
+        /* Declare heights because of positioning of img element */
+        .carousel .item {
+            height: 700px;
+            background-color: #777;
+        }
+
+        .carousel-inner > .item > img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            min-width: 100%;
+            /*   height: 700px; */
+            overflow: hidden;
+
+        }
+
+        /* MARKETING CONTENT
+        -------------------------------------------------- */
+
+        /* Pad the edges of the mobile views a bit */
+        .marketing {
+            padding-right: 15px;
+            padding-left: 15px;
+        }
+
+        /* Center align the text within the three columns below the carousel */
+        .marketing .col-lg-4 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .marketing h2 {
+            font-weight: normal;
+        }
+
+        .marketing .col-lg-4 p {
+            margin-right: 10px;
+            margin-left: 10px;
+        }
+
+        /* Featurettes
+        ------------------------- */
+
+        .featurette-divider {
+            margin: 80px 0; /* Space out the Bootstrap <hr> more */
+        }
+
+        /* Thin out the marketing headings */
+        .featurette-heading {
+            font-weight: 300;
+            line-height: 1;
+            letter-spacing: -1px;
+        }
+
+        /* RESPONSIVE CSS
+        -------------------------------------------------- */
+
+        @media (min-width: 768px) {
+
+            /* Remove the edge padding needed for mobile */
+            .marketing {
+                padding-right: 0;
+                padding-left: 0;
+            }
+
+            /* Navbar positioning foo */
+            .navbar-wrapper {
+                margin-top: 20px;
+            }
+
+            .navbar-wrapper .container {
+                padding-right: 15px;
+                padding-left: 15px;
+            }
+
+            .navbar-wrapper .navbar {
+                padding-right: 0;
+                padding-left: 0;
+            }
+
+            /* The navbar becomes detached from the top, so we round the corners */
+            .navbar-wrapper .navbar {
+                border-radius: 4px;
+            }
+
+            /* Bump up size of carousel content */
+            .carousel-caption p {
+                margin-bottom: 20px;
+                font-size: 21px;
+                line-height: 1.4;
+            }
+
+            .featurette-heading {
+                font-size: 50px;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .featurette-heading {
+                margin-top: 120px;
+            }
+        }
+
+        /* COLOR TWEAKS */
+        body {
+            background-color: #232323;
+            color: #DDD
+        }
+
+        .jumbotron {
+            color: #232323;
+        }
+
+        div.navbar-wrapper div.container div.navbar div.container div.navbar-collapse ul.nav li a,
+        a.navbar-brand {
+            color: #FFE303;
+        }
+
+        div.navbar-wrapper div.container div.navbar div.container div.navbar-collapse ul.nav li.active a {
+
+            color: #EEE;
+        }
+
+        div#lnadmin-navbar-collapse-1.collapse ul.nav li.dropdown ul.dropdown-menu li a {
+            color: #111;
+        }
+    </style>
+    <!--         <link href="{% static 'css/bootstrap-responsive.css' %}" rel="stylesheet"> -->
 
 
-
-/* CUSTOMIZE THE NAVBAR
--------------------------------------------------- */
-
-/* Special class on .container surrounding .navbar, used for positioning it into place. */
-.navbar-wrapper {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  z-index: 20;
-}
-
-/* Flip around the padding for proper display in narrow viewports */
-.navbar-wrapper .container {
-  padding-right: 0;
-  padding-left: 0;
-}
-.navbar-wrapper .navbar {
-  padding-right: 15px;
-  padding-left: 15px;
-}
-
-
-/* CUSTOMIZE THE CAROUSEL
--------------------------------------------------- */
-/* Custom Spacer */
-.carousel-spacer {
-margin-bottom: 90px;
-}
-/* Carousel base class */
-.carousel {
-  height: 700px;
-  margin-bottom: 60px;
-}
-/* Since positioning the image, we need to help out the caption */
-.carousel-caption {
-  z-index: 10;
-}
-
-/* Declare heights because of positioning of img element */
-.carousel .item {
-  height: 700px;
-  background-color: #777;
-}
-.carousel-inner > .item > img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  min-width: 100%;
-/*   height: 700px; */
-  overflow:hidden;
-
-}
-
-
-
-/* MARKETING CONTENT
--------------------------------------------------- */
-
-/* Pad the edges of the mobile views a bit */
-.marketing {
-  padding-right: 15px;
-  padding-left: 15px;
-}
-
-/* Center align the text within the three columns below the carousel */
-.marketing .col-lg-4 {
-  margin-bottom: 20px;
-  text-align: center;
-}
-.marketing h2 {
-  font-weight: normal;
-}
-.marketing .col-lg-4 p {
-  margin-right: 10px;
-  margin-left: 10px;
-}
-
-
-/* Featurettes
-------------------------- */
-
-.featurette-divider {
-  margin: 80px 0; /* Space out the Bootstrap <hr> more */
-}
-
-/* Thin out the marketing headings */
-.featurette-heading {
-  font-weight: 300;
-  line-height: 1;
-  letter-spacing: -1px;
-}
-
-
-
-/* RESPONSIVE CSS
--------------------------------------------------- */
-
-@media (min-width: 768px) {
-
-  /* Remove the edge padding needed for mobile */
-  .marketing {
-    padding-right: 0;
-    padding-left: 0;
-  }
-
-  /* Navbar positioning foo */
-  .navbar-wrapper {
-    margin-top: 20px;
-  }
-  .navbar-wrapper .container {
-    padding-right: 15px;
-    padding-left:  15px;
-  }
-  .navbar-wrapper .navbar {
-    padding-right: 0;
-    padding-left:  0;
-  }
-
-  /* The navbar becomes detached from the top, so we round the corners */
-  .navbar-wrapper .navbar {
-    border-radius: 4px;
-  }
-
-  /* Bump up size of carousel content */
-  .carousel-caption p {
-    margin-bottom: 20px;
-    font-size: 21px;
-    line-height: 1.4;
-  }
-
-  .featurette-heading {
-    font-size: 50px;
-  }
-}
-
-@media (min-width: 992px) {
-  .featurette-heading {
-    margin-top: 120px;
-  }
-}
-
-/* COLOR TWEAKS */
-body {
-    background-color:#232323;
-    color: #DDD
-}
-.jumbotron {
-    color: #232323;
-}
-div.navbar-wrapper div.container div.navbar div.container div.navbar-collapse ul.nav li a,
-a.navbar-brand
-    {
-        color: #FFE303;
-    }
-div.navbar-wrapper div.container div.navbar div.container div.navbar-collapse ul.nav li.active a{
-        
-        color: #EEE;
-    }
-    div#lnadmin-navbar-collapse-1.collapse ul.nav li.dropdown ul.dropdown-menu li a {
-        color: #111;
-    }
-        </style>
-<!--         <link href="{{ STATIC_URL }}css/bootstrap-responsive.css" rel="stylesheet"> -->
-
-
-        <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
-        <!--[if lt IE 9]>
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
         <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
         <![endif]-->
-        
-        <!-- Google Analytics -->
-        <script>
-        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    <!-- Google Analytics -->
+    <script>
+        (function (i, s, o, g, r, a, m) {
+            i['GoogleAnalyticsObject'] = r;
+            i[r] = i[r] || function () {
+                (i[r].q = i[r].q || []).push(arguments)
+            }, i[r].l = 1 * new Date();
+            a = s.createElement(o),
+                    m = s.getElementsByTagName(o)[0];
+            a.async = 1;
+            a.src = g;
+            m.parentNode.insertBefore(a, m)
+        })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
         ga('create', 'UA-42765024-2', 'wpi.edu');
         ga('send', 'pageview');
-        </script>
-        
-        <!-- Le fav and touch icons -->
-        <link rel="shortcut icon" href="{{ STATIC_URL }}ico/favicon.ico">
-        <link rel="apple-touch-icon-precomposed" sizes="144x144" href="{{ STATIC_URL }}ico/apple-touch-icon-144-precomposed.png">
-        <link rel="apple-touch-icon-precomposed" sizes="114x114" href="{{ STATIC_URL }}ico/apple-touch-icon-114-precomposed.png">
-        <link rel="apple-touch-icon-precomposed" sizes="72x72" href="{{ STATIC_URL }}ico/apple-touch-icon-72-precomposed.png">
-        <link rel="apple-touch-icon-precomposed" href="{{ STATIC_URL }}ico/apple-touch-icon-57-precomposed.png">
-        {% block extras %}
-        {% endblock %}
-    </head>
+    </script>
 
-    <body>
- <!-- Beginning of the top NavBar code -->
-    <div class="navbar-wrapper">
-      <div class="container">
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="{% static 'ico/favicon.ico' %}">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144"
+          href="{% static 'ico/apple-touch-icon-144-precomposed.png' %}">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114"
+          href="{% static 'ico/apple-touch-icon-114-precomposed.png' %}">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72"
+          href="{% static 'ico/apple-touch-icon-72-precomposed.png' %}">
+    <link rel="apple-touch-icon-precomposed" href="{% static 'ico/apple-touch-icon-57-precomposed.png' %}">
+    {% block extras %}
+    {% endblock %}
+</head>
+
+<body>
+<!-- Beginning of the top NavBar code -->
+<div class="navbar-wrapper">
+    <div class="container">
 
         <div class="navbar navbar-inverse navbar-static-top" role="navigation">
-          <div class="container">
-            <div class="navbar-header">
-              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-              </button>
-              <a class="navbar-brand" href="{% url "pages.views.page" "index" %}">Lens and Lights</a>
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="{% url "pages.views.page" "index" %}">Lens and Lights</a>
+                </div>
+                <div class="navbar-collapse collapse">
+                    <ul class="nav navbar-nav">
+                        {% for nav in navs.navs %}
+                            <li {% if nav == page %} class="active" {% endif %}><a
+                                    href="{% url "pages.views.page" nav.slug %}">{{ nav.title }}</a></li>
+                        {% endfor %}
+                        <li><a href="#PriceModal" data-toggle="modal">Price List</a></li>
+                        <li><a href="{% url 'event' %}">Workorder</a></li>
+                        <li><a href="{% url "events.views.my.my" %}">My Account</a></li>
+                    </ul>
+                </div>
+                <!--/.nav-collapse -->
             </div>
-            <div class="navbar-collapse collapse">
-                <ul class="nav navbar-nav">
-                {% for nav in navs.navs %}
-                <li {% if nav = page %} class="active" {% endif %}><a href="{% url "pages.views.page" nav.slug %}">{{ nav.title }}</a></li>
-                {% endfor %}
-                <li><a href="#PriceModal" data-toggle="modal">Price List</a></li>
-                <li><a href="/workorder">Workorder</a></li>
-                <li><a href="{% url "events.views.my.my" %}">My Account</a></li>
-                </ul>
-            </div><!--/.nav-collapse -->
-          </div>
         </div>
 
-      </div>
     </div>
 </div>
-    {% block nav %}
+</div>
+{% block nav %}
     {% comment %}
     <div class="container navbar-wrapper">
       <div class="navbar navbar-inverse">
@@ -278,28 +295,29 @@ div.navbar-wrapper div.container div.navbar div.container div.navbar-collapse ul
 
     </div><!-- /.container -->
     {% endcomment %}
-    {% endblock %}
-    
+{% endblock %}
+
 <!--     <div class="container-fluid"> -->
-      {% block content %}
-      {% endblock %}
+{% block content %}
+{% endblock %}
 <!--     </div> -->
-      <div class="clearfix"> </div>
-      <div class="container">
-        <footer>
-            <p class="pull-right"><a href="#">Back to top</a></p>
-            <p>&copy; WPI Lens and Lights</p>
-        </footer>
-      </div>
+<div class="clearfix"></div>
+<div class="container">
+    <footer>
+        <p class="pull-right"><a href="#">Back to top</a></p>
+
+        <p>&copy; WPI Lens and Lights</p>
+    </footer>
+</div>
 
 
-    <!-- Le javascript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    <script src="{{ STATIC_URL }}js/jquery.js"></script>
-    <script src="{{ STATIC_URL }}js/bootstrap.js"></script>    
-    {% block finaljs %}
-    {% endblock %}
-    {% include 'modals/pricelist.html' %}
-  </body>
+<!-- Le javascript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="{% static 'js/jquery.js' %}"></script>
+<script src="{% static 'js/bootstrap.js' %}"></script>
+{% block finaljs %}
+{% endblock %}
+{% include 'modals/pricelist.html' %}
+</body>
 </html>

@@ -3,7 +3,7 @@
   margin-bottom: 20px;
   width: 1000px;
   height: 600px;
-  margin: 0px auto;
+    margin: 0 auto;
   margin-bottom: 20px;
   line-height: 1;
 }
@@ -11,6 +11,6 @@
 .carousel .item > img {
   display: block;
   height: 600px;
-  margin: 0px auto;
+    margin: 0 auto;
   line-height: 1;
 }

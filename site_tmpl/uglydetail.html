@@ -190,7 +190,7 @@
                     </table>
                 </div>
                 <div id="services" class="tab-pane">
-                    <div class="pull-right"><a class="btn btn-lg" href="{% url "eventextras" event.id %}">Modify Extras</a></div>
+                    <div class="pull-right"><a class="btn btn-lg btn-info" href="{% url "eventextras" event.id %}">Modify Extras</a></div>
                     {% if event.lighting %}
                         <h2>Lighting Services ({{ event.lighting }})</h2>
                         <h3>Requirements:</h3>
@@ -252,7 +252,7 @@
                     
                 </div>
                 <div id="crew" class="tab-pane">
-                    <a class="btn btn-lg pull-right" href="{% url "events.views.flow.assigncc" event.id %}">Modify</a>
+                    <a class="btn btn-lg btn-info pull-right" href="{% url "events.views.flow.assigncc" event.id %}">Modify</a>
                     <h2> Crew Chief(s) </h2>
                     <table class="table">
                         <tr>
@@ -260,7 +260,7 @@
                             <th>Setup Location</th>
                             <th>Setup Time</th>
                             <th>Service</th>
-                        </th>
+                        </tr>
                         {% for cc in event.ccinstances.all %}
                         <tr>
                             <td>
@@ -278,7 +278,7 @@
                         {% endfor %}
                     </table>
                     {% comment %}
-                    <a class="btn btn-lg pull-right" href="{% url "events.views.flow.assigncrew" event.id %}">Modify</a>
+                    <a class="btn btn-lg btn-info pull-right" href="{% url "events.views.flow.assigncrew" event.id %}">Modify</a>
                     <h2> Crew </h2>
                     <ul>
                         {% for c in event.crew.all %}
@@ -291,7 +291,7 @@
                 <div id="reports" class="tab-pane">
                     {% if not event.closed or not event.cancelled %}
                         <div class="pull-right">
-                            <a class="btn btn-lg" href="{% url "event-mkccr" event.id%}">New</a>
+                            <a class="btn btn-primary btn-lg" href="{% url "event-mkccr" event.id%}">New</a>
                         </div>
                     {% endif %}
                     <h2>Reports</h2>
@@ -325,13 +325,15 @@
                         {% endfor %}
                         </ul>
                     {% endif %}
-                    <div class="pull-right"><a class="btn btn-lg" href="{% url "admin-cchours-bulk" event.id %}">Edit</a></div>
+                    <div class="pull-right"><a class="btn btn-primary btn-lg" href="{% url "admin-cchours-bulk" event.id %}">Edit</a></div>
                     <h2> Hours </h2>
                     <table class="table">
                         <thead>
+                        <tr>
                             <th>Member</th>
                             <th>Hours</th>
                             <th>Service</th>
+                        </tr>
                         </thead>
                         {% for hour in event.hours.all %}
                             <tr>
@@ -343,11 +345,18 @@
                     </table>
                 </div>
                 <div id="billing" class="tab-pane">
-                    <div class="pull-right btngroup">
-                        <a class="btn btn-lg" href="{% url "eventextras" event.id %}">Modify Extras</a>
-                        <a class="btn btn-lg" href="{% url "eventoneoff" event.id %}">Add OneOff Charges</a>
+                    <div class="pull-right btn-group">
+                        <a class="btn btn-lg btn-primary" href="{% url "eventextras" event.id %}">Modify Extras</a>
+                        <a class="btn btn-lg btn-info" href="{% url "eventoneoff" event.id %}">Add OneOff Charges</a>
                     </div>
                     <h2>Price Breakdown</h2>
+                    <h3>Charge from 
+                        {% if event.billing_fund %}
+                            <a href="{% url 'admin-fundedit' event.billing_fund.id %}">{{ event.billing_fund }}.</a>
+                        {% else %}
+                            (no account given).
+                        {% endif %}
+                            </h3>
                     <style> .tdra { text-align: right; }</style>
                     <table class="table">
                         <thead>
@@ -392,7 +401,14 @@
                             <td class="tdra">${{ event.projection.base_cost }}</td>
                         </tr>
                         {% endif %}
-                        
+
+                        {% for extra in event.extras_projection %}
+                        <tr>
+                            <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
+                            <td class="tdra">${{ extra.totalcost }}</td>
+                        </tr>
+                        {% endfor %}
+
                         {% if event.otherservices.exists %}
                             {% for service in event.otherservices.all %}
                                 <tr class="success">
@@ -423,7 +439,7 @@
                         {% for oo in event.oneoffs %}
                         <tr>
                             <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
-                            <td {% if oo.negative %} style="color:red;" {% endif %}" class="tdra">
+                            <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
                                 {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
                             </td>
                         </tr>
@@ -436,6 +452,7 @@
                         </tr>
                     </table>
                     <h2> Bills </h2>
+                    <a class="btn btn-primary" href="{% url 'events-pdf-bill' event.id %}">Download Invoice</a>
                     <table class="table">
                     <thead>
                         <tr>
@@ -487,7 +504,7 @@
                             <td>{{ a.note }}</td>
                             <td>{{ a.attachment.name }}</td>
                             <td>{{ a.externally_uploaded }} </td>
-                            <td><a class="btn btn-default" href="{{ a.attachment.url }}">Link</a></td>
+                            <td><a class="btn btn-primary" href="{{ a.attachment.url }}">Link</a></td>
                         </tr>
                         
                         

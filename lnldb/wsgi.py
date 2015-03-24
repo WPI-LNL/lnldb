@@ -15,12 +15,14 @@ framework.
 """
 import os
 import sys
-path = '/home/lnldb/lnldb'
-if path not in sys.path: sys.path.append(path)
 
+path = '/home/lnldb/lnldb'
+if path not in sys.path:
+    sys.path.append(path)
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "lnldb.settings")
 import django.core.handlers.wsgi
+
 application = django.core.handlers.wsgi.WSGIHandler()
 
 # This application object is used by any WSGI server configured to use this

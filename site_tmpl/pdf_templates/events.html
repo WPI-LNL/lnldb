@@ -15,7 +15,7 @@
             <hr>
             <table>
                 <tr>
-                    <td class="tdleft">
+                    <td class="tdleft" valign="top">
                         <h3>Contact</h3>
                         <ul class="list-unstyled">
                             <li>{% for org in event.org.all %}{{ org.name }}, {% endfor %}</li>
@@ -26,13 +26,12 @@
                         </ul>
                     </td>
                     <td class="tdright">
-                        <h3>Billing</h3>
+                        <h3>Organization</h3>
                         <ul class="list-unstyled">
                             <li>{{ event.firstorg.name }}</li>
                             <li>{{ event.firstorg.exec_email }}</li>
                             <li>{{ event.firstorg.phone }}</li>
-                            <li>{{ event.firstorg.address }}</li>
-                            <li>{{ event.firstorg.fopal }}</li>
+                            <li>Contact: {{ event.firstorg.user_in_charge.profile.fullname }}</li>
                         </ul>
                     </td>
                 </tr>
@@ -46,7 +45,7 @@
                     <td class="tdl42">
                         {{ event }}
                     </td>
-                    <td class="tdright" rowspan="11">
+                    <td class="tdright" rowspan="11" valign="top">
                         <h5>Event Description</h5>
                         {{ event.description }}
                         <br />

@@ -33,7 +33,6 @@
                     {% endif %}
                     </td>
                 {% endfor %}
-            </td>
             </tr>
     {% endfor %}
     
@@ -49,7 +48,7 @@
         {% elif user.expiring %}
             <span class="badge badge-warning" title="Expiring Soon">Expiring Soon</span>
         {% else %}
-            <span>
+            <span></span>
         {% endif %}
 
     
@@ -69,7 +68,7 @@
         {% elif user.expiring %}
             <span class="badge badge-warning" title="Expiring Soon">Expiring Soon</span>
         {% else %}
-            <span>
+            <span></span>
         {% endif %}
 
     

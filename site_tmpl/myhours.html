@@ -3,12 +3,14 @@
 {% block content %}
     <h1><a href="{% url "my-events" %}">My</a> Hours for '<em>{{event}}</em>'</h1>
     <table class="table">
-    <thead>
+        <thead>
+        <tr>
         <th>Member</th>
         <th>Hours</th>
         <th>Service</th>
         <th></th>
-    </thead>
+        </tr>
+        </thead>
     {% for hour in hours %}
         <tr>
             <td>{{ hour.user.get_full_name }}</td>

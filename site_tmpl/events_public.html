@@ -1,14 +1,33 @@
 {% extends 'base.html' %}
+{% load bootstrap_calendar %}
+
 {% block extras %}
 {% include 'js_event_checkboxes.tmpl' %}
+{% bootstrap_calendar_js events_url="/list/json" %}
+{% bootstrap_calendar_css %}
 {% endblock %}
-{% block content %}    
+{% block content %}
 <div class="row">
     <div class="col-md-12">
         <h2>Ongoing and Future Events</h2>
-        <p class="lead">Want to get involved in LnL? Come by any of the events bellow, say hi and ask questions.</p>
+        <p class="lead">Want to get involved in LnL? Come by any of these events, say hi and ask questions!</p>
+        <p>Keep updated with new changes by copying the url from the subscribe link below and putting it into Outlook, Google Calendar, or any ICS-compatible program.</p>
     </div>
 </div>
+
+<div class="panel panel-default">
+<div class="row cal-ctl panel-heading">
+    <div class="btn-group cal-ctl">
+        <a role="button" href="{% url 'public_cal_feed' %}" class="btn btn-primary">Subscribe</a>
+    </div>
+    {% bootstrap_controls 'cal-ctl' %}
+    <h3 id="cal-header-title" class="panel-title"></h3>
+</div>
+<div class="panel-body">
+    {% bootstrap_calendar 'cal-body' %}
+</div>
+</div>
+
 <div class="row">
     <div class="col-md-12">
         <table class="table table-striped table-bordered">
@@ -22,7 +41,7 @@
                 <th> Crew Chiefs </th>
             </tr>
             {% for event in events %}
-                    <tr>
+                    <tr id="{{event.id}}">
                         <td>{{event.event_name}}</td>
                         <td>{{event.location}} ({{event.location.building }})</td>
                         <td>
