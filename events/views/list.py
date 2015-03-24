@@ -90,7 +90,7 @@ def datefilter(eventqs,context,start=None,end=None):
     if end:
         context['end'] = end
         try:
-            enddate = datetime.datetime.strptime(end, '%Y-%m-%d') + datetime.timedelta(days=1) #make inclusive.
+            enddate = datetime.datetime.strptime(end, '%Y-%m-%d')
             eventqs = eventqs.filter(datetime_end__lte=enddate)
             
         except:
@@ -214,7 +214,7 @@ def incoming(request,start=None,end=None):
     events,context = datefilter(events,context,start,end)
     
     page = request.GET.get('page')
-    sort = request.GET.get('sort') or 'datetime_start'
+    sort = request.GET.get('sort') or '-submitted_on'
     events = paginate_helper(events,page,sort)
     
     context['h2'] = "Incoming Events"
@@ -224,8 +224,8 @@ def incoming(request,start=None,end=None):
     context['cols'] = ['event_name',
                        'org',
                        'location',
-                       FakeExtendedField('datetime_start', verbose_name="Starts At"),
                        'submitted_on',
+                       FakeExtendedField('datetime_start', verbose_name="Starts At"),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
 
     context['cols'] = map_fields(context['cols']) #must use because there are strings

@@ -48,7 +48,8 @@
         
         <tr>
             <td>{{ crew.crew_chief.get_full_name }}</td>
-            <td><a class="btn btn-warning btn-default btn-xs" href={% url "event-review-remind" id=event.id uid=crew.crew_chief.id %}>Remind</div></td>
+            <td><a class="btn btn-warning btn-default btn-xs"
+                   href={% url "event-review-remind" id=event.id uid=crew.crew_chief.id %}>Remind</a></td>
         </tr>
         {% endfor %}
         </table>
@@ -56,10 +57,10 @@
     <div class="col-md-6">
         <h2> Hours </h2>
         <table class="table">
-            <thead>
+            <tr>
                 <th>Member</th>
                 <th>Hours</th>
-            </thead>
+            </tr>
             {% for hour in event.hours.all %}
                 <tr>
                     <td><a href="{% url "memberdetail" hour.user.id %}">{{ hour.user.get_full_name }}</a></td>
@@ -148,7 +149,7 @@
                 {% for oo in event.oneoffs %}
                 <tr>
                     <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
-                    <td {% if oo.negative %} style="color:red;" {% endif %}" class="tdra">
+                    <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
                         {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
                     </td>
                 </tr>

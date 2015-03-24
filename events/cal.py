@@ -1,14 +1,13 @@
+import datetime
+from time import mktime
+import json
+
 from django_ical.views import ICalFeed
 from events.models import Event, EventCCInstance
 from meetings.models import Meeting
 from django.db.models import Q
-from django.db.models.query import QuerySet
-from django.core.urlresolvers import reverse
-import datetime
-from time import mktime
 from django.http import HttpResponse
-import json
-from itertools import chain
+
 
 class EventFeed(ICalFeed):
     """
@@ -19,8 +18,11 @@ class EventFeed(ICalFeed):
     file_name = "event.ics"
 
     def items(self):
-        return list(Event.objects.filter(approved=True).exclude(Q(closed=True)|Q(cancelled=True)).order_by('datetime_start').all()) + \
-               list(EventCCInstance.objects.filter(event__approved=True).exclude(Q(event__closed=True)|Q(event__cancelled=True)).order_by('setup_start').all()) + \
+        return list(Event.objects.filter(approved=True).exclude(Q(closed=True) |
+                                                                Q(cancelled=True)).order_by('datetime_start').all()) + \
+               list(EventCCInstance.objects.filter(event__approved=True).exclude(Q(event__closed=True) |
+                                                                                 Q(event__cancelled=True))
+                    .order_by('setup_start').all()) + \
                list(Meeting.objects.order_by('datetime').all())
 
     def item_title(self, item):
@@ -31,6 +33,7 @@ class EventFeed(ICalFeed):
             return item.cal_desc()
         else:
             return ""
+
     def item_location(self, item):
         return item.cal_location()
 
@@ -46,24 +49,25 @@ class EventFeed(ICalFeed):
     def item_end_datetime(self, item):
         return item.cal_end()
 
+
 def cal_json(request, *args, **kwargs):
-    queryset = Event.objects.filter(approved=True).exclude(Q(closed=True)|Q(cancelled=True))
+    queryset = Event.objects.filter(approved=True).exclude(Q(closed=True) | Q(cancelled=True))
     from_date = request.GET.get('from', False)
     to_date = request.GET.get('to', False)
     if from_date and to_date:
         queryset = queryset.filter(
-        datetime_start__range=(
-        timestamp_to_datetime(from_date) + datetime.timedelta(-30),
-        timestamp_to_datetime(to_date)
-         )
-    )
+            datetime_start__range=(
+                timestamp_to_datetime(from_date) + datetime.timedelta(-30),
+                timestamp_to_datetime(to_date)
+            )
+        )
     elif from_date:
         queryset = queryset.filter(
-        datetime_start__gte=timestamp_to_datetime(from_date)
-         )
+            datetime_start__gte=timestamp_to_datetime(from_date)
+        )
     elif to_date:
         queryset = queryset.filter(
-        datetime_end__lte=timestamp_to_datetime(to_date)
+            datetime_end__lte=timestamp_to_datetime(to_date)
         )
     objects_body = []
     for event in queryset:
@@ -72,13 +76,12 @@ def cal_json(request, *args, **kwargs):
             "title": event.cal_name(),
             "url": "#" + str(event.id),
             "class": '',
-            "start": datetime_to_timestamp(event.cal_start()+datetime.timedelta(hours=-5)),
-            "end": datetime_to_timestamp(event.cal_end()+datetime.timedelta(hours=-5))
+            "start": datetime_to_timestamp(event.cal_start() + datetime.timedelta(hours=-5)),
+            "end": datetime_to_timestamp(event.cal_end() + datetime.timedelta(hours=-5))
         }
         objects_body.append(field)
 
-    objects_head = {"success": 1}
-    objects_head["result"] = objects_body
+    objects_head = {"success": 1, "result": objects_body}
     return HttpResponse(json.dumps(objects_head))
 
 

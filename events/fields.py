@@ -2,18 +2,19 @@ from django import forms
 from widgets import ExtraSelectorWidget
 from itertools import groupby
 
-class ExtraSelectorField(forms.MultiValueField):
-    def __init__(self, *args,**kwargs):
-        fields = [forms.CharField(required=False) for i in range(5)]
-        
-        self.choices = kwargs.pop("choices")
-        super(ExtraSelectorField, self).__init__(fields,*args,**kwargs)
-        self.widget = ExtraSelectorWidget(choices=self.choices)
-        
 
-#shamelessly grabbed from http://djangosnippets.org/snippets/2622/
-#modified because:
-#a, forms.MCI doesnt exist, while forms.models.MCI does
+class ExtraSelectorField(forms.MultiValueField):
+    def __init__(self, *args, **kwargs):
+        fields = [forms.CharField(required=False) for _ in range(5)]
+
+        self.choices = kwargs.pop("choices")
+        super(ExtraSelectorField, self).__init__(fields, *args, **kwargs)
+        self.widget = ExtraSelectorWidget(choices=self.choices)
+
+
+# shamelessly grabbed from http://djangosnippets.org/snippets/2622/
+# modified because:
+# a, forms.MCI doesnt exist, while forms.models.MCI does
 #b, something in the group_label became a string instead of a function
 
 class GroupedModelChoiceField(forms.ModelChoiceField):
@@ -36,26 +37,29 @@ class GroupedModelChoiceField(forms.ModelChoiceField):
         if hasattr(self, '_choices'):
             return self._choices
         return GroupedModelChoiceIterator(self)
+
     choices = property(_get_choices, forms.ModelChoiceField._set_choices)
+
 
 class GroupedModelChoiceIterator(forms.models.ModelChoiceIterator):
     def __iter__(self):
         if self.field.empty_label is not None:
             yield (u"", self.field.empty_label)
-        if self.field.cache_choices and False: #disable unintelligent caching
+        if self.field.cache_choices and False:  # disable unintelligent caching
             if self.field.choice_cache is None:
                 self.field.choice_cache = [
                     (self.field.group_label(group), [self.choice(ch) for ch in choices])
-                        for group,choices in groupby(self.queryset.all(),
-                            key=lambda row: getattr(row, self.field.group_by_field))
+                    for group, choices in groupby(self.queryset.all(),
+                                                  key=lambda row: getattr(row, self.field.group_by_field))
                 ]
             for choice in self.field.choice_cache:
                 yield choice
         else:
             for group, choices in groupby(self.queryset.all(),
-                    key=lambda row: getattr(row, self.field.group_by_field)):
+                                          key=lambda row: getattr(row, self.field.group_by_field)):
                 yield (self.field.group_label(group), [self.choice(ch) for ch in choices])
                 #yield (self.field.group_label, [self.choice(ch) for ch in choices])
+
 
 #was going to use this for fancier grouped dropdowns. Leaving it here, but no calls to it
 def get_key(row, field):

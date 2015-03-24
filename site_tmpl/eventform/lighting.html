@@ -8,7 +8,7 @@
             $('.radio-inline input').hide();
             $('.radio-inline').button();
             $('input:checked').parent().button('toggle');
-            $('.radio').parent().attr("data-toggle","buttons").parent().addClass('btn-group')
+            $('.radio').parent().attr("data-toggle", "buttons").parent().addClass('btn-group');
             $('.radio').parent().mousedown(function () {
                 $(this).button('toggle');
                 $(this).siblings().removeClass('active');

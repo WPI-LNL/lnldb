@@ -32,8 +32,7 @@
                                 var baseurl = "{{baseurl}}";
                                 var start = $("#fstart").val();
                                 var end = $("#fend").val();
-                                var target = baseurl + start + "/" + end + "/"
-                                window.location.href = target
+                                window.location.href = baseurl + start + "/" + end + "/";
                                 event.preventDefault();
                                 });
                             });
@@ -97,7 +96,8 @@
             {% for event in events %}
                 <tr class="event-status-{{ event.status | slugify }}">
                         <td class="hide eventselect">
-                                <input type="checkbox" class="hide eventselect" value="{{ event.id }}">
+                            <input type="checkbox" class="hide eventselect" title="Select {{ event.event_name }}"
+                                   value="{{ event.id }}">
                         </td>
                     {% for field in cols %}
                         {% if field.name == 'event_name' %}

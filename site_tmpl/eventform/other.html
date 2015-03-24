@@ -5,7 +5,7 @@
         $(document).ready(function () {
             
             $('.checkbox').addClass("btn btn-warning btn-lg");
-            $('.checkbox input ').hide()
+            $('.checkbox input ').hide();
             $('.checkbox').parent().button();
             $('input:checked').parent().button('toggle');
             $('.checkbox').mousedown(function () {
@@ -15,7 +15,10 @@
     </script>
         <style>
         li {float:left; margin: 3px; list-style-type:none}
-        .form-horizontal .controls {margin-left:0px;}
+
+        .form-horizontal .controls {
+            margin-left: 0;
+        }
         .controls .checkbox {padding-top:11px;}
         .controls >.checkbox:first-child {padding-top:11px;}
     </style>

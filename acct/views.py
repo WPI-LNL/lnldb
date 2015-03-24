@@ -3,13 +3,11 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 
-from django.views.generic import UpdateView,CreateView
+from django.views.generic import UpdateView, CreateView
 
-from django.forms.models import inlineformset_factory
-
-from acct.forms import UserAcct,ProfileAcct,UserProfileFormSet
+from acct.forms import UserAcct, ProfileAcct
 from acct.forms import UserAddForm
 from acct.models import Profile
 
@@ -17,61 +15,61 @@ from emails.generators import generate_selfmember_notice_email
 
 from helpers.mixins import LoginRequiredMixin, OfficerMixin, SetFormMsgMixin
 
-class AcctUpdate(LoginRequiredMixin,UpdateView):
+
+class AcctUpdate(LoginRequiredMixin, UpdateView):
     model = User
     form_class = UserAcct
     template_name = 'myacct.html'
-    
-    def get_object(self,queryset=None):
+
+    def get_object(self, queryset=None):
         return self.request.user
-    
-    def form_valid(self,form):
-        messages.success(self.request,"Account Info Saved!", extra_tags='success')
-        return super(AcctUpdate,self).form_valid(form)
-        
+
+    def form_valid(self, form):
+        messages.success(self.request, "Account Info Saved!", extra_tags='success')
+        return super(AcctUpdate, self).form_valid(form)
+
     def get_success_url(self):
         return reverse('my-acct')
-    
-class LNLUpdate(LoginRequiredMixin,UpdateView):
+
+
+class LNLUpdate(LoginRequiredMixin, UpdateView):
     model = Profile
     form_class = ProfileAcct
     template_name = 'myacct.html'
-    
-    def get_object(self,queryset=None):
+
+    def get_object(self, queryset=None):
         return self.request.user.get_profile()
-    
-    def form_valid(self,form):
-        messages.success(self.request,"Account Info Saved!", extra_tags='success')
-        return super(LNLUpdate,self).form_valid(form)
-        
+
+    def form_valid(self, form):
+        messages.success(self.request, "Account Info Saved!", extra_tags='success')
+        return super(LNLUpdate, self).form_valid(form)
+
     def get_success_url(self):
         return reverse('my-lnl')
-    
-    
+
+
 def send_member_request(request):
     if not request.user.profile.is_lnl:
-        context = {}
-        context['user'] = request.user
-        context['submitted_ip'] = request.META.get('REMOTE_ADDR')
+        context = {'user': request.user, 'submitted_ip': request.META.get('REMOTE_ADDR')}
         e = generate_selfmember_notice_email(context)
         e.send()
-        messages.success(request,"LNL Member Request Sent", extra_tags='success')
-        
+        messages.success(request, "LNL Member Request Sent", extra_tags='success')
+
         return HttpResponseRedirect(reverse("my-acct"))
     else:
-        messages.success(request,"You're already an LNL Member", extra_tags='warning')
+        messages.success(request, "You're already an LNL Member", extra_tags='warning')
         return HttpResponseRedirect(reverse("my-acct"))
-    
 
-class LNLAdd(SetFormMsgMixin,OfficerMixin,LoginRequiredMixin,CreateView):
+
+class LNLAdd(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, CreateView):
     model = User
     form_class = UserAddForm
     template_name = "form_master_cbv.html"
     msg = 'New User Addition'
-    
-    def form_valid(self,form):
-        messages.success(self.request,"User Added", extra_tags='success')
-        return super(LNLAdd,self).form_valid(form)
-    
+
+    def form_valid(self, form):
+        messages.success(self.request, "User Added", extra_tags='success')
+        return super(LNLAdd, self).form_valid(form)
+
     def get_success_url(self):
         return reverse('lnadmin')

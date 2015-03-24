@@ -260,7 +260,7 @@
                             <th>Setup Location</th>
                             <th>Setup Time</th>
                             <th>Service</th>
-                        </th>
+                        </tr>
                         {% for cc in event.ccinstances.all %}
                         <tr>
                             <td>
@@ -329,9 +329,11 @@
                     <h2> Hours </h2>
                     <table class="table">
                         <thead>
+                        <tr>
                             <th>Member</th>
                             <th>Hours</th>
                             <th>Service</th>
+                        </tr>
                         </thead>
                         {% for hour in event.hours.all %}
                             <tr>
@@ -437,7 +439,7 @@
                         {% for oo in event.oneoffs %}
                         <tr>
                             <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
-                            <td {% if oo.negative %} style="color:red;" {% endif %}" class="tdra">
+                            <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
                                 {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
                             </td>
                         </tr>

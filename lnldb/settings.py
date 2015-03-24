@@ -2,6 +2,7 @@
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 import os
+
 here = lambda *x: os.path.join(os.path.abspath(os.path.dirname(__file__)), *x)
 
 DEBUG = False
@@ -15,12 +16,12 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql', # SQLite does not work here; be sure to fill in server settings
-        'NAME': 'lnldb',                      # DB name on the host
-        'USER': '',                      # Username. Please use a unique user with limited permissions.
-        'PASSWORD': '',                  # And for the love of god, use a password.
-        'HOST': '',                      # Set to empty string for localhost.
-        'PORT': '',                      # Set to empty string for default.
+        'ENGINE': 'django.db.backends.mysql',  # SQLite does not work here; be sure to fill in server settings
+        'NAME': 'lnldb',  # DB name on the host
+        'USER': '',  # Username. Please use a unique user with limited permissions.
+        'PASSWORD': '',  # And for the love of god, use a password.
+        'HOST': '',  # Set to empty string for localhost.
+        'PORT': '',  # Set to empty string for default.
     }
 }
 
@@ -49,6 +50,7 @@ USE_TZ = True
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
+# noinspection PyUnresolvedReferences
 MEDIA_ROOT = '/home/lnldb/media/'
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
@@ -60,6 +62,7 @@ MEDIA_URL = 'http://lnldb.gaaaaaaa.be/media/'
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
+# noinspection PyUnresolvedReferences
 STATIC_ROOT = '/home/lnldb/app_statics/'
 
 # URL prefix for static files.
@@ -67,6 +70,7 @@ STATIC_ROOT = '/home/lnldb/app_statics/'
 STATIC_URL = 'http://lnldb.gaaaaaaa.be/static/'
 
 # Additional locations of static files
+# noinspection PyUnresolvedReferences
 STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
@@ -79,7 +83,7 @@ STATICFILES_DIRS = (
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
 # Make this unique, and don't share it with anybody.
@@ -89,7 +93,7 @@ SECRET_KEY = '*am$3w(-v2p+i)m-6t8f0d%)%g60cr+tj6$_x1_u-$wx^0$fu%'
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
+    # 'django.template.loaders.eggs.Loader',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -106,7 +110,7 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'lnldb.urls'
 
 # Python dotted path to the WSGI application used by Django's runserver.
-WSGI_APPLICATION = 'lnldb.wsgi.application' 
+WSGI_APPLICATION = 'lnldb.wsgi.application'
 
 TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
@@ -128,7 +132,7 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'markdown_deux',
     'django_cas',
-    
+
     'events',
     'inventory',
     'data',
@@ -138,19 +142,19 @@ INSTALLED_APPS = (
     'meetings',
     'emails',
     'members',
-    
+
     'bootstrap_toolkit',
     'crispy_forms',
     'lineage',
     'django_bootstrap_calendar',
     'ajax_select',
-    
+
     'south',
     'raven.contrib.django.raven_compat',
 )
 
 TEMPLATE_CONTEXT_PROCESSESORS = TCP + (
-    #'lnldb.processors.staticz',
+    # 'lnldb.processors.staticz',
     'processors.navs',
 )
 # A sample logging configuration. The only tangible logging
@@ -184,32 +188,33 @@ LOGGING = {
 
 AUTH_PROFILE_MODULE = 'acct.Profile'
 
-#AJAX_SELECT_BOOTSTRAP = False
-#AJAX_SELECT_INLINES = False
+# AJAX_SELECT_BOOTSTRAP = False
+# AJAX_SELECT_INLINES = False
 ### let's just shit all over the page. its okay. I'm fine with it :-\
 AJAX_SELECT_BOOTSTRAP = False
 #AJAX_SELECT_INLINES = 'staticfiles'
 
 AJAX_LOOKUP_CHANNELS = {
-    'Users' : ('acct.lookups', 'UserLookup'),
-    'Orgs' : ('events.lookups', 'OrgLookup'),
-    'UserLimitedOrgs' : ('events.lookups', 'UserLimitedOrgLookup'),
-    'Officers' : ('acct.lookups', 'OfficerLookup'),
-    'Members' : ('acct.lookups', 'MemberLookup'),
-    'AssocMembers' : ('acct.lookups', 'AssocMemberLookup'),
-    'Funds' : ('events.lookups', 'FundLookup'),
-    'FundsLimited' : ('events.lookups', 'FundLookupLimited')
+    'Users': ('acct.lookups', 'UserLookup'),
+    'Orgs': ('events.lookups', 'OrgLookup'),
+    'UserLimitedOrgs': ('events.lookups', 'UserLimitedOrgLookup'),
+    'Officers': ('acct.lookups', 'OfficerLookup'),
+    'Members': ('acct.lookups', 'MemberLookup'),
+    'AssocMembers': ('acct.lookups', 'AssocMemberLookup'),
+    'Funds': ('events.lookups', 'FundLookup'),
+    'FundsLimited': ('events.lookups', 'FundLookupLimited')
 }
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 
-TEMPLATE_CONTEXT_PROCESSORS = TCP + ('django.core.context_processors.request','dealer.contrib.django.staff.context_processor')
+TEMPLATE_CONTEXT_PROCESSORS = TCP + (
+    'django.core.context_processors.request', 'dealer.contrib.django.staff.context_processor')
 
 
 # Various Other Settings
 
 # Number of hours to show on the admin landing
-LANDING_TIMEDELTA = 72 
+LANDING_TIMEDELTA = 72
 
 # Number of days to pass before crew chief reports are no longer able to be written.
 CCR_DAY_DELTA = 7
@@ -217,7 +222,7 @@ CCR_DAY_DELTA = 7
 # email stuff
 DEFAULT_TO_ADDR = "lnl@wpi.edu"
 EMAIL_TARGET_P = "lnl-p@wpi.edu"
-EMAIL_TARGET_VP = "lnl-vp@wpi.edu" 
+EMAIL_TARGET_VP = "lnl-vp@wpi.edu"
 EMAIL_TARGET_S = "lnl-s@wpi.edu"
 EMAIL_TARGET_T = "lnl-t@wpi.edu"
 EMAIL_TARGET_TD = "lnl-td@wpi.edu"
@@ -236,7 +241,7 @@ LOGIN_REDIRECT_URL = "/my/"
 # GIT REV
 DEALER_TYPE = 'git'
 DEALER_PATH = '/home/lnldb/lnldb/'
-DEALER_BACKENDS = ('git')
+DEALER_BACKENDS = 'git'
 
 # crispy_forms
 CRISPY_TEMPLATE_PACK = 'bootstrap3'

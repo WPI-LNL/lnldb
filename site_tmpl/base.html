@@ -1,3 +1,4 @@
+{% load staticfiles %}
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -10,24 +11,24 @@
         <meta name="author" content="">
         
         <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
-        <link href="{{ STATIC_URL }}css/datepicker.css" rel="stylesheet"  type="text/css">
-        <link href="{{ STATIC_URL }}css/bootstrap-timepicker.min.css" rel="stylesheet"  type="text/css">
-        
-<!--         <link href="{{ STATIC_URL }}css/bootstrap-responsive.css" rel="stylesheet"> -->
+        <link href="{% static 'css/datepicker.css' %}" rel="stylesheet" type="text/css">
+        <link href="{% static 'css/bootstrap-timepicker.min.css' %}" rel="stylesheet" type="text/css">
+
+        <!--         <link href="{% static 'css/bootstrap-responsive.css' %}" rel="stylesheet"> -->
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
         <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
         <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
-        <script src="{{ STATIC_URL }}js/bootstrap-datepicker.js"></script>
-        <script src="{{ STATIC_URL }}js/bootstrap-timepicker.min.js"></script>
-        
-        <script src="{{ STATIC_URL }}ajax_select/js/ajax_select.js"></script>
-        <script src="{{ STATIC_URL }}js/flexmenu.min.js"></script>
-        <link href='{{ STATIC_URL }}ajax_select/css/ajax_select.css' rel="stylesheet" type="text/css">
-        <link href="{{ STATIC_URL }}css/jquery-ui.css" rel="stylesheet">
+        <script src="{% static 'js/bootstrap-datepicker.js' %}"></script>
+        <script src="{% static 'js/bootstrap-timepicker.min.js' %}"></script>
+
+        <script src="{% static 'ajax_select/js/ajax_select.js' %}"></script>
+        <script src="{% static 'js/flexmenu.min.js' %}"></script>
+        <link href='{% static 'ajax_select/css/ajax_select.css' %}' rel="stylesheet" type="text/css">
+        <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet">
         <script type="text/javascript">
             $(document).ready(function () {
                 $(".dateinput").datepicker({
-                        format: 'yyyy-mm-dd',
+                    format: 'yyyy-mm-dd'
                     });
                 $(".timeinput").timepicker(
                     {
@@ -39,7 +40,7 @@
                 $("div.collapse ul.navbar-nav").flexMenu()
                 });
     </script>
-<!--         <link href="{{ STATIC_URL }}css/style.css" rel="stylesheet"> -->
+        <!--         <link href="{% static 'css/style.css' %}" rel="stylesheet"> -->
         <style type="text/css">
         body {
             padding-bottom: 40px;
@@ -110,11 +111,23 @@
         <![endif]-->
         
         <!-- Le fav and touch icons -->
-        <link rel="shortcut icon" href="{{ STATIC_URL }}ico/favicon.ico">
-        <link rel="apple-touch-icon-precomposed" sizes="144x144" href="{{ STATIC_URL }}ico/apple-touch-icon-144-precomposed.png">
-        <link rel="apple-touch-icon-precomposed" sizes="114x114" href="{{ STATIC_URL }}ico/apple-touch-icon-114-precomposed.png">
-        <link rel="apple-touch-icon-precomposed" sizes="72x72" href="{{ STATIC_URL }}ico/apple-touch-icon-72-precomposed.png">
-        <link rel="apple-touch-icon-precomposed" href="{{ STATIC_URL }}ico/apple-touch-icon-57-precomposed.png">
+        <link rel="shortcut icon" href="{% static 'ico/favicon.ico' %}">
+        <link rel="apple-touch-icon" sizes="57x57" href={% static 'ico/apple-icon-57x57.png' %}>
+        <link rel="apple-touch-icon" sizes="60x60" href={% static 'ico/apple-icon-60x60.png' %}>
+        <link rel="apple-touch-icon" sizes="72x72" href={% static 'ico/apple-icon-72x72.png' %}>
+        <link rel="apple-touch-icon" sizes="76x76" href={% static 'ico/apple-icon-76x76.png' %}>
+        <link rel="apple-touch-icon" sizes="114x114" href={% static 'ico/apple-icon-114x114.png' %}>
+        <link rel="apple-touch-icon" sizes="120x120" href={% static 'ico/apple-icon-120x120.png' %}>
+        <link rel="apple-touch-icon" sizes="144x144" href={% static 'ico/apple-icon-144x144.png' %}>
+        <link rel="apple-touch-icon" sizes="152x152" href={% static 'ico/apple-icon-152x152.png' %}>
+        <link rel="apple-touch-icon" sizes="180x180" href={% static 'ico/apple-icon-180x180.png' %}>
+        <link rel="icon" type="image/png" sizes="192x192" href={% static 'ico/android-icon-192x192.png' %}>
+        <link rel="icon" type="image/png" sizes="32x32" href={% static 'ico/favicon-32x32.png' %}>
+        <link rel="icon" type="image/png" sizes="96x96" href={% static 'ico/favicon-96x96.png' %}>
+        <link rel="icon" type="image/png" sizes="16x16" href={% static 'ico/favicon-16x16.png' %}>
+        <meta name="msapplication-TileColor" content="#ffffff">
+        <meta name="msapplication-TileImage" content={% static 'ico/ms-icon-144x144.png' %}>
+        <meta name="theme-color" content="#ffffff">
         {% block extras %}
         {% endblock %}
     </head>
@@ -132,9 +145,10 @@
           </a>
           <p class="navbar-text pull-right">
                 {% if user.is_authenticated %}
-                Logged in as <a href="/my/" class="navbar-link">{{ user }}</a> &middot; <a href="/logout">Log Out</a>
+                    Logged in as <a href="{% url 'my' %}" class="navbar-link">{{ user }}</a> &middot;
+                    <a href="{% url 'logout' %}">Log Out</a>
                 {% else %}
-                <a href="/local/login"> Log In </a>
+                    <a href="{% url 'login' %}"> Log In </a>
                 {% endif %}
             </p>
           <a class="navbar-brand" href="{% url "events.views.indices.index" %}">Lens and Lights Database</a>
@@ -159,7 +173,7 @@
         </div>
 
       <footer>
-        <p>&copy; WPI Lens and Lights &middot; <a href="/list">Want to get involved?</a>
+          <p>&copy; WPI Lens and Lights &middot; <a href="{% url 'list' %}">Want to get involved?</a>
         
         </p>
       </footer>

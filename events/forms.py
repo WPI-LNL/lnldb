@@ -248,7 +248,8 @@ class EventApprovalForm(forms.ModelForm):
         fields = ['description','internal_notes','datetime_start','datetime_end', 'billing_fund',
                   'billed_by_semester','datetime_setup_complete','lighting','lighting_reqs',
                   'sound','sound_reqs','projection','proj_reqs','otherservices','otherservice_reqs']
-    billing_fund = AutoCompleteSelectField("Funds", required=False)
+
+    billing_fund = AutoCompleteSelectField("Funds")
     datetime_start =  forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
     datetime_end =  forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End")
     #datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())

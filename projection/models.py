@@ -1,40 +1,41 @@
+import datetime
+
 from django.db import models
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
 
-import datetime
 
 EXPIRY_WARNING_DAYS = 30
 
 # Create your models here.
 PIT_CHOICES = (
-    ('P1','PIT1'),
-    ('P2','PIT2'),
-    ('P3','PIT3'),
-    ('P4','PIT4'),
-    ('P5','PIT5'),
-    ('PP','Past Practical'),
-    ('L','Licensed'),        
+    ('P1', 'PIT1'),
+    ('P2', 'PIT2'),
+    ('P3', 'PIT3'),
+    ('P4', 'PIT4'),
+    ('P5', 'PIT5'),
+    ('PP', 'Past Practical'),
+    ('L', 'Licensed'),
 )
+
 
 class Projectionist(models.Model):
     user = models.OneToOneField(User)
-    #pit_level = models.CharField(choices=PIT_CHOICES,max_length=2,null=True,blank=True)
-    
+    # pit_level = models.CharField(choices=PIT_CHOICES,max_length=2,null=True,blank=True)
+
     license_number = models.CharField(max_length=10, null=True, blank=True)
     license_expiry = models.DateField(null=True, blank=True)
-    
+
     def __unicode__(self):
         return self.user.get_full_name()
-    
-    @property 
+
+    @property
     def level(self):
         instances = self.pitinstances.filter(valid=True).order_by('-pit_level__ordering')
         if instances:
             return instances[0]
         else:
             return None
-    
+
     @property
     def expiring(self):
         today = datetime.date.today()
@@ -43,24 +44,23 @@ class Projectionist(models.Model):
             return True
         else:
             return False
-        
-        
+
     @property
     def expired(self):
         if datetime.date.today() >= self.license_expiry:
             return True
         else:
             return False
-        
+
     @property
     def validlevels(self):
         out = {}
         instances = self.pitinstances.filter(valid=True)
         for i in instances:
             out[i.pit_level.name_short] = True
-            
+
         return out
-    
+
     @property
     def is_alumni(self):
         group = self.user.groups.filter(name="Alumni")
@@ -68,27 +68,26 @@ class Projectionist(models.Model):
             return True
         else:
             return False
-        
-    
-    
+
+
 class PITLevel(models.Model):
     name_short = models.CharField(max_length=3)
     name_long = models.CharField(max_length=16)
     ordering = models.IntegerField(default=0)
-    
+
     def __unicode__(self):
-        return u'%s (%s)' % (self.name_long,self.name_short)
-    
+        return u'%s (%s)' % (self.name_long, self.name_short)
+
 
 class PitInstance(models.Model):
     projectionist = models.ForeignKey(Projectionist, related_name="pitinstances")
-    pit_level = models.ForeignKey(PITLevel,related_name="pitinstances")
+    pit_level = models.ForeignKey(PITLevel, related_name="pitinstances")
     created_on = models.DateTimeField()
     valid = models.BooleanField(default=True)
-    
-    
+
+
 def create_projectionist(sender, instance, created, **kwargs):
     if created:
         Projectionist.objects.create(user=instance)
 
-#post_save.connect(create_projectionist, sender=User)
+# post_save.connect(create_projectionist, sender=User)

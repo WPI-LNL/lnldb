@@ -18,7 +18,7 @@
 <div class="panel panel-default">
 <div class="row cal-ctl panel-heading">
     <div class="btn-group cal-ctl">
-        <a role="button" href="/list/feed.ics" class="btn btn-primary">Subscribe</a>
+        <a role="button" href="{% url 'public_cal_feed' %}" class="btn btn-primary">Subscribe</a>
     </div>
     {% bootstrap_controls 'cal-ctl' %}
     <h3 id="cal-header-title" class="panel-title"></h3>

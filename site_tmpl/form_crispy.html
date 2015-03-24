@@ -20,14 +20,14 @@
         $("#samedate1").click(function(){
             var date = $("#id_datetime_setup_complete_0").val();
             $("#id_datetime_start_0").val(date);
-            $("#id_datetime_start_0").datepicker('setValue', date)
+            $("#id_datetime_start_0").datepicker('setValue', date);
             var time = $("#id_datetime_setup_complete_1").val();
             $("#id_datetime_start_1").val(time);
         });
         $("#samedate2").click(function(){
             var date = $("#id_datetime_start_0").val();
             $("#id_datetime_end_0").val(date);
-            $("#id_datetime_end_0").datepicker('setValue', date)
+            $("#id_datetime_end_0").datepicker('setValue', date);
             var time = $("#id_datetime_start_1").val();
             $("#id_datetime_end_1").val(time);
         });

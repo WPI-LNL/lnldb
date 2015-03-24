@@ -11,7 +11,7 @@
 //             $('.radio-inline input').hide();
             $('.radio-inline').button();
             $('input:checked').parent().button('toggle');
-            $('.radio').parent().attr("data-toggle","buttons").parent().addClass('btn-group')
+            $('.radio').parent().attr("data-toggle", "buttons").parent().addClass('btn-group');
             $('.radio').parent().mousedown(function () {
                 $(this).button('toggle');
                 $(this).siblings().removeClass('active');
@@ -24,7 +24,7 @@
             
             // for checboxes
             $('.checkbox-inline').addClass("btn btn-warning btn-lg");
-            $('.checkbox-inline input ').hide()
+            $('.checkbox-inline input ').hide();
             $('.checkbox-inline').parent().button();
             $('input:checked').parent().button('toggle');
             $('.checkbox-inline').mousedown(function () {

@@ -11,10 +11,11 @@
             </button>
             <a class="navbar-brand" href="{% url "events.views.indices.index" %}">LNLDB</a>
         </div>
-            
+
         <div class="collapse navbar-collapse" id="lnadmin-navbar-collapse-1">
             <p class="navbar-text navbar-right">
-              Logged in as <a href="{% url "events.views.my.my" %}" class="navbar-link"> {{user}} &middot; <a href="/logout">Log Out</a></a>
+                Logged in as <a href="{% url "events.views.my.my" %}" class="navbar-link"> {{ user }} &middot; <a
+                    href="{% url 'logout' %}">Log Out</a></a>
             </p>
             <ul class="nav navbar-nav">
                 <li class="{% ancestor '/lnadmin/$' %}"><a href="{% url "events.views.indices.admin" %}">Home</a></li>
@@ -30,15 +31,15 @@
                         <li><a href="{% url "events.views.list.openworkorders" %}">View Open Events</a></li>
                         <li><a href="{% url "events.views.list.closed" %}">Closed Events</a></li>
                         <li role="presentation" class="divider"></li>
-                        <li role="presentation" class="dropdown-header">Event Payments</li>    
-                        
+                        <li role="presentation" class="dropdown-header">Event Payments</li>
+
                         <li><a href="{% url "events.views.list.unreviewed" %}">Events Pending Review</a></li>
                         <li><a href="{% url "events.views.list.unbilled" %}">Events to be Billed</a></li>
                         <li><a href="{% url "events.views.list.unbilled_semester" %}">Events to be Billed - Semester (Films)</a></li>
                         <li><a href="{% url "events.views.list.unpaid" %}">Events Billed, Pending Payment</a></li>
                         <li><a href="{% url "events.views.list.paid" %}">Events Paid</a></li>
-                        
-                        
+
+
                     </ul>
                 </li>
                 <li class="{% ancestor '/lnadmin/clients/' %} dropdown">
@@ -126,7 +127,7 @@
                         </div>
                     </form>
                 </li>
-                 <!-- paste menu bar text above here --> 
+                <!-- paste menu bar text above here -->
             </ul>
             </div><!--/.nav-collapse -->
         </div>

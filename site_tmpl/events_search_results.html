@@ -75,7 +75,8 @@
                         </td>
                         <td class="tasks">
                             <span class="crewtask"><a href="{% url "events.views.flow.assigncrew" event.id %}">Crew</a></span>
-                            <input type="checkbox" class="hide eventselect" value="{{ event.id }}"> 
+                            <input type="checkbox" class="hide eventselect" title="Select {{ event.event_name }}"
+                                   value="{{ event.id }}">
                         </td>
                     </tr>
             {% endfor %}

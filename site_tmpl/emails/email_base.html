@@ -70,10 +70,22 @@
         #background-table { background-color: #c7c7c7; }
 
         /* Webkit Elements */
-        #top-bar { border-radius:6px 6px 0px 0px; -moz-border-radius: 6px 6px 0px 0px; -webkit-border-radius:6px 6px 0px 0px; -webkit-font-smoothing: antialiased; background-color: #2E2E2E; color: #888888; }
+        #top-bar {
+            border-radius: 6px 6px 0 0;
+            -moz-border-radius: 6px 6px 0 0;
+            -webkit-border-radius: 6px 6px 0 0;
+            -webkit-font-smoothing: antialiased;
+            background-color: #2E2E2E;
+            color: #888888;
+        }
         #top-bar a { font-weight: bold; color: #eeeeee; text-decoration: none;}
 
-        #footer { border-radius:0px 0px 6px 6px; -moz-border-radius: 0px 0px 6px 6px; -webkit-border-radius:0px 0px 6px 6px; -webkit-font-smoothing: antialiased; }
+        #footer {
+            border-radius: 0 0 6px 6px;
+            -moz-border-radius: 0 0 6px 6px;
+            -webkit-border-radius: 0 0 6px 6px;
+            -webkit-font-smoothing: antialiased;
+        }
 
         /* Fonts and Content */
         body, td { font-family: 'Helvetica Neue', Arial, Helvetica, Geneva, sans-serif; }
@@ -83,33 +95,67 @@
         .header-content { font-size: 12px; color: #888888; }
         .header-content a { font-weight: bold; color: #eeeeee; text-decoration: none; }
 
-        #headline p { color: #ffff00; font-family: 'Helvetica Neue', Arial, Helvetica, Geneva, sans-serif; font-size: 36px; text-align: center; margin-top:0px; margin-bottom:30px; }
+        #headline p {
+            color: #ffff00;
+            font-family: 'Helvetica Neue', Arial, Helvetica, Geneva, sans-serif;
+            font-size: 36px;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 30px;
+        }
         #headline p a { color: #ffff00; text-decoration: none; }
 
-
-
-
-
-        .article-title { font-size: 18px; line-height:24px; color: #b0b0b0; font-weight:bold; margin-top:0px; margin-bottom:18px; font-family: 'Helvetica Neue', Arial, Helvetica, Geneva, sans-serif; }
+        .article-title {
+            font-size: 18px;
+            line-height: 24px;
+            color: #b0b0b0;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 18px;
+            font-family: 'Helvetica Neue', Arial, Helvetica, Geneva, sans-serif;
+        }
         .article-title a { color: #b0b0b0; text-decoration: none; }
         .article-title.with-meta {margin-bottom: 0;}
         .article-meta { font-size: 13px; line-height: 20px; color: #ccc; font-weight: bold; margin-top: 0;}
 
-
-        .article-content { font-size: 13px; line-height: 18px; color: #444444; margin-top: 0px; margin-bottom: 18px; font-family: 'Helvetica Neue', Arial, Helvetica, Geneva, sans-serif; }
+        .article-content {
+            font-size: 13px;
+            line-height: 18px;
+            color: #444444;
+            margin-top: 0;
+            margin-bottom: 18px;
+            font-family: 'Helvetica Neue', Arial, Helvetica, Geneva, sans-serif;
+        }
         .article-content a { color: #2f82de; font-weight:bold; text-decoration:none; }
         .article-content img { max-width: 100% }
 
-        .article-content ol, .article-content ul { margin-top:0px; margin-bottom:18px; margin-left:19px; padding:0; }
+        .article-content ol, .article-content ul {
+            margin-top: 0;
+            margin-bottom: 18px;
+            margin-left: 19px;
+            padding: 0;
+        }
         .article-content li { font-size: 13px; line-height: 18px; color: #444444; }
         .article-content li a { color: #2f82de; text-decoration:underline; }
 
         .article-content p {margin-bottom: 15px;}
 
-        .footer-content-left { font-size: 12px; line-height: 15px; color: #888888; margin-top: 0px; margin-bottom: 15px; }
+        .footer-content-left {
+            font-size: 12px;
+            line-height: 15px;
+            color: #888888;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
         .footer-content-left a { color: #eeeeee; font-weight: bold; text-decoration: none; }
 
-        .footer-content-right { font-size: 11px; line-height: 16px; color: #888888; margin-top: 0px; margin-bottom: 15px; }
+        .footer-content-right {
+            font-size: 11px;
+            line-height: 16px;
+            color: #888888;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
         .footer-content-right a { color: #eeeeee; font-weight: bold; text-decoration: none; }
 
         #footer { background-color: #000000; color: #888888; }
