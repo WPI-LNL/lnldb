@@ -356,7 +356,15 @@
                         {% else %}
                             (no account given).
                         {% endif %}
-                            </h3>
+                    </h3>
+                    {% if event.late %}
+                        <div class="alert alert-warning" role="alert">
+                            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                            <b>Late Booked Event:</b>
+                            This event was booked {{ event.submitted_on|timesince:event.datetime_setup_complete }}
+                            before it began.
+                        </div>
+                    {% endif %}
                     <style> .tdra { text-align: right; }</style>
                     <table class="table">
                         <thead>

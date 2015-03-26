@@ -615,6 +615,10 @@ class Event(models.Model):
     def over(self):
         return self.datetime_end < datetime.datetime.now(pytz.utc)
 
+    @property
+    def late(self):
+        return self.datetime_setup_complete - self.submitted_on < datetime.timedelta(weeks=2)
+
     ### Extras And Billing Calculations
     @property
     def extras_lighting(self):
