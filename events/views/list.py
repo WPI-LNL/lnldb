@@ -282,7 +282,7 @@ def findchief(request, start=None, end=None):
     context = RequestContext(request)
 
     events = Event.objects \
-        .filter(approved=True) \
+        .filter(approved=True).filter(closed=False).filter(cancelled=False) \
         .annotate(num_ccs=Count('ccinstances')) \
         .annotate(services_count=Count('otherservices')) \
         .annotate(lighting_count=Count('lighting')) \
