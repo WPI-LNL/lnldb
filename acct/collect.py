@@ -5,7 +5,7 @@ import getpass
 import mechanize
 import os
 from BeautifulSoup import BeautifulSoup
-import simplejson
+import json
 from acct.models import Orgsync_User, Orgsync_Org, Orgsync_OrgCat
 
 
@@ -64,15 +64,15 @@ def collect_users():
          ('x-requested-with', 'XMLHttpRequest')]
     browser.open("https://orgsync.com/38382/accounts?per_page=100&num_pages=3&order=first_name+ASC&page=1")
     resp = browser.response().read()
-    json = simplejson.loads(resp)
+    json_out = json.loads(resp)
 
-    totalpages = json['totalEntries'] / 100 + 2
+    totalpages = json_out['totalEntries'] / 100 + 2
     for i in range(totalpages):
         print "parsing page %i" % i
         browser.open("https://orgsync.com/38382/accounts?per_page=100&num_pages=3&order=first_name+ASC&page=%i" % i)
         resp = browser.response().read()
-        json = simplejson.loads(resp)
-        entries = json['entries']
+        json_out = json.loads(resp)
+        entries = json_out['entries']
         for e in entries:
             id = {'last_name': e['last_name'], 'first_name': e['first_name'], 'title': e['title'],
                   'orgsync_id': e['id'], 'account_id': e['account_id']}
@@ -92,7 +92,7 @@ def collect_users():
 def create_orgs():
     g = open(os.getcwd() + "/acct/2013-09-17-orgs.json")
     h = g.read().replace('\n', '').replace("&quot;", '"')
-    i = simplejson.loads(h)
+    i = json.loads(h)
     for e in i['data']:
         c, ccreated = Orgsync_OrgCat.objects.get_or_create(orgsync_id=e['category']['id'], name=e['category']['name'])
         o, ocreated = Orgsync_Org.objects.get_or_create(
