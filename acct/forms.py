@@ -22,8 +22,6 @@ class UserAcct(forms.ModelForm):
 
         self.helper.layout = Layout(
             django_msgs,
-
-            'username',
             'first_name',
             'last_name',
 

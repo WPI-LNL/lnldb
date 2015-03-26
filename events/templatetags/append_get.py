@@ -9,14 +9,26 @@ Decorator to facilitate template tag creation
 
 def easy_tag(func):
     """deal with the repetitive parts of parsing template tags"""
-
     def inner(parser, token):
-        # print token
+        # divide token into args and kwargs
+        args = []
+        kwargs = {}
+        for arg in token.split_contents():
+            try:
+                name, value = arg.split('=')
+                kwargs[str(name)] = value
+            except ValueError:
+                args.append(arg)
         try:
-            return func(*token.split_contents())
+            # try passing parser as a kwarg for tags that support it
+            extrakwargs = kwargs.copy()
+            return func(*args, **extrakwargs)
         except TypeError:
-            raise template.TemplateSyntaxError('Bad arguments for tag "%s"' % token.split_contents()[0])
-
+            # otherwise just send through the original args and kwargs
+            try:
+                return func(*args, **kwargs)
+            except TypeError, e:
+                raise template.TemplateSyntaxError('Bad arguments for tag "%s"' % args[0])
     inner.__name__ = func.__name__
     inner.__doc__ = inner.__doc__
     return inner
@@ -25,9 +37,8 @@ def easy_tag(func):
 class AppendGetNode(template.Node):
     def __init__(self, in_dict):
         self.dict_pairs = {}
-        for pair in in_dict.split(','):
-            pair = pair.split('=')
-            self.dict_pairs[pair[0]] = template.Variable(pair[1])
+        for key in in_dict:
+            self.dict_pairs[key] = template.Variable(in_dict[key])
 
     def render(self, context):
         get = context['request'].GET.copy()
@@ -47,5 +58,5 @@ class AppendGetNode(template.Node):
 
 @register.tag()
 @easy_tag
-def append_to_get(_tag_name, mydict):
+def append_to_get(_tag_name, **mydict):
     return AppendGetNode(mydict)

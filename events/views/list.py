@@ -6,7 +6,7 @@ from django.template import RequestContext
 from events.models import Event
 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q
+from django.db.models import Q, F, Count
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from helpers.challenges import is_officer
@@ -263,6 +263,51 @@ def openworkorders(request,start=None,end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False),
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols']) #must use because there are strings
+    return render_to_response('events.html', context)
+
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+def findchief(request, start=None, end=None):
+    if not start and not end:
+        today = datetime.date.today()
+        start = today
+        start = start.strftime('%Y-%m-%d')
+        end = today + datetime.timedelta(days=30.5)
+        end = end.strftime('%Y-%m-%d')
+    context = RequestContext(request)
+
+    events = Event.objects \
+        .filter(approved=True) \
+        .annotate(num_ccs=Count('ccinstances')) \
+        .annotate(services_count=Count('otherservices')) \
+        .annotate(lighting_count=Count('lighting')) \
+        .annotate(sound_count=Count('sound')) \
+        .annotate(projection_count=Count('projection')) \
+        .filter(num_ccs__lt=(F('services_count') + F('lighting_count') +
+                             F('sound_count') + F('projection_count'))).distinct()
+
+    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
+        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+
+    events, context = datefilter(events, context, start, end)
+
+    page = request.GET.get('page')
+    sort = request.GET.get('sort') or 'datetime_start'
+    events = paginate_helper(events, page, sort)
+
+    context['h2'] = "Needs a Crew Chief"
+    context['proj_hideable'] = True
+    context['events'] = events
+    context['baseurl'] = reverse("findchief")
+    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['cols'] = ['event_name',
+                       'org',
+                       'location',
+                       FakeExtendedField('datetime_start', verbose_name="Starting At"),
+                       'submitted_on',
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render_to_response('events.html', context)
 
 

@@ -165,6 +165,12 @@ urlpatterns = patterns('',
                        url(r'^lnadmin/events/upcoming/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.upcoming'),
                        url(r'^lnadmin/events/upcoming/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
                            'events.views.list.upcoming'),
+
+                       url(r'^lnadmin/events/findchief/$', 'events.views.list.findchief', name="findchief"),
+                       url(r'^lnadmin/events/findchief/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.findchief'),
+                       url(r'^lnadmin/events/findchief/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
+                           'events.views.list.findchief'),
+                       
                        url(r'^lnadmin/events/incoming/$', 'events.views.list.incoming', name="incoming"),
                        url(r'^lnadmin/events/incoming/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.incoming'),
                        url(r'^lnadmin/events/incoming/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
