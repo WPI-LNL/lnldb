@@ -313,6 +313,8 @@ class InternalEventForm(forms.ModelForm):
                     Field('description'),
                     Field('internal_notes'),
                     Field('billed_by_semester'),
+                    'sensitive',
+                    'test_event',
                 ),
                 Tab(
                     'Contact',
@@ -376,7 +378,7 @@ class InternalEventForm(forms.ModelForm):
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_fund',
                   'billed_by_semester', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'lighting', 'lighting_reqs', 'sound', 'sound_reqs', 'projection', 'proj_reqs',
-                  'otherservices', 'otherservice_reqs')
+                  'otherservices', 'otherservice_reqs', 'sensitive', 'test_event')
 
     location = GroupedModelChoiceField(
         queryset=Location.objects.filter(show_in_wo_form=True),

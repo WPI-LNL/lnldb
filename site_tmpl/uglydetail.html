@@ -161,6 +161,14 @@
                             <td> {{ event.billed_by_semester }} </td>
                         </tr>
                         <tr>
+                            <th>Sensitive and Hidden</th>
+                            <td> {{ event.sensitive }} </td>
+                        </tr>
+                        <tr>
+                            <th>Test Event</th>
+                            <td> {{ event.test_event }} </td>
+                        </tr>
+                        <tr>
                             <th>Internal Notes</th>
                             <td>{% if event.internal_notes %}{{ event.internal_notes|mduserlink|mdeventlink|markdown }}{% else %} None {% endif %}</td>
                         </tr>

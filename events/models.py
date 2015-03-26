@@ -403,7 +403,8 @@ class Event(models.Model):
     # other fields
     internal_notes = models.TextField(null=True, blank=True)
     billed_by_semester = models.BooleanField(default=False)
-
+    sensitive = models.BooleanField(default=False)
+    test_event = models.BooleanField(default=False)
     # nice breakout for workorder
     @property
     def person_name(self):
