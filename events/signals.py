@@ -1,12 +1,14 @@
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 from django.utils import timezone
 
+import datetime
+
 from emails.generators import DefaultLNLEmailGenerator as DLEG
-from events.models import Billing
+from events.models import Billing, Fund
 from events.models import EventCCInstance
 from django.utils.text import slugify
 
@@ -92,3 +94,9 @@ def initial_user_create_notify(sender, instance, created, raw=False, **kwargs):
 
         e = DLEG(subject="LNL User Joined", to_emails=[settings.EMAIL_TARGET_S], body=email_body)
         e.send()
+
+
+@receiver(pre_save, sender=Fund)
+def update_fund_time(sender, instance, **kwargs):
+    instance.last_updated = datetime.date.today()
+

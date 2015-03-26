@@ -1,15 +1,10 @@
 from django.db import models
 # from events.managers import EventManager
 from django.conf import settings
-from django.contrib.auth.models import User
 # Create your models here.
 from django.core.urlresolvers import reverse
 from django import forms
-from django.db.models.signals import pre_save
-from django.dispatch import receiver
 
-from django.utils import timezone
-import datetime
 import pytz
 import decimal
 
@@ -406,6 +401,7 @@ class Event(models.Model):
     sensitive = models.BooleanField(default=False)
     test_event = models.BooleanField(default=False)
     # nice breakout for workorder
+
     @property
     def person_name(self):
         return self.contact_name
@@ -844,11 +840,6 @@ class Fund(models.Model):
         return "%s (%s)" % (self.name, self.fopal)
 
 
-@receiver(pre_save, sender=Fund)
-def update_fund_time(sender, instance, **kwargs):
-    instance.last_updated = datetime.date.today()
-
-
 class Organization(models.Model):  # AKA Client
     name = models.CharField(max_length=128, unique=True)
     shortname = models.CharField(max_length=8, null=True, blank=True)
@@ -1028,3 +1019,4 @@ class EventArbitrary(models.Model):
 
 
 ### SIGNALS IMPORT, DO NOT TOUCH
+from events.signals import *
