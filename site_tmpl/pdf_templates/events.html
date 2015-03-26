@@ -73,6 +73,37 @@
                         {% else %}
                             {{ event.otherservice_reqs }}
                         {% endif %}
+                        <br/>
+                        <br/>
+                        <h5>Extras Requested</h5>
+                        {% if service.category.name == "Lighting" and event.extras_lighting %}
+                            <ul>
+                                {% for xtra in event.extras_lighting %}
+                                    <li>{{ xtra.extra.name }} (x{{ xtra.quant }})</li>
+                                {% endfor %}
+                            </ul>
+                        {% elif service.category.name == "Sound" and event.extras_sound %}
+                            <ul>
+                                {% for xtra in event.extras_sound %}
+                                    <li>{{ xtra.extra.name }} (x{{ xtra.quant }})</li>
+                                {% endfor %}
+                            </ul>
+                        {% elif service.category.name == "Projection" and event.extras_projection %}
+                            <ul>
+                                {% for xtra in event.extras_projection %}
+                                    <li>{{ xtra.extra.name }} (x{{ xtra.quant }})</li>
+                                {% endfor %}
+                            </ul>
+                        {% elif event.extras_other %}
+                            <ul>
+                                {% for xtra in event.extras_other %}
+                                    <li>{{ xtra.extra.name }} (x{{ xtra.quant }})</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            None
+                        {% endif %}
+
                         <br />
                     </td>
                 </tr>
@@ -127,7 +158,7 @@
                 <tr>
                     <th class="tdl41">
                         End Date
-                    </td>
+                    </th>
                     <td class="tdl42">
                         {{ event.datetime_end|localtime|date }}
                     </td>
@@ -177,7 +208,6 @@
                         <hr>
                         Submit Reports @  lnl.wpi.edu/my/
                     </td>
-                    
                     
                 </tr>
             </table>
