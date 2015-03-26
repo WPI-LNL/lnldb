@@ -553,6 +553,9 @@ class BillingForm(forms.ModelForm):
         super(BillingForm, self).__init__(*args, **kwargs)
 
         self.fields['amount'].initial = str(event.cost_total)
+        self.fields['date_billed'].initial = datetime.date.today()
+        self.fields['opt_out_initial_email'].initial = True
+        self.fields['opt_out_update_email'].initial = True
 
     class Meta:
         model = Billing
