@@ -316,6 +316,12 @@ class Billing(models.Model):
     opt_out_initial_email = models.BooleanField(default=False)
     opt_out_update_email = models.BooleanField(default=False)
 
+    def __unicode__(self):
+        out = "Bill for %s" % self.event.event_name
+        if self.date_paid:
+            out += " (PAID)"
+        return out
+
     class Meta:
         ordering = ("-date_billed", "date_paid")
 
