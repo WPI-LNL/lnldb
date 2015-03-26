@@ -597,7 +597,13 @@ class ReportForm(forms.ModelForm):
         self.helper.form_method = "post"
         self.helper.form_action = ""
         self.helper.layout = Layout(
-            django_msgs,
+            HTML('<h4>What you might put in the report::</h4>'
+                 '<ul><li>How was the event set up?</li>'
+                 '<li>Roughly what equipment was used?</li>'
+                 '<li>Were there any last minute changes</li>'
+                 '<li>Did you come across any issues?</li>'
+                 '<li>Would you classify this event as the level it was booked under?</li>'
+                 '<li>What information would be useful for somebody next year?</li></ul>'),
             Field('report', css_class="col-md-10"),
             markdown_at_msgs,
             FormActions(
