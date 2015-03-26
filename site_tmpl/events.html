@@ -57,6 +57,14 @@
                             
                         </ul>
                         {% endif %}
+                        {% if proj_hideable %}
+                        <hr>
+                            <ul class="nav nav-pills">
+                                <li class="disabled"><a href="#">Projection Events</a></li>
+                                <li><a href="{% append_to_get page=1 hidedp=None %}">Show</a></li>
+                                <li><a href="{% append_to_get page=1 hidedp=1 %}">Hide</a></li>
+                            </ul>
+                        {% endif %}
                         <hr>
                     </div>
                 </div>
