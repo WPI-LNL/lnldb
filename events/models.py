@@ -1,5 +1,6 @@
 from django.db import models
 # from events.managers import EventManager
+from django.contrib.auth.models import User
 from django.conf import settings
 # Create your models here.
 from django.core.urlresolvers import reverse
