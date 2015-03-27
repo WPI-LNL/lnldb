@@ -568,6 +568,10 @@ class Event(models.Model):
         return foo
 
     @property
+    def eventcount(self):
+        return len(self.eventservices)
+
+    @property
     def eventservices(self):
         foo = []
         if self.lighting:

@@ -287,7 +287,7 @@ def findchief(request, start=None, end=None):
         .annotate(services_count=Count('otherservices')) \
         .annotate(lighting_count=Count('lighting')) \
         .annotate(sound_count=Count('sound')) \
-        .annotate(projection_count=Count('projection')) \
+        .annotate(projection_count=Count('projection')).all() \
         .filter(num_ccs__lt=(F('services_count') + F('lighting_count') +
                              F('sound_count') + F('projection_count'))).distinct()
 
@@ -310,6 +310,8 @@ def findchief(request, start=None, end=None):
                        'location',
                        FakeExtendedField('datetime_start', verbose_name="Starting At"),
                        'submitted_on',
+                       'num_ccs',
+                       FakeField('eventcount', verbose_name="# Services"),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render_to_response('events.html', context)
