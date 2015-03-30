@@ -526,7 +526,7 @@ class Event(models.Model):
 
         # chiefspending
         # chiefs = self.crew_chief.values_list('id')
-        # chiefs_with_lists = self.ccreport_set.values_list('crew_chief').distinct()
+        # chiefs_with_lists = self.ccreeport_set.values_list('crew_chief').distinct()
 
         # k =  [u[0] for u in chiefs if u not in chiefs_with_lists]
 
@@ -582,8 +582,11 @@ class Event(models.Model):
             foo.append(self.sound)
         if self.projection:
             foo.append(self.projection)
-        if self.otherservices:
-            foo.extend([s for s in self.otherservices.all()])
+        try:
+            if self.otherservices:
+                foo.extend([s for s in self.otherservices.all()])
+        except ValueError:
+            pass
         return foo
 
     ## Event Statuses
