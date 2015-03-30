@@ -395,6 +395,8 @@ class Event(models.Model):
     # reports
     crew_chief = models.ManyToManyField(User, null=True, blank=True, related_name='crewchiefx')
     crew = models.ManyToManyField(User, null=True, blank=True, related_name='crewx')
+    ccs_needed = models.PositiveIntegerField(default=0)
+    # ^^^ used as a cache to get around the awkward event type fields and allow for sql filtering
 
     # other fields
     internal_notes = models.TextField(null=True, blank=True)

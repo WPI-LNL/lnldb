@@ -288,8 +288,7 @@ def findchief(request, start=None, end=None):
         .annotate(lighting_count=Count('lighting')) \
         .annotate(sound_count=Count('sound')) \
         .annotate(projection_count=Count('projection')).all() \
-        .filter(num_ccs__lt=(F('services_count') + F('lighting_count') +
-                             F('sound_count') + F('projection_count'))).distinct()
+        .filter(num_ccs__lt=(F('ccs_needed'))).distinct()
 
     if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
         events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))

@@ -8,7 +8,7 @@ from django.utils import timezone
 import datetime
 
 from emails.generators import DefaultLNLEmailGenerator as DLEG
-from events.models import Billing, Fund
+from events.models import Billing, Fund, Event
 from events.models import EventCCInstance
 from django.utils.text import slugify
 
@@ -100,3 +100,7 @@ def initial_user_create_notify(sender, instance, created, raw=False, **kwargs):
 def update_fund_time(sender, instance, **kwargs):
     instance.last_updated = datetime.date.today()
 
+
+@receiver(pre_save, sender=Event)
+def on_event_update(sender, instance, **kwargs):
+    instance.ccs_needed = instance.eventcount
