@@ -1,6 +1,9 @@
 import datetime
 import decimal
 
+import _strptime
+# python multithreading bug workaround
+
 from django import forms
 from django.forms import ModelForm, ModelChoiceField
 from django.forms.extras.widgets import SelectDateWidget
