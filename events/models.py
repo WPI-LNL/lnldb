@@ -329,7 +329,7 @@ class Event(models.Model):
     """
         An Event, What everything ends up pointing to
     """
-
+    glyphicon = 'bullhorn'
     objects = models.Manager()
     event_mg = EventManager()
 
@@ -831,6 +831,7 @@ watson.register(Event, store=('id',
 
 
 class CCReport(models.Model):
+    glyphicon = 'comment'
     crew_chief = models.ForeignKey(User)
     event = models.ForeignKey(Event)
     report = models.TextField()
@@ -860,6 +861,7 @@ watson.register(CCReport)
 
 
 class Fund(models.Model):
+    glyphicon = 'credit-card'
     fund = models.IntegerField()
     organization = models.IntegerField()
     account = models.IntegerField(default=71973)
@@ -876,6 +878,9 @@ class Fund(models.Model):
     def fopal(self):
         return "%s-%s-%s" % (self.fund, self.organization, self.account)
 
+    def get_absolute_url(self):
+        return reverse('admin-fundedit', args=[self.id])
+
     def __unicode__(self):
         return "%s (%s)" % (self.name, self.fopal)
 
@@ -884,6 +889,7 @@ watson.register(Fund)
 
 
 class Organization(models.Model):  # AKA Client
+    glyphicon = 'education'
     name = models.CharField(max_length=128, unique=True)
     shortname = models.CharField(max_length=8, null=True, blank=True)
     email = models.EmailField(null=True, blank=True, verbose_name="normal_email_unused")
@@ -921,6 +927,9 @@ class Organization(models.Model):  # AKA Client
     @property
     def retname(self):
         return self.shortname or self.name
+
+    def get_absolute_url(self):
+        return reverse('admin-orgdetail', args=[self.id])
 
     class Meta:
         ordering = ['name']

@@ -35,6 +35,10 @@ ul.ui-autocomplete {
     float: none;
 }
 
+.navbar-right {
+    margin-right: 5px;
+}
+
 .dropdown-menu .dropdown-toggle {
     font-weight: bold;
     cursor: default;

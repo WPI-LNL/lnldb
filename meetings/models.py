@@ -1,3 +1,4 @@
+from django.core.urlresolvers import reverse
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -15,6 +16,7 @@ def get_default_email():
 
 
 class Meeting(models.Model):
+    glyphicon = 'briefcase'
     datetime = models.DateTimeField()
     attendance = models.ManyToManyField(User, null=True, blank=True)
     meeting_type = models.ForeignKey('MeetingType', default=1)
@@ -43,6 +45,9 @@ class Meeting(models.Model):
 
     def cal_guid(self):
         return "mtg" + str(self.id) + "@lnldb"
+
+    def get_absolute_url(self):
+        return reverse('meeting-view', args=[self.id])
 
     def __unicode__(self):
         return "Meeting For %s" % self.datetime.date()

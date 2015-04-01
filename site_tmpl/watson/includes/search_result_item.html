@@ -1,6 +1,8 @@
 <div class="well well-sm result">
     {% block search_result %}
-        <h2><span class="glyphicon glyphicon-asterisk" aria-hidden="true"></span> <a>{{ result.title }}</a>
+        <h2><span class="glyphicon glyphicon-{{ result.object.glyphicon|default_if_none:'asterisk' }}"
+                  aria-hidden="true"></span>
+            <a href="{{ result.url }}">{{ result.title }}</a>
             <span class="result-subtitle">{{ result.content_type | capfirst }}</span></h2>
         <p>{{ result.description }}&nbsp;</p>
     {% endblock %}
