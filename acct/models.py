@@ -84,13 +84,14 @@ class Profile(models.Model):
         return outstr
 
 
-watson.register(User, store=('id', 'email',
-                             'profile__fullname',
-                             'profile__mdc',
-                             'profile__phone',
-                             'profile__group_str',
-                             'profile__owns',
-                             'profile__orgs'))
+watson.register(User, fields=('id', 'email',
+                              'profile__fullname',
+                              'profile__mdc',
+                              'profile__phone',
+                              'profile__group_str',
+                              'profile__owns',
+                              'profile__orgs'))
+
 
 def create_user_profile(sender, instance, created, raw=False, **kwargs):
     if created and not raw:
