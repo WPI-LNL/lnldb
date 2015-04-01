@@ -84,13 +84,18 @@ class Profile(models.Model):
         return outstr
 
 
-watson.register(User, fields=('id', 'email',
-                              'profile__fullname',
-                              'profile__mdc',
-                              'profile__phone',
-                              'profile__group_str',
-                              'profile__owns',
-                              'profile__orgs'))
+class UserSearchAdapter(watson.SearchAdapter):
+    def get_title(self, obj):
+        return obj.profile.fullname
+
+
+watson.register(User, UserSearchAdapter, fields=('id', 'email',
+                                                 'profile__fullname',
+                                                 'profile__mdc',
+                                                 'profile__phone',
+                                                 'profile__group_str',
+                                                 'profile__owns',
+                                                 'profile__orgs'))
 
 
 def create_user_profile(sender, instance, created, raw=False, **kwargs):
