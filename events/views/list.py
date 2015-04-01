@@ -488,10 +488,11 @@ def unpaid(request, start=None, end=None):
     now = time.time()
     # events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now())
     # .filter(date_setup_start__lte=today)
-    events = Event.objects.filter(billings__date_paid__isnull=True,
-                                  billings__date_billed__isnull=False) \
-        .exclude(Q(closed=True) |
-                 Q(cancelled=True)) \
+    events = Event.objects.annotate(numpaid=Count('billings__date_paid')) \
+        .filter(billings__date_billed__isnull=False) \
+        .exclude(closed=True) \
+        .exclude(cancelled=True) \
+        .exclude(numpaid__gt=0) \
         .filter(reviewed=True) \
         .order_by('datetime_start').distinct()
     events, context = datefilter(events, context, start, end)
