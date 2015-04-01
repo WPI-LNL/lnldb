@@ -100,6 +100,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'watson.middleware.SearchContextMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     # Uncomment the next line for simple clickjacking protection:
@@ -148,7 +149,8 @@ INSTALLED_APPS = (
     'lineage',
     'django_bootstrap_calendar',
     'ajax_select',
-
+    'watson',
+    
     'south',
     'raven.contrib.django.raven_compat',
 )

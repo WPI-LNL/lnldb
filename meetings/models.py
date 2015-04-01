@@ -4,6 +4,8 @@ from django.contrib.auth.models import User
 from events.models import Event, Location
 # Create your models here.
 
+import watson
+
 from uuidfield import UUIDField
 from datetime import timedelta
 
@@ -48,6 +50,8 @@ class Meeting(models.Model):
     class Meta:
         ordering = ('-datetime',)
 
+
+watson.register(Meeting)
 
 class MeetingAnnounce(models.Model):
     meeting = models.ForeignKey(Meeting)

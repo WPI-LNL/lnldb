@@ -17,6 +17,11 @@ class Migration(DataMigration):
             except:
                 orm.Profile.objects.create(user=acct)
                 print("Account \"%s\" now has a profile" % acct.username)
+            if acct.profile.phone == '(':
+                tmp = acct.profile
+                tmp.phone = None
+                tmp.save()
+                print("Account \"%s\" phone '(' fixed" % acct.username)
 
                 # Note: Don't use "from appname.models import ModelName".
                 # Use orm.ModelName to refer to models in this application,

@@ -170,6 +170,68 @@ urlpatterns = patterns('',
                        url(r'^lnadmin/events/upcoming/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
                            'events.views.list.upcoming'),
 
+                       # inventory
+                       url(r'^lnadmin/inventory/view/$', 'inventory.views.view'),
+                       url(r'^lnadmin/inventory/add/$', 'inventory.views.add'),
+                       url(r'^lnadmin/inventory/categories/$', 'inventory.views.categories'),
+                       url(r'^lnadmin/inventory/cat/(?P<category>[a-zA-Z0-9_.-]+)/$', 'inventory.views.cat'),
+                       url(r'^lnadmin/inventory/cat/(?P<category>[a-zA-Z0-9_.-]+)/(?P<subcategory>[a-zA-Z0-9_.-]+)$',
+                           'inventory.views.subcat'),
+
+                       url(r'^lnadmin/inventory/d/(?P<id>[0-9a-f]+)/$', 'inventory.views.detail', name="inv-detail"),
+                       url(r'^lnadmin/inventory/d/(?P<id>[0-9a-f]+)/addentry/$', 'inventory.views.addentry',
+                           name="inv-new-entry"),
+
+                       # members
+                       url(r'^list/mdc/raw/$', 'members.views.mdc_raw'),
+                       url(r'^list/mdc/$', 'members.views.mdc'),
+                       url(r'^lnadmin/members/officers/$', 'members.views.officers'),
+                       url(r'^lnadmin/members/active/$', 'members.views.active'),
+                       url(r'^lnadmin/members/associate/$', 'members.views.associate'),
+                       url(r'^lnadmin/members/alum/$', 'members.views.alum'),
+                       url(r'^lnadmin/members/away/$', 'members.views.away'),
+                       url(r'^lnadmin/members/inactive/$', 'members.views.inactive'),
+                       url(r'^lnadmin/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail', name="memberdetail"),
+                       url(r'^lnadmin/members/edit/(?P<pk>[0-9a-f]+)/$', UserUpdate.as_view(), name="memberupdate"),
+                       url(r'^lnadmin/members/editcontact/(?P<pk>[0-9a-f]+)/$', MemberUpdate.as_view(),
+                           name="membercontact"),
+
+                       #misc
+                       url(r'^lnadmin/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
+                       url(r'^lnadmin/misc/users/unsorted/$', 'members.views.limbousers', name="users-limbo"),
+                       url(r'^lnadmin/misc/users/add/$', LNLAdd.as_view(), name="users-add"),
+                       url(r'^lnadmin/oldsearch$', "events.views.indices.event_search", name="events-search"),
+                       url(r'^lnadmin/search$', "data.views.search", name="search"),
+
+
+                       #meetings
+                       url(r'^lnadmin/meetings/new/$', 'meetings.views.newattendance', name="meeting-new"),
+                       url(r'^lnadmin/meetings/list/$', 'meetings.views.listattendance', name="meeting-list"),
+                       url(r'^lnadmin/meetings/list/(\d+)/$', 'meetings.views.listattendance', ),
+                       url(r'^lnadmin/meetings/view/(\d+)/$', 'meetings.views.viewattendance', name="meeting-view"),
+                       url(r'^lnadmin/meetings/view/(\d+)/(\d+)/$', 'meetings.views.updateevent',
+                           name="meeting-updateevent"),
+                       url(r'^lnadmin/meetings/edit/(\d+)/$', 'meetings.views.editattendance', name="meeting-edit"),
+                       url(r'^lnadmin/meetings/notice/(\d+)/$', 'meetings.views.mknotice', name="meeting-email"),
+                       url(r'^lnadmin/meetings/noticecc/(\d+)/$', 'meetings.views.mkccnotice', name="meeting-cc-email"), \
+                       #projection
+                       url(r'^lnadmin/projection/list/$', 'projection.views.plist_detail',
+                           name="projection-list-detail"),
+                       url(r'^lnadmin/projection/list/other/$', 'projection.views.plist', name="projection-list"),
+                       url(r'^lnadmin/projection/bulk/$', BulkUpdateView.as_view(), name="projection-bulk-update"),
+                       #url(r'^lnadmin/projection/update/(?P<pk>[0-9a-f]+)/$', ProjectionUpdate.as_view(), name="projection-update"),
+                       url(r'^lnadmin/projection/update/(?P<id>[0-9a-f]+)/$', "projection.views.projection_update",
+                           name="projection-update"),
+                       url(r'^lnadmin/projection/rm/(?P<pk>[0-9a-f]+)/$', ProjectionistDelete.as_view(),
+                           name="projection-delete"),
+                       url(r'^lnadmin/projection/mk/$', ProjectionCreate.as_view(), name="projection-create"),
+                       url(r'^lnadmin/projection/list/detail/pdf/$', 'pdfs.views.generate_projection_pdf',
+                           name="events-pdf-multi"),
+
+                       url(r'^lnadmin/projection/bulkevents/$', 'projection.views.bulk_projection',
+                           name="projection-bulk2"),
+    
+
                        url(r'^lnadmin/events/findchief/$', 'events.views.list.findchief', name="findchief"),
                        url(r'^lnadmin/events/findchief/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.findchief'),
                        url(r'^lnadmin/events/findchief/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',

@@ -1,0 +1,15 @@
+{% extends 'watson/includes/search_result_item.html' %}
+{% load linkify_map %}
+{% block search_result %}
+    <h2><span class="glyphicon glyphicon-user" aria-hidden="true"></span> <a
+            href="{% url 'memberdetail' result.object.id %}">{{ result.object.profile.fullname }}
+        ({{ result.title }})</a>
+        <span class="result-subtitle">User - {{ result.object.profile.group_str }}</span></h2>
+    <h3> Email: {{ result.object.email }}
+        {% if result.object.profile.phone %}| Phone: {{ result.object.profile.phone }} {% endif %}
+        {% if result.object.profile.mdc %}| MDC: {{ result.object.profile.mdc }}{% endif %}</h3>
+    {% if result.object.orgowner.exists %}
+        <p><b>Leads:</b> {{ result.object.orgowner|linkify_join:"admin-orgdetail" }}</p>{% endif %}
+    {% if result.object.orgusers.exists %}
+        <p><b>Member:</b> {{ result.object.orgusers|linkify_join:"admin-orgdetail" }}</p>{% endif %}
+{% endblock %}

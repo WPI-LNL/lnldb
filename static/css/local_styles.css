@@ -1,0 +1,102 @@
+body {
+    padding-bottom: 40px;
+}
+
+.navbar-collapse.in {
+    overflow-y: visible;
+    max-height: none;
+}
+
+/*.sidebar-nav {
+    padding: 9px 0;
+}
+.dropdown-backdrop {
+    position: static;
+}*/
+ul.ui-autocomplete {
+    max-height: 30%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.event-list .event-status-cancelled {
+    text-decoration: line-through;
+}
+
+.flexfix {
+    display: flex;
+}
+
+.inlineflexfix {
+    display: inline-flex;
+}
+
+.navbar-nav {
+    float: none;
+}
+
+.dropdown-menu .dropdown-toggle {
+    font-weight: bold;
+    cursor: default;
+}
+
+.dropdown-menu .dropdown-toggle .caret {
+    border: none;
+}
+
+.dropdown-menu .dropdown-menu {
+    display: block;
+    position: relative;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+    width: 100%;
+    border-radius: 0;
+}
+
+.dropdown-menu .dropdown-menu li {
+    display: block;
+}
+
+/* Search */
+.search-results > li {
+    display: block;
+}
+
+.search-results h2 {
+    margin-bottom: 0;
+    margin-top: 0.2em;
+    font-size: 18pt;
+    font-weight: bold;
+}
+
+.search-results h2 a {
+    color: black;
+}
+
+.result h2 .glyphicon {
+    float: left;
+    font-size: 30pt;
+    margin-right: 15px;
+    margin-bottom: 5px;
+}
+
+.search-results h3 {
+    font-size: 14pt;
+    font-weight: bold;
+    margin-top: 0.2em;
+    margin-bottom: .3em;
+    margin-left: 1.5em;
+    padding: 0;
+}
+
+span.result-subtitle {
+    font-size: 16pt;
+    font-weight: bold;
+    margin: 5px;
+    float: right;
+}
+
+.search-results p {
+    margin: 0;
+}

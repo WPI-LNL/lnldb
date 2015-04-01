@@ -1,10 +1,13 @@
 from django.db import models
 # from events.managers import EventManager
+# noinspection PyUnresolvedReferences
 from django.contrib.auth.models import User
 from django.conf import settings
 # Create your models here.
 from django.core.urlresolvers import reverse
 from django import forms
+
+import watson
 
 import pytz
 import decimal
@@ -807,6 +810,25 @@ class Event(models.Model):
     def short_services(self):
         return ", ".join(map(lambda m: m.shortname, self.eventservices))
 
+    @property
+    def datetime_nice(self):
+        out_str = ""
+        out_str += self.datetime_start.strftime("%a %m/%d/%Y %I:%M %p - ")
+        if self.datetime_start.date() == self.datetime_end.date():
+            out_str += self.datetime_end.strftime("%I:%M %p")
+        else:
+            out_str += self.datetime_end.strftime("%a %m/%d/%Y %I:%M %p")
+        return out_str
+
+
+watson.register(Event, store=('id',
+                              'datetime_nice',
+                              'description',
+                              'location__name',
+                              'org',
+                              'status',
+                              'short_services'))
+
 
 class CCReport(models.Model):
     crew_chief = models.ForeignKey(User)
@@ -823,10 +845,18 @@ class CCReport(models.Model):
     def pretty_cat_list(self):
         return ", ".join([x.name for x in self.for_service_cat.all()])
 
-        # class OrgFund(models.Model):
-        # fund = models.IntegerField()
-        # organization = models.IntegerField()
-        # account = models.IntegerField(default=71973)
+
+watson.register(CCReport)
+
+# class OrgFund(models.Model):
+# fund = models.IntegerField()
+# organization = models.IntegerField()
+# account = models.IntegerField(default=71973)
+
+# class OrgFund(models.Model):
+# fund = models.IntegerField()
+# organization = models.IntegerField()
+# account = models.IntegerField(default=71973)
 
 
 class Fund(models.Model):
@@ -848,6 +878,9 @@ class Fund(models.Model):
 
     def __unicode__(self):
         return "%s (%s)" % (self.name, self.fopal)
+
+
+watson.register(Fund)
 
 
 class Organization(models.Model):  # AKA Client
@@ -893,6 +926,9 @@ class Organization(models.Model):  # AKA Client
         ordering = ['name']
         verbose_name = "Client"
         verbose_name_plural = "Clients"
+
+
+watson.register(Organization)
 
 
 class OrganizationTransfer(models.Model):

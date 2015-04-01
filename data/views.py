@@ -6,11 +6,13 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.utils.datastructures import MultiValueDictKeyError
 from helpers.challenges import is_officer
 
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 # Create your views here.
+import watson
 
 
 @login_required
@@ -53,3 +55,20 @@ def access_log(request):
 
     context['accesses'] = accesses
     return render_to_response('access_log.html', context)
+
+
+@login_required
+@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+def search(request):
+    context = RequestContext(request)
+    q = ""
+    try:
+        if request.POST:
+            q = request.POST['q']
+        else:
+            q = request.GET['q']
+    except MultiValueDictKeyError:
+        q = ""
+    context['query'] = q
+    context['search_entry_list'] = watson.search(q)
+    return render_to_response('search.html', context)

@@ -1,0 +1,12 @@
+{% extends 'base_admin.html' %}
+{% load watson %}
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Results for {{ query }}</h2>
+            {% if msg %}
+                <div class="alert alert-danger">{{ msg }}</div>{% endif %}
+        </div>
+    </div>
+    {% search_results search_entry_list %}
+{% endblock %}

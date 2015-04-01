@@ -42,57 +42,9 @@
                 });
     </script>
         <!--         <link href="{% static 'css/style.css' %}" rel="stylesheet"> -->
-        <style type="text/css">
-        body {
-            padding-bottom: 40px;
-        }
-        .navbar-collapse.in {
-            overflow-y: visible;
-            max-height: none;
-        }
-        /*.sidebar-nav {
-            padding: 9px 0;
-        }
-        .dropdown-backdrop {
-        position: static;
-        }*/
-             ul.ui-autocomplete{
-                 max-height: 30%;
-                 overflow-y: auto;
-                 overflow-x: hidden;
-             }
-             .event-list .event-status-cancelled{
-                 text-decoration: line-through;
-             }
-            .flexfix {
-                display: flex;
-            }
-            .inlineflexfix {
-                display: inline-flex;
-            }
-            .navbar-nav {
-                float: none;
-            }
-            .dropdown-menu .dropdown-toggle {
-                font-weight: bold;
-                cursor: default;
-            }
-            .dropdown-menu .dropdown-toggle .caret {
-                border:none;
-            }
-            .dropdown-menu .dropdown-menu {
-                display: block;
-                position: relative;
-                border-left: none;
-                border-right: none;
-                box-shadow: none;
-                width: 100%;
-                border-radius: 0;
-            }
-            .dropdown-menu .dropdown-menu li {
-                  display: block;
-            }
-        </style>
+
+        <link href="{% static 'css/local_styles.css' %}" rel="stylesheet">
+
         {% block overrides %}
         {% endblock %}
 

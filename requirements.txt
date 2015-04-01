@@ -29,3 +29,8 @@ reportlab==2.7
 ## reportlab anything less than 3.
 django-markdown-deux
 django-ical
+<<<<<<< Updated upstream
+django-watson
+=======
+django-watson
+>>>>>>> Stashed changes

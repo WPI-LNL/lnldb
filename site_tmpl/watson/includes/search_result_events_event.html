@@ -1,0 +1,10 @@
+{% extends 'watson/includes/search_result_item.html' %}
+{% load markdown_deux_tags %}
+{% block search_result %}
+    <h2><span class="glyphicon glyphicon-bullhorn" aria-hidden="true"></span> <a
+            href="{% url 'events-detail' result.object.id %}">{{ result.title }}
+        ({{ result.object.short_services }})</a>
+        <span class="result-subtitle">Event - {{ result.object.status }}</span></h2>
+    <h3>{{ result.object.datetime_nice }} - {{ result.object.location.name }}</h3>
+    <p>{{ result.object.description | markdown }}</p>
+{% endblock %}
