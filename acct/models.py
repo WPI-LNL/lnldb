@@ -1,7 +1,8 @@
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
+from django.dispatch import receiver
 import watson
 # Create your models here.
 
@@ -102,6 +103,17 @@ def create_user_profile(sender, instance, created, raw=False, **kwargs):
 
 post_save.connect(create_user_profile, sender=User)
 
+# hacky? Yes. But I want to fix this, and I don't want to mess with the strangeness of that form.
+@receiver(pre_save, sender=Profile)
+def check_phone(sender, instance, **kwargs):
+    if instance.phone == '(':
+        instance.phone = None
+    if not instance.wpibox:
+        instance.wpibox = None
+    if not instance.addr:
+        instance.addr = None
+    if not instance.mdc:
+        instance.mdc = None
 
 class Orgsync_OrgCat(models.Model):
     name = models.CharField(max_length=64)
