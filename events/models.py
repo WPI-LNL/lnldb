@@ -441,6 +441,13 @@ class Event(models.Model):
             ##raise ValidationError('Stop trying to time travel')
 
     # implementing calendars
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        self.ccs_needed = self.eventcount
+        if update_fields:
+            update_fields.append('ccs_needed')
+        super(Event, self).save(force_insert, force_update, using, update_fields)
+
     def cal_name(self):
         return self.event_name
 

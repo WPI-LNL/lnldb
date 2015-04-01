@@ -99,8 +99,3 @@ def initial_user_create_notify(sender, instance, created, raw=False, **kwargs):
 @receiver(pre_save, sender=Fund)
 def update_fund_time(sender, instance, **kwargs):
     instance.last_updated = datetime.date.today()
-
-
-@receiver(pre_save, sender=Event)
-def on_event_update(sender, instance, **kwargs):
-    instance.ccs_needed = instance.eventcount
