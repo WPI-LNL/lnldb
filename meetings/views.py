@@ -4,7 +4,7 @@ import datetime
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.template import RequestContext
 from django.forms.models import inlineformset_factory
 from django.utils.functional import curry
@@ -25,7 +25,7 @@ from emails.generators import generate_notice_cc_email
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def viewattendance(request, id):
-    context = RequestContext(request)
+    context = {}
     m = get_object_or_404(Meeting, pk=id)
     context['m'] = m
 
@@ -40,18 +40,18 @@ def viewattendance(request, id):
     future = Event.objects.filter(datetime_start__gte=morethanaweek, datetime_start__lte=lessthantwoweeks).order_by(
         'datetime_start')
     context['future'] = future
-    return render_to_response('meeting_view.html', context)
+    return render(request, 'meeting_view.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def updateevent(request, meetingid, eventid):
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Update Event"
     event = get_object_or_404(Event, pk=eventid)
     context['event'] = event.event_name
 
-    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3)
+    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
     cc_formset.form = staticmethod(curry(CCIForm, event=event))
 
     if request.method == 'POST':
@@ -65,13 +65,13 @@ def updateevent(request, meetingid, eventid):
     else:
         formset = cc_formset(instance=event, prefix="main")
         context['formset'] = formset
-    return render_to_response('formset_crispy_helpers.html', context)
+    return render(request, 'formset_crispy_helpers.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def editattendance(request, id):
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Edit Meeting"
     m = get_object_or_404(Meeting, pk=id)
     if request.method == 'POST':
@@ -85,13 +85,13 @@ def editattendance(request, id):
     else:
         formset = MeetingAdditionForm(instance=m)
         context['formset'] = formset
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def listattendance(request, page=1):
-    context = RequestContext(request)
+    context = {}
     attend = Meeting.objects.all()
     paginated = Paginator(attend, 10)
 
@@ -101,13 +101,13 @@ def listattendance(request, page=1):
         attend = paginated.page(1)
 
     context['attend'] = attend
-    return render_to_response('meeting_list.html', context)
+    return render(request, 'meeting_list.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def newattendance(request):
-    context = RequestContext(request)
+    context = {}
     if request.method == 'POST':
         formset = MeetingAdditionForm(request.POST)
         if formset.is_valid():
@@ -120,13 +120,13 @@ def newattendance(request):
         formset = MeetingAdditionForm()
         context['formset'] = formset
         context['msg'] = "New Meeting"
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def mknotice(request, id):
-    context = RequestContext(request)
+    context = {}
 
     meeting = get_object_or_404(Meeting, pk=id)
 
@@ -150,13 +150,13 @@ def mknotice(request, id):
         formset = AnnounceSendForm(meeting)
         context['formset'] = formset
         context['msg'] = "New Meeting Notice"
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def mkccnotice(request, id):
-    context = RequestContext(request)
+    context = {}
 
     meeting = get_object_or_404(Meeting, pk=id)
 
@@ -182,4 +182,4 @@ def mkccnotice(request, id):
         formset = AnnounceCCSendForm(meeting)
         context['formset'] = formset
         context['msg'] = "CC Meeting Notice"
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)

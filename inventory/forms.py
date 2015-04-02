@@ -44,6 +44,8 @@ class InvForm(ModelForm):
 
     class Meta:
         model = Equipment
+        fields = ('name', 'subcategory', 'major', 'description', 'purchase_date', 'purchase_cost',
+                  'model_number', 'serial_number', 'road_case', 'manufacturer', 'home')
 
 
 class EntryForm(ModelForm):
@@ -70,3 +72,4 @@ class EntryForm(ModelForm):
 
     class Meta:
         model = EquipmentMaintEntry
+        fields = ('desc', 'entry', 'status', 'user', 'equipment')

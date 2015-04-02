@@ -1,3 +1,4 @@
+import debug_toolbar
 from django.conf.urls import patterns, include, url
 
 from events.cal import EventFeed
@@ -388,7 +389,10 @@ urlpatterns = patterns('',
                        url(r'^status/', TemplateView.as_view(template_name="status_page.html")),
                        url(r'^lnadmin/accesslog/$', 'data.views.access_log', name="access-log"),
                        url(r'^NOTOUCHING/$', 'data.views.fuckoffkitty'),
-                       url(r'^lnldb/fuckoffkitty/', RedirectView.as_view(url="/NOTOUCHING/")),
+                       url(r'^lnldb/fuckoffkitty/', RedirectView.as_view(url="/NOTOUCHING/", permanent=False)),
                        url(r'^(?P<slug>[-\w]+)/$', 'pages.views.page'),
 
-                       url(r'^lnadmin/(?P<msg>\w+)/$', 'events.views.indices.admin'),)
+                       url(r'^lnadmin/(?P<msg>\w+)/$', 'events.views.indices.admin'),
+                       # debugging
+
+                       url(r'^__debug__/', include(debug_toolbar.urls)))

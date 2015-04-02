@@ -9,9 +9,9 @@ from events.models import Event
 from events.models import Lighting, Sound, Projection
 
 from django.conf import settings
-from django.contrib.formtools.wizard.views import NamedUrlSessionWizardView
+from formtools.wizard.views import NamedUrlSessionWizardView
 
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 from django.template import RequestContext
 
 
@@ -57,7 +57,7 @@ class EventWizard(NamedUrlSessionWizardView):
                           body=email_bodyp)
             emailp.send()
         context = RequestContext(self.request)
-        return render_to_response('wizard_finished.html', context)
+        return render(request, 'wizard_finished.html', context)
 
     # fills in form info on the first step
     def get_form_initial(self, step):

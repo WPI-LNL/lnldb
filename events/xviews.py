@@ -5,7 +5,7 @@ import time
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.template import RequestContext
 from events.forms import WorkorderSubmit, CrewAssign, OrgForm
 from events.forms import named_event_tmpls
@@ -18,12 +18,12 @@ SUCCESS_MSG_ORG = "Successfully added a new client"
 
 ### FRONT 3 PAGES
 def index(request):
-    context = RequestContext(request)
-    return render_to_response('index.html', context)
+    context = {}
+    return render(request, 'index.html', context)
 
 
 def workorder(request):
-    context = RequestContext(request)
+    context = {}
 
     if request.method == 'POST':
         formset = WorkorderSubmit(request.POST)
@@ -42,13 +42,13 @@ def workorder(request):
 
         context['formset'] = formset
 
-    return render_to_response('workorder.html', context)
+    return render(request, 'workorder.html', context)
 
 
 def admin(request, msg=None):
-    context = RequestContext(request)
+    context = {}
     context['msg'] = msg
-    return render_to_response('admin.html', context)
+    return render(request, 'admin.html', context)
 
 
 ### EVENT VIEWS
@@ -59,7 +59,7 @@ def add(request):
 
 def upcoming(request, limit=True):
     """if limit = False, then it'll show all upcoming events that are more than a week away."""
-    context = RequestContext(request)
+    context = {}
 
     today = datetime.date.today()
     weekfromnow = today + datetime.timedelta(weeks=1)
@@ -71,38 +71,38 @@ def upcoming(request, limit=True):
 
     context['events'] = events
 
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 def incoming(request):
-    context = RequestContext(request)
+    context = {}
 
     events = Event.objects.filter(approved=False).filter(closed=False).filter(paid=False)
 
     context['events'] = events
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 def openworkorders(request):
-    context = RequestContext(request)
+    context = {}
 
     events = Event.objects.filter(closed=False)
 
     context['events'] = events
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 def paid(request):
-    context = RequestContext(request)
+    context = {}
 
     events = Event.objects.filter(approved=True).filter(paid=True)
 
     context['events'] = events
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 def unpaid(request):
-    context = RequestContext(request)
+    context = {}
 
     today = datetime.date.today()
     now = time.time()
@@ -110,20 +110,20 @@ def unpaid(request):
         date_setup_start__lte=today)
 
     context['events'] = events
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 def closed(request):
-    context = RequestContext(request)
+    context = {}
 
     events = Event.objects.filter(closed=True)
 
     context['events'] = events
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 def assigncrew(request, id):
-    context = RequestContext(request)
+    context = {}
 
     event = get_object_or_404(Event, pk=id)
 
@@ -140,32 +140,32 @@ def assigncrew(request, id):
 
         context['formset'] = formset
 
-    return render_to_response('form_master.html', context)
+    return render(request, 'form_master.html', context)
 
 
 def viewevent(request, id):
-    context = RequestContext(request)
+    context = {}
     event = get_object_or_404(Event, pk=id)
 
     context['event'] = event
 
-    return render_to_response('uglydetail.html', context)
+    return render(request, 'uglydetail.html', context)
 
 
 ### ORGANIZATION VIEWS
 
 def vieworgs(request):
-    context = RequestContext(request)
+    context = {}
 
     orgs = Organization.objects.all()
 
     context['orgs'] = orgs
 
-    return render_to_response('orgs.html', context)
+    return render(request, 'orgs.html', context)
 
 
 def addorgs(request):
-    context = RequestContext(request)
+    context = {}
 
     if request.method == 'POST':
         formset = OrgForm(request.POST)
@@ -183,40 +183,40 @@ def addorgs(request):
         context['formset'] = formset
         context['msg'] = msg
 
-    return render_to_response('form_master.html', context)
+    return render(request, 'form_master.html', context)
 
 
 ### USER FACING SHIT
 def my(request):
-    context = RequestContext(request)
-    return render_to_response('my.html', context)
+    context = {}
+    return render(request, 'my.html', context)
 
 
 def myacct(request):
-    context = RequestContext(request)
-    return render_to_response('myacct.html', context)
+    context = {}
+    return render(request, 'myacct.html', context)
 
 
 def myevents(request):
-    context = RequestContext(request)
+    context = {}
 
     user = request.user
-    orgs = user.orgusers.get_query_set()
+    orgs = user.orgusers.get_queryset()
 
     events = Event.objects.filter(group__in=orgs)
 
     context['events'] = events
-    return render_to_response('myevents.html', context)
+    return render(request, 'myevents.html', context)
 
 
 def myorgs(request):
-    context = RequestContext(request)
+    context = {}
 
     user = request.user
-    orgs = user.orgusers.get_query_set()
+    orgs = user.orgusers.get_queryset()
 
     context['orgs'] = orgs
-    return render_to_response('myorgs.html', context)
+    return render(request, 'myorgs.html', context)
 
 
 # CBV NuEventForm

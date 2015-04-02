@@ -3,7 +3,7 @@
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.template import RequestContext
 
 from inventory.models import Equipment, Category, SubCategory
@@ -14,7 +14,7 @@ SUCCESS_MSG_INV = "Successfully added new inventory Item"
 
 
 def view(request):
-    context = RequestContext(request)
+    context = {}
 
     inv = Equipment.objects.all()
     categories = Category.objects.all()
@@ -22,11 +22,11 @@ def view(request):
     context['h2'] = "Inventory List"
     context['inv'] = inv
     context['cats'] = categories
-    return render_to_response('inv.html', context)
+    return render(request, 'inv.html', context)
 
 
 def cat(request, category):
-    context = RequestContext(request)
+    context = {}
     cat = get_object_or_404(Category, name=category)
 
     inv = Equipment.objects.filter(subcategory__category=cat)
@@ -35,22 +35,22 @@ def cat(request, category):
     context['h2'] = "Category: %s" % cat.name
     context['inv'] = inv
     context['scats'] = subcategories
-    return render_to_response('inv.html', context)
+    return render(request, 'inv.html', context)
 
 
 def subcat(request, category, subcategory):
-    context = RequestContext(request)
+    context = {}
     cat = get_object_or_404(SubCategory, name=subcategory)
 
     inv = Equipment.objects.filter(subcategory=cat)
 
     context['h2'] = "SubCategory: %s" % cat.name
     context['inv'] = inv
-    return render_to_response('inv.html', context)
+    return render(request, 'inv.html', context)
 
 
 def add(request):
-    context = RequestContext(request)
+    context = {}
 
     if request.method == 'POST':
         formset = InvForm(request.POST)
@@ -68,30 +68,30 @@ def add(request):
         context['formset'] = formset
         context['msg'] = msg
 
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)
 
 
 def categories(request):
-    context = RequestContext(request)
+    context = {}
 
     categories = Category.objects.all()
 
     context['cats'] = categories
-    return render_to_response('cats.html', context)
+    return render(request, 'cats.html', context)
 
 
 # TODO fix all this shit to make it less shit
 
 def detail(request, id):
-    context = RequestContext(request)
+    context = {}
     e = get_object_or_404(Equipment, pk=id)
     context['e'] = e
 
-    return render_to_response('invdetail.html', context)
+    return render(request, 'invdetail.html', context)
 
 
 def addentry(request, id):
-    context = RequestContext(request)
+    context = {}
     msg = "New Maintenance Entry"
     context['msg'] = msg
 
@@ -111,4 +111,4 @@ def addentry(request, id):
 
         context['formset'] = formset
 
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)

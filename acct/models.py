@@ -84,20 +84,6 @@ class Profile(models.Model):
         return outstr
 
 
-class UserSearchAdapter(watson.SearchAdapter):
-    def get_title(self, obj):
-        return obj.profile.fullname
-
-
-watson.register(User, UserSearchAdapter, fields=('id', 'email',
-                                                 'profile__fullname',
-                                                 'profile__mdc',
-                                                 'profile__phone',
-                                                 'profile__group_str',
-                                                 'profile__owns',
-                                                 'profile__orgs'))
-
-
 def create_user_profile(sender, instance, created, raw=False, **kwargs):
     if created and not raw:
         Profile.objects.create(user=instance)
@@ -148,7 +134,7 @@ class Orgsync_User(models.Model):
     first_name = models.CharField(max_length=128)
     last_name = models.CharField(max_length=128)
     email_address = models.EmailField()
-    memberships = models.ManyToManyField(Orgsync_Org, null=True, blank=True)
+    memberships = models.ManyToManyField(Orgsync_Org, blank=True)
     last_login = models.DateField(null=True, blank=True)
     about_me = models.TextField(null=True, blank=True)
     portfolio = models.CharField(max_length=256, null=True, blank=True)

@@ -5,7 +5,7 @@
             $(".eventselect").toggleClass("hide");
         });
         $("#submitselect").click(function(){
-            var selectedids = $("input[type='checkbox']:checked").map(
+            var selectedids = $("input.eventselect[type='checkbox']:checked").map(
                 function () {return this.value;}).get().join(",");
             var baseurl = "{{pdfurl}}";
             var target = baseurl + selectedids + "/"

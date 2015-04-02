@@ -2,8 +2,7 @@ from data.models import StupidCat
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.utils.datastructures import MultiValueDictKeyError
@@ -26,18 +25,18 @@ def fuckoffkitty(request):
         )
         return HttpResponseRedirect(reverse('data.views.fuckoffkitty'))
     else:
-        context = RequestContext(request)
+        context = {}
         kitty = StupidCat.objects.filter(user=request.user).latest()
         context['kitty'] = kitty
         context['foo'] = 'foo'
 
-        return render_to_response('kitty.html', context)
+        return render(request, 'kitty.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def access_log(request):
-    context = RequestContext(request)
+    context = {}
 
     entries = StupidCat.objects.all()
     paginator = Paginator(entries, 50)
@@ -54,13 +53,13 @@ def access_log(request):
         accesses = paginator.page(paginator.num_pages)
 
     context['accesses'] = accesses
-    return render_to_response('access_log.html', context)
+    return render(request, 'access_log.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def search(request):
-    context = RequestContext(request)
+    context = {}
     q = ""
     try:
         if request.POST:
@@ -71,4 +70,4 @@ def search(request):
         q = ""
     context['query'] = q
     context['search_entry_list'] = watson.search(q)
-    return render_to_response('search.html', context)
+    return render(request, 'search.html', context)

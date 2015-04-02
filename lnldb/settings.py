@@ -106,6 +106,7 @@ MIDDLEWARE_CLASSES = (
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'events.middleware.ContactReminderMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
 )
 
 ROOT_URLCONF = 'lnldb.urls'
@@ -150,8 +151,9 @@ INSTALLED_APPS = (
     'django_bootstrap_calendar',
     'ajax_select',
     'watson',
-    
-    'south',
+    'debug_toolbar',
+    'template_profiler_panel',
+    'debug_toolbar_line_profiler',
     'raven.contrib.django.raven_compat',
 )
 
@@ -159,6 +161,28 @@ TEMPLATE_CONTEXT_PROCESSESORS = TCP + (
     # 'lnldb.processors.staticz',
     'processors.navs',
 )
+
+DEBUG_TOOLBAR_PATCH_SETTINGS = False
+
+DEBUG_TOOLBAR_PANELS = (
+    'debug_toolbar.panels.versions.VersionsPanel',
+    'debug_toolbar.panels.timer.TimerPanel',
+    'debug_toolbar.panels.settings.SettingsPanel',
+    'debug_toolbar.panels.headers.HeadersPanel',
+    'debug_toolbar.panels.request.RequestPanel',
+    'debug_toolbar.panels.sql.SQLPanel',
+    'debug_toolbar.panels.staticfiles.StaticFilesPanel',
+    'debug_toolbar.panels.templates.TemplatesPanel',
+    'debug_toolbar.panels.cache.CachePanel',
+    'debug_toolbar.panels.signals.SignalsPanel',
+    'debug_toolbar.panels.logging.LoggingPanel',
+    'debug_toolbar.panels.redirects.RedirectsPanel',
+    # Uncomment the following to enable profiling
+    # 'debug_toolbar.panels.profiling.ProfilingPanel',
+    # 'template_profiler_panel.panels.template.TemplateProfilerPanel',
+    # 'debug_toolbar_line_profiler.panel.ProfilingPanel',
+)
+
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error when DEBUG=False.
@@ -210,7 +234,7 @@ AJAX_LOOKUP_CHANNELS = {
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 
 TEMPLATE_CONTEXT_PROCESSORS = TCP + (
-    'django.core.context_processors.request', 'dealer.contrib.django.staff.context_processor')
+    'django.template.context_processors.request', 'dealer.contrib.django.staff.context_processor')
 
 
 # Various Other Settings
@@ -256,6 +280,13 @@ MARKDOWN_DEUX_STYLES = {
         },
         "safe_mode": False,
     },
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'lnldb-cache'
+    }
 }
 
 # Local Settings Imports

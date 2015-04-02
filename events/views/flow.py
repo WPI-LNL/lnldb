@@ -2,7 +2,7 @@ import datetime
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.template import RequestContext
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -26,7 +26,7 @@ from django.core.exceptions import ValidationError
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def approval(request, id):
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Approve Event"
     event = get_object_or_404(Event, pk=id)
     if event.approved:
@@ -58,13 +58,13 @@ def approval(request, id):
     else:
         form = EventApprovalForm(instance=event)
         context['formset'] = form
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def denial(request, id):
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Deny Event"
     event = get_object_or_404(Event, pk=id)
     if event.cancelled:
@@ -98,13 +98,13 @@ def denial(request, id):
     else:
         form = EventDenialForm(instance=event)
         context['formset'] = form
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def review(request, id):
-    context = RequestContext(request)
+    context = {}
     context['h2'] = "Review Event for Billing"
     event = get_object_or_404(Event, pk=id)
 
@@ -131,13 +131,13 @@ def review(request, id):
     else:
         form = EventReviewForm(instance=event, event=event)
         context['formset'] = form
-    return render_to_response('event_review.html', context)
+    return render(request, 'event_review.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def reviewremind(request, id, uid):
-    context = RequestContext(request)
+    context = {}
 
     event = get_object_or_404(Event, pk=id)
     if event.closed or event.reviewed:
@@ -169,7 +169,7 @@ def reviewremind(request, id, uid):
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def close(request, id):
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Closing Event"
     event = get_object_or_404(Event, pk=id)
 
@@ -193,7 +193,7 @@ def rmcrew(request, id, user):
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def assigncrew(request, id):
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Crew"
 
     event = get_object_or_404(Event, pk=id)
@@ -212,13 +212,13 @@ def assigncrew(request, id):
 
         context['formset'] = formset
 
-    return render_to_response('form_crew_add.html', context)
+    return render(request, 'form_crew_add.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def hours_bulk_admin(request, id):
-    context = RequestContext(request)
+    context = {}
     user = request.user
 
     context['msg'] = "Bulk Hours Entry"
@@ -226,7 +226,7 @@ def hours_bulk_admin(request, id):
 
     context['event'] = event
 
-    mk_hours_formset = inlineformset_factory(Event, Hours, extra=15)
+    mk_hours_formset = inlineformset_factory(Event, Hours, extra=15, exclude=[])
     mk_hours_formset.form = staticmethod(curry(MKHoursForm, event=event))
 
     if request.method == 'POST':
@@ -242,13 +242,13 @@ def hours_bulk_admin(request, id):
 
         context['formset'] = formset
 
-    return render_to_response('formset_hours_bulk.html', context)
+    return render(request, 'formset_hours_bulk.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def rmcc(request, id, user):
-    context = RequestContext(request)
+    context = {}
     event = get_object_or_404(Event, pk=id)
     event.crew_chief.remove(user)
     return HttpResponseRedirect(reverse('events.views.flow.assigncc', args=(event.id,)))
@@ -257,13 +257,13 @@ def rmcc(request, id, user):
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def assigncc(request, id):
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "CrewChief"
 
     event = get_object_or_404(Event, pk=id)
     context['event'] = event
 
-    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3)
+    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
     cc_formset.form = staticmethod(curry(CCIForm, event=event))
 
     if request.method == 'POST':
@@ -279,19 +279,19 @@ def assigncc(request, id):
 
         context['formset'] = formset
 
-    return render_to_response('formset_crispy_helpers.html', context)
+    return render(request, 'formset_crispy_helpers.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def assignattach(request, id):
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Attachments"
 
     event = get_object_or_404(Event, pk=id)
     context['event'] = event
 
-    att_formset = inlineformset_factory(Event, EventAttachment, extra=1)
+    att_formset = inlineformset_factory(Event, EventAttachment, extra=1, exclude=[])
     att_formset.form = staticmethod(curry(AttachmentForm, event=event))
 
     if request.method == 'POST':
@@ -307,12 +307,12 @@ def assignattach(request, id):
 
         context['formset'] = formset
 
-    return render_to_response('formset_crispy_attachments.html', context)
+    return render(request, 'formset_crispy_attachments.html', context)
 
 
 @login_required
 def assignattach_external(request, id):
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Attachments"
 
     event = get_object_or_404(Event, pk=id)
@@ -321,7 +321,7 @@ def assignattach_external(request, id):
 
     context['event'] = event
 
-    mk_att_formset = inlineformset_factory(Event, EventAttachment, extra=1)
+    mk_att_formset = inlineformset_factory(Event, EventAttachment, extra=1, exclude=[])
     # mk_att_formset.queryset = mk_att_formset.queryset.filter(externally_uploaded=True)
     mk_att_formset.form = staticmethod(curry(AttachmentForm, event=event, externally_uploaded=True))
 
@@ -342,20 +342,20 @@ def assignattach_external(request, id):
 
         context['formset'] = formset
 
-    return render_to_response('formset_crispy_attachments_ext.html', context)
+    return render(request, 'formset_crispy_attachments_ext.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def extras(request, id):
     """ This form is for adding extras to an event """
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Extras"
 
     event = get_object_or_404(Event, pk=id)
     context['event'] = event
 
-    mk_extra_formset = inlineformset_factory(Event, ExtraInstance, extra=1)
+    mk_extra_formset = inlineformset_factory(Event, ExtraInstance, extra=1, exclude=[])
     mk_extra_formset.form = staticmethod(curry(ExtraForm))
 
     if request.method == 'POST':
@@ -371,20 +371,20 @@ def extras(request, id):
 
         context['formset'] = formset
 
-    return render_to_response('formset_crispy_extras.html', context)
+    return render(request, 'formset_crispy_extras.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def oneoff(request, id):
     """ This form is for adding oneoff fees to an event """
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "One-Off Charges"
 
     event = get_object_or_404(Event, pk=id)
     context['event'] = event
 
-    mk_oneoff_formset = inlineformset_factory(Event, EventArbitrary, extra=1)
+    mk_oneoff_formset = inlineformset_factory(Event, EventArbitrary, extra=1, exclude=[])
 
     if request.method == 'POST':
         formset = mk_oneoff_formset(request.POST, request.FILES, instance=event)
@@ -399,18 +399,18 @@ def oneoff(request, id):
 
         context['formset'] = formset
 
-    return render_to_response('formset_crispy_arbitrary.html', context)
+    return render(request, 'formset_crispy_arbitrary.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def viewevent(request, id):
-    context = RequestContext(request)
+    context = {}
     event = get_object_or_404(Event, pk=id)
 
     context['event'] = event
 
-    return render_to_response('uglydetail.html', context)
+    return render(request, 'uglydetail.html', context)
 
 
 class CCRCreate(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, CreateView):

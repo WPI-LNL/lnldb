@@ -74,6 +74,7 @@ class InstanceForm(forms.ModelForm):
 
     class Meta:
         model = PitInstance
+        fields = ('pit_level', 'created_on', 'valid')
 
     created_on = forms.SplitDateTimeField(initial=datetime.datetime.now())
 

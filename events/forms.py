@@ -179,7 +179,8 @@ class IOrgForm(forms.ModelForm):
 
     class Meta:
         model = Organization
-
+        fields = ('name', 'exec_email', 'address', 'phone', 'associated_orgs', 'personal',
+                  'accounts', 'user_in_charge', 'associated_users')
     # associated_orgs = make_ajax_field(Organization,'associated_orgs','Orgs',plugin_options = {'minLength':2})
     # associated_users = make_ajax_field(Organization,'associated_users','Users',plugin_options = {'minLength':3})
     user_in_charge = AutoCompleteSelectField('Users')
@@ -205,6 +206,7 @@ class IOrgVerificationForm(forms.ModelForm):
 
     class Meta:
         model = OrgBillingVerificationEvent
+        fields = ('date', 'verified_by', 'note', 'org')
 
     verified_by = AutoCompleteSelectField('Officers')
 
@@ -444,7 +446,7 @@ class InternalReportForm(forms.ModelForm):
 
     class Meta:
         model = CCReport
-
+        fields = ('event', 'crew_chief', 'report')
     crew_chief = AutoCompleteSelectField('Members', required=True)
 
 
@@ -564,7 +566,7 @@ class BillingForm(forms.ModelForm):
 
     class Meta:
         model = Billing
-
+        fields = ('event', 'date_billed', 'amount', 'opt_out_initial_email', 'opt_out_update_email')
 
 class BillingUpdateForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
@@ -645,6 +647,7 @@ class MKHoursForm(forms.ModelForm):
 
     class Meta:
         model = Hours
+        fields = ('event', 'user', 'hours', 'service')
 
     user = AutoCompleteSelectField('AssocMembers', required=True)
     hours = forms.DecimalField(min_value=decimal.Decimal("0.00"))
@@ -716,6 +719,7 @@ class CCIForm(forms.ModelForm):
 
     class Meta:
         model = EventCCInstance
+        fields = ('crew_chief', 'service', 'setup_location', 'setup_start')
 
     crew_chief = AutoCompleteSelectField('Members', required=True)
     setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
@@ -763,11 +767,11 @@ class ExtraForm(forms.ModelForm):
     )
 
 
-# CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3,form=CCIForm)
+# CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3,form=CCIForm, exclude=[])
 
 
 # usage
-# CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3)
+# CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3, exclude=[])
 #CrewChiefFS.form = staticmethod(curry(CCIForm, event=request.event))
 
 ### Workorder Forms

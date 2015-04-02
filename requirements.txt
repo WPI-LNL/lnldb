@@ -1,36 +1,29 @@
+#### TODO: put version numbers for these
 mechanize
 BeautifulSoup
-simplejson
-
-Django==1.6
-Markdown==2.3.1
+#### ^^^ Check if actually needed. Currently only in the unused scrapers.
+Django<1.9
+Markdown
 pillow
-#### TODO: put version numbers for these
-South
 dealer
 pisa
 pytz
 django-lineage
-django-appconf==0.6
-django-bootstrap-toolkit==2.10.6
+django-bootstrap-toolkit
 -e git://github.com/gmorell/django-cas2.git#egg=django_cas-dev
--e git+https://github.com/progressive-cms/django-ajax-selects.git#egg=ajax_select
+django-ajax-selects
 -e git+https://github.com/jmerdich/django-bootstrap-calendar.git#egg=django_bootstrap_calendar
-django-compressor==1.3
 django-crispy-forms>= 1.4
-django-uuidfield==0.4.0
-## FIXME: could not find svn URL in dependency_links for this package:
-flup==1.0.3.dev-20110405
-raven==3.3.12
-six==1.3.0
-wsgiref==0.1.2
+django-uuidfield
+# TODO: migrate ^^^
+flup
+raven
 xhtml2pdf==0.0.6
-reportlab==2.7
-## reportlab anything less than 3.
+reportlab
 django-markdown-deux
 django-ical
-<<<<<<< Updated upstream
+django-debug-toolbar
 django-watson
-=======
-django-watson
->>>>>>> Stashed changes
+django-formtools
+django-debug-toolbar-line-profiler
+django-debug-toolbar-template-profiler

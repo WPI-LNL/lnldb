@@ -334,14 +334,14 @@ class Event(models.Model):
     event_mg = EventManager()
 
     submitted_by = models.ForeignKey(User, related_name='submitter')
-    submitted_ip = models.IPAddressField(max_length=16)
+    submitted_ip = models.GenericIPAddressField(max_length=16)
     submitted_on = models.DateTimeField(auto_now_add=True)
 
     event_name = models.CharField(max_length=128)
     # Person
     person_name = models.CharField(max_length=128, null=True, blank=True, verbose_name="Contact_name")  # DEPRECATED
     contact = models.ForeignKey(User, null=True, blank=True, verbose_name="Contact")
-    org = models.ManyToManyField('Organization', null=True, blank=True, verbose_name="Client")
+    org = models.ManyToManyField('Organization', blank=True, verbose_name="Client")
     billing_org = models.ForeignKey('Organization', null=True, blank=True, related_name="billedevents")
     billing_fund = models.ForeignKey('Fund', null=True, on_delete=models.SET_NULL, related_name="event_accounts")
     contact_email = models.CharField(max_length=256, null=True, blank=True)  # DEPRECATED
@@ -370,7 +370,7 @@ class Event(models.Model):
     description = models.TextField(null=True, blank=True)
 
     # NOT SHOWN
-    otherservices = models.ManyToManyField(Service, null=True, blank=True)
+    otherservices = models.ManyToManyField(Service, blank=True)
     otherservice_reqs = models.TextField(null=True, blank=True)
     setup_location = models.ForeignKey('Location', related_name="setuplocation", null=True, blank=True)  # DEPRECATED
     ##Status Indicators
@@ -396,8 +396,8 @@ class Event(models.Model):
     paid = models.BooleanField(default=False)
 
     # reports
-    crew_chief = models.ManyToManyField(User, null=True, blank=True, related_name='crewchiefx')
-    crew = models.ManyToManyField(User, null=True, blank=True, related_name='crewx')
+    crew_chief = models.ManyToManyField(User, blank=True, related_name='crewchiefx')
+    crew = models.ManyToManyField(User, blank=True, related_name='crewx')
     ccs_needed = models.PositiveIntegerField(default=0)
     # ^^^ used as a cache to get around the awkward event type fields and allow for sql filtering
 
@@ -828,13 +828,6 @@ class Event(models.Model):
         return out_str
 
 
-watson.register(Event, store=('id',
-                              'datetime_nice',
-                              'description',
-                              'location__name',
-                              'org',
-                              'status',
-                              'short_services'))
 
 
 class CCReport(models.Model):
@@ -844,7 +837,7 @@ class CCReport(models.Model):
     report = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
-    for_service_cat = models.ManyToManyField(Category, verbose_name="Services", null=True, blank=True)
+    for_service_cat = models.ManyToManyField(Category, verbose_name="Services", blank=True)
 
     def __unicode__(self):
         return u'%s - %s' % (self.event, self.crew_chief)
@@ -854,7 +847,6 @@ class CCReport(models.Model):
         return ", ".join([x.name for x in self.for_service_cat.all()])
 
 
-watson.register(CCReport)
 
 # class OrgFund(models.Model):
 # fund = models.IntegerField()
@@ -892,7 +884,6 @@ class Fund(models.Model):
         return "%s (%s)" % (self.name, self.fopal)
 
 
-watson.register(Fund)
 
 
 class Organization(models.Model):  # AKA Client
@@ -912,7 +903,7 @@ class Organization(models.Model):  # AKA Client
     user_in_charge = models.ForeignKey(User, related_name='orgowner')
     associated_users = models.ManyToManyField(User, related_name='orgusers')
 
-    associated_orgs = models.ManyToManyField("self", null=True, blank=True, verbose_name="Associated Clients")
+    associated_orgs = models.ManyToManyField("self", blank=True, verbose_name="Associated Clients")
 
     notes = models.TextField(null=True, blank=True)
     personal = models.BooleanField(default=False)
@@ -922,7 +913,7 @@ class Organization(models.Model):  # AKA Client
 
     @property
     def fopals(self):
-        return self.accounts.all().iterator().join(", ")
+        return ", ".join([f.fopal for f in self.accounts.all()])
 
     def __unicode__(self):
         return self.name
@@ -944,7 +935,6 @@ class Organization(models.Model):  # AKA Client
         verbose_name_plural = "Clients"
 
 
-watson.register(Organization)
 
 
 class OrganizationTransfer(models.Model):
@@ -952,7 +942,7 @@ class OrganizationTransfer(models.Model):
     old_user_in_charge = models.ForeignKey(User, related_name="xfer_old")
     org = models.ForeignKey(Organization)
     uuid = UUIDField(auto=True)  # for the link
-    created = models.DateTimeField(auto_now_add=True, auto_now=True)
+    created = models.DateTimeField(auto_now=True)
     completed_on = models.DateTimeField(null=True, blank=True)
     expiry = models.DateTimeField(null=True, blank=True)
     completed = models.BooleanField(default=False)
@@ -1053,7 +1043,7 @@ def attachment_file_name(instance, filename):
 
 class EventAttachment(models.Model):
     event = models.ForeignKey('Event', related_name="attachments")
-    for_service = models.ManyToManyField(Service, null=True, blank=True, related_name="attachments")
+    for_service = models.ManyToManyField(Service, blank=True, related_name="attachments")
     attachment = models.FileField(upload_to=attachment_file_name)
     note = models.TextField(null=True, blank=True, default="")
     externally_uploaded = models.BooleanField(default=False)

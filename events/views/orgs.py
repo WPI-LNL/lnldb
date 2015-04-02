@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.template import RequestContext
 from events.models import Organization, OrganizationTransfer, OrgBillingVerificationEvent, Fund
 from events.forms import IOrgForm, ExternalOrgUpdateForm, OrgXFerForm, IOrgVerificationForm, FopalForm
@@ -29,13 +29,13 @@ from emails.generators import generate_transfer_email
 def vieworgs(request):
     """ Views all organizations, """
     # todo add filters
-    context = RequestContext(request)
+    context = {}
 
     orgs = Organization.objects.filter(archived=False)
 
     context['orgs'] = orgs
 
-    return render_to_response('orgs.html', context)
+    return render(request, 'orgs.html', context)
 
 
 @login_required
@@ -43,7 +43,7 @@ def vieworgs(request):
 def addeditorgs(request, id=None):
     """form for adding an org """
     # need to fix this 
-    context = RequestContext(request)
+    context = {}
     if id:
         instance = get_object_or_404(Organization, pk=id)
         msg = "Edit Client"
@@ -67,7 +67,7 @@ def addeditorgs(request, id=None):
 
     context['msg'] = msg
 
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)
 
 
 @login_required
@@ -75,7 +75,7 @@ def addeditorgs(request, id=None):
 def fund_edit(request, id=None, org=None):
     """form for adding an fund """
     # need to fix this
-    context = RequestContext(request)
+    context = {}
     if id:
         instance = get_object_or_404(Fund, pk=id)
         msg = "Edit Fund"
@@ -106,31 +106,31 @@ def fund_edit(request, id=None, org=None):
 
     context['msg'] = msg
 
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def orgdetail(request, id):
-    context = RequestContext(request)
+    context = {}
     org = get_object_or_404(Organization, pk=id)
     context['org'] = org
-    return render_to_response('org_detail.html', context)
+    return render(request, 'org_detail.html', context)
 
 
 ### External Form Editing Views
 @login_required
 def orglist(request):
-    context = RequestContext(request)
+    context = {}
     orgs = Organization.objects.filter(user_in_charge=request.user)
     context['orgs'] = orgs
 
-    return render_to_response('myorgsincharge.html', context)
+    return render(request, 'myorgsincharge.html', context)
 
 
 @login_required
 def orgedit(request, id):
-    context = RequestContext(request)
+    context = {}
     orgs = Organization.objects.filter(user_in_charge=request.user)
 
     org = get_object_or_404(orgs, pk=id)
@@ -152,13 +152,13 @@ def orgedit(request, id):
 
         context['formset'] = formset
 
-    return render_to_response('mycrispy.html', context)
+    return render(request, 'mycrispy.html', context)
 
 
 ### Transfer Views
 @login_required
 def org_mkxfer(request, id):
-    context = RequestContext(request)
+    context = {}
 
     orgs = Organization.objects.filter(user_in_charge=request.user)
     org = get_object_or_404(orgs, pk=id)
@@ -192,12 +192,12 @@ def org_mkxfer(request, id):
         formset = OrgXFerForm(org, user)
         context['formset'] = formset
 
-    return render_to_response('mycrispy.html', context)
+    return render(request, 'mycrispy.html', context)
 
 
 @login_required
 def org_acceptxfer(request, idstr):
-    context = RequestContext(request)
+    context = {}
     transfer = get_object_or_404(OrganizationTransfer, uuid=idstr)
 
     if transfer.completed:
@@ -223,7 +223,7 @@ def org_acceptxfer(request, idstr):
         context['status'] = 'Not Yours.'
         context['msgclass'] = "alert-error"
 
-    return render_to_response('mytransfer.html', context)
+    return render(request, 'mytransfer.html', context)
 
 
 class OrgVerificationCreate(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, CreateView):

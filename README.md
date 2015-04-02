@@ -42,8 +42,6 @@ python manage.py loaddata categories.json
 
 ## Notes
 
-DB migrations are handled by south
 
-
-All WPI specific code hasn't been grafted on yet...
+All server-specific code hasn't and won't be included. Use local_settings.py
 All views have their functionality written out in """ """

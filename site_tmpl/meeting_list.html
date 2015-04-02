@@ -35,7 +35,7 @@
     
             
             <li>
-                <a href="#">Page {{ attend.number }} of {{ attend.num_pages }}</a>
+                <a href="#">Page {{ attend.number }} of {{ attend.paginator.num_pages }}</a>
             </li>
     
             {% if attend.has_next %}
