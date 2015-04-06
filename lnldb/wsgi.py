@@ -16,7 +16,7 @@ framework.
 import os
 import sys
 
-path = '/home/lnldb/lnldb'
+path = '/home/lnldb/lnldb_gitd'
 if path not in sys.path:
     sys.path.append(path)
 
