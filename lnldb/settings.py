@@ -234,7 +234,7 @@ AJAX_LOOKUP_CHANNELS = {
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 
 TEMPLATE_CONTEXT_PROCESSORS = TCP + (
-    'django.template.context_processors.request', 'dealer.contrib.django.staff.context_processor')
+    'django.template.context_processors.request',)
 
 
 # Various Other Settings
@@ -264,10 +264,6 @@ EMAIL_KEY_START_END = None
 LOGIN_URL = "/local/login/"
 LOGIN_REDIRECT_URL = "/my/"
 
-# GIT REV
-DEALER_TYPE = 'git'
-DEALER_PATH = '/home/lnldb/lnldb/'
-DEALER_BACKENDS = 'git'
 
 # crispy_forms
 CRISPY_TEMPLATE_PACK = 'bootstrap3'

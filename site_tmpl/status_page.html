@@ -21,5 +21,8 @@
 
 
 {% block content %}
+    {% if REVISION %}
 <h1>LNLDB is running Git Revision {{ REVISION }}</h1>
+        <p>{{ CHANGELOG }}</p>
+    {% endif %}
 {% endblock %}

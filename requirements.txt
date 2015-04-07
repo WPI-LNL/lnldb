@@ -5,7 +5,6 @@ BeautifulSoup
 Django<1.9
 Markdown
 pillow
-dealer
 pisa
 pytz
 django-lineage

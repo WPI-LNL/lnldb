@@ -386,7 +386,7 @@ urlpatterns = patterns('',
                            name="email-view-announce-cc"),
 
                        #special urls
-                       url(r'^status/', TemplateView.as_view(template_name="status_page.html")),
+                       url(r'^status/', "data.views.status"),
                        url(r'^lnadmin/accesslog/$', 'data.views.access_log', name="access-log"),
                        url(r'^NOTOUCHING/$', 'data.views.fuckoffkitty'),
                        url(r'^lnldb/fuckoffkitty/', RedirectView.as_view(url="/NOTOUCHING/", permanent=False)),
