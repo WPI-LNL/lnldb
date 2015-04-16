@@ -67,6 +67,7 @@ class AnnounceSendForm(forms.ModelForm):
     class Meta:
         model = MeetingAnnounce
         fields = ('meeting', 'events', 'subject', 'message', 'email_to')
+        widgets = {'meeting': forms.HiddenInput()}
 
     events = forms.ModelMultipleChoiceField(queryset=Event.objects.all(), required=False)
 
@@ -99,4 +100,5 @@ class AnnounceCCSendForm(forms.ModelForm):
     class Meta:
         model = CCNoticeSend
         fields = ('meeting', 'events', 'addtl_message', 'email_to')
+        widgets = {'meeting': forms.HiddenInput()}
         # events = forms.ModelMultipleChoiceField(queryset=Event.objects.all(),required=False)

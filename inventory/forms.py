@@ -1,3 +1,4 @@
+from django import forms
 from django.forms import ModelForm
 from inventory.models import Equipment, EquipmentMaintEntry
 
@@ -73,3 +74,4 @@ class EntryForm(ModelForm):
     class Meta:
         model = EquipmentMaintEntry
         fields = ('desc', 'entry', 'status', 'user', 'equipment')
+        widgets = {'user': forms.HiddenInput(), 'equipment': forms.HiddenInput()}

@@ -207,6 +207,7 @@ class IOrgVerificationForm(forms.ModelForm):
     class Meta:
         model = OrgBillingVerificationEvent
         fields = ('date', 'verified_by', 'note', 'org')
+        widgets = {'org': forms.HiddenInput()}
 
     verified_by = AutoCompleteSelectField('Officers')
 
@@ -447,6 +448,7 @@ class InternalReportForm(forms.ModelForm):
     class Meta:
         model = CCReport
         fields = ('event', 'crew_chief', 'report')
+        widgets = {'event': forms.HiddenInput()}
     crew_chief = AutoCompleteSelectField('Members', required=True)
 
 
@@ -507,6 +509,7 @@ class OrgXFerForm(forms.ModelForm):
     class Meta:
         model = OrganizationTransfer
         fields = ('new_user_in_charge',)
+        widgets = {'org': forms.HiddenInput(), 'old_user_in_charge': forms.HiddenInput()}
 
 
 class SelfServiceOrgRequestForm(forms.Form):
@@ -567,6 +570,7 @@ class BillingForm(forms.ModelForm):
     class Meta:
         model = Billing
         fields = ('event', 'date_billed', 'amount', 'opt_out_initial_email', 'opt_out_update_email')
+        widgets = {'event': forms.HiddenInput()}
 
 class BillingUpdateForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
@@ -594,6 +598,7 @@ class BillingUpdateForm(forms.ModelForm):
     class Meta:
         model = Billing
         fields = ('date_paid', 'amount', 'opt_out_update_email')
+        widgets = {'event': forms.HiddenInput()}
 
 
 ### CC Facing Forms
@@ -648,6 +653,7 @@ class MKHoursForm(forms.ModelForm):
     class Meta:
         model = Hours
         fields = ('event', 'user', 'hours', 'service')
+        widgets = {'event': forms.HiddenInput()}
 
     user = AutoCompleteSelectField('AssocMembers', required=True)
     hours = forms.DecimalField(min_value=decimal.Decimal("0.00"))
@@ -753,6 +759,7 @@ class AttachmentForm(forms.ModelForm):
     class Meta:
         model = EventAttachment
         fields = ('for_service', 'attachment', 'note')
+        widgets = {'event': forms.HiddenInput()}
 
 
 class ExtraForm(forms.ModelForm):
