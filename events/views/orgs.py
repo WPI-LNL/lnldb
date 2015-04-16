@@ -4,6 +4,7 @@ import datetime
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.core.urlresolvers import reverse
+from django.db.models import Count
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.template import RequestContext
@@ -31,7 +32,7 @@ def vieworgs(request):
     # todo add filters
     context = {}
 
-    orgs = Organization.objects.filter(archived=False)
+    orgs = Organization.objects.filter(archived=False).annotate(fund_count=Count('accounts'))
 
     context['orgs'] = orgs
 
