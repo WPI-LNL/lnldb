@@ -484,7 +484,7 @@ class Event(models.Model):
         return "event" + str(self.id) + "@lnldb"
 
     def firstorg(self):
-        return self.org.all()[0]
+        return self.org.first()
 
     def ccreport_url(self):
         return reverse("my-ccreport", args=(self.id,))
