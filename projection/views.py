@@ -3,7 +3,7 @@ import datetime
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.template import RequestContext
 from django.views.generic.edit import CreateView
 from django.views.generic.edit import DeleteView
@@ -28,19 +28,19 @@ from helpers.mixins import LoginRequiredMixin, OfficerMixin
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def plist(request):
-    context = RequestContext(request)
+    context = {}
     users = Projectionist.objects.all().order_by('user__last_name')
 
     context['users'] = users
     context['h2'] = "Projectionist List"
 
-    return render_to_response('projectionlist.html', context)
+    return render(request, 'projectionlist.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def plist_detail(request):
-    context = RequestContext(request)
+    context = {}
     levels = PITLevel.objects.exclude(name_short__in=['PP', 'L']).order_by('ordering')
     unlicensed_users = Projectionist.objects.exclude(pitinstances__pit_level__name_short__in=['PP', 'L'])
     licensed_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP', 'L']).exclude(
@@ -54,14 +54,14 @@ def plist_detail(request):
     context['levels'] = levels
     context['h2'] = "Projectionist List Detailed"
 
-    return render_to_response('projectionlist_detail.html', context)
+    return render(request, 'projectionlist_detail.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def projection_update(request, id):
     projectionist = get_object_or_404(Projectionist, pk=id)
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Updating Projectionist %s" % projectionist
 
     if request.method == "POST":
@@ -81,7 +81,7 @@ def projection_update(request, id):
         context['formset'] = formset
         context['pk'] = id
 
-    return render_to_response('form_crispy_projection.html', context)
+    return render(request, 'form_crispy_projection.html', context)
 
 
 class ProjectionCreate(OfficerMixin, LoginRequiredMixin, CreateView):
@@ -108,7 +108,7 @@ class ProjectionCreate(OfficerMixin, LoginRequiredMixin, CreateView):
             pitform.save()
             return HttpResponseRedirect(self.success_url)
         else:
-            return self.render_to_response(self.get_context_data(form=form))
+            return self.render(self.get_context_data(form=form))
 
     model = Projectionist
     template_name = "form_crispy_projection.html"
@@ -142,7 +142,7 @@ class ProjectionistDelete(OfficerMixin, LoginRequiredMixin, DeleteView):
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING')
 def bulk_projection(request):
-    context = RequestContext(request)
+    context = {}
     tz = timezone.get_current_timezone()
 
     if request.GET:
@@ -252,27 +252,27 @@ def bulk_projection(request):
                             pass
                     # after thats done
                     context['result'] = out
-                    return render_to_response("form_crispy_bulk_projection_done.html", context)
+                    return render(request, "form_crispy_bulk_projection_done.html", context)
 
                 else:
                     context['form'] = filled
-                    return render_to_response("form_crispy_bulk_projection_entries.html", context)
+                    return render(request, "form_crispy_bulk_projection_entries.html", context)
             else:
                 #pass back the empty form
                 context['msg'] = "Bulk Movie Addition"
                 context['formset'] = formbulk
 
-                return render_to_response("form_crispy_bulk_projection_entries.html", context)
+                return render(request, "form_crispy_bulk_projection_entries.html", context)
         else:
             # here we only have our params
             context['msg'] = "Bulk Movie Addition (Errors)"
             context['formset'] = formbulk
-            return render_to_response("form_crispy.html", context)
+            return render(request, "form_crispy.html", context)
     else:
         # here we have nothing
         form = BulkCreateForm()
         context['formset'] = form
         context['msg'] = "Bulk Movie Addition"
-        return render_to_response("form_crispy.html", context)
+        return render(request, "form_crispy.html", context)
         
 

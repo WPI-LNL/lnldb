@@ -18,7 +18,7 @@ def get_default_email():
 class Meeting(models.Model):
     glyphicon = 'briefcase'
     datetime = models.DateTimeField()
-    attendance = models.ManyToManyField(User, null=True, blank=True)
+    attendance = models.ManyToManyField(User, blank=True)
     meeting_type = models.ForeignKey('MeetingType', default=1)
     location = models.ForeignKey('events.Location', null=True, blank=True)
 
@@ -56,7 +56,6 @@ class Meeting(models.Model):
         ordering = ('-datetime',)
 
 
-watson.register(Meeting)
 
 class MeetingAnnounce(models.Model):
     meeting = models.ForeignKey(Meeting)

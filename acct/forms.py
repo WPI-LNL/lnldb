@@ -42,12 +42,8 @@ class UserAcct(forms.ModelForm):
     last_name = forms.CharField(label="Last Name")
 
 
-class UserProfileLimitd(forms.ModelForm):
-    class Meta:
-        model = Profile
 
 
-UserProfileFormSet = inlineformset_factory(User, Profile)
 
 
 class ProfileAcct(forms.ModelForm):

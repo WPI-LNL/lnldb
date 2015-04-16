@@ -8,14 +8,14 @@ class Page(models.Model):
     slug = models.SlugField(max_length=64)
 
     body = models.TextField()
-    body_in_hero = models.BooleanField()
+    body_in_hero = models.BooleanField(default=False)
 
-    main_nav = models.BooleanField()
+    main_nav = models.BooleanField(default=False)
     nav_pos = models.IntegerField()
 
     carousel_css = models.CharField(max_length=32, default="custom")
 
-    imgs = models.ManyToManyField('CarouselImg', null=True, blank=True)
+    imgs = models.ManyToManyField('CarouselImg', blank=True)
 
     def __unicode__(self):
         return self.title

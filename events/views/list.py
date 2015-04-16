@@ -3,7 +3,7 @@ import datetime
 import time
 
 from django.core.urlresolvers import reverse
-from django.shortcuts import render_to_response
+from django.shortcuts import render, render
 from django.template import RequestContext
 from events.models import Event
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -54,7 +54,7 @@ def map_fields(cols):
     """ Puts field names into actual fields (even if they don't exist) """
 
     out_cols = []
-    all_names = Event._meta.get_all_field_names()
+    all_names = map(lambda f: f.name, Event._meta.get_fields())
 
     for col in cols:
         if isinstance(col, FakeField):
@@ -105,8 +105,8 @@ def datefilter(eventqs, context, start=None, end=None):
 # paginator helper
 
 def paginate_helper(queryset, page, sort=None, count=DEFAULT_ENTRY_COUNT):
-    if sort and (sort in queryset.model._meta.get_all_field_names() or
-                     (sort[0] == '-' and sort[1:] in queryset.model._meta.get_all_field_names())):
+    names = map(lambda f: f.name, queryset.model._meta.get_fields())
+    if sort and ((sort in names) or (sort[0] == '-' and sort[1:] in names)):
         post_sort = queryset.order_by(sort)
     elif sort:
         try:
@@ -152,7 +152,7 @@ def upcoming(request, start=None, end=None):
     Lists Upcoming Events
     if limit = False, then it'll show all upcoming events that are more than a week away.
     """
-    context = RequestContext(request)
+    context = {}
     if not start and not end:
         today = datetime.date.today()
         start = today - datetime.timedelta(days=1)
@@ -201,13 +201,13 @@ def upcoming(request, start=None, end=None):
                        FakeExtendedField('datetime_start', verbose_name="Starts At"),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def incoming(request, start=None, end=None):
-    context = RequestContext(request)
+    context = {}
     if not start and not end:
         today = datetime.date.today()
         start = today - datetime.timedelta(days=365.25)
@@ -234,7 +234,7 @@ def incoming(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False)]
 
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 @login_required
@@ -246,7 +246,7 @@ def openworkorders(request, start=None, end=None):
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
-    context = RequestContext(request)
+    context = {}
 
     events = Event.objects.filter(approved=True).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
     events, context = datefilter(events, context, start, end)
@@ -267,7 +267,7 @@ def openworkorders(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False),
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 @login_required
@@ -279,7 +279,7 @@ def findchief(request, start=None, end=None):
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=30.5)
         end = end.strftime('%Y-%m-%d')
-    context = RequestContext(request)
+    context = {}
 
     events = Event.objects \
         .filter(approved=True).filter(closed=False).filter(cancelled=False) \
@@ -313,13 +313,13 @@ def findchief(request, start=None, end=None):
                        FakeField('eventcount', verbose_name="# Services"),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def unreviewed(request, start=None, end=None):
-    context = RequestContext(request)
+    context = {}
 
     if not start and not end:
         today = datetime.date.today()
@@ -356,13 +356,13 @@ def unreviewed(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False),
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def unbilled(request, start=None, end=None):
-    context = RequestContext(request)
+    context = {}
 
     # events = Event.objects.filter(approved=True).filter(paid=True)
     if not start and not end:
@@ -396,13 +396,13 @@ def unbilled(request, start=None, end=None):
                        FakeField('num_crew_needing_reports', sortable=True, verbose_name="Missing Reports"),
                        FakeField('short_services', verbose_name="Services", sortable=False), ]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def unbilled_semester(request, start=None, end=None):
-    context = RequestContext(request)
+    context = {}
 
     # events = Event.objects.filter(approved=True).filter(paid=True)
     if not start and not end:
@@ -435,13 +435,13 @@ def unbilled_semester(request, start=None, end=None):
                        'crew_chief',
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def paid(request, start=None, end=None):
-    context = RequestContext(request)
+    context = {}
 
     if not start and not end:
         start, end = get_farback_date_range_plus_next_week()
@@ -473,13 +473,13 @@ def paid(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
 
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def unpaid(request, start=None, end=None):
-    context = RequestContext(request)
+    context = {}
 
     if not start and not end:
         start, end = get_farback_date_range_plus_next_week()
@@ -512,13 +512,13 @@ def unpaid(request, start=None, end=None):
                        FakeField('times_billed', sortable=True),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render_to_response('events.html', context)
+    return render(request, 'events.html', context)
 
 
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def closed(request, start=None, end=None):
-    context = RequestContext(request)
+    context = {}
 
     if not start and not end:
         start, end = get_farback_date_range_plus_next_week()
@@ -541,11 +541,12 @@ def closed(request, start=None, end=None):
                        'crew_chief',
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render_to_response('events.html', context)
+    print context['cols']
+    return render(request, 'events.html', context)
 
 
 def public_facing(request):
-    context = RequestContext(request)
+    context = {}
     now = datetime.datetime.now(pytz.utc)
     events = Event.objects.filter(approved=True, closed=False, cancelled=False, test_event=False, sensitive=False) \
         .filter(datetime_end__gte=now)
@@ -553,4 +554,4 @@ def public_facing(request):
     context['h2'] = "Active Events"
     context['events'] = events
 
-    return render_to_response("events_public.html", context)
+    return render(request, "events_public.html", context)

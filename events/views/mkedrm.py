@@ -3,7 +3,7 @@ from events.forms import InternalEventForm
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.template import RequestContext
 
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -13,7 +13,7 @@ from helpers.challenges import is_officer
 @login_required
 @user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def eventnew(request, id=None):
-    context = RequestContext(request)
+    context = {}
 
     # get instance if id is passed in
     if id:
@@ -50,4 +50,4 @@ def eventnew(request, id=None):
             context['msg'] = "New Event"
         context['formset'] = form
 
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)
