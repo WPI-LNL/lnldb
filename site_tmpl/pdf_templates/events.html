@@ -1,5 +1,6 @@
 {% extends "pdf_templates/pdf_base.html" %}
 {% load tz %}
+{% load markdown_deux_tags %}
 {% block body %}
 <div>
     {% for event in events %}
@@ -47,31 +48,31 @@
                     </td>
                     <td class="tdright" rowspan="11" valign="top">
                         <h5>Event Description</h5>
-                        {{ event.description }}
+                        {{ event.description | markdown }}
                         <br />
                         <br />
                         <h5>Service Description</h5>
                         {% if service.category.name == "Lighting" %}
-                            {{ event.lighting_reqs }}
+                            {{ event.lighting_reqs | markdown }}
                             {% if event.attachment_for_lighting %}
                             <br />
                             ~-~-~-ATTACHMENT AVAILABLE FOR LIGHTING-~-~-~
                             {% endif %}
                             
                         {% elif service.category.name == "Sound" %}
-                            {{ event.sound_reqs }}
+                            {{ event.sound_reqs  | markdown }}
                             {% if event.attachment_for_sound %}
                             <br />
                             ~-~-~-ATTACHMENT AVAILABLE FOR SOUND-~-~-~
                             {% endif %}
                         {% elif service.category.name == "Projection" %}
-                            {{ event.proj_reqs }}
+                            {{ event.proj_reqs | markdown }}
                             {% if event.attachment_for_projection %}
                             <br />
                             ~-~-~-ATTACHMENT AVAILABLE FOR PROJECTION-~-~-~
                             {% endif %}
                         {% else %}
-                            {{ event.otherservice_reqs }}
+                            {{ event.otherservice_reqs | markdown }}
                         {% endif %}
                         <br/>
                         <br/>
