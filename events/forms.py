@@ -8,7 +8,6 @@ from django import forms
 from django.forms import ModelForm, ModelChoiceField
 from django.forms.extras.widgets import SelectDateWidget
 from django.db.models import Q
-from helpers.form_fields import django_msgs
 from helpers.form_text import markdown_at_msgs
 from django.core.urlresolvers import reverse
 from crispy_forms.helper import FormHelper
@@ -193,21 +192,25 @@ class IOrgVerificationForm(forms.ModelForm):
     def __init__(self, org, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
+        self.org = org
         self.helper.layout = Layout(
             Field('date', css_class="datepick"),
             Field('verified_by'),
             Field('note', size="5"),
-            Hidden("org", org.id),
             FormActions(
                 Submit('save', 'Verify'),
             )
         )
         super(IOrgVerificationForm, self).__init__(*args, **kwargs)
 
+    def save(self, commit=True):
+        obj = super(IOrgVerificationForm, self).save(commit=False)
+        obj.org = self.org
+        obj.save(commit)
+
     class Meta:
         model = OrgBillingVerificationEvent
-        fields = ('date', 'verified_by', 'note', 'org')
-        widgets = {'org': forms.HiddenInput()}
+        fields = ('date', 'verified_by', 'note')
 
     verified_by = AutoCompleteSelectField('Officers')
 
@@ -310,7 +313,6 @@ class InternalEventForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.layout = Layout(
-            django_msgs,
             TabHolder(
                 Tab(
                     'Name And Location',
@@ -428,13 +430,12 @@ class EventReviewForm(forms.ModelForm):
 
 class InternalReportForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
+        self.event = event
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
         self.helper.form_action = ""
         self.helper.layout = Layout(
-            django_msgs,
-            Hidden('event', event.id),
             Field('crew_chief'),
             Field('report', css_class="col-md-10"),
             markdown_at_msgs,
@@ -447,8 +448,7 @@ class InternalReportForm(forms.ModelForm):
 
     class Meta:
         model = CCReport
-        fields = ('event', 'crew_chief', 'report')
-        widgets = {'event': forms.HiddenInput()}
+        fields = ('crew_chief', 'report')
     crew_chief = AutoCompleteSelectField('Members', required=True)
 
 
@@ -461,8 +461,6 @@ class ExternalOrgUpdateForm(forms.ModelForm):
         self.helper.form_method = 'post'
         self.helper.form_action = ''
         self.helper.layout = Layout(
-            django_msgs,
-
             'address',
             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
             'associated_users',
@@ -481,15 +479,14 @@ class ExternalOrgUpdateForm(forms.ModelForm):
 
 class OrgXFerForm(forms.ModelForm):
     def __init__(self, org, user, *args, **kwargs):
+        self.user = user
+        self.org = org
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = 'post'
         self.helper.form_action = ''
         self.helper.layout = Layout(
-            django_msgs,
             'new_user_in_charge',
-            Hidden('org', org.id),
-            Hidden('old_user_in_charge', user.id),
             HTML(
                 '<p class="text-muted">'
                 'This form will transfer ownership of this Organization to another user associated '
@@ -503,13 +500,19 @@ class OrgXFerForm(forms.ModelForm):
 
         self.fields['new_user_in_charge'].queryset = org.associated_users.all().exclude(id=user.id)
 
+    def save(self, commit=True):
+        obj = super(OrgXFerForm, self).save(commit=False)
+        obj.old_user_in_charge = self.user
+        obj.org = self.org
+        return obj.save(commit)
+
+
     # new_user_in_charge = AutoCompleteSelectField('Users', required=True,
     # plugin_options={'position':"{ my : \"right top\", at: \"right bottom\",
     # of: \"#id_person_name_text\"},'minlength':4"})
     class Meta:
         model = OrganizationTransfer
         fields = ('new_user_in_charge',)
-        widgets = {'org': forms.HiddenInput(), 'old_user_in_charge': forms.HiddenInput()}
 
 
 class SelfServiceOrgRequestForm(forms.Form):
@@ -520,7 +523,6 @@ class SelfServiceOrgRequestForm(forms.Form):
         self.helper.form_action = ''
         self.helper.help_text_inline = True
         self.helper.layout = Layout(
-            django_msgs,
             Field('client_name', help_text_inline=True),
             'email',
             'address',
@@ -547,10 +549,8 @@ class BillingForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
         self.helper.form_action = ""
-
+        self.event = event
         self.helper.layout = Layout(
-            django_msgs,
-            Hidden('event', event.id),
             PrependedText('date_billed', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
             PrependedText('amount', '<strong>$</strong>'),
             Field('opt_out_initial_email'),
@@ -567,21 +567,24 @@ class BillingForm(forms.ModelForm):
         self.fields['opt_out_initial_email'].initial = True
         self.fields['opt_out_update_email'].initial = True
 
+    def save(self, commit=True):
+        obj = super(BillingForm, self).save(commit=False)
+        obj.event = self.event
+        return obj.save(commit)
+
     class Meta:
         model = Billing
-        fields = ('event', 'date_billed', 'amount', 'opt_out_initial_email', 'opt_out_update_email')
-        widgets = {'event': forms.HiddenInput()}
+        fields = ('date_billed', 'amount', 'opt_out_initial_email', 'opt_out_update_email')
 
 class BillingUpdateForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
+        self.event = event
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
         self.helper.form_action = ""
 
         self.helper.layout = Layout(
-            django_msgs,
-            Hidden('event', event.id),
             PrependedText('date_paid', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
             PrependedText('amount', '<strong>$</strong>'),
             Field('opt_out_update_email'),
@@ -598,7 +601,6 @@ class BillingUpdateForm(forms.ModelForm):
     class Meta:
         model = Billing
         fields = ('date_paid', 'amount', 'opt_out_update_email')
-        widgets = {'event': forms.HiddenInput()}
 
 
 ### CC Facing Forms
@@ -637,8 +639,6 @@ class MKHoursForm(forms.ModelForm):
         self.helper.form_method = "post"
         self.helper.form_action = ""
         self.helper.layout = Layout(
-            django_msgs,
-            Hidden('event', event.id),
             Field('user'),
             Field('hours'),
             Field('service'),
@@ -650,10 +650,14 @@ class MKHoursForm(forms.ModelForm):
         super(MKHoursForm, self).__init__(*args, **kwargs)
         self.fields['service'].queryset = get_qs_from_event(event)
 
+    def save(self, commit=True):
+        obj = super(MKHoursForm, self).save(commit=False)
+        obj.event = self.event
+        return obj.save(commit)
+
     class Meta:
         model = Hours
-        fields = ('event', 'user', 'hours', 'service')
-        widgets = {'event': forms.HiddenInput()}
+        fields = ('user', 'hours', 'service')
 
     user = AutoCompleteSelectField('AssocMembers', required=True)
     hours = forms.DecimalField(min_value=decimal.Decimal("0.00"))
@@ -666,7 +670,6 @@ class EditHoursForm(forms.ModelForm):
         self.helper.form_method = "post"
         self.helper.form_action = ""
         self.helper.layout = Layout(
-            django_msgs,
             Field('hours'),
             FormActions(
                 Submit('save', 'Save Changes'),
@@ -686,7 +689,6 @@ class FopalForm(forms.ModelForm):
         self.helper.form_method = "post"
         self.helper.form_action = ""
         self.helper.layout = Layout(
-            django_msgs,
             Field('name'),
             Field('notes'),
             Field('fund'),
@@ -930,8 +932,6 @@ class ContactForm(forms.Form):
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
-            django_msgs,
-
             'name',
             'email',
             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),

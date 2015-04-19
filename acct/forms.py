@@ -1,14 +1,10 @@
 from django.contrib.auth.models import User
 from django import forms
-from django.forms.models import inlineformset_factory
-
 from django.core.urlresolvers import reverse
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Field, HTML
 from crispy_forms.bootstrap import FormActions
-
-from helpers.form_fields import django_msgs
 
 from acct.models import Profile
 
@@ -21,7 +17,6 @@ class UserAcct(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
 
         self.helper.layout = Layout(
-            django_msgs,
             'first_name',
             'last_name',
 
@@ -42,10 +37,6 @@ class UserAcct(forms.ModelForm):
     last_name = forms.CharField(label="Last Name")
 
 
-
-
-
-
 class ProfileAcct(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
@@ -53,7 +44,6 @@ class ProfileAcct(forms.ModelForm):
         self.helper.form_action = ''
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
-            django_msgs,
 
             'wpibox',
             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
@@ -80,8 +70,6 @@ class UserAddForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
 
         self.helper.layout = Layout(
-            django_msgs,
-
             'username',
             'email',
             'first_name',

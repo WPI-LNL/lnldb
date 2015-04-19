@@ -3,7 +3,6 @@ import datetime
 from django import forms
 from django.forms.models import inlineformset_factory
 from django.contrib.auth.models import User
-from helpers.form_fields import django_msgs
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Field, HTML
 from crispy_forms.bootstrap import FormActions
@@ -19,7 +18,6 @@ class ProjectionistUpdateForm(forms.ModelForm):
         self.helper.form_action = ''
         self.helper.form_tag = False
         self.helper.layout = Layout(
-            django_msgs,
 
             # 'pit_level',
             'license_number',
@@ -40,7 +38,6 @@ class ProjectionistForm(forms.ModelForm):
         self.helper.form_method = 'post'
         self.helper.form_action = ''
         self.helper.layout = Layout(
-            django_msgs,
             'user',
             # 'pit_level',
             'license_number',

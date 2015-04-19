@@ -1,7 +1,6 @@
 from django import forms
 
 from django.contrib.auth.models import User
-from helpers.form_fields import django_msgs
 
 from acct.models import Profile
 
@@ -38,7 +37,6 @@ class MemberContact(forms.ModelForm):
         self.helper.form_action = ''
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
-            django_msgs,
             Fieldset(
                 "Information",
                 'wpibox',

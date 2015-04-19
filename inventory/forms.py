@@ -7,7 +7,6 @@ from crispy_forms.layout import Layout, Fieldset, Submit, Field, Hidden
 from crispy_forms.bootstrap import Tab, TabHolder, FormActions
 
 from helpers.form_text import markdown_at_msgs
-from helpers.form_fields import django_msgs
 
 
 class InvForm(ModelForm):
@@ -56,7 +55,6 @@ class EntryForm(ModelForm):
         self.helper.layout = Layout(
             Fieldset(
                 'Maintenance Information',
-                django_msgs,
                 Field('desc', label="Description", css_class="span8"),
                 Field('entry', css_class="span8"),
                 markdown_at_msgs,

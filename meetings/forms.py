@@ -45,7 +45,7 @@ class AnnounceSendForm(forms.ModelForm):
         now = meeting.datetime
         twodaysago = now + datetime.timedelta(days=-4)
         aweekfromnow = now + datetime.timedelta(days=9)
-
+        self.meeting = meeting
         self.fields["events"].queryset = Event.objects.filter(datetime_setup_complete__gte=twodaysago, approved=True,
                                                               datetime_setup_complete__lte=aweekfromnow).exclude(
             Q(closed=True) | Q(cancelled=True))
@@ -54,7 +54,6 @@ class AnnounceSendForm(forms.ModelForm):
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-5'
         self.helper.layout = Layout(
-            Hidden('meeting', meeting.id),
             Field('events', css_class="col-md-6", size="15"),
             'subject',
             'message',
@@ -64,10 +63,14 @@ class AnnounceSendForm(forms.ModelForm):
             )
         )
 
+    def save(self, commit=True):
+        obj = super(AnnounceSendForm, self).save(commit=False)
+        obj.meeting = self.meeting
+        return obj.save(commit)
+
     class Meta:
         model = MeetingAnnounce
-        fields = ('meeting', 'events', 'subject', 'message', 'email_to')
-        widgets = {'meeting': forms.HiddenInput()}
+        fields = ('events', 'subject', 'message', 'email_to')
 
     events = forms.ModelMultipleChoiceField(queryset=Event.objects.all(), required=False)
 
@@ -77,13 +80,13 @@ class AnnounceCCSendForm(forms.ModelForm):
         now = meeting.datetime
         twodaysago = now + datetime.timedelta(days=-4)
         aweekfromnow = now + datetime.timedelta(days=17)
+        self.meeting = meeting
 
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-5'
         self.helper.layout = Layout(
-            Hidden('meeting', meeting.id),
             Field('events', css_class="col-md-6", size="15"),
             Field('addtl_message', css_class="col-md-6"),
             Field('email_to', css_class="col-md-6"),
@@ -97,8 +100,12 @@ class AnnounceCCSendForm(forms.ModelForm):
                                                               datetime_setup_complete__lte=aweekfromnow).exclude(
             Q(closed=True) | Q(cancelled=True))
 
+    def save(self, commit=True):
+        obj = super(AnnounceCCSendForm, self).save(commit=False)
+        obj.meeting = self.meeting
+        return obj.save(commit)
+
     class Meta:
         model = CCNoticeSend
-        fields = ('meeting', 'events', 'addtl_message', 'email_to')
-        widgets = {'meeting': forms.HiddenInput()}
+        fields = ('events', 'addtl_message', 'email_to')
         # events = forms.ModelMultipleChoiceField(queryset=Event.objects.all(),required=False)
