@@ -634,6 +634,7 @@ class ReportForm(forms.ModelForm):
 
 class MKHoursForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
+        self.event = event
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
