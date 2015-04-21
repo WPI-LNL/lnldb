@@ -66,7 +66,9 @@ class AnnounceSendForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super(AnnounceSendForm, self).save(commit=False)
         obj.meeting = self.meeting
-        return obj.save(commit)
+        if commit:
+            obj.save()
+        return obj
 
     class Meta:
         model = MeetingAnnounce
@@ -103,7 +105,9 @@ class AnnounceCCSendForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super(AnnounceCCSendForm, self).save(commit=False)
         obj.meeting = self.meeting
-        return obj.save(commit)
+        if commit:
+            obj.save()
+        return obj
 
     class Meta:
         model = CCNoticeSend
