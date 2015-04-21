@@ -504,7 +504,7 @@ class OrgXFerForm(forms.ModelForm):
         obj = super(OrgXFerForm, self).save(commit=False)
         obj.old_user_in_charge = self.user
         obj.org = self.org
-        return obj.save(commit)
+        return self.save_instance(instance=obj, commit=commit)
 
 
     # new_user_in_charge = AutoCompleteSelectField('Users', required=True,
@@ -570,7 +570,7 @@ class BillingForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super(BillingForm, self).save(commit=False)
         obj.event = self.event
-        return obj.save(commit)
+        return self.save_instance(instance=obj, commit=commit)
 
     class Meta:
         model = Billing
@@ -654,7 +654,7 @@ class MKHoursForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super(MKHoursForm, self).save(commit=False)
         obj.event = self.event
-        return obj.save(commit)
+        return self.save_instance(instance=obj, commit=commit)
 
     class Meta:
         model = Hours
