@@ -57,7 +57,7 @@ class EventWizard(NamedUrlSessionWizardView):
                           body=email_bodyp)
             emailp.send()
         context = RequestContext(self.request)
-        return render(request, 'wizard_finished.html', context)
+        return render(self.request, 'wizard_finished.html', context)
 
     # fills in form info on the first step
     def get_form_initial(self, step):
