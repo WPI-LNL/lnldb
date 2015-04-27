@@ -1,6 +1,7 @@
 import datetime
 
 import os
+from django.utils.text import slugify
 from xhtml2pdf import pisa
 from django.template.loader import get_template
 from django.template import Context
@@ -121,7 +122,9 @@ def generate_event_bill_pdf(request, id):
     pdf_file.seek(0)
     pdf = pdf_file.read()
     pdf_file.close()  # Don't forget to close the file handle
-    return HttpResponse(pdf, content_type='application/pdf')
+    resp =  HttpResponse(pdf, content_type='application/pdf')
+    resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
+    return resp
     # return HttpResponse(html)
 
 
