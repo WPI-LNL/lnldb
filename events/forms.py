@@ -446,6 +446,11 @@ class InternalReportForm(forms.ModelForm):
         )
         super(InternalReportForm, self).__init__(*args, **kwargs)
 
+    def save(self, commit=True):
+        obj = super(InternalReportForm, self).save(commit=False)
+        obj.event = self.event
+        return obj
+
     class Meta:
         model = CCReport
         fields = ('crew_chief', 'report')
@@ -602,6 +607,13 @@ class BillingUpdateForm(forms.ModelForm):
         self.fields['amount'].initial = str(event.cost_total)
         self.fields['date_paid'].initial = datetime.date.today()
 
+    def save(self, commit=True):
+        obj = super(BillingUpdateForm, self).save(commit=False)
+        obj.event = self.event
+        if commit:
+            obj.save()
+        return obj
+
     class Meta:
         model = Billing
         fields = ('date_paid', 'amount', 'opt_out_update_email')
@@ -732,6 +744,13 @@ class CCIForm(forms.ModelForm):
         self.fields['service'].queryset = get_qs_from_event(event)
         self.fields['setup_start'].initial = self.event.datetime_setup_complete
 
+    def save(self, commit=True):
+        obj = super(CCIForm, self).save(commit=False)
+        obj.event = self.event
+        if commit:
+            obj.save()
+        return obj
+
     class Meta:
         model = EventCCInstance
         fields = ('crew_chief', 'service', 'setup_location', 'setup_start')
@@ -765,10 +784,15 @@ class AttachmentForm(forms.ModelForm):
         # x = self.instance.event.lighting
         self.fields['for_service'].queryset = get_qs_from_event(event)
 
+    def save(self, commit=True):
+        obj = super(AttachmentForm, self).save(commit=False)
+        obj.event = self.event
+        if commit:
+            obj.save()
+        return obj
     class Meta:
         model = EventAttachment
         fields = ('for_service', 'attachment', 'note')
-        widgets = {'event': forms.HiddenInput()}
 
 
 class ExtraForm(forms.ModelForm):
