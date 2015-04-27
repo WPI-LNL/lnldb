@@ -206,7 +206,9 @@ class IOrgVerificationForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super(IOrgVerificationForm, self).save(commit=False)
         obj.org = self.org
-        obj.save(commit)
+        if commit:
+            obj.save()
+        return obj
 
     class Meta:
         model = OrgBillingVerificationEvent
@@ -449,6 +451,8 @@ class InternalReportForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super(InternalReportForm, self).save(commit=False)
         obj.event = self.event
+        if commit:
+            obj.save()
         return obj
 
     class Meta:
