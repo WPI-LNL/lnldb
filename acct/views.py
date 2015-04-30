@@ -38,7 +38,7 @@ class LNLUpdate(LoginRequiredMixin, UpdateView):
     template_name = 'myacct.html'
 
     def get_object(self, queryset=None):
-        return self.request.user.get_profile()
+        return self.request.user.profile
 
     def form_valid(self, form):
         messages.success(self.request, "Account Info Saved!", extra_tags='success')

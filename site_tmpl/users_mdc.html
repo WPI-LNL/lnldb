@@ -12,8 +12,8 @@
     {% for user in users %}
             <tr>
                 <td>{{ user.last_name }}, {{ user.first_name }}</td>
-                <td>{{ user.get_profile.mdc_name }}</td>
-                <td>{{ user.get_profile.mdc }}</td>
+                <td>{{ user.profile.mdc_name }}</td>
+                <td>{{ user.profile.mdc }}</td>
             </tr>
     {% endfor %}
 </table>
