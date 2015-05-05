@@ -104,3 +104,15 @@ span.result-subtitle {
 .search-results p {
     margin: 0;
 }
+
+@media print { 
+    h2:first-of-type:before {
+        content: "LNLDB: ";
+    }
+    a[href]:after { 
+        content: none;
+    }
+    a[href] {
+        text-decoration: underline;
+    }
+}
