@@ -109,7 +109,10 @@ span.result-subtitle {
     h2:first-of-type:before {
         content: "LNLDB: ";
     }
-    href:after { 
+    a[href]:after { 
         content: none;
+    }
+    a[href] {
+        text-decoration: underline;
     }
 }
