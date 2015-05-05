@@ -157,7 +157,7 @@ def reviewremind(request, id, uid):
                      ' Please Visit %s%s to complete it' % (event.event_name,
                                                             request.get_host(),
                                                             reverse("my-ccreport", args=[event.id]))
-        email = DLEG(subject="LNL Crew Chief Report Reminder EMail", to_emails=[cci.crew_chief.email], body=email_body,
+        email = DLEG(subject="LNL Crew Chief Report Reminder Email", to_emails=[cci.crew_chief.email], body=email_body,
                      attachments=attachments)
         email.send()
         messages.add_message(request, messages.INFO, 'Reminder Sent')
