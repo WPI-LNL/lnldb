@@ -104,3 +104,9 @@ span.result-subtitle {
 .search-results p {
     margin: 0;
 }
+
+/* Fix ugly permissions debugging notification */
+#hijacked-warning {
+    height: 35px;
+    position: static;
+}

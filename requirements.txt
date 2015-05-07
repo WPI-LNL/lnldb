@@ -26,3 +26,4 @@ django-watson
 django-formtools
 django-debug-toolbar-line-profiler
 django-debug-toolbar-template-profiler
+django-hijack

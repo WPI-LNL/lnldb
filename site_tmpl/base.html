@@ -1,4 +1,5 @@
 {% load staticfiles %}
+{% load hijack_tags %}
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -35,6 +36,7 @@
         <script src="{% static 'js/flexmenu.min.js' %}"></script>
         <link href='{% static 'ajax_select/css/ajax_select.css' %}' rel="stylesheet" type="text/css">
         <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet">
+        <link rel="stylesheet" type="text/css" href="{% static 'hijack/hijack-styles.css' %}" />
         <script type="text/javascript">
             $(document).ready(function () {
                 $(".dateinput").datepicker({
@@ -96,6 +98,7 @@
     </head>
 
     <body>
+    {{ request|hijackNotification }}
  <!-- Beginning of the top NavBar code -->
     {% block nav %}
     <div class="navbar navbar-inverse navbar-static-top">

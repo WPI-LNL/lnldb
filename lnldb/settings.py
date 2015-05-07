@@ -155,6 +155,8 @@ INSTALLED_APPS = (
     'template_profiler_panel',
     'debug_toolbar_line_profiler',
     'raven.contrib.django.raven_compat',
+    'hijack',
+    'compat',
 )
 
 TEMPLATE_CONTEXT_PROCESSESORS = TCP + (

@@ -394,5 +394,5 @@ urlpatterns = patterns('',
 
                        url(r'^lnadmin/(?P<msg>\w+)/$', 'events.views.indices.admin'),
                        # debugging
-
+                       url(r'^hijack/', include('hijack.urls')),
                        url(r'^__debug__/', include(debug_toolbar.urls)))
