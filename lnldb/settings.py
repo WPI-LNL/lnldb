@@ -234,7 +234,8 @@ AJAX_LOOKUP_CHANNELS = {
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 
 TEMPLATE_CONTEXT_PROCESSORS = TCP + (
-    'django.template.context_processors.request',)
+    'django.template.context_processors.request',
+    'data.context_processors.airplane_mode')
 
 
 # Various Other Settings
@@ -264,6 +265,8 @@ EMAIL_KEY_START_END = None
 LOGIN_URL = "/local/login/"
 LOGIN_REDIRECT_URL = "/my/"
 
+
+AIRPLANE_MODE = False
 
 # crispy_forms
 CRISPY_TEMPLATE_PACK = 'bootstrap3'

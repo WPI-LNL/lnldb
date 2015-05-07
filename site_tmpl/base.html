@@ -10,15 +10,24 @@
         <meta name="description" content="">
         <meta name="author" content="">
 
-        <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
-        <link href="{% static 'css/datepicker.css' %}" rel="stylesheet" type="text/css">
-        <link href="{% static 'css/bootstrap-timepicker.min.css' %}" rel="stylesheet" type="text/css">
+        {% if AIRPLANE_MODE %}
+            <link rel="stylesheet" href="{% static 'css/bootstrap.css' %}">
+            <link rel="stylesheet" href="{% static 'css/bootstrap-theme.css' %}">
+            <script src="{% static 'js/jquery.js' %}"></script>
+            <script src="{% static 'js/jquery-ui.js' %}"></script>
+            <script src="{% static 'js/bootstrap.js' %}"></script>
+        {% else %}
+            <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
+            <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+            <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+            <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+            <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+        {% endif %}
+
 
         <!--         <link href="{% static 'css/bootstrap-responsive.css' %}" rel="stylesheet"> -->
-        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-        <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
-        <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+        <link href="{% static 'css/datepicker.css' %}" rel="stylesheet" type="text/css">
+        <link href="{% static 'css/bootstrap-timepicker.min.css' %}" rel="stylesheet" type="text/css">
         <script src="{% static 'js/bootstrap-datepicker.js' %}"></script>
         <script src="{% static 'js/bootstrap-timepicker.min.js' %}"></script>
 
