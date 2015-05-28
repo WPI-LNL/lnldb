@@ -116,3 +116,7 @@ span.result-subtitle {
         text-decoration: underline;
     }
 }
+
+.bootstrap-timepicker-widget table td input {
+    display: inline-block;
+}
