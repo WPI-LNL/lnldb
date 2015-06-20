@@ -36,9 +36,18 @@
                     {% endfor %}
                     </ul>
                 </div>
-                
-                
-                
+
+                {% if m.attachments.exists %}
+                    <div class="tab-pane active" id="minutes">
+                        <h3>Attachments:</h3>
+                        <ul>
+                            {% for a in m.attachments.all %}
+                                <li>{{ a.name }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
                 <div class="tab-pane" id="emails">
                     <h3>E-Mail</h3>
                     {% if m.meetingannounce_set.exists or m.meetingccnotices.exists %}
@@ -150,7 +159,9 @@
                                     {% endfor %}
                                 </td>
                                 <td>
+                                    {% permission user has 'meetings.edit_mtg' of m %}
                                     <a class="btn btn-default" href="{% url "meeting-updateevent" m.id e.id %}">Setup Time &amp; Crew Chiefs</a>
+                                    {% endpermission %}
                                 </td>
                             </tr>
                             <tr>
