@@ -399,7 +399,7 @@ urlpatterns = patterns('',
                        url(r'^(?P<slug>[-\w]+)/$', 'pages.views.page'),
 
                        # keep old urls
-                       url(r'^lnadmin/(?P<newpath>.+)$', RedirectView.as_view(url="/db/%(newpath)s", permanent=True)),
+                       url(r'^lnadmin/(?P<newpath>.+)?$', RedirectView.as_view(url="/db/%(newpath)s", permanent=True)),
                        # url(r'^db/(?P<msg>\w+)/$', 'events.views.indices.admin'),
 
                        # debugging
