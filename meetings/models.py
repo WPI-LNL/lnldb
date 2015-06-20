@@ -22,7 +22,7 @@ def get_default_email():
         email.save()
     else:
         email = qs.first()
-    return email
+    return email.pk
 
 class Meeting(models.Model):
     glyphicon = 'briefcase'
