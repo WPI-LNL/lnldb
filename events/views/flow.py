@@ -1,5 +1,4 @@
 import datetime
-from data.views import ConditionalFormMixin
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect

@@ -1,5 +1,4 @@
 # Create your views here.
-from data.views import ConditionalFormMixin
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
