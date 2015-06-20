@@ -62,6 +62,23 @@ ul.ui-autocomplete {
     display: block;
 }
 
+.navbar-inverse .navbar-nav > .active > a {
+    color: #EEE;
+}
+
+.navbar-inverse .navbar-nav > li > a,
+.navbar-inverse .navbar-nav > li > a:hover,
+.navbar-inverse .navbar-nav > li > a:focus,
+.navbar-inverse .navbar-brand {
+    color: #FFE303;
+}
+
+@media (min-width: 768px) {
+    ul.nav ul.dropdown-menu li a {
+        color: #111;
+    }
+}
+
 /* Search */
 .search-results > li {
     display: block;
@@ -109,4 +126,23 @@ span.result-subtitle {
 #hijacked-warning {
     height: 35px;
     position: static;
+}
+
+footer {
+    margin-top: 2em;
+}
+
+.jumbotron .actions {
+    margin-top: -2em;
+}
+
+.jumboglyph {
+    margin: 0.3em;
+    vertical-align: middle;
+    margin-top: 0.1em;
+}
+
+.jumbo-event-info .event-description {
+    font-style: italic;
+    font-size: smaller;
 }

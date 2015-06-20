@@ -14,9 +14,9 @@
             <div class="jumbotron">
                 <h1> {{e}} Information </h1>
                 <p class="lead">
-                    <a href="{% url "inventory.views.cat" e.subcategory.category %}">{{e.subcategory.category }}</a>
-                    / 
-                    <a href="{% url "inventory.views.subcat" e.subcategory.category e.subcategory %}">{{e.subcategory }}</a>
+                    <a href="{% url "inventory.views.cat" e.subcategory.category.pk %}">{{ e.subcategory.category }}</a>
+                    /
+                    <a href="{% url "inventory.views.subcat" category=e.subcategory.category.pk subcategory=e.subcategory.pk %}">{{ e.subcategory }}</a>
                 </p>
             </div>
         </div>

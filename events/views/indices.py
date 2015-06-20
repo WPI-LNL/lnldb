@@ -5,7 +5,7 @@ import datetime
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.template import RequestContext
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.utils import timezone
 from django.conf import settings
 from django.db.models import Q
@@ -50,7 +50,6 @@ def workorder(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def admin(request, msg=None):
     """ admin landing page """
 
@@ -62,14 +61,12 @@ def admin(request, msg=None):
     else:
         delta = 48
 
-    tz = timezone.get_current_timezone()
-
     # fuzzy delta
-    today = datetime.datetime.now(tz)
-    today_min = datetime.datetime.combine(today.date(), datetime.time.min)
+    today = timezone.now()
+    today_min = timezone.make_aware(datetime.datetime.combine(today.date(), datetime.time.min))
 
     end = today + datetime.timedelta(hours=delta)
-    end_max = datetime.datetime.combine(end.date(), datetime.time.max)
+    end_max = timezone.make_aware(datetime.datetime.combine(end.date(), datetime.time.max))
 
     # get upcoming and ongoing events
     events = Event.objects.filter(
@@ -83,7 +80,7 @@ def admin(request, msg=None):
 
 
 @login_required
-# @user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.view_debug_info', raise_exception=True)
 def dbg_land(request):
     context = {}
     context['env'] = os.environ
@@ -92,7 +89,7 @@ def dbg_land(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.view_event', raise_exception=True)
 def event_search(request):
     context = {}
     if request.POST:

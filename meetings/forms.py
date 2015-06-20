@@ -3,12 +3,13 @@ import datetime
 from django import forms
 from django.db.models import Q
 from django.forms.fields import SplitDateTimeField
-from meetings.models import Meeting, MeetingAnnounce, CCNoticeSend
+from meetings.models import Meeting, MeetingAnnounce, CCNoticeSend, MtgAttachment
 from events.models import Event, Location
 from ajax_select.fields import AutoCompleteSelectMultipleField
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Field
 from crispy_forms.bootstrap import FormActions
+from multiupload.fields import MultiFileInput, MultiFileField
 
 
 class MeetingAdditionForm(forms.ModelForm):
@@ -20,6 +21,7 @@ class MeetingAdditionForm(forms.ModelForm):
             'location',
             'datetime',
             'attendance',
+            'attachments',
             FormActions(
                 Submit('save', 'Save Changes'),
             )
@@ -30,6 +32,7 @@ class MeetingAdditionForm(forms.ModelForm):
     datetime = SplitDateTimeField(required=True, initial=datetime.datetime.today())
     location = forms.ModelChoiceField(queryset=Location.objects.filter(available_for_meetings=True), label="Location",
                                       required=False)
+    attachments = MultiFileField(max_file_size=1024 * 1024 * 20)  # 20 MB
 
     class Meta:
         model = Meeting
@@ -37,6 +40,17 @@ class MeetingAdditionForm(forms.ModelForm):
             'datetime': forms.widgets.DateInput(attrs={"class": "datepick"}),
         }
         fields = ('meeting_type', 'location', 'datetime', 'attendance')
+
+
+class MtgAttachmentEditForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.add_input(Submit('submit', 'Submit'))
+        super(MtgAttachmentEditForm, self).__init__(*args, **kwargs)
+
+    class Meta:
+        model = MtgAttachment
+        fields = ('name', 'file')
 
 
 class AnnounceSendForm(forms.ModelForm):

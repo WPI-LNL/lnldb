@@ -8,8 +8,10 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Field
 from crispy_forms.bootstrap import FormActions
 
+from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer
 
-class MemberForm(forms.ModelForm):
+
+class MemberForm(FieldAccessForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -29,8 +31,20 @@ class MemberForm(forms.ModelForm):
         model = User
         fields = ['username', 'first_name', 'last_name', 'groups']
 
+    class FieldAccess:
+        def __init__(self):
+            pass
 
-class MemberContact(forms.ModelForm):
+        selfservice = FieldAccessLevel(
+            lambda user, instance: user.has_perm('auth.change_user', instance),
+            enable=('username', 'first_name', 'last_name')
+        )
+        edit_groups = FieldAccessLevel(
+            lambda user, instance: user.has_perm('auth.change_group', instance)
+        )
+
+
+class MemberContact(FieldAccessForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -44,10 +58,10 @@ class MemberContact(forms.ModelForm):
                 'addr',
                 'mdc',
             ),
-            Fieldset(
+            DynamicFieldContainer(Fieldset(
                 "Settings",
                 "locked"
-            ),
+            )),
             FormActions(
                 Submit('save', 'Save Changes'),
             )
@@ -57,3 +71,24 @@ class MemberContact(forms.ModelForm):
     class Meta:
         model = Profile
         exclude = ("user",)
+
+    class FieldAccess:
+        def __init__(self):
+            pass
+
+        selfservice = FieldAccessLevel(
+            lambda user, instance: user.has_perm('acct.edit_user', instance),
+            enable=('wpibox', 'phone', 'addr'),
+        )
+        edit_mdc = FieldAccessLevel(
+            lambda user, instance: user.has_perm('acct.edit_mdc', instance),
+            enable=('mdc',)
+        )
+        rev_lock = FieldAccessLevel(
+            lambda user, instance: True,
+            exclude=('locked',)
+        )
+        lock = FieldAccessLevel(
+            lambda user, instance: user.has_perm('acct.change_group', instance),
+            enable=('locked',)
+        )

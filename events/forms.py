@@ -3,6 +3,7 @@ import decimal
 
 import _strptime
 # python multithreading bug workaround
+from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer
 
 from django import forms
 from django.forms import ModelForm, ModelChoiceField
@@ -29,21 +30,17 @@ from ajax_select.fields import AutoCompleteSelectMultipleField, AutoCompleteSele
 
 valid_time_formats = ['%H:%M', '%I:%M%p', '%I:%M %p']
 
-CAT_LIGHTING = Category.objects.get(name="Lighting")
-CAT_SOUND = Category.objects.get(name="Sound")
-CAT_PROJ = Category.objects.get(name="Projection")
-
-LIGHT_EXTRAS = Extra.objects.filter(category=CAT_LIGHTING)
+LIGHT_EXTRAS = Extra.objects.filter(category__name="Lighting")
 LIGHT_EXTRAS_ID_NAME = LIGHT_EXTRAS.values_list('id', 'name')
-LIGHT_EXTRAS_NAMES = ["e_%s" % v[0] for v in LIGHT_EXTRAS_ID_NAME]
+LIGHT_EXTRAS_NAMES = LIGHT_EXTRAS.values('name')
 
-SOUND_EXTRAS = Extra.objects.filter(category=CAT_SOUND)
+SOUND_EXTRAS = Extra.objects.filter(category__name="Sound")
 SOUND_EXTRAS_ID_NAME = SOUND_EXTRAS.values_list('id', 'name')
-SOUND_EXTRAS_NAMES = ["e_%s" % v[0] for v in SOUND_EXTRAS_ID_NAME]
+SOUND_EXTRAS_NAMES = SOUND_EXTRAS.values('name')
 
-PROJ_EXTRAS = Extra.objects.filter(category=CAT_PROJ)
+PROJ_EXTRAS = Extra.objects.filter(category__name="Projection")
 PROJ_EXTRAS_ID_NAME = PROJ_EXTRAS.values_list('id', 'name')
-PROJ_EXTRAS_NAMES = ["e_%s" % v[0] for v in PROJ_EXTRAS_ID_NAME]
+PROJ_EXTRAS_NAMES = PROJ_EXTRAS.values('name')
 
 JOBTYPES = (
     (0, 'Lighting'),
@@ -309,8 +306,9 @@ class EventMeetingForm(forms.ModelForm):
     crew = AutoCompleteSelectMultipleField('3', required=False)
 
 
-class InternalEventForm(forms.ModelForm):
+class InternalEventForm(FieldAccessForm):
     def __init__(self, *args, **kwargs):
+        super(InternalEventForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.layout = Layout(
             TabHolder(
@@ -319,8 +317,8 @@ class InternalEventForm(forms.ModelForm):
                     'event_name',
                     'location',
                     Field('description'),
-                    Field('internal_notes'),
-                    Field('billed_by_semester'),
+                    DynamicFieldContainer('internal_notes'),
+                    DynamicFieldContainer('billed_by_semester'),
                     'sensitive',
                     'test_event',
                 ),
@@ -329,7 +327,7 @@ class InternalEventForm(forms.ModelForm):
                     # 'person_name',
                     'contact',
                     'org',
-                    Field('billing_fund'),
+                    DynamicFieldContainer('billing_fund'),
                 ),
                 Tab(
                     'Scheduling',
@@ -381,6 +379,56 @@ class InternalEventForm(forms.ModelForm):
         )
         super(InternalEventForm, self).__init__(*args, **kwargs)
 
+    class FieldAccess:
+        def __init__(self):
+            pass
+
+        internal_notes_write = FieldAccessLevel(
+            lambda user, instance: user.has_perm("events.event_view_sensitive", instance),
+            enable=('internal_notes',)
+        )
+
+        hide_internal_notes = FieldAccessLevel(
+            lambda user, instance: not user.has_perm("events.event_view_sensitive", instance),
+            exclude=('internal_notes',)
+        )
+
+        event_times = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_times', instance),
+            enable=('datetime_start', 'datetime_setup_complete', 'datetime_end')
+        )
+
+        edit_descriptions = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_text', instance),
+            enable=('event_name', 'location', 'description',
+                    'lighting_reqs', 'sound_reqs', 'proj_reqs', 'otherservice_reqs')
+        )
+
+        change_owner = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.adjust_event_owner', instance),
+            enable=('contact', 'org')
+        )
+
+        change_type = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.adjust_event_charges', instance),
+            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_by_semester')
+        )
+
+        billing_edit = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_fund', instance),
+            enable=('billing_fund', 'billed_by_semester')
+        )
+
+        billing_view = FieldAccessLevel(
+            lambda user, instance: not user.has_perm('events.view_event_billing', instance),
+            exclude=('billing_fund', 'billed_by_semester')
+        )
+
+        change_flags = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_flags', instance),
+            enable=('sensitive', 'test_event')
+        )
+
     class Meta:
         model = Event
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_fund',
@@ -428,7 +476,7 @@ class EventReviewForm(forms.ModelForm):
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="")
 
 
-class InternalReportForm(forms.ModelForm):
+class InternalReportForm(FieldAccessForm):
     def __init__(self, event, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()
@@ -436,7 +484,7 @@ class InternalReportForm(forms.ModelForm):
         self.helper.form_method = "post"
         self.helper.form_action = ""
         self.helper.layout = Layout(
-            Field('crew_chief'),
+            DynamicFieldContainer('crew_chief'),
             Field('report', css_class="col-md-10"),
             markdown_at_msgs,
             FormActions(
@@ -446,10 +494,27 @@ class InternalReportForm(forms.ModelForm):
         )
         super(InternalReportForm, self).__init__(*args, **kwargs)
 
+    def save(self, commit=True):
+        super(InternalReportForm, self).save(commit=False)
+        if 'crew_chief' not in self.cleaned_data:
+            self.instance.crew_chief = self.user  # user field from FAF
+        self.instance.event = self.event
+        if commit:
+            self.instance.save()
+            self.save_m2m()
+        return self.instance
+
     class Meta:
         model = CCReport
         fields = ('crew_chief', 'report')
     crew_chief = AutoCompleteSelectField('Members', required=True)
+
+    class FieldAccess:
+        avg_user = FieldAccessLevel(
+            lambda user, instance: not user.has_perm('events.add_event_report'),
+            exclude=('crew_chief',)
+        )
+        all = FieldAccessLevel(lambda user, instance: True, enable=('report',))
 
 
 ### External Organization forms
@@ -505,7 +570,6 @@ class OrgXFerForm(forms.ModelForm):
         obj.old_user_in_charge = self.user
         obj.org = self.org
         return self.save_instance(instance=obj, commit=commit)
-
 
     # new_user_in_charge = AutoCompleteSelectField('Users', required=True,
     # plugin_options={'position':"{ my : \"right top\", at: \"right bottom\",
@@ -575,6 +639,7 @@ class BillingForm(forms.ModelForm):
     class Meta:
         model = Billing
         fields = ('date_billed', 'amount', 'opt_out_initial_email', 'opt_out_update_email')
+
 
 class BillingUpdateForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
@@ -733,7 +798,7 @@ class CCIForm(forms.ModelForm):
     crew_chief = AutoCompleteSelectField('Members', required=True)
     setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
     setup_location = GroupedModelChoiceField(
-        queryset=Location.objects.filter(Q(setup_only=True) | Q(show_in_wo_form=True)),
+        queryset=Location.objects.filter(Q(setup_only=True) | Q(show_in_wo_form=True)).select_related('building'),
         group_by_field="building",
         group_label=lambda group: group.name,
     )
@@ -1057,7 +1122,7 @@ class LightingForm(forms.Form):
             ),
             Fieldset(
                 'Extras',  # title
-                *LIGHT_EXTRAS_NAMES,
+                *[DynamicFieldContainer(name) for name in LIGHT_EXTRAS_NAMES],
                 css_class="extra_fs"),
         )
         super(LightingForm, self).__init__(*args, **kwargs)
@@ -1098,7 +1163,7 @@ class SoundForm(forms.Form):
             ),
             Fieldset(
                 'Extras',  # title
-                *SOUND_EXTRAS_NAMES,
+                *[DynamicFieldContainer(name) for name in SOUND_EXTRAS_NAMES],
                 css_class="extra_fs"
             ),
         )
@@ -1134,7 +1199,7 @@ class ProjectionForm(forms.Form):
             ),
             Fieldset(
                 'Extras',  # title
-                *PROJ_EXTRAS_NAMES,
+                *[DynamicFieldContainer(name) for name in PROJ_EXTRAS_NAMES],
                 css_class="extra_fs"
             ),
 

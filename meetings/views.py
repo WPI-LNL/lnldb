@@ -1,32 +1,79 @@
 # Create your views here.
 
 import datetime
+from data.views import serve_file
+from django.core.exceptions import PermissionDenied
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
+from django.http.response import Http404
 from django.template import RequestContext
-from django.forms.models import inlineformset_factory
+from django.forms.models import inlineformset_factory, ModelForm
 from django.utils.functional import curry
 from events.forms import CCIForm
 from events.models import Event, EventCCInstance
-from meetings.forms import MeetingAdditionForm
-from meetings.models import Meeting
+from meetings.forms import MeetingAdditionForm, MtgAttachmentEditForm
+from meetings.models import Meeting, MtgAttachment
 from meetings.forms import AnnounceSendForm
 from meetings.forms import AnnounceCCSendForm
 from meetings.models import AnnounceSend
 from django.core.paginator import Paginator, InvalidPage
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from helpers.challenges import is_officer
 from emails.generators import generate_notice_email
 from emails.generators import generate_notice_cc_email
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+def download_att(request, mtg_id, att_id):
+    mtg = get_object_or_404(Meeting, pk=mtg_id)
+    if not request.user.has_perm('meetings.view_mtg', mtg):
+        raise PermissionDenied
+    att = get_object_or_404(MtgAttachment, pk=att_id)
+    if att.meeting.pk != mtg_id:
+        raise PermissionDenied
+    return serve_file(request, att.file)
+
+
+@login_required
+def modify_att(request, mtg_id, att_id):
+    context = {}
+    mtg_perms = ('meetings.edit_mtg',)
+    att_perms = []
+    context['msg'] = "Update Attachment"
+    mtg = get_object_or_404(Meeting, pk=mtg_id)
+    att = get_object_or_404(MtgAttachment, pk=att_id)
+    if not (request.user.has_perms(mtg_perms, mtg) and
+                request.user.has_perms(att_perms, att) and
+                    att.meeting.pk == mtg.pk):
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        form = MtgAttachmentEditForm(instance=att, data=request.POST, files=request.FILES)
+        if form.is_valid():
+            form.save()
+            url = reverse('meetings.views.viewattendance', args=(mtg_id,)) + "#minutes"
+            return HttpResponseRedirect(url)
+        else:
+            context['formset'] = form
+    else:
+        form = MtgAttachmentEditForm(instance=att)
+        context['formset'] = form
+    return render(request, 'form_crispy.html', context)
+
+
+@login_required
 def viewattendance(request, id):
     context = {}
-    m = get_object_or_404(Meeting, pk=id)
+    perms = ('meetings.view_mtg_attendance',)
+    try:
+        m = Meeting.objects.prefetch_related('attendance').get(pk=id)
+    except Meeting.DoesNotExist:
+        raise Http404(0)
+    if not (request.user.has_perms(perms) or
+                request.user.has_perms(perms, m)):
+        raise PermissionDenied
     context['m'] = m
 
     now = m.datetime
@@ -34,21 +81,26 @@ def viewattendance(request, id):
     morethanaweek = now + datetime.timedelta(days=7, hours=12)
 
     upcoming = Event.objects.filter(datetime_start__gte=yest, datetime_start__lte=morethanaweek)
-    context['events'] = upcoming
+    context['events'] = upcoming.prefetch_related('ccinstances__crew_chief') \
+        .prefetch_related('ccinstances__service')
 
     lessthantwoweeks = morethanaweek + datetime.timedelta(days=7)
     future = Event.objects.filter(datetime_start__gte=morethanaweek, datetime_start__lte=lessthantwoweeks).order_by(
-        'datetime_start')
+        'datetime_start').prefetch_related('ccinstances__crew_chief') \
+        .prefetch_related('ccinstances__service')
     context['future'] = future
     return render(request, 'meeting_view.html', context)
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def updateevent(request, meetingid, eventid):
     context = {}
+    perms = ('meetings.edit_mtg',)
     context['msg'] = "Update Event"
     event = get_object_or_404(Event, pk=eventid)
+    if not (request.user.has_perms(perms) or
+                request.user.has_perms(perms, event)):
+        raise PermissionDenied
     context['event'] = event.event_name
 
     cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
@@ -69,14 +121,19 @@ def updateevent(request, meetingid, eventid):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def editattendance(request, id):
     context = {}
+    perms = ('meetings.edit_mtg',)
     context['msg'] = "Edit Meeting"
     m = get_object_or_404(Meeting, pk=id)
+    if not (request.user.has_perms(perms) or
+                request.user.has_perms(perms, m)):
+        raise PermissionDenied
     if request.method == 'POST':
-        formset = MeetingAdditionForm(request.POST, instance=m)
+        formset = MeetingAdditionForm(request.POST, request.FILES, instance=m)
         if formset.is_valid():
+            for each in formset.cleaned_data['attachments']:
+                MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m)
             m = formset.save()
             url = reverse('meetings.views.viewattendance', args=(m.id,)) + "#attendance"
             return HttpResponseRedirect(url)
@@ -89,7 +146,7 @@ def editattendance(request, id):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('meetings.list_mtgs', raise_exception=True)
 def listattendance(request, page=1):
     context = {}
     attend = Meeting.objects.all()
@@ -105,7 +162,7 @@ def listattendance(request, page=1):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('meetings.create_mtg', raise_exception=True)
 def newattendance(request):
     context = {}
     if request.method == 'POST':
@@ -124,12 +181,13 @@ def newattendance(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def mknotice(request, id):
     context = {}
-
+    perms = ('meetings.send_mtg_notice',)
     meeting = get_object_or_404(Meeting, pk=id)
-
+    if not (request.user.has_perms(perms) or
+                request.user.has_perms(perms, meeting)):
+        raise PermissionDenied
     if request.method == 'POST':
         formset = AnnounceSendForm(meeting, request.POST)
         if formset.is_valid():
@@ -154,11 +212,13 @@ def mknotice(request, id):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def mkccnotice(request, id):
     context = {}
-
+    perms = ('meetings.send_mtg_notice',)
     meeting = get_object_or_404(Meeting, pk=id)
+    if not (request.user.has_perms(perms) or
+                request.user.has_perms(perms, meeting)):
+        raise PermissionDenied
 
     if request.method == 'POST':
         formset = AnnounceCCSendForm(meeting, request.POST)

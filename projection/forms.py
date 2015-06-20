@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Field, HTML
 from crispy_forms.bootstrap import FormActions
+from django.utils.timezone import now
 from projection.models import Projectionist, PitInstance, PITLevel
 from ajax_select.fields import AutoCompleteSelectField, AutoCompleteSelectMultipleField
 
@@ -73,7 +74,7 @@ class InstanceForm(forms.ModelForm):
         model = PitInstance
         fields = ('pit_level', 'created_on', 'valid')
 
-    created_on = forms.SplitDateTimeField(initial=datetime.datetime.now())
+    created_on = forms.SplitDateTimeField(initial=now())
 
 
 class BulkUpdateForm(forms.Form):

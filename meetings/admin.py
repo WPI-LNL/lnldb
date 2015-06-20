@@ -1,8 +1,9 @@
 from meetings.models import *
 from django.contrib import admin
+import reversion
 
 
-class MAAdmin(admin.ModelAdmin):
+class MAAdmin(reversion.VersionAdmin):
     list_display = ('added', 'uuid', 'email_to')
 
 
@@ -16,3 +17,4 @@ admin.site.register(MeetingAnnounce, MAAdmin)
 admin.site.register(TargetEmailList)
 admin.site.register(AnnounceSend)
 admin.site.register(CCNoticeSend, CCAdmin)
+admin.site.register(MtgAttachment)

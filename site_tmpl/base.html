@@ -101,27 +101,7 @@
     {{ request|hijackNotification }}
  <!-- Beginning of the top NavBar code -->
     {% block nav %}
-    <div class="navbar navbar-inverse navbar-static-top">
-      <div class="navbar-inner">
-        <div class="container-fluid">
-          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="glyphicon glyphicon-bar"></span>
-            <span class="glyphicon glyphicon-bar"></span>
-            <span class="glyphicon glyphicon-bar"></span>
-          </a>
-          <p class="navbar-text pull-right">
-                {% if user.is_authenticated %}
-                    Logged in as <a href="{% url 'my' %}" class="navbar-link">{{ user }}</a> &middot;
-                    <a href="{% url 'logout' %}">Log Out</a>
-                {% else %}
-                    <a href="{% url 'login' %}"> Log In </a>
-                {% endif %}
-            </p>
-          <a class="navbar-brand" href="{% url "events.views.indices.index" %}">Lens and Lights Database</a>
-        
-        </div>
-      </div>
-    </div>
+        {% include 'my.nav.html' %}
     {% endblock %}
     
     <div class="container-fluid">

@@ -32,7 +32,7 @@ def generate_notice_email(notice):
 
 
 def generate_notice_cc_email(notice):
-    subject = "Lens and Lights Crew List for %s" % notice.meeting.datetime.date()
+    subject = notice.subject
     from_email = DEFAULT_FROM_ADDR
     to_email = notice.email_to.email
 
@@ -172,7 +172,7 @@ class DefaultLNLEmailGenerator(object):  # yay classes
 
         template_txt = "%s.txt" % template_basename
         content_txt = render_to_string(template_txt, context)
-        print bcc
+        # print bcc
         self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=bcc)
         for a in attachments:
             self.email.attach(a['name'], a['file_handle'], "application/pdf")

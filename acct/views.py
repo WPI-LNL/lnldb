@@ -1,4 +1,5 @@
 # Create your views here.
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 
@@ -13,7 +14,7 @@ from acct.models import Profile
 
 from emails.generators import generate_selfmember_notice_email
 
-from helpers.mixins import LoginRequiredMixin, OfficerMixin, SetFormMsgMixin
+from helpers.mixins import LoginRequiredMixin, OfficerMixin, SetFormMsgMixin, HasPermMixin
 
 
 class AcctUpdate(LoginRequiredMixin, UpdateView):
@@ -47,7 +48,7 @@ class LNLUpdate(LoginRequiredMixin, UpdateView):
     def get_success_url(self):
         return reverse('my-lnl')
 
-
+@login_required
 def send_member_request(request):
     if not request.user.profile.is_lnl:
         context = {'user': request.user, 'submitted_ip': request.META.get('REMOTE_ADDR')}
@@ -61,11 +62,12 @@ def send_member_request(request):
         return HttpResponseRedirect(reverse("my-acct"))
 
 
-class LNLAdd(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, CreateView):
+class LNLAdd(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
     model = User
     form_class = UserAddForm
     template_name = "form_master_cbv.html"
     msg = 'New User Addition'
+    perms = 'add_user'
 
     def form_valid(self, form):
         messages.success(self.request, "User Added", extra_tags='success')

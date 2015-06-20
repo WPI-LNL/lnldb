@@ -22,6 +22,6 @@ class EventsConfig(AppConfig):
                                       'org',
                                       'status',
                                       'short_services'))
+        watson.register(Organization)
         watson.register(CCReport)
         watson.register(Fund)
-        watson.register(Organization)

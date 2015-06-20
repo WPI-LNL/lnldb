@@ -3,16 +3,25 @@
 {% load at_event_linking %}
 {% load markdown_deux_tags %}
 {% load bootstrap_toolkit %}
+{% load permissionif %}
 {% block content %}
     <div class="jumbotron">
-    <h1>Meeting for {{ m.datetime.date }}</h1>
+        <h1>{{ m.name }}</h1>
+
+        <h2>{{ m.datetime }}</h2>
+        {% permission user has 'meetings.edit_mtg' of m %}
+            <a class="btn btn-lg btn-primary" href="{% url "meetings.views.editattendance" m.id %}">Edit</a>
+        {% endpermission %}
     </div>
     <div class="row">
-        <div class="col-md-1">
+        <div class="col-md-2">
             <ul class="nav nav-pills nav-stacked" id="meetingtabs">
-            <li class="active"><a href="#attendance" data-toggle="tab">Attendance</a></li>
-            <li><a href="#emails" data-toggle="tab">EMail</a></li>
-            <li><a href="#events" data-toggle="tab">Events</a></li>
+                <li class="active"><a href="#attendance" data-toggle="tab">Attendance</a></li>
+                <li><a href="#emails" data-toggle="tab">Email</a></li>
+                {% if m.agenda or m.minutes or m.attachments.exists %}
+                    <li><a href="#minutes" data-toggle="tab">Minutes</a></li>
+                {% endif %}
+                <li><a href="#events" data-toggle="tab">Events</a></li>
             </ul>
         </div>
         <div class="col-md-10">
@@ -26,14 +35,13 @@
                         <small>Nobody is here I guess.</small>
                     {% endfor %}
                     </ul>
-                    <a class="btn btn-primary" href="{% url "meetings.views.editattendance" m.id %}">Edit Attendance</a>
                 </div>
                 
                 
                 
                 <div class="tab-pane" id="emails">
                     <h3>E-Mail</h3>
-                    {% if m.meetingannounce_set.count or m.meetingccnotices.count %}
+                    {% if m.meetingannounce_set.exists or m.meetingccnotices.exists %}
                         <strong> Emails Sent:</strong>
                         
                         <div class="panel-group" id="accordion0">
@@ -47,15 +55,21 @@
                                 </div>
                                 <div id="collapsea{{ forloop.counter0 }}" class="panel-collapse collapse">
                                     <div class="panel-body">
-                                    Subj: {{ announce.subject }} <br />
-                                    Msg: {{ announce.message }} <br />
-                                    Sent To: {{ announce.email_to }} <br /><br />
-                                    Events: <br/>
-                                    {% for event in announce.events.all %}
-                                        {{ event }}<br />
-                                    {% endfor %}
-                                    <br/>
-                                    <a href="{% url "email-view-announce" announce.uuid %}" class="cm-webversion">View Online</a>
+                                        <b>Subj:</b> {{ announce.subject }} <br/>
+                                        <b>Sent To:</b> {{ announce.email_to }} <br/>
+
+                                        <br/>{{ announce.message | markdown }} <br/>
+
+                                        {% if announce.events.exists %}
+                                            <b>Events:</b> <br/>
+                                            {% for event in announce.events.all %}
+                                                {{ event }}<br/>
+                                            {% endfor %}
+                                        {% endif %}
+
+                                        <br/>
+                                        <a href="{% url "email-view-announce" announce.uuid %}" class="cm-webversion">View
+                                            Online</a>
                                     </div>
                                 </div>
                             </div>
@@ -69,29 +83,62 @@
                                 </div>
                                 <div id="collapseb{{ forloop.counter0 }}" class="panel-collapse collapse">
                                     <div class="panel-body">
-                                    <strong>Msg: {{ announce.addtl_message }}</strong> <Br />
-                                    Events: <br/>
-                                    {% for event in announce.events.all %}
-                                        <em>{{ event }}</em><br/>
-                                    {% endfor %}
+                                        <b>Subj:</b> {{ announce.subject }} <br/>
+                                        <b>Sent To:</b> {{ announce.email_to }} <br/>
+
+                                        <br/>{{ announce.addtl_message | markdown }} <br/>
+
+                                        {% if announce.events.exists %}
+                                            <b>Events:</b> <br/>
+                                            {% for event in announce.events.all %}
+                                                {{ event }}<br/>
+                                            {% endfor %}
+                                        {% endif %}
+
                                     <a href="{% url "email-view-announce-cc" announce.uuid %}" class="cm-webversion">View Online</a>
                                     </div>
                                 </div>
                             </div>
                             {% endfor %}
                             </div>
-                
-                        
+                    {% else %}
+                        <b>No meeting notices have been sent.</b>
+                    {% endif %}
+                    {% permission request.user has 'meetings.send_mtg_notice' of m %}
                     <br />
                     <a class="btn btn-default" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
                     <a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>
-                    {% else %}
-                    <a class="btn btn-primary" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
-                    {% endif %}
-                    <!--<a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>-->
+                    {% endpermission %}
                 </div>
-                
-                
+
+                <div class="tab-pane" id="minutes">
+                    {% if m.agenda %}
+                        <h1>Agenda</h1>
+                        <div class="well">{{ m.agenda | markdown }}</div>
+                    {% endif %}
+
+                    {% if m.minutes %}
+                        <h1>Minutes</h1>
+                        <div class="well">{{ m.minutes | markdown }}</div>
+                    {% endif %}
+
+                    {% if m.attachments.exists %}
+                        <h1>Attachments</h1>
+                        <ul>
+                            {% for att in m.attachments.all %}
+                                <li>
+                                    <a href="{% url 'meetings.views.download_att' m.pk att.pk %}">
+                                        {{ att.name }}
+                                    </a> [{{ att.modified | date }}]
+                                    {% permission user has 'meetings.edit_mtg' of m %}
+                                        <b>[<a href="{% url 'meetings.views.modify_att' m.pk att.pk %}">Edit</a>]</b>
+                                    {% endpermission %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                </div>
                 
                 <div class="tab-pane" id="events">
                 <h3>This Week's Upcoming Events</h3>
@@ -122,14 +169,13 @@
                                 <td>{{ e.datetime_setup_complete }}</td>
 
                                 <td>
-                                    {% if e.ccinstances.count %}
-                                        {% for c in e.ccinstances.all %}
-                                            <strong>{{ c.service.shortname }}</strong> : <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>{% if not forloop.last %}<br />{% endif %}
-                                            
-                                        {% endfor %}
-                                    {% else %}
-                                        None Set 
-                                    {% endif %}
+                                    {% for c in e.ccinstances.all %}
+                                        <strong>{{ c.service.shortname }}</strong> :
+                                        <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>
+                                        {% if not forloop.last %}<br/>{% endif %}
+                                    {% empty %}
+                                        None Set
+                                    {% endfor %}
                                 </td>
                                 <td>
                                     <a class="btn btn-default" href="{% url "meeting-updateevent" m.id e.id %}">Setup Time &amp; Crew Chiefs</a>
@@ -167,14 +213,13 @@
                                 <td>{{ e.datetime_setup_complete }}</td>
 
                                 <td>
-                                    {% if e.ccinstances.count %}
-                                        {% for c in e.ccinstances.all %}
-                                            <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>&nbsp;
-                                            {% if not forloop.last %},{% endif %}
-                                        {% endfor %}
-                                    {% else %}
-                                        None Set 
-                                    {% endif %}
+                                    {% for c in e.ccinstances.all %}
+                                        <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>
+                                        &nbsp;
+                                        {% if not forloop.last %},{% endif %}
+                                    {% empty %}
+                                        None Set
+                                    {% endfor %}
                                 </td>
                                 <td>
                                     <a class="btn btn-default" href="{% url "meeting-updateevent" m.id e.id %}">Setup Time &amp; Crew Chiefs</a>

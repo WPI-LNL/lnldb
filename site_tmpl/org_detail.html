@@ -1,5 +1,5 @@
 {% extends 'base_admin.html' %}
-
+{% load permissionif %}
 {% block extrajs %}
     $(document).ready(function () {
         $('.collapse').collapse('hide');
@@ -8,14 +8,16 @@
 
 
 {% block content %}
-    <div class="row">
+    <div class="row" xmlns="http://www.w3.org/1999/html">
         <div class="col-md-12">
             <div class="jumbotron">
                  <h1>{{org }}</h1>
                  {% if org.shortname %}
                  ({{ org.shortname }})
                  {% endif %}
+                {% permission user has 'events.edit_org' of org %}
                  <a class="btn btn-lg btn-primary" href="{% url "events.views.orgs.addeditorgs" org.id %}">Edit</a>
+                {% endpermission %}
             </div>
         </div>
     </div>
@@ -41,23 +43,34 @@
                 </tr>
                 <tr>
                     <th>User in charge </th>
-                    <td> {{ org.user_in_charge }} </td>
+                    <td> {{ org.user_in_charge.profile.fullname }} </td>
                 </tr>
             
             </table>
         </div>
+        {% permission user has 'events.list_org_fund' of org %}
         <div class="col-md-3">
             <h3>Money</h3>
             <table>
                 {% for f in org.accounts.all %}
+                    {% permission user has 'events.edit_fund' of f %}
                 <tr><td>
                     <b><a href="{% url 'admin-fundedit' f.id %}">{{ f }}</a></b>
                     {% if f.notes %}{{ f.notes }}{% endif %}
                 </td></tr>
+                        {% elpermission user has 'events.view_fund' of f %}
+                        <tr>
+                            <td>
+                                <b><a href="{% url 'admin-fundedit' f.id %}">{{ f }}</a></b>
+                                {% if f.notes %}{{ f.notes }}{% endif %}
+                            </td>
+                        </tr>
+                    {% endpermission %}
                 {% endfor %}
                 <tr><td>
                     <b><a href="{% url 'admin-fundaddorg' org.id %}">[Add New]</a></b>
                 </td></tr>
+                {% permission user has 'events.view_verifications' of org %}
                 <tr>
                     <td colspan="2">
                         {% if org.verifications.exists %}
@@ -68,17 +81,24 @@
                         {% else %}
                         <p class="muted text-muted">No verification created</p>
                         {% endif %}
+                        {% permission user has 'events.add_verification' of org %}
                         <a href="{% url "admin-org-verify" org.id %}">Create Verification</a>
+                        {% endpermission %}
                     </td>
                 </tr>
+                {% endpermission %}
                 
             </table>
         </div>
+        {% endpermission %}
         <div class="col-md-3">
             <h3>Associated Users</h3>
             <ul class="list-unstyled">
+                <li><b><a
+                        href="{% url 'members.views.detail' org.user_in_charge.pk %}">{{ org.user_in_charge.profile.fullname }}
+                    [Owner]</a></b></li>
                 {% for u in org.associated_users.all %}
-                    <li>{{ u }}</li>
+                    <li><a href="{% url 'members.views.detail' u.pk %}">{{ u.profile.fullname }}</a></li>
                 {% endfor %}
             </ul>
         </div>
@@ -117,6 +137,7 @@
             </tr>
             </thead>
             {% for e in org.event_set.all %}
+                {% permission user has 'events.view_event' of e %}
             <tr>
                 <td>
                     <a href="{% url "events.views.flow.viewevent" e.id %}">{{ e }}</a>
@@ -136,6 +157,7 @@
                     {{ e.status }}
                 </td>
             </tr>
+                {% endpermission %}
             {% endfor %}
         </table>
         </div>

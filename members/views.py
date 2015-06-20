@@ -1,4 +1,6 @@
 # Create your views here.
+from data.views import ConditionalFormMixin
+from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, render
@@ -13,16 +15,17 @@ from members.models import StatusChange
 from acct.models import Profile
 
 from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.contrib import messages
 
 from helpers.challenges import is_officer
-from helpers.mixins import LoginRequiredMixin, OfficerMixin
+from helpers.mixins import LoginRequiredMixin, HasPermMixin, ConditionalFormMixin
 
 from events.models import Event, Projection, EventCCInstance
 
 
 @login_required
+@permission_required('acct.view_member', raise_exception=True)
 def mdc(request):
     context = {}
     users = User.objects.exclude(profile__mdc__isnull=True).exclude(profile__mdc='').order_by('last_name')
@@ -34,6 +37,7 @@ def mdc(request):
 
 
 @login_required
+@permission_required('acct.view_member', raise_exception=True)
 def mdc_raw(request):
     context = {}
     users = User.objects.exclude(profile__mdc__isnull=True).exclude(profile__mdc='').order_by('last_name')
@@ -47,7 +51,7 @@ def mdc_raw(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('acct.view_member', raise_exception=True)
 def officers(request):
     context = {}
     users = User.objects.filter(groups__name='Officer').order_by('last_name')
@@ -59,7 +63,7 @@ def officers(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('acct.view_member', raise_exception=True)
 def active(request):
     context = {}
     users = User.objects.filter(groups__name='Active').order_by('last_name')
@@ -71,7 +75,7 @@ def active(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('acct.view_member', raise_exception=True)
 def associate(request):
     context = {}
     users = User.objects.filter(groups__name='Associate').order_by('last_name')
@@ -83,7 +87,7 @@ def associate(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('acct.view_member', raise_exception=True)
 def alum(request):
     context = {}
     users = User.objects.filter(groups__name='Alumni').order_by('last_name')
@@ -95,7 +99,7 @@ def alum(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('acct.view_member', raise_exception=True)
 def away(request):
     context = {}
     users = User.objects.filter(groups__name='Away').order_by('last_name')
@@ -107,7 +111,7 @@ def away(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('acct.view_member', raise_exception=True)
 def inactive(request):
     context = {}
     users = User.objects.filter(groups__name='Inactive').order_by('last_name')
@@ -119,7 +123,7 @@ def inactive(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('acct.view_user', raise_exception=True)
 def contactusers(request):
     context = {}
     users = User.objects.filter(groups__name='Contact').order_by('last_name')
@@ -131,7 +135,7 @@ def contactusers(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('acct.view_user', raise_exception=True)
 def limbousers(request):
     context = {}
     users = User.objects.filter(groups__isnull=True)
@@ -143,10 +147,12 @@ def limbousers(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def detail(request, id):
     context = {}
     user = get_object_or_404(User, pk=id)
+    if not ((user.profile.is_lnl and request.user.has_perm('acct.view_member')) or
+                request.user.has_perm('acct.view_user', user.profile)):
+        raise PermissionDenied
 
     context['u'] = user
 
@@ -161,10 +167,17 @@ def detail(request, id):
     return render(request, 'userdetail.html', context)
 
 
-class UserUpdate(OfficerMixin, LoginRequiredMixin, UpdateView):
+@login_required
+def named_detail(request, username):
+    user = get_object_or_404(User, username=username)
+    return detail(request, user.pk)
+
+
+class UserUpdate(LoginRequiredMixin, HasPermMixin, ConditionalFormMixin, UpdateView):
     model = User
     form_class = MemberForm
     template_name = "form_crispy_cbv.html"
+    perms = 'acct.edit_user'
 
     def form_valid(self, form):
         user = self.get_object()
@@ -185,10 +198,11 @@ class UserUpdate(OfficerMixin, LoginRequiredMixin, UpdateView):
         return reverse('memberdetail', args=(self.object.id,))
 
 
-class MemberUpdate(OfficerMixin, LoginRequiredMixin, UpdateView):
+class MemberUpdate(LoginRequiredMixin, HasPermMixin, ConditionalFormMixin, UpdateView):
     model = Profile
     form_class = MemberContact
     template_name = "form_crispy_cbv.html"
+    perms = 'acct.edit_user'
 
     def form_valid(self, form):
         messages.success(self.request, "Account Info Saved!", extra_tags='success')
