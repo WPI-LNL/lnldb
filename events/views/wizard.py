@@ -5,7 +5,7 @@ from events.forms import LIGHT_EXTRAS, SOUND_EXTRAS, PROJ_EXTRAS
 
 from emails.generators import DefaultLNLEmailGenerator as DLEG
 
-from events.models import Event
+from events.models import Event, Extra
 from events.models import Lighting, Sound, Projection
 
 from django.conf import settings
@@ -85,15 +85,15 @@ class EventWizard(NamedUrlSessionWizardView):
         if self.steps.current == 'lighting':
             context.update({'help_objs': Lighting.objects.all()})
             context.update({'help_name': "Lighting"})
-            context.update({'extras': LIGHT_EXTRAS})
+            context.update({'extras': list(Extra.objects.filter(category__name="Lighting").all())})
         if self.steps.current == 'sound':
             context.update({'help_objs': Sound.objects.all()})
             context.update({'help_name': "Sound"})
-            context.update({'extras': SOUND_EXTRAS})
+            context.update({'extras': Extra.objects.filter(category__name="Sound").all()})
         if self.steps.current == 'projection':
             context.update({'help_objs': Projection.objects.all()})
             context.update({'help_name': "Projection"})
-            context.update({'extras': PROJ_EXTRAS})
+            context.update({'extras': Extra.objects.filter(category__name="Projection").all()})
         percent = int(self.steps.step1 / float(self.steps.count) * 100)
         context.update({"percentage": percent})
         return context

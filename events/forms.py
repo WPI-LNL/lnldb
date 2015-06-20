@@ -1081,7 +1081,6 @@ class SelectForm(forms.Form):
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
-        print org
         if org:
             self.fields['fund'].queryset = Fund.objects.filter(Q(orgfunds=org) | Q(name='None'))
         self.helper.layout = Layout(
@@ -1149,13 +1148,15 @@ class LightingForm(forms.Form):
             ),
             Fieldset(
                 'Extras',  # title
-                *[DynamicFieldContainer(name) for name in LIGHT_EXTRAS_NAMES],
+                *[DynamicFieldContainer("e_%s" % extra.id) for extra in LIGHT_EXTRAS.all()],
                 css_class="extra_fs"),
         )
         super(LightingForm, self).__init__(*args, **kwargs)
         for extra in LIGHT_EXTRAS:
-            self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox, disappear=extra.disappear,
-                                                              label=extra.name, initial=0, required=False)
+            self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox,
+                                                              disappear=extra.disappear,
+                                                              label=extra.name, initial=0,
+                                                              required=False)
 
     lighting = forms.ModelChoiceField(
         empty_label=None,
@@ -1190,7 +1191,7 @@ class SoundForm(forms.Form):
             ),
             Fieldset(
                 'Extras',  # title
-                *[DynamicFieldContainer(name) for name in SOUND_EXTRAS_NAMES],
+                *[DynamicFieldContainer("e_%s" % extra.id) for extra in SOUND_EXTRAS.all()],
                 css_class="extra_fs"
             ),
         )
@@ -1226,7 +1227,7 @@ class ProjectionForm(forms.Form):
             ),
             Fieldset(
                 'Extras',  # title
-                *[DynamicFieldContainer(name) for name in PROJ_EXTRAS_NAMES],
+                *[DynamicFieldContainer("e_%s" % extra.id) for extra in PROJ_EXTRAS.all()],
                 css_class="extra_fs"
             ),
 
