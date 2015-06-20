@@ -26,4 +26,9 @@ django-watson
 django-formtools
 django-debug-toolbar-line-profiler
 django-debug-toolbar-template-profiler
+django-permission
 django-hijack
+django-multiupload
+django-extensions
+django-reversion
+docutils

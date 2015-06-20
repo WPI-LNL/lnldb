@@ -101,6 +101,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'watson.middleware.SearchContextMiddleware',
+    'reversion.middleware.RevisionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     # Uncomment the next line for simple clickjacking protection:
@@ -134,6 +135,7 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'markdown_deux',
     'django_cas',
+    'django_extensions',
 
     'events',
     'inventory',
@@ -155,6 +157,8 @@ INSTALLED_APPS = (
     'template_profiler_panel',
     'debug_toolbar_line_profiler',
     'raven.contrib.django.raven_compat',
+    'permission',
+    'reversion',
     'hijack',
     'compat',
 )
@@ -216,6 +220,8 @@ LOGGING = {
 
 AUTH_PROFILE_MODULE = 'acct.Profile'
 
+
+
 # AJAX_SELECT_BOOTSTRAP = False
 # AJAX_SELECT_INLINES = False
 ### let's just shit all over the page. its okay. I'm fine with it :-\
@@ -239,6 +245,11 @@ TEMPLATE_CONTEXT_PROCESSORS = TCP + (
     'django.template.context_processors.request',
     'data.context_processors.airplane_mode')
 
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',  # default
+    'permission.backends.PermissionBackend',
+    'data.backends.PermissionShimBackend'
+)
 
 # Various Other Settings
 
@@ -272,6 +283,9 @@ AIRPLANE_MODE = False
 
 # crispy_forms
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
+
+# Don't mess with builtins just for the sake of permissions
+PERMISSION_REPLACE_BUILTIN_IF = False
 
 #markdown deux configuration
 MARKDOWN_DEUX_STYLES = {
