@@ -16,8 +16,13 @@ from datetime import timedelta
 
 
 def get_default_email():
-    return TargetEmailList.objects.get(email="lnlnews@wpi.edu")
-
+    qs = TargetEmailList.objects.filter(email="lnlnews@wpi.edu")
+    if not qs.exists():
+        email = TargetEmailList(name="LNL News", email="lnlnews@wpi.edu")
+        email.save()
+    else:
+        email = qs.first()
+    return email
 
 class Meeting(models.Model):
     glyphicon = 'briefcase'
