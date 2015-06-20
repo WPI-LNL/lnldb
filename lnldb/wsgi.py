@@ -18,7 +18,7 @@ import sys
 
 from django.core.wsgi import get_wsgi_application
 
-path = '/home/lnldb/lnldb_gitd'
+path = '/home/lnl/lnldb'
 
 if path not in sys.path:
     sys.path.append(path)

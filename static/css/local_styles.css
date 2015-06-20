@@ -122,6 +122,22 @@ span.result-subtitle {
     margin: 0;
 }
 
+@media print { 
+    h2:first-of-type:before {
+        content: "LNLDB: ";
+    }
+    a[href]:after { 
+        content: none;
+    }
+    a[href] {
+        text-decoration: underline;
+    }
+}
+
+.bootstrap-timepicker-widget table td input {
+    display: inline-block;
+}
+
 /* Fix ugly permissions debugging notification */
 #hijacked-warning {
     height: 35px;

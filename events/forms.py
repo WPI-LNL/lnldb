@@ -203,7 +203,9 @@ class IOrgVerificationForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super(IOrgVerificationForm, self).save(commit=False)
         obj.org = self.org
-        obj.save(commit)
+        if commit:
+            obj.save()
+        return obj
 
     class Meta:
         model = OrgBillingVerificationEvent
@@ -495,14 +497,14 @@ class InternalReportForm(FieldAccessForm):
         super(InternalReportForm, self).__init__(*args, **kwargs)
 
     def save(self, commit=True):
-        super(InternalReportForm, self).save(commit=False)
+        obj = super(InternalReportForm, self).save(commit=False)
         if 'crew_chief' not in self.cleaned_data:
             self.instance.crew_chief = self.user  # user field from FAF
-        self.instance.event = self.event
+        obj.event = self.event
         if commit:
-            self.instance.save()
+            obj.save()
             self.save_m2m()
-        return self.instance
+        return obj
 
     class Meta:
         model = CCReport
@@ -569,7 +571,9 @@ class OrgXFerForm(forms.ModelForm):
         obj = super(OrgXFerForm, self).save(commit=False)
         obj.old_user_in_charge = self.user
         obj.org = self.org
-        return self.save_instance(instance=obj, commit=commit)
+        if commit:
+            obj.save()
+        return obj
 
     # new_user_in_charge = AutoCompleteSelectField('Users', required=True,
     # plugin_options={'position':"{ my : \"right top\", at: \"right bottom\",
@@ -626,7 +630,7 @@ class BillingForm(forms.ModelForm):
         )
         super(BillingForm, self).__init__(*args, **kwargs)
 
-        self.fields['amount'].initial = str(event.cost_total)
+        self.fields['amount'].initial = "%.2f" % event.cost_total
         self.fields['date_billed'].initial = datetime.date.today()
         self.fields['opt_out_initial_email'].initial = True
         self.fields['opt_out_update_email'].initial = True
@@ -634,7 +638,9 @@ class BillingForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super(BillingForm, self).save(commit=False)
         obj.event = self.event
-        return self.save_instance(instance=obj, commit=commit)
+        if commit:
+            obj.save()
+        return obj
 
     class Meta:
         model = Billing
@@ -662,6 +668,13 @@ class BillingUpdateForm(forms.ModelForm):
 
         self.fields['amount'].initial = str(event.cost_total)
         self.fields['date_paid'].initial = datetime.date.today()
+
+    def save(self, commit=True):
+        obj = super(BillingUpdateForm, self).save(commit=False)
+        obj.event = self.event
+        if commit:
+            obj.save()
+        return obj
 
     class Meta:
         model = Billing
@@ -719,7 +732,9 @@ class MKHoursForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super(MKHoursForm, self).save(commit=False)
         obj.event = self.event
-        return self.save_instance(instance=obj, commit=commit)
+        if commit:
+            obj.save()
+        return obj
 
     class Meta:
         model = Hours
@@ -791,6 +806,13 @@ class CCIForm(forms.ModelForm):
         self.fields['service'].queryset = get_qs_from_event(event)
         self.fields['setup_start'].initial = self.event.datetime_setup_complete
 
+    def save(self, commit=True):
+        obj = super(CCIForm, self).save(commit=False)
+        obj.event = self.event
+        if commit:
+            obj.save()
+        return obj
+
     class Meta:
         model = EventCCInstance
         fields = ('crew_chief', 'service', 'setup_location', 'setup_start')
@@ -824,10 +846,15 @@ class AttachmentForm(forms.ModelForm):
         # x = self.instance.event.lighting
         self.fields['for_service'].queryset = get_qs_from_event(event)
 
+    def save(self, commit=True):
+        obj = super(AttachmentForm, self).save(commit=False)
+        obj.event = self.event
+        if commit:
+            obj.save()
+        return obj
     class Meta:
         model = EventAttachment
         fields = ('for_service', 'attachment', 'note')
-        widgets = {'event': forms.HiddenInput()}
 
 
 class ExtraForm(forms.ModelForm):

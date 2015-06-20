@@ -18,7 +18,7 @@ from helpers.mixins import LoginRequiredMixin, SetFormMsgMixin, HasPermMixin
 import pytz
 from django.utils import timezone
 
-# so that we can know to send EMail
+# so that we can know to send Email
 from django.conf import settings
 from emails.generators import generate_transfer_email
 

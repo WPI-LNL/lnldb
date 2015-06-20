@@ -101,43 +101,15 @@
                             </div>
                             {% endfor %}
                             </div>
-                    {% else %}
-                        <b>No meeting notices have been sent.</b>
-                    {% endif %}
-                    {% permission request.user has 'meetings.send_mtg_notice' of m %}
+                
+                        
                     <br />
                     <a class="btn btn-default" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
                     <a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>
-                    {% endpermission %}
-                </div>
-
-                <div class="tab-pane" id="minutes">
-                    {% if m.agenda %}
-                        <h1>Agenda</h1>
-                        <div class="well">{{ m.agenda | markdown }}</div>
+                    {% else %}
+                    <a class="btn btn-primary" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
                     {% endif %}
-
-                    {% if m.minutes %}
-                        <h1>Minutes</h1>
-                        <div class="well">{{ m.minutes | markdown }}</div>
-                    {% endif %}
-
-                    {% if m.attachments.exists %}
-                        <h1>Attachments</h1>
-                        <ul>
-                            {% for att in m.attachments.all %}
-                                <li>
-                                    <a href="{% url 'meetings.views.download_att' m.pk att.pk %}">
-                                        {{ att.name }}
-                                    </a> [{{ att.modified | date }}]
-                                    {% permission user has 'meetings.edit_mtg' of m %}
-                                        <b>[<a href="{% url 'meetings.views.modify_att' m.pk att.pk %}">Edit</a>]</b>
-                                    {% endpermission %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-
+                    <!--<a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>-->
                 </div>
                 
                 <div class="tab-pane" id="events">

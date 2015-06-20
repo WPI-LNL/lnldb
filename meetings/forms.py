@@ -7,7 +7,7 @@ from meetings.models import Meeting, MeetingAnnounce, CCNoticeSend, MtgAttachmen
 from events.models import Event, Location
 from ajax_select.fields import AutoCompleteSelectMultipleField
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Submit, Field
+from crispy_forms.layout import Layout, Submit, Field, Hidden
 from crispy_forms.bootstrap import FormActions
 from multiupload.fields import MultiFileInput, MultiFileField
 
@@ -80,7 +80,9 @@ class AnnounceSendForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super(AnnounceSendForm, self).save(commit=False)
         obj.meeting = self.meeting
-        return self.save_instance(instance=obj, commit=commit)
+        if commit:
+            obj.save()
+        return obj
 
     class Meta:
         model = MeetingAnnounce
@@ -117,7 +119,9 @@ class AnnounceCCSendForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super(AnnounceCCSendForm, self).save(commit=False)
         obj.meeting = self.meeting
-        return self.save_instance(instance=obj, commit=commit)
+        if commit:
+            obj.save()
+        return obj
 
     class Meta:
         model = CCNoticeSend

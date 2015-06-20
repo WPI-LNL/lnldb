@@ -41,7 +41,9 @@
             $(document).ready(function () {
                 $(".dateinput").datepicker({
                     format: 'yyyy-mm-dd',
-                    clearBtn: true
+                    clearBtn: true,
+                    todayBtn: true,
+                    todayHighlight: true
                     });
                 $(".timeinput").timepicker(
                     {
@@ -122,6 +124,7 @@
           <p>&copy; WPI Lens and Lights &middot; <a href="{% url 'list' %}">Want to get involved?</a>
         
         </p>
+        <p>Generated {% now "N d Y, P e" %}</p>
       </footer>
 
     </div><!--/.fluid-container-->

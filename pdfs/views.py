@@ -1,6 +1,7 @@
 import datetime
 
 import os
+from django.utils.text import slugify
 from xhtml2pdf import pisa
 from django.template.loader import get_template
 from django.template import Context
@@ -56,7 +57,8 @@ def generate_projection_pdf(request):
     # Render html content through html template with context
     template = get_template('pdf_templates/projection.html')
     html = template.render(Context(data))
-
+    if 'raw' in request.GET and bool(request.GET['raw']):
+        return HttpResponse(html)
     # write file
     pdf_pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'projection-%s.pdf' % now.date()), "w+b")
     pisastatus = pisa.CreatePDF(html, dest=pdf_pdf_file, link_callback=link_callback)
@@ -78,6 +80,9 @@ def generate_event_pdf(request, id):
     # Render html content through html template with context
     template = get_template('pdf_templates/events.html')
     html = template.render(Context(data))
+
+    if 'raw' in request.GET and bool(request.GET['raw']):
+        return HttpResponse(html)
 
     # Write PDF to file
     pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'event-%s.pdf' % event.id), "w+b")
@@ -113,6 +118,9 @@ def generate_event_bill_pdf(request, id):
     template = get_template('pdf_templates/bill-itemized.html')
     html = template.render(Context(data))
 
+    if 'raw' in request.GET and bool(request.GET['raw']):
+        return HttpResponse(html)
+
     # Write PDF to file
     pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'pay-%s.pdf' % event.id), "w+b")
     pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
@@ -121,8 +129,9 @@ def generate_event_bill_pdf(request, id):
     pdf_file.seek(0)
     pdf = pdf_file.read()
     pdf_file.close()  # Don't forget to close the file handle
-    return HttpResponse(pdf, content_type='application/pdf')
-    # return HttpResponse(html)
+    resp = HttpResponse(pdf, content_type='application/pdf')
+    resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
+    return resp
 
 
 def generate_pdfs_standalone(ids=None):
@@ -164,6 +173,9 @@ def generate_event_pdf_multi(request, ids=None):
     # Render html content through html template with context
     template = get_template('pdf_templates/events.html')
     html = template.render(Context(data))
+
+    if 'raw' in request.GET and bool(request.GET['raw']):
+        return HttpResponse(html)
 
     # Write PDF to file
     pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'event-multi.pdf'), "w+b")

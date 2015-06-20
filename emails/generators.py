@@ -117,7 +117,7 @@ def generate_event_start_end_emails():
 # Cron Example
 # * * * * * ~/bin/python ~/lnldb/manage.py send_start_end
 
-#### Self Service EMails
+#### Self Service Emails
 # Self service org email
 def generate_selfservice_notice_email(context):
     subject = "Self Service Form Submission"

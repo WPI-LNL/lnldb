@@ -5,7 +5,7 @@ Requesting User's Email: {{ user.email }}
 Requesting IP: {{ submitted_ip }}
 
 Client Name: {{ client_name }}
-Client EMail: {{ email }}
+Client Email: {{ email }}
 Client Address: {{ address }}
 Client Phone: {{ phone }}
 Client FOI: {{ fund_info }}

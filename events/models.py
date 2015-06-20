@@ -350,7 +350,7 @@ class Event(models.Model):
     contact = models.ForeignKey(User, null=True, blank=True, verbose_name="Contact")
     org = models.ManyToManyField('Organization', blank=True, verbose_name="Client")
     billing_org = models.ForeignKey('Organization', null=True, blank=True, related_name="billedevents")
-    billing_fund = models.ForeignKey('Fund', null=True, on_delete=models.SET_NULL, related_name="event_accounts")
+    billing_fund = models.ForeignKey('Fund', null=True, blank=True, on_delete=models.SET_NULL, related_name="event_accounts")
     contact_email = models.CharField(max_length=256, null=True, blank=True)  # DEPRECATED
     contact_addr = models.TextField(null=True, blank=True)  # DEPRECATED
     contact_phone = models.CharField(max_length=32, null=True, blank=True)  # DEPRECATED
@@ -926,7 +926,7 @@ class Organization(models.Model):  # AKA Client
     name = models.CharField(max_length=128, unique=True)
     shortname = models.CharField(max_length=8, null=True, blank=True)
     email = models.EmailField(null=True, blank=True, verbose_name="normal_email_unused")
-    exec_email = models.EmailField(null=True, blank=True, verbose_name="EMail")
+    exec_email = models.EmailField(null=True, blank=True, verbose_name="Email")
 
     email_exec = models.BooleanField(default=True)
     email_normal = models.BooleanField(default=False)
