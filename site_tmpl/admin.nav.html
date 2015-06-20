@@ -1,7 +1,6 @@
 {% load lineage %}
 {% load permissionif %}
 {% load cache %}
-{% cache 300 header request.user %}
 <div class="navbar navbar-inverse navbar-static-top" role="navigation">
 <!--     <div class="navbar-inner"> -->
         <div class="container-fluid">
@@ -175,4 +174,3 @@
         </div>
 <!--     </div> -->
 </div>
-{% endcache %}
