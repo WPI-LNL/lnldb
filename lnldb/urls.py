@@ -396,10 +396,11 @@ urlpatterns = patterns('',
                        url(r'^db/accesslog/$', 'data.views.access_log', name="access-log"),
                        url(r'^NOTOUCHING/$', 'data.views.fuckoffkitty'),
                        url(r'^lnldb/fuckoffkitty/$', RedirectView.as_view(url="/NOTOUCHING/", permanent=False)),
+                       url(r'^lnadmin$', RedirectView.as_view(url="/db/", permanent=True)),
+
                        url(r'^(?P<slug>[-\w]+)/$', 'pages.views.page'),
 
                        # keep old urls
-                       url(r'^lnadmin$', RedirectView.as_view(url="/db/", permanent=True)),
                        url(r'^lnadmin/(?P<newpath>.+)$', RedirectView.as_view(url="/db/%(newpath)s", permanent=True)),
                        # url(r'^db/(?P<msg>\w+)/$', 'events.views.indices.admin'),
 
