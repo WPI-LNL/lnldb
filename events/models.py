@@ -6,6 +6,7 @@ from django.conf import settings
 # Create your models here.
 from django.core.urlresolvers import reverse
 from django import forms
+from django.db.models import Manager
 
 import watson
 
@@ -325,12 +326,18 @@ class Billing(models.Model):
         ordering = ("-date_billed", "date_paid")
 
 
+class OptimizedEventManager(Manager):
+    def get_queryset(self):
+        return super(OptimizedEventManager, self).get_queryset()\
+                      .select_related('lighting').select_related('sound').select_related('projection')
+
+
 class Event(models.Model):
     """
         An Event, What everything ends up pointing to
     """
     glyphicon = 'bullhorn'
-    objects = models.Manager()
+    objects = OptimizedEventManager()
     event_mg = EventManager()
 
     submitted_by = models.ForeignKey(User, related_name='submitter')
@@ -827,6 +834,34 @@ class Event(models.Model):
             out_str += self.datetime_end.strftime("%a %m/%d/%Y %I:%M %p")
         return out_str
 
+    class Meta:
+        permissions = (
+            ("view_event", "Show an event that isn't hidden"),
+            ("event_images", "Upload images to an event"),
+            ("view_hidden_event", "Show hidden events"),
+            ("cancel_event", "Declare an event to be cancelled"),
+            ("event_attachments", "Upload attachments to an event"),
+            ("edit_event_times", "Modify the dates for an event"),
+            ("add_event_report", "Add reports about the event"),
+            ("edit_event_fund", "Change where money for an event comes from"),
+            ("view_event_billing", "See financial info for event"),
+            ("edit_event_text", "Update any event descriptions"),
+            ("adjust_event_owner", "Change the event contact and organization"),
+            ("edit_event_hours", "Modify the time sheets"),
+            ('edit_event_flags', 'Add flags to an event'),
+            ("event_view_sensitive", "Show internal notes and other metadata marked as not public"),
+            ("approve_event", "Accept an event"),
+            ("decline_event", "Decline an event"),
+            ("review_event", "Review an event for billing"),
+            ("adjust_event_charges", "Add charges and change event type"),
+            ("bill_event", "Send bills and mark event paid"),
+            ("close_event", "Lock an event after everything is done."),
+            ("view_test_event", "Show events for testing"),
+            ("event_view_granular", "See debug data like ip addresses"),
+            ("event_view_debug", "See debug events"),
+            ("reopen_event", "Reopen a closed, declined, or cancelled event"),
+        )
+
 
 
 
@@ -933,8 +968,20 @@ class Organization(models.Model):  # AKA Client
         ordering = ['name']
         verbose_name = "Client"
         verbose_name_plural = "Clients"
-
-
+        permissions = (('view_org', 'See an Organization\'s basic properties'),
+                       ('list_org_events', 'View an Org\'s non-hidden events'),
+                       ('list_org_hidden_events', 'View an Org\'s hidden events'),
+                       ('edit_org', 'Edit an Org\'s name and description'),
+                       ('show_org_billing', 'See an Org\'s account and billing info'),
+                       ('edit_org_billing', 'Modify an Org\'s account and billing info'),
+                       ('list_org_members', 'View who is in an Org'),
+                       ('edit_org_members', 'Edit who is in an Org'),
+                       ('create_org_event', 'Create an event in an Org\'s name'),
+                       ('view_verifications', 'Show proofs of Org account ownership'),
+                       ('create_verifications', 'Create proofs of Org account ownership'),
+                       ('transfer_org_ownership', 'Give an Org a new owner'),
+                       ('add_org', 'Create an Organization'),
+                       ('deprecate_org', 'Mark an Organization as defunct'))
 
 
 class OrganizationTransfer(models.Model):

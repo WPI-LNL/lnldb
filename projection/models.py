@@ -69,6 +69,13 @@ class Projectionist(models.Model):
         else:
             return False
 
+    class Meta:
+        permissions = (
+            ('view_pits', 'View a projectionist\'s PITs'),
+            ('edit_pits', 'Edit a projectionist\'s PITs'),
+            ('add_bulk_events', 'Create a semester\'s worth of movies')
+        )
+
 
 class PITLevel(models.Model):
     name_short = models.CharField(max_length=3)

@@ -83,10 +83,20 @@ class Profile(models.Model):
         outstr += clean_first[:max_chars - len(outstr)]  # fill whatever's left with the first name
         return outstr
 
+    class Meta:
+        permissions = (
+            ('change_group', 'Change the group membership of a user'),
+            ('edit_mdc', 'Change the MDC of a user'),
+            ('edit_user', 'Edit the name and contact info of a user'),
+            ('view_user', 'View users'),
+            ('view_member', 'View LNL members'),
+        )
+
 
 def create_user_profile(sender, instance, created, raw=False, **kwargs):
     if created and not raw:
-        Profile.objects.create(user=instance)
+        profile = Profile.objects.create(user=instance)
+        profile.save()
         # if not email, this solves issue #138
         if not instance.email:
             instance.email = "%s@wpi.edu" % instance.username
