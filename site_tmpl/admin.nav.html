@@ -5,24 +5,24 @@
 <!--     <div class="navbar-inner"> -->
         <div class="container-fluid">
             <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#lnadmin-navbar-collapse-1">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#db-navbar-collapse-1">
                 <span class="sr-only">Toggle navigation</span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-                <a class="navbar-brand" href="{% url "members.views.detail" request.user.pk %}">LNLDB</a>
+                <a class="navbar-brand" href="{% url "events.views.indices.admin" %}">LNLDB</a>
         </div>
 
-        <div class="collapse navbar-collapse" id="lnadmin-navbar-collapse-1">
+            <div class="collapse navbar-collapse" id="db-navbar-collapse-1">
             <p class="navbar-text navbar-right">
-                Logged in as <a href="{% url "events.views.my.my" %}" class="navbar-link"> {{ user }}</a>
+                Logged in as <a href="{% url  "members.views.detail" request.user.pk %}"
+                                class="navbar-link">{{ user }}</a>
                 &middot;
                 <a href="{% url 'logout' %}">Log Out</a>
             </p>
             <ul class="nav navbar-nav">
-                <li class="{% ancestor '/lnadmin/$' %}"><a href="{% url "events.views.indices.admin" %}">Home</a></li>
-                <li class="{% ancestor '/lnadmin/events/' %} dropdown">
+                <li class="{% ancestor '/db/events/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Events <b class="caret"></b>
                     </a>
@@ -64,7 +64,7 @@
 
                     </ul>
                 </li>
-                <li class="{% ancestor '/lnadmin/clients/' %} dropdown">
+                <li class="{% ancestor '/db/clients/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Clients
                         <b class="caret"></b>
@@ -82,7 +82,7 @@
                     </ul>
                 </li>
                 {% permission request.user has 'events.view_user' %}
-                <li class="{% ancestor '/lnadmin/members/' %} dropdown">
+                    <li class="{% ancestor '/db/members/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Members
                         <b class="caret"></b>
@@ -108,7 +108,7 @@
                 </li>
                 {% endpermission %}
                 {% permission request.user has 'meetings.list_mtgs' %}
-                <li class="{% ancestor '/lnadmin/meetings/' %} dropdown">
+                    <li class="{% ancestor '/db/meetings/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown"  href="#">
                         Meetings
                         <b class="caret"></b>
@@ -122,7 +122,7 @@
                 </li>
                 {% endpermission %}
                 {% comment %} 
-                <li class="{% ancestor '/lnadmin/inventory/' %} dropdown">
+                <li class="{% ancestor '/db/inventory/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Inventory
                         <b class="caret"></b>
@@ -140,7 +140,7 @@
                 </li>
                 {% endcomment %}
                 {% permission request.user has 'projection.view_pits' or request.user has 'projection.add_bulk_events' %}
-                    <li class="{% ancestor '/lnadmin/projection/' %} dropdown">
+                    <li class="{% ancestor '/db/projection/' %} dropdown">
                         <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                             Projection
                             <b class="caret"></b>

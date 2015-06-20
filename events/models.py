@@ -485,7 +485,7 @@ class Event(models.Model):
         return self.datetime_end
 
     def cal_link(self):
-        return "http://lnl.wpi.edu/lnadmin/events/view/" + str(self.id)
+        return "http://lnl.wpi.edu/db/events/view/" + str(self.id)
 
     def cal_guid(self):
         return "event" + str(self.id) + "@lnldb"
@@ -1067,7 +1067,7 @@ class EventCCInstance(models.Model):
             return self.event.datetime_start
 
     def cal_link(self):
-        return "http://lnl.wpi.edu/lnadmin/events/view/" + str(self.event.id)
+        return "http://lnl.wpi.edu/db/events/view/" + str(self.event.id)
 
     def cal_guid(self):
         return "setup" + str(self.id) + "@lnldb"
