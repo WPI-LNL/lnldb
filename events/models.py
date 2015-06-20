@@ -178,19 +178,19 @@ class EventManager(models.Manager):
         # raise
         # int(e[1][1]) is int(True) if its valid, which returns 1
         for e in lighting_extras:
-            if len(e[1]) and int(e[1][1]):  # for checkbox
-                event.extrainstance_set.create(extra_id=e[0], quant=1)
-            elif len(e[1]) and int(e[1][0]):
-                event.extrainstance_set.create(extra_id=e[0], quant=e[1][0])
+            if hasattr(e[1], "__get_item__") and e[1][1]:  # for checkbox
+                event.extrainstance_set.create(extra_id=int(e[0]), quant=1)
+            elif hasattr(e[1], "__get_item__") and e[1][0]:
+                event.extrainstance_set.create(extra_id=int(e[0]), quant=int(e[1][0]))
 
         for e in sound_extras:
-            if len(e[1]) and int(e[1][1]):  # for checkbox
-                event.extrainstance_set.create(extra_id=e[0], quant=1)
-            if len(e[1]) and int(e[1][0]):
-                event.extrainstance_set.create(extra_id=e[0], quant=e[1][0])
+            if hasattr(e[1], "__get_item__") and e[1][1]:  # for checkbox
+                event.extrainstance_set.create(extra_id=int(e[0]), quant=1)
+            if hasattr(e[1], "__get_item__") and e[1][0]:
+                event.extrainstance_set.create(extra_id=int(e[0]), quant=int(e[1][0]))
         for e in projection_extras:
-            if len(e[1]) and int(e[1][0]):
-                event.extrainstance_set.create(extra_id=e[0], quant=e[1][0])
+            if hasattr(e[1], "__get_item__") and e[1][0]:
+                event.extrainstance_set.create(extra_id=int(e[0]), quant=int(e[1][0]))
         event.save()
         return event
 
