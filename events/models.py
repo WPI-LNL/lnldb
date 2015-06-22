@@ -837,6 +837,7 @@ class Event(models.Model):
     class Meta:
         permissions = (
             ("view_event", "Show an event that isn't hidden"),
+            ("add_raw_event", "Use the editor to create an event"),
             ("event_images", "Upload images to an event"),
             ("view_hidden_event", "Show hidden events"),
             ("cancel_event", "Declare an event to be cancelled"),
@@ -852,6 +853,7 @@ class Event(models.Model):
             ("event_view_sensitive", "Show internal notes and other metadata marked as not public"),
             ("approve_event", "Accept an event"),
             ("decline_event", "Decline an event"),
+            ("can_chief_event", "Accept an event"),
             ("review_event", "Review an event for billing"),
             ("adjust_event_charges", "Add charges and change event type"),
             ("bill_event", "Send bills and mark event paid"),

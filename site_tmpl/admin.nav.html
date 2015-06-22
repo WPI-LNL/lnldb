@@ -38,10 +38,10 @@
                         <li class="divider"></li>
                         {% endpermission %}
 
-                        {% permission request.user has 'events.accept_event' %}
+                        {% permission request.user has 'events.approve_event' %}
                         <li><a href="{% url "events.views.list.incoming" %}">Incoming Events</a></li>
                         {% endpermission %}
-                        {% permission request.user has 'events.can_chief_events' %}
+                        {% permission request.user has 'events.can_chief_event' %}
                         <li><a href="{% url "events.views.list.findchief" %}">Needs a Chief</a></li>
                         {% endpermission %}
                         {% permission request.user has 'events.view_event' %}
