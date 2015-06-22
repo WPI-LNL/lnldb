@@ -853,7 +853,7 @@ class Event(models.Model):
             ("event_view_sensitive", "Show internal notes and other metadata marked as not public"),
             ("approve_event", "Accept an event"),
             ("decline_event", "Decline an event"),
-            ("can_chief_event", "Accept an event"),
+            ("can_chief_event", "Can crew chief an event"),
             ("review_event", "Review an event for billing"),
             ("adjust_event_charges", "Add charges and change event type"),
             ("bill_event", "Send bills and mark event paid"),
