@@ -67,7 +67,7 @@ class LNLAdd(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
     form_class = UserAddForm
     template_name = "form_master_cbv.html"
     msg = 'New User Addition'
-    perms = 'add_user'
+    perms = 'acct.add_user'
 
     def form_valid(self, form):
         messages.success(self.request, "User Added", extra_tags='success')

@@ -81,7 +81,7 @@
                         {% endpermission %}
                     </ul>
                 </li>
-                {% permission request.user has 'events.view_user' %}
+                {% permission request.user has 'acct.view_user' or request.user has 'acct.view_member' %}
                     <li class="{% ancestor '/db/members/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Members
@@ -96,8 +96,7 @@
                         <li><a href="{% url "members.views.inactive" %}">Inactive</a></li>
                         <li><a href="{% url "users-limbo" %}">Unafiliated Users</a></li>
                         <li class="divider"></li>
-                        <li><a href="{% url "users-contact" %}">Contact Users</a></li>
-                        {% permission request.user has 'auth.create_raw_user' %}
+                        {% permission request.user has 'acct.add_user' %}
                             <li><a href="{% url "users-add" %}">Add User</a></li>
                         {% endpermission %}
                         {% permission request.user has 'data.view_debug_info' %}

@@ -86,6 +86,7 @@ class Profile(models.Model):
     class Meta:
         permissions = (
             ('change_group', 'Change the group membership of a user'),
+            ('add_user', 'Add a new user'),
             ('edit_mdc', 'Change the MDC of a user'),
             ('edit_user', 'Edit the name and contact info of a user'),
             ('view_user', 'View users'),
