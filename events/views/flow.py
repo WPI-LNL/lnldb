@@ -26,7 +26,7 @@ import reversion
 
 
 @login_required
-@permission_required('events.accept_event', raise_exception=True)
+@permission_required('events.approve_event', raise_exception=True)
 def approval(request, id):
     context = {}
     context['msg'] = "Approve Event"
