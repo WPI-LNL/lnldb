@@ -920,6 +920,10 @@ class Fund(models.Model):
     def __unicode__(self):
         return "%s (%s)" % (self.name, self.fopal)
 
+    class Meta:
+        permissions = (
+            ('view_fund', 'View a fund'),
+        )
 
 
 

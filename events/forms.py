@@ -97,7 +97,7 @@ class WorkorderSubmit(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(WorkorderSubmit, self).__init__(*args, **kwargs)
-        self.fields['date_setup_start'].widget = SelectDateWidget()
+        self.fields['datetime_setup_start'].widget = SelectDateWidget()
         # self.fields['datetime_start'].widget = datetime()
         # self.fields['datetime_end'].widget = datetime()
 

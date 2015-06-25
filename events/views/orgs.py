@@ -83,8 +83,8 @@ def fund_edit(request, id=None, org=None):
     """form for adding an fund """
     # need to fix this
     context = {}
-    edit_perms = ('events.edit_fund',)
-    mk_perms = ('events.add_org_fund',)
+    edit_perms = ('events.modify_fund',)
+    mk_perms = ('events.add_fund',)
     if id:
         instance = get_object_or_404(Fund, pk=id)
         msg = "Edit Fund"

@@ -440,7 +440,7 @@ def unbilled(request, start=None, end=None):
 
 
 @login_required
-@permission_required('events.bill_events', raise_exception=True)
+@permission_required('events.bill_event', raise_exception=True)
 def unbilled_semester(request, start=None, end=None):
     context = {}
 
@@ -486,7 +486,7 @@ def unbilled_semester(request, start=None, end=None):
 
 
 @login_required
-@permission_required('events.close_events', raise_exception=True)
+@permission_required('events.close_event', raise_exception=True)
 def paid(request, start=None, end=None):
     context = {}
 
@@ -531,7 +531,7 @@ def paid(request, start=None, end=None):
 
 
 @login_required
-@permission_required('events.bill_events', raise_exception=True)
+@permission_required('events.bill_event', raise_exception=True)
 def unpaid(request, start=None, end=None):
     context = {}
 

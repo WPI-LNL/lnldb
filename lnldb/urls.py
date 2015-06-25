@@ -192,7 +192,7 @@ urlpatterns = patterns('',
                            name="inv-new-entry"),
 
                        # members
-                       url(r'^list/mdc/raw/$', 'members.views.mdc_raw'),
+                       url(r'^list/mdc/raw/$', 'members.views.mdc_raw', name="mdc_raw"),
                        url(r'^list/mdc/$', 'members.views.mdc'),
                        url(r'^db/members/officers/$', 'members.views.officers'),
                        url(r'^db/members/active/$', 'members.views.active'),

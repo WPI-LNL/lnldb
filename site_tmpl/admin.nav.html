@@ -16,10 +16,14 @@
 
             <div class="collapse navbar-collapse" id="db-navbar-collapse-1">
             <p class="navbar-text navbar-right">
+                {% if request.user.pk %}
                 Logged in as <a href="{% url  "members.views.detail" request.user.pk %}"
                                 class="navbar-link">{{ user }}</a>
                 &middot;
                 <a href="{% url 'logout' %}">Log Out</a>
+                {% else %}
+                    <a href="{% url 'login' %}">Log In</a>
+                {% endif %}
             </p>
             <ul class="nav navbar-nav">
                 <li class="{% ancestor '/db/events/' %} dropdown">

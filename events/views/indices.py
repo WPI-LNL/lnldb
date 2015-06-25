@@ -80,7 +80,7 @@ def admin(request, msg=None):
 
 
 @login_required
-@permission_required('events.view_debug_info', raise_exception=True)
+@permission_required('events.event_view_granular', raise_exception=True)
 def dbg_land(request):
     context = {}
     context['env'] = os.environ

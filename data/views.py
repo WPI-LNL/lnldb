@@ -7,7 +7,7 @@ from django.views.static import was_modified_since
 import os
 from django.conf import settings
 from django.core.urlresolvers import reverse
-from django.http import HttpResponseRedirect, FileResponse, HttpResponseNotModified
+from django.http import HttpResponseRedirect, FileResponse, HttpResponseNotModified, HttpResponseGone, HttpResponse
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required, permission_required
 from django.utils.datastructures import MultiValueDictKeyError
@@ -32,7 +32,10 @@ def fuckoffkitty(request):
         return HttpResponseRedirect(reverse('data.views.fuckoffkitty'))
     else:
         context = {}
-        kitty = StupidCat.objects.filter(user=request.user).latest()
+        try:
+            kitty = StupidCat.objects.filter(user=request.user).latest()
+        except:
+            return HttpResponse("Error: Schrodinger's Cat")
         context['kitty'] = kitty
         context['foo'] = 'foo'
 
@@ -64,7 +67,7 @@ def status(request):
 
 
 @login_required
-@permission_required('events.view_debug_info', raise_exception=True)
+@permission_required('events.event_view_granular', raise_exception=True)
 def access_log(request):
     context = {}
 
