@@ -1,4 +1,5 @@
 from django import test
+from django.contrib.auth.models import Permission
 from django.core.urlresolvers import reverse
 from django.conf import settings
 import importlib
@@ -15,7 +16,10 @@ class UrlsTest(test.TestCase):
                  'is_staff': True,
                  'is_superuser': False}
         extra.update(self.credentials)
-        get_user_model().objects._create_user(**extra)
+        self.user = get_user_model().objects._create_user(**extra)
+        self.user.save()
+        for perm in Permission.objects.all():
+            self.user.user_permissions.add(perm)
 
     @override_settings(TEMPLATE_STRING_IF_INVALID='TEMPLATE_WARNING [%s]')
     def test_responses(self, allowed_http_codes=[200, 302, 403],
@@ -51,6 +55,7 @@ class UrlsTest(test.TestCase):
         def check_urls(urlpatterns, prefix=''):
             for pattern in urlpatterns:
                 if hasattr(pattern, 'url_patterns'):
+                    # bypass the recursive checks because some libs fail.
                     continue
                     # this is an included urlconf
                     new_prefix = prefix
@@ -84,13 +89,13 @@ class UrlsTest(test.TestCase):
                     name = ""
                 fullname = (prefix + ":" + name) if prefix else name
                 if not skip:
-                    print("Trying %s %s" % (fullname, params))
+                    print(" > Trying %s %s" % (fullname, params))
                     url = reverse(fullname, kwargs=params)
                     response = self.client.get(url)
                     # print status code if it is not 200
-                    status = "" if response.status_code == 200 else str(response.status_code) + " "
+                    status = str(response.status_code) + " "
                     if response.status_code in (301, 302):
-                        status = status + "> " + response["Location"] + " "
+                        status = status + "=> " + response["Location"] + " "
                     if not quiet:
                         print(status + url)
                     self.assertIn(response.status_code, allowed_http_codes)

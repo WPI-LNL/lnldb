@@ -105,7 +105,7 @@
                             <li class="divider"></li>
                             <li><a href="{% url "users-add" %}">Add User</a></li>
                         {% endpermission %}
-                        {% permission request.user has 'data.view_debug_info' %}
+                        {% permission request.user has 'events.event_view_granular' %}
                             <li class="divider"></li>
                             <li><a href="{% url "access-log" %}">Access Log</a>
                         {% endpermission %}
@@ -168,7 +168,10 @@
                     <form class="navbar-form navbar-left" action="{% url "search" %}" method="GET" role="search">
                         <div class="form-group">
                             <input type="text" class="form-control" name="q" placeholder="Search Everything"
-                                   value="{{ q }}">
+                                    {% if q %}
+                                   value="{{ q }}"
+                                    {% endif %}
+                                    >
                         </div>
                     </form>
                 </li>
