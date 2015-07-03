@@ -24,10 +24,12 @@
                         <a class="btn btn-warning btn-lg"
                            href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
                     {% endpermission %}
-                    {% permission request.user has 'events.cancel_event' of event %}
-                        <a class="btn btn-danger btn-lg" href="#cancelModal" role="button"
-                           data-toggle="modal">Cancel</a>
-                    {% endpermission %}
+                    {% if not event.reviewed %}
+                        {% permission request.user has 'events.cancel_event' of event %}
+                            <a class="btn btn-danger btn-lg" href="#cancelModal" role="button"
+                               data-toggle="modal">Cancel</a>
+                        {% endpermission %}
+                    {% endif %}
                     {% if not event.approved %}
                         {% permission request.user has 'events.approve_event' of event %}
                             <a class="btn btn-success btn-lg" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
@@ -44,6 +46,11 @@
                             {% permission request.user has 'events.bill_event' of event %}
                                 <a class="btn btn-primary btn-lg" href="{% url "event-mkbilling" event.id %}">Create
                                     Bill</a>
+                            {% endpermission %}
+                            {% permission request.user has 'events.close_event' of event %}
+                                <a class="btn btn-success btn-lg" href="#cancelModal" role="button" data-toggle="modal">
+                                    Close
+                                </a>
                             {% endpermission %}
                         {% endif %}
                     {% endif %}
@@ -95,7 +102,7 @@
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
-                        <a class="btn btn-primary" href="{% url "event-close" event.id %}">Cancel Event</a>
+                        <a class="btn btn-primary" href="{% url "event-cancel" event.id %}">Cancel Event</a>
                     </div>
                 </div>
             </div>
@@ -115,11 +122,10 @@
                         <div class="modal-body">
                             <p>Reopening an event should be considered a last resort option, and removes all records
                                 of the event being closed to begin with.</p>
-                            TODO: implement me
                         </div>
                         <div class="modal-footer">
                             <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
-                            <a class="btn btn-primary" href="{% url "event-close" event.id %}">Reopen Event</a>
+                            <a class="btn btn-primary" href="{% url "event-reopen" event.id %}">Reopen Event</a>
                         </div>
                     </div>
                 </div>

@@ -177,11 +177,43 @@ def close(request, id):
     context = {}
     context['msg'] = "Closing Event"
     event = get_object_or_404(Event, pk=id)
-    if not (request.user.has_perm('events.close_event') or request.user.has_perm('events.close_event', event)):
+    if not request.user.has_perm('events.close_event', event):
         raise PermissionDenied
     event.closed = True
     event.closed_by = request.user
     event.closed_on = timezone.now()
+
+    event.save()
+
+    return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+
+
+@login_required
+def cancel(request, id):
+    context = {}
+    context['msg'] = "Event Cancelled"
+    event = get_object_or_404(Event, pk=id)
+    if not request.user.has_perm('events.cancel_event', event):
+        raise PermissionDenied
+    event.cancelled = True
+    event.cancelled_by = request.user
+    event.cancelled_on = timezone.now()
+
+    event.save()
+
+    return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+
+
+@login_required
+def reopen(request, id):
+    context = {}
+    context['msg'] = "Event Reopened"
+    event = get_object_or_404(Event, pk=id)
+    if not request.user.has_perm('events.reopen', event):
+        raise PermissionDenied
+    event.closed = False
+    event.closed_by = None
+    event.closed_on = None
 
     event.save()
 
