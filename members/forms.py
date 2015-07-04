@@ -35,6 +35,10 @@ class MemberForm(FieldAccessForm):
         def __init__(self):
             pass
 
+        thisisme = FieldAccessLevel(
+            lambda user, instance: user == instance,
+            enable=('first_name', 'last_name')
+        )
         selfservice = FieldAccessLevel(
             lambda user, instance: user.has_perm('auth.change_user', instance),
             enable=('username', 'first_name', 'last_name')

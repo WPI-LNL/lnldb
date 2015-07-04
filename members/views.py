@@ -182,7 +182,7 @@ class UserUpdate(LoginRequiredMixin, HasPermMixin, ConditionalFormMixin, UpdateV
         user = self.get_object()
 
         # if the groups have changed,
-        if 'groups' in form.changed_data:
+        if 'groups' in form.changed_data and 'groups' in form.cleaned_data:
             newgroups = form.cleaned_data['groups']
             # create tracking instance
             s = StatusChange.objects.create(member=user)
