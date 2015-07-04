@@ -80,6 +80,10 @@ class MemberContact(FieldAccessForm):
         def __init__(self):
             pass
 
+        thisisme = FieldAccessLevel(
+            lambda user, instance: user == instance,
+            enable=('wpibox', 'phone', 'addr'),
+        )
         selfservice = FieldAccessLevel(
             lambda user, instance: user.has_perm('acct.edit_user', instance),
             enable=('wpibox', 'phone', 'addr'),
