@@ -83,7 +83,7 @@
                     <h3>Attachments:</h3>
                     <ul>
                         {% for a in m.attachments.all %}
-                            {% permission not a.private or request.user has 'meetings.view_mtg_close' of m %}
+                            {% permission not a.private or request.user has 'meetings.view_mtg_closed' of m %}
                                 <li><a href="{% url 'meeting-att-dl' m.pk a.pk %}">{{ a.name }}</a>
                                     {% permission request.user has 'meetings.edit_mtg' of m %}
                                         [<a href="{% url 'meeting-att-edit' m.pk a.pk %}">Edit</a>]
