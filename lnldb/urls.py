@@ -232,6 +232,8 @@ urlpatterns = patterns('',
                            'meetings.views.download_att', name="meeting-att-dl"),
                        url(r'^db/meetings/(?P<mtg_id>\d+)/file/(?P<att_id>\d+)/$', 'meetings.views.modify_att',
                            name="meeting-att-edit"),
+                       url(r'^db/meetings/(?P<mtg_id>\d+)/rm/(?P<att_id>\d+)/$',
+                           'meetings.views.rm_att', name="meeting-att-rm"),
 
                        #projection
                        url(r'^db/projection/list/$', 'projection.views.plist_detail',

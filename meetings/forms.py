@@ -3,12 +3,13 @@ import datetime
 from django import forms
 from django.db.models import Q
 from django.forms.fields import SplitDateTimeField
+from django.core.urlresolvers import reverse
 from pagedown.widgets import PagedownWidget
 from meetings.models import Meeting, MeetingAnnounce, CCNoticeSend, MtgAttachment
 from events.models import Event, Location
 from ajax_select.fields import AutoCompleteSelectMultipleField
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Submit, Field
+from crispy_forms.layout import Layout, Submit, Field, Button
 from crispy_forms.bootstrap import FormActions, TabHolder, Tab
 from multiupload.fields import MultiFileField
 
@@ -82,6 +83,11 @@ class MtgAttachmentEditForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.add_input(Submit('submit', 'Submit'))
         super(MtgAttachmentEditForm, self).__init__(*args, **kwargs)
+        self.helper.add_input(Button('delete', 'Delete',
+                                     onClick='window.location.href="{}"'
+                                     .format(reverse('meetings.views.rm_att',
+                                                     args=(self.instance.meeting.pk, self.instance.pk))),
+                                     css_class='btn-danger'))
 
     class Meta:
         model = MtgAttachment

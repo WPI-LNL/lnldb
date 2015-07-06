@@ -31,11 +31,23 @@ def download_att(request, mtg_id, att_id):
     if not request.user.has_perm('meetings.view_mtg', mtg):
         raise PermissionDenied
     att = get_object_or_404(MtgAttachment, pk=att_id)
-    if att.meeting.pk != mtg.pk:
+    if not att.meeting or att.meeting.pk != mtg.pk:
         raise PermissionDenied
     elif att.private and not request.user.has_perm('meetings.view_mtg_closed', mtg):
         raise PermissionDenied
     return serve_file(request, att.file)
+
+
+@login_required
+def rm_att(request, mtg_id, att_id):
+    mtg = get_object_or_404(Meeting, pk=mtg_id)
+    if not request.user.has_perm('meetings.edit_mtg', mtg):
+        raise PermissionDenied
+    att = get_object_or_404(MtgAttachment, pk=att_id)
+    if not att.meeting or att.meeting.pk != mtg.pk:
+        raise PermissionDenied
+    mtg.attachments.remove(att)
+    return HttpResponseRedirect(reverse('meetings.views.viewattendance', args=(mtg.pk,)))
 
 
 @login_required
@@ -48,6 +60,7 @@ def modify_att(request, mtg_id, att_id):
     att = get_object_or_404(MtgAttachment, pk=att_id)
     if not (request.user.has_perms(mtg_perms, mtg) and
                 request.user.has_perms(att_perms, att) and
+                att.meeting and
                     att.meeting.pk == mtg.pk):
         raise PermissionDenied
 

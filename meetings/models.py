@@ -104,7 +104,7 @@ class MtgAttachment(TimeStampedModel):
     name = models.CharField(max_length=64, null=False, blank=False)
     file = models.FileField(upload_to=mtg_attachment_file_name, blank=False, null=False)
     author = models.ForeignKey(AUTH_USER_MODEL, editable=False, null=False)
-    meeting = models.ForeignKey(Meeting, related_name='attachments', null=False)
+    meeting = models.ForeignKey(Meeting, related_name='attachments', null=True)
     private = models.BooleanField(default=False)
 
 
