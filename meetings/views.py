@@ -33,6 +33,8 @@ def download_att(request, mtg_id, att_id):
     att = get_object_or_404(MtgAttachment, pk=att_id)
     if att.meeting.pk != mtg_id:
         raise PermissionDenied
+    elif att.private and not request.user.has_perm('meetings.view_mtg_closed', mtg):
+        raise PermissionDenied
     return serve_file(request, att.file)
 
 
@@ -133,7 +135,9 @@ def editattendance(request, id):
         formset = MeetingAdditionForm(request.POST, request.FILES, instance=m)
         if formset.is_valid():
             for each in formset.cleaned_data['attachments']:
-                MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m)
+                MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m, private=False)
+            for each in formset.cleaned_data['attachments_private']:
+                MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m, private=True)
             m = formset.save()
             url = reverse('meetings.views.viewattendance', args=(m.id,)) + "#attendance"
             return HttpResponseRedirect(url)

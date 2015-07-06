@@ -3,13 +3,14 @@ import datetime
 from django import forms
 from django.db.models import Q
 from django.forms.fields import SplitDateTimeField
+from pagedown.widgets import PagedownWidget
 from meetings.models import Meeting, MeetingAnnounce, CCNoticeSend, MtgAttachment
 from events.models import Event, Location
 from ajax_select.fields import AutoCompleteSelectMultipleField
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Submit, Field, Hidden
-from crispy_forms.bootstrap import FormActions
-from multiupload.fields import MultiFileInput, MultiFileField
+from crispy_forms.layout import Layout, Submit, Field
+from crispy_forms.bootstrap import FormActions, TabHolder, Tab
+from multiupload.fields import MultiFileField
 
 
 class MeetingAdditionForm(forms.ModelForm):
@@ -17,11 +18,33 @@ class MeetingAdditionForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         self.helper.layout = Layout(
-            'meeting_type',
-            'location',
-            'datetime',
-            'attendance',
-            'attachments',
+            TabHolder(
+                Tab(
+                    'Basic Info',
+                    'meeting_type',
+                    'location',
+                    'datetime',
+                    'duration'
+                ),
+                Tab(
+                    'Attendance',
+                    'attendance',
+                ),
+                Tab(
+                    'Agenda',
+                    'agenda',
+                ),
+                Tab(
+                    'Open Minutes',
+                    'minutes',
+                    'attachments'
+                ),
+                Tab(
+                    'Closed Minutes',
+                    'minutes_private',
+                    'attachments_private'
+                ),
+            ),
             FormActions(
                 Submit('save', 'Save Changes'),
             )
@@ -32,14 +55,26 @@ class MeetingAdditionForm(forms.ModelForm):
     datetime = SplitDateTimeField(required=True, initial=datetime.datetime.today())
     location = forms.ModelChoiceField(queryset=Location.objects.filter(available_for_meetings=True), label="Location",
                                       required=False)
-    attachments = MultiFileField(max_file_size=1024 * 1024 * 20)  # 20 MB
+    attachments = MultiFileField(max_file_size=1024 * 1024 * 20,  # 20 MB
+                                 required=False)
+    attachments_private = MultiFileField(max_file_size=1024 * 1024 * 20,  # 20 MB
+                                         label="Closed Attachments",
+                                         required=False)
+    minutes = forms.CharField(widget=PagedownWidget(),
+                              required=False)
+    agenda = forms.CharField(widget=PagedownWidget(),
+                             required=False)
+    minutes_private = forms.CharField(widget=PagedownWidget(),
+                                      label="Closed Minutes",
+                                      required=False)
 
     class Meta:
         model = Meeting
         widgets = {
             'datetime': forms.widgets.DateInput(attrs={"class": "datepick"}),
         }
-        fields = ('meeting_type', 'location', 'datetime', 'attendance')
+        fields = ('meeting_type', 'location', 'datetime', 'attendance', 'duration',
+                  'agenda', 'minutes', 'minutes_private')
 
 
 class MtgAttachmentEditForm(forms.ModelForm):
@@ -50,7 +85,7 @@ class MtgAttachmentEditForm(forms.ModelForm):
 
     class Meta:
         model = MtgAttachment
-        fields = ('name', 'file')
+        fields = ('name', 'file', 'private')
 
 
 class AnnounceSendForm(forms.ModelForm):
@@ -87,6 +122,9 @@ class AnnounceSendForm(forms.ModelForm):
     class Meta:
         model = MeetingAnnounce
         fields = ('events', 'subject', 'message', 'email_to')
+        widgets = {
+            'message': PagedownWidget(),
+        }
 
     events = forms.ModelMultipleChoiceField(queryset=Event.objects.all(), required=False)
 
@@ -126,4 +164,7 @@ class AnnounceCCSendForm(forms.ModelForm):
     class Meta:
         model = CCNoticeSend
         fields = ('events', 'addtl_message', 'email_to')
+        widgets = {
+            'addtl_message': PagedownWidget()
+        }
         # events = forms.ModelMultipleChoiceField(queryset=Event.objects.all(),required=False)

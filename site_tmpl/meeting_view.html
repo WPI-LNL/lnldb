@@ -4,11 +4,12 @@
 {% load markdown_deux_tags %}
 {% load bootstrap_toolkit %}
 {% load permissionif %}
+{% load lnldb_tags %}
 {% block content %}
     <div class="jumbotron">
         <h1>{{ m.name }}</h1>
 
-        <h2>{{ m.datetime }}</h2>
+        <h2>{{ m.datetime | daterange:m.endtime }}</h2>
         {% permission user has 'meetings.edit_mtg' of m %}
             <a class="btn btn-lg btn-primary" href="{% url "meetings.views.editattendance" m.id %}">Edit</a>
         {% endpermission %}
@@ -17,10 +18,13 @@
         <div class="col-md-2">
             <ul class="nav nav-pills nav-stacked" id="meetingtabs">
                 <li class="active"><a href="#attendance" data-toggle="tab">Attendance</a></li>
-                <li><a href="#emails" data-toggle="tab">Email</a></li>
-                {% if m.agenda or m.minutes or m.attachments.exists %}
-                    <li><a href="#minutes" data-toggle="tab">Minutes</a></li>
-                {% endif %}
+                <li><a href="#emails" data-toggle="tab">Emails</a></li>
+                <li><a href="#agenda" data-toggle="tab">Agenda</a></li>
+                <li><a href="#minutes" data-toggle="tab">Minutes</a></li>
+                {% permission request.user has 'meetings.view_mtg_closed' of m %}
+                    <li><a href="#closed" data-toggle="tab">Closed Minutes</a></li>
+                {% endpermission %}
+                <li><a href="#attachments" data-toggle="tab">Attachments</a></li>
                 <li><a href="#events" data-toggle="tab">Events</a></li>
             </ul>
         </div>
@@ -37,24 +41,66 @@
                     </ul>
                 </div>
 
-                {% if m.attachments.exists %}
-                    <div class="tab-pane active" id="minutes">
-                        <h3>Attachments:</h3>
-                        <ul>
-                            {% for a in m.attachments.all %}
-                                <li>{{ a.name }}</li>
-                            {% endfor %}
-                        </ul>
+                <div class="tab-pane" id="agenda">
+                    <h3>Agenda:</h3>
+
+                    <div class="note-body agenda">
+                        {% if m.agenda %}
+                            {{ m.agenda | mduserlink | mdeventlink | markdown }}
+                        {% else %}
+                            <i>There is nothing here</i>
+                        {% endif %}
                     </div>
-                {% endif %}
+                </div>
+
+                <div class="tab-pane" id="minutes">
+                    <h3>Meeting Minutes:</h3>
+
+                    <div class="note-body minutes">
+                        {% if m.minutes %}
+                            {{ m.minutes | mduserlink | mdeventlink | markdown }}
+                        {% else %}
+                            <i>There is nothing here</i>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% permission request.user has 'meetings.view_mtg_closed' of m %}
+                    <div class="tab-pane" id="closed">
+                        <h3>Closed Meeting Minutes:</h3>
+
+                        <div class="note-body closed-minutes">
+                            {% if m.minutes_private %}
+                                {{ m.minutes_private | mduserlink | mdeventlink | markdown }}
+                            {% else %}
+                                <i>There is nothing here</i>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endpermission %}
+
+                <div class="tab-pane" id="attachments">
+                    <h3>Attachments:</h3>
+                    <ul>
+                        {% for a in m.attachments.all %}
+                            {% permission not a.private or request.user has 'meetings.view_mtg_close' of m %}
+                                <li><a href="{% url 'meeting-att-dl' m.pk a.pk %}">{{ a.name }}</a>
+                                    {% permission request.user has 'meetings.edit_mtg' of m %}
+                                        [<a href="{% url 'meeting-att-edit' m.pk a.pk %}">Edit</a>]
+                                    {% endpermission %}
+                                </li>
+                            {% endpermission %}
+                        {% endfor %}
+                    </ul>
+                </div>
 
                 <div class="tab-pane" id="emails">
                     <h3>E-Mail</h3>
                     {% if m.meetingannounce_set.exists or m.meetingccnotices.exists %}
                         <strong> Emails Sent:</strong>
-                        
+
                         <div class="panel-group" id="accordion0">
-                            
+
                             {% for announce in m.meetingannounce_set.all %}
                             <div class="panel panel-default">
                                 <div class="panel-heading">
@@ -110,9 +156,9 @@
                             </div>
                             {% endfor %}
                             </div>
-                
-                        
-                    <br />
+
+
+                        <br />
                     <a class="btn btn-default" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
                     <a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>
                     {% else %}
@@ -120,11 +166,11 @@
                     {% endif %}
                     <!--<a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>-->
                 </div>
-                
+
                 <div class="tab-pane" id="events">
                 <h3>This Week's Upcoming Events</h3>
                     <table class="table">
-                        <tr>        
+                        <tr>
                             <th>Name</th>
                             <th>Services</th>
                             <th>Setup Start</th>
@@ -143,7 +189,7 @@
                                 </td>
                                 <td>
                                     {% for c in e.ccinstances.all %}
-                                        <strong>{{ c.service.shortname }}</strong> : 
+                                        <strong>{{ c.service.shortname }}</strong> :
                                         {{ c.setup_start }}<br />
                                     {% endfor %}
                                 </td>
@@ -175,7 +221,7 @@
                     </table>
                     <h3>Future Events (next week)</h3>
                     <table class="table">
-                        <tr>        
+                        <tr>
                             <th>Name</th>
                             <th>Services</th>
                             <th>Setup Start</th>
@@ -221,10 +267,6 @@
             </div>
         </div>
     </div>
-    
-            
-            
-            
 
     <div class="row">
         <div class="col-md-12">
@@ -234,21 +276,5 @@
 {% endblock %}
 
 {% block extras %}
-<script>
-$(document).ready(function () {
-    $('#meetingtabs a').click(function (e) {
-        e.preventDefault();
-        $(this).tab('show');
-    });
 
-    // store the currently selected tab in the hash value
-    $("ul.nav-pills > li > a").on("shown.bs.tab", function (e) {
-        window.location.hash = $(e.target).attr("href").substr(1);
-    });
-
-    // on load of the page: switch to the currently selected tab
-    var hash = window.location.hash;
-    $('#meetingtabs a[href="' + hash + '"]').tab('show');
-    });
-</script>
 {% endblock %}
