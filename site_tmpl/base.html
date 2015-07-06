@@ -52,8 +52,29 @@
                         defaultTime: false,
                         showMeridian: false
                     });
+
+                // Collapse main navbar if too big
                 $("div.collapse ul.navbar-nav").flexMenu()
+
+                /*
+                 Save tabs across reloads
+                 */
+
+                $('a[data-toggle="tab"]').click(function (e) {
+                    e.preventDefault();
+                    $(this).tab('show');
+                }).on("shown.bs.tab", function (e) {
+                    // store the currently selected tab in the hash value
+                    window.location.hash = $(e.target).attr("href").substr(1);
                 });
+
+                // on load of the page: switch to the currently selected tab
+                $('a[href="' + window.location.hash + '"][data-toggle="tab"]').tab('show');
+            });
+            // switch to tabs using back button too.
+            window.addEventListener('popstate', function (event) {
+                $('a[href="' + window.location.hash + '"][data-toggle="tab"]').tab('show');
+            });
     </script>
         <!--         <link href="{% static 'css/style.css' %}" rel="stylesheet"> -->
 

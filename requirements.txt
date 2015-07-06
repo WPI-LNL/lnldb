@@ -31,4 +31,5 @@ django-hijack
 django-multiupload
 django-extensions
 django-reversion
+django-pagedown
 docutils

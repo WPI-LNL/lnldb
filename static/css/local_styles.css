@@ -162,3 +162,20 @@ footer {
     font-style: italic;
     font-size: smaller;
 }
+
+input[type="file"] {
+    height: auto;
+}
+
+/* Markdown Widget */
+.wmd-input {
+    background-color: white !important;
+}
+
+#mdModal table {
+    width: 100%;
+}
+
+#mdModal td {
+    padding: 5px;
+}

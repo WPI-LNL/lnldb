@@ -3,6 +3,7 @@ import decimal
 
 import _strptime
 # python multithreading bug workaround
+from pagedown.widgets import PagedownWidget
 from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer
 
 from django import forms
@@ -258,6 +259,14 @@ class EventApprovalForm(forms.ModelForm):
         fields = ['description', 'internal_notes', 'datetime_start', 'datetime_end', 'billing_fund',
                   'billed_by_semester', 'datetime_setup_complete', 'lighting', 'lighting_reqs',
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs']
+        widgets = {
+            'description': PagedownWidget(),
+            'internal_notes': PagedownWidget,
+            'lighting_reqs': PagedownWidget(),
+            'sound_reqs': PagedownWidget(),
+            'proj_reqs': PagedownWidget(),
+            'otherservice_reqs': PagedownWidget()
+        }
 
     billing_fund = AutoCompleteSelectField("Funds", required=False)
     datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
@@ -281,6 +290,9 @@ class EventDenialForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ('cancelled_reason',)
+        widgets = {
+            'cancelled_reason': PagedownWidget()
+        }
 
 
 class EventMeetingForm(forms.ModelForm):
@@ -437,6 +449,15 @@ class InternalEventForm(FieldAccessForm):
                   'billed_by_semester', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'lighting', 'lighting_reqs', 'sound', 'sound_reqs', 'projection', 'proj_reqs',
                   'otherservices', 'otherservice_reqs', 'sensitive', 'test_event')
+        widgets = {
+            'description': PagedownWidget(),
+            'internal_notes': PagedownWidget,
+            'lighting_reqs': PagedownWidget(),
+            'sound_reqs': PagedownWidget(),
+            'proj_reqs': PagedownWidget(),
+            'otherservice_reqs': PagedownWidget()
+        }
+
 
     location = GroupedModelChoiceField(
         queryset=Location.objects.filter(show_in_wo_form=True),
@@ -474,6 +495,9 @@ class EventReviewForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ('billing_org', 'internal_notes')
+        widgets = {
+            'internal_notes': PagedownWidget()
+        }
 
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="")
 
@@ -509,6 +533,9 @@ class InternalReportForm(FieldAccessForm):
     class Meta:
         model = CCReport
         fields = ('crew_chief', 'report')
+        widgets = {
+            'report': PagedownWidget()
+        }
     crew_chief = AutoCompleteSelectField('Members', required=True)
 
     class FieldAccess:
@@ -712,6 +739,9 @@ class ReportForm(forms.ModelForm):
     class Meta:
         model = CCReport
         fields = ('report',)
+        widgets = {
+            'report': PagedownWidget()
+        }
 
 
 class MKHoursForm(forms.ModelForm):
@@ -856,6 +886,7 @@ class AttachmentForm(forms.ModelForm):
         if commit:
             obj.save()
         return obj
+
     class Meta:
         model = EventAttachment
         fields = ('for_service', 'attachment', 'note')
@@ -1169,7 +1200,7 @@ class LightingForm(forms.Form):
     )
 
     requirements = forms.CharField(
-        widget=forms.Textarea,
+        widget=PagedownWidget(),
         # widget=BootstrapTextInput(prepend='P',),
         label="Lighting Requirements",
         help_text=SERVICE_INFO_HELP_TEXT,
@@ -1210,7 +1241,7 @@ class SoundForm(forms.Form):
         widget=forms.RadioSelect(attrs={'class': 'radio itt'}),
     )
     requirements = forms.CharField(
-        widget=forms.Textarea,
+        widget=PagedownWidget(),
         label="Sound Requirements",
         required=False,
         help_text=SERVICE_INFO_HELP_TEXT,
@@ -1248,7 +1279,7 @@ class ProjectionForm(forms.Form):
         widget=forms.RadioSelect(attrs={'class': 'radio'}),
     )
     requirements = forms.CharField(
-        widget=forms.Textarea,
+        widget=PagedownWidget(),
         label="Projection Requirements",
         required=False,
         help_text=SERVICE_INFO_HELP_TEXT,
@@ -1276,7 +1307,7 @@ class ServiceForm(forms.Form):
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
     )
     otherservice_reqs = forms.CharField(
-        widget=forms.Textarea,
+        widget=PagedownWidget(),
         label="Additional Information",
     )
 

@@ -160,6 +160,7 @@ INSTALLED_APPS = (
     'permission',
     'reversion',
     'hijack',
+    'pagedown',
     'compat',
 )
 
