@@ -31,7 +31,7 @@ def download_att(request, mtg_id, att_id):
     if not request.user.has_perm('meetings.view_mtg', mtg):
         raise PermissionDenied
     att = get_object_or_404(MtgAttachment, pk=att_id)
-    if att.meeting.pk != mtg_id:
+    if att.meeting.pk != mtg.pk:
         raise PermissionDenied
     elif att.private and not request.user.has_perm('meetings.view_mtg_closed', mtg):
         raise PermissionDenied
