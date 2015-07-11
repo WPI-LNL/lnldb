@@ -2,6 +2,7 @@
 {% load crispy_forms_tags %}
 
 {% block extras %}
+    {{ formset.media }}
 {% include "js_phonelimit.tmpl" %}
 {% include "js_datetimepick_wo.tmpl" %}
 <script type="text/javascript">

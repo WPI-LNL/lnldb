@@ -19,9 +19,7 @@
 
 {% block extras %}
 
-    <script type="text/javascript" src="{% static 'js/jquery-ui.js' %}"></script>
-    <link href="{% static 'css/ajax_select.css' %}" rel="stylesheet">
-    <script type="text/javascript" src="{% static '/js/ajax_select.js' %}"></script>
+    {{ formset.media }}
 
 {% include "js_datepick.tmpl" %}
 {% endblock %}
