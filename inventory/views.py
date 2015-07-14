@@ -233,6 +233,11 @@ def fast_mk(request):
     if not request.user.has_perm('inventory.add_equipmentitem'):
         raise PermissionDenied
 
+    try:
+        cat = int(request.GET['default_cat'])
+    except (ValueError, KeyError, TypeError):
+        cat = None
+
     if request.method == 'POST':
         formset = FastAdd(request.user, request.POST, request.FILES)
         if formset.is_valid():
@@ -242,7 +247,7 @@ def fast_mk(request):
             return HttpResponseRedirect(reverse('inventory.views.quick_bulk_edit',
                                                 kwargs={'type_id': obj.pk}))
     else:
-        formset = FastAdd(request.user)
+        formset = FastAdd(request.user, initial={'item_cat': cat})
     return render(request, "form_crispy.html", {
         'msg': "Fast Add Item(s)",
         "formset": formset,

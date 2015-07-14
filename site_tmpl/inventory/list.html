@@ -31,7 +31,7 @@
                         </a>
                     {% endpermission %}
                     {% permission request.user has 'inventory.add_equipmentcategory' %}
-                        <a class="btn btn-primary" href="{% url "inventory.views.fast_mk" %}">
+                        <a class="btn btn-primary" href="{% url "inventory.views.fast_mk" %}?default_cat={{ cat.pk }}">
                             Quick Add Items
                         </a>
                     {% endpermission %}
