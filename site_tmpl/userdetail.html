@@ -18,9 +18,10 @@
             <h3>Stats</h3>
             <table class="table">
                 <tr>
-                    <th>Status <a href="#statusmodal" data-toggle="modal">History</a></th>
-                    <td>{% for g in u.groups.all %}{{g }} {% endfor %}</td>
+                    <th>Status</th>
+                    <td>{{ u.groups.all|join:", " }}</td>
                 </tr>
+                {% if u.profile.is_lnl %}
                 <tr>
                     <th>Events CCd:</th>
                     <td>{{u.crewchiefx.count|add:u.ccinstances.count}}</td>
@@ -37,6 +38,7 @@
                     <th>Meeting Attendance Count</th>
                     <td>{{ u.meeting_set.count }}</td>
                 </tr>
+                {% endif %}
             </table>
             <div class="pull-right"><a href="{% url "membercontact" u.profile.id %}" class="btn btn-default">Edit</a></div>
             <h3> Contact</h3>
@@ -53,12 +55,16 @@
                     <th>Address</th>
                     <td>{{u.profile.address}}</td>
                 </tr>
-                <tr>
-                    <th>MDC</th>
-                    <td>{{u.profile.mdc}}</td>
-                </tr>
+                {% if u.profile.is_lnl %}
+                    <tr>
+                        <th>MDC</th>
+                        <td>{{ u.profile.mdc }}</td>
+                    </tr>
+                {% endif %}
             </table>
         </div>
+
+        {% if u.ccinstances or u.crewchiefx %}
         <div class="col-md-4">
             <h3>Events CC'd</h3>
             <ul class="list-unstyled"> 
@@ -70,6 +76,8 @@
                 {% endfor %}
             </ul>
         </div>
+        {% endif %}
+        {% if u.hours %}
         <div class="col-md-4">
             <h3>Events Participated</h3>
             <ul class="list-unstyled"> 
@@ -78,7 +86,30 @@
                 {% endfor %}
             </ul>
         </div>
-        
+        {% endif %}
+        <div class="col-md-4">
+            <h3>Organizations</h3>
+            {% if u.orgowner %}
+                <h4>Owner of:</h4>
+                <ul class="list-unstyled">
+                    {% for org in u.orgowner.all %}
+                        <li><a href="{% url "admin-orgdetail" org.pk %}">{{ org }}</a></li>
+                    {% empty %}
+                        [None]
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            {% if u.orgusers %}
+                <h4>Member of:</h4>
+                <ul class="list-unstyled">
+                    {% for org in u.orgusers.all %}
+                        <li><a href="{% url "admin-orgdetail" org.pk %}">{{ org }}</a></li>
+                    {% empty %}
+                        [None]
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
     </div>
      
     <div id="statusmodal" class="modal hide fade">
