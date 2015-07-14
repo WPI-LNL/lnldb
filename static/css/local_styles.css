@@ -168,6 +168,11 @@ input[type="file"] {
 }
 
 /* Markdown Widget */
+@media all {
+    .wmd-button-row {
+        overflow: hidden;
+    }
+}
 .wmd-input {
     background-color: white !important;
 }
