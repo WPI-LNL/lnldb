@@ -5,6 +5,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 import watson
 # Create your models here.
+from events.models import Organization
 
 
 class Profile(models.Model):
@@ -63,6 +64,11 @@ class Profile(models.Model):
     @property
     def orgs(self):
         return ', '.join(map(str, self.user.orgusers.all()))
+
+    @property
+    def all_orgs(self):
+        return Organization.objects.complex_filter(
+            Q(user_in_charge=self.user) | Q(associated_users=self.user)).distinct()
 
     @property
     def mdc_name(self):
