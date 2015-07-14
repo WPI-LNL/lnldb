@@ -64,7 +64,7 @@
             </table>
         </div>
 
-        {% if u.ccinstances or u.crewchiefx %}
+        {% if u.ccinstances.exists or u.crewchiefx.exists %}
         <div class="col-md-4">
             <h3>Events CC'd</h3>
             <ul class="list-unstyled"> 
@@ -77,7 +77,7 @@
             </ul>
         </div>
         {% endif %}
-        {% if u.hours %}
+        {% if u.hours.exists %}
         <div class="col-md-4">
             <h3>Events Participated</h3>
             <ul class="list-unstyled"> 
