@@ -195,8 +195,8 @@ def cat_edit(request, category_id):
             obj = formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Category saved.")
-            return HttpResponseRedirect(reverse('inventory.views.type_detail',
-                                                kwargs={'type_id': category_id}))
+            return HttpResponseRedirect(reverse('inventory.views.cat',
+                                                kwargs={'category_id': category_id}))
     else:
         formset = CategoryForm(instance=category)
     return render(request, "form_crispy.html", {
@@ -218,8 +218,8 @@ def cat_mk(request):
             obj = formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Category added.")
-            return HttpResponseRedirect(reverse('inventory.views.type_detail',
-                                                kwargs={'type_id': obj.pk}))
+            return HttpResponseRedirect(reverse('inventory.views.cat',
+                                                kwargs={'category_id': obj.pk}))
     else:
         formset = CategoryForm(initial={'parent': parent})
     return render(request, "form_crispy.html", {
