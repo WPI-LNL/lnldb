@@ -43,7 +43,7 @@
                         {% endpermission %}
                     {% endif %}
                     {% permission request.user has 'inventory.add_equipmentcategory' %}
-                        <a class="btn btn-default" href="{% url 'inventory.views.cat_mk' %}">
+                        <a class="btn btn-default" href="{% url 'inventory.views.cat_mk' %}?parent={{ cat.pk }}">
                             Add Category
                         </a>
                     {% endpermission %}
