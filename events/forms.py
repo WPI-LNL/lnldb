@@ -1173,13 +1173,14 @@ class LightingForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
             Fieldset(
                 'Basics',  # title
                 InlineRadios('lighting', title="test"),
-                Field('requirements', css_class="col-md-8"),
+                Field('requirements', css_class="col-md-10"),
             ),
             Fieldset(
                 'Extras',  # title
@@ -1216,13 +1217,14 @@ class SoundForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
             Fieldset(
                 'Basics',  # title
                 InlineRadios('sound'),
-                Field('requirements', css_class="col-md-8"),
+                Field('requirements', css_class="col-md-10"),
             ),
             Fieldset(
                 'Extras',  # title
@@ -1252,13 +1254,14 @@ class ProjectionForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
             Fieldset(
                 'Basics',  # title
                 InlineRadios('projection'),
-                Field('requirements', css_class="col-md-8"),
+                Field('requirements', css_class="col-md-10"),
             ),
             Fieldset(
                 'Extras',  # title
@@ -1290,6 +1293,7 @@ class ServiceForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
