@@ -1,0 +1,122 @@
+{% extends 'base_admin.html' %}
+{% load mptt_tags %}
+{% load permissionif %}
+{% block content %}
+    <div class="row">
+        <div class="col-md-2">
+            <b>Categories</b>
+            <ul class="category-tree">
+                {% recursetree cats %}
+                    <li {% ifequal cat node %}class="active"{% endifequal %}>
+                        {% if cat in node.get_descendants_inclusive %}<b>{% endif %}
+                        <a href="{% url 'inventory.views.cat' node.pk %}">{{ node.name }}</a>
+                        {% if cat in node.get_descendants_inclusive %}</b>{% endif %}
+                        {% if not node.is_leaf_node %}
+                            <ul class="children">
+                                {{ children }}
+                            </ul>
+                        {% endif %}
+                    </li>
+                {% endrecursetree %}
+            </ul>
+        </div>
+        <div class="list-body col-md-10">
+
+
+            <div>
+                <div class="pull-right btn-group">
+                    {% permission request.user has 'inventory.add_equipmentclass' %}
+                        <a class="btn btn-default" href="{% url 'inv-type-mk' %}?default_cat={{ cat.pk }}">
+                            Add Item Type
+                        </a>
+                    {% endpermission %}
+                    {% permission request.user has 'inventory.add_equipmentcategory' %}
+                        <a class="btn btn-primary" href="{% url "inventory.views.fast_mk" %}">
+                            Quick Add Items
+                        </a>
+                    {% endpermission %}
+                    {% if cat %}
+                        {% permission request.user has 'inventory.change_equipmentcategory' of cat %}
+                            <a class="btn btn-default" href="{% url 'inventory.views.cat_edit' cat.pk %}">
+                                Edit Category
+                            </a>
+                        {% endpermission %}
+                    {% endif %}
+                    {% permission request.user has 'inventory.add_equipmentcategory' %}
+                        <a class="btn btn-default" href="{% url 'inventory.views.cat_mk' %}">
+                            Add Category
+                        </a>
+                    {% endpermission %}
+                </div>
+
+                {% if cat %}
+                    <h2>Equipment Types in '{{ cat }}':</h2>
+                {% else %}
+                    <h3>Equipment Types:</h3>
+                {% endif %}
+            </div>
+
+            <table class="table table-striped table-bordered">
+
+                <thead>
+                <tr>
+                    <th>
+                        Name
+                    </th>
+                    <th>
+                        Count
+                    </th>
+                    <th>
+                        Type
+                    </th>
+                </tr>
+                </thead>
+                {% for i in inv %}
+                    <tr>
+                        <td><a href="{% url 'inv-type-detail' i.pk %}">{{ i }}</a></td>
+                        <td>
+                            {{ i.items.count }}
+                        </td>
+                        <td>
+                            {{ i.category.get_ancestors_inclusive |tree_path:" > " }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+
+            {% if inv.has_other_pages %}
+                <nav class="page-nav">
+                    <ul class="pagination">
+                        {% if inv.has_previous %}
+                            <li>
+                                <a href="?page={{ inv.previous_page_number }}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for i in inv.paginator.page_range %}
+                            <li {% ifequal i inv.number %}class="active"{% endifequal %}>
+                                <a href="?page={{ i }}" aria-label="Page {{ i }}">
+                                    <span aria-hidden="true">{{ i }}</span>
+                                </a>
+                            </li>
+                        {% endfor %}
+                        {% if inv.has_next %}
+                            <li>
+                                <a href="?page={{ inv.next_page_number }}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                <div class="pull-right">
+                    <strong>
+                        Items {{ inv.start_index }}-{{ inv.end_index }} of {{ inv.paginator.object_list.count }}.
+                    </strong>
+                </div>
+    {% endif %}
+        </div>
+</div>
+{% endblock %}

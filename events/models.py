@@ -218,6 +218,7 @@ class Location(models.Model):
     setup_only = models.BooleanField(default=False)
     show_in_wo_form = models.BooleanField(default=True, verbose_name="Event Location")
     available_for_meetings = models.BooleanField(default=False)
+    holds_equipment = models.BooleanField(default=False)
 
     #
     building = models.ForeignKey(Building)

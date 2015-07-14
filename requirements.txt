@@ -33,3 +33,4 @@ django-extensions
 django-reversion
 django-pagedown
 docutils
+django-mptt

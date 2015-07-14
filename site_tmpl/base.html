@@ -33,6 +33,7 @@
         <script src="{% static 'js/bootstrap-timepicker.min.js' %}"></script>
 
         <script src="{% static 'js/flexmenu.min.js' %}"></script>
+        <link href='{% static 'ajax_select/css/ajax_select.css' %}' rel="stylesheet" type="text/css">
         <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet">
         <link rel="stylesheet" type="text/css" href="{% static 'hijack/hijack-styles.css' %}" />
         <script type="text/javascript">
@@ -41,7 +42,8 @@
                     format: 'yyyy-mm-dd',
                     clearBtn: true,
                     todayBtn: true,
-                    todayHighlight: true
+                    todayHighlight: true,
+                    orientation: 'top',
                     });
                 $(".timeinput").timepicker(
                     {

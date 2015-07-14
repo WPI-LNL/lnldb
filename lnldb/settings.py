@@ -146,6 +146,7 @@ INSTALLED_APPS = (
     'meetings',
     'emails',
     'members',
+    'mptt',
 
     'bootstrap_toolkit',
     'crispy_forms',
@@ -237,7 +238,8 @@ AJAX_LOOKUP_CHANNELS = {
     'Members': ('acct.lookups', 'MemberLookup'),
     'AssocMembers': ('acct.lookups', 'AssocMemberLookup'),
     'Funds': ('events.lookups', 'FundLookup'),
-    'FundsLimited': ('events.lookups', 'FundLookupLimited')
+    'FundsLimited': ('events.lookups', 'FundLookupLimited'),
+    'EquipmentClass': ('inventory.lookups', 'ClassLookup')
 }
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
@@ -304,6 +306,8 @@ CACHES = {
         'LOCATION': 'lnldb-cache'
     }
 }
+
+MPTT_ADMIN_LEVEL_INDENT = 20
 
 # Local Settings Imports
 try:

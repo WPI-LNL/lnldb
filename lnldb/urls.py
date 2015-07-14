@@ -181,17 +181,6 @@ urlpatterns = patterns('',
                        url(r'^db/events/upcoming/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
                            'events.views.list.upcoming'),
 
-                       # inventory
-                       url(r'^db/inventory/view/$', 'inventory.views.view'),
-                       url(r'^db/inventory/add/$', 'inventory.views.add'),
-                       url(r'^db/inventory/categories/$', 'inventory.views.categories'),
-                       url(r'^db/inventory/cat/(?P<category>[a-zA-Z0-9_.-]+)/$', 'inventory.views.cat'),
-                       url(r'^db/inventory/cat/(?P<category>[a-zA-Z0-9_.-]+)/(?P<subcategory>[a-zA-Z0-9_.-]+)$',
-                           'inventory.views.subcat'),
-
-                       url(r'^db/inventory/d/(?P<id>[0-9a-f]+)/$', 'inventory.views.detail', name="inv-detail"),
-                       url(r'^db/inventory/d/(?P<id>[0-9a-f]+)/addentry/$', 'inventory.views.addentry',
-                           name="inv-new-entry"),
 
                        # members
                        url(r'^list/mdc/raw/$', 'members.views.mdc_raw', name="mdc_raw"),
@@ -337,16 +326,22 @@ urlpatterns = patterns('',
 
 
                        #inventory
-                       url(r'^db/inventory/view/$', 'inventory.views.view'),
-                       url(r'^db/inventory/add/$', 'inventory.views.add'),
-                       url(r'^db/inventory/categories/$', 'inventory.views.categories'),
-                       url(r'^db/inventory/cat/(?P<category>[a-zA-Z0-9_.-]+)/$', 'inventory.views.cat'),
-                       url(r'^db/inventory/cat/(?P<category>[a-zA-Z0-9_.-]+)/(?P<subcategory>[a-zA-Z0-9_.-]+)$',
-                           'inventory.views.subcat'),
-
-                       url(r'^db/inventory/d/(?P<id>[0-9a-f]+)/$', 'inventory.views.detail', name="inv-detail"),
-                       url(r'^db/inventory/d/(?P<id>[0-9a-f]+)/addentry/$', 'inventory.views.addentry',
-                           name="inv-new-entry"),
+                       url(r'^db/inventory/$', 'inventory.views.view_all'),
+                       url(r'^db/inventory/cat/(?P<category_id>[0-9]+)/$', 'inventory.views.cat'),
+                       url(r'^db/inventory/cat/(?P<category_id>[0-9]+)/edit/$', 'inventory.views.cat_edit'),
+                       url(r'^db/inventory/cat/mk/$', 'inventory.views.cat_mk'),
+                       url(r'^db/inventory/new/$', 'inventory.views.fast_mk',
+                           name="inv-fast-mk"),
+                       url(r'^db/inventory/class/new/$', 'inventory.views.type_mk',
+                           name="inv-type-mk"),
+                       url(r'^db/inventory/class/(?P<type_id>[0-9]+)/$', 'inventory.views.type_detail',
+                           name="inv-type-detail"),
+                       url(r'^db/inventory/class/(?P<type_id>[0-9]+)/add/bulk/$', 'inventory.views.quick_bulk_add',
+                           name="inv-bulk-add"),
+                       url(r'^db/inventory/class/(?P<type_id>[0-9]+)/edit/$', 'inventory.views.type_edit',
+                           name="inv-type-edit"),
+                       url(r'^db/inventory/class/(?P<type_id>[0-9]+)/edit/bulk/$', 'inventory.views.quick_bulk_edit',
+                           name="inv-bulk-edit"),
 
                        #members
                        url(r'^list/mdc/raw/$', 'members.views.mdc_raw'),

@@ -126,24 +126,23 @@
                     </ul>
                 </li>
                 {% endpermission %}
-                {% comment %} 
+                {% permission request.user has 'inventory.view_equipment' %}
                 <li class="{% ancestor '/db/inventory/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Inventory
                         <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
-                         <li><a href="{% url "inventory.views.view" %}">View Inventory</a></li>
-                         <li><a href="{% url "inventory.views.add" %}">Add Inventory Item</a></li>
-                         <li class="dropdown-submenu">
-                            <a tabindex="-1" href="#">Organize</a>
-                            <ul class="dropdown-menu">
-                            <li><a href="{% url "inventory.views.categories" %}">Categories</a></li>
-                            </ul>
-                         </li>
+                        <li><a href="{% url "inventory.views.view_all" %}">View Inventory</a></li>
+                        {% permission request.user has 'inventory.add_equipmentcategory' %}
+                            <li><a href="{% url "inventory.views.type_mk" %}">Add Item Type</a></li>
+                        {% endpermission %}
+                        {% permission request.user has 'inventory.add_equipmentcategory' %}
+                            <li><a href="{% url "inventory.views.fast_mk" %}">Quick Add Items</a></li>
+                        {% endpermission %}
                     </ul>
                 </li>
-                {% endcomment %}
+                {% endpermission %}
                 {% permission request.user has 'projection.view_pits' or request.user has 'projection.add_bulk_events' %}
                     <li class="{% ancestor '/db/projection/' %} dropdown">
                         <a class="dropdown-toggle" data-toggle="dropdown" href="#">
