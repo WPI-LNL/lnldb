@@ -147,7 +147,7 @@ class EquipmentClass(models.Model):
     def size(self):
         dims = filter(lambda dim: dim is not None,
                       [self.length, self.width, self.height])
-        return "x".join(dims)
+        return "x".join((str(dim) for dim in dims))
 
     class Meta:
         permissions = (
