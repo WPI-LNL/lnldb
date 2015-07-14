@@ -4,7 +4,9 @@
 {% block content %}
     <div class="row">
         <div class="col-md-2">
-            <b>Categories</b>
+            <b>Categories
+                {% if cat %}(<a href="{% url 'inventory.views.view_all' %}">clear</a>){% endif %}
+            </b>
             <ul class="category-tree">
                 {% recursetree cats %}
                     <li {% ifequal cat node %}class="active"{% endifequal %}>
