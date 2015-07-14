@@ -44,13 +44,14 @@
     <div class="row">
         <div class="col-md-12">
             <div class="jumbotron">
-                <h1> Equipment: {{ equipment }} </h1>
                 <p class="lead">
                     <a href="{% url 'inventory.views.view_all' %}">Inventory</a>
                     {% for ancestor in equipment.category.get_ancestors_inclusive %}
                         &rang; <a href="{% url 'inventory.views.cat' ancestor.pk %}">{{ ancestor }}</a>
                     {% endfor %}
                 </p>
+                <h1> Equipment: {{ equipment }} </h1>
+
 
                 <div class="actions pull-right">
                     <div class="btn-group">
