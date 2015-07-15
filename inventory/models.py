@@ -30,9 +30,11 @@ class EquipmentCategory(MPTTModel):
                                       "Choose '---' if not.")
 
     # for templates
+    @cached_property
     def get_ancestors_inclusive(self, ascending=False):
         return self.get_ancestors(ascending=ascending, include_self=True)
 
+    @cached_property
     def get_descendants_inclusive(self):
         return self.get_descendants(include_self=True)
 

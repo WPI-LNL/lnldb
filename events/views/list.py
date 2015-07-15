@@ -363,6 +363,7 @@ def unreviewed(request, start=None, end=None):
         .filter(reviewed=False) \
         .filter(datetime_end__lte=now) \
         .order_by('datetime_start') \
+        .prefetch_related('crew_chief') \
         .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)

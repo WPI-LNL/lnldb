@@ -32,7 +32,12 @@ def vieworgs(request):
     # todo add filters
     context = {}
 
-    orgs = Organization.objects.filter(archived=False).annotate(fund_count=Count('accounts'))
+    orgs = Organization.objects \
+        .filter(archived=False) \
+        .annotate(fund_count=Count('accounts')) \
+        .select_related('user_in_charge__first_name',
+                        'user_in_charge__last_name',
+                        'user_in_charge__username', ).all()
 
     context['orgs'] = orgs
 

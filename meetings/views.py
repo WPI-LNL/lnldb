@@ -23,6 +23,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test, per
 from helpers.challenges import is_officer
 from emails.generators import generate_notice_email
 from emails.generators import generate_notice_cc_email
+from django.db.models.aggregates import Count
 
 
 @login_required
@@ -166,7 +167,10 @@ def editattendance(request, id):
 @permission_required('meetings.list_mtgs', raise_exception=True)
 def listattendance(request, page=1):
     context = {}
-    attend = Meeting.objects.all()
+    attend = Meeting.objects \
+        .select_related('meeting_type__name') \
+        .annotate(num_attendees=Count('attendance')) \
+        .all()
     paginated = Paginator(attend, 10)
 
     try:

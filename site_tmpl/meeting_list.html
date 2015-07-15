@@ -17,7 +17,7 @@
             <tr>
                 <td><a href="{% url "meetings.views.viewattendance" m.id %}">{{ m }}</a></td>
                 <td>{{m.meeting_type}}</td>
-                <td>{{ m.attendance.count }}</td>
+                <td>{{ m.num_attendees }}</td>
             </tr>
             {% endfor %}
         </table>

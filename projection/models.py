@@ -2,7 +2,7 @@ import datetime
 
 from django.db import models
 from django.contrib.auth.models import User
-
+from django.utils.functional import cached_property
 
 EXPIRY_WARNING_DAYS = 30
 
@@ -30,11 +30,9 @@ class Projectionist(models.Model):
 
     @property
     def level(self):
-        instances = self.pitinstances.filter(valid=True).order_by('-pit_level__ordering')
-        if instances:
-            return instances[0]
-        else:
-            return None
+        return self.pitinstances.filter(valid=True) \
+            .select_related('pit_level__name_short').order_by('-pit_level__ordering') \
+            .first()
 
     @property
     def expiring(self):
@@ -52,22 +50,14 @@ class Projectionist(models.Model):
         else:
             return False
 
-    @property
+    @cached_property
     def validlevels(self):
-        out = {}
-        instances = self.pitinstances.filter(valid=True)
-        for i in instances:
-            out[i.pit_level.name_short] = True
-
-        return out
+        return self.pitinstances.filter(valid=True) \
+            .values_list('pit_level__name_short', flat=True)
 
     @property
     def is_alumni(self):
-        group = self.user.groups.filter(name="Alumni")
-        if group:
-            return True
-        else:
-            return False
+        return self.user.groups.filter(name="Alumni").exists()
 
     class Meta:
         permissions = (

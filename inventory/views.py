@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
+from django.db.models import Count
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.forms.models import inlineformset_factory
@@ -21,8 +22,8 @@ def view_all(request):
         raise PermissionDenied
 
     context = {}
-
-    inv = EquipmentClass.objects.order_by('name')
+    inv = EquipmentClass.objects.order_by('name') \
+        .annotate(item_count=Count('items'))
     categories = EquipmentCategory.objects.all()
 
     paginator = Paginator(inv, NUM_IN_PAGE)

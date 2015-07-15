@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.urlresolvers import reverse
 from django import forms
 from django.db.models import Manager
+from django.utils.functional import cached_property
 
 import watson
 
@@ -539,8 +540,7 @@ class Event(models.Model):
         # chiefs_with_lists = self.ccreport_set.values_list('crew_chief__id',
         # 'crew_chief__first_name','crew_chief__last_name').distinct()
         reports = self.ccreport_set.all().values_list('crew_chief', flat=True)
-        chiefs = self.ccinstances.all()
-        pending = chiefs.exclude(crew_chief__in=reports)
+        pending = self.ccinstances.exclude(crew_chief__in=reports).all()
 
         # chiefspending
         # chiefs = self.crew_chief.values_list('id')
@@ -608,7 +608,7 @@ class Event(models.Model):
         return foo
 
     ## Event Statuses
-    @property
+    @cached_property
     def status(self):
         if self.cancelled:
             return "Cancelled"
@@ -866,8 +866,6 @@ class Event(models.Model):
         )
 
 
-
-
 class CCReport(models.Model):
     glyphicon = 'comment'
     crew_chief = models.ForeignKey(User)
@@ -883,7 +881,6 @@ class CCReport(models.Model):
     @property
     def pretty_cat_list(self):
         return ", ".join([x.name for x in self.for_service_cat.all()])
-
 
 
 # class OrgFund(models.Model):
@@ -925,7 +922,6 @@ class Fund(models.Model):
         permissions = (
             ('view_fund', 'View a fund'),
         )
-
 
 
 class Organization(models.Model):  # AKA Client

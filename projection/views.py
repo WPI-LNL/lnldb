@@ -4,13 +4,14 @@ import datetime
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
+from django.db.models import Q, Prefetch
 from django.views.generic.edit import CreateView
 from django.views.generic.edit import DeleteView
 from django.views.generic.edit import FormView
 from events.models import Event
 from events.models import Projection as ProjService
 from events.models import Location
-from projection.models import Projectionist, PITLevel
+from projection.models import Projectionist, PITLevel, PitInstance
 from projection.forms import ProjectionistUpdateForm
 from projection.forms import ProjectionistForm
 from projection.forms import PITFormset
@@ -27,7 +28,7 @@ from helpers.mixins import LoginRequiredMixin, HasPermMixin
 @permission_required('projection.view_pits', raise_exception=True)
 def plist(request):
     context = {}
-    users = Projectionist.objects.all().order_by('user__last_name')
+    users = Projectionist.objects.select_related().order_by('user__last_name')
 
     context['users'] = users
     context['h2'] = "Projectionist List"
@@ -39,16 +40,18 @@ def plist(request):
 @permission_required('projection.view_pits', raise_exception=True)
 def plist_detail(request):
     context = {}
-    levels = PITLevel.objects.exclude(name_short__in=['PP', 'L']).order_by('ordering')
-    unlicensed_users = Projectionist.objects.exclude(pitinstances__pit_level__name_short__in=['PP', 'L'])
-    licensed_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP', 'L']).exclude(
-        user__groups__name="Alumni")
-    alumni_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP', 'L']).filter(
-        user__groups__name="Alumni")
+    levels = PITLevel.objects.exclude(name_short__in=['PP', 'L']) \
+        .order_by('ordering')
 
-    context['unlicensed_users'] = unlicensed_users
-    context['licensed_users'] = licensed_users
-    context['alumni_users'] = alumni_users
+    users = Projectionist.objects \
+        .select_related('user__first_name', 'user__last_name', 'user__username') \
+ \
+    licensed = Q(pitinstances__pit_level__name_short__in=['PP', 'L'])
+    alumni = Q(user__groups__name="Alumni")
+
+    context['unlicensed_users'] = users.exclude(licensed)
+    context['licensed_users'] = users.filter(licensed).exclude(alumni)
+    context['alumni_users'] = users.filter(licensed).filter(alumni)
     context['levels'] = levels
     context['h2'] = "Projectionist List Detailed"
 
