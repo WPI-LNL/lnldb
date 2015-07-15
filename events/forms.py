@@ -1056,6 +1056,7 @@ class ContactForm(forms.Form):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
+        self.helper.form_tag = False
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
@@ -1084,6 +1085,7 @@ class OrgForm(forms.Form):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
+        self.helper.form_tag = False
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
@@ -1113,6 +1115,7 @@ class SelectForm(forms.Form):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
+        self.helper.form_tag = False
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
@@ -1147,7 +1150,8 @@ class SelectForm(forms.Form):
 
     # soon to be a 
     location = GroupedModelChoiceField(
-        queryset=Location.objects.filter(show_in_wo_form=True),
+        queryset=Location.objects.filter(show_in_wo_form=True)
+            .select_related('building__name'),
         group_by_field="building",
         group_label=lambda group: group.name,
     )
@@ -1320,6 +1324,7 @@ class ScheduleForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-5'
         self.helper.layout = Layout(
