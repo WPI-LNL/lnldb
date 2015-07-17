@@ -20,7 +20,7 @@ class ClassLookup(LookupChannel):
 
     def format_item_display(self, obj):
         long_cat = ">".join(map(lambda cat: cat.name,
-                                obj.category.get_ancestors_inclusive()))
+                                obj.category.get_ancestors_inclusive.all()))
         return ' <span class="text-muted">[x%02d]</span> <strong>%s</strong> (%s)' % (obj.items.count(),
                                                                                       escape(obj.name),
                                                                                       escape(long_cat))
