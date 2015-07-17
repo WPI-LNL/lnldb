@@ -10,7 +10,12 @@ class ClassLookup(LookupChannel):
         return request.user.has_perm('inventory.view_equipment')
 
     def get_query(self, q, request):
-        return EquipmentClass.objects.filter(name__contains=q).all()
+        filters = Q(name__icontains=q)
+
+        if q.isdigit():
+            filters |= Q(items__barcode=int(q))
+
+        return EquipmentClass.objects.filter(filters).all()
 
     def get_result(self, obj):
         return obj.name

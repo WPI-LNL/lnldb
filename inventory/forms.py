@@ -93,6 +93,9 @@ class FastAdd(Form):
                                    label="New Item Category", required=False)
 
     num_to_add = forms.IntegerField(min_value=1)
+    item_type = AutoCompleteSelectField('EquipmentClass', help_text=None,
+                                        label="Select Existing Item Type", required=False,
+                                        plugin_options={'autoFocus': True})
 
     def __init__(self, user, *args, **kwargs):
         self.helper = FormHelper()
@@ -121,8 +124,6 @@ class FastAdd(Form):
                 )
             )
         super(FastAdd, self).__init__(*args, **kwargs)
-        self.fields['item_type'] = AutoCompleteSelectField('EquipmentClass', help_text=None,
-                                                           label="Select Existing Item Type", required=False)
 
     def clean(self):
         data = self.cleaned_data
