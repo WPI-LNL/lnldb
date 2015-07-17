@@ -344,9 +344,9 @@ class Event(models.Model):
 
     submitted_by = models.ForeignKey(User, related_name='submitter')
     submitted_ip = models.GenericIPAddressField(max_length=16)
-    submitted_on = models.DateTimeField(auto_now_add=True)
+    submitted_on = models.DateTimeField(auto_now_add=True, db_index=True)
 
-    event_name = models.CharField(max_length=128)
+    event_name = models.CharField(max_length=128, db_index=True)
     # Person
     person_name = models.CharField(max_length=128, null=True, blank=True, verbose_name="Contact_name")  # DEPRECATED
     contact = models.ForeignKey(User, null=True, blank=True, verbose_name="Contact")
@@ -358,10 +358,10 @@ class Event(models.Model):
     contact_phone = models.CharField(max_length=32, null=True, blank=True)  # DEPRECATED
 
     # Dates & Times
-    datetime_setup_start = models.DateTimeField(null=True, blank=True)  # DEPRECATED
+    datetime_setup_start = models.DateTimeField(null=True, blank=True, db_index=True)  # DEPRECATED
     datetime_setup_complete = models.DateTimeField()
 
-    datetime_start = models.DateTimeField()
+    datetime_start = models.DateTimeField(db_index=True)
     datetime_end = models.DateTimeField()
 
     # Location
@@ -402,17 +402,17 @@ class Event(models.Model):
     cancelled_reason = models.TextField(null=True, blank=True)
 
     payment_amount = models.IntegerField(blank=True, null=True, default=None)
-    paid = models.BooleanField(default=False)
+    paid = models.BooleanField(default=False, db_index=True)
 
     # reports
     crew_chief = models.ManyToManyField(User, blank=True, related_name='crewchiefx')
     crew = models.ManyToManyField(User, blank=True, related_name='crewx')
-    ccs_needed = models.PositiveIntegerField(default=0)
+    ccs_needed = models.PositiveIntegerField(default=0, db_index=True)
     # ^^^ used as a cache to get around the awkward event type fields and allow for sql filtering
 
     # other fields
     internal_notes = models.TextField(null=True, blank=True)
-    billed_by_semester = models.BooleanField(default=False)
+    billed_by_semester = models.BooleanField(default=False, db_index=True)
     sensitive = models.BooleanField(default=False)
     test_event = models.BooleanField(default=False)
     # nice breakout for workorder
