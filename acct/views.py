@@ -5,6 +5,7 @@ from django.contrib import messages
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
+from django.utils.safestring import mark_safe
 
 from django.views.generic import UpdateView, CreateView
 
@@ -14,7 +15,9 @@ from acct.models import Profile
 
 from emails.generators import generate_selfmember_notice_email
 
-from helpers.mixins import LoginRequiredMixin, OfficerMixin, SetFormMsgMixin, HasPermMixin
+from helpers.mixins import LoginRequiredMixin, SetFormMsgMixin, HasPermMixin
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
 
 
 class AcctUpdate(LoginRequiredMixin, UpdateView):
@@ -48,6 +51,7 @@ class LNLUpdate(LoginRequiredMixin, UpdateView):
     def get_success_url(self):
         return reverse('my-lnl')
 
+
 @login_required
 def send_member_request(request):
     if not request.user.profile.is_lnl:
@@ -75,3 +79,21 @@ class LNLAdd(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse('db')
+
+
+def smart_login(request):
+    pref_cas = request.COOKIES.get('prefer_cas', None)
+
+    if pref_cas == "true":
+        return HttpResponseRedirect(reverse('cas-login'))
+    else:
+        return HttpResponseRedirect(reverse('local-login'))
+
+
+@receiver(user_logged_in)
+def nag_for_contact_info(sender, request, user, **kwargs):
+    if not (user.first_name and user.last_name):
+        nagtext = mark_safe('Please visit <a href="' +
+                            reverse('my-acct') +
+                            '">My Account</a> and update your information')
+        messages.warning(request, nagtext)

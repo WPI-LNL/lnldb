@@ -5,18 +5,43 @@
     {% include "my.nav.html" %}
 {% endblock %}
 
+{% block extras %}
+    <script type="application/javascript">
+
+        $(function () {
+            var value = "; " + document.cookie;
+            var parts = value.split("; prefer_cas=");
+            if (parts.length == 2) {
+                var cook = parts.pop().split(";").shift();
+                $("#prefer_cas").prop('checked', cook == "true");
+            }
+
+            $("#prefer_cas").change(function () {
+                var d = new Date();
+                d.setTime(d.getTime() + (24 * 60 * 60 * 365)); // a year is plenty
+                document.cookie = "prefer_cas=" + $(this).is(":checked") + ";expires=" + d.toUTCString() + ";path=/";
+            });
+        });
+
+    </script>
+{% endblock %}
+
 {% block content %}
-<style>
-#spacer {
-    height:1px;
-}
-</style>
+
 <div class="container marketing" style="text-align:center;">
     <div class="row">
         <div class="col-md-5 offset1">
             <h2> Login via WPI CAS </h2>
-            <p class="lead"> If you are currently part of the WPI Community, Please login to the application via CAS, otherwise log in with the form on the right</p>
-<!--             <div id="spacer">&nbsp;</div> -->
+
+            <p class="lead"> If you are currently part of the WPI Community, you can login to the application via CAS,
+                otherwise log in with the form on the right</p>
+
+            <form>
+                <label>
+                    <input type="checkbox" id="prefer_cas" name="prefer_cas">
+                    Automatically send me to CAS in the future.
+                </label>
+            </form>
             <a class="btn btn-lg btn-block btn-primary" href="{% url "django_cas.views.login" %}"> CAS Login</a>
         </div>
         <div class="col-md-5 login">
