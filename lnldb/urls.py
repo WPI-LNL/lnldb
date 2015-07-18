@@ -1,3 +1,4 @@
+from django.conf import settings
 from acct.forms import LoginForm
 import debug_toolbar
 from django.conf.urls import patterns, include, url
@@ -94,7 +95,7 @@ urlpatterns = patterns('',
 
                        url(r'^local/reset/$', 'django.contrib.auth.views.password_reset',
                            {'template_name': 'registration/reset_password.html',
-                            'from_email': 'lnl-w@wpi.edu'},
+                            'from_email': settings.DEFAULT_FROM_ADDR},
                            name='password_reset'),
                        url(r'^local/reset/confirm/(?P<uidb64>[0-9A-Za-z]+)-(?P<token>.+)/$',
                            'django.contrib.auth.views.password_reset_confirm',

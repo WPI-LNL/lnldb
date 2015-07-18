@@ -264,6 +264,7 @@ CCR_DAY_DELTA = 7
 
 # email stuff
 DEFAULT_TO_ADDR = "lnl@wpi.edu"
+DEFAULT_FROM_ADDR = 'WPI Lens and Lights <lnl@wpi.edu>'
 EMAIL_TARGET_P = "lnl-p@wpi.edu"
 EMAIL_TARGET_VP = "lnl-vp@wpi.edu"
 EMAIL_TARGET_S = "lnl-s@wpi.edu"
