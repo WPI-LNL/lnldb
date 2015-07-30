@@ -44,7 +44,8 @@ class MemberForm(FieldAccessForm):
             enable=('username', 'email', 'first_name', 'last_name')
         )
         edit_groups = FieldAccessLevel(
-            lambda user, instance: user.has_perm('auth.change_group', instance)
+            lambda user, instance: user.has_perm('auth.change_group', instance),
+            enable=('group',)
         )
 
 
