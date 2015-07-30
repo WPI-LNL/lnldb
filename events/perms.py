@@ -39,7 +39,7 @@ class AssocUsersCustomPermissionLogic(PermissionLogic):
 class CrewChiefPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'ccinstances__crew_chief'
     perms = ('events.view_event', 'events.event_images', 'events.cancel_event',
-             'events.event_attachments' 'events.edit_event_times',
+             'events.event_attachments', 'events.edit_event_times',
              'events.add_event_report', 'events.edit_event_text',
              'events.view_hidden_event', 'events.edit_event_fund',
              'events.view_event_billing', 'events.adjust_event_charges',
