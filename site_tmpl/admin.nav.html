@@ -18,7 +18,7 @@
             <p class="navbar-text navbar-right">
                 {% if request.user.pk %}
                 Logged in as <a href="{% url  "members.views.detail" request.user.pk %}"
-                                class="navbar-link">{{ user }}</a>
+                                class="navbar-link">{{ request.user }}</a>
                 &middot;
                 <a href="{% url 'logout' %}">Log Out</a>
                 {% else %}

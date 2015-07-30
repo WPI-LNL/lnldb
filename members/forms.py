@@ -16,8 +16,8 @@ class MemberForm(FieldAccessForm):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
-
             'username',
+            'email',
             'first_name',
             'last_name',
             'groups',
@@ -29,7 +29,7 @@ class MemberForm(FieldAccessForm):
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'groups']
+        fields = ['username', 'email', 'first_name', 'last_name', 'groups']
 
     class FieldAccess:
         def __init__(self):
@@ -37,11 +37,11 @@ class MemberForm(FieldAccessForm):
 
         thisisme = FieldAccessLevel(
             lambda user, instance: user == instance,
-            enable=('first_name', 'last_name')
+            enable=('email', 'first_name', 'last_name')
         )
         selfservice = FieldAccessLevel(
             lambda user, instance: user.has_perm('auth.change_user', instance),
-            enable=('username', 'first_name', 'last_name')
+            enable=('username', 'email', 'first_name', 'last_name')
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('auth.change_group', instance)

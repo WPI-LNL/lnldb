@@ -196,6 +196,10 @@ class UserUpdate(LoginRequiredMixin, HasPermMixin, ConditionalFormMixin, UpdateV
     def get_success_url(self):
         return reverse('memberdetail', args=(self.object.id,))
 
+    # Don't overwrite the user object!
+    def get_context_object_name(self, obj):
+        return 'member'
+
 
 class MemberUpdate(LoginRequiredMixin, HasPermMixin, ConditionalFormMixin, UpdateView):
     model = Profile
