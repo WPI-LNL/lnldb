@@ -4,7 +4,9 @@
 {% block content %}
     <div class="row">
         <div class="col-md-12">
+            {% if msg %}
                 <h2> {{msg }} </h2>
+            {% endif %}
                 <form method="post" action="" class="form-horizontal">
                 {% crispy form %}
                 <hr>
@@ -56,6 +58,9 @@ $(document).ready(function () {
     });
 });
 </script>
+{{ form.media }}
+{{ formset.media }}
+
 
 {% endblock %}
 

@@ -9,4 +9,3 @@ class LevelAdmin(admin.ModelAdmin):
 admin.site.register(Projectionist)
 admin.site.register(PITLevel, LevelAdmin)
 admin.site.register(PitInstance)
-

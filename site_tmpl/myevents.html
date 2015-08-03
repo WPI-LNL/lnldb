@@ -1,51 +1,51 @@
-{% extends 'base.html' %}
+{% extends 'base_admin.html' %}
 
 {% block content %}
-    {% if member %}
-        {% if user.ccinstances.count %}
-            <h1> <a href="{% url "events.views.my.my" %}">My</a> CC'd Events </h1>
-            <table class="table table-striped table-bordered">
-                <tr> 
-                    <th>Name </th>
-                    <th>Date </th>
-                    <th>Location </th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-                {% for instance in user.ccinstances.all %}
-                        <tr>
-                            <td>{{instance.event.event_name}}</td>
-                            <td title="{{instance.event.datetime_end}}">
-                                {% if instance.event.datetime_end > now %}
-                                    {{instance.event.datetime_end|timeuntil}} from now 
-                                {% else %}
-                                    {{instance.event.datetime_end|timesince}} Ago 
-                                {% endif %}
-                            </td>
-                            <td>{{ instance.event.location}}</td>
-                            <td>{{ instance.event.status }}</td>
-                            <td>
-                                <div class="btn-group">
-                                    <a class="btn btn-default"  href="{% url 'my-events-pdf' instance.event.id %}">Workorder PDF </a>
-                                    {% if instance.event.reports_editable %}
-                                    <a class="btn btn-primary" href="{% url 'my-ccreport' instance.event.id %}">CC Report</a>
-                                    <a class="btn btn-info" href="{% url 'my-cchours' instance.event.id %}">Crew Hours</a>
-                                    {% endif %}
-                                    {% if instance.event.attachments.count %}
-                                    <a class="btn btn-info"  href="{% url 'my-eventfiles' instance.event.id %}">Files</a>
-                                    {% endif %}
-                                    
-                                </div>
-                            </td>
-                        </tr>
-                {% empty %}
+    {% if user.ccinstances.exists %}
+        <h1>Events as Crew Chief </h1>
+        <table class="table table-striped table-bordered">
+            <tr>
+                <th>Name</th>
+                <th>Date</th>
+                <th>Location</th>
+                <th>Quick Actions</th>
+            </tr>
+            {% for instance in user.ccinstances.all %}
                 <tr>
-                    <td colspan="4">You dont have any events.</td>
+                    <td><a href="{% url 'events-detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
+                    <td title="{{ instance.event.datetime_end }}">
+                        {% if instance.event.datetime_end > now %}
+                            {{ instance.event.datetime_end|timeuntil }} from now
+                        {% else %}
+                            {{ instance.event.datetime_end|timesince }} Ago
+                        {% endif %}
+                    </td>
+                    <td>{{ instance.event.location }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <a class="btn btn-default" href="{% url 'my-events-pdf' instance.event.id %}">Workorder
+                                PDF </a>
+                            {% if instance.event.reports_editable %}
+                                <a class="btn btn-primary" href="{% url 'my-ccreport' instance.event.id %}">CC
+                                    Report</a>
+                                <a class="btn btn-info" href="{% url 'my-cchours' instance.event.id %}">Crew Hours</a>
+                                {% endif %}
+                            {% if instance.event.attachments %}
+                                <a class="btn btn-info" href="{% url 'my-eventfiles' instance.event.id %}">Files</a>
+                            {% endif %}
+
+                        </div>
+                    </td>
                 </tr>
-                {% endfor %}
-            </table>
-        {% endif %}
-    <h1> <a href="{% url "events.views.my.my" %}">My</a> Involved Events </h1>
+            {% empty %}
+                <tr>
+                    <td colspan="4">You have never crew chiefed an event.</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+    {% if user.hours.exists %}
+        <h1>Event Work Log</h1>
     <table class="table table-striped table-bordered">
         <tr> 
             <th>Name </th>
@@ -55,7 +55,7 @@
         </tr>
         {% for instance in user.hours.all %}
                 <tr>
-                    <td>{{instance.event.event_name}}</td>
+                    <td><a href="{% url 'events-detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
                     <td title="{{instance.event.datetime_end}}">
                         {% if instance.event.datetime_end > now %}
                             {{instance.event.datetime_end|timeuntil}} from now 
@@ -64,7 +64,7 @@
                         {% endif %}
                     </td>
                     <td>{{instance.event.location}}</td>
-                    <td>{{ instance.hours }}</td>
+                    <td>{{ instance.hours }} hrs.</td>
                 </tr>
             {% if forloop.last %}
                 <tr class="info">
@@ -74,13 +74,13 @@
             {% endif %}
         {% empty %}
         <tr>
-            <td colspan="4">You dont have any events.</td>
+            <td colspan="4">You have never logged any hours at an event.</td>
         </tr>
         {% endfor %}
     </table>
     {% endif %}
-    {% if user.submitter.count %}
-        <h1> <a href="{% url "events.views.my.my" %}">My</a> Submitted Events </h1>
+
+    <h1>Submitted Events </h1>
         <table class="table table-striped table-bordered">
             <tr> 
                 <th>Name </th>
@@ -90,7 +90,7 @@
             </tr>
             {% for event in user.submitter.all %}
                     <tr>
-                        <td>{{event.event_name}}</td>
+                        <td><a href="{% url 'events-detail' event.pk %}">{{ event.event_name }}</a></td>
                         <td title="{{event.datetime_end}}">
                             {% if event.datetime_end > now %}
                                 {{event.datetime_end|timeuntil}} from now 
@@ -107,5 +107,36 @@
                 </tr>
             {% endfor %}
         </table>
+    {% if user.profile.all_orgs %}
+        <h1>Events by Organization </h1>
+        {% for org in user.profile.all_orgs %}
+            <h3><a href="{% url 'events.views.orgs.orgdetail' org.pk %}">{{ org }}</a></h3>
+            <table class="table table-striped table-bordered">
+                <tr>
+                    <th>Name</th>
+                    <th>Date</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                </tr>
+                {% for event in org.event_set.all %}
+                    <tr>
+                        <td><a href="{% url 'events-detail' event.pk %}">{{ event.event_name }}</a></td>
+                        <td title="{{ event.datetime_end }}">
+                            {% if event.datetime_end > now %}
+                                {{ event.datetime_end|timeuntil }} from now
+                            {% else %}
+                                {{ event.datetime_end|timesince }} Ago
+                            {% endif %}
+                        </td>
+                        <td>{{ event.location }}</td>
+                        <td>{{ event.status }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4">{{ org }} hasn't submitted any events</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% endfor %}
     {% endif %}
 {% endblock %}

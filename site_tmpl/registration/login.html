@@ -1,55 +1,55 @@
 {% extends 'base.html' %}
+{% load crispy_forms_tags %}
 
 {% block nav %}
     {% include "my.nav.html" %}
 {% endblock %}
 
+{% block extras %}
+    <script type="application/javascript">
+
+        $(function () {
+            var value = "; " + document.cookie;
+            var parts = value.split("; prefer_cas=");
+            if (parts.length == 2) {
+                var cook = parts.pop().split(";").shift();
+                $("#prefer_cas").prop('checked', cook == "true");
+            }
+
+            $("#prefer_cas").change(function () {
+                var d = new Date();
+                d.setTime(d.getTime() + (24 * 60 * 60 * 365)); // a year is plenty
+                document.cookie = "prefer_cas=" + $(this).is(":checked") + ";expires=" + d.toUTCString() + ";path=/";
+            });
+        });
+
+    </script>
+{% endblock %}
+
 {% block content %}
-<style>
-#spacer {
-    height:1px;
-}
-</style>
+
 <div class="container marketing" style="text-align:center;">
     <div class="row">
         <div class="col-md-5 offset1">
             <h2> Login via WPI CAS </h2>
-            <p class="lead"> If you are currently part of the WPI Community, Please login to the application via CAS, otherwise log in with the form on the right</p>
-<!--             <div id="spacer">&nbsp;</div> -->
+
+            <p class="lead"> If you are currently part of the WPI Community, you can login to the application via CAS,
+                otherwise log in with the form on the right</p>
+
+            <form>
+                <label>
+                    <input type="checkbox" id="prefer_cas" name="prefer_cas">
+                    Automatically send me to CAS in the future.
+                </label>
+            </form>
             <a class="btn btn-lg btn-block btn-primary" href="{% url "django_cas.views.login" %}"> CAS Login</a>
         </div>
-        <div class="col-md-5">
-            <h2> Login </h2>
-            <form class="form-horizontal" method="post" action="{% url "django.contrib.auth.views.login" %}">
-            {% csrf_token %}
-            <div class="form-group">
-                <label class="control-label" for="username">{{form.username.label_tag}}</label>
-                <div class="controls">
-                                {{ form.username }}
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="control-label" for="password">{{form.password.label_tag}}</label>
-                <div class="controls">
-                                {{ form.password }}
-                </div>
-            </div>
-            <input type="hidden" name="next" value="{{next}}">
-            <div class="footer">
-                <button type="submit" name="re_event" class="btn btn-lg btn-block btn-info">Sign In</button>
-            </div>
+        <div class="col-md-5 login">
+            <h2> Login via Local Account </h2>
+            {% crispy form %}
             <p class="muted text-muted"><a href="{% url "django.contrib.auth.views.password_reset" %}"> Forgot your password? </a></p>
-            </form>
         </div>
-        
-        {% comment %}
-        <div class="col-md-5">
-            <h2> LNLDB </h2>
-            <p class="lead"> Authentication has changed, LNL is no longer using WPI's Central Authentication System. If you haven't already use the below link to set your password. </p>
-            <a href="{% url "django.contrib.auth.views.password_reset" %}"> Reset your password </a>
-            
-        </div>
-        {% endcomment %}
+
     </div>
 </div>
 

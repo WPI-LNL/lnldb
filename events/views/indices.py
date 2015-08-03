@@ -3,9 +3,9 @@
 import datetime
 
 from django.http import HttpResponse
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 from django.template import RequestContext
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.utils import timezone
 from django.conf import settings
 from django.db.models import Q
@@ -18,16 +18,16 @@ import os
 ### FRONT 3 PAGES
 def index(request):
     """Landing Page"""
-    context = RequestContext(request)
+    context = {}
 
     is_off = is_officer(request.user)
     context['is_officer'] = is_off
-    return render_to_response('index.html', context)
+    return render(request, 'index.html', context)
 
 
 def workorder(request):
     """ Workorder Page, deprecated cause CBV workorder in wizard.py"""
-    context = RequestContext(request)
+    context = {}
 
     if request.method == 'POST':
         formset = WorkorderSubmit(request.POST)
@@ -46,15 +46,14 @@ def workorder(request):
 
         context['formset'] = formset
 
-    return render_to_response('workorder.html', context)
+    return render(request, 'workorder.html', context)
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def admin(request, msg=None):
     """ admin landing page """
 
-    context = RequestContext(request)
+    context = {}
     context['msg'] = msg
 
     if settings.LANDING_TIMEDELTA:
@@ -62,14 +61,12 @@ def admin(request, msg=None):
     else:
         delta = 48
 
-    tz = timezone.get_current_timezone()
-
     # fuzzy delta
-    today = datetime.datetime.now(tz)
-    today_min = datetime.datetime.combine(today.date(), datetime.time.min)
+    today = timezone.now()
+    today_min = timezone.make_aware(datetime.datetime.combine(today.date(), datetime.time.min))
 
     end = today + datetime.timedelta(hours=delta)
-    end_max = datetime.datetime.combine(end.date(), datetime.time.max)
+    end_max = timezone.make_aware(datetime.datetime.combine(end.date(), datetime.time.max))
 
     # get upcoming and ongoing events
     events = Event.objects.filter(
@@ -79,22 +76,22 @@ def admin(request, msg=None):
 
     context['tznow'] = today
 
-    return render_to_response('admin.html', context)
+    return render(request, 'admin.html', context)
 
 
 @login_required
-# @user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.event_view_granular', raise_exception=True)
 def dbg_land(request):
-    context = RequestContext(request)
+    context = {}
     context['env'] = os.environ
     context['meta'] = request.META
     return HttpResponse("<pre>-%s</pre>" % request.META.items())
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.view_event', raise_exception=True)
 def event_search(request):
-    context = RequestContext(request)
+    context = {}
     if request.POST:
         q = request.POST['q']
         context['q'] = q
@@ -103,5 +100,5 @@ def event_search(request):
         else:
             e = Event.objects.filter(Q(event_name__icontains=q) | Q(description__icontains=q))
             context['events'] = e
-        return render_to_response('events_search_results.html', context)
-    return render_to_response('events_search_results.html', context)
+        return render(request, 'events_search_results.html', context)
+    return render(request, 'events_search_results.html', context)

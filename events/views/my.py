@@ -2,7 +2,7 @@ import datetime
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.template import RequestContext
 from django.contrib.auth.models import User
 from django.forms.models import inlineformset_factory
@@ -13,34 +13,35 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from helpers.challenges import is_lnlmember
 from emails.generators import generate_selfservice_notice_email
+from django.db.models.aggregates import Sum
 
 
 ### USER FACING SHIT
 @login_required
 def my(request):
     """ Landing Page For User Related Functions"""
-    context = RequestContext(request)
+    context = {}
 
     is_lnl = is_lnlmember(request.user)
     context['is_lnl'] = is_lnl
-    return render_to_response('my.html', context)
+    return render(request, 'my.html', context)
 
 
 @login_required
 def myacct(request):
     """ Account Change Page """
-    context = RequestContext(request)
-    return render_to_response('myacct.html', context)
+    context = {}
+    return render(request, 'myacct.html', context)
 
 
 @login_required
 def mywo(request):
     """ List Events (if lnl member will list their events)"""
-    context = RequestContext(request)
+    context = {}
 
     user = request.user
-    orgs = user.orgusers.get_query_set()
-    ic_orgs = user.orgowner.get_query_set()
+    orgs = user.orgusers.get_queryset()
+    ic_orgs = user.orgowner.get_queryset()
 
     ##combined = orgs|ic_orgs
     # combined = ic_orgs
@@ -56,12 +57,12 @@ def mywo(request):
     owned = ic_orgs.values_list('name', flat=True)
     assoc = orgs.values_list('name', flat=True)
     context['owned'] = list(set(list(owned) + list(assoc)))
-    return render_to_response('mywo.html', context)
+    return render(request, 'mywo.html', context)
 
 
 @login_required
 def myworepeat(request, eventid):
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Workorder Repeat"
 
     event = get_object_or_404(Event, pk=eventid)
@@ -83,32 +84,32 @@ def myworepeat(request, eventid):
             o.cancelled_by = None
             o.cancelled_reason = None
             o.save()
-            return render_to_response('wizard_finished.html', context)
+            return render(request, 'wizard_finished.html', context)
         else:
             context['formset'] = f
-            return render_to_response('mycrispy.html', context)
+            return render(request, 'mycrispy.html', context)
     else:
         f = WorkorderRepeatForm(instance=event)
         context['formset'] = f
-        return render_to_response('mycrispy.html', context)
+        return render(request, 'mycrispy.html', context)
 
 
 @login_required
 def myorgs(request):
     """ List of associated organizations """
-    context = RequestContext(request)
+    context = {}
 
     user = request.user
-    orgs = user.orgusers.get_query_set()
+    context['ownedorgs'] = user.orgowner.get_queryset()
+    context['memberorgs'] = user.orgusers.get_queryset()
 
-    context['orgs'] = orgs
-    return render_to_response('myorgs.html', context)
+    return render(request, 'myorgs.html', context)
 
 
 @login_required
 def myorgform(request):
     """ Organization Creation Request Form"""
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Client Request"
     context[
         'extra_text'] = 'Note: The information being requested here is not your personal information,' \
@@ -125,15 +126,15 @@ def myorgform(request):
                              'submitted_ip': request.META['REMOTE_ADDR']}
             email = generate_selfservice_notice_email(email_context)
             email.send()
-            return render_to_response('org.service.html', context)
+            return render(request, 'org.service.html', context)
         else:
             context['formset'] = form
-            return render_to_response('mycrispy.html', context)
+            return render(request, 'mycrispy.html', context)
     else:
         form = SelfServiceOrgRequestForm()
         context['formset'] = form
 
-        return render_to_response('mycrispy.html', context)
+        return render(request, 'mycrispy.html', context)
 
 
 ### lnl facing
@@ -142,31 +143,18 @@ def myorgform(request):
 # @user_passes_test(is_lnlmember, login_url='/lnldb/fuckoffkitty/')
 def myevents(request):
     """ List Events That Have been CC'd / involved """
-    context = RequestContext(request)
+    context = {}
+    context['user'] = request.user
+    context.update(request.user.hours.aggregate(totalhours=Sum('hours')))
+    context['now'] = datetime.datetime.now(timezone.get_current_timezone())
 
-    user = request.user
-    context['user'] = user
-
-    totalhours = sum([x.hours for x in user.hours.all()])
-    context['totalhours'] = totalhours
-
-    now = datetime.datetime.now(timezone.get_current_timezone())
-    context['now'] = now
-
-    if user.groups.exclude(name__in=["Contact"]).exists():
-        member = True
-    else:
-        member = False
-
-    context['member'] = member
-
-    return render_to_response('myevents.html', context)
+    return render(request, 'myevents.html', context)
 
 
 @login_required
 def myeventdetail(request, id):
     """ Shows detail for users event """
-    context = RequestContext(request)
+    context = {}
     event = get_object_or_404(Event, pk=id)
 
     u = request.user
@@ -174,24 +162,24 @@ def myeventdetail(request, id):
         return HttpResponse("You can't see this event, sorry")
     else:
         context['event'] = event
-        return render_to_response('eventdetail.html', context)
+        return render(request, 'eventdetail.html', context)
 
 
 @login_required
 def eventfiles(request, eventid):
     """ Files for an event"""
-    context = RequestContext(request)
+    context = {}
     event = get_object_or_404(Event, pk=eventid)
 
     context['event'] = event
-    return render_to_response('myeventfiles.html', context)
+    return render(request, 'myeventfiles.html', context)
 
 
 ### Views Relating to Crew Chiefs
 @login_required
 def ccreport(request, eventid):
     """ Submits a crew chief report """
-    context = RequestContext(request)
+    context = {}
 
     user = request.user
 
@@ -226,13 +214,13 @@ def ccreport(request, eventid):
 
         context['formset'] = formset
 
-    return render_to_response('mycrispy.html', context)
+    return render(request, 'mycrispy.html', context)
 
 
 @login_required
 def hours_list(request, eventid):
     """ Lists a users' hours """
-    context = RequestContext(request)
+    context = {}
     user = request.user
 
     event = user.ccinstances.filter(event__pk=eventid)
@@ -245,13 +233,13 @@ def hours_list(request, eventid):
     hours = event.hours.all()
     context['hours'] = hours
 
-    return render_to_response('myhours.html', context)
+    return render(request, 'myhours.html', context)
 
 
 @login_required
 def hours_mk(request, eventid):
     """ Hour Entry Form for CC """
-    context = RequestContext(request)
+    context = {}
 
     user = request.user
     uevent = user.ccinstances.filter(event__pk=eventid)
@@ -278,13 +266,13 @@ def hours_mk(request, eventid):
 
         context['formset'] = formset
 
-    return render_to_response('mycrispy.html', context)
+    return render(request, 'mycrispy.html', context)
 
 
 @login_required
 def hours_edit(request, eventid, userid):
     """ Hour Entry Form for CC (editing)"""
-    context = RequestContext(request)
+    context = {}
     user = request.user
     uevent = user.ccinstances.filter(event__pk=eventid)
 
@@ -312,13 +300,13 @@ def hours_edit(request, eventid, userid):
 
         context['formset'] = formset
 
-    return render_to_response('mycrispy.html', context)
+    return render(request, 'mycrispy.html', context)
 
 
 @login_required
 def hours_bulk(request, eventid):
     """ Bulk Hours Entry Form """
-    context = RequestContext(request)
+    context = {}
     user = request.user
     uevent = user.ccinstances.filter(event__pk=eventid)
 
@@ -334,7 +322,7 @@ def hours_bulk(request, eventid):
 
     context['event'] = event
 
-    mk_event_formset = inlineformset_factory(Event, Hours, extra=15)
+    mk_event_formset = inlineformset_factory(Event, Hours, extra=15, exclude=[])
     mk_event_formset.form = staticmethod(curry(MKHoursForm, event=event))
 
     if request.method == 'POST':
@@ -350,4 +338,4 @@ def hours_bulk(request, eventid):
 
         context['formset'] = formset
 
-    return render_to_response('formset_hours_bulk.html', context)
+    return render(request, 'formset_hours_bulk.html', context)

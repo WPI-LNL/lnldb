@@ -4,15 +4,22 @@
 {% block content %}
     <div class="row">
         <div class="col-md-12">
-            <div class="pull-right"><p class="lead">{{ extra }}</p></div>
-                <h2> {{msg }} </h2>
-                {% crispy form %}
+            {% if extra %}
+                <div class="pull-right">
+                    <p class="lead">{{ extra }}</p>
+                </div>
+            {% endif %}
+            {% if msg %}
+                <h2> {{ msg }} </h2>
+            {% endif %}
+            {% crispy form %}
                 
         </div>
     </div>
 {% endblock %}
 
 {% block extras %}
+    {{ form.media }}
 {% include "js_phonelimit.tmpl" %}
 {% include "js_datetimepick.tmpl" %}
 {% endblock %}

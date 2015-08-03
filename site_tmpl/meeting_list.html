@@ -17,7 +17,7 @@
             <tr>
                 <td><a href="{% url "meetings.views.viewattendance" m.id %}">{{ m }}</a></td>
                 <td>{{m.meeting_type}}</td>
-                <td>{{ m.attendance.count }}</td>
+                <td>{{ m.num_attendees }}</td>
             </tr>
             {% endfor %}
         </table>
@@ -35,7 +35,7 @@
     
             
             <li>
-                <a href="#">Page {{ attend.number }} of {{ attend.num_pages }}</a>
+                <a href="#">Page {{ attend.number }} of {{ attend.paginator.num_pages }}</a>
             </li>
     
             {% if attend.has_next %}
@@ -51,22 +51,4 @@
         </ul>
         </div>
     </div>
-{% endblock %}
-
-{% block extras %}
-    <script type="text/javascript" src="{% static 'js/jquery-ui.js' %}"></script>
-    <link href="{% static '/css/ajax_select.css' %}" rel="stylesheet">
-    <script type="text/javascript" src="{% static '/js/ajax_select.js' %}"></script>
-
-
-
-    <link href="{% static 'css/bootstrap-datetimepicker.min.css' %}" rel="stylesheet">
-    <script type="text/javascript" src="{% static 'js//bootstrap-datetimepicker.min.js' %}"></script>
-<script type="text/javascript">
-$(function() {
-    $('.dtw').datetimepicker({
-        language: 'en'
-    });
-  });
-</script>
 {% endblock %}

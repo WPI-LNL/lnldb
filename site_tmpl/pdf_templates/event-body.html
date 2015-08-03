@@ -1,0 +1,244 @@
+{% load tz %}
+{% load markdown_deux_tags %}
+<div class="heading">
+                <center>WPI Lens and Lights Work Order</center>
+            </div>
+            <div class="subheading">
+                <center>Student Activities Office - WPI - 100 Institute Road - Worcester, MA - 01609-2280 <br />
+                508-831-5595 - Fax: 508-831-6045 - lnl@wpi.edu - http://lnl.wpi.edu/</center>
+            </div>
+            <hr>
+            <table>
+                <tr>
+                    <td class="tdleft" valign="top">
+                        <h3>Contact</h3>
+                        <ul class="list-unstyled">
+                            <li>{{ event.org.all|join:", " }}</li>
+                            <li>{{ event.person_name }}</li>
+                            <li>{{ event.contact_phone }}</li>
+                            <li>{{ event.contact_email }}</li>
+                            <li>{{ event.contact_addr }}</li>
+                        </ul>
+                    </td>
+                    <td class="tdright">
+                        <h3>Organization</h3>
+                        {% if event.firstorg %}
+                        <ul class="list-unstyled">
+                            <li>{{ event.firstorg.name }}</li>
+                            <li>{{ event.firstorg.exec_email }}</li>
+                            <li>{{ event.firstorg.phone }}</li>
+                            <li>Contact: {{ event.firstorg.user_in_charge.profile.fullname }}</li>
+                        </ul>
+                        {% else %}
+                            No Organizations listed.
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+            <hr>
+            <table>
+                <tr>
+                    <th class="tdl41">
+                        Event Name
+                    </th>
+                    <td class="tdl42">
+                        {{ event }}
+                    </td>
+                    <td class="tdright" rowspan="11" valign="top">
+                        <h5>Event Description</h5>
+                        {% if event.description %}
+                            {{ event.description | markdown }}
+                        {% else %}
+                            No event description given. Please talk with the VP and contact to find out about this event.
+                        {% endif %}
+                        {% if service %}
+                            <h5>Service Description</h5>
+                            <b>{{ service.longname }} [{{ service.shortname }}]</b> <br />
+                            {% if service.category.name == "Lighting" %}
+                                {% if event.lighting_reqs %}
+                                    {{ event.lighting_reqs | markdown }}
+                                {% else %}
+                                    No requirements specific to the {{ service.shortname }}.
+                                {% endif %}
+
+                                {% if event.attachment_for_lighting %}
+                                <br />
+                                ~-~-~-ATTACHMENT AVAILABLE FOR LIGHTING-~-~-~
+                                {% endif %}
+
+                            {% elif service.category.name == "Sound" %}
+                                {% if event.sound_reqs %}
+                                    {{ event.sound_reqs  | markdown }}
+                                {% else %}
+                                    No requirements specific to the {{ service.shortname }}.
+                                {% endif %}
+
+                                {% if event.attachment_for_sound %}
+                                <br />
+                                ~-~-~-ATTACHMENT AVAILABLE FOR SOUND-~-~-~
+                                {% endif %}
+                            {% elif service.category.name == "Projection" %}
+                                {% if event.proj_reqs %}
+                                    {{ event.proj_reqs | markdown }}
+                                {% else %}
+                                    No requirements specific to the {{ service.shortname }}.
+                                {% endif %}
+
+                                {% if event.attachment_for_projection %}
+                                <br />
+                                ~-~-~-ATTACHMENT AVAILABLE FOR PROJECTION-~-~-~
+                                {% endif %}
+                            {% else %}
+                                {% if event.otherservice_reqs %}
+                                    {{ event.otherservice_reqs | markdown }}
+                                {% else %}
+                                    No requirements specific to the {{ service.shortname }}.
+                                {% endif %}
+                            {% endif %}
+                            <br/>
+                            <br/>
+                        {% endif %}
+                        {% if service or event.extrainstance_set.exists %}
+                        <h5>Extras Requested</h5>
+                            {% if not service %}
+                                <ul>
+                                    {% for xtra in event.extrainstance_set.all %}
+                                        <li>{{ xtra.extra.name }} (x{{ xtra.quant }})</li>
+                                    {% endfor %}
+                                </ul>
+                            {% elif service.category.name == "Lighting" and event.extras_lighting %}
+                                <ul>
+                                    {% for xtra in event.extras_lighting %}
+                                        <li>{{ xtra.extra.name }} (x{{ xtra.quant }})</li>
+                                    {% endfor %}
+                                </ul>
+                            {% elif service.category.name == "Sound" and event.extras_sound %}
+                                <ul>
+                                    {% for xtra in event.extras_sound %}
+                                        <li>{{ xtra.extra.name }} (x{{ xtra.quant }})</li>
+                                    {% endfor %}
+                                </ul>
+                            {% elif service.category.name == "Projection" and event.extras_projection %}
+                                <ul>
+                                    {% for xtra in event.extras_projection %}
+                                        <li>{{ xtra.extra.name }} (x{{ xtra.quant }})</li>
+                                    {% endfor %}
+                                </ul>
+                            {% elif event.extras_other %}
+                                <ul>
+                                    {% for xtra in event.extras_other %}
+                                        <li>{{ xtra.extra.name }} (x{{ xtra.quant }})</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                No extras requested.
+                            {% endif %}
+                        {% endif %}
+                        <br />
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Location
+                    </th>
+                    <td class="tdl42">
+                        {{ event.location }} ({{ event.location.building.shortname }})
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Event Type
+                    </th>
+                    <td class="tdl42">
+                        {{ service }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Setup Date
+                    </th>
+                    <td class="tdl42">
+                        {{ event.datetime_setup_complete|localtime|date }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Setup Time
+                    </th>
+                    <td class="tdl42">
+                        {{ event.datetime_setup_complete|localtime|time:"TIME_FORMAT" }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Start Date
+                    </th>
+                    <td class="tdl42">
+                        {{ event.datetime_start|localtime|date }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        Start Time
+                    </th>
+                    <td class="tdl42">
+                        {{ event.datetime_start|localtime|time:"TIME_FORMAT" }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        End Date
+                    </th>
+                    <td class="tdl42">
+                        {{ event.datetime_end|localtime|date }}
+                    </td>
+                </tr>
+                <tr>
+                    <th class="tdl41">
+                        End Time
+                    </th>
+                    <td class="tdl42">
+                        {{ event.datetime_end|localtime|time:"TIME_FORMAT" }}
+                    </td>
+                </tr>
+                <tr>
+                    <td  colspan="2">
+                        <hr>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="tdleft" colspan="2">
+                        <strong>Setup Start</strong>
+                        <hr>
+                        <strong>CC</strong>
+                        <hr>
+                        <strong>Crew</strong>
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        &nbsp;
+                        <hr>
+                        Submit Reports @  lnl.wpi.edu/my/
+                    </td>
+                    
+                </tr>
+            </table>
+            

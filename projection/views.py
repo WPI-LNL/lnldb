@@ -3,65 +3,66 @@ import datetime
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
-from django.template import RequestContext
+from django.shortcuts import render, get_object_or_404
+from django.db.models import Q, Prefetch
 from django.views.generic.edit import CreateView
 from django.views.generic.edit import DeleteView
 from django.views.generic.edit import FormView
 from events.models import Event
 from events.models import Projection as ProjService
 from events.models import Location
-from projection.models import Projectionist, PITLevel
+from projection.models import Projectionist, PITLevel, PitInstance
 from projection.forms import ProjectionistUpdateForm
 from projection.forms import ProjectionistForm
 from projection.forms import PITFormset
 from projection.forms import BulkUpdateForm
 from projection.forms import BulkCreateForm
 from projection.forms import DateEntryFormSetBase
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required, permission_required
 from django.forms.formsets import formset_factory
 from django.utils import timezone
-from helpers.challenges import is_officer
-from helpers.mixins import LoginRequiredMixin, OfficerMixin
+from helpers.mixins import LoginRequiredMixin, HasPermMixin
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('projection.view_pits', raise_exception=True)
 def plist(request):
-    context = RequestContext(request)
-    users = Projectionist.objects.all().order_by('user__last_name')
+    context = {}
+    users = Projectionist.objects.select_related().order_by('user__last_name')
 
     context['users'] = users
     context['h2'] = "Projectionist List"
 
-    return render_to_response('projectionlist.html', context)
+    return render(request, 'projectionlist.html', context)
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('projection.view_pits', raise_exception=True)
 def plist_detail(request):
-    context = RequestContext(request)
-    levels = PITLevel.objects.exclude(name_short__in=['PP', 'L']).order_by('ordering')
-    unlicensed_users = Projectionist.objects.exclude(pitinstances__pit_level__name_short__in=['PP', 'L'])
-    licensed_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP', 'L']).exclude(
-        user__groups__name="Alumni")
-    alumni_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP', 'L']).filter(
-        user__groups__name="Alumni")
+    context = {}
+    levels = PITLevel.objects.exclude(name_short__in=['PP', 'L']) \
+        .order_by('ordering')
 
-    context['unlicensed_users'] = unlicensed_users
-    context['licensed_users'] = licensed_users
-    context['alumni_users'] = alumni_users
+    users = Projectionist.objects \
+        .select_related('user__first_name', 'user__last_name', 'user__username')
+
+    licensed = Q(pitinstances__pit_level__name_short__in=['PP', 'L'])
+    alumni = Q(user__groups__name="Alumni")
+
+    context['unlicensed_users'] = users.exclude(licensed)
+    context['licensed_users'] = users.filter(licensed).exclude(alumni)
+    context['alumni_users'] = users.filter(licensed).filter(alumni)
     context['levels'] = levels
     context['h2'] = "Projectionist List Detailed"
 
-    return render_to_response('projectionlist_detail.html', context)
+    return render(request, 'projectionlist_detail.html', context)
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('projection.edit_pits', raise_exception=True)
 def projection_update(request, id):
     projectionist = get_object_or_404(Projectionist, pk=id)
-    context = RequestContext(request)
+    context = {}
     context['msg'] = "Updating Projectionist %s" % projectionist
 
     if request.method == "POST":
@@ -81,10 +82,12 @@ def projection_update(request, id):
         context['formset'] = formset
         context['pk'] = id
 
-    return render_to_response('form_crispy_projection.html', context)
+    return render(request, 'form_crispy_projection.html', context)
 
 
-class ProjectionCreate(OfficerMixin, LoginRequiredMixin, CreateView):
+class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
+    perms = 'projection.edit_pits'
+
     def get_context_data(self, **kwargs):
         context = super(ProjectionCreate, self).get_context_data(**kwargs)
         if self.request.POST:
@@ -114,13 +117,20 @@ class ProjectionCreate(OfficerMixin, LoginRequiredMixin, CreateView):
     template_name = "form_crispy_projection.html"
     form_class = ProjectionistForm
     # success_url = reverse("projection-list")
-    success_url = "/lnadmin/projection/list"
+
+    @property
+    def success_url(self):
+        return reverse('projection-list-detail')
 
 
-class BulkUpdateView(OfficerMixin, LoginRequiredMixin, FormView):
+class BulkUpdateView(LoginRequiredMixin, HasPermMixin, FormView):
     template_name = "form_crispy_cbv.html"
     form_class = BulkUpdateForm
-    success_url = "/lnadmin/projection/list/"
+    perms = 'projection.edit_pits'
+
+    @property
+    def success_url(self):
+        return reverse('projection-list-detail')
 
     def form_valid(self, form):
         # This method is called when valid form data has been POSTed.
@@ -129,10 +139,11 @@ class BulkUpdateView(OfficerMixin, LoginRequiredMixin, FormView):
         return super(BulkUpdateView, self).form_valid(form)
 
 
-class ProjectionistDelete(OfficerMixin, LoginRequiredMixin, DeleteView):
+class ProjectionistDelete(LoginRequiredMixin, HasPermMixin, DeleteView):
     model = Projectionist
     template_name = "form_delete_cbv.html"
     msg = "Deleted Projectionist"
+    perms = 'projection.edit_pits'
 
     def get_success_url(self):
         return reverse("projection-list-detail")
@@ -140,9 +151,9 @@ class ProjectionistDelete(OfficerMixin, LoginRequiredMixin, DeleteView):
 
 ### Non-Wizard Projection Bulk View
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('projection.add_bulk_events', raise_exception=True)
 def bulk_projection(request):
-    context = RequestContext(request)
+    context = {}
     tz = timezone.get_current_timezone()
 
     if request.GET:
@@ -252,27 +263,25 @@ def bulk_projection(request):
                             pass
                     # after thats done
                     context['result'] = out
-                    return render_to_response("form_crispy_bulk_projection_done.html", context)
+                    return render(request, "form_crispy_bulk_projection_done.html", context)
 
                 else:
                     context['form'] = filled
-                    return render_to_response("form_crispy_bulk_projection_entries.html", context)
+                    return render(request, "form_crispy_bulk_projection_entries.html", context)
             else:
                 #pass back the empty form
                 context['msg'] = "Bulk Movie Addition"
                 context['formset'] = formbulk
 
-                return render_to_response("form_crispy_bulk_projection_entries.html", context)
+                return render(request, "form_crispy_bulk_projection_entries.html", context)
         else:
             # here we only have our params
             context['msg'] = "Bulk Movie Addition (Errors)"
             context['formset'] = formbulk
-            return render_to_response("form_crispy.html", context)
+            return render(request, "form_crispy.html", context)
     else:
         # here we have nothing
         form = BulkCreateForm()
         context['formset'] = form
         context['msg'] = "Bulk Movie Addition"
-        return render_to_response("form_crispy.html", context)
-        
-
+        return render(request, "form_crispy.html", context)

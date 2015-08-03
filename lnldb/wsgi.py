@@ -16,14 +16,18 @@ framework.
 import os
 import sys
 
-path = '/home/lnldb/lnldb'
+from django.core.wsgi import get_wsgi_application
+
+path = '/home/lnl/lnldb'
+
 if path not in sys.path:
     sys.path.append(path)
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "lnldb.settings")
-import django.core.handlers.wsgi
+# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "lnldb.settings")
 
-application = django.core.handlers.wsgi.WSGIHandler()
+os.environ['DJANGO_SETTINGS_MODULE'] = 'lnldb.settings'
+
+application = get_wsgi_application()
 
 # This application object is used by any WSGI server configured to use this
 # file. This includes Django's development server, if the WSGI_APPLICATION

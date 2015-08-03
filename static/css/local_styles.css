@@ -1,0 +1,227 @@
+body {
+    padding-bottom: 40px;
+}
+
+.navbar-collapse.in {
+    overflow-y: visible;
+    max-height: none;
+}
+
+/*.sidebar-nav {
+    padding: 9px 0;
+}
+.dropdown-backdrop {
+    position: static;
+}*/
+ul.ui-autocomplete {
+    max-height: 30%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.event-list .event-status-cancelled {
+    text-decoration: line-through;
+}
+
+.flexfix {
+    display: flex;
+}
+
+.inlineflexfix {
+    display: inline-flex;
+}
+
+.navbar-nav {
+    float: none;
+}
+
+.navbar-right {
+    margin-right: 5px;
+}
+
+.dropdown-menu .dropdown-toggle {
+    font-weight: bold;
+    cursor: default;
+}
+
+.dropdown-menu .dropdown-toggle .caret {
+    border: none;
+}
+
+.dropdown-menu .dropdown-menu {
+    display: block;
+    position: relative;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+    width: 100%;
+    border-radius: 0;
+}
+
+.dropdown-menu .dropdown-menu li {
+    display: block;
+}
+
+.navbar-inverse .navbar-nav > .active > a {
+    color: #EEE;
+}
+
+.navbar-inverse .navbar-nav > li > a,
+.navbar-inverse .navbar-nav > li > a:hover,
+.navbar-inverse .navbar-nav > li > a:focus,
+.navbar-inverse .navbar-brand {
+    color: #FFE303;
+}
+
+@media (min-width: 768px) {
+    ul.nav ul.dropdown-menu li a {
+        color: #111;
+    }
+}
+
+/* Search */
+.search-results > li {
+    display: block;
+}
+
+.search-results h2 {
+    margin-bottom: 0;
+    margin-top: 0.2em;
+    font-size: 18pt;
+    font-weight: bold;
+}
+
+.search-results h2 a {
+    color: black;
+}
+
+.result h2 .glyphicon {
+    float: left;
+    font-size: 30pt;
+    margin-right: 15px;
+    margin-bottom: 5px;
+}
+
+.search-results h3 {
+    font-size: 14pt;
+    font-weight: bold;
+    margin-top: 0.2em;
+    margin-bottom: .3em;
+    margin-left: 1.5em;
+    padding: 0;
+}
+
+span.result-subtitle {
+    font-size: 16pt;
+    font-weight: bold;
+    margin: 5px;
+    float: right;
+}
+
+.search-results p {
+    margin: 0;
+}
+
+@media print { 
+    h2:first-of-type:before {
+        content: "LNLDB: ";
+    }
+    a[href]:after { 
+        content: none;
+    }
+    a[href] {
+        text-decoration: underline;
+    }
+}
+
+.bootstrap-timepicker-widget table td input {
+    display: inline-block;
+}
+
+/* Fix ugly permissions debugging notification */
+#hijacked-warning {
+    height: 35px;
+    position: static;
+}
+
+footer {
+    margin-top: 2em;
+}
+
+.jumbotron .actions {
+    margin-top: -2em;
+}
+
+.jumboglyph {
+    margin: 0.3em;
+    vertical-align: middle;
+    margin-top: 0.1em;
+}
+
+.jumbo-event-info .event-description {
+    font-style: italic;
+    font-size: smaller;
+}
+
+input[type="file"] {
+    height: auto;
+}
+
+/* Markdown Widget */
+@media all {
+    .wmd-button-row {
+        overflow: hidden;
+    }
+}
+.wmd-input {
+    background-color: white !important;
+}
+
+#mdModal table {
+    width: 100%;
+}
+
+#mdModal td {
+    padding: 5px;
+}
+
+nav.page-nav {
+    text-align: center;
+}
+
+/* Inventory */
+ul.category-tree, .category-tree ul {
+    padding-left: 15px;
+}
+
+.category-tree li {
+    list-style: none;
+}
+
+.category-tree .active::before {
+    content: '> ';
+    margin-left: -1em;
+    position: absolute;
+}
+
+.eqp-item {
+    padding-left: 50px;
+}
+
+.eqp-item .mini-title {
+    margin-left: -35px;
+}
+
+.table > tbody > tr > th.checkbox {
+    border: none;
+    padding: 0;
+    padding-left: 20px;
+}
+
+.controls > input.checkboxinput[type=checkbox] {
+    margin-left: 4px;
+}
+
+h3 {
+    font-weight: bold;
+}

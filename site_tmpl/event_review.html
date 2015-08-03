@@ -3,6 +3,11 @@
 {% load at_event_linking %}
 {% load markdown_deux_tags %}
 {% load crispy_forms_tags %}
+
+{% block extras %}
+{{ formset.media }}
+{% endblock %}
+
 {% block content %}
 <h1>{{ h2 }}</h1>
 

@@ -1,31 +1,37 @@
+from django.core.exceptions import PermissionDenied
 from events.models import Event
 from events.forms import InternalEventForm
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response, get_object_or_404
-from django.template import RequestContext
+from django.shortcuts import render, get_object_or_404
 
-from django.contrib.auth.decorators import login_required, user_passes_test
-from helpers.challenges import is_officer
+from django.contrib.auth.decorators import login_required
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+# TODO: rework form for perm logic.
 def eventnew(request, id=None):
-    context = RequestContext(request)
-
+    context = {}
+    edit_perms = ('events.view_event',)
+    mk_perms = ('events.add_raw_event',)
     # get instance if id is passed in
     if id:
         instance = get_object_or_404(Event, pk=id)
         context['new'] = False
+        if not (request.user.has_perms(edit_perms) or
+                request.user.has_perms(edit_perms, instance)):
+            raise PermissionDenied
     else:
         instance = None
         context['new'] = True
+        if not request.user.has_perms(edit_perms):
+            raise PermissionDenied
 
     if request.method == 'POST':
         form = InternalEventForm(
-            request.POST,
+            data=request.POST,
+            request_user=request.user,
             instance=instance
         )
 
@@ -43,11 +49,12 @@ def eventnew(request, id=None):
             context['e'] = form.errors
             context['formset'] = form
     else:
-        form = InternalEventForm(instance=instance)
+        form = InternalEventForm(request_user=request.user,
+                                 instance=instance)
         if instance:
             context['msg'] = "Edit Event"
         else:
             context['msg'] = "New Event"
         context['formset'] = form
 
-    return render_to_response('form_crispy.html', context)
+    return render(request, 'form_crispy.html', context)

@@ -1,8 +1,6 @@
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 
-DEFAULT_FROM_ADDR = 'LnL <lnl@wpi.edu>'
-
 import pytz
 import datetime
 
@@ -17,7 +15,7 @@ DEFAULT_TO_ADDR = settings.DEFAULT_TO_ADDR
 
 def generate_notice_email(notice):
     subject = notice.subject
-    from_email = DEFAULT_FROM_ADDR
+    from_email = settings.DEFAULT_FROM_ADDR
     to_email = notice.email_to.email
 
     context = {'object': notice}
@@ -32,8 +30,8 @@ def generate_notice_email(notice):
 
 
 def generate_notice_cc_email(notice):
-    subject = "Lens and Lights Crew List for %s" % notice.meeting.datetime.date()
-    from_email = DEFAULT_FROM_ADDR
+    subject = notice.subject
+    from_email = settings.DEFAULT_FROM_ADDR
     to_email = notice.email_to.email
 
     context = {'object': notice}
@@ -49,7 +47,7 @@ def generate_notice_cc_email(notice):
 
 def generate_transfer_email(orgtransfer):
     subject = "LNL Organization Control Transfer for %s" % orgtransfer.org.name
-    from_email = DEFAULT_FROM_ADDR
+    from_email = settings.DEFAULT_FROM_ADDR
     to_email = "%s@wpi.edu" % orgtransfer.old_user_in_charge.username
 
     context = {'object': orgtransfer}
@@ -84,7 +82,7 @@ def generate_event_start_end_emails():
     #print starting.count()
     #print ending.count()
 
-    from_email = DEFAULT_FROM_ADDR
+    from_email = settings.DEFAULT_FROM_ADDR
 
     if starting:
         context_start = {'events': starting, 'string': "Events Starting Now", 'stringtwo': ""}
@@ -117,11 +115,11 @@ def generate_event_start_end_emails():
 # Cron Example
 # * * * * * ~/bin/python ~/lnldb/manage.py send_start_end
 
-#### Self Service EMails
+#### Self Service Emails
 # Self service org email
 def generate_selfservice_notice_email(context):
     subject = "Self Service Form Submission"
-    from_email = DEFAULT_FROM_ADDR
+    from_email = settings.DEFAULT_FROM_ADDR
     to_email = settings.EMAIL_TARGET_VP
 
     cont_html = render_to_string('emails/email_selfservice.html', context)
@@ -136,7 +134,7 @@ def generate_selfservice_notice_email(context):
 # Self service member email
 def generate_selfmember_notice_email(context):
     subject = "Self Service Member Request Submission"
-    from_email = DEFAULT_FROM_ADDR
+    from_email = settings.DEFAULT_FROM_ADDR
     to_email = settings.EMAIL_TARGET_S
 
     cont_html = render_to_string('emails/email_selfmember.html', context)
@@ -152,7 +150,7 @@ class DefaultLNLEmailGenerator(object):  # yay classes
     def __init__(self,
                  subject="LNL Notice",
                  to_emails=settings.DEFAULT_TO_ADDR,
-                 from_email=DEFAULT_FROM_ADDR,
+                 from_email=settings.DEFAULT_FROM_ADDR,
                  context=None,
                  template_basename="emails/email_generic",
                  build_html=True,
@@ -172,7 +170,7 @@ class DefaultLNLEmailGenerator(object):  # yay classes
 
         template_txt = "%s.txt" % template_basename
         content_txt = render_to_string(template_txt, context)
-        print bcc
+        # print bcc
         self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=bcc)
         for a in attachments:
             self.email.attach(a['name'], a['file_handle'], "application/pdf")

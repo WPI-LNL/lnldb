@@ -1,5 +1,4 @@
-
-{% extends 'base.html' %}
+{% extends 'base_admin.html' %}
 {% block content %}
 <h2> {{ h2 }} </h2>
 <p>Motorola XTS/APX users can <a href="{% url "members.views.mdc_raw" %}">import the list directly</a></p>
@@ -12,8 +11,8 @@
     {% for user in users %}
             <tr>
                 <td>{{ user.last_name }}, {{ user.first_name }}</td>
-                <td>{{ user.get_profile.mdc_name }}</td>
-                <td>{{ user.get_profile.mdc }}</td>
+                <td>{{ user.profile.mdc_name }}</td>
+                <td>{{ user.profile.mdc }}</td>
             </tr>
     {% endfor %}
 </table>

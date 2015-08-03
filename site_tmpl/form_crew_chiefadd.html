@@ -1,13 +1,11 @@
-{% extends 'base.html' %}
+{% extends 'base_admin.html' %}
 {% load staticfiles %}
 {% load bootstrap_toolkit %}
-{% block nav %}
-    {% include "admin.nav.html" %}
-{% endblock %}
+
 {% block content %}
     <div class="row">
         <div class="col-md-12">
-            <div class="jumbotron">
+            <div class="well well-lg">
                 <h2> {{msg }} </h2>
                 <h4>Current CC </h4>
                 <table class="table">
@@ -32,7 +30,7 @@
 {% endblock %}
 
 {% block extras %}
-
+    {{ formset.media }}
     <link href="{% static 'css/bootstrap-datetimepicker.min.css' %}" rel="stylesheet">
     <script type="text/javascript" src="{% static 'js//bootstrap-datetimepicker.min.js' %}"></script>
 <style>

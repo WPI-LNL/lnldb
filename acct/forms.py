@@ -1,16 +1,21 @@
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django import forms
-from django.forms.models import inlineformset_factory
-
 from django.core.urlresolvers import reverse
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Field, HTML
 from crispy_forms.bootstrap import FormActions
-
-from helpers.form_fields import django_msgs
+from django.utils.translation import ugettext_lazy as _
 
 from acct.models import Profile
+
+
+class LoginForm(AuthenticationForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        super(LoginForm, self).__init__(*args, **kwargs)
+        self.helper.add_input(Submit('submit', 'Log In Locally', css_class="btn btn-lg btn-block btn-info"))
 
 
 class UserAcct(forms.ModelForm):
@@ -21,7 +26,6 @@ class UserAcct(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
 
         self.helper.layout = Layout(
-            django_msgs,
             'first_name',
             'last_name',
 
@@ -42,14 +46,6 @@ class UserAcct(forms.ModelForm):
     last_name = forms.CharField(label="Last Name")
 
 
-class UserProfileLimitd(forms.ModelForm):
-    class Meta:
-        model = Profile
-
-
-UserProfileFormSet = inlineformset_factory(User, Profile)
-
-
 class ProfileAcct(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
@@ -57,7 +53,6 @@ class ProfileAcct(forms.ModelForm):
         self.helper.form_action = ''
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
-            django_msgs,
 
             'wpibox',
             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
@@ -84,8 +79,6 @@ class UserAddForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
 
         self.helper.layout = Layout(
-            django_msgs,
-
             'username',
             'email',
             'first_name',

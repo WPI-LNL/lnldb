@@ -1,8 +1,11 @@
 from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
+from django.dispatch import receiver
+import watson
 # Create your models here.
+from events.models import Organization
 
 
 class Profile(models.Model):
@@ -17,7 +20,10 @@ class Profile(models.Model):
 
     @property
     def fullname(self):
-        return self.user.first_name + " " + self.user.last_name
+        if self.user.first_name and self.user.last_name:
+            return self.user.first_name + " " + self.user.last_name
+        else:
+            return 'Unnamed User (%s)' % self.user.username
 
     @property
     def email(self):
@@ -30,6 +36,39 @@ class Profile(models.Model):
             return True
         else:
             return False
+
+    @property
+    def group_str(self):
+        groups = map(lambda l: l.name, self.user.groups.all())
+        out_str = ""
+        if "Alumni" in groups:
+            out_str += 'Alum '
+        if "Officer" in groups:
+            out_str += 'Officer'
+        elif "Active" in groups:
+            out_str += 'Active'
+        elif "Associate" in groups:
+            out_str += 'Associate'
+        elif "Away" in groups:
+            out_str += 'Away'
+        elif "Inactive" in groups:
+            out_str += 'Inactive'
+        else:
+            out_str += "Unclassified"
+        return out_str
+
+    @property
+    def owns(self):
+        return ', '.join(map(str, self.user.orgowner.all()))
+
+    @property
+    def orgs(self):
+        return ', '.join(map(str, self.user.orgusers.all()))
+
+    @property
+    def all_orgs(self):
+        return Organization.objects.complex_filter(
+            Q(user_in_charge=self.user) | Q(associated_users=self.user)).distinct()
 
     @property
     def mdc_name(self):
@@ -50,10 +89,21 @@ class Profile(models.Model):
         outstr += clean_first[:max_chars - len(outstr)]  # fill whatever's left with the first name
         return outstr
 
+    class Meta:
+        permissions = (
+            ('change_group', 'Change the group membership of a user'),
+            ('add_user', 'Add a new user'),
+            ('edit_mdc', 'Change the MDC of a user'),
+            ('edit_user', 'Edit the name and contact info of a user'),
+            ('view_user', 'View users'),
+            ('view_member', 'View LNL members'),
+        )
+
 
 def create_user_profile(sender, instance, created, raw=False, **kwargs):
     if created and not raw:
-        Profile.objects.create(user=instance)
+        profile = Profile.objects.create(user=instance)
+        profile.save()
         # if not email, this solves issue #138
         if not instance.email:
             instance.email = "%s@wpi.edu" % instance.username
@@ -61,6 +111,19 @@ def create_user_profile(sender, instance, created, raw=False, **kwargs):
 
 
 post_save.connect(create_user_profile, sender=User)
+
+
+# hacky? Yes. But I want to fix this, and I don't want to mess with the strangeness of that form.
+@receiver(pre_save, sender=Profile)
+def check_phone(sender, instance, **kwargs):
+    if instance.phone == '(':
+        instance.phone = None
+    if not instance.wpibox:
+        instance.wpibox = None
+    if not instance.addr:
+        instance.addr = None
+    if not instance.mdc:
+        instance.mdc = None
 
 
 class Orgsync_OrgCat(models.Model):
@@ -90,7 +153,7 @@ class Orgsync_User(models.Model):
     first_name = models.CharField(max_length=128)
     last_name = models.CharField(max_length=128)
     email_address = models.EmailField()
-    memberships = models.ManyToManyField(Orgsync_Org, null=True, blank=True)
+    memberships = models.ManyToManyField(Orgsync_Org, blank=True)
     last_login = models.DateField(null=True, blank=True)
     about_me = models.TextField(null=True, blank=True)
     portfolio = models.CharField(max_length=256, null=True, blank=True)
@@ -105,7 +168,7 @@ class Orgsync_User(models.Model):
 # "last_login":"April 24, 2012","portfolio":"http://my.orgsync.com/aakritibhakhri"},
 # url https://orgsync.com/38382/accounts?per_page=100&num_pages=3&order=first_name+ASC
 # paginatd https://orgsync.com/38382/accounts?per_page=100&num_pages=3&order=first_name+ASC&page=46
-#profile https://orgsync.com/profile/display_profile?id=636887
+# profile https://orgsync.com/profile/display_profile?id=636887
 #profile2 https://orgsync.com/profile/display_profile?id=575310
 #b.open("https://orgsync.com/38382/groups")
 #b.open("https://orgsync.com/38382/accounts?per_page=100&num_pages=3&order=first_name+ASC")

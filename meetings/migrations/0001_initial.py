@@ -1,84 +1,112 @@
 # -*- coding: utf-8 -*-
-from south.db import db
-from south.v2 import SchemaMigration
-from django.db import models
+from __future__ import unicode_literals
+
+from django.db import models, migrations
+from django.conf import settings
+import uuidfield.fields
+import meetings.models
 
 
-class Migration(SchemaMigration):
-    def forwards(self, orm):
-        # Adding model 'Meeting'
-        db.create_table('meetings_meeting', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('datetime', self.gf('django.db.models.fields.DateTimeField')()),
-        ))
-        db.send_create_signal('meetings', ['Meeting'])
+class Migration(migrations.Migration):
+    dependencies = [
+        ('events', '0001_initial'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
 
-        # Adding M2M table for field attendance on 'Meeting'
-        db.create_table('meetings_meeting_attendance', (
-            ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('meeting', models.ForeignKey(orm['meetings.meeting'], null=False)),
-            ('user', models.ForeignKey(orm['auth.user'], null=False))
-        ))
-        db.create_unique('meetings_meeting_attendance', ['meeting_id', 'user_id'])
-
-    def backwards(self, orm):
-        # Deleting model 'Meeting'
-        db.delete_table('meetings_meeting')
-
-        # Removing M2M table for field attendance on 'Meeting'
-        db.delete_table('meetings_meeting_attendance')
-
-    models = {
-        'auth.group': {
-            'Meta': {'object_name': 'Group'},
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '80'}),
-            'permissions': ('django.db.models.fields.related.ManyToManyField', [],
-                            {'to': "orm['auth.Permission']", 'symmetrical': 'False', 'blank': 'True'})
-        },
-        'auth.permission': {
-            'Meta': {'ordering': "('content_type__app_label', 'content_type__model', 'codename')",
-                     'unique_together': "(('content_type', 'codename'),)", 'object_name': 'Permission'},
-            'codename': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'content_type': (
-                'django.db.models.fields.related.ForeignKey', [], {'to': "orm['contenttypes.ContentType']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '50'})
-        },
-        'auth.user': {
-            'Meta': {'object_name': 'User'},
-            'date_joined': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
-            'email': ('django.db.models.fields.EmailField', [], {'max_length': '75', 'blank': 'True'}),
-            'first_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
-            'groups': ('django.db.models.fields.related.ManyToManyField', [],
-                       {'to': "orm['auth.Group']", 'symmetrical': 'False', 'blank': 'True'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'is_active': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'is_staff': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'is_superuser': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'last_login': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime.now'}),
-            'last_name': ('django.db.models.fields.CharField', [], {'max_length': '30', 'blank': 'True'}),
-            'password': ('django.db.models.fields.CharField', [], {'max_length': '128'}),
-            'user_permissions': ('django.db.models.fields.related.ManyToManyField', [],
-                                 {'to': "orm['auth.Permission']", 'symmetrical': 'False', 'blank': 'True'}),
-            'username': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '30'})
-        },
-        'contenttypes.contenttype': {
-            'Meta': {'ordering': "('name',)", 'unique_together': "(('app_label', 'model'),)",
-                     'object_name': 'ContentType', 'db_table': "'django_content_type'"},
-            'app_label': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'model': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
-        },
-        'meetings.meeting': {
-            'Meta': {'object_name': 'Meeting'},
-            'attendance': (
-                'django.db.models.fields.related.ManyToManyField', [],
-                {'to': "orm['auth.User']", 'symmetrical': 'False'}),
-            'datetime': ('django.db.models.fields.DateTimeField', [], {}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
-        }
-    }
-
-    complete_apps = ['meetings']
+    operations = [
+        migrations.CreateModel(
+            name='AnnounceSend',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('sent_at', models.DateTimeField(auto_now_add=True)),
+                ('sent_success', models.BooleanField(default=False)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='CCNoticeSend',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('sent_at', models.DateTimeField(auto_now_add=True)),
+                ('sent_success', models.BooleanField(default=False)),
+                ('uuid', uuidfield.fields.UUIDField(max_length=32, unique=True, null=True, editable=False, blank=True)),
+                ('addtl_message', models.TextField(null=True, verbose_name=b'Additional Message', blank=True)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Meeting',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('datetime', models.DateTimeField()),
+                ('attendance', models.ManyToManyField(to=settings.AUTH_USER_MODEL, blank=True)),
+                ('location', models.ForeignKey(blank=True, to='events.Location', null=True)),
+            ],
+            options={
+                'ordering': ('-datetime',),
+            },
+        ),
+        migrations.CreateModel(
+            name='MeetingAnnounce',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('subject', models.CharField(max_length=128)),
+                ('message', models.TextField()),
+                ('added', models.DateTimeField(auto_now_add=True)),
+                ('uuid', uuidfield.fields.UUIDField(max_length=32, unique=True, null=True, editable=False, blank=True)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='MeetingType',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('name', models.CharField(max_length=32)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='TargetEmailList',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('name', models.CharField(max_length=16)),
+                ('email', models.EmailField(max_length=254)),
+            ],
+        ),
+        migrations.AddField(
+            model_name='meetingannounce',
+            name='email_to',
+            field=models.ForeignKey(to='meetings.TargetEmailList'),
+        ),
+        migrations.AddField(
+            model_name='meetingannounce',
+            name='events',
+            field=models.ManyToManyField(related_name='meetingannouncements', to='events.Event'),
+        ),
+        migrations.AddField(
+            model_name='meetingannounce',
+            name='meeting',
+            field=models.ForeignKey(to='meetings.Meeting'),
+        ),
+        migrations.AddField(
+            model_name='meeting',
+            name='meeting_type',
+            field=models.ForeignKey(default=1, to='meetings.MeetingType'),
+        ),
+        migrations.AddField(
+            model_name='ccnoticesend',
+            name='email_to',
+            field=models.ForeignKey(default=meetings.models.get_default_email, to='meetings.TargetEmailList'),
+        ),
+        migrations.AddField(
+            model_name='ccnoticesend',
+            name='events',
+            field=models.ManyToManyField(related_name='meetingccnoticeevents', to='events.Event'),
+        ),
+        migrations.AddField(
+            model_name='ccnoticesend',
+            name='meeting',
+            field=models.ForeignKey(related_name='meetingccnotices', to='meetings.Meeting'),
+        ),
+        migrations.AddField(
+            model_name='announcesend',
+            name='announce',
+            field=models.ForeignKey(to='meetings.MeetingAnnounce'),
+        ),
+    ]

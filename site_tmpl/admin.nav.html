@@ -1,36 +1,61 @@
 {% load lineage %}
+{% load permissionif %}
+{% load cache %}
 <div class="navbar navbar-inverse navbar-static-top" role="navigation">
 <!--     <div class="navbar-inner"> -->
         <div class="container-fluid">
             <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#lnadmin-navbar-collapse-1">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#db-navbar-collapse-1">
                 <span class="sr-only">Toggle navigation</span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="{% url "events.views.indices.index" %}">LNLDB</a>
+                <a class="navbar-brand" href="{% url "events.views.indices.admin" %}">LNLDB</a>
         </div>
 
-        <div class="collapse navbar-collapse" id="lnadmin-navbar-collapse-1">
+            <div class="collapse navbar-collapse" id="db-navbar-collapse-1">
             <p class="navbar-text navbar-right">
-                Logged in as <a href="{% url "events.views.my.my" %}" class="navbar-link"> {{ user }} &middot; <a
-                    href="{% url 'logout' %}">Log Out</a></a>
+                {% if request.user.pk %}
+                Logged in as <a href="{% url  "members.views.detail" request.user.pk %}"
+                                class="navbar-link">{{ request.user }}</a>
+                &middot;
+                <a href="{% url 'logout' %}">Log Out</a>
+                {% else %}
+                    <a href="{% url 'login' %}">Log In</a>
+                {% endif %}
             </p>
             <ul class="nav navbar-nav">
-                <li class="{% ancestor '/lnadmin/$' %}"><a href="{% url "events.views.indices.admin" %}">Home</a></li>
-                <li class="{% ancestor '/lnadmin/events/' %} dropdown">
+                <li class="{% ancestor '/db/events/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Events <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
+                        <li><a href="{% url 'events.views.my.myevents' %}">My Events</a></li>
+                        <li><a href="{% url 'event' %}">Event Wizard</a></li>
+
+                        {% permission request.user has 'events.add_raw_event' %}
                         <li><a href="{% url "events.views.mkedrm.eventnew" %}">Add Event</a></li>
+                        {% endpermission %}
+
+                        {% permission request.user has 'events.view_event' %}
                         <li class="divider"></li>
+                        {% endpermission %}
+
+                        {% permission request.user has 'events.approve_event' %}
                         <li><a href="{% url "events.views.list.incoming" %}">Incoming Events</a></li>
+                        {% endpermission %}
+                        {% permission request.user has 'events.can_chief_event' %}
                         <li><a href="{% url "events.views.list.findchief" %}">Needs a Chief</a></li>
+                        {% endpermission %}
+                        {% permission request.user has 'events.view_event' %}
                         <li><a href="{% url "events.views.list.upcoming" %}">Upcoming Events</a></li>
                         <li><a href="{% url "events.views.list.openworkorders" %}">View Open Events</a></li>
                         <li><a href="{% url "events.views.list.closed" %}">Closed Events</a></li>
+                        {% endpermission %}
+
+
+                        {% permission request.user has 'events.view_event_billing' %}
                         <li role="presentation" class="divider"></li>
                         <li role="presentation" class="dropdown-header">Event Payments</li>
 
@@ -39,21 +64,29 @@
                         <li><a href="{% url "events.views.list.unbilled_semester" %}">Events to be Billed - Semester (Films)</a></li>
                         <li><a href="{% url "events.views.list.unpaid" %}">Events Billed, Pending Payment</a></li>
                         <li><a href="{% url "events.views.list.paid" %}">Events Paid</a></li>
-
+                        {% endpermission %}
 
                     </ul>
                 </li>
-                <li class="{% ancestor '/lnadmin/clients/' %} dropdown">
+                <li class="{% ancestor '/db/clients/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Clients
                         <b class="caret"></b>
                       </a>
                     <ul class="dropdown-menu">
-                        <li><a href="{% url "events.views.orgs.vieworgs" %}">View Clients</a></li>
-                        <li><a href="{% url "events.views.orgs.addeditorgs" %}">Add Clients</a></li>
+                        <li><a href="{% url "events.views.my.myorgs" %}">My Organizations</a></li>
+                        {% permission request.user has 'events.view_org' %}
+                            <li><a href="{% url "events.views.orgs.vieworgs" %}">View Organizations</a></li>
+                        {% endpermission %}
+                        {% permission request.user has 'events.add_org' %}
+                            <li><a href="{% url "events.views.orgs.addeditorgs" %}">Add Organization</a></li>
+                            {% else %}
+                            <li><a href="{% url "events.views.my.myorgform" %}">Request Organization</a></li>
+                        {% endpermission %}
                     </ul>
                 </li>
-                <li class="{% ancestor '/lnadmin/members/' %} dropdown">
+                {% permission request.user has 'acct.view_user' or request.user has 'acct.view_member' %}
+                    <li class="{% ancestor '/db/members/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Members
                         <b class="caret"></b>
@@ -65,69 +98,83 @@
                         <li><a href="{% url "members.views.alum" %}">Alumni</a></li>
                         <li><a href="{% url "members.views.away" %}">Away</a></li>
                         <li><a href="{% url "members.views.inactive" %}">Inactive</a></li>
+                        {% permission request.user has 'acct.view_user' %}
+                        <li><a href="{% url "users-limbo" %}">Unafiliated Users</a></li>
+                        {% endpermission %}
+                        {% permission request.user has 'acct.add_user' %}
+                            <li class="divider"></li>
+                            <li><a href="{% url "users-add" %}">Add User</a></li>
+                        {% endpermission %}
+                        {% permission request.user has 'events.event_view_granular' %}
+                            <li class="divider"></li>
+                            <li><a href="{% url "access-log" %}">Access Log</a>
+                        {% endpermission %}
                     </ul>
                 </li>
-                <li class="{% ancestor '/lnadmin/meetings/' %} dropdown">
+                {% endpermission %}
+                {% permission request.user has 'meetings.list_mtgs' %}
+                    <li class="{% ancestor '/db/meetings/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown"  href="#">
                         Meetings
                         <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
-                          <li><a href="{% url "meetings.views.listattendance" %}">View Meetings</a></li>
-                          <li><a href="{% url "meetings.views.newattendance" %}">New Meeting</a></li>
+                        <li><a href="{% url "meetings.views.listattendance" %}">View Meetings</a></li>
+                        {% permission request.user has 'meetings.create_mtg' %}
+                            <li><a href="{% url "meetings.views.newattendance" %}">New Meeting</a></li>
+                        {% endpermission %}
                     </ul>
                 </li>
-                {% comment %} 
-                <li class="{% ancestor '/lnadmin/inventory/' %} dropdown">
+                {% endpermission %}
+                {% permission request.user has 'inventory.view_equipment' %}
+                <li class="{% ancestor '/db/inventory/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                         Inventory
                         <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
-                         <li><a href="{% url "inventory.views.view" %}">View Inventory</a></li>
-                         <li><a href="{% url "inventory.views.add" %}">Add Inventory Item</a></li>
-                         <li class="dropdown-submenu">
-                            <a tabindex="-1" href="#">Organize</a>
-                            <ul class="dropdown-menu">
-                            <li><a href="{% url "inventory.views.categories" %}">Categories</a></li>
-                            </ul>
-                         </li>
+                        <li><a href="{% url "inventory.views.view_all" %}">View Inventory</a></li>
+                        {% permission request.user has 'inventory.add_equipmentclass' %}
+                            <li><a href="{% url "inventory.views.type_mk" %}">Add Item Type</a></li>
+                        {% endpermission %}
+                        {% permission request.user has 'inventory.add_equipmentitem' %}
+                            <li><a href="{% url "inventory.views.fast_mk" %}">Quick Add Items</a></li>
+                        {% endpermission %}
                     </ul>
                 </li>
-                {% endcomment %}
-                <li class="{% ancestor '/lnadmin/projection/' %} dropdown">
-                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                        Projection
-                        <b class="caret"></b>
-                      </a>
-                    <ul class="dropdown-menu">
-                        <li><a href="{% url "projection.views.plist_detail" %}">View Projectionists</a></li>
-                        <li><a href="{% url "projection-bulk-update" %}">Bulk Update Projectionists</a></li>
-                        <li><a href="{% url "projection-bulk2" %}">Bulk Add Movies</a></li>
-                    </ul>
-                </li>
-                <li class="{% ancestor '/lnadmin/misc/' %} dropdown">
-                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                        Misc
-                        <b class="caret"></b>
-                      </a>
-                    <ul class="dropdown-menu">
-                        <li><a href="{% url "access-log" %}">Access Log</a>
-                        <li class="divider"></li>
-                        <li><a href="{% url "users-contact" %}">Contact Users</a></li>
-                        <li><a href="{% url "users-limbo" %}">Unafiliated Users</a></li>
-                        <li class="divider"></li>
-                        <li><a href="{% url "users-add" %}">Add User</a></li>
-                    </ul>
-                </li>
+                {% endpermission %}
+                {% permission request.user has 'projection.view_pits' or request.user has 'projection.add_bulk_events' %}
+                    <li class="{% ancestor '/db/projection/' %} dropdown">
+                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                            Projection
+                            <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            {% permission request.user has 'projection.view_pits' %}
+                                <li><a href="{% url "projection.views.plist_detail" %}">View Projectionists</a></li>
+                            {% endpermission %}
+                            {% permission request.user has 'projection.edit_pits' %}
+                                <li><a href="{% url "projection-bulk-update" %}">Bulk Update Projectionists</a></li>
+                            {% endpermission %}
+                            {% permission request.user has 'projection.add_bulk_events' %}
+                                <li><a href="{% url "projection-bulk2" %}">Bulk Add Movies</a></li>
+                            {% endpermission %}
+                        </ul>
+                    </li>
+                {% endpermission %}
+                {% permission request.user has 'data.search' %}
                 <li>
-                    <form class="navbar-form navbar-left" action="{% url "events-search" %}" method="POST" role="search">
+                    <form class="navbar-form navbar-left" action="{% url "search" %}" method="GET" role="search">
                         <div class="form-group">
-                        {% csrf_token %}
-                        <input type="text" class="form-control" name="q" placeholder="Search Events" value="{{q}}">
+                            <input type="text" class="form-control" name="q" placeholder="Search Everything"
+                                    {% if q %}
+                                   value="{{ q }}"
+                                    {% endif %}
+                                    >
                         </div>
                     </form>
                 </li>
+                {% endpermission %}
                 <!-- paste menu bar text above here -->
             </ul>
             </div><!--/.nav-collapse -->

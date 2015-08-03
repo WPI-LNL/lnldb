@@ -7,9 +7,17 @@ from django.contrib.auth.models import User
 class StupidCat(models.Model):
     """ For logging when a user goes somewhere they shouldn't be going """
     user = models.ForeignKey(User, blank=True, null=True)
-    user_ip = models.IPAddressField(max_length=16)
+    user_ip = models.GenericIPAddressField(max_length=16)
     requested_uri = models.CharField(max_length=512)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         get_latest_by = "timestamp"
+
+
+class GlobalPerms(models.Model):
+    #it's a dummy class
+    class Meta:
+        permissions = (
+            ('search', 'Enables search functionality'),
+        )

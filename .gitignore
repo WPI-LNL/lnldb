@@ -6,3 +6,5 @@ runtime/*
 wheelhouse/*
 src/*
 .idea/*
+.coverage
+htmlcov/*

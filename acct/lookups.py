@@ -17,13 +17,16 @@ class UserLookup(LookupChannel):
                 Q(username__icontains=term) | Q(first_name__icontains=term) | Q(last_name__icontains=term))
 
     def get_result(self, obj):
-        return obj.first_name + " " + obj.last_name
+        if obj.first_name or obj.last_name:
+            return "%s %s" % (obj.first_name, obj.last_name)
+        else:
+            return "[%s] (name not given)" % obj.username
 
     def format_match(self, obj):
         return self.format_item_display(obj)
 
     def format_item_display(self, obj):
-        return '&nbsp;<strong>%s</strong>' % escape(obj.first_name + " " + obj.last_name)
+        return '&nbsp;<strong>%s</strong>' % self.get_result(obj)
 
 
 class OfficerLookup(LookupChannel):
@@ -40,13 +43,16 @@ class OfficerLookup(LookupChannel):
                 groups__name="Officer").distinct()
 
     def get_result(self, obj):
-        return obj.first_name + " " + obj.last_name
+        if obj.first_name or obj.last_name:
+            return "%s %s" % (obj.first_name, obj.last_name)
+        else:
+            return "[%s] (name not given)" % obj.username
 
     def format_match(self, obj):
         return self.format_item_display(obj)
 
     def format_item_display(self, obj):
-        return '&nbsp;<strong>%s</strong>' % escape(obj.first_name + " " + obj.last_name)
+        return '&nbsp;<strong>%s</strong>' % self.get_result(obj)
 
 
 class MemberLookup(LookupChannel):
@@ -63,13 +69,16 @@ class MemberLookup(LookupChannel):
                 Q(groups__name="Alumni") | Q(groups__name="Active") | Q(groups__name="Officer")).distinct()
 
     def get_result(self, obj):
-        return obj.first_name + " " + obj.last_name
+        if obj.first_name or obj.last_name:
+            return "%s %s" % (obj.first_name, obj.last_name)
+        else:
+            return "[%s] (name not given)" % obj.username
 
     def format_match(self, obj):
         return self.format_item_display(obj)
 
     def format_item_display(self, obj):
-        return '&nbsp;<strong>%s</strong>' % escape(obj.first_name + " " + obj.last_name)
+        return '&nbsp;<strong>%s</strong>' % self.get_result(obj)
 
 
 class AssocMemberLookup(LookupChannel):
@@ -87,10 +96,13 @@ class AssocMemberLookup(LookupChannel):
                     groups__name="Officer")).distinct()
 
     def get_result(self, obj):
-        return obj.first_name + " " + obj.last_name
+        if obj.first_name or obj.last_name:
+            return "%s %s" % (obj.first_name, obj.last_name)
+        else:
+            return "[%s] (name not given)" % obj.username
 
     def format_match(self, obj):
         return self.format_item_display(obj)
 
     def format_item_display(self, obj):
-        return '&nbsp;<strong>%s</strong>' % escape(obj.first_name + " " + obj.last_name)
+        return '&nbsp;<strong>%s</strong>' % self.get_result(obj)

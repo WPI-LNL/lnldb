@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base_admin.html' %}
 {% load bootstrap_toolkit %}
 {% load markdown_deux_tags %}
 {% load i18n %}
@@ -21,5 +21,8 @@
 
 
 {% block content %}
+    {% if REVISION %}
 <h1>LNLDB is running Git Revision {{ REVISION }}</h1>
+        <p>{{ CHANGELOG }}</p>
+    {% endif %}
 {% endblock %}

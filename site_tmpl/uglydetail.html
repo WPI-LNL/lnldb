@@ -2,74 +2,135 @@
 {% load at_user_linking %}
 {% load at_event_linking %}
 {% load markdown_deux_tags %}
+{% load permissionif %}
 {% block content %}
-    <div class="row">
-        <div class="col-md-3">
-            <h1> {{event }}:</h1>
-        </div>
-        <div class="col-md-2">
-            <h3>Status: {{ event.status }}</h3>
-        </div>
-        <div class="col-md-3">
-            <h3>Client{% if event.org.count > 1 %}s{% endif %}: {% for org in event.org.all %}<a href="{% url "admin-orgdetail" org.id %}">{{ org.retname }}</a> &nbsp;{% endfor %}</h3>
-        </div>
-        <div class="col-md-4">
-            <h3>Actions:
-            {% if event.cancelled or event.closed %}
-            <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
-            
-            {% elif event.paid and not event.closed %} 
-            <div class="btn-group">
-                <a class="btn btn-default btn-lg" href="#closeModal" role="button" data-toggle="modal">Close</a>
-                <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
+    <div class="jumbotron">
+        <div class="clearfix">
+            <h1><span class="glyphicon glyphicon-{{ event.glyphicon }} jumboglyph"
+                      aria-hidden="true"></span>{{ event }}</h1>
             </div>
-            
-            {% elif not event.reviewed and event.approved %}
-            <div class="btn-group">
-                <a class="btn btn-success btn-lg" href="{% url "events.views.flow.review" event.id %}">Review For Billing</a>
-                <a class="btn btn-warning btn-lg" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
-                <a class="btn btn-default btn-lg" href="#closeModal" role="button" data-toggle="modal">Close</a>
-                <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
-            </div>
-            {% elif event.approved and not event.paid and not event.closed and event.reviewed %}
-            <div class="btn-group">
-                <a class="btn btn-primary btn-lg" href="{% url "event-mkbilling" event.id %}">Create Bill</a>
-                <a class="btn btn-warning btn-lg" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
-                <a class="btn btn-default btn-lg" href="#closeModal" role="button" data-toggle="modal">Close</a>
-                <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
-            </div>
+        <div class="actions pull-right">
+            <h3>Status: <b>{{ event.status }}</b></h3>
 
-            {% elif not event.approved and not event.closed or not event.cancelled and not event.closed %}
             <div class="btn-group">
-                <a class="btn btn-success btn-lg" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
-                <a class="btn btn-danger btn-lg" href="{% url "events.views.flow.denial" event.id %}">Cancel</a>
-                <a class="btn btn-warning btn-lg" href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
+                <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
+                {% if event.closed or event.cancelled %}
+                    {% permission request.user has 'events.reopen_event' of event %}
+                        <a class="btn btn-default btn-lg" href="#reopenModal" role="button"
+                           data-toggle="modal">Reopen</a>
+                    {% endpermission %}
+                {% else %}
+                    {% permission request.user has 'events.edit_event_text' of event or request.user has 'events.edit_event_times' of event %}
+                        <a class="btn btn-warning btn-lg"
+                           href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
+                    {% endpermission %}
+                    {% if not event.reviewed %}
+                        {% permission request.user has 'events.cancel_event' of event %}
+                            <a class="btn btn-danger btn-lg" href="#cancelModal" role="button"
+                               data-toggle="modal">Cancel</a>
+                        {% endpermission %}
+                    {% endif %}
+                    {% if not event.approved %}
+                        {% permission request.user has 'events.approve_event' of event %}
+                            <a class="btn btn-success btn-lg" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
+                            <a class="btn btn-danger btn-lg"
+                               href="{% url "events.views.flow.denial" event.id %}">Deny</a>
+                        {% endpermission %}
+                    {% else %}
+                        {% if not event.reviewed %}
+                            {% permission request.user has 'events.review_event' of event %}
+                                <a class="btn btn-success btn-lg" href="{% url "events.views.flow.review" event.id %}">Review
+                                    For Billing</a>
+                            {% endpermission %}
+                        {% else %}
+                            {% permission request.user has 'events.bill_event' of event %}
+                                <a class="btn btn-primary btn-lg" href="{% url "event-mkbilling" event.id %}">Create
+                                    Bill</a>
+                            {% endpermission %}
+                            {% permission request.user has 'events.close_event' of event %}
+                                <a class="btn btn-success btn-lg" href="#closeModal" role="button" data-toggle="modal">
+                                    Close
+                                </a>
+                            {% endpermission %}
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
             </div>
+            </div>
+        <div class="jumbo-event-info">
+            <h3>Client{% if event.org.count > 1 %}s{% endif %}:
+                {% for org in event.org.all %}<a href="{% url "admin-orgdetail" org.id %}">{{ org.retname }}</a>
+                    &nbsp;{% empty %}[None listed]{% endfor %}</h3>
+            </div>
+    </div>
+    {% permission request.user has 'events.close_event' of event %}
+        <!-- CloseModal -->
+        <div id="closeModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="closeModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                        <h3 id="closeModalLabel">Confirm Close Event</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Closing will lock the event for edits, and cannot be easily undone.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                        <a class="btn btn-primary" href="{% url "event-close" event.id %}">Close Event</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endpermission %}
 
-            {% else %}
-            <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
-            <a class="btn btn-default btn-lg" href="#closeModal" role="button" data-toggle="modal">Close</a>
-            {% endif %}
-            </h3>
+    {% permission request.user has 'events.cancel_event' of event %}
+        <!-- CancelModal -->
+        <div id="cancelModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="cancelModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                        <h3 id="cancelModalLabel">Confirm Cancel Event</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Cancelling an event locks the event for edits, and cannot be easily undone. This should
+                            only be used if an event does not actually occur, and this information was given before any
+                            setups/rentals were done.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                        <a class="btn btn-primary" href="{% url "event-cancel" event.id %}">Cancel Event</a>
+                    </div>
+                </div>
+            </div>
+            </div>
+    {% endpermission %}
 
-            <!-- CloseModal -->
-            <div id="closeModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="closeModalLabel" aria-hidden="true">
+    {% permission request.user has 'events.reopen_event' of event %}
+        <!-- ReopenModal -->
+        <div id="reopenModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="reopenModalLabel"
+             aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
                             <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                            <h3 id="closeModalLabel">Sure?</h3>
+                            <h3 id="reopenModalLabel">Confirm Reopen Event</h3>
                         </div>
                         <div class="modal-body">
-                            <p>Once this event is closed it's closed.</p>
+                            <p>Reopening an event should be considered a last resort option, and removes all records
+                                of the event being closed to begin with.</p>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Cancel</button>
-                            <a class="btn btn-primary" href="{% url "event-close" event.id %}">Yes I'm Sure</a>
+                            <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                            <a class="btn btn-primary" href="{% url "event-reopen" event.id %}">Reopen Event</a>
                         </div>
                     </div>
                 </div>
             </div>
+    {% endpermission %}
             
             
         </div>
@@ -82,8 +143,11 @@
                 <li><a href="#services" data-toggle="tab">Services</a></li>
                 <li><a href="#crew" data-toggle="tab">Crew</a></li>
                 <li><a href="#reports" data-toggle="tab">Reports</a></li>
-                <li><a href="#billing" data-toggle="tab">Billing</a></li>
+                {% permission request.user has 'events.event_view_billing' of event %}
+                    <li><a href="#billing" data-toggle="tab">Billing</a></li>
+                {% endpermission %}
                 <li><a href="#files" data-toggle="tab">Files</a></li>
+                <li><a href="#history" data-toggle="tab">History</a></li>
             </ul>
             
             <div class="tab-content">
@@ -117,53 +181,86 @@
                             <th>Submitted on</th>
                             <td>{{ event.submitted_on }} </td>
                         </tr>
+                        {% permission request.user has 'events.event_view_granular' of event %}
                         <tr>
                             <th>Submitted from</th>
                             <td>{{event.submitted_ip}}</td>
                         </tr>
+                        {% endpermission %}
                         <tr>
-                            <th>Approved by/on</th>
+                            <th>Approved:</th>
                             <td>
                                 {% if event.approved_by %} 
                                     <a href="{% url "memberdetail" event.approved_by.id %}">{{ event.approved_by.get_full_name }}</a> on {{ event.approved_on }}      
                                 {% else %}
                                     Needs Approval 
                                 {% endif %}
+                            </td>
                         </tr>
+                        {% if event.cancelled %}
                         <tr>
-                            <th>Cancelled by/on</th>
+                            <th>Cancelled:</th>
                             <td>
                                 {% if event.cancelled_by %} 
                                     <a href="{% url "memberdetail" event.cancelled_by.id %}">{{ event.cancelled_by.get_full_name }}</a> on {{ event.cancelled_on }}      
                                 {% else %}
-                                    N/A 
+                                    True
                                 {% endif %}
-                        </tr>
-                        <tr>
-                            <th>Closed by/on</th>
-                            <td>
-                                {% if event.closed_by %} 
-                                    <a href="{% url "memberdetail" event.closed_by.id %}">{{ event.closed_by.get_full_name }}</a> on {{ event.closed_on }}      
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                        </tr>
-                        {% if event.reviewed %}
-                        <tr>
-                            <th>Reviewed for billing by/on</th>
-                            <td>
-                            <a href="{% url "memberdetail" event.reviewed_by.id %}">{{ event.reviewed_by.get_full_name }}</a> on {{ event.reviewed_on }}
                             </td>
                         </tr>
                         {% endif %}
-                        <tr>
-                            <th>Billed by semester</th>
-                            <td> {{ event.billed_by_semester }} </td>
-                        </tr>
-                        <tr>
-                            <th>Internal Notes</th>
-                            <td>{% if event.internal_notes %}{{ event.internal_notes|mduserlink|mdeventlink|markdown }}{% else %} None {% endif %}</td>
-                        </tr>
+                        {% if event.closed %}
+                            <tr>
+                                <th>Closed:</th>
+                                <td>
+                                    {% if event.closed_by %}
+                                        <a href="{% url "memberdetail" event.closed_by.id %}">{{ event.closed_by.get_full_name }}</a>
+                                        on {{ event.closed_on }}
+                                    {% else %}
+                                        True
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                        {% permission request.user has 'events.view_event_billing' of event %}
+                            {% if event.reviewed %}
+                                <tr>
+                                    <th>Reviewed for billing:</th>
+                                    <td>
+                                        {% if event.reviewed_by %}
+                                            <a href="{% url "memberdetail" event.reviewed_by.id %}">{{ event.reviewed_by.get_full_name }}</a>
+                                            on {{ event.reviewed_on }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                            <tr>
+                                <th>Billed by semester</th>
+                                <td> {{ event.billed_by_semester }} </td>
+                            </tr>
+                        {% endpermission %}
+                        {% permission request.user has 'events.event_view_hidden' of event %}
+                            <tr>
+                                <th>Sensitive and Hidden</th>
+                                <td> {{ event.sensitive }} </td>
+                            </tr>
+                        {% endpermission %}
+                        {% if event.test_event %}
+                            <tr>
+                                <th>Test Event</th>
+                                <td> {{ event.test_event }} </td>
+                            </tr>
+                        {% endif %}
+                        {% permission request.user has 'events.event_view_sensitive' of event %}
+                            <tr>
+                                <th>Internal Notes</th>
+                                <td>{% if event.internal_notes %}
+                                    {{ event.internal_notes|mduserlink|mdeventlink|markdown }}{% else %}
+                                    None {% endif %}</td>
+                            </tr>
+                        {% endpermission %}
                     </table>
 
                 </div>
@@ -303,9 +400,12 @@
                                 Last Updated: {{ report.updated_on }}
                             {% endif %}
                             {% if not event.closed or not event.cancelled %}
-                            <br />
-                            <a href="{% url "event-updccr" event.id report.id %}">Edit</a> / 
-                            <a href="{% url "event-rmccr" event.id report.id %}">Delete</a>
+                                {% permission request.user has 'events.change_cc_report' of report %}
+                                    [<a href="{% url "event-updccr" event.id report.id %}">Edit</a>]
+                                {% endpermission %}
+                                {% permission request.user has 'events.delete_cc_report' of report %}
+                                    [<a href="{% url "event-rmccr" event.id report.id %}">Delete</a>]
+                                {% endpermission %}
                             {% endif %}
                         </em>
                         
@@ -344,11 +444,15 @@
                         {% endfor %}
                     </table>
                 </div>
+                {% permission request.user has 'events.event_view_billing' of event %}
                 <div id="billing" class="tab-pane">
-                    <div class="pull-right btn-group">
-                        <a class="btn btn-lg btn-primary" href="{% url "eventextras" event.id %}">Modify Extras</a>
-                        <a class="btn btn-lg btn-info" href="{% url "eventoneoff" event.id %}">Add OneOff Charges</a>
-                    </div>
+                    {% permission request.user has 'events.adjust_event_charges' of event %}
+                        <div class="pull-right btn-group">
+                            <a class="btn btn-lg btn-primary" href="{% url "eventextras" event.id %}">Modify Extras</a>
+                            <a class="btn btn-lg btn-info" href="{% url "eventoneoff" event.id %}">Add OneOff
+                                Charges</a>
+                        </div>
+                    {% endpermission %}
                     <h2>Price Breakdown</h2>
                     <h3>Charge from 
                         {% if event.billing_fund %}
@@ -356,8 +460,15 @@
                         {% else %}
                             (no account given).
                         {% endif %}
-                            </h3>
-                    <style> .tdra { text-align: right; }</style>
+                    </h3>
+                    {% if event.late %}
+                        <div class="alert alert-warning" role="alert">
+                            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                            <b>Late Booked Event:</b>
+                            This event was booked {{ event.submitted_on|timesince:event.datetime_setup_complete }}
+                            before it began.
+                        </div>
+                    {% endif %}
                     <table class="table">
                         <thead>
                             <tr>
@@ -453,35 +564,48 @@
                     </table>
                     <h2> Bills </h2>
                     <a class="btn btn-primary" href="{% url 'events-pdf-bill' event.id %}">Download Invoice</a>
-                    <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Date Billed</th>
-                            <th>Date Paid</th>
-                            <th>Amount</th>
-                            <th>&nbsp;</th>
-                        </tr>
-                    </thead>
-                    {% for billing in event.billings.all %}
-                        <tr>
-                            <td>{{ billing.date_billed }}</td>
-                            <td>{{ billing.date_paid }}</td>
-                            <td>{{ billing.amount }}</td>
-                            <td>
-                                {% if not event.closed %}
-                                <a class="btn btn-link" href="{% url "event-updbilling" event.id billing.id %}">Update</a>
-                                {% if not billing.date_paid %}<a class="btn btn-link" href="{% url "event-rmbilling" event.id billing.id %}">Delete</a>{% endif %}
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% empty %}
-                    
-                    <h2> No Bills Posted </h2>
-                    {% endfor %}
-                    </table>
-                    <h3>Internal Notes</h3>
-                    <p>{% if event.internal_notes %}{{ event.internal_notes|mduserlink|mdeventlink|markdown }}{% else %} None {% endif %}</p>
+                    {% if event.billings %}
+                        <table class="table">
+                            <thead>
+                            <tr>
+                                <th>Date Billed</th>
+                                <th>Date Paid</th>
+                                <th>Amount</th>
+                                {% permission request.user has 'events.bill_event' of event %}
+                                    <th>&nbsp;</th>
+                                {% endpermission %}
+                            </tr>
+                            </thead>
+                            {% for billing in event.billings.all %}
+                                <tr>
+                                    <td>{{ billing.date_billed }}</td>
+                                    <td>{{ billing.date_paid }}</td>
+                                    <td>{{ billing.amount }}</td>
+                                    {% permission request.user has 'events.bill_event' of event %}
+                                        <td>
+                                            {% if not event.closed %}
+                                                <a class="btn btn-link"
+                                                   href="{% url "event-updbilling" event.id billing.id %}">Update</a>
+                                                {% if not billing.date_paid %}<a class="btn btn-link"
+                                                                                 href="{% url "event-rmbilling" event.id billing.id %}">Delete</a>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                    {% endpermission %}
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    {% else %}
+                        <h2> No Bills Posted </h2>
+                    {% endif %}
+
+                    {% permission request.user has 'events.event_view_sensitive' of event %}
+                        <h3>Internal Notes</h3>
+                        <p>{% if event.internal_notes %}
+                            {{ event.internal_notes|mduserlink|mdeventlink|markdown }}{% else %} None {% endif %}</p>
+                    {% endpermission %}
                 </div>
+                {% endpermission %}
                 <div id="files" class="tab-pane">
                     <div class="pull-right">{% if not event.closed %}<a class="btn btn-warning" href="{% url "eventattachments" event.id %}">Edit</a>{% endif %}</div>
                     <h2> Files </h2> 
@@ -510,6 +634,31 @@
                         
                         {% empty %}
                         <tr><td colspan="4">No files have been uploaded</td></tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                <div id="history" class="tab-pane">
+                    <h2> History </h2>
+                    <table class="table">
+                        <tr>
+                            <th>Date</th>
+                            <th>User</th>
+                            <th>Comment</th>
+                        </tr>
+                        {% for version in history %}
+                            <tr>
+                                <td>
+                                    {{ version.revision.date_created }}
+                                </td>
+                                <td>
+                                    {% if version.revision.user %}
+                                        {{ version.revision.user }}
+                                    {% else %}
+                                        [None]
+                                    {% endif %}
+                                </td>
+                                <td>{{ version.revision.comment }}</td>
+                            </tr>
                         {% endfor %}
                     </table>
                 </div>

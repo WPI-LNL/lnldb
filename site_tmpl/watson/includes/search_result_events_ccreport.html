@@ -1,0 +1,13 @@
+{% extends 'watson/includes/search_result_item.html' %}
+{% load markdown_deux_tags %}
+{% block search_result %}
+    <h2><span class="glyphicon glyphicon-{{ result.object.glyphicon|default_if_none:'asterisk' }}"
+              aria-hidden="true"></span> <a
+            href="{% url 'events-detail' result.object.event.id %}">Report for {{ result.object.event.event_name }}</a>
+    <span class="result-subtitle">Crew Chief Report -
+        <a href='{% url 'memberdetail' result.object.crew_chief.id %}'>
+            {{ result.object.crew_chief.profile.fullname }}
+        </a></span></h2>
+    <h3>{{ result.object.updated_on | date }} - {{ result.object.event.location.name }}</h3>
+    <p>{{ result.object.report | markdown }}</p>
+{% endblock %}

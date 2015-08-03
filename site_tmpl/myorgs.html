@@ -1,23 +1,26 @@
-{% extends 'base.html' %}
+{% extends 'base_admin.html' %}
 
-{% block content %}    
-<h1> <a href="{% url "events.views.my.my" %}">My</a> Work Organizations </h1>
-<p class="lead"> 
-    All the organizations you are associated with <br />
-    <a href="{% url "my-orgs-incharge-list" %}">Organizations you are in charge of</a>
+{% block content %}
+    <h1>My Client Organizations </h1>
+<p class="lead">
+    All the organizations you are associated with. <a href="{% url 'events.views.my.myorgform' %}">Create one?</a>
 </p>
 <table class="table table-striped table-bordered">
     <tr> 
         <th>Name </th>
-        <th></th>
+        <th>Status</th>
     </tr>
-    {% for org in orgs %}
+    {% for org in ownedorgs %}
             <tr>
-                <td>{{org}}</td>
-                <td></td>
+                <td><a href="{% url 'events.views.orgs.orgdetail' org.pk %}">{{ org }}</a></td>
+                <td>Owner</td>
             </tr>
-    {% empty %}
-    No Organizations.
+    {% endfor %}
+    {% for org in memberorgs %}
+        <tr>
+            <td><a href="{% url 'events.views.orgs.orgdetail' org.pk %}">{{ org }}</a></td>
+            <td>Member</td>
+        </tr>
     {% endfor %}
 </table>
 {% endblock %}

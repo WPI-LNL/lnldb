@@ -35,10 +35,10 @@ def do(infile):
 
         if created:
             p = Profile.objects.create(user=u)
-            p = u.get_profile()
+            p = u.profile
         else:
             print u
-            p = u.get_profile()
+            p = u.profile
 
         #assocation
         if line[0] == 'Al':
