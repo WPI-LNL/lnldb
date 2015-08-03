@@ -15,7 +15,6 @@ from events.forms import EventApprovalForm, EventDenialForm, BillingForm, Billin
 from events.forms import CrewAssign, CCIForm, AttachmentForm, ExtraForm, MKHoursForm
 from events.models import Event, Billing, EventCCInstance, EventAttachment, ExtraInstance, \
     EventArbitrary, CCReport, Hours, ReportReminder
-from helpers.challenges import is_officer
 from django.utils.text import slugify
 from pdfs.views import generate_pdfs_standalone
 from django.views.generic import UpdateView, CreateView, DeleteView

@@ -9,7 +9,6 @@ from events.models import Event
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q, F, Count
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
-from helpers.challenges import is_officer
 import pytz
 import re
 
