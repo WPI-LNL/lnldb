@@ -17,7 +17,6 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.contrib import messages
 
-from helpers.challenges import is_officer
 from helpers.mixins import LoginRequiredMixin, HasPermMixin, ConditionalFormMixin
 
 from events.models import Event, Projection, EventCCInstance

@@ -20,7 +20,6 @@ from meetings.forms import AnnounceCCSendForm
 from meetings.models import AnnounceSend
 from django.core.paginator import Paginator, InvalidPage
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
-from helpers.challenges import is_officer
 from emails.generators import generate_notice_email
 from emails.generators import generate_notice_cc_email
 from django.db.models.aggregates import Count

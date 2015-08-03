@@ -13,7 +13,6 @@ from events.forms import IOrgForm, ExternalOrgUpdateForm, OrgXFerForm, IOrgVerif
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.views.generic import CreateView
-from helpers.challenges import is_officer
 from helpers.mixins import LoginRequiredMixin, SetFormMsgMixin, HasPermMixin
 import pytz
 from django.utils import timezone
