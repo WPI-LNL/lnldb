@@ -77,8 +77,7 @@ class EventWizard(NamedUrlSessionWizardView):
             org_step = self.get_cleaned_data_for_step('organization')
             if org_step:
                 return {'org': org_step.get('group')}
-        else:
-            return {}
+        return {}
 
     def dispatch(self, request, *args, **kwargs):
         self._form_cache = {}
