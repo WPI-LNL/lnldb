@@ -458,7 +458,6 @@ class InternalEventForm(FieldAccessForm):
             'otherservice_reqs': PagedownWidget()
         }
 
-
     location = GroupedModelChoiceField(
         queryset=Location.objects.filter(show_in_wo_form=True),
         group_by_field="building",
@@ -1148,10 +1147,10 @@ class SelectForm(forms.Form):
     # queryset = Location.objects.filter(show_in_wo_form=True)
     #)
 
-    # soon to be a 
+    # soon to be a
     location = GroupedModelChoiceField(
         queryset=Location.objects.filter(show_in_wo_form=True)
-            .select_related('building__name'),
+                         .select_related('building__name'),
         group_by_field="building",
         group_label=lambda group: group.name,
     )

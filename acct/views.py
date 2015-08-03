@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 
 from django.core.urlresolvers import reverse
+from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.utils.safestring import mark_safe
 
@@ -92,7 +93,7 @@ def smart_login(request):
 
 @receiver(user_logged_in)
 def nag_for_contact_info(sender, request, user, **kwargs):
-    if not (user.first_name and user.last_name):
+    if not (user.first_name and user.last_name) and not settings.TESTING:
         nagtext = mark_safe('Please visit <a href="' +
                             reverse('my-acct') +
                             '">My Account</a> and update your information')

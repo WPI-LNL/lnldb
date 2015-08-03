@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from django import test
 from django.contrib.auth.models import Permission
 from django.core.urlresolvers import reverse
@@ -99,8 +101,6 @@ class UrlsTest(test.TestCase):
                     if not quiet:
                         print(status + url)
                     self.assertIn(response.status_code, allowed_http_codes)
-                    if response.status_code in (301, 302):
-                        self.assertNotIn('login', response["Location"])
                     self.assertNotIn("TEMPLATE_WARNING", response.content)
                     if credentials:
                         # if we just tested logout, then login again

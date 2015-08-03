@@ -10,7 +10,8 @@ def linkify_map(value, page, escape=True, title_callback=None, id_callback=None)
     if not title_callback:
         title_callback = str
     if not id_callback:
-        id_callback = lambda item: item.id
+        def id_callback(item):
+            return item.id
     try:
         value.__iter__
     except AttributeError:

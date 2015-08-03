@@ -150,7 +150,7 @@ def detail(request, id):
     context = {}
     user = get_object_or_404(User, pk=id)
     if not ((user.profile.is_lnl and request.user.has_perm('acct.view_member')) or
-                request.user.has_perm('acct.view_user', user.profile)):
+            request.user.has_perm('acct.view_user', user.profile)):
         raise PermissionDenied
 
     context['u'] = user

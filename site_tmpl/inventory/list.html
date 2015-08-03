@@ -28,12 +28,20 @@
             <div>
                 <div class="pull-right btn-group">
                     {% permission request.user has 'inventory.add_equipmentclass' %}
-                        <a class="btn btn-default" href="{% url 'inv-type-mk' %}?default_cat={{ cat.pk }}">
+                        {% if cat %}
+                            <a class="btn btn-default" href="{% url 'inv-type-mk' %}?default_cat={{ cat.pk }}">
+                        {% else %}
+                            <a class="btn btn-default" href="{% url 'inv-type-mk' %}">
+                        {% endif %}
                             Add Item Type
                         </a>
                     {% endpermission %}
                     {% permission request.user has 'inventory.add_equipmentitem' %}
-                        <a class="btn btn-primary" href="{% url "inventory.views.fast_mk" %}?default_cat={{ cat.pk }}">
+                        {% if cat %}
+                            <a class="btn btn-primary" href="{% url 'inventory.views.fast_mk' %}?default_cat={{ cat.pk }}">
+                        {% else %}
+                            <a class="btn btn-primary" href="{% url 'inventory.views.fast_mk' %}">
+                        {% endif %}
                             Quick Add Items
                         </a>
                     {% endpermission %}
@@ -45,7 +53,11 @@
                         {% endpermission %}
                     {% endif %}
                     {% permission request.user has 'inventory.add_equipmentcategory' %}
-                        <a class="btn btn-default" href="{% url 'inventory.views.cat_mk' %}?parent={{ cat.pk }}">
+                        {% if cat %}
+                            <a class="btn btn-default" href="{% url 'inventory.views.cat_mk' %}?parent={{ cat.pk }}">
+                        {% else %}
+                            <a class="btn btn-default" href="{% url 'inventory.views.cat_mk' %}">
+                        {% endif %}
                             Add Category
                         </a>
                     {% endpermission %}

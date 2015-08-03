@@ -112,6 +112,7 @@ def create_user_profile(sender, instance, created, raw=False, **kwargs):
 
 post_save.connect(create_user_profile, sender=User)
 
+
 # hacky? Yes. But I want to fix this, and I don't want to mess with the strangeness of that form.
 @receiver(pre_save, sender=Profile)
 def check_phone(sender, instance, **kwargs):
@@ -123,6 +124,7 @@ def check_phone(sender, instance, **kwargs):
         instance.addr = None
     if not instance.mdc:
         instance.mdc = None
+
 
 class Orgsync_OrgCat(models.Model):
     name = models.CharField(max_length=64)

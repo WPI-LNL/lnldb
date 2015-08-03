@@ -46,4 +46,4 @@ def mduserlink(value):
                                           '[@%s](%s) ' % (user.username, reverse("memberdetail", args=(user.id,))))
         except User.DoesNotExist:
             pass
-    return new_value 
+    return new_value

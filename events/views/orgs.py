@@ -48,7 +48,7 @@ def vieworgs(request):
 ### TODO: edit form with perm logic
 def addeditorgs(request, id=None):
     """form for adding an org """
-    # need to fix this 
+    # need to fix this
     context = {}
     edit_perms = ('events.edit_org',)
     mk_perms = ('events.add_org',)
@@ -56,7 +56,7 @@ def addeditorgs(request, id=None):
         instance = get_object_or_404(Organization, pk=id)
         msg = "Edit Client"
         if not (request.user.has_perms(edit_perms) or
-                    request.user.has_perms(edit_perms, instance)):
+                request.user.has_perms(edit_perms, instance)):
             raise PermissionDenied
     else:
         instance = None
@@ -94,7 +94,7 @@ def fund_edit(request, id=None, org=None):
         instance = get_object_or_404(Fund, pk=id)
         msg = "Edit Fund"
         if not (request.user.has_perms(edit_perms) or
-                    request.user.has_perms(edit_perms, instance)):
+                request.user.has_perms(edit_perms, instance)):
             raise PermissionDenied
     else:
         instance = None
@@ -134,7 +134,7 @@ def orgdetail(request, id):
     perms = ('events.view_org',)
     org = get_object_or_404(Organization, pk=id)
     if not (request.user.has_perms(perms) or
-                request.user.has_perms(perms, org)):
+            request.user.has_perms(perms, org)):
         raise PermissionDenied
     context['org'] = org
     return render(request, 'org_detail.html', context)

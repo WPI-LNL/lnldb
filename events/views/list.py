@@ -176,7 +176,7 @@ def upcoming(request, start=None, end=None):
         # # fex
         # # thurs == 3
         # # 7 - 3 + 2 = 6 days = weds
-        # delta = 7 - wd + 2 
+        # delta = 7 - wd + 2
         # end = today + datetime.timedelta(days=delta)
         # end = end.strftime('%Y-%m-%d')
 
@@ -357,9 +357,9 @@ def unreviewed(request, start=None, end=None):
 
     now = datetime.datetime.now(pytz.utc)
     # events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.exclude(Q(closed=True)
-                                   | Q(cancelled=True)
-                                   | Q(approved=False)) \
+    events = Event.objects.exclude(Q(closed=True) |
+                                   Q(cancelled=True) |
+                                   Q(approved=False)) \
         .filter(reviewed=False) \
         .filter(datetime_end__lte=now) \
         .order_by('datetime_start') \
@@ -453,8 +453,8 @@ def unbilled_semester(request, start=None, end=None):
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
     events = Event.objects.filter(billings__isnull=True) \
-        .exclude(Q(closed=True)
-                 | Q(cancelled=True)) \
+        .exclude(Q(closed=True) |
+                 Q(cancelled=True)) \
         .filter(reviewed=True) \
         .filter(billed_by_semester=True) \
         .order_by('datetime_start') \
@@ -496,8 +496,8 @@ def paid(request, start=None, end=None):
 
     # events = Event.objects.filter(approved=True).filter(paid=True)
     events = Event.objects.filter(billings__date_paid__isnull=False) \
-        .exclude(Q(closed=True)
-                 | Q(cancelled=True)) \
+        .exclude(Q(closed=True) |
+                 Q(cancelled=True)) \
         .filter(reviewed=True) \
         .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
