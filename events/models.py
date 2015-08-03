@@ -276,7 +276,7 @@ class Category(models.Model):
 
 
 class Service(models.Model):
-    """ 
+    """
         Some chargable service that is added to an event,
         lighting, sound, projection are examples
     """
@@ -331,7 +331,9 @@ class Billing(models.Model):
 class OptimizedEventManager(Manager):
     def get_queryset(self):
         return super(OptimizedEventManager, self).get_queryset()\
-                      .select_related('lighting').select_related('sound').select_related('projection')
+                                                 .select_related('lighting')\
+                                                 .select_related('sound')\
+                                                 .select_related('projection')
 
 
 class Event(models.Model):
@@ -744,7 +746,7 @@ class Event(models.Model):
     @property
     def cost_total_pre_discount(self):
         return self.cost_projection_total + self.cost_lighting_total + \
-               self.cost_sound_total + self.extras_total + self.oneoff_total
+            self.cost_sound_total + self.extras_total + self.oneoff_total
 
     @property
     def discount_value(self):
@@ -768,7 +770,7 @@ class Event(models.Model):
     @property
     def cost_total(self):
         return self.cost_projection_total + self.cost_lighting_total \
-               - self.discount_value + self.cost_sound_total + self.extras_total + self.oneoff_total
+            - self.discount_value + self.cost_sound_total + self.extras_total + self.oneoff_total
 
     # org to be billed
     @property

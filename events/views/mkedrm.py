@@ -20,7 +20,7 @@ def eventnew(request, id=None):
         instance = get_object_or_404(Event, pk=id)
         context['new'] = False
         if not (request.user.has_perms(edit_perms) or
-                    request.user.has_perms(edit_perms, instance)):
+                request.user.has_perms(edit_perms, instance)):
             raise PermissionDenied
     else:
         instance = None

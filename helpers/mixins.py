@@ -26,6 +26,7 @@ class HasPermMixin(object):
     def dispatch(self, request, *args, **kwargs):
         return super(HasPermMixin, self).dispatch(request, *args, **kwargs)
 
+
 class SetFormMsgMixin(object):
     def get_context_data(self, **kwargs):
         context = super(SetFormMsgMixin, self).get_context_data(**kwargs)

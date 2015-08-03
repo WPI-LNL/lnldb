@@ -60,9 +60,9 @@ def modify_att(request, mtg_id, att_id):
     mtg = get_object_or_404(Meeting, pk=mtg_id)
     att = get_object_or_404(MtgAttachment, pk=att_id)
     if not (request.user.has_perms(mtg_perms, mtg) and
-                request.user.has_perms(att_perms, att) and
-                att.meeting and
-                    att.meeting.pk == mtg.pk):
+            request.user.has_perms(att_perms, att) and
+            att.meeting and
+            att.meeting.pk == mtg.pk):
         raise PermissionDenied
 
     if request.method == 'POST':
@@ -88,7 +88,7 @@ def viewattendance(request, id):
     except Meeting.DoesNotExist:
         raise Http404(0)
     if not (request.user.has_perms(perms) or
-                request.user.has_perms(perms, m)):
+            request.user.has_perms(perms, m)):
         raise PermissionDenied
     context['m'] = m
 
@@ -115,7 +115,7 @@ def updateevent(request, meetingid, eventid):
     context['msg'] = "Update Event"
     event = get_object_or_404(Event, pk=eventid)
     if not (request.user.has_perms(perms) or
-                request.user.has_perms(perms, event)):
+            request.user.has_perms(perms, event)):
         raise PermissionDenied
     context['event'] = event.event_name
 
@@ -143,7 +143,7 @@ def editattendance(request, id):
     context['msg'] = "Edit Meeting"
     m = get_object_or_404(Meeting, pk=id)
     if not (request.user.has_perms(perms) or
-                request.user.has_perms(perms, m)):
+            request.user.has_perms(perms, m)):
         raise PermissionDenied
     if request.method == 'POST':
         formset = MeetingAdditionForm(request.POST, request.FILES, instance=m)
@@ -207,7 +207,7 @@ def mknotice(request, id):
     perms = ('meetings.send_mtg_notice',)
     meeting = get_object_or_404(Meeting, pk=id)
     if not (request.user.has_perms(perms) or
-                request.user.has_perms(perms, meeting)):
+            request.user.has_perms(perms, meeting)):
         raise PermissionDenied
     if request.method == 'POST':
         formset = AnnounceSendForm(meeting, request.POST)
@@ -238,7 +238,7 @@ def mkccnotice(request, id):
     perms = ('meetings.send_mtg_notice',)
     meeting = get_object_or_404(Meeting, pk=id)
     if not (request.user.has_perms(perms) or
-                request.user.has_perms(perms, meeting)):
+            request.user.has_perms(perms, meeting)):
         raise PermissionDenied
 
     if request.method == 'POST':

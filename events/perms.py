@@ -77,7 +77,7 @@ class EventOrgMemberPermLogic(AssocUsersCustomPermissionLogic):
 class EventOrgOwnerPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'org__user_in_charge'
     perms = EventOrgMemberPermLogic.perms + \
-            ('events.edit_event_flags', 'events.adjust_event_owner')
+        ('events.edit_event_flags', 'events.adjust_event_owner')
 
 
 class WorkedAtEventPermLogic(AssocUsersCustomPermissionLogic):

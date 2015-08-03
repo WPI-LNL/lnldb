@@ -4,11 +4,18 @@ from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 import os
 import sys
 
-here = lambda *x: os.path.join(os.path.abspath(os.path.dirname(__file__)), *x)
-from_root = lambda *x: os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', *x)
-from_runtime = lambda *x: os.path.join(from_root('runtime'), *x)
-if not os.path.exists(from_runtime()):
-    os.makedirs(from_runtime())
+
+def here(*x):
+    return os.path.join(os.path.abspath(os.path.dirname(__file__)), *x)
+
+
+def from_root(*x):
+    return os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', *x)
+
+
+def from_runtime(*x):
+    return os.path.join(from_root('runtime'), *x)
+
 
 TESTING = sys.argv[1:2] == ['test']
 
@@ -59,8 +66,6 @@ USE_TZ = True
 # Example: "/home/media/media.lawrence.com/media/"
 # noinspection PyUnresolvedReferences
 MEDIA_ROOT = from_runtime('media/')
-if not os.path.exists(MEDIA_ROOT):
-    os.makedirs(MEDIA_ROOT)
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
@@ -73,8 +78,6 @@ MEDIA_URL = '/media/'
 # Example: "/home/media/media.lawrence.com/static/"
 # noinspection PyUnresolvedReferences
 STATIC_ROOT = from_runtime('static')
-if not os.path.exists(STATIC_ROOT):
-    os.makedirs(STATIC_ROOT)
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
@@ -234,12 +237,11 @@ LOGGING = {
 AUTH_PROFILE_MODULE = 'acct.Profile'
 
 
-
 # AJAX_SELECT_BOOTSTRAP = False
 # AJAX_SELECT_INLINES = False
-### let's just shit all over the page. its okay. I'm fine with it :-\
+# let's just shit all over the page. its okay. I'm fine with it :-\
 AJAX_SELECT_BOOTSTRAP = False
-#AJAX_SELECT_INLINES = 'staticfiles'
+# AJAX_SELECT_INLINES = 'staticfiles'
 
 AJAX_LOOKUP_CHANNELS = {
     'Users': ('acct.lookups', 'UserLookup'),
@@ -303,7 +305,7 @@ CRISPY_TEMPLATE_PACK = 'bootstrap3'
 # Don't mess with builtins just for the sake of permissions
 PERMISSION_REPLACE_BUILTIN_IF = False
 
-#markdown deux configuration
+# markdown deux configuration
 MARKDOWN_DEUX_STYLES = {
     "default": {
         "extras": {
@@ -329,3 +331,10 @@ try:
     exec local_settings_script
 except IOError, e:
     print "Unable to open local settings! %s" % e
+
+
+if not os.path.exists(STATIC_ROOT):
+    os.makedirs(STATIC_ROOT)
+
+if not os.path.exists(MEDIA_ROOT):
+    os.makedirs(MEDIA_ROOT)

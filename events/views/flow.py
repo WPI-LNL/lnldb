@@ -223,8 +223,8 @@ def reopen(request, id):
 @login_required
 def rmcrew(request, id, user):
     event = get_object_or_404(Event, pk=id)
-    if not (
-        request.user.has_perm('events.edit_event_hours') or request.user.has_perm('events.edit_event_hours', event)):
+    if not (request.user.has_perm('events.edit_event_hours') or
+            request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
     event.crew.remove(user)
     return HttpResponseRedirect(reverse('events.views.flow.assigncrew', args=(event.id,)))
@@ -236,8 +236,8 @@ def assigncrew(request, id):
     context['msg'] = "Crew"
 
     event = get_object_or_404(Event, pk=id)
-    if not (
-        request.user.has_perm('events.edit_event_hours') or request.user.has_perm('events.edit_event_hours', event)):
+    if not (request.user.has_perm('events.edit_event_hours') or
+            request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
     context['event'] = event
 
@@ -264,8 +264,8 @@ def hours_bulk_admin(request, id):
 
     context['msg'] = "Bulk Hours Entry"
     event = get_object_or_404(Event, pk=id)
-    if not (
-        request.user.has_perm('events.edit_event_hours') or request.user.has_perm('events.edit_event_hours', event)):
+    if not (request.user.has_perm('events.edit_event_hours') or
+            request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
 
     context['event'] = event
@@ -293,8 +293,8 @@ def hours_bulk_admin(request, id):
 def rmcc(request, id, user):
     context = {}
     event = get_object_or_404(Event, pk=id)
-    if not (
-        request.user.has_perm('events.edit_event_hours') or request.user.has_perm('events.edit_event_hours', event)):
+    if not (request.user.has_perm('events.edit_event_hours') or
+            request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
     event.crew_chief.remove(user)
     return HttpResponseRedirect(reverse('events.views.flow.assigncc', args=(event.id,)))
@@ -307,8 +307,8 @@ def assigncc(request, id):
 
     event = get_object_or_404(Event, pk=id)
 
-    if not (
-        request.user.has_perm('events.edit_event_hours') or request.user.has_perm('events.edit_event_hours', event)):
+    if not (request.user.has_perm('events.edit_event_hours') or
+            request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
 
     context['event'] = event
@@ -338,8 +338,8 @@ def assignattach(request, id):
     context['msg'] = "Attachments"
 
     event = get_object_or_404(Event, pk=id)
-    if not (
-        request.user.has_perm('events.event_attachments') or request.user.has_perm('events.event_attachments', event)):
+    if not (request.user.has_perm('events.event_attachments') or
+            request.user.has_perm('events.event_attachments', event)):
         raise PermissionDenied
     context['event'] = event
 
@@ -514,6 +514,7 @@ class CCRDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     template_name = "form_delete_cbv.html"
     msg = "Deleted Crew Chief Report"
     perms = 'add_event_report'  # TODO: check if adding a diffferent perm
+
     def get_object(self, queryset=None):
         """ Hook to ensure object isn't closed """
         obj = super(CCRDelete, self).get_object()
