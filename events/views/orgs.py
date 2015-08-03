@@ -1,7 +1,7 @@
 # Create your views here.
 
 import datetime
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 
 from django.core.urlresolvers import reverse
 from django.db.models import Count
@@ -11,12 +11,12 @@ from django.template import RequestContext
 from events.models import Organization, OrganizationTransfer, OrgBillingVerificationEvent, Fund
 from events.forms import IOrgForm, ExternalOrgUpdateForm, OrgXFerForm, IOrgVerificationForm, FopalForm
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.views.generic import CreateView
 from helpers.challenges import is_officer
-from helpers.mixins import LoginRequiredMixin, OfficerMixin, SetFormMsgMixin
+from helpers.mixins import LoginRequiredMixin, SetFormMsgMixin, HasPermMixin
 import pytz
-
+from django.utils import timezone
 
 # so that we can know to send Email
 from django.conf import settings
@@ -26,13 +26,18 @@ from emails.generators import generate_transfer_email
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.view_org', raise_exception=True)
 def vieworgs(request):
     """ Views all organizations, """
     # todo add filters
     context = {}
 
-    orgs = Organization.objects.filter(archived=False).annotate(fund_count=Count('accounts'))
+    orgs = Organization.objects \
+        .filter(archived=False) \
+        .annotate(fund_count=Count('accounts')) \
+        .select_related('user_in_charge__first_name',
+                        'user_in_charge__last_name',
+                        'user_in_charge__username', ).all()
 
     context['orgs'] = orgs
 
@@ -40,25 +45,32 @@ def vieworgs(request):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+### TODO: edit form with perm logic
 def addeditorgs(request, id=None):
     """form for adding an org """
-    # need to fix this 
+    # need to fix this
     context = {}
+    edit_perms = ('events.edit_org',)
+    mk_perms = ('events.add_org',)
     if id:
         instance = get_object_or_404(Organization, pk=id)
         msg = "Edit Client"
+        if not (request.user.has_perms(edit_perms) or
+                request.user.has_perms(edit_perms, instance)):
+            raise PermissionDenied
     else:
         instance = None
         msg = "New Client"
+        if not request.user.has_perms(edit_perms):
+            raise PermissionDenied
 
     if request.method == 'POST':
         formset = IOrgForm(request.POST, instance=instance)
         if formset.is_valid():
-            formset.save()
+            org = formset.save()
             messages.add_message(request, messages.SUCCESS, 'Changes saved.')
             # return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
-            return HttpResponseRedirect(reverse('events.views.orgs.vieworgs'))
+            return HttpResponseRedirect(reverse('events.views.orgs.orgdetail', kwargs={'id': org.pk}))
         else:
             context['formset'] = formset
             messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
@@ -72,17 +84,23 @@ def addeditorgs(request, id=None):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def fund_edit(request, id=None, org=None):
     """form for adding an fund """
     # need to fix this
     context = {}
+    edit_perms = ('events.modify_fund',)
+    mk_perms = ('events.add_fund',)
     if id:
         instance = get_object_or_404(Fund, pk=id)
         msg = "Edit Fund"
+        if not (request.user.has_perms(edit_perms) or
+                request.user.has_perms(edit_perms, instance)):
+            raise PermissionDenied
     else:
         instance = None
         msg = "New Fund"
+        if not request.user.has_perms(mk_perms):
+            raise PermissionDenied
 
     if request.method == 'POST':
         formset = FopalForm(request.POST, instance=instance)
@@ -111,15 +129,18 @@ def fund_edit(request, id=None, org=None):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
 def orgdetail(request, id):
     context = {}
+    perms = ('events.view_org',)
     org = get_object_or_404(Organization, pk=id)
+    if not (request.user.has_perms(perms) or
+            request.user.has_perms(perms, org)):
+        raise PermissionDenied
     context['org'] = org
     return render(request, 'org_detail.html', context)
 
 
-### External Form Editing Views
+### External Form Editing Views (NOW DEPRECATED!)
 @login_required
 def orglist(request):
     context = {}
@@ -169,7 +190,7 @@ def org_mkxfer(request, id):
 
     user = request.user
 
-    now = datetime.datetime.now()
+    now = timezone.now()
     wfn = now + datetime.timedelta(days=7)
     #
     # OrganizationTransfer.objects.filter(old_user_in_charge=
@@ -227,11 +248,12 @@ def org_acceptxfer(request, idstr):
     return render(request, 'mytransfer.html', context)
 
 
-class OrgVerificationCreate(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, CreateView):
+class OrgVerificationCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
     model = OrgBillingVerificationEvent
     form_class = IOrgVerificationForm
     template_name = "form_crispy_cbv.html"
     msg = "Mark Client billing as valid"
+    perms = ('events.verify_org',)
 
     def get_form_kwargs(self):
         kwargs = super(OrgVerificationCreate, self).get_form_kwargs()

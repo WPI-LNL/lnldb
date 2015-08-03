@@ -1,12 +1,19 @@
-{% extends 'base.html' %}
+{% extends 'base_admin.html' %}
 {% load bootstrap_toolkit %}
 {% load markdown_deux_tags %}
 {% load i18n %}
 {% load crispy_forms_tags %}
+{% load crispy_forms_filters %}
 
 
 {% block head %}
-{{ wizard.form.media }}
+    {% if wizard.form.forms %}
+        {% for form in wizard.form.forms %}
+            {{ form.media }}
+        {% endfor %}
+    {% else %}
+        {{ wizard.form.media }}
+    {% endif %}
 {% endblock %}
 
 {% block extras %}
@@ -24,7 +31,7 @@
         </div>
         {% endif %}
         <form class="form-horizontal" action="" method="post" role="form">{% csrf_token %}
-        <table>
+
         {{ wizard.management_form }}
         {% if wizard.form.forms %}
             {{ wizard.form.management_form }}
@@ -34,8 +41,7 @@
         {% else %}
             {% crispy wizard.form %}
         {% endif %}
-        </table>
-        <br />
+            <br>
             <div class="row">
                 <div class="col-md-12">
                     {% if wizard.steps.prev %}
@@ -79,16 +85,16 @@
                         <div class="tab-pane active" id="tservice">
                             {% for o in help_objs %}
                             <h2>{{ o.longname }} (${{ o.base_cost }})</h2>
-                            <p>{{  o.help_desc|markdown }}</p>
+                                {{ o.help_desc|markdown }}
                             {% endfor %}
                         </div>
                         {% if extras %}
                         <div class="tab-pane" id="textras">
                             <table class="table table-bordered">
                                 {% for e in extras %}
-                                <div class="hide">
+                                    <!--<div class="hide">
                                     <div id="e_{{e.id }}" class="{% for s in e.services.all %}s_{{s.id}} {% endfor %}"></div>
-                                </div>
+                                </div>-->
                                 <tr>
                                     <td><b>{{ e.name }}:</b> {{e.desc}}</td>
                                     <td>{{ e.cost }}</td>

@@ -2,7 +2,6 @@
 {% load bootstrap_calendar %}
 
 {% block extras %}
-{% include 'js_event_checkboxes.tmpl' %}
 {% bootstrap_calendar_js events_url="/list/json" %}
 {% bootstrap_calendar_css %}
 {% endblock %}

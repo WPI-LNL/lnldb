@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from helpers.challenges import is_lnlmember
 from emails.generators import generate_selfservice_notice_email
+from django.db.models.aggregates import Sum
 
 
 ### USER FACING SHIT
@@ -99,9 +100,9 @@ def myorgs(request):
     context = {}
 
     user = request.user
-    orgs = user.orgusers.get_queryset()
+    context['ownedorgs'] = user.orgowner.get_queryset()
+    context['memberorgs'] = user.orgusers.get_queryset()
 
-    context['orgs'] = orgs
     return render(request, 'myorgs.html', context)
 
 
@@ -143,22 +144,9 @@ def myorgform(request):
 def myevents(request):
     """ List Events That Have been CC'd / involved """
     context = {}
-
-    user = request.user
-    context['user'] = user
-
-    totalhours = sum([x.hours for x in user.hours.all()])
-    context['totalhours'] = totalhours
-
-    now = datetime.datetime.now(timezone.get_current_timezone())
-    context['now'] = now
-
-    if user.groups.exclude(name__in=["Contact"]).exists():
-        member = True
-    else:
-        member = False
-
-    context['member'] = member
+    context['user'] = request.user
+    context.update(request.user.hours.aggregate(totalhours=Sum('hours')))
+    context['now'] = datetime.datetime.now(timezone.get_current_timezone())
 
     return render(request, 'myevents.html', context)
 

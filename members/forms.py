@@ -8,14 +8,16 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Field
 from crispy_forms.bootstrap import FormActions
 
+from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer
 
-class MemberForm(forms.ModelForm):
+
+class MemberForm(FieldAccessForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
-
             'username',
+            'email',
             'first_name',
             'last_name',
             'groups',
@@ -27,10 +29,27 @@ class MemberForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'groups']
+        fields = ['username', 'email', 'first_name', 'last_name', 'groups']
+
+    class FieldAccess:
+        def __init__(self):
+            pass
+
+        thisisme = FieldAccessLevel(
+            lambda user, instance: user == instance,
+            enable=('email', 'first_name', 'last_name')
+        )
+        selfservice = FieldAccessLevel(
+            lambda user, instance: user.has_perm('auth.change_user', instance),
+            enable=('username', 'email', 'first_name', 'last_name')
+        )
+        edit_groups = FieldAccessLevel(
+            lambda user, instance: user.has_perm('auth.change_group', instance),
+            enable=('groups',)
+        )
 
 
-class MemberContact(forms.ModelForm):
+class MemberContact(FieldAccessForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -44,10 +63,10 @@ class MemberContact(forms.ModelForm):
                 'addr',
                 'mdc',
             ),
-            Fieldset(
+            DynamicFieldContainer(Fieldset(
                 "Settings",
                 "locked"
-            ),
+            )),
             FormActions(
                 Submit('save', 'Save Changes'),
             )
@@ -57,3 +76,28 @@ class MemberContact(forms.ModelForm):
     class Meta:
         model = Profile
         exclude = ("user",)
+
+    class FieldAccess:
+        def __init__(self):
+            pass
+
+        thisisme = FieldAccessLevel(
+            lambda user, instance: user == instance,
+            enable=('wpibox', 'phone', 'addr'),
+        )
+        selfservice = FieldAccessLevel(
+            lambda user, instance: user.has_perm('acct.edit_user', instance),
+            enable=('wpibox', 'phone', 'addr'),
+        )
+        edit_mdc = FieldAccessLevel(
+            lambda user, instance: user.has_perm('acct.edit_mdc', instance),
+            enable=('mdc',)
+        )
+        rev_lock = FieldAccessLevel(
+            lambda user, instance: True,
+            exclude=('locked',)
+        )
+        lock = FieldAccessLevel(
+            lambda user, instance: user.has_perm('acct.change_group', instance),
+            enable=('locked',)
+        )

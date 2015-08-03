@@ -8,7 +8,7 @@ from django.template import RequestContext
 from events.models import Event
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q, F, Count
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from helpers.challenges import is_officer
 import pytz
 import re
@@ -115,7 +115,7 @@ def paginate_helper(queryset, page, sort=None, count=DEFAULT_ENTRY_COUNT):
             else:
                 post_sort = sorted(queryset.all(), key=lambda m: getattr(m, sort))
         except Exception as e:
-            print "Won't sort.", e
+            # print "Won't sort.", e
             post_sort = queryset
     else:
         post_sort = queryset
@@ -145,8 +145,8 @@ def get_farback_date_range_plus_next_week(delta=180):
 
 
 # ## EVENT VIEWS
-@login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@login_required()
+@permission_required('events.view_event', raise_exception=True)
 def upcoming(request, start=None, end=None):
     """
     Lists Upcoming Events
@@ -176,7 +176,7 @@ def upcoming(request, start=None, end=None):
         # # fex
         # # thurs == 3
         # # 7 - 3 + 2 = 6 days = weds
-        # delta = 7 - wd + 2 
+        # delta = 7 - wd + 2
         # end = today + datetime.timedelta(days=delta)
         # end = end.strftime('%Y-%m-%d')
 
@@ -184,6 +184,12 @@ def upcoming(request, start=None, end=None):
     # .filter(datetime_start__gte=today)
     events = Event.objects.filter(approved=True).exclude(
         Q(closed=True) | Q(cancelled=True)).distinct()  # .filter(paid=False)
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building__shortname').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -205,7 +211,7 @@ def upcoming(request, start=None, end=None):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.approve_event', raise_exception=True)
 def incoming(request, start=None, end=None):
     context = {}
     if not start and not end:
@@ -215,7 +221,14 @@ def incoming(request, start=None, end=None):
         end = today + datetime.timedelta(days=365.25)
         end = end.strftime('%Y-%m-%d')
 
-    events = Event.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
+    events = Event.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)) \
+        .distinct()
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building__shortname').prefetch_related('org') \
+        .prefetch_related('otherservices')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -238,7 +251,7 @@ def incoming(request, start=None, end=None):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.view_event', raise_exception=True)
 def openworkorders(request, start=None, end=None):
     if not start and not end:
         today = datetime.date.today()
@@ -249,6 +262,14 @@ def openworkorders(request, start=None, end=None):
     context = {}
 
     events = Event.objects.filter(approved=True).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building__shortname').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
+        .prefetch_related('billings') \
+        .prefetch_related('crew_chief')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -270,8 +291,8 @@ def openworkorders(request, start=None, end=None):
     return render(request, 'events.html', context)
 
 
-@login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@login_required()
+@permission_required('events.view_event', raise_exception=True)
 def findchief(request, start=None, end=None):
     if not start and not end:
         today = datetime.date.today()
@@ -290,6 +311,12 @@ def findchief(request, start=None, end=None):
         .annotate(projection_count=Count('projection')).all() \
         .filter(num_ccs__lt=(F('ccs_needed'))).distinct()
 
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building__shortname').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
         events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
 
@@ -317,7 +344,7 @@ def findchief(request, start=None, end=None):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.review_event', raise_exception=True)
 def unreviewed(request, start=None, end=None):
     context = {}
 
@@ -330,13 +357,20 @@ def unreviewed(request, start=None, end=None):
 
     now = datetime.datetime.now(pytz.utc)
     # events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.exclude(Q(closed=True)
-                                   | Q(cancelled=True)
-                                   | Q(approved=False)) \
+    events = Event.objects.exclude(Q(closed=True) |
+                                   Q(cancelled=True) |
+                                   Q(approved=False)) \
         .filter(reviewed=False) \
         .filter(datetime_end__lte=now) \
         .order_by('datetime_start') \
+        .prefetch_related('crew_chief') \
         .distinct()
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building__shortname').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -360,7 +394,7 @@ def unreviewed(request, start=None, end=None):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.bill_event', raise_exception=True)
 def unbilled(request, start=None, end=None):
     context = {}
 
@@ -379,6 +413,13 @@ def unbilled(request, start=None, end=None):
         .filter(billed_by_semester=False) \
         .order_by('datetime_start') \
         .distinct()
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building__shortname').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
+        .prefetch_related('billings')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -400,7 +441,7 @@ def unbilled(request, start=None, end=None):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.bill_event', raise_exception=True)
 def unbilled_semester(request, start=None, end=None):
     context = {}
 
@@ -412,12 +453,19 @@ def unbilled_semester(request, start=None, end=None):
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
     events = Event.objects.filter(billings__isnull=True) \
-        .exclude(Q(closed=True)
-                 | Q(cancelled=True)) \
+        .exclude(Q(closed=True) |
+                 Q(cancelled=True)) \
         .filter(reviewed=True) \
         .filter(billed_by_semester=True) \
         .order_by('datetime_start') \
         .distinct()
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building__shortname').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
+        .prefetch_related('billings')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -439,7 +487,7 @@ def unbilled_semester(request, start=None, end=None):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.close_event', raise_exception=True)
 def paid(request, start=None, end=None):
     context = {}
 
@@ -448,10 +496,17 @@ def paid(request, start=None, end=None):
 
     # events = Event.objects.filter(approved=True).filter(paid=True)
     events = Event.objects.filter(billings__date_paid__isnull=False) \
-        .exclude(Q(closed=True)
-                 | Q(cancelled=True)) \
+        .exclude(Q(closed=True) |
+                 Q(cancelled=True)) \
         .filter(reviewed=True) \
         .distinct()
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building__shortname').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
+        .prefetch_related('billings')
     events, context = datefilter(events, context, start, end)
 
     # if events:
@@ -477,7 +532,7 @@ def paid(request, start=None, end=None):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.bill_event', raise_exception=True)
 def unpaid(request, start=None, end=None):
     context = {}
 
@@ -495,6 +550,13 @@ def unpaid(request, start=None, end=None):
         .exclude(numpaid__gt=0) \
         .filter(reviewed=True) \
         .order_by('datetime_start').distinct()
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building__shortname').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
+        .prefetch_related('billings')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -516,7 +578,7 @@ def unpaid(request, start=None, end=None):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING/')
+@permission_required('events.view_event', raise_exception=True)
 def closed(request, start=None, end=None):
     context = {}
 
@@ -524,6 +586,13 @@ def closed(request, start=None, end=None):
         start, end = get_farback_date_range_plus_next_week()
 
     events = Event.objects.filter(closed=True)
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building__shortname').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
+        .prefetch_related('crew_chief')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -541,7 +610,7 @@ def closed(request, start=None, end=None):
                        'crew_chief',
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    print context['cols']
+    #print context['cols']
     return render(request, 'events.html', context)
 
 
@@ -551,6 +620,8 @@ def public_facing(request):
     events = Event.objects.filter(approved=True, closed=False, cancelled=False, test_event=False, sensitive=False) \
         .filter(datetime_end__gte=now)
     events = events.order_by('datetime_start')
+    events = events.select_related('location__building__shortname').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     context['h2'] = "Active Events"
     context['events'] = events
 

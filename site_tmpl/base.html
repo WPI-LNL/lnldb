@@ -1,4 +1,5 @@
 {% load staticfiles %}
+{% load hijack_tags %}
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -10,29 +11,39 @@
         <meta name="description" content="">
         <meta name="author" content="">
 
-        <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
-        <link href="{% static 'css/datepicker.css' %}" rel="stylesheet" type="text/css">
-        <link href="{% static 'css/bootstrap-timepicker.min.css' %}" rel="stylesheet" type="text/css">
+        {% if AIRPLANE_MODE %}
+            <link rel="stylesheet" href="{% static 'css/bootstrap.css' %}">
+            <link rel="stylesheet" href="{% static 'css/bootstrap-theme.css' %}">
+            <script src="{% static 'js/jquery.js' %}"></script>
+            <script src="{% static 'js/jquery-ui.js' %}"></script>
+            <script src="{% static 'js/bootstrap.js' %}"></script>
+        {% else %}
+            <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
+            <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+            <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+            <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+            <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+        {% endif %}
+
 
         <!--         <link href="{% static 'css/bootstrap-responsive.css' %}" rel="stylesheet"> -->
-        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-        <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
-        <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+        <link href="{% static 'css/datepicker.css' %}" rel="stylesheet" type="text/css">
+        <link href="{% static 'css/bootstrap-timepicker.min.css' %}" rel="stylesheet" type="text/css">
         <script src="{% static 'js/bootstrap-datepicker.js' %}"></script>
         <script src="{% static 'js/bootstrap-timepicker.min.js' %}"></script>
 
-        <script src="{% static 'ajax_select/js/ajax_select.js' %}"></script>
         <script src="{% static 'js/flexmenu.min.js' %}"></script>
         <link href='{% static 'ajax_select/css/ajax_select.css' %}' rel="stylesheet" type="text/css">
         <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet">
+        <link rel="stylesheet" type="text/css" href="{% static 'hijack/hijack-styles.css' %}" />
         <script type="text/javascript">
             $(document).ready(function () {
                 $(".dateinput").datepicker({
                     format: 'yyyy-mm-dd',
                     clearBtn: true,
                     todayBtn: true,
-                    todayHighlight: true
+                    todayHighlight: true,
+                    orientation: 'top',
                     });
                 $(".timeinput").timepicker(
                     {
@@ -41,8 +52,29 @@
                         defaultTime: false,
                         showMeridian: false
                     });
+
+                // Collapse main navbar if too big
                 $("div.collapse ul.navbar-nav").flexMenu()
+
+                /*
+                 Save tabs across reloads
+                 */
+
+                $('a[data-toggle="tab"]').click(function (e) {
+                    e.preventDefault();
+                    $(this).tab('show');
+                }).on("shown.bs.tab", function (e) {
+                    // store the currently selected tab in the hash value
+                    window.location.hash = $(e.target).attr("href").substr(1);
                 });
+
+                // on load of the page: switch to the currently selected tab
+                $('a[href="' + window.location.hash + '"][data-toggle="tab"]').tab('show');
+            });
+            // switch to tabs using back button too.
+            window.addEventListener('popstate', function (event) {
+                $('a[href="' + window.location.hash + '"][data-toggle="tab"]').tab('show');
+            });
     </script>
         <!--         <link href="{% static 'css/style.css' %}" rel="stylesheet"> -->
 
@@ -89,29 +121,10 @@
     </head>
 
     <body>
+    {{ request|hijackNotification }}
  <!-- Beginning of the top NavBar code -->
     {% block nav %}
-    <div class="navbar navbar-inverse navbar-static-top">
-      <div class="navbar-inner">
-        <div class="container-fluid">
-          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="glyphicon glyphicon-bar"></span>
-            <span class="glyphicon glyphicon-bar"></span>
-            <span class="glyphicon glyphicon-bar"></span>
-          </a>
-          <p class="navbar-text pull-right">
-                {% if user.is_authenticated %}
-                    Logged in as <a href="{% url 'my' %}" class="navbar-link">{{ user }}</a> &middot;
-                    <a href="{% url 'logout' %}">Log Out</a>
-                {% else %}
-                    <a href="{% url 'login' %}"> Log In </a>
-                {% endif %}
-            </p>
-          <a class="navbar-brand" href="{% url "events.views.indices.index" %}">Lens and Lights Database</a>
-        
-        </div>
-      </div>
-    </div>
+        {% include 'my.nav.html' %}
     {% endblock %}
     
     <div class="container-fluid">

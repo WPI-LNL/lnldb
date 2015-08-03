@@ -9,10 +9,12 @@ pisa
 pytz
 django-lineage
 django-bootstrap-toolkit
--e git://github.com/gmorell/django-cas2.git#egg=django_cas-dev
+-e git://github.com/WPI-lnl/django-cas2.git#egg=django_cas-dev
 django-ajax-selects
 -e git+https://github.com/jmerdich/django-bootstrap-calendar.git#egg=django_bootstrap_calendar
-django-crispy-forms>= 1.4
+# django-crispy-forms>= 1.4.1
+# replace it once d-c-f releases 1.4.1
+-e git+https://github.com/maraujop/django-crispy-forms.git@dev#egg=django-crispy-forms
 django-uuidfield
 # TODO: migrate ^^^
 flup
@@ -26,3 +28,11 @@ django-watson
 django-formtools
 django-debug-toolbar-line-profiler
 django-debug-toolbar-template-profiler
+django-permission
+django-hijack
+django-multiupload
+django-extensions
+django-reversion
+django-pagedown
+docutils
+django-mptt

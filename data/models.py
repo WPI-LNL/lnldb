@@ -13,3 +13,11 @@ class StupidCat(models.Model):
 
     class Meta:
         get_latest_by = "timestamp"
+
+
+class GlobalPerms(models.Model):
+    #it's a dummy class
+    class Meta:
+        permissions = (
+            ('search', 'Enables search functionality'),
+        )

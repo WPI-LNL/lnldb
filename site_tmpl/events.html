@@ -16,14 +16,14 @@
 </div>
 <div class="row">
     <div class="col-md-12">
-        <div class="panel-group" id="accordion{{ forloop.counter0 }}">
+        <div class="panel-group" id="accordion">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion{{ forloop.counter0 }}" href="#collapse{{ forloop.counter0 }}">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapse">
                         Filter <i class="glyphicon glyphicon-search"></i>
                     </a>
                 </div>
-                <div id="collapse{{ forloop.counter0 }}" class="panel-collapse collapse">
+                <div id="collapse" class="panel-collapse collapse">
                     <div class="panel-body">
                         {% include "js_datepick.tmpl" %}
                         <script type="text/javascript">

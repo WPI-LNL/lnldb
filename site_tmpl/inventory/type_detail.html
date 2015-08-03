@@ -1,0 +1,167 @@
+{% extends 'base_admin.html' %}
+{% load at_user_linking %}
+{% load markdown_deux_tags %}
+{% load mptt_tags %}
+{% load permissionif %}
+{% load static %}
+{% block extrajs %}
+    $(document).ready(function () {
+        $('.collapse').collapse('hide');
+    });
+{% endblock %}
+
+
+{% block content %}
+    {% permission request.user has 'inventory.add_equipmentitem' %}
+        <!-- AddItemModal -->
+        <div id="addItemModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="addItemModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                        <h3 id="addItemModalLabel">Confirm Add Item</h3>
+                    </div>
+                    <form action="{% url 'inv-bulk-add' equipment.pk %}" method="post">
+                        {% csrf_token %}
+                        <div class="modal-body">
+                            <p>How many items would you like to add?</p>
+                            <label>
+                                Number to add:
+                                <input aria-label="" type="number" name="num_to_add" min="1">
+                            </label>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                            <button type="submit" class="btn btn-primary">Add Items</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endpermission %}
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="jumbotron">
+                <p class="lead">
+                    <a href="{% url 'inventory.views.view_all' %}">Inventory</a>
+                    {% for ancestor in equipment.category.get_ancestors_inclusive %}
+                        &rang; <a href="{% url 'inventory.views.cat' ancestor.pk %}">{{ ancestor }}</a>
+                    {% endfor %}
+                </p>
+                <h1> Equipment: {{ equipment }} </h1>
+
+
+                <div class="actions pull-right">
+                    <div class="btn-group">
+                        {% permission request.user has 'inventory.change_equipmentclass' of equipment %}
+                            <a class="btn btn-default btn-lg"
+                               href="{% url 'inv-type-edit' equipment.pk %}"
+                               role="button">
+                                Edit Type
+                            </a>
+                        {% endpermission %}
+                        {% permission request.user has 'inventory.add_equipmentitem' %}
+                            <a class="btn btn-primary btn-lg" href="#addItemModal" role="button"
+                               data-toggle="modal">Add Items</a>
+                        {% endpermission %}
+                        {% permission request.user has 'inventory.change_equipmentitem' %}
+                            <a class="btn btn-default btn-lg"
+                               href="{% url 'inv-bulk-edit' equipment.pk %}"
+                               role="button">Edit Items</a>
+                        {% endpermission %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <h3> General Information </h3>
+            <table class="table">
+                {% if equipment.value %}
+                    {% permission request.user has 'inventory.view_equipment_value' of equipment %}
+                        <tr>
+                            <th>Purchase Price:</th>
+                            <td>${{ equipment.value }}</td>
+                        </tr>
+                    {% endpermission %}
+                {% endif %}
+
+                {% if equipment.manufacturer %}
+                    <tr>
+                        <th>Manufacturer:</th>
+                        <td>{{ equipment.manufacturer }}</td>
+                </tr>
+                {% endif %}
+
+                {% if equipment.model_number %}
+                <tr>
+                    <th>Model No.:</th>
+                    <td>{{ equipment.model_number }}</td>
+                </tr>
+                {% endif %}
+
+                {% if equipment.size %}
+                <tr>
+                    <th>Size:</th>
+                    <td>{{ equipment.size }} in.</td>
+                </tr>
+                {% endif %}
+
+                {% if equipment.weight %}
+                <tr>
+                    <th>Weight</th>
+                    <td>{{ equipment.weight }} lbs.</td>
+                </tr>
+                {% endif %}
+            </table>
+        </div>
+        <div class="col-md-4">
+            <h3> Description </h3>
+
+            {% if equipment.url %}
+                <a href="{{ equipment.url }}">Visit Website</a>
+            {% endif %}
+
+            {{ equipment.description | markdown }}
+        </div>
+        <div class="col-md-4">
+            <h3>Items owned</h3>
+            {% for item in equipment.items.all %}
+                <div class="well eqp-item">
+                    <b class="mini-title">
+                        <span class="glyphicon glyphicon-{{ item.status.glyphicon }}" aria-hidden="true"></span>
+                        {% if item.barcode %}
+                            {{ item.barcode }}
+                        {% else %}
+                            [No barcode]
+                        {% endif %}
+                    </b>
+
+                    <br>
+
+                    {% if item.features %}
+                        {{ item.features }}
+                        <br>
+                    {% endif %}
+
+                    Resides in {{ item.location }}
+
+                    <br>
+
+                    Purchased {{ item.purchase_date }}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div id="wiki" class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">How to Use (Wiki)</h3>
+        </div>
+        <div class="panel-body">
+            {{ equipment.wiki_text | markdown }}
+        </div>
+    </div>
+{% endblock %}

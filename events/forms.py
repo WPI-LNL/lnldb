@@ -3,6 +3,8 @@ import decimal
 
 import _strptime
 # python multithreading bug workaround
+from pagedown.widgets import PagedownWidget
+from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer
 
 from django import forms
 from django.forms import ModelForm, ModelChoiceField
@@ -29,21 +31,17 @@ from ajax_select.fields import AutoCompleteSelectMultipleField, AutoCompleteSele
 
 valid_time_formats = ['%H:%M', '%I:%M%p', '%I:%M %p']
 
-CAT_LIGHTING = Category.objects.get(name="Lighting")
-CAT_SOUND = Category.objects.get(name="Sound")
-CAT_PROJ = Category.objects.get(name="Projection")
-
-LIGHT_EXTRAS = Extra.objects.filter(category=CAT_LIGHTING)
+LIGHT_EXTRAS = Extra.objects.filter(category__name="Lighting")
 LIGHT_EXTRAS_ID_NAME = LIGHT_EXTRAS.values_list('id', 'name')
-LIGHT_EXTRAS_NAMES = ["e_%s" % v[0] for v in LIGHT_EXTRAS_ID_NAME]
+LIGHT_EXTRAS_NAMES = LIGHT_EXTRAS.values('name')
 
-SOUND_EXTRAS = Extra.objects.filter(category=CAT_SOUND)
+SOUND_EXTRAS = Extra.objects.filter(category__name="Sound")
 SOUND_EXTRAS_ID_NAME = SOUND_EXTRAS.values_list('id', 'name')
-SOUND_EXTRAS_NAMES = ["e_%s" % v[0] for v in SOUND_EXTRAS_ID_NAME]
+SOUND_EXTRAS_NAMES = SOUND_EXTRAS.values('name')
 
-PROJ_EXTRAS = Extra.objects.filter(category=CAT_PROJ)
+PROJ_EXTRAS = Extra.objects.filter(category__name="Projection")
 PROJ_EXTRAS_ID_NAME = PROJ_EXTRAS.values_list('id', 'name')
-PROJ_EXTRAS_NAMES = ["e_%s" % v[0] for v in PROJ_EXTRAS_ID_NAME]
+PROJ_EXTRAS_NAMES = PROJ_EXTRAS.values('name')
 
 JOBTYPES = (
     (0, 'Lighting'),
@@ -100,7 +98,7 @@ class WorkorderSubmit(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(WorkorderSubmit, self).__init__(*args, **kwargs)
-        self.fields['date_setup_start'].widget = SelectDateWidget()
+        self.fields['datetime_setup_start'].widget = SelectDateWidget()
         # self.fields['datetime_start'].widget = datetime()
         # self.fields['datetime_end'].widget = datetime()
 
@@ -261,6 +259,14 @@ class EventApprovalForm(forms.ModelForm):
         fields = ['description', 'internal_notes', 'datetime_start', 'datetime_end', 'billing_fund',
                   'billed_by_semester', 'datetime_setup_complete', 'lighting', 'lighting_reqs',
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs']
+        widgets = {
+            'description': PagedownWidget(),
+            'internal_notes': PagedownWidget,
+            'lighting_reqs': PagedownWidget(),
+            'sound_reqs': PagedownWidget(),
+            'proj_reqs': PagedownWidget(),
+            'otherservice_reqs': PagedownWidget()
+        }
 
     billing_fund = AutoCompleteSelectField("Funds", required=False)
     datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
@@ -284,6 +290,9 @@ class EventDenialForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ('cancelled_reason',)
+        widgets = {
+            'cancelled_reason': PagedownWidget()
+        }
 
 
 class EventMeetingForm(forms.ModelForm):
@@ -311,8 +320,9 @@ class EventMeetingForm(forms.ModelForm):
     crew = AutoCompleteSelectMultipleField('3', required=False)
 
 
-class InternalEventForm(forms.ModelForm):
+class InternalEventForm(FieldAccessForm):
     def __init__(self, *args, **kwargs):
+        super(InternalEventForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.layout = Layout(
             TabHolder(
@@ -321,8 +331,8 @@ class InternalEventForm(forms.ModelForm):
                     'event_name',
                     'location',
                     Field('description'),
-                    Field('internal_notes'),
-                    Field('billed_by_semester'),
+                    DynamicFieldContainer('internal_notes'),
+                    DynamicFieldContainer('billed_by_semester'),
                     'sensitive',
                     'test_event',
                 ),
@@ -331,7 +341,7 @@ class InternalEventForm(forms.ModelForm):
                     # 'person_name',
                     'contact',
                     'org',
-                    Field('billing_fund'),
+                    DynamicFieldContainer('billing_fund'),
                 ),
                 Tab(
                     'Scheduling',
@@ -383,12 +393,70 @@ class InternalEventForm(forms.ModelForm):
         )
         super(InternalEventForm, self).__init__(*args, **kwargs)
 
+    class FieldAccess:
+        def __init__(self):
+            pass
+
+        internal_notes_write = FieldAccessLevel(
+            lambda user, instance: user.has_perm("events.event_view_sensitive", instance),
+            enable=('internal_notes',)
+        )
+
+        hide_internal_notes = FieldAccessLevel(
+            lambda user, instance: not user.has_perm("events.event_view_sensitive", instance),
+            exclude=('internal_notes',)
+        )
+
+        event_times = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_times', instance),
+            enable=('datetime_start', 'datetime_setup_complete', 'datetime_end')
+        )
+
+        edit_descriptions = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_text', instance),
+            enable=('event_name', 'location', 'description',
+                    'lighting_reqs', 'sound_reqs', 'proj_reqs', 'otherservice_reqs')
+        )
+
+        change_owner = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.adjust_event_owner', instance),
+            enable=('contact', 'org')
+        )
+
+        change_type = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.adjust_event_charges', instance),
+            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_by_semester')
+        )
+
+        billing_edit = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_fund', instance),
+            enable=('billing_fund', 'billed_by_semester')
+        )
+
+        billing_view = FieldAccessLevel(
+            lambda user, instance: not user.has_perm('events.view_event_billing', instance),
+            exclude=('billing_fund', 'billed_by_semester')
+        )
+
+        change_flags = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_flags', instance),
+            enable=('sensitive', 'test_event')
+        )
+
     class Meta:
         model = Event
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_fund',
                   'billed_by_semester', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'lighting', 'lighting_reqs', 'sound', 'sound_reqs', 'projection', 'proj_reqs',
                   'otherservices', 'otherservice_reqs', 'sensitive', 'test_event')
+        widgets = {
+            'description': PagedownWidget(),
+            'internal_notes': PagedownWidget,
+            'lighting_reqs': PagedownWidget(),
+            'sound_reqs': PagedownWidget(),
+            'proj_reqs': PagedownWidget(),
+            'otherservice_reqs': PagedownWidget()
+        }
 
     location = GroupedModelChoiceField(
         queryset=Location.objects.filter(show_in_wo_form=True),
@@ -426,11 +494,14 @@ class EventReviewForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ('billing_org', 'internal_notes')
+        widgets = {
+            'internal_notes': PagedownWidget()
+        }
 
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="")
 
 
-class InternalReportForm(forms.ModelForm):
+class InternalReportForm(FieldAccessForm):
     def __init__(self, event, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()
@@ -438,7 +509,7 @@ class InternalReportForm(forms.ModelForm):
         self.helper.form_method = "post"
         self.helper.form_action = ""
         self.helper.layout = Layout(
-            Field('crew_chief'),
+            DynamicFieldContainer('crew_chief'),
             Field('report', css_class="col-md-10"),
             markdown_at_msgs,
             FormActions(
@@ -450,15 +521,32 @@ class InternalReportForm(forms.ModelForm):
 
     def save(self, commit=True):
         obj = super(InternalReportForm, self).save(commit=False)
+        if 'crew_chief' not in self.cleaned_data:
+            self.instance.crew_chief = self.user  # user field from FAF
         obj.event = self.event
         if commit:
             obj.save()
+            self.save_m2m()
         return obj
 
     class Meta:
         model = CCReport
         fields = ('crew_chief', 'report')
+        widgets = {
+            'report': PagedownWidget()
+        }
     crew_chief = AutoCompleteSelectField('Members', required=True)
+
+    class FieldAccess:
+        avg_user = FieldAccessLevel(
+            lambda user, instance: not user.has_perm('events.add_event_report'),
+            exclude=('crew_chief',)
+        )
+        admin = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.add_event_report'),
+            enable=('crew_chief',)
+        )
+        all = FieldAccessLevel(lambda user, instance: True, enable=('report',))
 
 
 ### External Organization forms
@@ -516,7 +604,6 @@ class OrgXFerForm(forms.ModelForm):
         if commit:
             obj.save()
         return obj
-
 
     # new_user_in_charge = AutoCompleteSelectField('Users', required=True,
     # plugin_options={'position':"{ my : \"right top\", at: \"right bottom\",
@@ -589,6 +676,7 @@ class BillingForm(forms.ModelForm):
         model = Billing
         fields = ('date_billed', 'amount', 'opt_out_initial_email', 'opt_out_update_email')
 
+
 class BillingUpdateForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
         self.event = event
@@ -650,6 +738,9 @@ class ReportForm(forms.ModelForm):
     class Meta:
         model = CCReport
         fields = ('report',)
+        widgets = {
+            'report': PagedownWidget()
+        }
 
 
 class MKHoursForm(forms.ModelForm):
@@ -762,7 +853,7 @@ class CCIForm(forms.ModelForm):
     crew_chief = AutoCompleteSelectField('Members', required=True)
     setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
     setup_location = GroupedModelChoiceField(
-        queryset=Location.objects.filter(Q(setup_only=True) | Q(show_in_wo_form=True)),
+        queryset=Location.objects.filter(Q(setup_only=True) | Q(show_in_wo_form=True)).select_related('building'),
         group_by_field="building",
         group_label=lambda group: group.name,
     )
@@ -794,6 +885,7 @@ class AttachmentForm(forms.ModelForm):
         if commit:
             obj.save()
         return obj
+
     class Meta:
         model = EventAttachment
         fields = ('for_service', 'attachment', 'note')
@@ -963,6 +1055,7 @@ class ContactForm(forms.Form):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
+        self.helper.form_tag = False
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
@@ -991,6 +1084,7 @@ class OrgForm(forms.Form):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
+        self.helper.form_tag = False
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
@@ -1020,10 +1114,10 @@ class SelectForm(forms.Form):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
+        self.helper.form_tag = False
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
-        print org
         if org:
             self.fields['fund'].queryset = Fund.objects.filter(Q(orgfunds=org) | Q(name='None'))
         self.helper.layout = Layout(
@@ -1053,9 +1147,10 @@ class SelectForm(forms.Form):
     # queryset = Location.objects.filter(show_in_wo_form=True)
     #)
 
-    # soon to be a 
+    # soon to be a
     location = GroupedModelChoiceField(
-        queryset=Location.objects.filter(show_in_wo_form=True),
+        queryset=Location.objects.filter(show_in_wo_form=True)
+                         .select_related('building__name'),
         group_by_field="building",
         group_label=lambda group: group.name,
     )
@@ -1081,23 +1176,26 @@ class LightingForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
             Fieldset(
                 'Basics',  # title
                 InlineRadios('lighting', title="test"),
-                Field('requirements', css_class="col-md-8"),
+                Field('requirements', css_class="col-md-10"),
             ),
             Fieldset(
                 'Extras',  # title
-                *LIGHT_EXTRAS_NAMES,
+                *[DynamicFieldContainer("e_%s" % extra.id) for extra in LIGHT_EXTRAS.all()],
                 css_class="extra_fs"),
         )
         super(LightingForm, self).__init__(*args, **kwargs)
         for extra in LIGHT_EXTRAS:
-            self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox, disappear=extra.disappear,
-                                                              label=extra.name, initial=0, required=False)
+            self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox,
+                                                              disappear=extra.disappear,
+                                                              label=extra.name, initial=0,
+                                                              required=False)
 
     lighting = forms.ModelChoiceField(
         empty_label=None,
@@ -1106,7 +1204,7 @@ class LightingForm(forms.Form):
     )
 
     requirements = forms.CharField(
-        widget=forms.Textarea,
+        widget=PagedownWidget(),
         # widget=BootstrapTextInput(prepend='P',),
         label="Lighting Requirements",
         help_text=SERVICE_INFO_HELP_TEXT,
@@ -1122,17 +1220,18 @@ class SoundForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
             Fieldset(
                 'Basics',  # title
                 InlineRadios('sound'),
-                Field('requirements', css_class="col-md-8"),
+                Field('requirements', css_class="col-md-10"),
             ),
             Fieldset(
                 'Extras',  # title
-                *SOUND_EXTRAS_NAMES,
+                *[DynamicFieldContainer("e_%s" % extra.id) for extra in SOUND_EXTRAS.all()],
                 css_class="extra_fs"
             ),
         )
@@ -1147,7 +1246,7 @@ class SoundForm(forms.Form):
         widget=forms.RadioSelect(attrs={'class': 'radio itt'}),
     )
     requirements = forms.CharField(
-        widget=forms.Textarea,
+        widget=PagedownWidget(),
         label="Sound Requirements",
         required=False,
         help_text=SERVICE_INFO_HELP_TEXT,
@@ -1158,17 +1257,18 @@ class ProjectionForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
             Fieldset(
                 'Basics',  # title
                 InlineRadios('projection'),
-                Field('requirements', css_class="col-md-8"),
+                Field('requirements', css_class="col-md-10"),
             ),
             Fieldset(
                 'Extras',  # title
-                *PROJ_EXTRAS_NAMES,
+                *[DynamicFieldContainer("e_%s" % extra.id) for extra in PROJ_EXTRAS.all()],
                 css_class="extra_fs"
             ),
 
@@ -1185,7 +1285,7 @@ class ProjectionForm(forms.Form):
         widget=forms.RadioSelect(attrs={'class': 'radio'}),
     )
     requirements = forms.CharField(
-        widget=forms.Textarea,
+        widget=PagedownWidget(),
         label="Projection Requirements",
         required=False,
         help_text=SERVICE_INFO_HELP_TEXT,
@@ -1196,6 +1296,7 @@ class ServiceForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
@@ -1213,7 +1314,7 @@ class ServiceForm(forms.Form):
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
     )
     otherservice_reqs = forms.CharField(
-        widget=forms.Textarea,
+        widget=PagedownWidget(),
         label="Additional Information",
     )
 
@@ -1222,6 +1323,7 @@ class ScheduleForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-5'
         self.helper.layout = Layout(

@@ -6,6 +6,8 @@ from django.conf import settings
 # Create your models here.
 from django.core.urlresolvers import reverse
 from django import forms
+from django.db.models import Manager
+from django.utils.functional import cached_property
 
 import watson
 
@@ -177,19 +179,19 @@ class EventManager(models.Manager):
         # raise
         # int(e[1][1]) is int(True) if its valid, which returns 1
         for e in lighting_extras:
-            if len(e[1]) and int(e[1][1]):  # for checkbox
-                event.extrainstance_set.create(extra_id=e[0], quant=1)
-            elif len(e[1]) and int(e[1][0]):
-                event.extrainstance_set.create(extra_id=e[0], quant=e[1][0])
+            if hasattr(e[1], "__get_item__") and e[1][1]:  # for checkbox
+                event.extrainstance_set.create(extra_id=int(e[0]), quant=1)
+            elif hasattr(e[1], "__get_item__") and e[1][0]:
+                event.extrainstance_set.create(extra_id=int(e[0]), quant=int(e[1][0]))
 
         for e in sound_extras:
-            if len(e[1]) and int(e[1][1]):  # for checkbox
-                event.extrainstance_set.create(extra_id=e[0], quant=1)
-            if len(e[1]) and int(e[1][0]):
-                event.extrainstance_set.create(extra_id=e[0], quant=e[1][0])
+            if hasattr(e[1], "__get_item__") and e[1][1]:  # for checkbox
+                event.extrainstance_set.create(extra_id=int(e[0]), quant=1)
+            if hasattr(e[1], "__get_item__") and e[1][0]:
+                event.extrainstance_set.create(extra_id=int(e[0]), quant=int(e[1][0]))
         for e in projection_extras:
-            if len(e[1]) and int(e[1][0]):
-                event.extrainstance_set.create(extra_id=e[0], quant=e[1][0])
+            if hasattr(e[1], "__get_item__") and e[1][0]:
+                event.extrainstance_set.create(extra_id=int(e[0]), quant=int(e[1][0]))
         event.save()
         return event
 
@@ -217,6 +219,7 @@ class Location(models.Model):
     setup_only = models.BooleanField(default=False)
     show_in_wo_form = models.BooleanField(default=True, verbose_name="Event Location")
     available_for_meetings = models.BooleanField(default=False)
+    holds_equipment = models.BooleanField(default=False)
 
     #
     building = models.ForeignKey(Building)
@@ -273,7 +276,7 @@ class Category(models.Model):
 
 
 class Service(models.Model):
-    """ 
+    """
         Some chargable service that is added to an event,
         lighting, sound, projection are examples
     """
@@ -325,19 +328,27 @@ class Billing(models.Model):
         ordering = ("-date_billed", "date_paid")
 
 
+class OptimizedEventManager(Manager):
+    def get_queryset(self):
+        return super(OptimizedEventManager, self).get_queryset()\
+                                                 .select_related('lighting')\
+                                                 .select_related('sound')\
+                                                 .select_related('projection')
+
+
 class Event(models.Model):
     """
         An Event, What everything ends up pointing to
     """
     glyphicon = 'bullhorn'
-    objects = models.Manager()
+    objects = OptimizedEventManager()
     event_mg = EventManager()
 
     submitted_by = models.ForeignKey(User, related_name='submitter')
     submitted_ip = models.GenericIPAddressField(max_length=16)
-    submitted_on = models.DateTimeField(auto_now_add=True)
+    submitted_on = models.DateTimeField(auto_now_add=True, db_index=True)
 
-    event_name = models.CharField(max_length=128)
+    event_name = models.CharField(max_length=128, db_index=True)
     # Person
     person_name = models.CharField(max_length=128, null=True, blank=True, verbose_name="Contact_name")  # DEPRECATED
     contact = models.ForeignKey(User, null=True, blank=True, verbose_name="Contact")
@@ -349,10 +360,10 @@ class Event(models.Model):
     contact_phone = models.CharField(max_length=32, null=True, blank=True)  # DEPRECATED
 
     # Dates & Times
-    datetime_setup_start = models.DateTimeField(null=True, blank=True)  # DEPRECATED
+    datetime_setup_start = models.DateTimeField(null=True, blank=True, db_index=True)  # DEPRECATED
     datetime_setup_complete = models.DateTimeField()
 
-    datetime_start = models.DateTimeField()
+    datetime_start = models.DateTimeField(db_index=True)
     datetime_end = models.DateTimeField()
 
     # Location
@@ -393,17 +404,17 @@ class Event(models.Model):
     cancelled_reason = models.TextField(null=True, blank=True)
 
     payment_amount = models.IntegerField(blank=True, null=True, default=None)
-    paid = models.BooleanField(default=False)
+    paid = models.BooleanField(default=False, db_index=True)
 
     # reports
     crew_chief = models.ManyToManyField(User, blank=True, related_name='crewchiefx')
     crew = models.ManyToManyField(User, blank=True, related_name='crewx')
-    ccs_needed = models.PositiveIntegerField(default=0)
+    ccs_needed = models.PositiveIntegerField(default=0, db_index=True)
     # ^^^ used as a cache to get around the awkward event type fields and allow for sql filtering
 
     # other fields
     internal_notes = models.TextField(null=True, blank=True)
-    billed_by_semester = models.BooleanField(default=False)
+    billed_by_semester = models.BooleanField(default=False, db_index=True)
     sensitive = models.BooleanField(default=False)
     test_event = models.BooleanField(default=False)
     # nice breakout for workorder
@@ -478,7 +489,7 @@ class Event(models.Model):
         return self.datetime_end
 
     def cal_link(self):
-        return "http://lnl.wpi.edu/lnadmin/events/view/" + str(self.id)
+        return "http://lnl.wpi.edu/db/events/view/" + str(self.id)
 
     def cal_guid(self):
         return "event" + str(self.id) + "@lnldb"
@@ -531,8 +542,7 @@ class Event(models.Model):
         # chiefs_with_lists = self.ccreport_set.values_list('crew_chief__id',
         # 'crew_chief__first_name','crew_chief__last_name').distinct()
         reports = self.ccreport_set.all().values_list('crew_chief', flat=True)
-        chiefs = self.ccinstances.all()
-        pending = chiefs.exclude(crew_chief__in=reports)
+        pending = self.ccinstances.exclude(crew_chief__in=reports).all()
 
         # chiefspending
         # chiefs = self.crew_chief.values_list('id')
@@ -600,7 +610,7 @@ class Event(models.Model):
         return foo
 
     ## Event Statuses
-    @property
+    @cached_property
     def status(self):
         if self.cancelled:
             return "Cancelled"
@@ -736,7 +746,7 @@ class Event(models.Model):
     @property
     def cost_total_pre_discount(self):
         return self.cost_projection_total + self.cost_lighting_total + \
-               self.cost_sound_total + self.extras_total + self.oneoff_total
+            self.cost_sound_total + self.extras_total + self.oneoff_total
 
     @property
     def discount_value(self):
@@ -760,7 +770,7 @@ class Event(models.Model):
     @property
     def cost_total(self):
         return self.cost_projection_total + self.cost_lighting_total \
-               - self.discount_value + self.cost_sound_total + self.extras_total + self.oneoff_total
+            - self.discount_value + self.cost_sound_total + self.extras_total + self.oneoff_total
 
     # org to be billed
     @property
@@ -827,7 +837,35 @@ class Event(models.Model):
             out_str += self.datetime_end.strftime("%a %m/%d/%Y %I:%M %p")
         return out_str
 
-
+    class Meta:
+        permissions = (
+            ("view_event", "Show an event that isn't hidden"),
+            ("add_raw_event", "Use the editor to create an event"),
+            ("event_images", "Upload images to an event"),
+            ("view_hidden_event", "Show hidden events"),
+            ("cancel_event", "Declare an event to be cancelled"),
+            ("event_attachments", "Upload attachments to an event"),
+            ("edit_event_times", "Modify the dates for an event"),
+            ("add_event_report", "Add reports about the event"),
+            ("edit_event_fund", "Change where money for an event comes from"),
+            ("view_event_billing", "See financial info for event"),
+            ("edit_event_text", "Update any event descriptions"),
+            ("adjust_event_owner", "Change the event contact and organization"),
+            ("edit_event_hours", "Modify the time sheets"),
+            ('edit_event_flags', 'Add flags to an event'),
+            ("event_view_sensitive", "Show internal notes and other metadata marked as not public"),
+            ("approve_event", "Accept an event"),
+            ("decline_event", "Decline an event"),
+            ("can_chief_event", "Can crew chief an event"),
+            ("review_event", "Review an event for billing"),
+            ("adjust_event_charges", "Add charges and change event type"),
+            ("bill_event", "Send bills and mark event paid"),
+            ("close_event", "Lock an event after everything is done."),
+            ("view_test_event", "Show events for testing"),
+            ("event_view_granular", "See debug data like ip addresses"),
+            ("event_view_debug", "See debug events"),
+            ("reopen_event", "Reopen a closed, declined, or cancelled event"),
+        )
 
 
 class CCReport(models.Model):
@@ -845,7 +883,6 @@ class CCReport(models.Model):
     @property
     def pretty_cat_list(self):
         return ", ".join([x.name for x in self.for_service_cat.all()])
-
 
 
 # class OrgFund(models.Model):
@@ -883,7 +920,10 @@ class Fund(models.Model):
     def __unicode__(self):
         return "%s (%s)" % (self.name, self.fopal)
 
-
+    class Meta:
+        permissions = (
+            ('view_fund', 'View a fund'),
+        )
 
 
 class Organization(models.Model):  # AKA Client
@@ -933,8 +973,20 @@ class Organization(models.Model):  # AKA Client
         ordering = ['name']
         verbose_name = "Client"
         verbose_name_plural = "Clients"
-
-
+        permissions = (('view_org', 'See an Organization\'s basic properties'),
+                       ('list_org_events', 'View an Org\'s non-hidden events'),
+                       ('list_org_hidden_events', 'View an Org\'s hidden events'),
+                       ('edit_org', 'Edit an Org\'s name and description'),
+                       ('show_org_billing', 'See an Org\'s account and billing info'),
+                       ('edit_org_billing', 'Modify an Org\'s account and billing info'),
+                       ('list_org_members', 'View who is in an Org'),
+                       ('edit_org_members', 'Edit who is in an Org'),
+                       ('create_org_event', 'Create an event in an Org\'s name'),
+                       ('view_verifications', 'Show proofs of Org account ownership'),
+                       ('create_verifications', 'Create proofs of Org account ownership'),
+                       ('transfer_org_ownership', 'Give an Org a new owner'),
+                       ('add_org', 'Create an Organization'),
+                       ('deprecate_org', 'Mark an Organization as defunct'))
 
 
 class OrganizationTransfer(models.Model):
@@ -1020,7 +1072,7 @@ class EventCCInstance(models.Model):
             return self.event.datetime_start
 
     def cal_link(self):
-        return "http://lnl.wpi.edu/lnadmin/events/view/" + str(self.event.id)
+        return "http://lnl.wpi.edu/db/events/view/" + str(self.event.id)
 
     def cal_guid(self):
         return "setup" + str(self.id) + "@lnldb"

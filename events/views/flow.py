@@ -5,7 +5,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.template import RequestContext
 from django.conf import settings
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.contrib import messages
 from django.forms.models import inlineformset_factory
 from django.utils.functional import curry
@@ -19,16 +19,20 @@ from helpers.challenges import is_officer
 from django.utils.text import slugify
 from pdfs.views import generate_pdfs_standalone
 from django.views.generic import UpdateView, CreateView, DeleteView
-from helpers.mixins import LoginRequiredMixin, OfficerMixin, SetFormMsgMixin
-from django.core.exceptions import ValidationError
+from helpers.mixins import LoginRequiredMixin, SetFormMsgMixin, HasPermMixin, ConditionalFormMixin
+from django.core.exceptions import ValidationError, PermissionDenied
+from django.utils import timezone
+import reversion
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+@permission_required('events.approve_event', raise_exception=True)
 def approval(request, id):
     context = {}
     context['msg'] = "Approve Event"
     event = get_object_or_404(Event, pk=id)
+    if not request.user.has_perm('events.approve_event', event):
+        raise PermissionDenied
     if event.approved:
         messages.add_message(request, messages.INFO, 'Event has already been approved!')
         return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
@@ -38,7 +42,7 @@ def approval(request, id):
         if form.is_valid():
             e = form.save(commit=False)
             e.approved = True
-            e.approved_on = datetime.datetime.now()
+            e.approved_on = timezone.now()
             e.approved_by = request.user
             e.save()
             # confirm with user
@@ -62,11 +66,12 @@ def approval(request, id):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def denial(request, id):
     context = {}
     context['msg'] = "Deny Event"
     event = get_object_or_404(Event, pk=id)
+    if not request.user.has_perm('events.deny_event', event):
+        raise PermissionDenied
     if event.cancelled:
         messages.add_message(request, messages.INFO, 'Event has already been cancelled!')
         return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
@@ -76,10 +81,10 @@ def denial(request, id):
         if form.is_valid():
             e = form.save(commit=False)
             e.cancelled = True
-            e.cancelled_on = datetime.datetime.now()
+            e.cancelled_on = timezone.now()
             e.cancelled_by = request.user
             e.closed_by = request.user
-            e.closed_on = datetime.datetime.now()
+            e.closed_on = timezone.now()
             e.save()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Denied Event')
@@ -102,11 +107,13 @@ def denial(request, id):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def review(request, id):
     context = {}
     context['h2'] = "Review Event for Billing"
     event = get_object_or_404(Event, pk=id)
+
+    if not request.user.has_perm('events.review_event', event):
+        raise PermissionDenied
 
     if event.reviewed:
         messages.add_message(request, messages.INFO, 'Event has already been reviewed!')
@@ -119,7 +126,7 @@ def review(request, id):
         if form.is_valid():
             e = form.save(commit=False)
             e.reviewed = True
-            e.reviewed_on = datetime.datetime.now()
+            e.reviewed_on = timezone.now()
             e.reviewed_by = request.user
             e.save()
             # confirm with user
@@ -135,7 +142,6 @@ def review(request, id):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def reviewremind(request, id, uid):
     context = {}
 
@@ -167,15 +173,15 @@ def reviewremind(request, id, uid):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def close(request, id):
     context = {}
     context['msg'] = "Closing Event"
     event = get_object_or_404(Event, pk=id)
-
+    if not request.user.has_perm('events.close_event', event):
+        raise PermissionDenied
     event.closed = True
     event.closed_by = request.user
-    event.closed_on = datetime.datetime.now()
+    event.closed_on = timezone.now()
 
     event.save()
 
@@ -183,20 +189,56 @@ def close(request, id):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
+def cancel(request, id):
+    context = {}
+    context['msg'] = "Event Cancelled"
+    event = get_object_or_404(Event, pk=id)
+    if not request.user.has_perm('events.cancel_event', event):
+        raise PermissionDenied
+    event.cancelled = True
+    event.cancelled_by = request.user
+    event.cancelled_on = timezone.now()
+
+    event.save()
+
+    return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+
+
+@login_required
+def reopen(request, id):
+    context = {}
+    context['msg'] = "Event Reopened"
+    event = get_object_or_404(Event, pk=id)
+    if not request.user.has_perm('events.reopen', event):
+        raise PermissionDenied
+    event.closed = False
+    event.closed_by = None
+    event.closed_on = None
+
+    event.save()
+
+    return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+
+
+@login_required
 def rmcrew(request, id, user):
     event = get_object_or_404(Event, pk=id)
+    if not (request.user.has_perm('events.edit_event_hours') or
+            request.user.has_perm('events.edit_event_hours', event)):
+        raise PermissionDenied
     event.crew.remove(user)
     return HttpResponseRedirect(reverse('events.views.flow.assigncrew', args=(event.id,)))
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def assigncrew(request, id):
     context = {}
     context['msg'] = "Crew"
 
     event = get_object_or_404(Event, pk=id)
+    if not (request.user.has_perm('events.edit_event_hours') or
+            request.user.has_perm('events.edit_event_hours', event)):
+        raise PermissionDenied
     context['event'] = event
 
     if request.method == 'POST':
@@ -216,13 +258,15 @@ def assigncrew(request, id):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def hours_bulk_admin(request, id):
     context = {}
     user = request.user
 
     context['msg'] = "Bulk Hours Entry"
     event = get_object_or_404(Event, pk=id)
+    if not (request.user.has_perm('events.edit_event_hours') or
+            request.user.has_perm('events.edit_event_hours', event)):
+        raise PermissionDenied
 
     context['event'] = event
 
@@ -246,21 +290,27 @@ def hours_bulk_admin(request, id):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def rmcc(request, id, user):
     context = {}
     event = get_object_or_404(Event, pk=id)
+    if not (request.user.has_perm('events.edit_event_hours') or
+            request.user.has_perm('events.edit_event_hours', event)):
+        raise PermissionDenied
     event.crew_chief.remove(user)
     return HttpResponseRedirect(reverse('events.views.flow.assigncc', args=(event.id,)))
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def assigncc(request, id):
     context = {}
     context['msg'] = "CrewChief"
 
     event = get_object_or_404(Event, pk=id)
+
+    if not (request.user.has_perm('events.edit_event_hours') or
+            request.user.has_perm('events.edit_event_hours', event)):
+        raise PermissionDenied
+
     context['event'] = event
 
     cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
@@ -283,12 +333,14 @@ def assigncc(request, id):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def assignattach(request, id):
     context = {}
     context['msg'] = "Attachments"
 
     event = get_object_or_404(Event, pk=id)
+    if not (request.user.has_perm('events.event_attachments') or
+            request.user.has_perm('events.event_attachments', event)):
+        raise PermissionDenied
     context['event'] = event
 
     att_formset = inlineformset_factory(Event, EventAttachment, extra=1, exclude=[])
@@ -316,7 +368,7 @@ def assignattach_external(request, id):
     context['msg'] = "Attachments"
 
     event = get_object_or_404(Event, pk=id)
-    if event.over or event.closed or event.cancelled:
+    if event.closed or event.cancelled:
         return HttpResponse("Event does not allow attachment upload at this time")
 
     context['event'] = event
@@ -342,17 +394,21 @@ def assignattach_external(request, id):
 
         context['formset'] = formset
 
-    return render(request, 'formset_crispy_attachments_ext.html', context)
+    return render(request, 'formset_crispy_attachments.html', context)
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def extras(request, id):
     """ This form is for adding extras to an event """
     context = {}
     context['msg'] = "Extras"
 
     event = get_object_or_404(Event, pk=id)
+
+    if not (request.user.has_perm('events.adjust_event_charges') or request.user.has_perm('events.adjust_event_charges',
+                                                                                          event)):
+        raise PermissionDenied
+
     context['event'] = event
 
     mk_extra_formset = inlineformset_factory(Event, ExtraInstance, extra=1, exclude=[])
@@ -375,7 +431,6 @@ def extras(request, id):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def oneoff(request, id):
     """ This form is for adding oneoff fees to an event """
     context = {}
@@ -383,6 +438,10 @@ def oneoff(request, id):
 
     event = get_object_or_404(Event, pk=id)
     context['event'] = event
+
+    if not (request.user.has_perm('events.adjust_event_charges') or request.user.has_perm('events.adjust_event_charges',
+                                                                                          event)):
+        raise PermissionDenied
 
     mk_oneoff_formset = inlineformset_factory(Event, EventArbitrary, extra=1, exclude=[])
 
@@ -403,21 +462,23 @@ def oneoff(request, id):
 
 
 @login_required
-@user_passes_test(is_officer, login_url='/NOTOUCHING')
 def viewevent(request, id):
     context = {}
     event = get_object_or_404(Event, pk=id)
+    if not (request.user.has_perm('events.view_event') or request.user.has_perm('events.view_event', event)):
+        raise PermissionDenied
 
     context['event'] = event
-
+    context['history'] = reversion.get_unique_for_object(event)
     return render(request, 'uglydetail.html', context)
 
 
-class CCRCreate(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, CreateView):
+class CCRCreate(SetFormMsgMixin, HasPermMixin, ConditionalFormMixin, LoginRequiredMixin, CreateView):
     model = CCReport
     form_class = InternalReportForm
     template_name = "form_crispy_cbv.html"
     msg = "New Crew Chief Report"
+    perms = 'add_event_report'
 
     def get_form_kwargs(self):
         kwargs = super(CCRCreate, self).get_form_kwargs()
@@ -433,17 +494,12 @@ class CCRCreate(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, CreateView):
         return reverse("events-detail", args=(self.kwargs['event'],))
 
 
-class CCRUpdate(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, UpdateView):
+class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
     model = CCReport
     form_class = InternalReportForm
     template_name = "form_crispy_cbv.html"
     msg = "Update Crew Chief Report"
-
-    def get_form_kwargs(self):
-        kwargs = super(CCRUpdate, self).get_form_kwargs()
-        event = get_object_or_404(Event, pk=self.kwargs['event'])
-        kwargs['event'] = event
-        return kwargs
+    perms = 'add_event_report'  # TODO: check if adding a diffferent perm
 
     def form_valid(self, form):
         messages.success(self.request, "Crew Chief Report Updated!", extra_tags='success')
@@ -453,10 +509,11 @@ class CCRUpdate(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, UpdateView):
         return reverse("events-detail", args=(self.kwargs['event'],))
 
 
-class CCRDelete(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, DeleteView):
+class CCRDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = CCReport
     template_name = "form_delete_cbv.html"
     msg = "Deleted Crew Chief Report"
+    perms = 'add_event_report'  # TODO: check if adding a diffferent perm
 
     def get_object(self, queryset=None):
         """ Hook to ensure object isn't closed """
@@ -470,11 +527,13 @@ class CCRDelete(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, DeleteView):
         return reverse("events-detail", args=(self.kwargs['event'],))
 
 
-class BillingCreate(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, CreateView):
+class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
     model = Billing
     form_class = BillingForm
     template_name = "form_crispy_cbv.html"
     msg = "New Bill"
+
+    perms = 'bill_event'
 
     def get_context_data(self, **kwargs):
         context = super(BillingCreate, self).get_context_data(**kwargs)
@@ -500,11 +559,12 @@ class BillingCreate(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, CreateVie
         return reverse("events-detail", args=(self.kwargs['event'],))
 
 
-class BillingUpdate(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, UpdateView):
+class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
     model = Billing
     form_class = BillingUpdateForm
     template_name = "form_crispy_cbv.html"
     msg = "Update Bill"
+    perms = 'bill_event'
 
     def get_form_kwargs(self):
         # pass "user" keyword argument with the current user to your form
@@ -521,10 +581,11 @@ class BillingUpdate(SetFormMsgMixin, OfficerMixin, LoginRequiredMixin, UpdateVie
         return reverse("events-detail", args=(self.kwargs['event'],))
 
 
-class BillingDelete(OfficerMixin, LoginRequiredMixin, DeleteView):
+class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
     model = Billing
     template_name = "form_delete_cbv.html"
     msg = "Deleted Bill"
+    perms = 'bill_event'
 
     def get_object(self, queryset=None):
         """ Hook to ensure object isn't closed """

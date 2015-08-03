@@ -113,7 +113,6 @@ def generate_event_bill_pdf(request, id):
         if len(e_for_cat) > 0:
             extras[cat] = e_for_cat
     data['extras'] = extras
-    print extras
     # Render html content through html template with context
     template = get_template('pdf_templates/bill-itemized.html')
     html = template.render(Context(data))

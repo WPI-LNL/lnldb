@@ -1,26 +1,58 @@
+from django.conf.global_settings import AUTH_USER_MODEL
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
+from django_extensions.db.models import TimeStampedModel
 
 from events.models import Event, Location
 # Create your models here.
-
-import watson
 
 from uuidfield import UUIDField
 from datetime import timedelta
 
 
 def get_default_email():
-    return TargetEmailList.objects.get(email="lnlnews@wpi.edu")
+    qs = TargetEmailList.objects.filter(email="lnlnews@wpi.edu")
+    if not qs.exists():
+        email = TargetEmailList(name="LNL News", email="lnlnews@wpi.edu")
+        email.save()
+    else:
+        email = qs.first()
+    return email.pk
+
+
+#### When Django 1.9 hits with proper M2M migration,
+####   use this to override closed viewing per meeting
+####   with a 'through' parameter on 'attendance'.
+# class MeetingAttendee(models.Model):
+#     meeting = models.ForeignKey('Meeting')
+#     attendee = models.ForeignKey(User)
+#     closed_privy = models.BooleanField(default=False)
+#
+#     class Meta:
+#         unique_together = ('meeting', 'attendee')
+#         db_table = 'meetings_meeting_attendance'
 
 
 class Meeting(models.Model):
     glyphicon = 'briefcase'
-    datetime = models.DateTimeField()
+    datetime = models.DateTimeField(verbose_name="Start Time")
+    duration = models.DurationField(default=timedelta(hours=1), null=False, blank=False)
     attendance = models.ManyToManyField(User, blank=True)
     meeting_type = models.ForeignKey('MeetingType', default=1)
     location = models.ForeignKey('events.Location', null=True, blank=True)
+    agenda = models.TextField(null=True, blank=True)
+    minutes = models.TextField(null=True, blank=True)
+    minutes_private = models.TextField(verbose_name="Closed Minutes", null=True, blank=True)
+
+    @property
+    def name(self):
+        return "%s Meeting on %s" % (self.meeting_type.name, self.datetime.date())
+
+    @property
+    def endtime(self):
+        return self.datetime + self.duration
 
     def cal_name(self):
         return "Meeting - " + self.meeting_type.name
@@ -38,10 +70,10 @@ class Meeting(models.Model):
         return self.datetime
 
     def cal_end(self):
-        return self.datetime + timedelta(hours=1)
+        return self.datetime + self.duration
 
     def cal_link(self):
-        return "http://lnl.wpi.edu/lnadmin/meetings/view/" + str(self.id)
+        return reverse('meeting-view', args=[self.id])
 
     def cal_guid(self):
         return "mtg" + str(self.id) + "@lnldb"
@@ -54,7 +86,26 @@ class Meeting(models.Model):
 
     class Meta:
         ordering = ('-datetime',)
+        permissions = (("view_mtg", "See all meeting info"),
+                       ("edit_mtg", "Edit all meeting info"),
+                       ("view_mtg_attendance", "See meeting attendance"),
+                       ("list_mtgs", "List all meetings"),
+                       ("create_mtg", "Create a meeting"),
+                       ("send_mtg_notice", "Send meeting notices manually"),
+                       ("view_mtg_closed", "See closed meeting info"))
 
+
+def mtg_attachment_file_name(instance, filename):
+    return '/'.join(['meeting_uploads', str(instance.meeting.pk), filename])
+
+
+class MtgAttachment(TimeStampedModel):
+    glyphicon = 'paperclip'
+    name = models.CharField(max_length=64, null=False, blank=False)
+    file = models.FileField(upload_to=mtg_attachment_file_name, blank=False, null=False)
+    author = models.ForeignKey(AUTH_USER_MODEL, editable=False, null=False)
+    meeting = models.ForeignKey(Meeting, related_name='attachments', null=True)
+    private = models.BooleanField(default=False)
 
 
 class MeetingAnnounce(models.Model):
@@ -103,6 +154,10 @@ class CCNoticeSend(models.Model):
     email_to = models.ForeignKey('TargetEmailList', default=get_default_email)
 
     addtl_message = models.TextField(null=True, blank=True, verbose_name="Additional Message")
+
+    @property
+    def subject(self):
+        return "Lens and Lights Crew List for %s" % self.meeting.datetime.date()
 
     @property
     def reverse_ordered_events(self):

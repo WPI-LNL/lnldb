@@ -5,7 +5,7 @@ from events.forms import LIGHT_EXTRAS, SOUND_EXTRAS, PROJ_EXTRAS
 
 from emails.generators import DefaultLNLEmailGenerator as DLEG
 
-from events.models import Event
+from events.models import Event, Extra
 from events.models import Lighting, Sound, Projection
 
 from django.conf import settings
@@ -80,20 +80,44 @@ class EventWizard(NamedUrlSessionWizardView):
         else:
             return {}
 
+    def dispatch(self, request, *args, **kwargs):
+        self._form_cache = {}
+        return super(EventWizard, self).dispatch(request, *args, **kwargs)
+
+    def get_cleaned_data_for_step(self, step):
+        """
+        Returns the cleaned data for a given `step`. Before returning the
+        cleaned data, the stored values are revalidated through the form.
+        If the data doesn't validate, None will be returned.
+        """
+        if not hasattr(self, '_form_cache'):
+            self._form_cache = {}
+        if step in self.form_list:
+            if step in self._form_cache:
+                form_obj = self._form_cache[step]
+            else:
+                form_obj = self.get_form(step=step,
+                                         data=self.storage.get_step_data(step),
+                                         files=self.storage.get_step_files(step))
+                self._form_cache[step] = form_obj
+            if form_obj.is_valid():
+                return form_obj.cleaned_data
+        return None
+
     def get_context_data(self, form, **kwargs):
         context = super(EventWizard, self).get_context_data(form=form, **kwargs)
         if self.steps.current == 'lighting':
             context.update({'help_objs': Lighting.objects.all()})
             context.update({'help_name': "Lighting"})
-            context.update({'extras': LIGHT_EXTRAS})
+            context.update({'extras': list(Extra.objects.filter(category__name="Lighting").all())})
         if self.steps.current == 'sound':
             context.update({'help_objs': Sound.objects.all()})
             context.update({'help_name': "Sound"})
-            context.update({'extras': SOUND_EXTRAS})
+            context.update({'extras': Extra.objects.filter(category__name="Sound").all()})
         if self.steps.current == 'projection':
             context.update({'help_objs': Projection.objects.all()})
             context.update({'help_name': "Projection"})
-            context.update({'extras': PROJ_EXTRAS})
+            context.update({'extras': Extra.objects.filter(category__name="Projection").all()})
         percent = int(self.steps.step1 / float(self.steps.count) * 100)
         context.update({"percentage": percent})
         return context

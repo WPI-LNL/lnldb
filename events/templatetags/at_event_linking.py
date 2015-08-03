@@ -54,4 +54,4 @@ def mdeventlink(value, targeturlname=None):
                     event.event_name, reverse("events-detail", args=(event.id,))))
         except Event.DoesNotExist:
             pass
-    return new_value 
+    return new_value

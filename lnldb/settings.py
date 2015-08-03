@@ -2,8 +2,22 @@
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 import os
+import sys
 
-here = lambda *x: os.path.join(os.path.abspath(os.path.dirname(__file__)), *x)
+
+def here(*x):
+    return os.path.join(os.path.abspath(os.path.dirname(__file__)), *x)
+
+
+def from_root(*x):
+    return os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', *x)
+
+
+def from_runtime(*x):
+    return os.path.join(from_root('runtime'), *x)
+
+
+TESTING = sys.argv[1:2] == ['test']
 
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
@@ -16,8 +30,8 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',  # SQLite does not work here; be sure to fill in server settings
-        'NAME': 'lnldb',  # DB name on the host
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': from_runtime('lnldb.db'),  # DB name on the host
         'USER': '',  # Username. Please use a unique user with limited permissions.
         'PASSWORD': '',  # And for the love of god, use a password.
         'HOST': '',  # Set to empty string for localhost.
@@ -51,23 +65,23 @@ USE_TZ = True
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
 # noinspection PyUnresolvedReferences
-MEDIA_ROOT = '/home/lnldb/media/'
+MEDIA_ROOT = from_runtime('media/')
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
 # Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
-MEDIA_URL = 'http://lnldb.gaaaaaaa.be/media/'
+MEDIA_URL = '/media/'
 
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
 # noinspection PyUnresolvedReferences
-STATIC_ROOT = '/home/lnldb/app_statics/'
+STATIC_ROOT = from_runtime('static')
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
-STATIC_URL = 'http://lnldb.gaaaaaaa.be/static/'
+STATIC_URL = '/static/'
 
 # Additional locations of static files
 # noinspection PyUnresolvedReferences
@@ -75,7 +89,7 @@ STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    "/home/lnldb/lnldb/static",
+    from_root("/static"),
 )
 
 # List of finder classes that know how to find static files in
@@ -101,11 +115,12 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'watson.middleware.SearchContextMiddleware',
+    'reversion.middleware.RevisionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'events.middleware.ContactReminderMiddleware',
+    # 'events.middleware.ContactReminderMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 )
 
@@ -118,7 +133,7 @@ TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    "/home/lnldb/lnldb/site_tmpl"
+    from_root("site_tmpl"),
 )
 
 INSTALLED_APPS = (
@@ -134,6 +149,7 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'markdown_deux',
     'django_cas',
+    'django_extensions',
 
     'events',
     'inventory',
@@ -144,6 +160,7 @@ INSTALLED_APPS = (
     'meetings',
     'emails',
     'members',
+    'mptt',
 
     'bootstrap_toolkit',
     'crispy_forms',
@@ -155,6 +172,11 @@ INSTALLED_APPS = (
     'template_profiler_panel',
     'debug_toolbar_line_profiler',
     'raven.contrib.django.raven_compat',
+    'permission',
+    'reversion',
+    'hijack',
+    'pagedown',
+    'compat',
 )
 
 TEMPLATE_CONTEXT_PROCESSESORS = TCP + (
@@ -214,11 +236,12 @@ LOGGING = {
 
 AUTH_PROFILE_MODULE = 'acct.Profile'
 
+
 # AJAX_SELECT_BOOTSTRAP = False
 # AJAX_SELECT_INLINES = False
-### let's just shit all over the page. its okay. I'm fine with it :-\
+# let's just shit all over the page. its okay. I'm fine with it :-\
 AJAX_SELECT_BOOTSTRAP = False
-#AJAX_SELECT_INLINES = 'staticfiles'
+# AJAX_SELECT_INLINES = 'staticfiles'
 
 AJAX_LOOKUP_CHANNELS = {
     'Users': ('acct.lookups', 'UserLookup'),
@@ -228,14 +251,21 @@ AJAX_LOOKUP_CHANNELS = {
     'Members': ('acct.lookups', 'MemberLookup'),
     'AssocMembers': ('acct.lookups', 'AssocMemberLookup'),
     'Funds': ('events.lookups', 'FundLookup'),
-    'FundsLimited': ('events.lookups', 'FundLookupLimited')
+    'FundsLimited': ('events.lookups', 'FundLookupLimited'),
+    'EquipmentClass': ('inventory.lookups', 'ClassLookup')
 }
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 
 TEMPLATE_CONTEXT_PROCESSORS = TCP + (
-    'django.template.context_processors.request',)
+    'django.template.context_processors.request',
+    'data.context_processors.airplane_mode')
 
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',  # default
+    'permission.backends.PermissionBackend',
+    'data.backends.PermissionShimBackend'
+)
 
 # Various Other Settings
 
@@ -247,6 +277,7 @@ CCR_DAY_DELTA = 7
 
 # email stuff
 DEFAULT_TO_ADDR = "lnl@wpi.edu"
+DEFAULT_FROM_ADDR = 'WPI Lens and Lights <lnl@wpi.edu>'
 EMAIL_TARGET_P = "lnl-p@wpi.edu"
 EMAIL_TARGET_VP = "lnl-vp@wpi.edu"
 EMAIL_TARGET_S = "lnl-s@wpi.edu"
@@ -264,11 +295,17 @@ EMAIL_KEY_START_END = None
 LOGIN_URL = "/local/login/"
 LOGIN_REDIRECT_URL = "/my/"
 
+CAS_FORCE_POST_LOGIN = False
+
+AIRPLANE_MODE = False
 
 # crispy_forms
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
-#markdown deux configuration
+# Don't mess with builtins just for the sake of permissions
+PERMISSION_REPLACE_BUILTIN_IF = False
+
+# markdown deux configuration
 MARKDOWN_DEUX_STYLES = {
     "default": {
         "extras": {
@@ -285,6 +322,8 @@ CACHES = {
     }
 }
 
+MPTT_ADMIN_LEVEL_INDENT = 20
+
 # Local Settings Imports
 try:
     local_settings_file = open(here('local_settings.py'), 'r')
@@ -292,3 +331,10 @@ try:
     exec local_settings_script
 except IOError, e:
     print "Unable to open local settings! %s" % e
+
+
+if not os.path.exists(STATIC_ROOT):
+    os.makedirs(STATIC_ROOT)
+
+if not os.path.exists(MEDIA_ROOT):
+    os.makedirs(MEDIA_ROOT)
