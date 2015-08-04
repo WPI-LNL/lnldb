@@ -10,7 +10,9 @@ pytz
 django-lineage
 django-bootstrap-toolkit
 -e git://github.com/WPI-lnl/django-cas2.git#egg=django_cas-dev
-django-ajax-selects
+# django-ajax-selects >= 1.3.7
+# replace it once ajax-selects releases 1.3.7
+-e git+https://github.com/crucialfelix/django-ajax-selects@34ef412#egg=django-ajax-selects
 -e git+https://github.com/jmerdich/django-bootstrap-calendar.git#egg=django_bootstrap_calendar
 # django-crispy-forms>= 1.4.1
 # replace it once d-c-f releases 1.4.1
