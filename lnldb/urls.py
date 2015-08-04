@@ -141,7 +141,6 @@ urlpatterns = patterns('',
                        url(r'^my/events/(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', 'events.views.my.hours_edit',
                            name="my-cchours-edit"),
                        #workorders
-                       url(r'^workorder2/$', 'events.views.indices.workorder'),
                        url(r'^workorder/(?P<step>.+)/$', login_wrapped_wo, name='event_step'),
                        url(r'^workorder/$', login_wrapped_wo, name='event'),
                        url(r'^my/events/(?P<eventid>[0-9]+)/repeat/$', 'events.views.my.myworepeat', name="my-repeat"),

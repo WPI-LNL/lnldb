@@ -8,6 +8,22 @@ import importlib
 from django.test import modify_settings, override_settings
 
 
+# from http://lukeplant.me.uk/blog/posts/fuzzy-testing-with-assertnumqueries/
+# did we just redefine what a integer is? Oh yes we did.
+class FuzzyInt(int):
+    def __new__(cls, lowest, highest):
+        obj = super(FuzzyInt, cls).__new__(cls, highest)
+        obj.lowest = lowest
+        obj.highest = highest
+        return obj
+
+    def __eq__(self, other):
+        return other >= self.lowest and other <= self.highest
+
+    def __repr__(self):
+        return "[%d..%d]" % (self.lowest, self.highest)
+
+
 class UrlsTest(test.TestCase):
     def setUp(self):
         from django.contrib.auth import get_user_model
@@ -53,6 +69,8 @@ class UrlsTest(test.TestCase):
             self.assertTrue(res)
             if not quiet:
                 print("Logging in using %s... %s" % (credentials, res))
+            else:
+                print('.', end='')
 
         def check_urls(urlpatterns, prefix=''):
             for pattern in urlpatterns:
@@ -91,14 +109,18 @@ class UrlsTest(test.TestCase):
                     name = ""
                 fullname = (prefix + ":" + name) if prefix else name
                 if not skip:
-                    print(" > Trying %s %s" % (fullname, params))
+                    if not quiet:
+                        print(" > Trying %s %s" % (fullname, params))
                     url = reverse(fullname, kwargs=params)
-                    response = self.client.get(url)
+                    with self.assertNumQueries(FuzzyInt(0, 11)):
+                        response = self.client.get(url)
                     # print status code if it is not 200
                     status = str(response.status_code) + " "
                     if response.status_code in (301, 302):
                         status = status + "=> " + response["Location"] + " "
-                    if not quiet:
+                    if quiet:
+                        print('.', end='')
+                    else:
                         print(status + url)
                     self.assertIn(response.status_code, allowed_http_codes)
                     self.assertNotIn("TEMPLATE_WARNING", response.content)
@@ -107,7 +129,10 @@ class UrlsTest(test.TestCase):
                         self.client.login(**credentials)
                 else:
                     skipreason = skipreason or ""
-                    if not quiet:
+                    if quiet:
+                        print('S', end='')
+                    else:
                         print("SKIP /%s/ : %s [%s]" % (regex.pattern, fullname, skipreason))
 
         check_urls(module.urlpatterns)
+        print('')

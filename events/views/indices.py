@@ -25,30 +25,6 @@ def index(request):
     return render(request, 'index.html', context)
 
 
-def workorder(request):
-    """ Workorder Page, deprecated cause CBV workorder in wizard.py"""
-    context = {}
-
-    if request.method == 'POST':
-        formset = WorkorderSubmit(request.POST)
-        if formset.is_valid():
-            neworder = formset.save(commit=False)
-            neworder.submitted_by = request.user
-            neworder.submitted_ip = request.META['REMOTE_ADDR']
-            neworder.save()
-
-        else:
-            context['formset'] = formset
-            # todo: BITCH
-
-    else:
-        formset = WorkorderSubmit()
-
-        context['formset'] = formset
-
-    return render(request, 'workorder.html', context)
-
-
 @login_required
 def admin(request, msg=None):
     """ admin landing page """
