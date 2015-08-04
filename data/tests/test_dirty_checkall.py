@@ -7,6 +7,7 @@ from django.conf import settings
 import importlib
 from django.test import modify_settings, override_settings
 
+
 # from http://lukeplant.me.uk/blog/posts/fuzzy-testing-with-assertnumqueries/
 # did we just redefine what a integer is? Oh yes we did.
 class FuzzyInt(int):
@@ -111,7 +112,7 @@ class UrlsTest(test.TestCase):
                     if not quiet:
                         print(" > Trying %s %s" % (fullname, params))
                     url = reverse(fullname, kwargs=params)
-                    with self.assertNumQueries(FuzzyInt(0,11)):
+                    with self.assertNumQueries(FuzzyInt(0, 11)):
                         response = self.client.get(url)
                     # print status code if it is not 200
                     status = str(response.status_code) + " "

@@ -7,6 +7,7 @@ from events.models import Event, Location, Organization, Building
 
 __author__ = 'jmerdich'
 
+
 class UserFactory(DjangoModelFactory):
     class Meta:
         model = User
