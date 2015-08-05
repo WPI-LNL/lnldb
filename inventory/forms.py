@@ -10,6 +10,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms import layout
 from crispy_forms.layout import Layout, Fieldset, Submit, Field, Hidden, Column, Div, HTML
 from crispy_forms.bootstrap import Tab, TabHolder, FormActions
+from data.forms import FormFooter
 
 
 class CategoryForm(ModelForm):
@@ -20,9 +21,7 @@ class CategoryForm(ModelForm):
             'name',
             'parent',
             'usual_place',
-            FormActions(
-                Submit('save', 'Save changes'),
-            )
+            FormFooter('Save changes')
         )
         super(CategoryForm, self).__init__(*args, **kwargs)
         self.fields['usual_place'].queryset = EquipmentCategory.possible_locations()
@@ -70,9 +69,7 @@ class EquipmentClassForm(ModelForm):
                     'wiki_text'
                 ),
             ),
-            FormActions(
-                Submit('save', 'Save changes'),
-            )
+            FormFooter('Save changes')
         )
         super(EquipmentClassForm, self).__init__(*args, **kwargs)
 
@@ -109,9 +106,7 @@ class FastAdd(Form):
                         css_class='panel-body'),
                     css_class='panel panel-default'),
                 'num_to_add',
-                FormActions(
-                    Submit('save', 'Save changes'),
-                )
+                FormFooter('Save Changes')
             )
         else:
             self.helper.layout = Layout(
@@ -119,9 +114,7 @@ class FastAdd(Form):
                         css_class='panel-body'),
                     css_class='panel panel-default'),
                 'num_to_add',
-                FormActions(
-                    Submit('save', 'Save changes'),
-                )
+                FormFooter('Save changes')
             )
         super(FastAdd, self).__init__(*args, **kwargs)
 

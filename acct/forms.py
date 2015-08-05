@@ -9,6 +9,7 @@ from crispy_forms.bootstrap import FormActions
 from django.utils.translation import ugettext_lazy as _
 
 from acct.models import Profile
+from data.forms import FormFooter
 
 
 class LoginForm(AuthenticationForm):
@@ -29,8 +30,8 @@ class UserAcct(forms.ModelForm):
             'first_name',
             'last_name',
 
-            FormActions(
-                Submit('save', 'Save Changes'),
+            FormFooter(
+                'Save Changes',
                 HTML(
                     'Click here to modify your <a href="%s">Contact Information</a>' % reverse('my-lnl')),
             )
@@ -57,8 +58,8 @@ class ProfileAcct(forms.ModelForm):
             'wpibox',
             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
             'addr',
-            FormActions(
-                Submit('save', 'Save Changes'),
+            FormFooter(
+                'Save Changes',
                 HTML(
                     'Click here to modify your <a href="%s">user information</a>' % reverse('my-acct')),
             )
@@ -84,9 +85,7 @@ class UserAddForm(forms.ModelForm):
             'first_name',
             'last_name',
 
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save Changes'),
         )
         super(UserAddForm, self).__init__(*args, **kwargs)
 

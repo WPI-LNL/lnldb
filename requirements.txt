@@ -10,7 +10,7 @@ pytz
 django-lineage
 django-bootstrap-toolkit
 -e git://github.com/WPI-lnl/django-cas2.git#egg=django_cas-dev
-django-ajax-selects
+-e git+https://github.com/jmerdich/django-ajax-selects.git#egg=django-ajax-selects
 -e git+https://github.com/jmerdich/django-bootstrap-calendar.git#egg=django_bootstrap_calendar
 django-crispy-forms>= 1.4
 django-uuidfield
