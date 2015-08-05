@@ -8,7 +8,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Submit, Field
 from crispy_forms.bootstrap import FormActions
 
-from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer
+from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer, FormFooter
 
 
 class MemberForm(FieldAccessForm):
@@ -21,9 +21,7 @@ class MemberForm(FieldAccessForm):
             'first_name',
             'last_name',
             'groups',
-            FormActions(
-                Submit('save', 'Update Member and Return'),
-            )
+            FormFooter('Update Member and Return')
         )
         super(MemberForm, self).__init__(*args, **kwargs)
 
@@ -67,9 +65,7 @@ class MemberContact(FieldAccessForm):
                 "Settings",
                 "locked"
             )),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save changes')
         )
         super(MemberContact, self).__init__(*args, **kwargs)
 

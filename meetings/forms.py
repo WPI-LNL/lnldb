@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.forms.fields import SplitDateTimeField
 from django.core.urlresolvers import reverse
 from pagedown.widgets import PagedownWidget
+from data.forms import FormFooter
 from meetings.models import Meeting, MeetingAnnounce, CCNoticeSend, MtgAttachment
 from events.models import Event, Location
 from ajax_select.fields import AutoCompleteSelectMultipleField
@@ -46,9 +47,7 @@ class MeetingAdditionForm(forms.ModelForm):
                     'attachments_private'
                 ),
             ),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save changes')
         )
         super(MeetingAdditionForm, self).__init__(*args, **kwargs)
 
@@ -113,9 +112,7 @@ class AnnounceSendForm(forms.ModelForm):
             'subject',
             'message',
             'email_to',
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save changes')
         )
 
     def save(self, commit=True):
@@ -150,9 +147,7 @@ class AnnounceCCSendForm(forms.ModelForm):
             Field('events', css_class="col-md-6", size="15"),
             Field('addtl_message', css_class="col-md-6"),
             Field('email_to', css_class="col-md-6"),
-            FormActions(
-                Submit('save', 'Send'),
-            ),
+            FormFooter('Send')
         )
         super(AnnounceCCSendForm, self).__init__(*args, **kwargs)
 

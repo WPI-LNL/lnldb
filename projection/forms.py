@@ -7,6 +7,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Field, HTML
 from crispy_forms.bootstrap import FormActions
 from django.utils.timezone import now
+from data.forms import FormFooter
 from projection.models import Projectionist, PitInstance, PITLevel
 from ajax_select.fields import AutoCompleteSelectField, AutoCompleteSelectMultipleField
 
@@ -43,9 +44,7 @@ class ProjectionistForm(forms.ModelForm):
             # 'pit_level',
             'license_number',
             Field('license_expiry', css_class="datepick"),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save changes')
         )
         super(ProjectionistForm, self).__init__(*args, **kwargs)
         self.fields['user'].queryset = User.objects.exclude(projectionist__isnull=False)
@@ -84,9 +83,7 @@ class BulkUpdateForm(forms.Form):
             Field('users'),
             Field('date', css_class="datepick"),
             Field('pit_level'),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save changes')
         )
         super(BulkUpdateForm, self).__init__(*args, **kwargs)
 
@@ -117,9 +114,7 @@ class BulkCreateForm(forms.Form):
             Field('billing'),
             Field('date_first', css_class="datepick", ),
             Field('date_second', css_class="datepick", ),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save changes')
         )
         super(BulkCreateForm, self).__init__(*args, **kwargs)
 

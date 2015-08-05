@@ -56,6 +56,18 @@
                 // Collapse main navbar if too big
                 $("div.collapse ul.navbar-nav").flexMenu()
 
+                // Smarter back button
+                window.history.hashes = 0;
+                $(window).on("navigate", function (event, data) {
+                  var direction = data.state.direction;
+                  if (direction == 'back') {
+                    window.history.hashes = window.history.hashes - 2; // because hashchange adds by one.
+                  }
+                });
+                window.onhashchange = function(){window.history.hashes++};
+                window.history.back_page = function(){window.history.go(-1 - window.history.hashes);};
+
+
                 /*
                  Save tabs across reloads
                  */

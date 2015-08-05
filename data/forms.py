@@ -1,4 +1,5 @@
-from crispy_forms.layout import LayoutObject
+from crispy_forms.bootstrap import FormActions
+from crispy_forms.layout import LayoutObject, Button, Submit, Reset
 from crispy_forms.utils import TEMPLATE_PACK, render_field
 from django.core.exceptions import ValidationError
 from django.forms import FileField
@@ -110,3 +111,22 @@ class DynamicFieldContainer(LayoutObject):
                 # I really wish dcf had better exception handling
                 continue
         return fields
+
+
+class Cancel(Button):
+    template = 'cancel_btn.html'
+
+    def __init__(self, name, value, href=None, onclick=None, **kwargs):
+        self.href = href
+        self.onclick = onclick
+        # take those two out of flatargs, so we can replace them if we want
+        super(Cancel, self).__init__(name, value, **kwargs)
+
+# if we change template packs, remove the formactions bit.
+def FormFooter(name, *args, **kwargs):
+    return FormActions(
+        Submit('save_btn', name),
+        Cancel('cancel_btn', 'Cancel', css_class='btn-info'),
+        Reset('reset_btn', 'Reset form', css_class='btn-inverse'),
+        *args, **kwargs
+    )

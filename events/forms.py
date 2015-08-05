@@ -4,7 +4,7 @@ import decimal
 import _strptime
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
-from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer
+from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer, Cancel, FormFooter
 
 from django import forms
 from django.forms import ModelForm, ModelChoiceField
@@ -119,9 +119,7 @@ class CrewAssign(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
             Field('crew'),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save Changes')
         )
         super(CrewAssign, self).__init__(*args, **kwargs)
 
@@ -168,9 +166,7 @@ class IOrgForm(forms.ModelForm):
                     'associated_users',
                 )
             ),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save Changes')
         )
         super(IOrgForm, self).__init__(*args, **kwargs)
 
@@ -195,9 +191,7 @@ class IOrgVerificationForm(forms.ModelForm):
             Field('date', css_class="datepick"),
             Field('verified_by'),
             Field('note', size="5"),
-            FormActions(
-                Submit('save', 'Verify'),
-            )
+            FormFooter('Verify')
         )
         super(IOrgVerificationForm, self).__init__(*args, **kwargs)
 
@@ -248,9 +242,7 @@ class EventApprovalForm(forms.ModelForm):
                     Field('otherservice_reqs', css_class="col-md-8")
                 ),
             ),
-            FormActions(
-                Submit('save', 'Approve Event'),
-            ),
+            FormFooter('Approve Event')
         )
         super(EventApprovalForm, self).__init__(*args, **kwargs)
 
@@ -281,9 +273,7 @@ class EventDenialForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
             Field('cancelled_reason', label="Reason For Cancellation (optional)", css_class="col-md-6"),
-            FormActions(
-                Submit('save', 'Deny Event'),
-            ),
+            FormFooter( 'Deny Event')
         )
         super(EventDenialForm, self).__init__(*args, **kwargs)
 
@@ -304,9 +294,7 @@ class EventMeetingForm(forms.ModelForm):
             Field('datetime_setup_complete', label="Setup Finish", css_class="dtp"),
             Field('crew_chief', label="Crew Chief"),
             Field('crew', label="Crew"),
-            FormActions(
-                Submit('save', 'Update Event and Return'),
-            )
+            FormFooter( 'Update Event and Return')
         )
         super(EventMeetingForm, self).__init__(*args, **kwargs)
 
@@ -387,9 +375,7 @@ class InternalEventForm(FieldAccessForm):
                     'otherservice_reqs'
                 ),
             ),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save Changes')
         )
         super(InternalEventForm, self).__init__(*args, **kwargs)
 
@@ -512,10 +498,7 @@ class InternalReportForm(FieldAccessForm):
             DynamicFieldContainer('crew_chief'),
             Field('report', css_class="col-md-10"),
             markdown_at_msgs,
-            FormActions(
-                Submit('save', 'Save Changes'),
-                # Reset('reset','Reset Form'),
-            )
+            FormFooter('Save Changes')
         )
         super(InternalReportForm, self).__init__(*args, **kwargs)
 
@@ -561,9 +544,7 @@ class ExternalOrgUpdateForm(forms.ModelForm):
             'address',
             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
             'associated_users',
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save Changes')
         )
         super(ExternalOrgUpdateForm, self).__init__(*args, **kwargs)
 
@@ -589,9 +570,7 @@ class OrgXFerForm(forms.ModelForm):
                 'This form will transfer ownership of this Organization to another user associated '
                 'with the Organization. A confirmation E-Mail will be sent with a link to confirm the '
                 'transfer.</p>'),
-            FormActions(
-                Submit('save', 'Submit Transfer'),
-            )
+            FormFooter('Submit Transfer')
         )
         super(OrgXFerForm, self).__init__(*args, **kwargs)
 
@@ -626,9 +605,7 @@ class SelfServiceOrgRequestForm(forms.Form):
             'address',
             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
             'fund_info',
-            FormActions(
-                Submit('save', 'Submit Request'),
-            )
+            FormFooter('Submit Request')
         )
         super(SelfServiceOrgRequestForm, self).__init__(*args, **kwargs)
 
@@ -653,10 +630,7 @@ class BillingForm(forms.ModelForm):
             PrependedText('amount', '<strong>$</strong>'),
             Field('opt_out_initial_email'),
             Field('opt_out_update_email'),
-            FormActions(
-                Submit('save', 'Save Changes'),
-                Reset('reset', 'Reset Form'),
-            )
+            FormFooter('Save Changes')
         )
         super(BillingForm, self).__init__(*args, **kwargs)
 
@@ -689,10 +663,7 @@ class BillingUpdateForm(forms.ModelForm):
             PrependedText('date_paid', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
             PrependedText('amount', '<strong>$</strong>'),
             Field('opt_out_update_email'),
-            FormActions(
-                Submit('save', 'Save Changes'),
-                Reset('reset', 'Reset Form'),
-            )
+            FormFooter('Save Changes'),
         )
         super(BillingUpdateForm, self).__init__(*args, **kwargs)
 
@@ -728,10 +699,7 @@ class ReportForm(forms.ModelForm):
                  '<li>What information would be useful for somebody next year?</li></ul>'),
             Field('report', css_class="col-md-10"),
             markdown_at_msgs,
-            FormActions(
-                Submit('save', 'Save Changes'),
-                Reset('reset', 'Reset Form'),
-            )
+            FormFooter('Save Changes')
         )
         super(ReportForm, self).__init__(*args, **kwargs)
 
@@ -754,10 +722,7 @@ class MKHoursForm(forms.ModelForm):
             Field('user'),
             Field('hours'),
             Field('service'),
-            FormActions(
-                Submit('save', 'Save Changes'),
-                # Reset('reset','Reset Form'),
-            )
+            FormFooter('Save Changes')
         )
         super(MKHoursForm, self).__init__(*args, **kwargs)
         self.fields['service'].queryset = get_qs_from_event(event)
@@ -785,9 +750,7 @@ class EditHoursForm(forms.ModelForm):
         self.helper.form_action = ""
         self.helper.layout = Layout(
             Field('hours'),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save Changes')
         )
         super(EditHoursForm, self).__init__(*args, **kwargs)
 
@@ -808,9 +771,7 @@ class FopalForm(forms.ModelForm):
             Field('fund'),
             Field('organization'),
             Field('account'),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            FormFooter('Save Changes')
         )
         super(FopalForm, self).__init__(*args, **kwargs)
 
@@ -949,9 +910,7 @@ class WorkorderRepeatForm(forms.ModelForm):
                     Field('otherservice_reqs', css_class="col-md-8")
                 ),
             ),
-            FormActions(
-                Submit('save', 'Repeat Event'),
-            ),
+            FormFooter('Repeat Event')
         )
         super(WorkorderRepeatForm, self).__init__(*args, **kwargs)
 
