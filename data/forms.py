@@ -114,7 +114,7 @@ class DynamicFieldContainer(LayoutObject):
 
 
 class Cancel(Button):
-    template = 'cancel_btn.html'
+    template = '%s_cancel_btn.html'
 
     def __init__(self, name, value, href=None, onclick=None, **kwargs):
         self.href = href
