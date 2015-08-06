@@ -273,7 +273,7 @@ class EventDenialForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
             Field('cancelled_reason', label="Reason For Cancellation (optional)", css_class="col-md-6"),
-            FormFooter( 'Deny Event')
+            FormFooter('Deny Event')
         )
         super(EventDenialForm, self).__init__(*args, **kwargs)
 
@@ -294,7 +294,7 @@ class EventMeetingForm(forms.ModelForm):
             Field('datetime_setup_complete', label="Setup Finish", css_class="dtp"),
             Field('crew_chief', label="Crew Chief"),
             Field('crew', label="Crew"),
-            FormFooter( 'Update Event and Return')
+            FormFooter('Update Event and Return')
         )
         super(EventMeetingForm, self).__init__(*args, **kwargs)
 

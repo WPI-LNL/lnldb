@@ -122,6 +122,7 @@ class Cancel(Button):
         # take those two out of flatargs, so we can replace them if we want
         super(Cancel, self).__init__(name, value, **kwargs)
 
+
 # if we change template packs, remove the formactions bit.
 def FormFooter(name, *args, **kwargs):
     return FormActions(
