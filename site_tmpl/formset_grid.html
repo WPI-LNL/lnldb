@@ -42,7 +42,11 @@
 
                         <tr>
                             {% for field in form %}
-                                {% include 'bootstrap3/field.html' with tag="th" form_show_labels=False %}
+                                {% if field.name == "DELETE" and form.instance.unsafe_to_delete %}
+                                    <th>N/A</th>
+                                {% else %}
+                                    {% include 'bootstrap3/field.html' with tag="th" form_show_labels=False %}
+                                {% endif %}
                             {% endfor %}
                         </tr>
                     {% endfor %}

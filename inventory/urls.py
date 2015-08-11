@@ -30,6 +30,7 @@ urlpatterns = [
     url(r'^item/(?P<item_id>[0-9]+)/', include([
         url(r'^$', views.item_detail, name="item_detail"),
         url(r'^edit/$', views.item_edit, name="item_edit"),
+        url(r'^rm/$', views.item_rm, name="item_rm"),
         # url(r'^ticket/$', views.ticket_add, name='ticket_add')
     ])),
 

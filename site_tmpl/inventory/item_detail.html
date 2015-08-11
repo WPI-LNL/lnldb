@@ -34,6 +34,14 @@
            href="{% url 'inventory:item_edit' item.pk %}"
            role="button">Edit Item</a>
     {% endpermission %}
+    {% permission request.user has 'inventory.delete_equipmentitem' and not item.unsafe_to_delete %}
+        <a class="btn btn-danger btn-lg"
+           href="#rmItemModal"
+           role="button"
+           data-toggle="modal">
+            Delete Item
+        </a>
+    {% endpermission %}
 {% endblock %}
 
 {% block body %}
@@ -113,4 +121,32 @@
         </div>
     {% endcomment %}
     </div>
+{% endblock %}
+
+{% block modals %}
+    {% permission request.user has 'inventory.delete_equipmentitem' and not item.unsafe_to_delete %}
+        <!-- RmItemModal -->
+        <div id="rmItemModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="rmItemModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                        <h3 id="rmItemModalLabel">Confirm Remove Item</h3>
+                    </div>
+                    <form action="{% url 'inventory:item_rm' item.pk %}" method="post">
+                        {% csrf_token %}
+                        <div class="modal-body">
+                            <p><b>Are you sure you want to delete {{ item }}?</b></p>
+                            <p>There are no contained items here, but any metadata will be gone FOREVER.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                            <button type="submit" class="btn btn-danger">Yes, delete</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endpermission %}
 {% endblock %}
