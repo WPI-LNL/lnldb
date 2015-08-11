@@ -181,6 +181,7 @@ def type_mk(request):
         "formset": formset,
     })
 
+
 @login_required
 def type_rm(request, type_id):
     obj = get_object_or_404(EquipmentClass, pk=int(type_id))
