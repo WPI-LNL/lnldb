@@ -35,6 +35,31 @@
             </div>
         </div>
     {% endpermission %}
+        {% permission request.user has 'inventory.delete_equipmentclass' and not equipment.items.exists %}
+        <!-- RmItemModal -->
+        <div id="rmItemModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="rmItemModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                        <h3 id="rmItemModalLabel">Confirm Remove Type</h3>
+                    </div>
+                    <form action="{% url 'inventory:type_rm' equipment.pk %}" method="post">
+                        {% csrf_token %}
+                        <div class="modal-body">
+                            <p><b>Are you sure you want to delete the {{ equipment }} type?</b></p>
+                            <p>There are no items here, but any metadata will be gone FOREVER.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                            <button type="submit" class="btn btn-danger">Yes, delete</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endpermission %}
 {% endblock %}
 
 {% block jumbotitle %}
@@ -49,6 +74,10 @@
                role="button">
                 Edit Type
             </a>
+        {% endpermission %}
+        {% permission request.user has 'inventory.delete_equipmentclass' and not equipment.items.exists %}
+        <a class="btn btn-danger btn-lg" href="#rmItemModal" role="button"
+               data-toggle="modal">Remove Type</a>
         {% endpermission %}
         {% permission request.user has 'inventory.add_equipmentitem' %}
             <a class="btn btn-primary btn-lg" href="#addItemModal" role="button"

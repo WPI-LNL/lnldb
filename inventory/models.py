@@ -59,7 +59,7 @@ class EquipmentCategory(MPTTModel):
 
         try:
             return Location.objects.get(**GLOBAL_LOC_DEFAULT)
-        except models.exceptions.MultipleObjectsReturned, DoesNotExist:
+        except (Location.MultipleObjectsReturned, Location.DoesNotExist):
             logging.warn("Unable to load default location for %s" % self.name)
             return None
 
@@ -88,7 +88,8 @@ class EquimentItemManager(TreeManager):
             for i in xrange(0, num_to_add):
                 items.append(EquipmentItem(item_type=item_type, home=default_loc,
                                            purchase_date=datetime.date.today(),
-                                           case=put_into))
+                                           case=put_into,
+                                           level=0, rght=0, lft=0, tree_id=0))
         self.rebuild()
 
         EquipmentItem.objects.bulk_create(items)

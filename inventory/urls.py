@@ -15,12 +15,14 @@ urlpatterns = [
     url(r'^cat/(?P<category_id>[0-9]+)/', include([
         url(r'^$', views.cat, name="cat"),
         url(r'edit/$', views.cat_edit, name="cat_edit"),
+        url(r'rm/$', views.cat_rm, name="cat_rm"),
     ])),
 
     url(r'^class/new/$', views.type_mk, name="type_mk"),
     url(r'^class/(?P<type_id>[0-9]+)/', include([
         url(r'^$', views.type_detail, name="type_detail"),
         url(r'^edit/$', views.type_edit, name="type_edit"),
+        url(r'^rm/$', views.type_rm, name="type_rm"),
         url(r'^add/bulk/$', views.quick_bulk_add, name="bulk_add"),
         url(r'^edit/bulk/$', views.quick_bulk_edit, name="bulk_edit"),
     ])),
