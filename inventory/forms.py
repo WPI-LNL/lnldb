@@ -1,5 +1,6 @@
 from ajax_select.fields import AutoCompleteSelectField, autoselect_fields_check_can_add
 from django import forms
+from django.core.exceptions import ValidationError
 from django.forms import ModelForm, Form, ModelChoiceField, CharField
 from mptt.forms import TreeNodeChoiceField
 from pagedown.widgets import PagedownWidget
@@ -26,6 +27,10 @@ class CategoryForm(ModelForm):
         )
         super(CategoryForm, self).__init__(*args, **kwargs)
         self.fields['usual_place'].queryset = EquipmentCategory.possible_locations()
+
+    def clean_parent(self):
+        if self.cleaned_data['parent'] in self.instance.get_descendants_inclusive:
+            raise ValidationError('A category cannot be a subcategory of itself or one of its children.')
 
     class Meta:
         model = EquipmentCategory
