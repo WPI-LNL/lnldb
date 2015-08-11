@@ -6,9 +6,11 @@ import logging
 import datetime
 
 from django.db.models import Q
+from django.core.urlresolvers import reverse
 
 from django.utils.functional import cached_property
 from mptt.fields import TreeForeignKey
+from mptt.managers import TreeManager
 from mptt.models import MPTTModel
 from events.models import Location
 
@@ -61,6 +63,14 @@ class EquipmentCategory(MPTTModel):
             logging.warn("Unable to load default location for %s" % self.name)
             return None
 
+    @cached_property
+    def breadcrumbs(self):
+        out = [('Inventory', reverse('inventory:view_all'))]
+        out.extend([
+             (cat.name, reverse('inventory:cat', args=[cat.pk])) for cat in self.get_ancestors_inclusive
+        ])
+        return out
+
     def __str__(self):
         return self.name
 
@@ -68,41 +78,58 @@ class EquipmentCategory(MPTTModel):
         order_insertion_by = ['name']
 
 
-class EquimentItemManager(models.Manager):
-    def bulk_add_helper(self, item_type, num_to_add):
+class EquimentItemManager(TreeManager):
+    def bulk_add_helper(self, item_type, num_to_add, put_into=None):
         items = []
 
         # loc is usually automatic, but not in bulk queries
-        default_loc = item_type.category.default_location
-        for i in xrange(0, num_to_add):
-            items.append(EquipmentItem(item_type=item_type, home=default_loc,
-                                       purchase_date=datetime.date.today()))
+        default_loc = item_type.category.default_location if put_into is None else None
+        with self.delay_mptt_updates():
+            for i in xrange(0, num_to_add):
+                items.append(EquipmentItem(item_type=item_type, home=default_loc,
+                                           purchase_date=datetime.date.today(),
+                                           case=put_into))
+        self.rebuild()
 
         EquipmentItem.objects.bulk_create(items)
 
 
-class EquipmentItem(models.Model):
+class EquipmentItem(MPTTModel):
     objects = EquimentItemManager()
     item_type = models.ForeignKey('EquipmentClass', related_name="items", null=False, blank=False)
     serial_number = models.CharField(max_length=256, null=True, blank=True)
-    case = models.ForeignKey('self', null=True, blank=True, related_name="contents")
+    case = TreeForeignKey('self', null=True, blank=True,
+                          related_name='contents', db_index=True,
+                          help_text="Case or item that contains this item")
 
     barcode = models.BigIntegerField(null=True, blank=True, unique=True)
     purchase_date = models.DateField(null=False, blank=True)
-    home = models.ForeignKey(Location, null=True, blank=True)
+    home = models.ForeignKey(Location, null=True, blank=True, help_text="Place where this item typically resides.")
     features = models.CharField(max_length=128, null=True, blank=True, verbose_name='Identifying Features')
 
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
+    def save(self, *args, **kwargs):
         if self.purchase_date is None:
             self.purchase_date = datetime.date.today()
         if self.pk is None and not self.home and not self.case:
             self.home = self.item_type.category.default_location
-        super(EquipmentItem, self).save(force_insert, force_update, using, update_fields)
+        if self.case and self.home:
+            self.home = None  # location inherits from parent
+        super(EquipmentItem, self).save(*args, **kwargs)
+
+    @cached_property
+    def breadcrumbs(self):
+        out = self.item_type.breadcrumbs
+
+        out.append(
+            ("Item %s" % (self.barcode or self.pk), reverse('inventory:item_detail', args=[self.pk]))
+        )
+        return out
 
     @property
     def location(self):
-        if self.home:
+        if self.case:
+            return self.get_root().location
+        elif self.home:
             return self.home
         elif self.case:
             return self.case.home
@@ -125,6 +152,9 @@ class EquipmentItem(models.Model):
         return "%s (%d)" % (str(self.item_type),
                             self.barcode or self.pk)
 
+    class MPTTMeta:
+        parent_attr = 'case'
+
 
 class EquipmentClass(models.Model):
     name = models.CharField(max_length=256)
@@ -135,6 +165,7 @@ class EquipmentClass(models.Model):
     model_number = models.CharField(max_length=256, null=True, blank=True)
     manufacturer = models.CharField(max_length=128, null=True, blank=True)
     url = models.URLField(null=True, blank=True)
+    holds_items = models.BooleanField(default=False, help_text="Can hold other items")
 
     length = models.DecimalField(help_text="Length in inches", max_digits=6, decimal_places=2, null=True, blank=True)
     width = models.DecimalField(help_text="Width in inches", max_digits=6, decimal_places=2, null=True, blank=True)
@@ -145,6 +176,14 @@ class EquipmentClass(models.Model):
 
     def __unicode__(self):
         return self.name
+
+    @cached_property
+    def breadcrumbs(self):
+        out =  self.category.breadcrumbs
+        out.append(
+            (self.name, reverse('inventory:type_detail', args=[self.pk]))
+        )
+        return out
 
     def size(self):
         dims = filter(lambda dim: dim is not None,

@@ -133,12 +133,12 @@
                         <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a href="{% url "inventory.views.view_all" %}">View Inventory</a></li>
+                        <li><a href="{% url "inventory:view_all" %}">View Inventory</a></li>
                         {% permission request.user has 'inventory.add_equipmentclass' %}
-                            <li><a href="{% url "inventory.views.type_mk" %}">Add Item Type</a></li>
+                            <li><a href="{% url "inventory:type_mk" %}">Add Item Type</a></li>
                         {% endpermission %}
                         {% permission request.user has 'inventory.add_equipmentitem' %}
-                            <li><a href="{% url "inventory.views.fast_mk" %}">Quick Add Items</a></li>
+                            <li><a href="{% url "inventory:fast_mk" %}">Quick Add Items</a></li>
                         {% endpermission %}
                     </ul>
                 </li>

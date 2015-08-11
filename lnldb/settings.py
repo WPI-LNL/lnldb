@@ -19,7 +19,7 @@ def from_runtime(*x):
 
 TESTING = sys.argv[1:2] == ['test']
 
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
@@ -27,6 +27,7 @@ ADMINS = (
 )
 
 MANAGERS = ADMINS
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu', 'users.wpi.edu', 'userweb.wpi.edu']
 
 DATABASES = {
     'default': {
@@ -89,7 +90,7 @@ STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    from_root("/static"),
+    from_root("static"),
 )
 
 # List of finder classes that know how to find static files in
@@ -252,7 +253,8 @@ AJAX_LOOKUP_CHANNELS = {
     'AssocMembers': ('acct.lookups', 'AssocMemberLookup'),
     'Funds': ('events.lookups', 'FundLookup'),
     'FundsLimited': ('events.lookups', 'FundLookupLimited'),
-    'EquipmentClass': ('inventory.lookups', 'ClassLookup')
+    'EquipmentClass': ('inventory.lookups', 'ClassLookup'),
+    'EquipmentContainer': ('inventory.lookups', 'ContainerLookup')
 }
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
