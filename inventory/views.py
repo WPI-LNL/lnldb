@@ -101,16 +101,13 @@ def quick_bulk_add(request, type_id):
     messages.add_message(request, messages.SUCCESS,
                          "%d items added and saved. Now editing." % num_to_add)
 
-    return HttpResponseRedirect(reverse('inventory:quick_bulk_edit',
+    return HttpResponseRedirect(reverse('inventory:bulk_edit',
                                         kwargs={'type_id': type_id}))
 
 
 @login_required
 def quick_bulk_edit(request, type_id):
-    try:
-        e_type = EquipmentClass.objects.get(pk=int(type_id))
-    except EquipmentClass.DoesNotExist:
-        return HttpResponseNotFound()
+    get_object_or_404(EquipmentClass, pk=int(type_id))
 
     if not request.user.has_perm('inventory.change_equipmentitem', e_type):
         raise PermissionDenied
@@ -184,6 +181,23 @@ def type_mk(request):
         "formset": formset,
     })
 
+@login_required
+def type_rm(request, type_id):
+    obj = get_object_or_404(EquipmentClass, pk=int(type_id))
+    return_page = reverse('inventory:cat', args=[obj.category.pk])
+
+    if not request.user.has_perm('inventory.delete_equipmentclass', obj):
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        if obj.items.exists():
+            return HttpResponseBadRequest("There are still items of this type")
+        else:
+            obj.delete()
+            return HttpResponseRedirect(return_page)
+    else:
+        return HttpResponseBadRequest("Bad method")
+
 
 @login_required
 def cat_edit(request, category_id):
@@ -203,7 +217,7 @@ def cat_edit(request, category_id):
     else:
         formset = CategoryForm(instance=category)
     return render(request, "form_crispy.html", {
-        'msg': "Create Category",
+        'msg': "Edit Category",
         "formset": formset,
     })
 
@@ -232,6 +246,29 @@ def cat_mk(request):
 
 
 @login_required
+def cat_rm(request, category_id):
+    cat = get_object_or_404(EquipmentCategory, pk=int(category_id))
+    if cat.parent:
+        return_url = reverse('inventory:cat', args=[cat.parent.pk])
+    else:
+        return_url = reverse('inventory:view_all')
+
+    if not request.user.has_perm('inventory.delete_equipmentcategory', cat):
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        if cat.get_children().exists():
+            return HttpResponseBadRequest("There are still subcategories of this type")
+        elif cat.equipmentclass_set.exists():
+            return HttpResponseBadRequest("There are still items in this category")
+        else:
+            cat.delete()
+            return HttpResponseRedirect(return_url)
+    else:
+        return HttpResponseBadRequest("Bad method")
+
+
+@login_required
 def fast_mk(request):
     if not request.user.has_perm('inventory.add_equipmentitem'):
         raise PermissionDenied
@@ -247,7 +284,7 @@ def fast_mk(request):
             obj = formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "%d items added and saved. Now editing." % formset.cleaned_data['num_to_add'])
-            return HttpResponseRedirect(reverse('inventory:quick_bulk_edit',
+            return HttpResponseRedirect(reverse('inventory:bulk_edit',
                                                 kwargs={'type_id': obj.pk}))
     else:
         formset = FastAdd(request.user, initial={'item_cat': cat})

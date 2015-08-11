@@ -9,12 +9,13 @@ from inventory.models import *
 
 from crispy_forms.helper import FormHelper
 from crispy_forms import layout
-from crispy_forms.layout import Layout, Fieldset, Submit, Field, Hidden, Column, Div, HTML
+from crispy_forms.layout import Layout, Fieldset, Submit, Field, Hidden, Column, Div, HTML, Button
 from crispy_forms.bootstrap import Tab, TabHolder, FormActions
 
 
 class CategoryForm(ModelForm):
     def __init__(self, *args, **kwargs):
+        super(CategoryForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         self.helper.layout = Layout(
@@ -25,7 +26,6 @@ class CategoryForm(ModelForm):
                 Submit('save', 'Save changes'),
             )
         )
-        super(CategoryForm, self).__init__(*args, **kwargs)
         self.fields['usual_place'].queryset = EquipmentCategory.possible_locations()
 
     def clean_parent(self):

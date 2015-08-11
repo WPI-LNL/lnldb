@@ -61,6 +61,13 @@
                             Add Category
                         </a>
                     {% endpermission %}
+                    {% permission request.user has 'inventory.delete_equipmentcategory'  %}
+                        {% if cat and not cat.get_children.exists and not cat.equipmentclass_set.exists %}
+                            <a class="btn btn-danger" role="button" onclick="$('#rmcat').submit();">
+                                    <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+                                </a>
+                        {% endif %}
+                    {% endpermission %}
                 </div>
 
                 {% if cat %}
@@ -133,4 +140,15 @@
     {% endif %}
         </div>
 </div>
+{% endblock %}
+
+{% block finalsay %}
+{% permission request.user has 'inventory.delete_equipmentcategory'  %}
+    {% if cat and not cat.get_children.exists and not cat.equipmentclass_set.exists %}
+        <form id="rmcat" method="post" action="{% url 'inventory:cat_rm' cat.pk %}">
+            {% csrf_token %}
+        </form>
+    {% endif %}
+{% endpermission %}
+{{ block.super }}
 {% endblock %}
