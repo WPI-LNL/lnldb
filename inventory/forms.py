@@ -29,8 +29,12 @@ class CategoryForm(ModelForm):
         self.fields['usual_place'].queryset = EquipmentCategory.possible_locations()
 
     def clean_parent(self):
-        if self.cleaned_data['parent'] in self.instance.get_descendants_inclusive:
-            raise ValidationError('A category cannot be a subcategory of itself or one of its children.')
+        if self.instance.pk:
+            if self.cleaned_data['parent'] == self.instance:
+                raise ValidationError('A category cannot be a subcategory of itself.')
+            if self.cleaned_data['parent'] in self.instance.get_descendants_inclusive:
+                raise ValidationError('A category cannot be a subcategory of one of its children.')
+        return self.cleaned_data['parent']
 
     class Meta:
         model = EquipmentCategory
