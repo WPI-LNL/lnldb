@@ -1,0 +1,116 @@
+{% extends 'jumbotron.html' %}
+{% load at_user_linking %}
+{% load markdown_deux_tags %}
+{% load permissionif %}
+{% load static %}
+
+{% block title %}
+    {{ item }} - {{ block.super }}
+{% endblock %}
+
+
+{% block jumbotitle %}
+    {{ item }}
+{% endblock %}
+
+{% block jumbosubtitle %}
+    Type: <a href="{% url 'inventory:type_detail' item.item_type.pk %}">{{ item.item_type }}</a>
+    <br>
+    {% if item.case %}
+        Inside <a href="{% url 'inventory:item_detail' item.case.pk %}">{{ item.case }}</a>
+    {% endif %}
+{% endblock %}
+
+{% block buttons %}
+    {% comment %}
+    {% permission request.user has 'inventory.add_ticket' %}
+        <a class="btn btn-primary btn-lg"
+           href="{% url 'inventory:ticket_add' item.pk %}"
+           role="button">Make TF</a>
+    {% endpermission %}
+    {% endcomment %}
+    {% permission request.user has 'inventory.change_equipmentitem' %}
+        <a class="btn btn-default btn-lg"
+           href="{% url 'inventory:item_edit' item.pk %}"
+           role="button">Edit Item</a>
+    {% endpermission %}
+{% endblock %}
+
+{% block body %}
+    <div class="row">
+        <div class="col-md-4">
+            <h3>Basic Info</h3>
+
+            <div class="well eqp-item">
+                <b> Status:
+                    <span class="glyphicon glyphicon-{{ item.status.glyphicon }}" aria-hidden="true"></span>
+                    {{ item.status }}
+                </b>
+                <br>
+
+                {% if item.barcode %}
+                    {{ item.barcode }}
+                {% else %}
+                    [No barcode; ID: {{ item.pk }}]
+                {% endif %}
+
+                <br>
+
+                {% if item.features %}
+                    {{ item.features }}
+                    <br>
+                {% endif %}
+
+                Resides in {{ item.location }}
+                {% if item.case %}
+                    inside <a href="{% url 'inventory:item_detail' item.case.pk %}">{{ item.case }}</a>
+                {% endif %}
+
+                <br>
+
+                Purchased {{ item.purchase_date }}
+            </div>
+        </div>
+        {% if item.contents.all %}
+            <div class="col-md-4">
+                <h3>Contains</h3>
+                {% for subitem in item.contents.all %}
+                    <div class="well eqp-item">
+                        <a href="{% url 'inventory:item_detail' item.pk %}">
+                            <b class="mini-title">
+                                <span class="glyphicon glyphicon-{{ item.status.glyphicon }}" aria-hidden="true"></span>
+                                {% if item.barcode %}
+                                    {{ item.barcode }}
+                                {% else %}
+                                    [No barcode]
+                                {% endif %}
+                            </b>
+                        </a>
+
+                        <br>
+
+                        {% if item.features %}
+                            {{ item.features }}
+                            <br>
+                        {% endif %}
+
+                        Resides in {{ item.location }}
+
+                        <br>
+
+                        Purchased {{ item.purchase_date }}
+                    </div>
+                {% endfor %}
+
+            </div>
+        {% endif %}
+
+    {% comment %}
+         <div class="col-md-4">
+            <h3>Used At</h3>
+
+
+        </div>
+    {% endcomment %}
+    </div>
+{% endblock %}

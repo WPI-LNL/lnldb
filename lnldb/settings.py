@@ -27,6 +27,7 @@ ADMINS = (
 )
 
 MANAGERS = ADMINS
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu', 'users.wpi.edu', 'userweb.wpi.edu']
 
 DATABASES = {
     'default': {
@@ -252,7 +253,8 @@ AJAX_LOOKUP_CHANNELS = {
     'AssocMembers': ('acct.lookups', 'AssocMemberLookup'),
     'Funds': ('events.lookups', 'FundLookup'),
     'FundsLimited': ('events.lookups', 'FundLookupLimited'),
-    'EquipmentClass': ('inventory.lookups', 'ClassLookup')
+    'EquipmentClass': ('inventory.lookups', 'ClassLookup'),
+    'EquipmentContainer': ('inventory.lookups', 'ContainerLookup')
 }
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP

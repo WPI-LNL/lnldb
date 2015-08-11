@@ -336,22 +336,7 @@ urlpatterns = patterns('',
 
 
                        #inventory
-                       url(r'^db/inventory/$', 'inventory.views.view_all'),
-                       url(r'^db/inventory/cat/(?P<category_id>[0-9]+)/$', 'inventory.views.cat'),
-                       url(r'^db/inventory/cat/(?P<category_id>[0-9]+)/edit/$', 'inventory.views.cat_edit'),
-                       url(r'^db/inventory/cat/mk/$', 'inventory.views.cat_mk'),
-                       url(r'^db/inventory/new/$', 'inventory.views.fast_mk',
-                           name="inv-fast-mk"),
-                       url(r'^db/inventory/class/new/$', 'inventory.views.type_mk',
-                           name="inv-type-mk"),
-                       url(r'^db/inventory/class/(?P<type_id>[0-9]+)/$', 'inventory.views.type_detail',
-                           name="inv-type-detail"),
-                       url(r'^db/inventory/class/(?P<type_id>[0-9]+)/add/bulk/$', 'inventory.views.quick_bulk_add',
-                           name="inv-bulk-add"),
-                       url(r'^db/inventory/class/(?P<type_id>[0-9]+)/edit/$', 'inventory.views.type_edit',
-                           name="inv-type-edit"),
-                       url(r'^db/inventory/class/(?P<type_id>[0-9]+)/edit/bulk/$', 'inventory.views.quick_bulk_edit',
-                           name="inv-bulk-edit"),
+                       url(r'^db/inventory/', include('inventory.urls', namespace='inventory')),
 
                        #members
                        url(r'^list/mdc/raw/$', 'members.views.mdc_raw'),

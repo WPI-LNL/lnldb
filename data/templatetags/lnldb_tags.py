@@ -15,3 +15,8 @@ def daterange(datetime_start, datetime_end):
     else:
         out_str += datetime_end.strftime("%a %m/%d/%y %I:%M %p")
     return out_str
+
+
+@register.filter()
+def is_list(string):
+    return hasattr(string, '__iter__') and not isinstance(string, basestring)

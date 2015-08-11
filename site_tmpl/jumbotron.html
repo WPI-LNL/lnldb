@@ -1,0 +1,52 @@
+{% extends 'base_admin.html' %}
+{% load lnldb_tags %}
+{% block content %}
+
+    <p class="lead">
+        {% block breadcrumbs %}
+            {% if breadcrumbs %}
+                <ol class="breadcrumb">
+                    {% for pair in breadcrumbs %}
+                        <li>
+                            {% if pair|is_list %}
+                                <a href="{{ pair.1 }}">{{ pair.0 }}</a>
+                            {% else %}
+                                {{ pair }}
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ol>
+            {% endif %}
+        {% endblock %}
+    </p>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="jumbotron">
+                <h1>
+                {% block jumbotitle %}
+
+                {% endblock %}
+                </h1>
+
+                <h2>
+                    {% block jumbosubtitle %}
+
+                    {% endblock %}
+                </h2>
+
+
+                <div class="actions pull-right">
+                    <div class="btn-group">
+                        {% block buttons %}
+
+                        {% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% block body %}
+
+    {% endblock %}
+{% endblock %}

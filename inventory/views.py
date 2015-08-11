@@ -101,7 +101,7 @@ def quick_bulk_add(request, type_id):
     messages.add_message(request, messages.SUCCESS,
                          "%d items added and saved. Now editing." % num_to_add)
 
-    return HttpResponseRedirect(reverse('inventory.views.quick_bulk_edit',
+    return HttpResponseRedirect(reverse('inventory:quick_bulk_edit',
                                         kwargs={'type_id': type_id}))
 
 
@@ -125,13 +125,14 @@ def quick_bulk_edit(request, type_id):
             formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Items saved.")
-            return HttpResponseRedirect(reverse('inventory.views.type_detail',
+            return HttpResponseRedirect(reverse('inventory:type_detail',
                                                 kwargs={'type_id': type_id}))
     else:
         formset = fs_factory(instance=e_type)
     return render(request, "formset_grid.html", {
         'msg': "Bulk inventory edit for '%s'" % e_type.name,
         "formset": formset,
+        'form_show_errors': True
     })
 
 
@@ -151,7 +152,7 @@ def type_edit(request, type_id):
             formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Equipment type saved.")
-            return HttpResponseRedirect(reverse('inventory.views.type_detail',
+            return HttpResponseRedirect(reverse('inventory:type_detail',
                                                 kwargs={'type_id': type_id}))
     else:
         formset = EquipmentClassForm(instance=e_type)
@@ -174,7 +175,7 @@ def type_mk(request):
             obj = formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Equipment type added.")
-            return HttpResponseRedirect(reverse('inventory.views.type_detail',
+            return HttpResponseRedirect(reverse('inventory:type_detail',
                                                 kwargs={'type_id': obj.pk}))
     else:
         formset = EquipmentClassForm(initial={'category': category})
@@ -197,7 +198,7 @@ def cat_edit(request, category_id):
             obj = formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Category saved.")
-            return HttpResponseRedirect(reverse('inventory.views.cat',
+            return HttpResponseRedirect(reverse('inventory:cat',
                                                 kwargs={'category_id': category_id}))
     else:
         formset = CategoryForm(instance=category)
@@ -220,7 +221,7 @@ def cat_mk(request):
             obj = formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Category added.")
-            return HttpResponseRedirect(reverse('inventory.views.cat',
+            return HttpResponseRedirect(reverse('inventory:cat',
                                                 kwargs={'category_id': obj.pk}))
     else:
         formset = CategoryForm(initial={'parent': parent})
@@ -246,7 +247,7 @@ def fast_mk(request):
             obj = formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "%d items added and saved. Now editing." % formset.cleaned_data['num_to_add'])
-            return HttpResponseRedirect(reverse('inventory.views.quick_bulk_edit',
+            return HttpResponseRedirect(reverse('inventory:quick_bulk_edit',
                                                 kwargs={'type_id': obj.pk}))
     else:
         formset = FastAdd(request.user, initial={'item_cat': cat})
@@ -265,7 +266,7 @@ def fast_mk(request):
 #             formset.save()
 #             # return HttpResponseRedirect(reverse('lnldb.events.views.admin',
 #  kwargs={'msg':slugify(SUCCESS_MSG_INV)}))
-#             return HttpResponseRedirect(reverse('inventory.views.view'))
+#             return HttpResponseRedirect(reverse('inventory:view'))
 #
 #         else:
 #             context['formset'] = formset
@@ -284,11 +285,48 @@ def fast_mk(request):
 
 @login_required
 def type_detail(request, type_id):
-    context = {}
     e = get_object_or_404(EquipmentClass, pk=type_id)
-    context['equipment'] = e
 
-    return render(request, 'inventory/type_detail.html', context)
+    return render(request, 'inventory/type_detail.html', {
+        'breadcrumbs': e.breadcrumbs,
+        'equipment': e
+    })
+
+
+@login_required
+def item_detail(request, item_id):
+    item = get_object_or_404(EquipmentItem, pk=item_id)
+
+    return render(request, 'inventory/item_detail.html', {
+        'breadcrumbs': item.breadcrumbs,
+        'item': item
+    })
+
+
+@login_required
+def item_edit(request, item_id):
+    try:
+        item = EquipmentItem.objects.get(pk=int(item_id))
+    except EquipmentItem.DoesNotExist:
+        return HttpResponseNotFound()
+
+    if not request.user.has_perm('inventory.change_equipmentitem', item):
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        formset = EquipmentItemForm(request.POST, request.FILES, instance=item)
+        if formset.is_valid():
+            formset.save()
+            messages.add_message(request, messages.SUCCESS,
+                                 "Item saved.")
+            return HttpResponseRedirect(reverse('inventory:item_detail',
+                                                kwargs={'item_id': item_id}))
+    else:
+        formset = EquipmentItemForm(instance=item)
+    return render(request, "form_crispy.html", {
+        'msg': "Edit '%s'" % str(item),
+        "formset": formset,
+    })
 
 #
 # def addentry(request, id):

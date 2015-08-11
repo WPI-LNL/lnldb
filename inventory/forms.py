@@ -42,13 +42,39 @@ class CategoryForm(ModelForm):
 
 
 class EquipmentItemForm(ModelForm):
+    case = AutoCompleteSelectField('EquipmentContainer', label="Put into container",
+                                   required=False)
+
     def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            'features',
+            'purchase_date',
+            layout.Row(Div('barcode', css_class='col-md-6'),
+                       Div('serial_number', css_class='col-md-6')),
+            Div(Div(Field('home', help_text="Place where this belongs"),
+                    HTML('<span style="font-size:24pt;">OR</span>'),
+                    'case',
+                    css_class='panel-body'),
+                css_class='panel panel-default'),
+            FormActions(
+                Submit('save', 'Save changes'),
+            )
+        )
         super(EquipmentItemForm, self).__init__(*args, **kwargs)
         self.fields['home'].queryset = EquipmentCategory.possible_locations()
 
+    def clean_case(self):
+        if self.instance.pk:
+            if self.cleaned_data['case'] == self.instance:
+                raise ValidationError('You cannot put an item inside itself.')
+            if self.cleaned_data['case'] in self.instance.get_descendants():
+                raise ValidationError('You cannot put an item inside an item inside itself.')
+        return self.cleaned_data['case']
+
     class Meta:
         model = EquipmentItem
-        fields = ('barcode', 'purchase_date', 'home', 'serial_number', 'features')
+        fields = ('barcode', 'purchase_date', 'case', 'home', 'serial_number', 'features')
 
 
 class EquipmentClassForm(ModelForm):
@@ -63,6 +89,7 @@ class EquipmentClassForm(ModelForm):
                     'category',
                     'description',
                     'url',
+                    'holds_items',
                 ),
                 Tab(
                     'Detailed Information',
@@ -89,7 +116,7 @@ class EquipmentClassForm(ModelForm):
         model = EquipmentClass
         fields = ('name', 'category', 'description', 'value', 'url',
                   'model_number', 'manufacturer', 'length', 'width', 'height', 'weight',
-                  'wiki_text')
+                  'wiki_text', 'holds_items')
         widgets = {
             'description': PagedownWidget(),
             'wiki_text': PagedownWidget(),
@@ -106,6 +133,9 @@ class FastAdd(Form):
                                         label="Select Existing Item Type", required=False,
                                         plugin_options={'autoFocus': True})
 
+    put_into = AutoCompleteSelectField('EquipmentContainer', label="(Optional) Put into container",
+                                       required=False)
+
     def __init__(self, user, *args, **kwargs):
         self.helper = FormHelper()
         self.can_add = user.has_perm('inventory.add_equipmentclass')
@@ -117,7 +147,8 @@ class FastAdd(Form):
                                    Div('item_cat', css_class='col-md-6')),
                         css_class='panel-body'),
                     css_class='panel panel-default'),
-                'num_to_add',
+                layout.Row(Div('num_to_add', css_class='col-md-6'),
+                           Div('put_into', css_class='col-md-6')),
                 FormActions(
                     Submit('save', 'Save changes'),
                 )
@@ -127,7 +158,8 @@ class FastAdd(Form):
                 Div(Div('item_type',
                         css_class='panel-body'),
                     css_class='panel panel-default'),
-                'num_to_add',
+                layout.Row(Div('num_to_add', css_class='col-md-6'),
+                           Div('put_into', css_class='col-md-6')),
                 FormActions(
                     Submit('save', 'Save changes'),
                 )
