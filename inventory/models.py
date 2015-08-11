@@ -90,9 +90,8 @@ class EquimentItemManager(TreeManager):
                                            purchase_date=datetime.date.today(),
                                            case=put_into,
                                            level=0, rght=0, lft=0, tree_id=0))
+        self.bulk_create(items)
         self.rebuild()
-
-        EquipmentItem.objects.bulk_create(items)
 
 
 class EquipmentItem(MPTTModel):
@@ -136,6 +135,10 @@ class EquipmentItem(MPTTModel):
             return self.case.home
         else:
             return None
+
+    @cached_property
+    def unsafe_to_delete(self):
+        return self.get_children().exists()
 
     @cached_property
     def status(self):

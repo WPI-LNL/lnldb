@@ -366,6 +366,25 @@ def item_edit(request, item_id):
         "formset": formset,
     })
 
+
+@login_required
+def item_rm(request, item_id):
+    obj = get_object_or_404(EquipmentItem, pk=int(item_id))
+    return_page = reverse('inventory:type_detail', args=[obj.item_type.pk])
+
+    if not request.user.has_perm('inventory.delete_equipmentitem', obj):
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        if obj.unsafe_to_delete:
+            return HttpResponseBadRequest("There are still items of this type")
+        else:
+            obj.delete()
+            return HttpResponseRedirect(return_page)
+    else:
+        return HttpResponseBadRequest("Bad method")
+
+
 #
 # def addentry(request, id):
 #     context = {}
