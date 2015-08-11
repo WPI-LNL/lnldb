@@ -30,6 +30,7 @@ class ClassLookup(LookupChannel):
                                                                                       escape(obj.name),
                                                                                       escape(long_cat))
 
+
 class ContainerLookup(LookupChannel):
     model = EquipmentItem
 
@@ -57,5 +58,5 @@ class ContainerLookup(LookupChannel):
         long_cat = ">".join(map(lambda cat: cat.name,
                                 obj.item_type.category.get_ancestors_inclusive.all()))
         return ' <span class="text-muted">[%d inside]</span> <strong>%s</strong> (%s)' % (obj.get_children().count(),
-                                                                                      escape(obj),
-                                                                                      escape(long_cat))
+                                                                                          escape(obj),
+                                                                                          escape(long_cat))

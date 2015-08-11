@@ -44,6 +44,7 @@ class CategoryForm(ModelForm):
 class EquipmentItemForm(ModelForm):
     case = AutoCompleteSelectField('EquipmentContainer', label="Put into container",
                                    required=False)
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.layout = Layout(

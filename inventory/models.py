@@ -67,7 +67,7 @@ class EquipmentCategory(MPTTModel):
     def breadcrumbs(self):
         out = [('Inventory', reverse('inventory:view_all'))]
         out.extend([
-             (cat.name, reverse('inventory:cat', args=[cat.pk])) for cat in self.get_ancestors_inclusive
+            (cat.name, reverse('inventory:cat', args=[cat.pk])) for cat in self.get_ancestors_inclusive
         ])
         return out
 
@@ -179,7 +179,7 @@ class EquipmentClass(models.Model):
 
     @cached_property
     def breadcrumbs(self):
-        out =  self.category.breadcrumbs
+        out = self.category.breadcrumbs
         out.append(
             (self.name, reverse('inventory:type_detail', args=[self.pk]))
         )
