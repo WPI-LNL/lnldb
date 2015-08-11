@@ -107,7 +107,7 @@ def quick_bulk_add(request, type_id):
 
 @login_required
 def quick_bulk_edit(request, type_id):
-    get_object_or_404(EquipmentClass, pk=int(type_id))
+    e_type = get_object_or_404(EquipmentClass, pk=int(type_id))
 
     if not request.user.has_perm('inventory.change_equipmentitem', e_type):
         raise PermissionDenied
