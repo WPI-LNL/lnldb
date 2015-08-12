@@ -13,6 +13,14 @@
                         {% if node in cat.get_ancestors_inclusive %}<b>{% endif %}
                         <a href="{% url 'inventory:cat' node.pk %}">{{ node.name }}</a>
                         {% if node in cat.get_ancestors_inclusive %}</b>{% endif %}
+                        {% if cat == node %}
+                            {% if exclusive %}
+                                (<a href="?">show children</a>)
+                            {% else %}
+                                (<a href="?exclusive=True">hide children</a>)
+                            {% endif %}
+                        {% endif %}
+
                         {% if not node.is_leaf_node %}
                             <ul class="children">
                                 {{ children }}
@@ -71,7 +79,7 @@
                 </div>
 
                 {% if cat %}
-                    <h2>Equipment Types in '{{ cat }}':</h2>
+                    <h2>Equipment Types in '{{ cat }}'{% if not exclusive %} and related{% endif %}:</h2>
                 {% else %}
                     <h3>Equipment Types:</h3>
                 {% endif %}
