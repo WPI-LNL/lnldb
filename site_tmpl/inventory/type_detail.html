@@ -157,13 +157,12 @@
                             {% endif %}
                         </b>
                     </a>
+                    <br>
 
                     {% if equipment.holds_items %}
                         Contains {{ item.get_children.count }} items.
                         <br>
                     {% endif %}
-
-                    <br>
 
                     {% if item.features %}
                         {{ item.features }}
