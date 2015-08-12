@@ -51,9 +51,14 @@ def cat(request, category_id):
     context = {}
     category = get_object_or_404(EquipmentCategory, pk=category_id)
 
-    cat_family = category.get_descendants(include_self=True)
-    inv = EquipmentClass.objects.filter(category__in=cat_family) \
-        .order_by('category__level', 'category__name', 'name') \
+    if 'exclusive' in request.GET and request.GET['exclusive']:
+        inv = EquipmentClass.objects.filter(category=category)
+        context['exclusive'] = True
+    else:
+        inv = EquipmentClass.objects.filter(category__in=category.get_descendants_inclusive)
+        context['exclusive'] = False
+
+    inv = inv.order_by('category__level', 'category__name', 'name') \
         .annotate(item_count=Count('items'))
     subcategories = EquipmentCategory.objects.all()
 

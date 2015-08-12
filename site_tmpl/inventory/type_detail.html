@@ -171,8 +171,12 @@
                     {% endif %}
 
                     Resides in {{ item.location }}
-
                     <br>
+
+                    {% if item.case %}
+                        Inside <a href="{% url 'inventory:item_detail' item.case.pk %}">{{ item.case }}</a>
+                        <br>
+                    {% endif %}
 
                     Purchased {{ item.purchase_date }}
                 </div>
