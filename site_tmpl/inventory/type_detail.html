@@ -151,12 +151,17 @@
                         <b class="mini-title">
                             <span class="glyphicon glyphicon-{{ item.status.glyphicon }}" aria-hidden="true"></span>
                             {% if item.barcode %}
-                                {{ item.barcode }}
+                                Item #{{ item.barcode }}
                             {% else %}
-                                [No barcode]
-                            {% endif %}
+                                Item #{{ subitem.pk }} [no bc]
+                            {% endif %}}}
                         </b>
                     </a>
+
+                    {% if equipment.holds_items %}
+                        Contains {{ item.get_children.count }} items.
+                        <br>
+                    {% endif %}
 
                     <br>
 

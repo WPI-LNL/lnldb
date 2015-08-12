@@ -84,29 +84,26 @@
                 <h3>Contains</h3>
                 {% for subitem in item.contents.all %}
                     <div class="well eqp-item">
-                        <a href="{% url 'inventory:item_detail' item.pk %}">
+                        <a href="{% url 'inventory:item_detail' subitem.pk %}">
                             <b class="mini-title">
                                 <span class="glyphicon glyphicon-{{ item.status.glyphicon }}" aria-hidden="true"></span>
-                                {% if item.barcode %}
-                                    {{ item.barcode }}
+                                {% if subitem.barcode %}
+                                    Item #{{ subitem.barcode }}
                                 {% else %}
-                                    [No barcode]
+                                    Item #{{ subitem.pk }} [no bc]
                                 {% endif %}
                             </b>
                         </a>
 
                         <br>
-
-                        {% if item.features %}
-                            {{ item.features }}
+                        {{ subitem.item_type }}
+                        <br>
+                        {% if subitem.features %}
+                            {{ subitem.features }}
                             <br>
                         {% endif %}
 
-                        Resides in {{ item.location }}
-
-                        <br>
-
-                        Purchased {{ item.purchase_date }}
+                        Purchased {{ subitem.purchase_date }}
                     </div>
                 {% endfor %}
 
