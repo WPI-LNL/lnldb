@@ -35,7 +35,7 @@
                     <td>{{ user }}</td>
                     {% for level in levels %}
                         <td align="center" style="text-align: center" >
-                        {% if level.name_short in user.validlevels.keys %}
+                        {% if level.name_short in user.validlevels %}
                         <strong>X</strong>
                         {% else %}
                         {% endif %}
