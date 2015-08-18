@@ -12,7 +12,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Field, Button
 from crispy_forms.bootstrap import FormActions, TabHolder, Tab
 from multiupload.fields import MultiFileField
-
+from natural_duration import NaturalDurationField
 
 class MeetingAdditionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -52,6 +52,7 @@ class MeetingAdditionForm(forms.ModelForm):
         )
         super(MeetingAdditionForm, self).__init__(*args, **kwargs)
 
+    duration = NaturalDurationField(human_values=True)
     attendance = AutoCompleteSelectMultipleField('Users', required=False)
     datetime = SplitDateTimeField(required=True, initial=datetime.datetime.today())
     location = forms.ModelChoiceField(queryset=Location.objects.filter(available_for_meetings=True), label="Location",
