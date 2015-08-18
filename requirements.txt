@@ -38,3 +38,4 @@ django-reversion
 django-pagedown
 docutils
 django-mptt
+django-natural-duration
