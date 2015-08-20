@@ -1,5 +1,6 @@
 # LNLDB 
-[![Build Status](https://travis-ci.org/WPI-LNL/lnldb.svg)](https://travis-ci.org/WPI-LNL/lnldb) [![Coverage Status](https://coveralls.io/repos/WPI-LNL/lnldb/badge.svg?branch=master&service=github)](https://coveralls.io/github/WPI-LNL/lnldb?branch=master)
+[![Build Status](https://travis-ci.org/WPI-LNL/lnldb.svg)](https://travis-ci.org/WPI-LNL/lnldb) [![Coverage Status](https://coveralls.io/repos/WPI-LNL/lnldb/badge.svg?branch=master&service=github)](https://coveralls.io/github/WPI-LNL/lnldb?branch=master) [![Dependency Status](https://gemnasium.com/WPI-LNL/lnldb.svg)](https://gemnasium.com/WPI-LNL/lnldb)
+
 ## Intro
 LNLDB runs under Python2.x and Django.
 
