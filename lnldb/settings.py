@@ -263,7 +263,9 @@ from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 
 TEMPLATE_CONTEXT_PROCESSORS = TCP + (
     'django.template.context_processors.request',
-    'data.context_processors.airplane_mode')
+    'data.context_processors.airplane_mode',
+    'data.context_processors.analytics',
+)
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',  # default
