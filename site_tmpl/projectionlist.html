@@ -1,9 +1,12 @@
 
 {% extends 'base_admin.html' %}
+{% load permissionif %}
 {% block content %}
 <div class="pull-right">
     <a class="btn btn-warning btn-lg" href="{% url "projection-list-detail" %}"><i class="glyphicon glyphicon-th icon-white"></i>&nbsp;Detailed List</a>
-    <a class="btn btn-info btn-lg" href="{% url "projection-bulk-update" %}"><i class="glyphicon glyphicon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
+    {% permission request.user has 'projection.edit_pits' %}
+        <a class="btn btn-info btn-lg" href="{% url "projection-bulk-update" %}"><i class="glyphicon glyphicon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
+    {% endpermission %}
     <a class="btn btn-info btn-lg" href="{% url "events-pdf-multi" %}"><i class="glyphicon glyphicon-print icon-white"></i>PDF</a>
 </div>
 <h2> {{ h2 }} </h2>
@@ -22,7 +25,15 @@
         {% else %}
             <tr>
         {% endif %}
-                <td><a href="{% url "projection-update" user.id %}">{{ user }}</a></td>
+                <td>
+                    {% permission request.user has 'projection.edit_pits' %}
+                        <a href="{% url "projection-update" user.id %}">
+                            {{ user }}
+                        </a>
+                    {% else %}
+                        {{ user }}
+                    {% endpermission %}
+                </td>
                 <td>
                     {{ user.level.pit_level }}
                 </td>
@@ -36,5 +47,7 @@
     {% endfor %}
     
 </table>
+                        {% permission request.user has 'projection.edit_pits' %}
 <a class="btn btn-lg btn-primary" href="{% url "projection-create" %}">Create</a>
+    {% endpermission %}
 {% endblock %}

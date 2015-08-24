@@ -74,7 +74,7 @@ class InstanceForm(forms.ModelForm):
         model = PitInstance
         fields = ('pit_level', 'created_on', 'valid')
 
-    created_on = forms.SplitDateTimeField(initial=now())
+    created_on = forms.SplitDateTimeField()
 
 
 class BulkUpdateForm(forms.Form):

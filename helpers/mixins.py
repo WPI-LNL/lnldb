@@ -22,8 +22,15 @@ class OfficerMixin(object):
 class HasPermMixin(object):
     perms = []
 
-    @method_decorator(permission_required(perms, raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
+        from django.utils import six
+
+        if isinstance(self.perms, six.string_types):
+            if not request.user.has_perm(self.perms):
+                raise PermissionDenied
+        elif not request.user.has_perms(self.perms):
+            raise PermissionDenied
+
         return super(HasPermMixin, self).dispatch(request, *args, **kwargs)
 
 

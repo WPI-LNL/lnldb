@@ -1,9 +1,12 @@
 
 {% extends 'base_admin.html' %}
+{% load permissionif %}
 {% block content %}
 <div class="pull-right">
     <a class="btn btn-warning btn-lg" href="{% url "projection-list" %}"><i class="glyphicon glyphicon-th-large icon-white"></i>&nbsp;Standard List</a>
-    <a class="btn btn-info btn-lg" href="{% url "projection-bulk-update" %}"><i class="glyphicon glyphicon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
+    {% permission request.user has 'projection.edit_pits' %}
+        <a class="btn btn-info btn-lg" href="{% url "projection-bulk-update" %}"><i class="glyphicon glyphicon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
+    {% endpermission %}
     <a class="btn btn-info btn-lg" href="{% url "events-pdf-multi" %}"><i class="glyphicon glyphicon-print icon-white"></i>PDF</a>
 </div>
 <h2> {{ h2 }} </h2>
@@ -24,7 +27,13 @@
             <tr>
         {% endif %}
                 
-                <td><a href="{% url "projection-update" user.id %}">{{ user }}</a></td>
+                <td>
+                    {% permission request.user has 'projection.edit_pits' %}
+                        <a href="{% url "projection-update" user.id %}">{{ user }}</a>
+                    {% else %}
+                        {{ user }}
+                    {% endpermission %}
+                </td>
                 {% for level in levels %}
                     <td align="center" style="text-align: center" >
                         {% if level.name_short in user.validlevels %}
@@ -41,8 +50,12 @@
 <ul>
 {% for user in licensed_users %}
     <li>
-    
-        <a href="{% url "projection-update" user.id %}">{{ user }}</a>
+        {% permission request.user has 'projection.edit_pits' %}
+            <a href="{% url "projection-update" user.id %}">{{ user }}</a>
+        {% else %}
+            {{ user }}
+        {% endpermission %}
+
         {% if user.expired %}
             <span class="badge badge-important" title="Expired">Expired</span>
         {% elif user.expiring %}
@@ -61,8 +74,12 @@
 <ul>
 {% for user in alumni_users %}
     <li>
-    
-        <a href="{% url "projection-update" user.id %}">{{ user }}</a>
+        {% permission request.user has 'projection.edit_pits' %}
+            <a href="{% url "projection-update" user.id %}">{{ user }}</a>
+        {% else %}
+            {{ user }}
+        {% endpermission %}
+
         {% if user.expired %}
             <span class="badge badge-important" title="Expired">Expired</span>
         {% elif user.expiring %}
@@ -76,6 +93,8 @@
     </li>
 {% endfor %}
 </ul>
-<a class="btn btn-lg btn-primary" href="{% url "projection-create" %}">Create</a>
+{% permission request.user has 'projection.edit_pits' %}
+    <a class="btn btn-lg btn-primary" href="{% url "projection-create" %}">Create</a>
+{% endpermission %}
 
 {% endblock %}
