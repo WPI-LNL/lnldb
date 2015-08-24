@@ -53,7 +53,7 @@ class MeetingAdditionForm(forms.ModelForm):
         )
         super(MeetingAdditionForm, self).__init__(*args, **kwargs)
 
-    duration = NaturalDurationField(human_values=True)
+    duration = NaturalDurationField(human_values=True, required=True)
     attendance = AutoCompleteSelectMultipleField('Users', required=False)
     datetime = SplitDateTimeField(required=True, initial=datetime.datetime.today())
     location = forms.ModelChoiceField(queryset=Location.objects.filter(available_for_meetings=True), label="Location",
