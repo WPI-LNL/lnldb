@@ -14,6 +14,7 @@ from crispy_forms.bootstrap import FormActions, TabHolder, Tab
 from multiupload.fields import MultiFileField
 from natural_duration import NaturalDurationField
 
+
 class MeetingAdditionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
