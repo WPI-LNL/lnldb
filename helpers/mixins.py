@@ -1,4 +1,4 @@
-from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.utils.decorators import method_decorator
 
@@ -8,7 +8,8 @@ from helpers.challenges import is_officer
 class LoginRequiredMixin(object):
     @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
-        return super(LoginRequiredMixin, self).dispatch(request, *args, **kwargs)
+        return super(LoginRequiredMixin, self).dispatch(request,
+                                                        *args, **kwargs)
 
 
 class OfficerMixin(object):
@@ -32,6 +33,27 @@ class HasPermMixin(object):
             raise PermissionDenied
 
         return super(HasPermMixin, self).dispatch(request, *args, **kwargs)
+
+
+class HasPermOrTestMixin(object):
+    perms = []
+
+    def user_passes_test(self, request):
+        raise NotImplementedError
+
+    def dispatch(self, request, *args, **kwargs):
+        from django.utils import six
+
+        if self.user_passes_test(request, *args, **kwargs):
+            pass  # don't check for perms; we're good.
+        elif isinstance(self.perms, six.string_types):
+            if not request.user.has_perm(self.perms):
+                raise PermissionDenied
+        elif not request.user.has_perms(self.perms):
+            raise PermissionDenied
+
+        return super(HasPermOrTestMixin, self).dispatch(request,
+                                                        *args, **kwargs)
 
 
 class SetFormMsgMixin(object):
