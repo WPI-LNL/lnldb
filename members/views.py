@@ -1,9 +1,6 @@
-# Create your views here.
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse
-from django.shortcuts import render, get_object_or_404, render
-from django.template import RequestContext
+from django.shortcuts import get_object_or_404, render
 
 from django.views.generic import UpdateView
 
@@ -14,10 +11,11 @@ from members.models import StatusChange
 from acct.models import Profile
 
 from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 
-from helpers.mixins import LoginRequiredMixin, HasPermMixin, ConditionalFormMixin
+from helpers.mixins import LoginRequiredMixin, ConditionalFormMixin, \
+    HasPermOrTestMixin
 
 from events.models import Event, Projection, EventCCInstance
 
@@ -26,7 +24,8 @@ from events.models import Event, Projection, EventCCInstance
 @permission_required('acct.view_member', raise_exception=True)
 def mdc(request):
     context = {}
-    users = User.objects.exclude(profile__mdc__isnull=True).exclude(profile__mdc='').order_by('last_name')
+    users = User.objects.exclude(profile__mdc__isnull=True)\
+        .exclude(profile__mdc='').order_by('last_name')
 
     context['users'] = users
     context['h2'] = "Member MDC List"
@@ -38,7 +37,8 @@ def mdc(request):
 @permission_required('acct.view_member', raise_exception=True)
 def mdc_raw(request):
     context = {}
-    users = User.objects.exclude(profile__mdc__isnull=True).exclude(profile__mdc='').order_by('last_name')
+    users = User.objects.exclude(profile__mdc__isnull=True)\
+        .exclude(profile__mdc='').order_by('last_name')
 
     context['users'] = users
 
@@ -148,18 +148,22 @@ def limbousers(request):
 def detail(request, id):
     context = {}
     user = get_object_or_404(User, pk=id)
-    if not ((user.profile.is_lnl and request.user.has_perm('acct.view_member')) or
-            request.user.has_perm('acct.view_user', user.profile)):
+    if not ((user.profile.is_lnl and
+             request.user.has_perm('acct.view_member')) or
+            request.user.has_perm('acct.view_user', user.profile) or
+            request.user.pk == user.pk):
         raise PermissionDenied
 
     context['u'] = user
 
-    moviesccd = Event.objects.filter(crew_chief__id=id, projection__isnull=False)
+    moviesccd = Event.objects.filter(crew_chief__id=id,
+                                     projection__isnull=False)
 
     # for the new style too
     p = Projection.objects.all()
     p_ids = [i.id for i in p]
-    moviesccd2 = EventCCInstance.objects.filter(service__in=p_ids, crew_chief=user)
+    moviesccd2 = EventCCInstance.objects.filter(service__in=p_ids,
+                                                crew_chief=user)
 
     context['moviesccd'] = moviesccd.count() + moviesccd2.count()
     return render(request, 'userdetail.html', context)
@@ -171,11 +175,15 @@ def named_detail(request, username):
     return detail(request, user.pk)
 
 
-class UserUpdate(LoginRequiredMixin, HasPermMixin, ConditionalFormMixin, UpdateView):
+class UserUpdate(LoginRequiredMixin, HasPermOrTestMixin,
+                 ConditionalFormMixin, UpdateView):
     model = User
     form_class = MemberForm
     template_name = "form_crispy_cbv.html"
     perms = 'acct.edit_user'
+
+    def user_passes_test(self, request, pk):
+        return request.user and request.user.pk == int(pk)
 
     def form_valid(self, form):
         user = self.get_object()
@@ -189,7 +197,8 @@ class UserUpdate(LoginRequiredMixin, HasPermMixin, ConditionalFormMixin, UpdateV
             s.save()
         # x= dir(newgroups)
 
-        messages.success(self.request, "Account Info Saved!", extra_tags='success')
+        messages.success(self.request, "Account Info Saved!",
+                         extra_tags='success')
         return super(UserUpdate, self).form_valid(form)
 
     def get_success_url(self):
@@ -200,14 +209,19 @@ class UserUpdate(LoginRequiredMixin, HasPermMixin, ConditionalFormMixin, UpdateV
         return 'member'
 
 
-class MemberUpdate(LoginRequiredMixin, HasPermMixin, ConditionalFormMixin, UpdateView):
+class MemberUpdate(LoginRequiredMixin, HasPermOrTestMixin,
+                   ConditionalFormMixin, UpdateView):
     model = Profile
     form_class = MemberContact
     template_name = "form_crispy_cbv.html"
     perms = 'acct.edit_user'
 
+    def user_passes_test(self, request, pk):
+        return request.user and request.user.pk == int(pk)
+
     def form_valid(self, form):
-        messages.success(self.request, "Account Info Saved!", extra_tags='success')
+        messages.success(self.request, "Account Info Saved!",
+                         extra_tags='success')
         return super(MemberUpdate, self).form_valid(form)
 
     def get_success_url(self):
