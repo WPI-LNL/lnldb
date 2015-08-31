@@ -1,6 +1,8 @@
 import datetime
 from time import mktime
 import json
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 from django_ical.views import ICalFeed
 from events.models import Event, EventCCInstance
@@ -16,6 +18,10 @@ class EventFeed(ICalFeed):
     product_id = '-//lnl.wpi.edu//LNLDB//EN'
     timezone = 'UTC'
     file_name = "event.ics"
+
+    @method_decorator(cache_page(15 * 60))
+    def __call__(self, *args, **kwargs):
+        return super(EventFeed, self).__call__(*args, **kwargs)
 
     def items(self):
         return list(Event.objects.filter(approved=True).exclude(Q(closed=True) |
