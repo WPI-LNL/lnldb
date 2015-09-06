@@ -477,7 +477,7 @@ class CCRCreate(SetFormMsgMixin, HasPermMixin, ConditionalFormMixin, LoginRequir
     form_class = InternalReportForm
     template_name = "form_crispy_cbv.html"
     msg = "New Crew Chief Report"
-    perms = 'add_event_report'
+    perms = 'events.add_event_report'
 
     def get_form_kwargs(self):
         kwargs = super(CCRCreate, self).get_form_kwargs()
@@ -498,7 +498,7 @@ class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermMixin, LoginRequir
     form_class = InternalReportForm
     template_name = "form_crispy_cbv.html"
     msg = "Update Crew Chief Report"
-    perms = 'add_event_report'  # TODO: check if adding a diffferent perm
+    perms = 'events.add_event_report'  # TODO: check if adding a diffferent perm
 
     def form_valid(self, form):
         messages.success(self.request, "Crew Chief Report Updated!", extra_tags='success')
@@ -512,7 +512,7 @@ class CCRDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = CCReport
     template_name = "form_delete_cbv.html"
     msg = "Deleted Crew Chief Report"
-    perms = 'add_event_report'  # TODO: check if adding a diffferent perm
+    perms = 'events.add_event_report'  # TODO: check if adding a diffferent perm
 
     def get_object(self, queryset=None):
         """ Hook to ensure object isn't closed """
@@ -532,7 +532,7 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
     template_name = "form_crispy_cbv.html"
     msg = "New Bill"
 
-    perms = 'bill_event'
+    perms = 'events.bill_event'
 
     def get_context_data(self, **kwargs):
         context = super(BillingCreate, self).get_context_data(**kwargs)
@@ -563,7 +563,7 @@ class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateVie
     form_class = BillingUpdateForm
     template_name = "form_crispy_cbv.html"
     msg = "Update Bill"
-    perms = 'bill_event'
+    perms = 'events.bill_event'
 
     def get_form_kwargs(self):
         # pass "user" keyword argument with the current user to your form
@@ -584,7 +584,7 @@ class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
     model = Billing
     template_name = "form_delete_cbv.html"
     msg = "Deleted Bill"
-    perms = 'bill_event'
+    perms = 'events.bill_event'
 
     def get_object(self, queryset=None):
         """ Hook to ensure object isn't closed """
