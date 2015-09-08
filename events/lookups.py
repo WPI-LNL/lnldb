@@ -12,7 +12,8 @@ class OrgLookup(LookupChannel):
         return request.user.is_authenticated()
 
     def get_query(self, q, request):
-        return Organization.objects.filter(Q(name__icontains=q) | Q(shortname__icontains=q)).filter(archived=False)
+        return Organization.objects.filter(Q(name__icontains=q) | Q(shortname__icontains=q)).filter(archived=False)\
+            .distinct()
 
     def get_result(self, obj):
         return obj.name
@@ -34,7 +35,7 @@ class FundLookup(LookupChannel):
         return Fund.objects.filter(Q(name__icontains=q) |
                                    Q(account__icontains=q) |
                                    Q(organization__icontains=q) |
-                                   Q(fund__icontains=q))
+                                   Q(fund__icontains=q)).distinct()
 
     def get_result(self, obj):
         return obj.id
@@ -61,7 +62,8 @@ class FundLookupLimited(LookupChannel):
             .filter(Q(name__icontains=q) |
                     Q(account__icontains=q) |
                     Q(organization__icontains=q) |
-                    Q(fund__icontains=q))
+                    Q(fund__icontains=q))\
+            .distinct()
 
     def get_result(self, obj):
         return obj.id
