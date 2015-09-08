@@ -14,7 +14,7 @@ class UserLookup(LookupChannel):
     def get_query(self, q, request):
         for term in q.split():
             return User.objects.filter(
-                Q(username__icontains=term) | Q(first_name__icontains=term) | Q(last_name__icontains=term))
+                Q(username__icontains=term) | Q(first_name__icontains=term) | Q(last_name__icontains=term)).distinct()
 
     def get_result(self, obj):
         if obj.first_name or obj.last_name:
