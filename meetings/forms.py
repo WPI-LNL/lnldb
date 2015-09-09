@@ -121,11 +121,12 @@ class AnnounceSendForm(forms.ModelForm):
         )
 
     def save(self, commit=True):
-        obj = super(AnnounceSendForm, self).save(commit=False)
-        obj.meeting = self.meeting
+        self.instance = super(AnnounceSendForm, self).save(commit=False)
+        self.instance.meeting = self.meeting
         if commit:
-            obj.save()
-        return obj
+            self.instance.save()
+            self.save_m2m()
+        return self.instance
 
     class Meta:
         model = MeetingAnnounce
@@ -163,11 +164,12 @@ class AnnounceCCSendForm(forms.ModelForm):
             Q(closed=True) | Q(cancelled=True))
 
     def save(self, commit=True):
-        obj = super(AnnounceCCSendForm, self).save(commit=False)
-        obj.meeting = self.meeting
+        self.instance = super(AnnounceCCSendForm, self).save(commit=False)
+        self.instance.meeting = self.meeting
         if commit:
-            obj.save()
-        return obj
+            self.instance.save()
+            self.save_m2m()
+        return self.instance
 
     class Meta:
         model = CCNoticeSend
