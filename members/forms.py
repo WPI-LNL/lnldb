@@ -82,7 +82,7 @@ class MemberContact(FieldAccessForm):
             pass
 
         thisisme = FieldAccessLevel(
-            lambda user, instance: user == instance,
+            lambda user, instance: user.profile == instance,
             enable=('wpibox', 'phone', 'addr'),
         )
         selfservice = FieldAccessLevel(

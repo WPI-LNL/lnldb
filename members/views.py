@@ -182,7 +182,7 @@ class UserUpdate(LoginRequiredMixin, HasPermOrTestMixin,
     template_name = "form_crispy_cbv.html"
     perms = 'acct.edit_user'
 
-    def user_passes_test(self, request, pk):
+    def user_passes_test(self, request, pk, *args, **kwargs):
         return request.user and request.user.pk == int(pk)
 
     def form_valid(self, form):
@@ -216,8 +216,8 @@ class MemberUpdate(LoginRequiredMixin, HasPermOrTestMixin,
     template_name = "form_crispy_cbv.html"
     perms = 'acct.edit_user'
 
-    def user_passes_test(self, request, pk):
-        return request.user and request.user.pk == int(pk)
+    def user_passes_test(self, request, pk, *args, **kwargs):
+        return request.user and request.user.profile.pk == int(pk)
 
     def form_valid(self, form):
         messages.success(self.request, "Account Info Saved!",

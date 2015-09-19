@@ -38,7 +38,7 @@ class HasPermMixin(object):
 class HasPermOrTestMixin(object):
     perms = []
 
-    def user_passes_test(self, request):
+    def user_passes_test(self, request, *args, **kwargs):
         raise NotImplementedError
 
     def dispatch(self, request, *args, **kwargs):
