@@ -44,7 +44,7 @@ def email_cc_notification(sender, instance, created, raw=False, **kwargs):
 @receiver(post_save, sender=Billing)
 def email_billing_create(sender, instance, created, raw=False, **kwargs):
     """ Sends an email to the client to notify of a bill being created """
-    if created and not instance.opt_out_initial_email and not raw:
+    if created and not instance.opt_out_initial_email and not raw and i.event.contact and i.event.contact.email:
         i = instance
         email_body = """
             A New LNL bill has been posted for "%s" on %s for the amount of $%s
@@ -59,7 +59,7 @@ def email_billing_create(sender, instance, created, raw=False, **kwargs):
 def email_billing_marked_paid(sender, instance, created, raw=False, **kwargs):
     """ Sends an email to the client to notify of a bill having been paid """
     if not created and not raw:
-        if instance.date_paid and not instance.opt_out_update_email:
+        if instance.date_paid and not instance.opt_out_update_email and i.event.contact and i.event.contact.email:
             i = instance
             email_body = """
             Thank you for paying the bill for "%s" on %s for the amount of $%s
@@ -72,7 +72,7 @@ def email_billing_marked_paid(sender, instance, created, raw=False, **kwargs):
 
 @receiver(pre_delete, sender=Billing)
 def email_billing_delete(sender, instance, **kwargs):
-    if not instance.opt_out_update_email:
+    if not instance.opt_out_update_email and i.event.contact and i.event.contact.email:
         i = instance
         email_body = """
             The bill for the amount of $%s on "%s" has been deleted
