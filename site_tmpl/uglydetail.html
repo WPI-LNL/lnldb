@@ -143,7 +143,7 @@
                 <li><a href="#services" data-toggle="tab">Services</a></li>
                 <li><a href="#crew" data-toggle="tab">Crew</a></li>
                 <li><a href="#reports" data-toggle="tab">Reports</a></li>
-                {% permission request.user has 'events.event_view_billing' of event %}
+                {% permission request.user has 'events.view_event_billing' of event %}
                     <li><a href="#billing" data-toggle="tab">Billing</a></li>
                 {% endpermission %}
                 <li><a href="#files" data-toggle="tab">Files</a></li>
@@ -444,7 +444,7 @@
                         {% endfor %}
                     </table>
                 </div>
-                {% permission request.user has 'events.event_view_billing' of event %}
+                {% permission request.user has 'events.view_event_billing' of event %}
                 <div id="billing" class="tab-pane">
                     {% permission request.user has 'events.adjust_event_charges' of event %}
                         <div class="pull-right btn-group">
