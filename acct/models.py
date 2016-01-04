@@ -1,15 +1,15 @@
 from django.db import models
 from django.db.models import Q
-from django.contrib.auth.models import User
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
+from django.conf import settings
 import watson
 # Create your models here.
 from events.models import Organization
 
 
 class Profile(models.Model):
-    user = models.OneToOneField(User)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL)
 
     wpibox = models.IntegerField(null=True, blank=True, verbose_name="WPI Box Number")
     phone = models.CharField(max_length=24, null=True, blank=True, verbose_name="Phone Number")
@@ -110,7 +110,7 @@ def create_user_profile(sender, instance, created, raw=False, **kwargs):
             instance.save()
 
 
-post_save.connect(create_user_profile, sender=User)
+post_save.connect(create_user_profile, sender=settings.AUTH_USER_MODEL)
 
 
 # hacky? Yes. But I want to fix this, and I don't want to mess with the strangeness of that form.

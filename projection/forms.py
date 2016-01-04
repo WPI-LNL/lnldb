@@ -1,8 +1,8 @@
 import datetime
 
 from django import forms
+from django.contrib.auth import get_user_model
 from django.forms.models import inlineformset_factory
-from django.contrib.auth.models import User
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Field, HTML
 from crispy_forms.bootstrap import FormActions
@@ -48,7 +48,7 @@ class ProjectionistForm(forms.ModelForm):
             )
         )
         super(ProjectionistForm, self).__init__(*args, **kwargs)
-        self.fields['user'].queryset = User.objects.exclude(projectionist__isnull=False)
+        self.fields['user'].queryset = get_user_model().objects.exclude(projectionist__isnull=False)
 
     user = AutoCompleteSelectField('Users', required=True, plugin_options={
         'position': "{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})

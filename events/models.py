@@ -1,7 +1,6 @@
 from django.db import models
 # from events.managers import EventManager
 # noinspection PyUnresolvedReferences
-from django.contrib.auth.models import User
 from django.conf import settings
 # Create your models here.
 from django.core.urlresolvers import reverse
@@ -344,14 +343,14 @@ class Event(models.Model):
     objects = OptimizedEventManager()
     event_mg = EventManager()
 
-    submitted_by = models.ForeignKey(User, related_name='submitter')
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='submitter')
     submitted_ip = models.GenericIPAddressField(max_length=16)
     submitted_on = models.DateTimeField(auto_now_add=True, db_index=True)
 
     event_name = models.CharField(max_length=128, db_index=True)
     # Person
     person_name = models.CharField(max_length=128, null=True, blank=True, verbose_name="Contact_name")  # DEPRECATED
-    contact = models.ForeignKey(User, null=True, blank=True, verbose_name="Contact")
+    contact = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, verbose_name="Contact")
     org = models.ManyToManyField('Organization', blank=True, verbose_name="Client")
     billing_org = models.ForeignKey('Organization', null=True, blank=True, related_name="billedevents")
     billing_fund = models.ForeignKey('Fund', null=True, blank=True, on_delete=models.SET_NULL, related_name="event_accounts")
@@ -387,28 +386,28 @@ class Event(models.Model):
     ##Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True, blank=True)
-    approved_by = models.ForeignKey(User, related_name="eventapprovals", null=True, blank=True)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventapprovals", null=True, blank=True)
 
     # billing reviews
     reviewed = models.BooleanField(default=False)
     reviewed_on = models.DateTimeField(null=True, blank=True)
-    reviewed_by = models.ForeignKey(User, related_name="eventbillingreview", null=True, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventbillingreview", null=True, blank=True)
 
     closed = models.BooleanField(default=False)
     closed_on = models.DateTimeField(null=True, blank=True)
-    closed_by = models.ForeignKey(User, related_name="eventclosings", null=True, blank=True)
+    closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventclosings", null=True, blank=True)
 
     cancelled = models.BooleanField(default=False)
     cancelled_on = models.DateTimeField(null=True, blank=True)
-    cancelled_by = models.ForeignKey(User, related_name="eventcancellations", null=True, blank=True)
+    cancelled_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventcancellations", null=True, blank=True)
     cancelled_reason = models.TextField(null=True, blank=True)
 
     payment_amount = models.IntegerField(blank=True, null=True, default=None)
     paid = models.BooleanField(default=False, db_index=True)
 
     # reports
-    crew_chief = models.ManyToManyField(User, blank=True, related_name='crewchiefx')
-    crew = models.ManyToManyField(User, blank=True, related_name='crewx')
+    crew_chief = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='crewchiefx')
+    crew = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='crewx')
     ccs_needed = models.PositiveIntegerField(default=0, db_index=True)
     # ^^^ used as a cache to get around the awkward event type fields and allow for sql filtering
 
@@ -870,7 +869,7 @@ class Event(models.Model):
 
 class CCReport(models.Model):
     glyphicon = 'comment'
-    crew_chief = models.ForeignKey(User)
+    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL)
     event = models.ForeignKey(Event)
     report = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
@@ -940,8 +939,8 @@ class Organization(models.Model):  # AKA Client
 
     accounts = models.ManyToManyField(Fund, related_name='orgfunds')
 
-    user_in_charge = models.ForeignKey(User, related_name='orgowner')
-    associated_users = models.ManyToManyField(User, related_name='orgusers')
+    user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='orgowner')
+    associated_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='orgusers')
 
     associated_orgs = models.ManyToManyField("self", blank=True, verbose_name="Associated Clients")
 
@@ -990,8 +989,8 @@ class Organization(models.Model):  # AKA Client
 
 
 class OrganizationTransfer(models.Model):
-    new_user_in_charge = models.ForeignKey(User, related_name="xfer_new")
-    old_user_in_charge = models.ForeignKey(User, related_name="xfer_old")
+    new_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_new")
+    old_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_old")
     org = models.ForeignKey(Organization)
     uuid = UUIDField(auto=True)  # for the link
     created = models.DateTimeField(auto_now=True)
@@ -1011,7 +1010,7 @@ class OrganizationTransfer(models.Model):
 class OrgBillingVerificationEvent(models.Model):
     org = models.ForeignKey(Organization, related_name="verifications")
     date = models.DateField()
-    verified_by = models.ForeignKey(User, related_name="verification_events")
+    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="verification_events")
     note = models.TextField(null=True, blank=True)
 
     class Meta:
@@ -1023,7 +1022,7 @@ class OrgBillingVerificationEvent(models.Model):
 class Hours(models.Model):
     event = models.ForeignKey('Event', related_name="hours")
     service = models.ForeignKey('Service', related_name="hours", null=True, blank=True)
-    user = models.ForeignKey(User, related_name="hours")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="hours")
     hours = models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)
 
     def __unicode__(self):
@@ -1037,7 +1036,7 @@ class Hours(models.Model):
 class EventCCInstance(models.Model):
     # the pair
     event = models.ForeignKey('Event', related_name="ccinstances")
-    crew_chief = models.ForeignKey(User, related_name="ccinstances")
+    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="ccinstances")
 
     # the service
     service = models.ForeignKey(Service, related_name="ccinstances")
@@ -1084,7 +1083,7 @@ class EventCCInstance(models.Model):
 # A log of CC Report Reminders Sent
 class ReportReminder(models.Model):
     event = models.ForeignKey('Event', related_name="ccreportreminders")
-    crew_chief = models.ForeignKey(User, related_name="ccreportreminders")
+    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="ccreportreminders")
     sent = models.DateTimeField(auto_now_add=True)
 
 

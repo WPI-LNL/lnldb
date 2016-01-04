@@ -10,7 +10,8 @@ from members.models import StatusChange
 
 from acct.models import Profile
 
-from django.contrib.auth.models import User
+from django.conf import  settings
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 
@@ -24,7 +25,7 @@ from events.models import Event, Projection, EventCCInstance
 @permission_required('acct.view_member', raise_exception=True)
 def mdc(request):
     context = {}
-    users = User.objects.exclude(profile__mdc__isnull=True)\
+    users = get_user_model().objects.exclude(profile__mdc__isnull=True)\
         .exclude(profile__mdc='').order_by('last_name')
 
     context['users'] = users
@@ -37,7 +38,7 @@ def mdc(request):
 @permission_required('acct.view_member', raise_exception=True)
 def mdc_raw(request):
     context = {}
-    users = User.objects.exclude(profile__mdc__isnull=True)\
+    users = get_user_model().objects.exclude(profile__mdc__isnull=True)\
         .exclude(profile__mdc='').order_by('last_name')
 
     context['users'] = users
@@ -52,7 +53,7 @@ def mdc_raw(request):
 @permission_required('acct.view_member', raise_exception=True)
 def officers(request):
     context = {}
-    users = User.objects.filter(groups__name='Officer').order_by('last_name')
+    users = get_user_model().objects.filter(groups__name='Officer').order_by('last_name')
 
     context['users'] = users
     context['h2'] = "Officer List"
@@ -64,7 +65,7 @@ def officers(request):
 @permission_required('acct.view_member', raise_exception=True)
 def active(request):
     context = {}
-    users = User.objects.filter(groups__name='Active').order_by('last_name')
+    users = get_user_model().objects.filter(groups__name='Active').order_by('last_name')
 
     context['users'] = users
     context['h2'] = "Active Members"
@@ -76,7 +77,7 @@ def active(request):
 @permission_required('acct.view_member', raise_exception=True)
 def associate(request):
     context = {}
-    users = User.objects.filter(groups__name='Associate').order_by('last_name')
+    users = get_user_model().objects.filter(groups__name='Associate').order_by('last_name')
 
     context['users'] = users
     context['h2'] = "Associate Members"
@@ -88,7 +89,7 @@ def associate(request):
 @permission_required('acct.view_member', raise_exception=True)
 def alum(request):
     context = {}
-    users = User.objects.filter(groups__name='Alumni').order_by('last_name')
+    users = get_user_model().objects.filter(groups__name='Alumni').order_by('last_name')
 
     context['users'] = users
     context['h2'] = "Alumni Members"
@@ -100,7 +101,7 @@ def alum(request):
 @permission_required('acct.view_member', raise_exception=True)
 def away(request):
     context = {}
-    users = User.objects.filter(groups__name='Away').order_by('last_name')
+    users = get_user_model().objects.filter(groups__name='Away').order_by('last_name')
 
     context['users'] = users
     context['h2'] = "Away Members"
@@ -112,7 +113,7 @@ def away(request):
 @permission_required('acct.view_member', raise_exception=True)
 def inactive(request):
     context = {}
-    users = User.objects.filter(groups__name='Inactive').order_by('last_name')
+    users = get_user_model().objects.filter(groups__name='Inactive').order_by('last_name')
 
     context['users'] = users
     context['h2'] = "Inactive Members"
@@ -124,10 +125,10 @@ def inactive(request):
 @permission_required('acct.view_user', raise_exception=True)
 def contactusers(request):
     context = {}
-    users = User.objects.filter(groups__name='Contact').order_by('last_name')
+    users = get_user_model().objects.filter(groups__name='Contact').order_by('last_name')
 
     context['users'] = users
-    context['h2'] = "Contact Users"
+    context['h2'] = "Contact get_user_model()s"
 
     return render(request, 'users.html', context)
 
@@ -136,7 +137,7 @@ def contactusers(request):
 @permission_required('acct.view_user', raise_exception=True)
 def limbousers(request):
     context = {}
-    users = User.objects.filter(groups__isnull=True)
+    users = get_user_model().objects.filter(groups__isnull=True)
 
     context['users'] = users
     context['h2'] = "Users Without Association"
@@ -147,7 +148,7 @@ def limbousers(request):
 @login_required
 def detail(request, id):
     context = {}
-    user = get_object_or_404(User, pk=id)
+    user = get_object_or_404(settings.AUTH_USER_MODEL, pk=id)
     if not ((user.profile.is_lnl and
              request.user.has_perm('acct.view_member')) or
             request.user.has_perm('acct.view_user', user.profile) or
@@ -171,13 +172,13 @@ def detail(request, id):
 
 @login_required
 def named_detail(request, username):
-    user = get_object_or_404(User, username=username)
+    user = get_object_or_404(settings.AUTH_USER_MODEL, username=username)
     return detail(request, user.pk)
 
 
 class UserUpdate(LoginRequiredMixin, HasPermOrTestMixin,
                  ConditionalFormMixin, UpdateView):
-    model = User
+    model = settings.AUTH_USER_MODEL
     form_class = MemberForm
     template_name = "form_crispy_cbv.html"
     perms = 'acct.edit_user'

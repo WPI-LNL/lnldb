@@ -1,11 +1,12 @@
 from ajax_select import LookupChannel
 from django.utils.html import escape
 from django.db.models import Q
-from django.contrib.auth.models import User
+from django.conf import settings
+from django.contrib.auth import get_user_model
 
 
 class UserLookup(LookupChannel):
-    model = User
+    model = settings.AUTH_USER_MODEL
 
     def check_auth(self, request):
         if request.user.groups.filter(Q(name="Alumni") | Q(name="Active") | Q(name="Officer")).exists():
@@ -13,7 +14,7 @@ class UserLookup(LookupChannel):
 
     def get_query(self, q, request):
         for term in q.split():
-            return User.objects.filter(
+            return get_user_model().objects.filter(
                 Q(username__icontains=term) | Q(first_name__icontains=term) | Q(last_name__icontains=term)).distinct()
 
     def get_result(self, obj):
@@ -30,7 +31,7 @@ class UserLookup(LookupChannel):
 
 
 class OfficerLookup(LookupChannel):
-    model = User
+    model = settings.AUTH_USER_MODEL
 
     def check_auth(self, request):
         if request.user.groups.filter(Q(name="Alumni") | Q(name="Active") | Q(name="Officer")).exists():
@@ -38,7 +39,7 @@ class OfficerLookup(LookupChannel):
 
     def get_query(self, q, request):
         for term in q.split():
-            return User.objects.filter(
+            return get_user_model().objects.filter(
                 Q(username__icontains=term) | Q(first_name__icontains=term) | Q(last_name__icontains=term)).filter(
                 groups__name="Officer").distinct()
 
@@ -56,7 +57,7 @@ class OfficerLookup(LookupChannel):
 
 
 class MemberLookup(LookupChannel):
-    model = User
+    model = settings.AUTH_USER_MODEL
 
     def check_auth(self, request):
         if request.user.groups.filter(Q(name="Alumni") | Q(name="Active") | Q(name="Officer")).exists():
@@ -64,7 +65,7 @@ class MemberLookup(LookupChannel):
 
     def get_query(self, q, request):
         for term in q.split():
-            return User.objects.filter(
+            return get_user_model().objects.filter(
                 Q(username__icontains=term) | Q(first_name__icontains=term) | Q(last_name__icontains=term)).filter(
                 Q(groups__name="Alumni") | Q(groups__name="Active") | Q(groups__name="Officer")).distinct()
 
@@ -82,7 +83,7 @@ class MemberLookup(LookupChannel):
 
 
 class AssocMemberLookup(LookupChannel):
-    model = User
+    model = settings.AUTH_USER_MODEL
 
     def check_auth(self, request):
         if request.user.groups.filter(Q(name="Alumni") | Q(name="Active") | Q(name="Officer")).exists():
@@ -90,7 +91,7 @@ class AssocMemberLookup(LookupChannel):
 
     def get_query(self, q, request):
         for term in q.split():
-            return User.objects.filter(
+            return get_user_model().objects.filter(
                 Q(username__icontains=term) | Q(first_name__icontains=term) | Q(last_name__icontains=term)).filter(
                 Q(groups__name="Associate") | Q(groups__name="Alumni") | Q(groups__name="Active") | Q(
                     groups__name="Officer")).distinct()

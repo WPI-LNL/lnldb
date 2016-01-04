@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.db.models.signals import post_save, pre_save
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
@@ -83,7 +82,7 @@ def email_billing_delete(sender, instance, **kwargs):
         e.send()
 
 
-@receiver(post_save, sender=User)
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def initial_user_create_notify(sender, instance, created, raw=False, **kwargs):
     if created and not raw:
         i = instance

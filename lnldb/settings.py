@@ -238,7 +238,7 @@ LOGGING = {
 }
 
 AUTH_PROFILE_MODULE = 'acct.Profile'
-
+AUTH_USER_MODEL = 'auth.User'
 
 # AJAX_SELECT_BOOTSTRAP = False
 # AJAX_SELECT_INLINES = False

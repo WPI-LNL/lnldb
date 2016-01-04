@@ -3,8 +3,7 @@ import datetime
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
-from django.template import RequestContext
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.forms.models import inlineformset_factory
 from django.utils.functional import curry
 from events.models import Event, CCReport, Hours
@@ -285,7 +284,7 @@ def hours_edit(request, eventid, userid):
     event = uevent[0].event
 
     hours = get_object_or_404(Hours, event=event, user_id=userid)
-    u = get_object_or_404(User, pk=userid)
+    u = get_object_or_404(settings.AUTH_USER_MODEL, pk=userid)
     context['msg'] = "Hours for '%s' on '%s'" % (u, event.event_name)
     if request.method == 'POST':
         formset = EditHoursForm(request.POST, instance=hours)

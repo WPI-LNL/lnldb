@@ -1,6 +1,5 @@
 # Create your views here.
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 from django.contrib import messages
 
 from django.core.urlresolvers import reverse
@@ -22,7 +21,7 @@ from django.dispatch import receiver
 
 
 class AcctUpdate(LoginRequiredMixin, UpdateView):
-    model = User
+    model = settings.AUTH_USER_MODEL
     form_class = UserAcct
     template_name = 'myacct.html'
 
@@ -68,7 +67,7 @@ def send_member_request(request):
 
 
 class LNLAdd(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
-    model = User
+    model = settings.AUTH_USER_MODEL
     form_class = UserAddForm
     template_name = "form_master_cbv.html"
     msg = 'New User Addition'

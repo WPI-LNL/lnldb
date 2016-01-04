@@ -1,7 +1,7 @@
 import datetime
 
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.utils.functional import cached_property
 
 EXPIRY_WARNING_DAYS = 30
@@ -19,7 +19,7 @@ PIT_CHOICES = (
 
 
 class Projectionist(models.Model):
-    user = models.OneToOneField(User)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL)
     # pit_level = models.CharField(choices=PIT_CHOICES,max_length=2,null=True,blank=True)
 
     license_number = models.CharField(max_length=10, null=True, blank=True)
