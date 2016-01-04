@@ -16,5 +16,5 @@ from django.contrib.auth.admin import UserAdmin
 UserAdmin.list_display += ('last_login',)
 UserAdmin.list_filter += ('last_login',)
 
-admin.site.unregister(get_user_model())
-admin.site.register(get_user_model(), UserAdmin)
+# admin.site.unregister(get_user_model())
+# admin.site.register(get_user_model(), UserAdmin)

@@ -152,6 +152,7 @@ INSTALLED_APPS = (
     'django_cas',
     'django_extensions',
 
+    'accounts',
     'events',
     'inventory',
     'data',
@@ -178,12 +179,16 @@ INSTALLED_APPS = (
     'hijack',
     'pagedown',
     'compat',
+
+    "django_custom_user_migration"
 )
 
 TEMPLATE_CONTEXT_PROCESSESORS = TCP + (
     # 'lnldb.processors.staticz',
     'processors.navs',
 )
+
+SHOW_HIJACKUSER_IN_ADMIN = False
 
 DEBUG_TOOLBAR_PATCH_SETTINGS = False
 
@@ -238,7 +243,7 @@ LOGGING = {
 }
 
 AUTH_PROFILE_MODULE = 'acct.Profile'
-AUTH_USER_MODEL = 'auth.User'
+AUTH_USER_MODEL = 'accounts.User'
 
 # AJAX_SELECT_BOOTSTRAP = False
 # AJAX_SELECT_INLINES = False

@@ -30,8 +30,8 @@ class OOAdmin(admin.ModelAdmin):
     search_fields = ('name', 'orgsync_id')
 
 # Re-register UserAdmin
-admin.site.unregister(get_user_model())
-admin.site.register(get_user_model(), UserAdmin)
+# admin.site.unregister(get_user_model())
+# admin.site.register(get_user_model(), UserAdmin)
 
 admin.site.register(Orgsync_User)
 admin.site.register(Orgsync_Org, OOAdmin)

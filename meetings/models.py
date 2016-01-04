@@ -1,4 +1,3 @@
-from django.conf.global_settings import AUTH_USER_MODEL
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.conf import settings
@@ -102,7 +101,7 @@ class MtgAttachment(TimeStampedModel):
     glyphicon = 'paperclip'
     name = models.CharField(max_length=64, null=False, blank=False)
     file = models.FileField(upload_to=mtg_attachment_file_name, blank=False, null=False)
-    author = models.ForeignKey(AUTH_USER_MODEL, editable=False, null=False)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, editable=False, null=False)
     meeting = models.ForeignKey(Meeting, related_name='attachments', null=True)
     private = models.BooleanField(default=False)
 
