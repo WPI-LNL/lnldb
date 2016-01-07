@@ -21,7 +21,8 @@ from helpers.mixins import LoginRequiredMixin, SetFormMsgMixin, HasPermMixin
 from django.conf import settings
 from emails.generators import generate_transfer_email
 
-### ORGANIZATION VIEWS
+
+# ORGANIZATION VIEWS
 
 
 @login_required
@@ -44,7 +45,7 @@ def vieworgs(request):
 
 
 @login_required
-### TODO: edit form with perm logic
+# TODO: edit form with perm logic
 def addeditorgs(request, id=None):
     """form for adding an org """
     # need to fix this
@@ -144,7 +145,7 @@ def orgdetail(request, id):
     return render(request, 'org_detail.html', context)
 
 
-### External Form Editing Views (NOW DEPRECATED!)
+# External Form Editing Views (NOW DEPRECATED!)
 @login_required
 def orglist(request):
     context = {}
@@ -181,7 +182,7 @@ def orgedit(request, id):
     return render(request, 'mycrispy.html', context)
 
 
-### Transfer Views
+# Transfer Views
 @login_required
 def org_mkxfer(request, id):
     context = {}

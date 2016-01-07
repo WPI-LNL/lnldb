@@ -25,7 +25,8 @@ PROJECTIONS = (
     ('70', '70mm'),
 )
 
-##MANAGERS
+
+# MANAGERS
 
 
 def get_level_object(level, etype):
@@ -192,7 +193,7 @@ class EventManager(models.Manager):
         return event
 
 
-### MODELS
+# MODELS
 
 class Building(models.Model):
     """ Used to group locations together in forms """
@@ -350,7 +351,8 @@ class Event(models.Model):
     contact = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, verbose_name="Contact")
     org = models.ManyToManyField('Organization', blank=True, verbose_name="Client")
     billing_org = models.ForeignKey('Organization', null=True, blank=True, related_name="billedevents")
-    billing_fund = models.ForeignKey('Fund', null=True, blank=True, on_delete=models.SET_NULL, related_name="event_accounts")
+    billing_fund = models.ForeignKey('Fund', null=True, blank=True, on_delete=models.SET_NULL,
+                                     related_name="event_accounts")
     contact_email = models.CharField(max_length=256, null=True, blank=True)  # DEPRECATED
     contact_addr = models.TextField(null=True, blank=True)  # DEPRECATED
     contact_phone = models.CharField(max_length=32, null=True, blank=True)  # DEPRECATED
@@ -380,7 +382,7 @@ class Event(models.Model):
     otherservices = models.ManyToManyField(Service, blank=True)
     otherservice_reqs = models.TextField(null=True, blank=True)
     setup_location = models.ForeignKey('Location', related_name="setuplocation", null=True, blank=True)  # DEPRECATED
-    ##Status Indicators
+    # Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True, blank=True)
     approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventapprovals", null=True, blank=True)
@@ -444,8 +446,8 @@ class Event(models.Model):
             # raise ValidationError('You cannot start after you finish')
             # if self.datetime_setup_complete > self.datetime_start:
             # raise ValidationError('You cannot setup after you finish')
-            ##if self.datetime_setup_complete < datetime.datetime.now(pytz.utc):
-            ##raise ValidationError('Stop trying to time travel')
+            # if self.datetime_setup_complete < datetime.datetime.now(pytz.utc):
+            # raise ValidationError('Stop trying to time travel')
 
     # implementing calendars
     def save(self, force_insert=False, force_update=False, using=None,
@@ -528,10 +530,7 @@ class Event(models.Model):
     def __unicode__(self):
         return self.event_name
 
-    class Meta:
-        ordering = ['-datetime_start']
-
-    ## Report Properties
+    # Report Properties
     @property
     def crew_needing_reports(self):
         # chiefs = self.crew_chief.values_list('id','first_name','last_name')
@@ -556,12 +555,12 @@ class Event(models.Model):
     @property
     def reports_editable(self):
 
-        tz = timezone.get_current_timezone()
+        # tz = timezone.get_current_timezone()
 
         end = self.datetime_start
 
-        end_min = datetime.datetime.combine(end.date(), datetime.time.min)
-        end_min = tz.localize(end_min)
+        # end_min = datetime.datetime.combine(end.date(), datetime.time.min)
+        # end_min = tz.localize(end_min)
 
         end_plus_time = end + datetime.timedelta(days=CCR_DELTA)
         now = datetime.datetime.now(timezone.get_current_timezone())
@@ -571,7 +570,7 @@ class Event(models.Model):
         else:
             return False
 
-    ## Service information for templates
+    # Service information for templates
     @property
     def allservices(self):
         foo = []
@@ -605,7 +604,7 @@ class Event(models.Model):
             pass
         return foo
 
-    ## Event Statuses
+    # Event Statuses
     @cached_property
     def status(self):
         if self.cancelled:
@@ -642,7 +641,7 @@ class Event(models.Model):
     def late(self):
         return self.datetime_setup_complete - self.submitted_on < datetime.timedelta(weeks=2)
 
-    ### Extras And Billing Calculations
+    # Extras And Billing Calculations
     @property
     def extras_lighting(self):
         return self.extrainstance_set.filter(extra__category__name="Lighting")
@@ -862,6 +861,7 @@ class Event(models.Model):
             ("event_view_debug", "See debug events"),
             ("reopen_event", "Reopen a closed, declined, or cancelled event"),
         )
+        ordering = ['-datetime_start']
 
 
 class CCReport(models.Model):
@@ -1118,5 +1118,6 @@ class EventArbitrary(models.Model):
         return abs(self.totalcost)
 
 
-### SIGNALS IMPORT, DO NOT TOUCH
+# SIGNALS IMPORT, DO NOT TOUCH
+# noinspection PyPep8
 from events.signals import *

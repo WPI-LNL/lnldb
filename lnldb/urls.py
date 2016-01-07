@@ -7,16 +7,15 @@ from accounts.forms import LoginForm
 from events.cal import EventFeed
 from events.forms import named_event_forms
 from events.views.wizard import EventWizard
-from events.views.wizard import show_lighting_form_condition, show_sound_form_condition, show_projection_form_condition, \
-    show_other_services_form_condition
+from events.views.wizard import show_lighting_form_condition, show_sound_form_condition, \
+    show_projection_form_condition, show_other_services_form_condition
 
 # Uncomment the next two lines to enable the admin:
 from django.contrib import admin
 
-admin.autodiscover()
 import permission
 
-permission.autodiscover()
+from django.views.generic.base import RedirectView
 
 # cbv imports
 # from acct.views import AcctUpdate, LNLUpdate, LNLAdd
@@ -33,6 +32,9 @@ from projection.views import ProjectionistDelete
 # event wizard form defenitions
 
 from django.contrib.auth.decorators import login_required
+
+admin.autodiscover()
+permission.autodiscover()
 
 event_wizard = EventWizard.as_view(
     named_event_forms,
@@ -58,7 +60,6 @@ handler404 = 'data.views.err404'
 handler500 = 'data.views.err500'
 
 # generics
-from django.views.generic.base import RedirectView
 
 urlpatterns = patterns('',
                        # Examples:
@@ -124,7 +125,7 @@ urlpatterns = patterns('',
                        # url(r'^my/acct/send_lnl_member_request/$', 'acct.views.send_member_request',
                        #     name="my-acct-request-lnl"),
                        url(r'^my/events/$', 'events.views.my.myevents', name="my-events"),
-                       url(r'^my/events/(?P<id>[0-9]+)$', 'events.views.my.myeventdetail', name="my-event-detail"),
+                       # url(r'^my/events/(?P<id>[0-9]+)$', 'events.views.my.myeventdetail', name="my-event-detail"),
                        url(r'^my/events/(?P<id>[0-9a-f]+)/pdf/$', 'pdfs.views.generate_event_pdf',
                            name="my-events-pdf"),
                        url(r'^my/events/(?P<eventid>[0-9]+)/files/$', 'events.views.my.eventfiles',
@@ -137,7 +138,7 @@ urlpatterns = patterns('',
                            name="my-cchours-mk"),
                        url(r'^my/events/(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', 'events.views.my.hours_edit',
                            name="my-cchours-edit"),
-                       #workorders
+                       # workorders
                        url(r'^workorder/(?P<step>.+)/$', login_wrapped_wo, name='event_step'),
                        url(r'^workorder/$', login_wrapped_wo, name='event'),
                        url(r'^my/events/(?P<eventid>[0-9]+)/repeat/$', 'events.views.my.myworepeat', name="my-repeat"),
@@ -204,15 +205,14 @@ urlpatterns = patterns('',
                        # url(r'^db/members/editcontact/(?P<pk>[0-9a-f]+)/$', MemberUpdate.as_view(),
                        #     name="membercontact"),
 
-                       #misc
+                       # misc
                        # url(r'^db/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
                        # url(r'^db/misc/users/unsorted/$', 'members.views.limbousers', name="users-limbo"),
                        # url(r'^db/misc/users/add/$', LNLAdd.as_view(), name="users-add"),
                        url(r'^db/oldsearch$', "events.views.indices.event_search", name="events-search"),
                        url(r'^db/search$', "data.views.search", name="search"),
 
-
-                       #meetings
+                       # meetings
                        url(r'^db/meetings/new/$', 'meetings.views.newattendance', name="meeting-new"),
                        url(r'^db/meetings/$', 'meetings.views.listattendance', name="meeting-list"),
                        url(r'^db/meetings/(\d+)/list/$', 'meetings.views.listattendance', ),
@@ -230,7 +230,7 @@ urlpatterns = patterns('',
                        url(r'^db/meetings/(?P<mtg_id>\d+)/rm/(?P<att_id>\d+)/$',
                            'meetings.views.rm_att', name="meeting-att-rm"),
 
-                       #projection
+                       # projection
                        url(r'^db/projection/list/$', 'projection.views.plist_detail',
                            name="projection-list-detail"),
                        url(r'^db/projection/list/other/$', 'projection.views.plist', name="projection-list"),
@@ -374,14 +374,13 @@ urlpatterns = patterns('',
                        url(r'^db/projection/bulkevents/$', 'projection.views.bulk_projection',
                            name="projection-bulk2"),
 
-
-                       #emails
+                       # emails
                        url(r'^email/announce/(?P<slug>[0-9a-f]+)/$', MeetingAnnounceView.as_view(),
                            name="email-view-announce"),
                        url(r'^email/announcecc/(?P<slug>[0-9a-f]+)/$', MeetingAnnounceCCView.as_view(),
                            name="email-view-announce-cc"),
 
-                       #special urls
+                       # special urls
                        url(r'^status/$', "data.views.status"),
                        url(r'^db/accesslog/$', 'data.views.access_log', name="access-log"),
                        url(r'^NOTOUCHING/$', 'data.views.fuckoffkitty'),

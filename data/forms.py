@@ -5,7 +5,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import FileField
 
-__author__ = 'Killarny'
+__author_orig__ = 'Killarny'
 __author__ = 'Jake Merdich'
 # Taken from https://djangosnippets.org/snippets/1148/ (it was exactly what I needed)
 

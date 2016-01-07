@@ -1,3 +1,4 @@
+# noinspection PyProtectedMember
 from django.contrib.auth.models import AbstractUser, _user_has_perm
 from django.db.models import Q, IntegerField, CharField, TextField
 from django.utils.six import python_2_unicode_compatible

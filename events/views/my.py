@@ -31,11 +31,11 @@ def mywo(request):
     orgs = user.orgusers.get_queryset()
     ic_orgs = user.orgowner.get_queryset()
 
-    ##combined = orgs|ic_orgs
+    # combined = orgs|ic_orgs
     # combined = ic_orgs
-    values = orgs.distinct().values_list('id', flat=True)
+    # values = orgs.distinct().values_list('id', flat=True)
 
-    events = Event.objects.filter(org__in=values)
+    # events = Event.objects.filter(org__in=values)
     l = {}
     for org in orgs:
         l[org.name] = Event.objects.filter(org=org)
@@ -50,8 +50,7 @@ def mywo(request):
 
 @login_required
 def myworepeat(request, eventid):
-    context = {}
-    context['msg'] = "Workorder Repeat"
+    context = {'msg': "Workorder Repeat"}
 
     event = get_object_or_404(Event, pk=eventid)
     if request.method == "POST":
@@ -97,14 +96,12 @@ def myorgs(request):
 @login_required
 def myorgform(request):
     """ Organization Creation Request Form"""
-    context = {}
-    context['msg'] = "Client Request"
-    context[
-        'extra_text'] = 'Note: The information being requested here is not your personal information,' \
-                        ' this can be edited <a href="%s"> here </a>.' \
-                        ' This information should relate to the client account that is being requested ' \
-                        'and should only mirror your personal information if you are requesting a ' \
-                        'personal account be made.' % (reverse("my-acct"))
+    context = {'msg': "Client Request",
+               'extra_text': 'Note: The information being requested here is not your personal information,'
+                             ' this can be edited <a href="%s"> here </a>.'
+                             ' This information should relate to the client account that is being requested '
+                             'and should only mirror your personal information if you are requesting a '
+                             'personal account be made.' % (reverse("my-acct"))}
     if request.method == "POST":
         form = SelfServiceOrgRequestForm(request.POST)
         if form.is_valid():
@@ -125,37 +122,35 @@ def myorgform(request):
         return render(request, 'mycrispy.html', context)
 
 
-### lnl facing
+# lnl facing
 
 @login_required
 # @user_passes_test(is_lnlmember, login_url='/lnldb/fuckoffkitty/')
 def myevents(request):
     """ List Events That Have been CC'd / involved """
-    context = {}
-    context['user'] = request.user
-    context.update(request.user.hours.aggregate(totalhours=Sum('hours')))
-    context['now'] = datetime.datetime.now(timezone.get_current_timezone())
+    context = {'user': request.user, 'now': datetime.datetime.now(timezone.get_current_timezone()),
+               'ccinstances': request.user.ccinstances.select_related('event__location').all(),
+               'orgs': request.user.all_orgs.prefetch_related('event_set__location'),
+               'submitted_events': request.user.submitter.select_related('location').all(),
+               'hours': request.user.hours.select_related('event__location').all()}
 
-    context['ccinstances'] = request.user.ccinstances.select_related('event__location').all()
-    context['orgs'] = request.user.all_orgs.prefetch_related('event_set__location')
-    context['submitted_events'] = request.user.submitter.select_related('location').all()
-    context['hours'] = request.user.hours.select_related('event__location').all()
+    context.update(request.user.hours.aggregate(totalhours=Sum('hours')))
 
     return render(request, 'myevents.html', context)
 
 
-@login_required
-def myeventdetail(request, id):
-    """ Shows detail for users event """
-    context = {}
-    event = get_object_or_404(Event, pk=id)
-
-    u = request.user
-    if not event.usercanseeevent(u):
-        return HttpResponse("You can't see this event, sorry")
-    else:
-        context['event'] = event
-        return render(request, 'eventdetail.html', context)
+# @login_required
+# def myeventdetail(request, id):
+#     """ Shows detail for users event """
+#     context = {}
+#     event = get_object_or_404(Event, pk=id)
+#
+#     u = request.user
+#     if not event.usercanseeevent(u):
+#         return HttpResponse("You can't see this event, sorry")
+#     else:
+#         context['event'] = event
+#         return render(request, 'eventdetail.html', context)
 
 
 @login_required
@@ -168,7 +163,7 @@ def eventfiles(request, eventid):
     return render(request, 'myeventfiles.html', context)
 
 
-### Views Relating to Crew Chiefs
+# Views Relating to Crew Chiefs
 @login_required
 def ccreport(request, eventid):
     """ Submits a crew chief report """

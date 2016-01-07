@@ -74,13 +74,14 @@ class EquipmentCategory(MPTTModel):
     def __str__(self):
         return self.name
 
+    # noinspection PyClassHasNoInit
     class MPTTMeta:
         order_insertion_by = ['name']
 
 
 class EquimentItemManager(TreeManager):
     def bulk_add_helper(self, item_type, num_to_add, put_into=None):
-        items = []
+        # items = []
 
         # loc is usually automatic, but not in bulk queries
         default_loc = item_type.category.default_location if put_into is None else None
@@ -160,6 +161,7 @@ class EquipmentItem(MPTTModel):
         return "%s (%d)" % (str(self.item_type),
                             self.barcode or self.pk)
 
+    # noinspection PyClassHasNoInit
     class MPTTMeta:
         parent_attr = 'case'
 
