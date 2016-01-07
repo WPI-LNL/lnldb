@@ -141,7 +141,6 @@ def myevents(request):
     context['submitted_events'] = request.user.submitter.select_related('location').all()
     context['hours'] = request.user.hours.select_related('event__location').all()
 
-
     return render(request, 'myevents.html', context)
 
 

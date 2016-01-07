@@ -189,8 +189,6 @@ INSTALLED_APPS = (
     'hijack',
     'pagedown',
     'compat',
-
-    "django_custom_user_migration"
 )
 
 SHOW_HIJACKUSER_IN_ADMIN = False
