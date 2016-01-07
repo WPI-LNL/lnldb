@@ -127,12 +127,12 @@
                             <td class="event-cc">
                                 {% if event.crew_chief.count %}
                                     {% for cc in event.crew_chief.all %}
-                                        <a href="{% url "members.views.detail" cc.id %}">
+                                        <a href="{% url "accounts:detail" cc.id %}">
                                             {{ cc }}</a>{% if not forloop.last %},{% endif %} 
                                     {% endfor %}
                                 {% elif event.ccinstances.count %}
                                     {% for cc in event.ccinstances.all %}
-                                        <a href="{% url "members.views.detail" cc.crew_chief.id %}">
+                                        <a href="{% url "accounts:detail" cc.crew_chief.id %}">
                                             {{ cc.crew_chief }}{% if not forloop.last %},{% endif %} </a>
                                     {% endfor %}
                                 {% else %}

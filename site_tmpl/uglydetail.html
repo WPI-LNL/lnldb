@@ -159,11 +159,13 @@
                         </tr>
                         <tr>
                             <th>Event Contact Name</th>
-                            <td>{% if event.contact %}<a href="{% url "memberdetail" event.contact.id %}">{{ event.contact.get_full_name }}</a>{% else %}{{ event.contact }} {% endif %}</td>
+                            <td>{% if event.contact %}
+                                <a href="{% url "accounts:detail" event.contact.id %}">{{ event.contact.get_full_name }}</a>
+                                {% else %}{{ event.contact }} {% endif %}</td>
                         </tr>
                         <tr>
                             <th>Event Contact Phone</th>
-                            <td>{{ event.contact.profile.phone }}</td>
+                            <td>{{ event.contact.phone }}</td>
                         </tr>
                         <tr>
                             <th>Event Contact Email</th>
@@ -175,7 +177,9 @@
                         </tr>
                         <tr>
                             <th>Submitted by</th>
-                            <td><a href="{% url "memberdetail" event.submitted_by.id %}">{{event.submitted_by.get_full_name }}</a></td> 
+                            <td>
+                                <a href="{% url "accounts:detail" event.submitted_by.id %}">{{ event.submitted_by.get_full_name }}</a>
+                            </td>
                         </tr>
                         <tr>
                             <th>Submitted on</th>
@@ -190,8 +194,9 @@
                         <tr>
                             <th>Approved:</th>
                             <td>
-                                {% if event.approved_by %} 
-                                    <a href="{% url "memberdetail" event.approved_by.id %}">{{ event.approved_by.get_full_name }}</a> on {{ event.approved_on }}      
+                                {% if event.approved_by %}
+                                    <a href="{% url "accounts:detail" event.approved_by.id %}">{{ event.approved_by.get_full_name }}</a>
+                                    on {{ event.approved_on }}
                                 {% else %}
                                     Needs Approval 
                                 {% endif %}
@@ -201,8 +206,9 @@
                         <tr>
                             <th>Cancelled:</th>
                             <td>
-                                {% if event.cancelled_by %} 
-                                    <a href="{% url "memberdetail" event.cancelled_by.id %}">{{ event.cancelled_by.get_full_name }}</a> on {{ event.cancelled_on }}      
+                                {% if event.cancelled_by %}
+                                    <a href="{% url "accounts:detail" event.cancelled_by.id %}">{{ event.cancelled_by.get_full_name }}</a>
+                                    on {{ event.cancelled_on }}
                                 {% else %}
                                     True
                                 {% endif %}
@@ -214,7 +220,7 @@
                                 <th>Closed:</th>
                                 <td>
                                     {% if event.closed_by %}
-                                        <a href="{% url "memberdetail" event.closed_by.id %}">{{ event.closed_by.get_full_name }}</a>
+                                        <a href="{% url "accounts:detail" event.closed_by.id %}">{{ event.closed_by.get_full_name }}</a>
                                         on {{ event.closed_on }}
                                     {% else %}
                                         True
@@ -228,7 +234,7 @@
                                     <th>Reviewed for billing:</th>
                                     <td>
                                         {% if event.reviewed_by %}
-                                            <a href="{% url "memberdetail" event.reviewed_by.id %}">{{ event.reviewed_by.get_full_name }}</a>
+                                            <a href="{% url "accounts:detail" event.reviewed_by.id %}">{{ event.reviewed_by.get_full_name }}</a>
                                             on {{ event.reviewed_on }}
                                         {% else %}
                                             N/A
@@ -361,7 +367,7 @@
                         {% for cc in event.ccinstances.all %}
                         <tr>
                             <td>
-                                <a href="{% url "memberdetail" cc.crew_chief.id %}">{{ cc.crew_chief.get_full_name }}</a>
+                                <a href="{% url "accounts:detail" cc.crew_chief.id %}">{{ cc.crew_chief.get_full_name }}</a>
                             </td>
                             <td>
                                 {{ cc.setup_location }}
@@ -421,7 +427,9 @@
                         <h4> Crew Chiefs Needing Reports </h4>
                         <ul>
                         {% for crew in event.crew_needing_reports %}
-                            <li><a href="{% url "memberdetail" crew.crew_chief.id %}">{{ crew.crew_chief.get_full_name }}</a></li>
+                            <li>
+                                <a href="{% url "accounts:detail" crew.crew_chief.id %}">{{ crew.crew_chief.get_full_name }}</a>
+                            </li>
                         {% endfor %}
                         </ul>
                     {% endif %}
@@ -437,7 +445,8 @@
                         </thead>
                         {% for hour in event.hours.all %}
                             <tr>
-                                <td><a href="{% url "memberdetail" hour.user.id %}">{{ hour.user.get_full_name }}</a></td>
+                                <td><a href="{% url "accounts:detail" hour.user.id %}">{{ hour.user.get_full_name }}</a>
+                                </td>
                                 <td>{{ hour.hours }}</td>
                                 <td>{{ hour.service }}</td>
                             </tr>

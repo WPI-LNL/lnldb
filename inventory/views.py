@@ -1,16 +1,13 @@
 # Create your views here.
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-
 from django.db.models import Count
-from django.contrib import messages
-from django.core.urlresolvers import reverse
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import render, get_object_or_404
 
-from inventory.models import *
 from inventory.forms import *
 
 NUM_IN_PAGE = 25
@@ -131,6 +128,9 @@ def quick_bulk_edit(request, type_id):
                                                 kwargs={'type_id': type_id}))
     else:
         formset = fs_factory(instance=e_type)
+        qs = EquipmentCategory.possible_locations()
+        for form in formset:
+            form.fields['home'].queryset = qs
     return render(request, "formset_grid.html", {
         'msg': "Bulk inventory edit for '%s'" % e_type.name,
         "formset": formset,

@@ -9,8 +9,3 @@ class MeetingsConfig(AppConfig):
     def ready(self):
         Meeting = self.get_model('Meeting')
         watson.register(Meeting)
-
-
-class UserSearchAdapter(watson.SearchAdapter):
-    def get_title(self, obj):
-        return obj.profile.fullname

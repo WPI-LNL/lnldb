@@ -1,5 +1,5 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
 
 # Create your models here.
 import logging
@@ -84,14 +84,18 @@ class EquimentItemManager(TreeManager):
 
         # loc is usually automatic, but not in bulk queries
         default_loc = item_type.category.default_location if put_into is None else None
-        with self.delay_mptt_updates():
-            for i in xrange(0, num_to_add):
-                items.append(EquipmentItem(item_type=item_type, home=default_loc,
-                                           purchase_date=datetime.date.today(),
-                                           case=put_into,
-                                           level=0, rght=0, lft=0, tree_id=0))
-        self.bulk_create(items)
-        self.rebuild()
+        # with self.delay_mptt_updates():
+        #     for i in xrange(0, num_to_add):
+        #         items.append(EquipmentItem(item_type=item_type, home=default_loc,
+        #                                    purchase_date=datetime.date.today(),
+        #                                    case=put_into,
+        #                                    level=0, rght=0, lft=0, tree_id=0))
+        #     self.bulk_create(items)
+        # ^^^ works well for large values, but rather hacky.
+
+        for i in xrange(0, num_to_add):
+            self.create(item_type=item_type, home=default_loc,
+                        purchase_date=datetime.date.today(), case=put_into)
 
 
 class EquipmentItem(MPTTModel):

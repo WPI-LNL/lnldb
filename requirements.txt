@@ -43,15 +43,17 @@
 app-version==0.2.1
 BeautifulSoup==3.2.1
 dealer==2.0.4
-Django==1.8.4
+Django<1.9
+# I trust django not to have any breaking issues in their security patches.
 -e git+https://github.com/crucialfelix/django-ajax-selects@34ef412856ddd1bdb6c0b86d645b9085a63e9df9#egg=django_ajax_selects-develop
 django-appconf==1.0.1
 -e git+https://github.com/jmerdich/django-bootstrap-calendar.git@fbe22d9dd0b2c99e8a6d3a3ad8d41063e791432c#egg=django_bootstrap_calendar-master
 django-bootstrap-toolkit==2.15.0
--e git://github.com/WPI-lnl/django-cas2.git@6220bc8ba6eb4643e3ef58b4830616f37f1a1a8f#egg=django_cas-origin_HEAD
+-e git+https://github.com/WPI-lnl/django-cas2.git@6220bc8ba6eb4643e3ef58b4830616f37f1a1a8f#egg=django_cas-origin_HEAD
 django-compat==1.0.7
 django-compressor==1.3
--e git+https://github.com/maraujop/django-crispy-forms.git@57e9e3f9c5deb2876aa5021599671d6a65e97ed0#egg=django_crispy_forms-dev
+django-crispy-forms==1.5.2
+# -e git+https://github.com/maraujop/django-crispy-forms.git@57e9e3f9c5deb2876aa5021599671d6a65e97ed0#egg=django_crispy_forms-dev
 django-debug-toolbar==1.3.2
 django-debug-toolbar-line-profiler==0.4.0
 django-debug-toolbar-template-profiler==1.0.1

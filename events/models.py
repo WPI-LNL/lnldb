@@ -8,8 +8,6 @@ from django import forms
 from django.db.models import Manager
 from django.utils.functional import cached_property
 
-import watson
-
 import pytz
 import decimal
 
@@ -127,9 +125,8 @@ class EventManager(models.Manager):
         u.email = contact_email
         u.first_name = person_name_first
         u.last_name = person_name_last
+        u.phone = contact_phone
         u.save()
-        u.profile.phone = contact_phone
-        u.profile.save()
 
         # scheduling
 
@@ -424,23 +421,23 @@ class Event(models.Model):
 
     @property
     def contact_name(self):
-        if self.contact and self.contact.profile:
-            return self.contact.profile.fullname
+        if self.contact:
+            return self.contact.fullname
 
     @property
     def contact_phone(self):
-        if self.contact and self.contact.profile:
-            return self.contact.profile.phone
+        if self.contact:
+            return self.contact.phone
 
     @property
     def contact_email(self):
-        if self.contact and self.contact.profile:
-            return self.contact.profile.email
+        if self.contact:
+            return self.contact.email
 
     @property
     def contact_addr(self):
-        if self.contact and self.contact.profile:
-            return self.contact.profile.addr
+        if self.contact:
+            return self.contact.addr
 
             # def clean(self):
             # if self.datetime_start > self.datetime_end:

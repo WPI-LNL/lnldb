@@ -1,9 +1,9 @@
 from django.contrib import admin
-
-# Register your models here.
 from django.contrib.auth.admin import UserAdmin
-from . models import User
-from django.utils.translation import ugettext, ugettext_lazy as _
+from django.utils.translation import ugettext_lazy as _
+
+from .models import User
+
 
 class MemberAdmin(UserAdmin):
     fieldsets = (
@@ -14,6 +14,7 @@ class MemberAdmin(UserAdmin):
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
         ("Other", {"fields": ["addr", "mdc", "wpibox", "phone"]})
     )
+
 
 # We use the real User model here because the code here is specific to it.
 # If it's swapped out, it also means that it gets its own admin to tinker with.

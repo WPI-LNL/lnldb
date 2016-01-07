@@ -1,29 +1,18 @@
 import datetime
 
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
+from django.db.models.aggregates import Sum
+from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
-from django.conf import settings
-from django.forms.models import inlineformset_factory
-from django.utils.functional import curry
-from events.models import Event, CCReport, Hours
-from events.forms import ReportForm, MKHoursForm, EditHoursForm, SelfServiceOrgRequestForm, WorkorderRepeatForm
 from django.utils import timezone
-from django.contrib.auth.decorators import login_required
-from helpers.challenges import is_lnlmember
+from django.utils.functional import curry
+
 from emails.generators import generate_selfservice_notice_email
-from django.db.models.aggregates import Sum
-
-
-### USER FACING SHIT
-@login_required
-def my(request):
-    """ Landing Page For User Related Functions"""
-    context = {}
-
-    is_lnl = is_lnlmember(request.user)
-    context['is_lnl'] = is_lnl
-    return render(request, 'my.html', context)
+from events.forms import ReportForm, MKHoursForm, EditHoursForm, SelfServiceOrgRequestForm, WorkorderRepeatForm
+from events.models import Event, CCReport, Hours
 
 
 @login_required
@@ -146,6 +135,12 @@ def myevents(request):
     context['user'] = request.user
     context.update(request.user.hours.aggregate(totalhours=Sum('hours')))
     context['now'] = datetime.datetime.now(timezone.get_current_timezone())
+
+    context['ccinstances'] = request.user.ccinstances.select_related('event__location').all()
+    context['orgs'] = request.user.all_orgs.prefetch_related('event_set__location')
+    context['submitted_events'] = request.user.submitter.select_related('location').all()
+    context['hours'] = request.user.hours.select_related('event__location').all()
+
 
     return render(request, 'myevents.html', context)
 

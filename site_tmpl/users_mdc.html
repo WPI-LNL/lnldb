@@ -1,7 +1,7 @@
 {% extends 'base_admin.html' %}
 {% block content %}
 <h2> {{ h2 }} </h2>
-<p>Motorola XTS/APX users can <a href="{% url "members.views.mdc_raw" %}">import the list directly</a></p>
+    <p>Motorola XTS/APX users can <a href="{% url "accounts:mdc_raw" %}">import the list directly</a></p>
 <table class="table table-striped table-bordered" style="width:30%;">
     <tr> 
         <th> Full Name </th>
@@ -11,8 +11,8 @@
     {% for user in users %}
             <tr>
                 <td>{{ user.last_name }}, {{ user.first_name }}</td>
-                <td>{{ user.profile.mdc_name }}</td>
-                <td>{{ user.profile.mdc }}</td>
+                <td>{{ user.mdc_name }}</td>
+                <td>{{ user.mdc }}</td>
             </tr>
     {% endfor %}
 </table>

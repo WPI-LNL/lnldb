@@ -1,5 +1,7 @@
-from crispy_forms.layout import LayoutObject
+from crispy_forms.bootstrap import FormActions
+from crispy_forms.layout import LayoutObject, Submit
 from crispy_forms.utils import TEMPLATE_PACK, render_field
+from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import FileField
 
@@ -7,7 +9,11 @@ __author__ = 'Killarny'
 __author__ = 'Jake Merdich'
 # Taken from https://djangosnippets.org/snippets/1148/ (it was exactly what I needed)
 
-from django import forms
+
+def form_footer(return_text="Save", *args):
+    return FormActions(
+            Submit('save', return_text), *args
+    )
 
 
 class FieldAccessLevel:

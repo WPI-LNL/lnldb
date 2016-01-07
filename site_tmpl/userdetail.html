@@ -4,11 +4,9 @@
         <div class="col-md-12">
             <div class="jumbotron">
                 <h1> {{u}} </h1>
-                {% if u.first_name %}
-                    {{ u.first_name }} {{ u.last_name }}
-                {% endif %}
+                <h3>{{ u.groups.all|join:", " }}</h3>
                 <div class="pull-right">
-                    <a class="btn btn-info btn-lg" href="{% url "memberupdate" u.id %}">Modify</a>
+                    <a class="btn btn-info btn-lg" href="{% url "accounts:update" u.id %}">Modify</a>
                 </div>
             </div>
         </div>
@@ -17,11 +15,7 @@
         <div class="col-md-4">
             <h3>Stats</h3>
             <table class="table">
-                <tr>
-                    <th>Status</th>
-                    <td>{{ u.groups.all|join:", " }}</td>
-                </tr>
-                {% if u.profile.is_lnl %}
+                {% if u.is_lnl %}
                 <tr>
                     <th>Events CCd:</th>
                     <td>{{u.crewchiefx.count|add:u.ccinstances.count}}</td>
@@ -40,25 +34,32 @@
                 </tr>
                 {% endif %}
             </table>
-            <div class="pull-right"><a href="{% url "membercontact" u.profile.id %}" class="btn btn-default">Edit</a></div>
             <h3> Contact</h3>
             <table class="table">
                 <tr>
+                    <th>Username</th>
+                    <td>{{ u.username }}</td>
+                </tr>
+                <tr>
+                    <th>Email</th>
+                    <td>{{ u.email }}</td>
+                </tr>
+                <tr>
                     <th>WPI Box</th>
-                    <td>{{ u.profile.wpibox }}</td>
+                    <td>{{ u.wpibox }}</td>
                 </tr>
                 <tr>
                     <th>Phone</th>
-                    <td>{{ u.profile.phone }}</td>
+                    <td>{{ u.phone }}</td>
                 </tr>
                 <tr>
                     <th>Address</th>
-                    <td>{{u.profile.address}}</td>
+                    <td>{{ u.address }}</td>
                 </tr>
-                {% if u.profile.is_lnl %}
+                {% if u.is_lnl or u.mdc %}
                     <tr>
                         <th>MDC</th>
-                        <td>{{ u.profile.mdc }}</td>
+                        <td>{{ u.mdc }}</td>
                     </tr>
                 {% endif %}
             </table>
@@ -67,8 +68,8 @@
         {% if u.ccinstances.exists or u.crewchiefx.exists %}
         <div class="col-md-4">
             <h3>Events CC'd</h3>
-            <ul class="list-unstyled"> 
-                {% for event in u.ccinstances.all %}
+            <ul class="list-unstyled">
+                {% for event in ccs %}
                     <li><a href="{% url "events-detail" event.event.id %}">{{ event.event }}</a> ({{ event.event.datetime_start }})</li>
                 {% endfor %}
                 {% for event in u.crewchiefx.all %}
@@ -77,11 +78,11 @@
             </ul>
         </div>
         {% endif %}
-        {% if u.hours.exists %}
+        {% if hours %}
         <div class="col-md-4">
             <h3>Events Participated</h3>
-            <ul class="list-unstyled"> 
-                {% for h in u.hours.all %}
+            <ul class="list-unstyled">
+                {% for h in hours %}
                     <li><a href="{% url "events-detail" h.event.id %}">{{ h.event }} {% if h.service %} ({{h.service.shortname  }}) {% else %} (N/A) {% endif %}:</a> {{ h.hours }}h</li>
                 {% endfor %}
             </ul>

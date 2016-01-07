@@ -15,5 +15,5 @@ __Section__,"List"
 __Field Names__
 "Call ID","Call text"
 __Field Values__
-{% for user in users %}"{{ user.profile.mdc|slice:":4" }}","{{ user.profile.mdc_name }}"
+{% for user in users %}"{{ user.mdc|slice:":4" }}","{{ user.mdc_name }}"
 {% endfor %}{% endblock %}

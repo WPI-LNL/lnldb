@@ -34,7 +34,7 @@
                     <h3>Attendance:</h3>
                     <ul>
                     {% for a in m.attendance.all %}
-                        <li><a href="{% url "members.views.detail" a.id %}">{{a.first_name }} {{a.last_name }}</a></li>
+                        <li><a href="{% url "accounts:detail" a.id %}">{{ a.first_name }} {{ a.last_name }}</a></li>
                     {% empty %}
                         <small>Nobody is here I guess.</small>
                     {% endfor %}
@@ -198,7 +198,7 @@
                                 <td>
                                     {% for c in e.ccinstances.all %}
                                         <strong>{{ c.service.shortname }}</strong> :
-                                        <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>
+                                        <a href="{% url "accounts:detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>
                                         {% if not forloop.last %}<br/>{% endif %}
                                     {% empty %}
                                         None Set
@@ -243,7 +243,7 @@
 
                                 <td>
                                     {% for c in e.ccinstances.all %}
-                                        <a href="{% url "members.views.detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>
+                                        <a href="{% url "accounts:detail" c.crew_chief.id %}">{{ c.crew_chief.first_name }} {{ c.crew_chief.last_name }}</a>
                                         &nbsp;
                                         {% if not forloop.last %},{% endif %}
                                     {% empty %}

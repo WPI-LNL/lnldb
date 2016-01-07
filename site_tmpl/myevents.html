@@ -10,7 +10,7 @@
                 <th>Location</th>
                 <th>Quick Actions</th>
             </tr>
-            {% for instance in user.ccinstances.all %}
+            {% for instance in ccinstances %}
                 <tr>
                     <td><a href="{% url 'events-detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
                     <td title="{{ instance.event.datetime_end }}">
@@ -53,7 +53,7 @@
             <th>Location </th>
             <th>Hours</th>
         </tr>
-        {% for instance in user.hours.all %}
+        {% for instance in hours %}
                 <tr>
                     <td><a href="{% url 'events-detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
                     <td title="{{instance.event.datetime_end}}">
@@ -88,7 +88,7 @@
                 <th>Location </th>
                 <th>Status</th>
             </tr>
-            {% for event in user.submitter.all %}
+            {% for event in submitted_events %}
                     <tr>
                         <td><a href="{% url 'events-detail' event.pk %}">{{ event.event_name }}</a></td>
                         <td title="{{event.datetime_end}}">
@@ -107,9 +107,9 @@
                 </tr>
             {% endfor %}
         </table>
-    {% if user.profile.all_orgs %}
+    {% if user.all_orgs %}
         <h1>Events by Organization </h1>
-        {% for org in user.profile.all_orgs %}
+        {% for org in orgs %}
             <h3><a href="{% url 'events.views.orgs.orgdetail' org.pk %}">{{ org }}</a></h3>
             <table class="table table-striped table-bordered">
                 <tr>

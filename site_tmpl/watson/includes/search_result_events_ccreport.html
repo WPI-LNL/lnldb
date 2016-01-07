@@ -5,8 +5,8 @@
               aria-hidden="true"></span> <a
             href="{% url 'events-detail' result.object.event.id %}">Report for {{ result.object.event.event_name }}</a>
     <span class="result-subtitle">Crew Chief Report -
-        <a href='{% url 'memberdetail' result.object.crew_chief.id %}'>
-            {{ result.object.crew_chief.profile.fullname }}
+        <a href='{% url 'accounts:detail' result.object.crew_chief.id %}'>
+            {{ result.object.crew_chief.fullname }}
         </a></span></h2>
     <h3>{{ result.object.updated_on | date }} - {{ result.object.event.location.name }}</h3>
     <p>{{ result.object.report | markdown }}</p>

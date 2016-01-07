@@ -14,7 +14,9 @@
     </div>
     <div class="col-md-4">
         <h2>
-            Contact: {% if event.contact %}<a href="{% url "memberdetail" event.contact.id %}">{{ event.contact.get_full_name }}</a>{% else %}No Contact Set {% endif %}
+            Contact: {% if event.contact %}
+            <a href="{% url "accounts:detail" event.contact.id %}">{{ event.contact.get_full_name }}</a>{% else %}No
+            Contact Set {% endif %}
             <br/>
             Client(s) {% for org in event.org.all %}<span class="text-muted"><a href="{% url "admin-orgdetail" org.id %}">{{ org.retname }} </a>Last Verified: {% if org.verifications.exists %} {{ org.verifications.latest.date }} {% else %} Never {% endif %}</span>{% endfor %}
         </h2>
@@ -65,7 +67,7 @@
             </tr>
             {% for hour in event.hours.all %}
                 <tr>
-                    <td><a href="{% url "memberdetail" hour.user.id %}">{{ hour.user.get_full_name }}</a></td>
+                    <td><a href="{% url "accounts:detail" hour.user.id %}">{{ hour.user.get_full_name }}</a></td>
                     <td>{{ hour.hours }}</td>
                 </tr>
             {% endfor %}
