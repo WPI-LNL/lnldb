@@ -1,18 +1,20 @@
 import datetime
 
-from django import forms
-from django.db.models import Q
-from django.forms.fields import SplitDateTimeField
-from django.core.urlresolvers import reverse
-from pagedown.widgets import PagedownWidget
-from meetings.models import Meeting, MeetingAnnounce, CCNoticeSend, MtgAttachment
-from events.models import Event, Location
 from ajax_select.fields import AutoCompleteSelectMultipleField
+from crispy_forms.bootstrap import FormActions, TabHolder, Tab
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Field, Button
-from crispy_forms.bootstrap import FormActions, TabHolder, Tab
+from django import forms
+from django.core.urlresolvers import reverse
+from django.db.models import Q
+from django.forms.fields import SplitDateTimeField
 from multiupload.fields import MultiFileField
 from natural_duration import NaturalDurationField
+from pagedown.widgets import PagedownWidget
+
+from data.forms import valid_time_formats
+from events.models import Event, Location
+from meetings.models import Meeting, MeetingAnnounce, CCNoticeSend, MtgAttachment
 
 
 class MeetingAdditionForm(forms.ModelForm):
@@ -55,7 +57,8 @@ class MeetingAdditionForm(forms.ModelForm):
 
     duration = NaturalDurationField(human_values=True, required=True)
     attendance = AutoCompleteSelectMultipleField('Users', required=False)
-    datetime = SplitDateTimeField(required=True, initial=datetime.datetime.today())
+    datetime = SplitDateTimeField(required=True, initial=datetime.datetime.today(),
+                                  input_time_formats=valid_time_formats)
     location = forms.ModelChoiceField(queryset=Location.objects.filter(available_for_meetings=True), label="Location",
                                       required=False)
     attachments = MultiFileField(max_file_size=1024 * 1024 * 20,  # 20 MB

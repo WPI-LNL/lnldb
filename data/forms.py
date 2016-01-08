@@ -10,6 +10,9 @@ __author__ = 'Jake Merdich'
 # Taken from https://djangosnippets.org/snippets/1148/ (it was exactly what I needed)
 
 
+valid_time_formats = ['%H:%M', '%I:%M%p', '%I:%M %p']
+
+
 def form_footer(return_text="Save", *args):
     return FormActions(
             Submit('save', return_text), *args
