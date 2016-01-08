@@ -3,7 +3,7 @@ import decimal
 
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
-from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer, valid_time_formats
+from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer
 
 from django import forms
 from django.forms import ModelForm, ModelChoiceField
@@ -266,13 +266,10 @@ class EventApprovalForm(forms.ModelForm):
         }
 
     billing_fund = AutoCompleteSelectField("Funds", required=False)
-    datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start",
-                                              input_time_formats=['%I:%M%p', '%I:%M %p', '%H:%M'])
-    datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End",
-                                            input_time_formats=valid_time_formats)
-    # datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now(), input_time_formats=valid_time_formats)
-    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Setup Completed",
-                                                       input_time_formats=valid_time_formats)
+    datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
+    datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End")
+    # datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
+    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Setup Completed")
 
 
 class EventDenialForm(forms.ModelForm):
@@ -314,10 +311,8 @@ class EventMeetingForm(forms.ModelForm):
         model = Event
         fields = ['datetime_setup_start', 'datetime_setup_complete', 'crew_chief', 'crew']
 
-    datetime_setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now(),
-                                                    input_time_formats=valid_time_formats)
-    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(),
-                                                       input_time_formats=valid_time_formats)
+    datetime_setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
+    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
     crew_chief = AutoCompleteSelectMultipleField('Users', required=False)
     crew = AutoCompleteSelectMultipleField('3', required=False)
 
@@ -469,12 +464,9 @@ class InternalEventForm(FieldAccessForm):
     billing_fund = AutoCompleteSelectField('Funds', required=False)
     org = AutoCompleteSelectMultipleField('Orgs', required=False, label="Client")
 
-    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Setup Completed",
-                                                       input_time_formats=valid_time_formats)
-    datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start",
-                                              input_time_formats=valid_time_formats)
-    datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End",
-                                            input_time_formats=valid_time_formats)
+    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Setup Completed")
+    datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
+    datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End")
 
 
 class EventReviewForm(forms.ModelForm):
@@ -856,7 +848,7 @@ class CCIForm(forms.ModelForm):
         fields = ('crew_chief', 'service', 'setup_location', 'setup_start')
 
     crew_chief = AutoCompleteSelectField('Members', required=True)
-    setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now(), input_time_formats=valid_time_formats)
+    setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
     setup_location = GroupedModelChoiceField(
         queryset=Location.objects.filter(Q(setup_only=True) | Q(show_in_wo_form=True)).select_related('building'),
         group_by_field="building",
@@ -960,10 +952,9 @@ class WorkorderRepeatForm(forms.ModelForm):
         )
         super(WorkorderRepeatForm, self).__init__(*args, **kwargs)
 
-    datetime_setup_complete = forms.SplitDateTimeField(label="Setup Completed By",
-                                                       input_time_formats=valid_time_formats, required=True)
-    datetime_start = forms.SplitDateTimeField(label="Event Starts", input_time_formats=valid_time_formats)
-    datetime_end = forms.SplitDateTimeField(label="Event Ends", input_time_formats=valid_time_formats)
+    datetime_setup_complete = forms.SplitDateTimeField(label="Setup Completed By", required=True)
+    datetime_start = forms.SplitDateTimeField(label="Event Starts")
+    datetime_end = forms.SplitDateTimeField(label="Event Ends")
     location = GroupedModelChoiceField(
         queryset=Location.objects.filter(show_in_wo_form=True),
         group_by_field="building",
@@ -1355,12 +1346,10 @@ class ScheduleForm(forms.Form):
     today = datetime.datetime.today()
     noon = datetime.time(12)
     noontoday = datetime.datetime.combine(today, noon)
-    # setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now(), input_time_formats=valid_time_formats)
-    setup_complete = forms.SplitDateTimeField(initial=noontoday, label="Setup Completed By",
-                                              input_time_formats=valid_time_formats, required=True)
-    event_start = forms.SplitDateTimeField(initial=noontoday, label="Event Starts",
-                                           input_time_formats=valid_time_formats)
-    event_end = forms.SplitDateTimeField(initial=noontoday, label="Event Ends", input_time_formats=valid_time_formats)
+    # setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
+    setup_complete = forms.SplitDateTimeField(initial=noontoday, label="Setup Completed By", required=True)
+    event_start = forms.SplitDateTimeField(initial=noontoday, label="Event Starts")
+    event_end = forms.SplitDateTimeField(initial=noontoday, label="Event Ends")
 
     def clean(self):
         cleaned_data = super(ScheduleForm, self).clean()

@@ -12,7 +12,6 @@ from multiupload.fields import MultiFileField
 from natural_duration import NaturalDurationField
 from pagedown.widgets import PagedownWidget
 
-from data.forms import valid_time_formats
 from events.models import Event, Location
 from meetings.models import Meeting, MeetingAnnounce, CCNoticeSend, MtgAttachment
 
@@ -57,8 +56,7 @@ class MeetingAdditionForm(forms.ModelForm):
 
     duration = NaturalDurationField(human_values=True, required=True)
     attendance = AutoCompleteSelectMultipleField('Users', required=False)
-    datetime = SplitDateTimeField(required=True, initial=datetime.datetime.today(),
-                                  input_time_formats=valid_time_formats)
+    datetime = SplitDateTimeField(required=True, initial=datetime.datetime.today())
     location = forms.ModelChoiceField(queryset=Location.objects.filter(available_for_meetings=True), label="Location",
                                       required=False)
     attachments = MultiFileField(max_file_size=1024 * 1024 * 20,  # 20 MB
