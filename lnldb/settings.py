@@ -159,7 +159,7 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
     'markdown_deux',
-    'django_cas',
+    'django_cas_ng',
     'django_extensions',
 
     'accounts',

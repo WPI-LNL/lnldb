@@ -9,6 +9,8 @@ from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.views import generic
+from django_cas_ng.views import login as cas_login
+from django.contrib.auth.views import login as local_login
 
 from data.forms import form_footer
 from events.models import Event
@@ -148,11 +150,16 @@ class MeDirectView(generic.RedirectView):
 
 def smart_login(request):
     pref_cas = request.COOKIES.get('prefer_cas', None)
+    use_cas = request.GET.get("force_cas", None)
 
-    if pref_cas == "true":
-        return HttpResponseRedirect(reverse('cas-login'))
+    next_url = request.GET.get("next", reverse('db'))
+    if request.user.is_authenticated():
+        return HttpResponseRedirect(next_url)
+    if pref_cas == "true" or use_cas == "true" or "ticket" in request.GET: 
+        return cas_login(request, next_url)
     else:
-        return HttpResponseRedirect(reverse('local-login'))
+        return local_login(request, template_name='registration/login.html',
+                            authentication_form=forms.LoginForm)
 
 
 @login_required
