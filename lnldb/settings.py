@@ -39,6 +39,15 @@ DATABASES = {
         'PASSWORD': '',  # And for the love of god, use a password.
         'HOST': '',  # Set to empty string for localhost.
         'PORT': '',  # Set to empty string for default.
+        'OPTIONS': {
+            'sql_mode': 'TRADITIONAL',
+            'charset': 'utf8',
+            'init_command': 'SET '
+                            'storage_engine=INNODB,'
+                            'character_set_connection=utf8,'
+                            'collation_connection=utf8_bin,'
+                            'SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
+        }  # Now we have a mild degree of confidence :-)
     }
 }
 

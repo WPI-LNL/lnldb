@@ -424,7 +424,7 @@ class Event(models.Model):
     @property
     def contact_name(self):
         if self.contact:
-            return self.contact.fullname
+            return str(self.contact)
 
     @property
     def contact_phone(self):

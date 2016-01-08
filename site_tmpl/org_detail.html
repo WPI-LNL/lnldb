@@ -43,7 +43,7 @@
                 </tr>
                 <tr>
                     <th>User in charge </th>
-                    <td> {{ org.user_in_charge.fullname }} </td>
+                    <td> {{ org.user_in_charge }} </td>
                 </tr>
             
             </table>
@@ -95,10 +95,10 @@
             <h3>Associated Users</h3>
             <ul class="list-unstyled">
                 <li><b><a
-                        href="{% url 'accounts:detail' org.user_in_charge.pk %}">{{ org.user_in_charge.fullname }}
+                        href="{% url 'accounts:detail' org.user_in_charge.pk %}">{{ org.user_in_charge }}
                     [Owner]</a></b></li>
                 {% for u in org.associated_users.all %}
-                    <li><a href="{% url 'accounts:detail' u.pk %}">{{ u.fullname }}</a></li>
+                    <li><a href="{% url 'accounts:detail' u.pk %}">{{ u }}</a></li>
                 {% endfor %}
             </ul>
         </div>
