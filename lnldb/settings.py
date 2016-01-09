@@ -72,9 +72,9 @@ USE_I18N = True
 USE_L10N = True
 TIME_FORMAT = "%I:%M %p"
 DATETIME_FORMAT = '%Y-%m-%d %H:%M'
-TIME_INPUT_FORMATS = ('%I:%M %p', '%I:%M:%S.%f %p', '%I:%M %p',
+TIME_INPUT_FORMATS = ['%I:%M %p', '%I:%M:%S.%f %p', '%I:%M %p',
                       '%I:%M%p', '%I:%M:%S.%f%p', '%I:%M%p',
-                      '%H:%M:%S', '%H:%M:%S.%f', '%H:%M'),
+                      '%H:%M:%S', '%H:%M:%S.%f', '%H:%M']
 
 
 # If you set this to False, Django will not use timezone-aware datetimes.
