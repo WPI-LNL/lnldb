@@ -257,7 +257,7 @@
                         {% endfor %}
                         <li><a href="#PriceModal" data-toggle="modal">Price List</a></li>
                         <li><a href="{% url 'event' %}">Workorder</a></li>
-                        <li><a href="{% url "events.views.my.my" %}">My Account</a></li>
+                        <li><a href="{% url "accounts:me" %}">My Account</a></li>
                     </ul>
                 </div>
                 <!--/.nav-collapse -->
@@ -287,7 +287,7 @@
               {% endfor %}
               <li><a href="#PriceModal" data-toggle="modal">Price List</a></li>
               <li><a href="/workorder">Workorder</a></li>
-              <li><a href="{% url "events.views.my.my" %}">My Account</a></li>
+              <li><a href="{% url "accounts:me" %}">My Account</a></li>
             </ul>
           </div><!--/.nav-collapse -->
         </div><!-- /.navbar-inner -->

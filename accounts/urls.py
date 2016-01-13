@@ -3,7 +3,7 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
-    url(r'^me/', views.MeDirectView.as_view(permanent=False, pattern_name='accounts:detail')),
+    url(r'^me/', views.MeDirectView.as_view(permanent=False, pattern_name='accounts:detail'), name="me"),
     url(r'^my/', views.MeDirectView.as_view(permanent=False, pattern_name='accounts:detail')),
 
     url(r'^db/members/add', views.UserAddView.as_view(), name='add'),

@@ -17,7 +17,7 @@
 
             <div {% if is_officer %}class="col-md-4" {% else %}class="col-md-6"{% endif %}>
                 <h2>View Your Account</h2>
-                <p><a class="btn btn-success" href="{% url "events.views.my.my" %}">My Account &raquo;</a></p>
+                <p><a class="btn btn-success" href="{% url "accounts:me" %}">My Account &raquo;</a></p>
             </div><!--/span-->
 
             {% if is_officer %}

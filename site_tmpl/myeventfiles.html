@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block content %}    
-    <h2> <a href="{% url "events.views.my.my" %}">My</a> Files for '<em>{{event }}</em>'</h2>
+    <h2> <a href="{% url "accounts:me" %}">My</a> Files for '<em>{{event }}</em>'</h2>
     <table class="table">
         <tr>
             <th>Service</th>
