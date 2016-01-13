@@ -1062,7 +1062,7 @@ class ContactForm(forms.Form):
             HTML(
                 '<span class="text-muted">To avoid entering this information again, update your '
                 '<a target="_blank" href="%s">contact information</a></span>' % reverse(
-                    'my-lnl')),
+                    'accounts:me')),
         )
         super(ContactForm, self).__init__(*args, **kwargs)
 
