@@ -21,7 +21,7 @@ from . import forms
 class UserAddView(mixins.HasPermMixin, generic.CreateView):
     form_class = forms.UserAddForm
     model = get_user_model()
-    perms = 'accounts.create_user'
+    perms = 'accounts.add_user'
     template_name = 'form_crispy.html'
 
     def get_context_data(self, **kwargs):
