@@ -1,8 +1,6 @@
-from django.conf.global_settings import AUTH_USER_MODEL
 from django.core.urlresolvers import reverse
 from django.db import models
-from django.contrib.auth.models import User
-from django.utils import timezone
+from django.conf import settings
 from django_extensions.db.models import TimeStampedModel
 
 from events.models import Event, Location
@@ -22,9 +20,9 @@ def get_default_email():
     return email.pk
 
 
-#### When Django 1.9 hits with proper M2M migration,
-####   use this to override closed viewing per meeting
-####   with a 'through' parameter on 'attendance'.
+# When Django 1.9 hits with proper M2M migration,
+#   use this to override closed viewing per meeting
+#   with a 'through' parameter on 'attendance'.
 # class MeetingAttendee(models.Model):
 #     meeting = models.ForeignKey('Meeting')
 #     attendee = models.ForeignKey(User)
@@ -39,7 +37,7 @@ class Meeting(models.Model):
     glyphicon = 'briefcase'
     datetime = models.DateTimeField(verbose_name="Start Time")
     duration = models.DurationField(default=timedelta(hours=1), null=False, blank=False)
-    attendance = models.ManyToManyField(User, blank=True)
+    attendance = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True)
     meeting_type = models.ForeignKey('MeetingType', default=1)
     location = models.ForeignKey('events.Location', null=True, blank=True)
     agenda = models.TextField(null=True, blank=True)
@@ -103,7 +101,7 @@ class MtgAttachment(TimeStampedModel):
     glyphicon = 'paperclip'
     name = models.CharField(max_length=64, null=False, blank=False)
     file = models.FileField(upload_to=mtg_attachment_file_name, blank=False, null=False)
-    author = models.ForeignKey(AUTH_USER_MODEL, editable=False, null=False)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, editable=False, null=False)
     meeting = models.ForeignKey(Meeting, related_name='attachments', null=True)
     private = models.BooleanField(default=False)
 

@@ -1,6 +1,6 @@
 from datetime import timedelta
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.utils import timezone
 from factory import DjangoModelFactory, SubFactory, Sequence
 from events.models import Event, Location, Organization, Building
@@ -10,7 +10,7 @@ __author__ = 'jmerdich'
 
 class UserFactory(DjangoModelFactory):
     class Meta:
-        model = User
+        model = settings.AUTH_USER_MODEL
         django_get_or_create = ('username',)
     username = Sequence(lambda n: 'testuser%d' % n)
     email = 'someone@example.com'

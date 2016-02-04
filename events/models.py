@@ -1,15 +1,12 @@
 from django.db import models
 # from events.managers import EventManager
 # noinspection PyUnresolvedReferences
-from django.contrib.auth.models import User
 from django.conf import settings
 # Create your models here.
 from django.core.urlresolvers import reverse
 from django import forms
 from django.db.models import Manager
 from django.utils.functional import cached_property
-
-import watson
 
 import pytz
 import decimal
@@ -28,7 +25,8 @@ PROJECTIONS = (
     ('70', '70mm'),
 )
 
-##MANAGERS
+
+# MANAGERS
 
 
 def get_level_object(level, etype):
@@ -128,9 +126,8 @@ class EventManager(models.Manager):
         u.email = contact_email
         u.first_name = person_name_first
         u.last_name = person_name_last
+        u.phone = contact_phone
         u.save()
-        u.profile.phone = contact_phone
-        u.profile.save()
 
         # scheduling
 
@@ -196,7 +193,7 @@ class EventManager(models.Manager):
         return event
 
 
-### MODELS
+# MODELS
 
 class Building(models.Model):
     """ Used to group locations together in forms """
@@ -344,17 +341,18 @@ class Event(models.Model):
     objects = OptimizedEventManager()
     event_mg = EventManager()
 
-    submitted_by = models.ForeignKey(User, related_name='submitter')
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='submitter')
     submitted_ip = models.GenericIPAddressField(max_length=16)
     submitted_on = models.DateTimeField(auto_now_add=True, db_index=True)
 
     event_name = models.CharField(max_length=128, db_index=True)
     # Person
     person_name = models.CharField(max_length=128, null=True, blank=True, verbose_name="Contact_name")  # DEPRECATED
-    contact = models.ForeignKey(User, null=True, blank=True, verbose_name="Contact")
+    contact = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, verbose_name="Contact")
     org = models.ManyToManyField('Organization', blank=True, verbose_name="Client")
     billing_org = models.ForeignKey('Organization', null=True, blank=True, related_name="billedevents")
-    billing_fund = models.ForeignKey('Fund', null=True, blank=True, on_delete=models.SET_NULL, related_name="event_accounts")
+    billing_fund = models.ForeignKey('Fund', null=True, blank=True, on_delete=models.SET_NULL,
+                                     related_name="event_accounts")
     contact_email = models.CharField(max_length=256, null=True, blank=True)  # DEPRECATED
     contact_addr = models.TextField(null=True, blank=True)  # DEPRECATED
     contact_phone = models.CharField(max_length=32, null=True, blank=True)  # DEPRECATED
@@ -384,31 +382,31 @@ class Event(models.Model):
     otherservices = models.ManyToManyField(Service, blank=True)
     otherservice_reqs = models.TextField(null=True, blank=True)
     setup_location = models.ForeignKey('Location', related_name="setuplocation", null=True, blank=True)  # DEPRECATED
-    ##Status Indicators
+    # Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True, blank=True)
-    approved_by = models.ForeignKey(User, related_name="eventapprovals", null=True, blank=True)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventapprovals", null=True, blank=True)
 
     # billing reviews
     reviewed = models.BooleanField(default=False)
     reviewed_on = models.DateTimeField(null=True, blank=True)
-    reviewed_by = models.ForeignKey(User, related_name="eventbillingreview", null=True, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventbillingreview", null=True, blank=True)
 
     closed = models.BooleanField(default=False)
     closed_on = models.DateTimeField(null=True, blank=True)
-    closed_by = models.ForeignKey(User, related_name="eventclosings", null=True, blank=True)
+    closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventclosings", null=True, blank=True)
 
     cancelled = models.BooleanField(default=False)
     cancelled_on = models.DateTimeField(null=True, blank=True)
-    cancelled_by = models.ForeignKey(User, related_name="eventcancellations", null=True, blank=True)
+    cancelled_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventcancellations", null=True, blank=True)
     cancelled_reason = models.TextField(null=True, blank=True)
 
     payment_amount = models.IntegerField(blank=True, null=True, default=None)
     paid = models.BooleanField(default=False, db_index=True)
 
     # reports
-    crew_chief = models.ManyToManyField(User, blank=True, related_name='crewchiefx')
-    crew = models.ManyToManyField(User, blank=True, related_name='crewx')
+    crew_chief = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='crewchiefx')
+    crew = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='crewx')
     ccs_needed = models.PositiveIntegerField(default=0, db_index=True)
     # ^^^ used as a cache to get around the awkward event type fields and allow for sql filtering
 
@@ -425,31 +423,31 @@ class Event(models.Model):
 
     @property
     def contact_name(self):
-        if self.contact and self.contact.profile:
-            return self.contact.profile.fullname
+        if self.contact:
+            return str(self.contact)
 
     @property
     def contact_phone(self):
-        if self.contact and self.contact.profile:
-            return self.contact.profile.phone
+        if self.contact:
+            return self.contact.phone
 
     @property
     def contact_email(self):
-        if self.contact and self.contact.profile:
-            return self.contact.profile.email
+        if self.contact:
+            return self.contact.email
 
     @property
     def contact_addr(self):
-        if self.contact and self.contact.profile:
-            return self.contact.profile.addr
+        if self.contact:
+            return self.contact.addr
 
             # def clean(self):
             # if self.datetime_start > self.datetime_end:
             # raise ValidationError('You cannot start after you finish')
             # if self.datetime_setup_complete > self.datetime_start:
             # raise ValidationError('You cannot setup after you finish')
-            ##if self.datetime_setup_complete < datetime.datetime.now(pytz.utc):
-            ##raise ValidationError('Stop trying to time travel')
+            # if self.datetime_setup_complete < datetime.datetime.now(pytz.utc):
+            # raise ValidationError('Stop trying to time travel')
 
     # implementing calendars
     def save(self, force_insert=False, force_update=False, using=None,
@@ -532,10 +530,7 @@ class Event(models.Model):
     def __unicode__(self):
         return self.event_name
 
-    class Meta:
-        ordering = ['-datetime_start']
-
-    ## Report Properties
+    # Report Properties
     @property
     def crew_needing_reports(self):
         # chiefs = self.crew_chief.values_list('id','first_name','last_name')
@@ -560,12 +555,12 @@ class Event(models.Model):
     @property
     def reports_editable(self):
 
-        tz = timezone.get_current_timezone()
+        # tz = timezone.get_current_timezone()
 
         end = self.datetime_start
 
-        end_min = datetime.datetime.combine(end.date(), datetime.time.min)
-        end_min = tz.localize(end_min)
+        # end_min = datetime.datetime.combine(end.date(), datetime.time.min)
+        # end_min = tz.localize(end_min)
 
         end_plus_time = end + datetime.timedelta(days=CCR_DELTA)
         now = datetime.datetime.now(timezone.get_current_timezone())
@@ -575,7 +570,7 @@ class Event(models.Model):
         else:
             return False
 
-    ## Service information for templates
+    # Service information for templates
     @property
     def allservices(self):
         foo = []
@@ -609,7 +604,7 @@ class Event(models.Model):
             pass
         return foo
 
-    ## Event Statuses
+    # Event Statuses
     @cached_property
     def status(self):
         if self.cancelled:
@@ -646,7 +641,7 @@ class Event(models.Model):
     def late(self):
         return self.datetime_setup_complete - self.submitted_on < datetime.timedelta(weeks=2)
 
-    ### Extras And Billing Calculations
+    # Extras And Billing Calculations
     @property
     def extras_lighting(self):
         return self.extrainstance_set.filter(extra__category__name="Lighting")
@@ -866,11 +861,12 @@ class Event(models.Model):
             ("event_view_debug", "See debug events"),
             ("reopen_event", "Reopen a closed, declined, or cancelled event"),
         )
+        ordering = ['-datetime_start']
 
 
 class CCReport(models.Model):
     glyphicon = 'comment'
-    crew_chief = models.ForeignKey(User)
+    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL)
     event = models.ForeignKey(Event)
     report = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
@@ -940,8 +936,8 @@ class Organization(models.Model):  # AKA Client
 
     accounts = models.ManyToManyField(Fund, related_name='orgfunds')
 
-    user_in_charge = models.ForeignKey(User, related_name='orgowner')
-    associated_users = models.ManyToManyField(User, related_name='orgusers')
+    user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='orgowner')
+    associated_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='orgusers')
 
     associated_orgs = models.ManyToManyField("self", blank=True, verbose_name="Associated Clients")
 
@@ -990,8 +986,8 @@ class Organization(models.Model):  # AKA Client
 
 
 class OrganizationTransfer(models.Model):
-    new_user_in_charge = models.ForeignKey(User, related_name="xfer_new")
-    old_user_in_charge = models.ForeignKey(User, related_name="xfer_old")
+    new_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_new")
+    old_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_old")
     org = models.ForeignKey(Organization)
     uuid = UUIDField(auto=True)  # for the link
     created = models.DateTimeField(auto_now=True)
@@ -1011,7 +1007,7 @@ class OrganizationTransfer(models.Model):
 class OrgBillingVerificationEvent(models.Model):
     org = models.ForeignKey(Organization, related_name="verifications")
     date = models.DateField()
-    verified_by = models.ForeignKey(User, related_name="verification_events")
+    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="verification_events")
     note = models.TextField(null=True, blank=True)
 
     class Meta:
@@ -1023,7 +1019,7 @@ class OrgBillingVerificationEvent(models.Model):
 class Hours(models.Model):
     event = models.ForeignKey('Event', related_name="hours")
     service = models.ForeignKey('Service', related_name="hours", null=True, blank=True)
-    user = models.ForeignKey(User, related_name="hours")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="hours")
     hours = models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)
 
     def __unicode__(self):
@@ -1037,7 +1033,7 @@ class Hours(models.Model):
 class EventCCInstance(models.Model):
     # the pair
     event = models.ForeignKey('Event', related_name="ccinstances")
-    crew_chief = models.ForeignKey(User, related_name="ccinstances")
+    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="ccinstances")
 
     # the service
     service = models.ForeignKey(Service, related_name="ccinstances")
@@ -1084,7 +1080,7 @@ class EventCCInstance(models.Model):
 # A log of CC Report Reminders Sent
 class ReportReminder(models.Model):
     event = models.ForeignKey('Event', related_name="ccreportreminders")
-    crew_chief = models.ForeignKey(User, related_name="ccreportreminders")
+    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="ccreportreminders")
     sent = models.DateTimeField(auto_now_add=True)
 
 
@@ -1122,5 +1118,6 @@ class EventArbitrary(models.Model):
         return abs(self.totalcost)
 
 
-### SIGNALS IMPORT, DO NOT TOUCH
+# SIGNALS IMPORT, DO NOT TOUCH
+# noinspection PyPep8
 from events.signals import *

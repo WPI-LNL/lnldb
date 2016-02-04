@@ -47,18 +47,18 @@
                     clearBtn: true,
                     todayBtn: true,
                     todayHighlight: true,
-                    orientation: 'top',
+                    orientation: 'top'
                     });
                 $(".timeinput").timepicker(
                     {
                         minuteStep: 15,
                         showInputs: true,
                         defaultTime: false,
-                        showMeridian: false
+                        showMeridian: true
                     });
 
                 // Collapse main navbar if too big
-                $("div.collapse ul.navbar-nav").flexMenu()
+                $("div.collapse ul.navbar-nav").flexMenu();
 
                 /*
                  Save tabs across reloads
@@ -142,6 +142,15 @@
             </div>
             {% endfor %}
         {% endif %}
+
+        {% if request.user.is_authenticated and not request.user.is_complete %}
+            <div class="alert alert-warning">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                <strong>It seems you haven't finished your profile.
+                    <a href="{% url 'accounts:update' request.user.pk %}">Enter contact info.</a></strong>
+            </div>
+        {% endif %}
+
         <div class="container-fluid">
         {% block content %}
         {% endblock %}

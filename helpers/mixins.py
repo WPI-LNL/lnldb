@@ -5,6 +5,9 @@ from django.utils.decorators import method_decorator
 from helpers.challenges import is_officer
 
 
+# flake8: noqa
+
+
 class LoginRequiredMixin(object):
     @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
@@ -23,6 +26,8 @@ class OfficerMixin(object):
 class HasPermMixin(object):
     perms = []
 
+    # assumed you have to log in to have any permissions...
+    @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
         from django.utils import six
 
@@ -41,6 +46,8 @@ class HasPermOrTestMixin(object):
     def user_passes_test(self, request, *args, **kwargs):
         raise NotImplementedError
 
+    # assumed you have to log in to have any permissions...
+    @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
         from django.utils import six
 
@@ -57,6 +64,8 @@ class HasPermOrTestMixin(object):
 
 
 class SetFormMsgMixin(object):
+    msg = None
+
     def get_context_data(self, **kwargs):
         context = super(SetFormMsgMixin, self).get_context_data(**kwargs)
         context['msg'] = self.msg

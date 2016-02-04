@@ -1,7 +1,6 @@
 import datetime
 import decimal
 
-import _strptime
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
 from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer
@@ -17,7 +16,7 @@ from crispy_forms.layout import Layout, Fieldset, Submit, Div, Field, HTML, Hidd
     Reset
 from crispy_forms.bootstrap import InlineCheckboxes, InlineRadios, Tab, TabHolder, FormActions, \
     PrependedText
-from events.models import Event, Organization, Category, OrganizationTransfer, OrgBillingVerificationEvent, Fund
+from events.models import Event, Organization, OrganizationTransfer, OrgBillingVerificationEvent, Fund
 from events.models import Extra, Location, Lighting, Sound, Projection, Service, EventCCInstance, EventAttachment, \
     ExtraInstance
 from events.models import Billing, CCReport, Hours
@@ -28,8 +27,6 @@ import pytz
 from ajax_select import make_ajax_field
 from ajax_select.fields import AutoCompleteSelectMultipleField, AutoCompleteSelectField
 
-
-valid_time_formats = ['%H:%M', '%I:%M%p', '%I:%M %p']
 
 LIGHT_EXTRAS = Extra.objects.filter(category__name="Lighting")
 LIGHT_EXTRAS_ID_NAME = LIGHT_EXTRAS.values_list('id', 'name')
@@ -955,10 +952,9 @@ class WorkorderRepeatForm(forms.ModelForm):
         )
         super(WorkorderRepeatForm, self).__init__(*args, **kwargs)
 
-    datetime_setup_complete = forms.SplitDateTimeField(label="Setup Completed By",
-                                                       input_time_formats=valid_time_formats, required=True)
-    datetime_start = forms.SplitDateTimeField(label="Event Starts", input_time_formats=valid_time_formats)
-    datetime_end = forms.SplitDateTimeField(label="Event Ends", input_time_formats=valid_time_formats)
+    datetime_setup_complete = forms.SplitDateTimeField(label="Setup Completed By", required=True)
+    datetime_start = forms.SplitDateTimeField(label="Event Starts")
+    datetime_end = forms.SplitDateTimeField(label="Event Ends")
     location = GroupedModelChoiceField(
         queryset=Location.objects.filter(show_in_wo_form=True),
         group_by_field="building",
@@ -1066,7 +1062,7 @@ class ContactForm(forms.Form):
             HTML(
                 '<span class="text-muted">To avoid entering this information again, update your '
                 '<a target="_blank" href="%s">contact information</a></span>' % reverse(
-                    'my-lnl')),
+                    'accounts:me')),
         )
         super(ContactForm, self).__init__(*args, **kwargs)
 
@@ -1350,12 +1346,10 @@ class ScheduleForm(forms.Form):
     today = datetime.datetime.today()
     noon = datetime.time(12)
     noontoday = datetime.datetime.combine(today, noon)
-    #setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    setup_complete = forms.SplitDateTimeField(initial=noontoday, label="Setup Completed By",
-                                              input_time_formats=valid_time_formats, required=True)
-    event_start = forms.SplitDateTimeField(initial=noontoday, label="Event Starts",
-                                           input_time_formats=valid_time_formats)
-    event_end = forms.SplitDateTimeField(initial=noontoday, label="Event Ends", input_time_formats=valid_time_formats)
+    # setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
+    setup_complete = forms.SplitDateTimeField(initial=noontoday, label="Setup Completed By", required=True)
+    event_start = forms.SplitDateTimeField(initial=noontoday, label="Event Starts")
+    event_end = forms.SplitDateTimeField(initial=noontoday, label="Event Ends")
 
     def clean(self):
         cleaned_data = super(ScheduleForm, self).clean()

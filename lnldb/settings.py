@@ -1,8 +1,9 @@
 # Django settings for lnldb project.
 
-from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 import os
 import sys
+
+from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
 
 
 def here(*x):
@@ -20,7 +21,6 @@ def from_runtime(*x):
 TESTING = sys.argv[1:2] == ['test']
 
 DEBUG = True
-TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -28,6 +28,8 @@ ADMINS = (
 
 MANAGERS = ADMINS
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu', 'users.wpi.edu', 'userweb.wpi.edu']
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DATABASES = {
     'default': {
@@ -37,6 +39,15 @@ DATABASES = {
         'PASSWORD': '',  # And for the love of god, use a password.
         'HOST': '',  # Set to empty string for localhost.
         'PORT': '',  # Set to empty string for default.
+        'OPTIONS': {
+            'sql_mode': 'TRADITIONAL',
+            'charset': 'utf8',
+            'init_command': 'SET '
+                            'storage_engine=INNODB,'
+                            'character_set_connection=utf8,'
+                            'collation_connection=utf8_bin,'
+                            'SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
+        }  # Now we have a mild degree of confidence :-)
     }
 }
 
@@ -59,6 +70,12 @@ USE_I18N = True
 # If you set this to False, Django will not format dates, numbers and
 # calendars according to the current locale.
 USE_L10N = True
+TIME_FORMAT = "%I:%M %p"
+DATETIME_FORMAT = '%Y-%m-%d %H:%M'
+TIME_INPUT_FORMATS = ['%I:%M %p', '%I:%M:%S.%f %p', '%I:%M %p',
+                      '%I:%M%p', '%I:%M:%S.%f%p', '%I:%M%p',
+                      '%H:%M:%S', '%H:%M:%S.%f', '%H:%M']
+
 
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = True
@@ -104,12 +121,27 @@ STATICFILES_FINDERS = (
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = '*am$3w(-v2p+i)m-6t8f0d%)%g60cr+tj6$_x1_u-$wx^0$fu%'
 
-# List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-    # 'django.template.loaders.eggs.Loader',
-)
+TEMPLATES = [{
+    'BACKEND': 'django.template.backends.django.DjangoTemplates',
+    'DIRS': [from_root("site_tmpl"), ],
+    'OPTIONS': {
+        'loaders': [
+            ('django.template.loaders.cached.Loader', [
+                'django.template.loaders.filesystem.Loader',
+                'django.template.loaders.app_directories.Loader',
+            ]),
+        ],
+        'context_processors':
+            TCP + (
+                'django.template.context_processors.request',
+                'data.context_processors.airplane_mode',
+                'data.context_processors.analytics',
+                # 'lnldb.processors.staticz',
+                'processors.navs',
+            ),
+        'debug': DEBUG
+    },
+}]
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
@@ -130,13 +162,6 @@ ROOT_URLCONF = 'lnldb.urls'
 # Python dotted path to the WSGI application used by Django's runserver.
 WSGI_APPLICATION = 'lnldb.wsgi.application'
 
-TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-    from_root("site_tmpl"),
-)
-
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -149,9 +174,10 @@ INSTALLED_APPS = (
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
     'markdown_deux',
-    'django_cas',
+    'django_cas_ng',
     'django_extensions',
 
+    'accounts',
     'events',
     'inventory',
     'data',
@@ -180,12 +206,8 @@ INSTALLED_APPS = (
     'compat',
 )
 
-TEMPLATE_CONTEXT_PROCESSESORS = TCP + (
-    # 'lnldb.processors.staticz',
-    'processors.navs',
-)
-
-DEBUG_TOOLBAR_PATCH_SETTINGS = False
+SHOW_HIJACKUSER_IN_ADMIN = False
+# Needed since Hijack doesn't support custom UserAdmin
 
 DEBUG_TOOLBAR_PANELS = (
     'debug_toolbar.panels.versions.VersionsPanel',
@@ -237,8 +259,7 @@ LOGGING = {
     }
 }
 
-AUTH_PROFILE_MODULE = 'acct.Profile'
-
+AUTH_USER_MODEL = 'accounts.User'
 
 # AJAX_SELECT_BOOTSTRAP = False
 # AJAX_SELECT_INLINES = False
@@ -247,25 +268,17 @@ AJAX_SELECT_BOOTSTRAP = False
 # AJAX_SELECT_INLINES = 'staticfiles'
 
 AJAX_LOOKUP_CHANNELS = {
-    'Users': ('acct.lookups', 'UserLookup'),
+    'Users': ('accounts.lookups', 'UserLookup'),
     'Orgs': ('events.lookups', 'OrgLookup'),
     'UserLimitedOrgs': ('events.lookups', 'UserLimitedOrgLookup'),
-    'Officers': ('acct.lookups', 'OfficerLookup'),
-    'Members': ('acct.lookups', 'MemberLookup'),
-    'AssocMembers': ('acct.lookups', 'AssocMemberLookup'),
+    'Officers': ('accounts.lookups', 'OfficerLookup'),
+    'Members': ('accounts.lookups', 'MemberLookup'),
+    'AssocMembers': ('accounts.lookups', 'AssocMemberLookup'),
     'Funds': ('events.lookups', 'FundLookup'),
     'FundsLimited': ('events.lookups', 'FundLookupLimited'),
     'EquipmentClass': ('inventory.lookups', 'ClassLookup'),
     'EquipmentContainer': ('inventory.lookups', 'ContainerLookup')
 }
-
-from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
-
-TEMPLATE_CONTEXT_PROCESSORS = TCP + (
-    'django.template.context_processors.request',
-    'data.context_processors.airplane_mode',
-    'data.context_processors.analytics',
-)
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',  # default
@@ -336,8 +349,8 @@ try:
     local_settings_script = local_settings_file.read()
     exec local_settings_script
 except IOError, e:
-    print "Unable to open local settings! %s" % e
-
+    print "No local settings were found (%s). " \
+          "If you're fine with the defaults, you can ignore this or create 'lnldb/local_settings.py'" % e
 
 if not os.path.exists(STATIC_ROOT):
     os.makedirs(STATIC_ROOT)

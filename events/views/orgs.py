@@ -1,27 +1,28 @@
 # Create your views here.
 
 import datetime
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 
+import pytz
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.core.urlresolvers import reverse
 from django.db.models import Count
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import render, get_object_or_404
-from django.template import RequestContext
-from events.models import Organization, OrganizationTransfer, OrgBillingVerificationEvent, Fund
-from events.forms import IOrgForm, ExternalOrgUpdateForm, OrgXFerForm, IOrgVerificationForm, FopalForm
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
-from django.views.generic import CreateView
-from helpers.mixins import LoginRequiredMixin, SetFormMsgMixin, HasPermMixin
-import pytz
 from django.utils import timezone
+from django.views.generic import CreateView
+
+from events.forms import IOrgForm, ExternalOrgUpdateForm, OrgXFerForm, IOrgVerificationForm, FopalForm
+from events.models import Organization, OrganizationTransfer, OrgBillingVerificationEvent, Fund, Event
+from helpers.mixins import LoginRequiredMixin, SetFormMsgMixin, HasPermMixin
 
 # so that we can know to send Email
 from django.conf import settings
 from emails.generators import generate_transfer_email
 
-### ORGANIZATION VIEWS
+
+# ORGANIZATION VIEWS
 
 
 @login_required
@@ -44,7 +45,7 @@ def vieworgs(request):
 
 
 @login_required
-### TODO: edit form with perm logic
+# TODO: edit form with perm logic
 def addeditorgs(request, id=None):
     """form for adding an org """
     # need to fix this
@@ -131,7 +132,12 @@ def fund_edit(request, id=None, org=None):
 def orgdetail(request, id):
     context = {}
     perms = ('events.view_org',)
-    org = get_object_or_404(Organization, pk=id)
+    try:
+        org = Organization.objects.prefetch_related('accounts', 'associated_users').get(pk=id)
+    except (Organization.DoesNotExist, Organization.MultipleObjectsReturned):
+        raise Http404('No Organization matches the given query.')
+    context['events'] = Event.objects.filter(org=org).prefetch_related('hours__user', 'ccinstances__crew_chief',
+                                                                       'location', 'org')
     if not (request.user.has_perms(perms) or
             request.user.has_perms(perms, org)):
         raise PermissionDenied
@@ -139,7 +145,7 @@ def orgdetail(request, id):
     return render(request, 'org_detail.html', context)
 
 
-### External Form Editing Views (NOW DEPRECATED!)
+# External Form Editing Views (NOW DEPRECATED!)
 @login_required
 def orglist(request):
     context = {}
@@ -176,7 +182,7 @@ def orgedit(request, id):
     return render(request, 'mycrispy.html', context)
 
 
-### Transfer Views
+# Transfer Views
 @login_required
 def org_mkxfer(request, id):
     context = {}

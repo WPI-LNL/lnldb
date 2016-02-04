@@ -42,7 +42,7 @@
                     Automatically send me to CAS in the future.
                 </label>
             </form>
-            <a class="btn btn-lg btn-block btn-primary" href="{% url "django_cas.views.login" %}"> CAS Login</a>
+            <a class="btn btn-lg btn-block btn-primary" href="{% url "login" %}?force_cas=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}"> CAS Login</a>
         </div>
         <div class="col-md-5 login">
             <h2> Login via Local Account </h2>

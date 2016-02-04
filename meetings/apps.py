@@ -7,10 +7,6 @@ class MeetingsConfig(AppConfig):
     verbose_name = "Meetings Module"
 
     def ready(self):
+        # noinspection PyPep8Naming
         Meeting = self.get_model('Meeting')
         watson.register(Meeting)
-
-
-class UserSearchAdapter(watson.SearchAdapter):
-    def get_title(self, obj):
-        return obj.profile.fullname

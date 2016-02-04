@@ -1,16 +1,13 @@
 # Create your views here.
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-
 from django.db.models import Count
-from django.contrib import messages
-from django.core.urlresolvers import reverse
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import render, get_object_or_404
 
-from inventory.models import *
 from inventory.forms import *
 
 NUM_IN_PAGE = 25
@@ -131,6 +128,9 @@ def quick_bulk_edit(request, type_id):
                                                 kwargs={'type_id': type_id}))
     else:
         formset = fs_factory(instance=e_type)
+        qs = EquipmentCategory.possible_locations()
+        for form in formset:
+            form.fields['home'].queryset = qs
     return render(request, "formset_grid.html", {
         'msg': "Bulk inventory edit for '%s'" % e_type.name,
         "formset": formset,
@@ -215,7 +215,7 @@ def cat_edit(request, category_id):
     if request.method == 'POST':
         formset = CategoryForm(request.POST, request.FILES, instance=category)
         if formset.is_valid():
-            obj = formset.save()
+            formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Category saved.")
             return HttpResponseRedirect(reverse('inventory:cat',
@@ -253,22 +253,22 @@ def cat_mk(request):
 
 @login_required
 def cat_rm(request, category_id):
-    cat = get_object_or_404(EquipmentCategory, pk=int(category_id))
-    if cat.parent:
-        return_url = reverse('inventory:cat', args=[cat.parent.pk])
+    ecat = get_object_or_404(EquipmentCategory, pk=int(category_id))
+    if ecat.parent:
+        return_url = reverse('inventory:cat', args=[ecat.parent.pk])
     else:
         return_url = reverse('inventory:view_all')
 
-    if not request.user.has_perm('inventory.delete_equipmentcategory', cat):
+    if not request.user.has_perm('inventory.delete_equipmentcategory', ecat):
         raise PermissionDenied
 
     if request.method == 'POST':
-        if cat.get_children().exists():
+        if ecat.get_children().exists():
             return HttpResponseBadRequest("There are still subcategories of this type")
-        elif cat.equipmentclass_set.exists():
+        elif ecat.equipmentclass_set.exists():
             return HttpResponseBadRequest("There are still items in this category")
         else:
-            cat.delete()
+            ecat.delete()
             return HttpResponseRedirect(return_url)
     else:
         return HttpResponseBadRequest("Bad method")
@@ -280,9 +280,9 @@ def fast_mk(request):
         raise PermissionDenied
 
     try:
-        cat = int(request.GET['default_cat'])
+        category = int(request.GET['default_cat'])
     except (ValueError, KeyError, TypeError):
-        cat = None
+        category = None
 
     if request.method == 'POST':
         formset = FastAdd(request.user, request.POST, request.FILES)
@@ -293,7 +293,7 @@ def fast_mk(request):
             return HttpResponseRedirect(reverse('inventory:bulk_edit',
                                                 kwargs={'type_id': obj.pk}))
     else:
-        formset = FastAdd(request.user, initial={'item_cat': cat})
+        formset = FastAdd(request.user, initial={'item_cat': category})
     return render(request, "form_crispy.html", {
         'msg': "Fast Add Item(s)",
         "formset": formset,

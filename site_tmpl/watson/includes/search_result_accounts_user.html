@@ -2,12 +2,12 @@
 {% load linkify_map %}
 {% block search_result %}
     <h2><span class="glyphicon glyphicon-user" aria-hidden="true"></span> <a
-            href="{% url 'memberdetail' result.object.id %}">{{ result.object.profile.fullname }}
+            href="{% url 'accounts:detail' result.object.id %}">{{ result.object }}
         ({{ result.object.username }})</a>
-        <span class="result-subtitle">User - {{ result.object.profile.group_str }}</span></h2>
+        <span class="result-subtitle">User - {{ result.object.group_str }}</span></h2>
     <h3> Email: {{ result.object.email }}
-        {% if result.object.profile.phone %}| Phone: {{ result.object.profile.phone }} {% endif %}
-        {% if result.object.profile.mdc %}| MDC: {{ result.object.profile.mdc }}{% endif %}</h3>
+        {% if result.object.phone %}| Phone: {{ result.object.phone }} {% endif %}
+        {% if result.object.mdc %}| MDC: {{ result.object.mdc }}{% endif %}</h3>
     {% if result.object.orgowner.exists %}
         <p><b>Leads:</b> {{ result.object.orgowner|linkify_join:"admin-orgdetail" }}</p>{% endif %}
     {% if result.object.orgusers.exists %}

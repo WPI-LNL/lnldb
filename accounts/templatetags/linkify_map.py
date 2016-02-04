@@ -1,5 +1,4 @@
 from django.core.urlresolvers import reverse
-from django.db.models.query import QuerySet
 from django.template.defaultfilters import register
 from django.utils.html import format_html, conditional_escape
 from django.utils.safestring import mark_safe
@@ -19,10 +18,10 @@ def linkify_map(value, page, escape=True, title_callback=None, id_callback=None)
     return map(lambda item: mark_safe(format_html("<a href=\"{0}\">{1}</a>",
                                                   reverse(page, args=[
                                                       conditional_escape(id_callback(item)) if escape else id_callback(
-                                                          item)
+                                                              item)
                                                   ]),
                                                   conditional_escape(
-                                                      title_callback(item)) if escape else title_callback(item))),
+                                                          title_callback(item)) if escape else title_callback(item))),
                value)
 
 

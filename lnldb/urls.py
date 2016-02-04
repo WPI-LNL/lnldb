@@ -1,30 +1,26 @@
-from django.conf import settings
-from acct.forms import LoginForm
 import debug_toolbar
+from ajax_select import urls as ajax_select_urls
+from django.conf import settings
 from django.conf.urls import patterns, include, url
 
+from accounts.forms import LoginForm
 from events.cal import EventFeed
 from events.forms import named_event_forms
 from events.views.wizard import EventWizard
-from events.views.wizard import show_lighting_form_condition, show_sound_form_condition, show_projection_form_condition, \
-    show_other_services_form_condition
-
-from django.views.generic.base import TemplateView
-
-from ajax_select import urls as ajax_select_urls
+from events.views.wizard import show_lighting_form_condition, show_sound_form_condition, \
+    show_projection_form_condition, show_other_services_form_condition
 
 # Uncomment the next two lines to enable the admin:
 from django.contrib import admin
 
-admin.autodiscover()
 import permission
 
-permission.autodiscover()
+from django.views.generic.base import RedirectView
 
 # cbv imports
-from acct.views import AcctUpdate, LNLUpdate, LNLAdd
-from members.views import UserUpdate
-from members.views import MemberUpdate
+# from acct.views import AcctUpdate, LNLUpdate, LNLAdd
+# from members.views import UserUpdate
+# from members.views import MemberUpdate
 from events.views.flow import BillingCreate, BillingUpdate, BillingDelete
 from events.views.flow import CCRCreate, CCRUpdate, CCRDelete
 from events.views.orgs import OrgVerificationCreate
@@ -36,6 +32,9 @@ from projection.views import ProjectionistDelete
 # event wizard form defenitions
 
 from django.contrib.auth.decorators import login_required
+
+admin.autodiscover()
+permission.autodiscover()
 
 event_wizard = EventWizard.as_view(
     named_event_forms,
@@ -61,7 +60,6 @@ handler404 = 'data.views.err404'
 handler500 = 'data.views.err500'
 
 # generics
-from django.views.generic.base import RedirectView
 
 urlpatterns = patterns('',
                        # Examples:
@@ -77,14 +75,14 @@ urlpatterns = patterns('',
                        #
                        url(r'^$', 'pages.views.page', {'slug': 'index'}),
                        # use the nice redirector
-                       url(r'^login/$', 'django_cas.views.login', name="cas-login"),
-                       url(r'^smart/login/$', 'acct.views.smart_login', name="login"),
+                       #url(r'^login/$', 'django_cas_ng.views.login', name="cas-login"),
+                       url(r'^login/$', 'accounts.views.smart_login', name="login"),
                        # best use CAS for logout, since it's guaranteed to log the user out
                        #  (without immediately signing them back in)
-                       url(r'^logout/$', 'django_cas.views.logout', name="logout"),
+                       url(r'^logout/$', 'django_cas_ng.views.logout', name="logout"),
 
-                       url(r'^cas/login/$', 'django_cas.views.login', name="cas-explicit-login"),
-                       url(r'^cas/logout/$', 'django_cas.views.logout', name="cas-logout"),
+                       url(r'^cas/login/$', 'django_cas_ng.views.login', name="cas-explicit-login"),
+                       url(r'^cas/logout/$', 'django_cas_ng.views.logout', name="cas-logout"),
                        # maybe we do
                        url(r'^local/login/$', 'django.contrib.auth.views.login',
                            {'template_name': 'registration/login.html',
@@ -111,8 +109,7 @@ urlpatterns = patterns('',
                        # static
 
                        # user facing shit
-                       url(r'^my/$', 'events.views.my.my', name="my"),
-                       url(r'^my/contact/$', LNLUpdate.as_view(), name="my-lnl"),
+                       # url(r'^my/contact/$', LNLUpdate.as_view(), name="my-lnl"),
                        url(r'^my/workorders/$', 'events.views.my.mywo', name="my-wo"),
                        url(r'^my/workorders/attach/(?P<id>[0-9]+)/$', 'events.views.flow.assignattach_external',
                            name="my-wo-attach"),
@@ -124,11 +121,11 @@ urlpatterns = patterns('',
                        url(r'^my/orgs/transfer/(?P<id>[0-9]+)/$', 'events.views.orgs.org_mkxfer', name="my-orgs-xfer"),
                        url(r'^my/orgs/transfer/(?P<idstr>[0-9a-f]+)/$', 'events.views.orgs.org_acceptxfer',
                            name="my-orgs-acceptxfer"),
-                       url(r'^my/acct/$', AcctUpdate.as_view(), name="my-acct"),
-                       url(r'^my/acct/send_lnl_member_request/$', 'acct.views.send_member_request',
-                           name="my-acct-request-lnl"),
+                       # url(r'^my/acct/$', AcctUpdate.as_view(), name="my-acct"),
+                       # url(r'^my/acct/send_lnl_member_request/$', 'acct.views.send_member_request',
+                       #     name="my-acct-request-lnl"),
                        url(r'^my/events/$', 'events.views.my.myevents', name="my-events"),
-                       url(r'^my/events/(?P<id>[0-9]+)$', 'events.views.my.myeventdetail', name="my-event-detail"),
+                       # url(r'^my/events/(?P<id>[0-9]+)$', 'events.views.my.myeventdetail', name="my-event-detail"),
                        url(r'^my/events/(?P<id>[0-9a-f]+)/pdf/$', 'pdfs.views.generate_event_pdf',
                            name="my-events-pdf"),
                        url(r'^my/events/(?P<eventid>[0-9]+)/files/$', 'events.views.my.eventfiles',
@@ -141,7 +138,7 @@ urlpatterns = patterns('',
                            name="my-cchours-mk"),
                        url(r'^my/events/(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', 'events.views.my.hours_edit',
                            name="my-cchours-edit"),
-                       #workorders
+                       # workorders
                        url(r'^workorder/(?P<step>.+)/$', login_wrapped_wo, name='event_step'),
                        url(r'^workorder/$', login_wrapped_wo, name='event'),
                        url(r'^my/events/(?P<eventid>[0-9]+)/repeat/$', 'events.views.my.myworepeat', name="my-repeat"),
@@ -193,30 +190,29 @@ urlpatterns = patterns('',
 
 
                        # members
-                       url(r'^list/mdc/raw/$', 'members.views.mdc_raw', name="mdc_raw"),
-                       url(r'^list/mdc/$', 'members.views.mdc'),
-                       url(r'^db/members/officers/$', 'members.views.officers'),
-                       url(r'^db/members/active/$', 'members.views.active'),
-                       url(r'^db/members/associate/$', 'members.views.associate'),
-                       url(r'^db/members/alum/$', 'members.views.alum'),
-                       url(r'^db/members/away/$', 'members.views.away'),
-                       url(r'^db/members/inactive/$', 'members.views.inactive'),
-                       url(r'^db/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail', name="memberdetail"),
-                       url(r'^db/members/detail/(?P<username>[^/]+)/$', 'members.views.named_detail',
-                           name="namedmemberdetail"),
-                       url(r'^db/members/edit/(?P<pk>[0-9a-f]+)/$', UserUpdate.as_view(), name="memberupdate"),
-                       url(r'^db/members/editcontact/(?P<pk>[0-9a-f]+)/$', MemberUpdate.as_view(),
-                           name="membercontact"),
+                       # url(r'^list/mdc/raw/$', 'members.views.mdc_raw', name="mdc_raw"),
+                       # url(r'^list/mdc/$', 'members.views.mdc'),
+                       # url(r'^db/members/officers/$', 'members.views.officers'),
+                       # url(r'^db/members/active/$', 'members.views.active'),
+                       # url(r'^db/members/associate/$', 'members.views.associate'),
+                       # url(r'^db/members/alum/$', 'members.views.alum'),
+                       # url(r'^db/members/away/$', 'members.views.away'),
+                       # url(r'^db/members/inactive/$', 'members.views.inactive'),
+                       # url(r'^db/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail', name="memberdetail"),
+                       # url(r'^db/members/detail/(?P<username>[^/]+)/$', 'members.views.named_detail',
+                       #     name="namedmemberdetail"),
+                       # url(r'^db/members/edit/(?P<pk>[0-9a-f]+)/$', UserUpdate.as_view(), name="memberupdate"),
+                       # url(r'^db/members/editcontact/(?P<pk>[0-9a-f]+)/$', MemberUpdate.as_view(),
+                       #     name="membercontact"),
 
-                       #misc
-                       url(r'^db/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
-                       url(r'^db/misc/users/unsorted/$', 'members.views.limbousers', name="users-limbo"),
-                       url(r'^db/misc/users/add/$', LNLAdd.as_view(), name="users-add"),
+                       # misc
+                       # url(r'^db/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
+                       # url(r'^db/misc/users/unsorted/$', 'members.views.limbousers', name="users-limbo"),
+                       # url(r'^db/misc/users/add/$', LNLAdd.as_view(), name="users-add"),
                        url(r'^db/oldsearch$', "events.views.indices.event_search", name="events-search"),
                        url(r'^db/search$', "data.views.search", name="search"),
 
-
-                       #meetings
+                       # meetings
                        url(r'^db/meetings/new/$', 'meetings.views.newattendance', name="meeting-new"),
                        url(r'^db/meetings/$', 'meetings.views.listattendance', name="meeting-list"),
                        url(r'^db/meetings/(\d+)/list/$', 'meetings.views.listattendance', ),
@@ -234,7 +230,7 @@ urlpatterns = patterns('',
                        url(r'^db/meetings/(?P<mtg_id>\d+)/rm/(?P<att_id>\d+)/$',
                            'meetings.views.rm_att', name="meeting-att-rm"),
 
-                       #projection
+                       # projection
                        url(r'^db/projection/list/$', 'projection.views.plist_detail',
                            name="projection-list-detail"),
                        url(r'^db/projection/list/other/$', 'projection.views.plist', name="projection-list"),
@@ -334,28 +330,28 @@ urlpatterns = patterns('',
                        url(r'^db/clients/funds/add/(?P<org>[0-9]+)/$', 'events.views.orgs.fund_edit',
                            name="admin-fundaddorg"),
 
-
-                       #inventory
+                       # nice include statements (ie. the future)
                        url(r'^db/inventory/', include('inventory.urls', namespace='inventory')),
-
-                       #members
-                       url(r'^list/mdc/raw/$', 'members.views.mdc_raw'),
-                       url(r'^list/mdc/$', 'members.views.mdc'),
-                       url(r'^db/members/officers/$', 'members.views.officers'),
-                       url(r'^db/members/active/$', 'members.views.active'),
-                       url(r'^db/members/associate/$', 'members.views.associate'),
-                       url(r'^db/members/alum/$', 'members.views.alum'),
-                       url(r'^db/members/away/$', 'members.views.away'),
-                       url(r'^db/members/inactive/$', 'members.views.inactive'),
-                       url(r'^db/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail', name="memberdetail"),
-                       url(r'^db/members/edit/(?P<pk>[0-9a-f]+)/$', UserUpdate.as_view(), name="memberupdate"),
-                       url(r'^db/members/editcontact/(?P<pk>[0-9a-f]+)/$', MemberUpdate.as_view(),
-                           name="membercontact"),
-
-                       #misc
-                       url(r'^db/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
-                       url(r'^db/misc/users/unsorted/$', 'members.views.limbousers', name="users-limbo"),
-                       url(r'^db/misc/users/add/$', LNLAdd.as_view(), name="users-add"),
+                       url(r'', include('accounts.urls', namespace='accounts')),
+                       #
+                       # #members
+                       # url(r'^list/mdc/raw/$', 'members.views.mdc_raw'),
+                       # url(r'^list/mdc/$', 'members.views.mdc'),
+                       # url(r'^db/members/officers/$', 'members.views.officers'),
+                       # url(r'^db/members/active/$', 'members.views.active'),
+                       # url(r'^db/members/associate/$', 'members.views.associate'),
+                       # url(r'^db/members/alum/$', 'members.views.alum'),
+                       # url(r'^db/members/away/$', 'members.views.away'),
+                       # url(r'^db/members/inactive/$', 'members.views.inactive'),
+                       # url(r'^db/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail', name="memberdetail"),
+                       # # url(r'^db/members/edit/(?P<pk>[0-9a-f]+)/$', UserUpdate.as_view(), name="memberupdate"),
+                       # # url(r'^db/members/editcontact/(?P<pk>[0-9a-f]+)/$', MemberUpdate.as_view(),
+                       # #     name="membercontact"),
+                       #
+                       # #misc
+                       # url(r'^db/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
+                       # url(r'^db/misc/users/unsorted/$', 'members.views.limbousers', name="users-limbo"),
+                       # # url(r'^db/misc/users/add/$', LNLAdd.as_view(), name="users-add"),
                        url(r'^db/search$', "events.views.indices.event_search", name="events-search"),
 
 
@@ -378,14 +374,13 @@ urlpatterns = patterns('',
                        url(r'^db/projection/bulkevents/$', 'projection.views.bulk_projection',
                            name="projection-bulk2"),
 
-
-                       #emails
+                       # emails
                        url(r'^email/announce/(?P<slug>[0-9a-f]+)/$', MeetingAnnounceView.as_view(),
                            name="email-view-announce"),
                        url(r'^email/announcecc/(?P<slug>[0-9a-f]+)/$', MeetingAnnounceCCView.as_view(),
                            name="email-view-announce-cc"),
 
-                       #special urls
+                       # special urls
                        url(r'^status/$', "data.views.status"),
                        url(r'^db/accesslog/$', 'data.views.access_log', name="access-log"),
                        url(r'^NOTOUCHING/$', 'data.views.fuckoffkitty'),

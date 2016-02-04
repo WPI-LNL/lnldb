@@ -6,8 +6,8 @@
 
 {% block content %}    
 <div class="pull-right text-muted">
-    
-    {% if object.profile.is_lnl %} 
+
+    {% if object.is_lnl %}
     
     {% else %} 
         If you're not an LNL member click
@@ -17,7 +17,7 @@
         to request access
     {% endif %}
 </div>
-<h1> <a href="{% url "events.views.my.my" %}">My</a> Account </h1>
+<h1> <a href="{% url "accounts:me" %}">My</a> Account </h1>
 
     <div class="well well-lg">
 {% crispy form %}

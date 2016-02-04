@@ -1,30 +1,18 @@
 import datetime
 
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
+from django.db.models.aggregates import Sum
+from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
-from django.template import RequestContext
-from django.contrib.auth.models import User
-from django.forms.models import inlineformset_factory
-from django.utils.functional import curry
-from events.models import Event, CCReport, Hours
-from events.forms import ReportForm, MKHoursForm, EditHoursForm, SelfServiceOrgRequestForm, WorkorderRepeatForm
 from django.utils import timezone
-from django.contrib.auth.decorators import login_required
-from helpers.challenges import is_lnlmember
+from django.utils.functional import curry
+
 from emails.generators import generate_selfservice_notice_email
-from django.db.models.aggregates import Sum
-
-
-### USER FACING SHIT
-@login_required
-def my(request):
-    """ Landing Page For User Related Functions"""
-    context = {}
-
-    is_lnl = is_lnlmember(request.user)
-    context['is_lnl'] = is_lnl
-    return render(request, 'my.html', context)
+from events.forms import ReportForm, MKHoursForm, EditHoursForm, SelfServiceOrgRequestForm, WorkorderRepeatForm
+from events.models import Event, CCReport, Hours
 
 
 @login_required
@@ -43,11 +31,11 @@ def mywo(request):
     orgs = user.orgusers.get_queryset()
     ic_orgs = user.orgowner.get_queryset()
 
-    ##combined = orgs|ic_orgs
+    # combined = orgs|ic_orgs
     # combined = ic_orgs
-    values = orgs.distinct().values_list('id', flat=True)
+    # values = orgs.distinct().values_list('id', flat=True)
 
-    events = Event.objects.filter(org__in=values)
+    # events = Event.objects.filter(org__in=values)
     l = {}
     for org in orgs:
         l[org.name] = Event.objects.filter(org=org)
@@ -62,8 +50,7 @@ def mywo(request):
 
 @login_required
 def myworepeat(request, eventid):
-    context = {}
-    context['msg'] = "Workorder Repeat"
+    context = {'msg': "Workorder Repeat"}
 
     event = get_object_or_404(Event, pk=eventid)
     if request.method == "POST":
@@ -109,14 +96,12 @@ def myorgs(request):
 @login_required
 def myorgform(request):
     """ Organization Creation Request Form"""
-    context = {}
-    context['msg'] = "Client Request"
-    context[
-        'extra_text'] = 'Note: The information being requested here is not your personal information,' \
-                        ' this can be edited <a href="%s"> here </a>.' \
-                        ' This information should relate to the client account that is being requested ' \
-                        'and should only mirror your personal information if you are requesting a ' \
-                        'personal account be made.' % (reverse("my-acct"))
+    context = {'msg': "Client Request",
+               'extra_text': 'Note: The information being requested here is not your personal information,'
+                             ' this can be edited <a href="%s"> here </a>.'
+                             ' This information should relate to the client account that is being requested '
+                             'and should only mirror your personal information if you are requesting a '
+                             'personal account be made.' % (reverse("my-acct"))}
     if request.method == "POST":
         form = SelfServiceOrgRequestForm(request.POST)
         if form.is_valid():
@@ -137,32 +122,35 @@ def myorgform(request):
         return render(request, 'mycrispy.html', context)
 
 
-### lnl facing
+# lnl facing
 
 @login_required
 # @user_passes_test(is_lnlmember, login_url='/lnldb/fuckoffkitty/')
 def myevents(request):
     """ List Events That Have been CC'd / involved """
-    context = {}
-    context['user'] = request.user
+    context = {'user': request.user, 'now': datetime.datetime.now(timezone.get_current_timezone()),
+               'ccinstances': request.user.ccinstances.select_related('event__location').all(),
+               'orgs': request.user.all_orgs.prefetch_related('event_set__location'),
+               'submitted_events': request.user.submitter.select_related('location').all(),
+               'hours': request.user.hours.select_related('event__location').all()}
+
     context.update(request.user.hours.aggregate(totalhours=Sum('hours')))
-    context['now'] = datetime.datetime.now(timezone.get_current_timezone())
 
     return render(request, 'myevents.html', context)
 
 
-@login_required
-def myeventdetail(request, id):
-    """ Shows detail for users event """
-    context = {}
-    event = get_object_or_404(Event, pk=id)
-
-    u = request.user
-    if not event.usercanseeevent(u):
-        return HttpResponse("You can't see this event, sorry")
-    else:
-        context['event'] = event
-        return render(request, 'eventdetail.html', context)
+# @login_required
+# def myeventdetail(request, id):
+#     """ Shows detail for users event """
+#     context = {}
+#     event = get_object_or_404(Event, pk=id)
+#
+#     u = request.user
+#     if not event.usercanseeevent(u):
+#         return HttpResponse("You can't see this event, sorry")
+#     else:
+#         context['event'] = event
+#         return render(request, 'eventdetail.html', context)
 
 
 @login_required
@@ -175,7 +163,7 @@ def eventfiles(request, eventid):
     return render(request, 'myeventfiles.html', context)
 
 
-### Views Relating to Crew Chiefs
+# Views Relating to Crew Chiefs
 @login_required
 def ccreport(request, eventid):
     """ Submits a crew chief report """
@@ -285,7 +273,7 @@ def hours_edit(request, eventid, userid):
     event = uevent[0].event
 
     hours = get_object_or_404(Hours, event=event, user_id=userid)
-    u = get_object_or_404(User, pk=userid)
+    u = get_object_or_404(settings.AUTH_USER_MODEL, pk=userid)
     context['msg'] = "Hours for '%s' on '%s'" % (u, event.event_name)
     if request.method == 'POST':
         formset = EditHoursForm(request.POST, instance=hours)

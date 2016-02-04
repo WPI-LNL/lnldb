@@ -1,18 +1,14 @@
 # Create your views here.
 
-from events.forms import named_event_tmpls
-from events.forms import LIGHT_EXTRAS, SOUND_EXTRAS, PROJ_EXTRAS
-
-from emails.generators import DefaultLNLEmailGenerator as DLEG
-
-from events.models import Event, Extra
-from events.models import Lighting, Sound, Projection
-
 from django.conf import settings
-from formtools.wizard.views import NamedUrlSessionWizardView
-
 from django.shortcuts import render
 from django.template import RequestContext
+from formtools.wizard.views import NamedUrlSessionWizardView
+
+from emails.generators import DefaultLNLEmailGenerator as DLEG
+from events.forms import named_event_tmpls
+from events.models import Event, Extra
+from events.models import Lighting, Sound, Projection
 
 
 # CBV NuEventForm
@@ -65,7 +61,7 @@ class EventWizard(NamedUrlSessionWizardView):
         if step == "contact":  # contact
             u = self.request.user
             first_last = "%s %s" % (u.first_name, u.last_name)
-            initial.update({'email': u.email, "name": first_last, "phone": u.profile.phone})
+            initial.update({'email': u.email, "name": first_last, "phone": u.phone})
         return initial
 
     # gives the form the user object to limit available orgs
