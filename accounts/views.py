@@ -38,7 +38,7 @@ class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, gen
     model = get_user_model()
     form_class = forms.UserEditForm
     template_name = "form_crispy_cbv.html"
-    perms = 'accounts.edit_user'
+    perms = 'accounts.change_user'
 
     def user_passes_test(self, request, *args, **kwargs):
         return request.user and request.user.pk == self.get_object().pk
