@@ -28,8 +28,8 @@ class AssocUsersCustomPermissionLogic(PermissionLogic):
         for lookup in self.field_name:
             authorized_users = field_lookup(obj, lookup)
             # break out of a generator expression
-            if hasattr(authorized_users, 'next'):
-                authorized_users = authorized_users.next()
+           # if hasattr(authorized_users, 'next'):
+           #     authorized_users = authorized_users.next()
             if hasattr(authorized_users, 'all'):
                 authorized_users = authorized_users.all()
             if user_obj == authorized_users or \

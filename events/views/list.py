@@ -231,7 +231,7 @@ def incoming(request, start=None, end=None):
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
-    sort = request.GET.get('sort') or '-submitted_on'
+    sort = request.GET.get('sort') or 'datetime_start'
     events = paginate_helper(events, page, sort)
 
     context['h2'] = "Incoming Events"
