@@ -52,15 +52,15 @@ class UserEditForm(FieldAccessForm):
                 enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone',)
         )
         hasperm = FieldAccessLevel(
-                lambda user, instance: user.has_perm('auth.change_user', instance),
+                lambda user, instance: user.has_perm('accounts.change_user', instance),
                 enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone',)
         )
         edit_groups = FieldAccessLevel(
-                lambda user, instance: user.has_perm('auth.change_group', instance),
+                lambda user, instance: user.has_perm('accounts.change_group', instance),
                 enable=('groups',)
         )
         edit_mdc = FieldAccessLevel(
-                lambda user, instance: user.has_perm('auth.edit_mdc', instance),
+                lambda user, instance: user.has_perm('accounts.edit_mdc', instance),
                 enable=('mdc',)
         )
 
