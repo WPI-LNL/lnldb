@@ -69,7 +69,7 @@ def denial(request, id):
     context = {}
     context['msg'] = "Deny Event"
     event = get_object_or_404(Event, pk=id)
-    if not request.user.has_perm('events.deny_event', event):
+    if not request.user.has_perm('events.decline_event', event):
         raise PermissionDenied
     if event.cancelled:
         messages.add_message(request, messages.INFO, 'Event has already been cancelled!')
