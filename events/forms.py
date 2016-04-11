@@ -850,7 +850,7 @@ class CCIForm(forms.ModelForm):
     crew_chief = AutoCompleteSelectField('Members', required=True)
     setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
     setup_location = GroupedModelChoiceField(
-        queryset=Location.objects.filter(Q(setup_only=True) | Q(show_in_wo_form=True)).select_related('building'),
+        queryset=Location.objects.filter(setup_only=True).select_related('building'),
         group_by_field="building",
         group_label=lambda group: group.name,
     )
