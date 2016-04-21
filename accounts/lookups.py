@@ -13,15 +13,10 @@ class UserLookup(LookupChannel):
     def get_query(self, q, request):
         for term in q.split():
             return get_user_model().objects.filter(
-                    Q(username__icontains=term) | Q(first_name__icontains=term) | Q(
-                            last_name__icontains=term)).distinct()
-
-    def get_result(self, obj):
-        if obj.first_name or obj.last_name:
-            return "%s %s" % (obj.first_name, obj.last_name)
-        else:
-            return "[%s] (name not given)" % obj.username
-
+                    Q(username__icontains=term) | Q(first_name__icontains=term) | \
+                    Q(nickname__icontains=term) | Q(last_name__icontains=term))\
+                    .distinct()
+    
     def format_match(self, obj):
         return self.format_item_display(obj)
 
@@ -39,14 +34,9 @@ class OfficerLookup(LookupChannel):
     def get_query(self, q, request):
         for term in q.split():
             return get_user_model().objects.filter(
-                    Q(username__icontains=term) | Q(first_name__icontains=term) | Q(last_name__icontains=term)).filter(
-                    groups__name="Officer").distinct()
-
-    def get_result(self, obj):
-        if obj.first_name or obj.last_name:
-            return "%s %s" % (obj.first_name, obj.last_name)
-        else:
-            return "[%s] (name not given)" % obj.username
+                    Q(username__icontains=term) | Q(first_name__icontains=term) | \
+                    Q(nickname__icontains=term) | Q(last_name__icontains=term))\
+                    .filter( groups__name="Officer").distinct()
 
     def format_match(self, obj):
         return self.format_item_display(obj)
@@ -65,14 +55,9 @@ class MemberLookup(LookupChannel):
     def get_query(self, q, request):
         for term in q.split():
             return get_user_model().objects.filter(
-                    Q(username__icontains=term) | Q(first_name__icontains=term) | Q(last_name__icontains=term)).filter(
-                    Q(groups__name="Alumni") | Q(groups__name="Active") | Q(groups__name="Officer")).distinct()
-
-    def get_result(self, obj):
-        if obj.first_name or obj.last_name:
-            return "%s %s" % (obj.first_name, obj.last_name)
-        else:
-            return "[%s] (name not given)" % obj.username
+                    Q(username__icontains=term) | Q(first_name__icontains=term) | \
+                    Q(nickname__icontains=term) | Q(last_name__icontains=term))\
+                    .filter(Q(groups__name="Alumni") | Q(groups__name="Active") | Q(groups__name="Officer")).distinct()
 
     def format_match(self, obj):
         return self.format_item_display(obj)
@@ -91,15 +76,11 @@ class AssocMemberLookup(LookupChannel):
     def get_query(self, q, request):
         for term in q.split():
             return get_user_model().objects.filter(
-                    Q(username__icontains=term) | Q(first_name__icontains=term) | Q(last_name__icontains=term)).filter(
-                    Q(groups__name="Associate") | Q(groups__name="Alumni") | Q(groups__name="Active") | Q(
-                            groups__name="Officer")).distinct()
-
-    def get_result(self, obj):
-        if obj.first_name or obj.last_name:
-            return "%s %s" % (obj.first_name, obj.last_name)
-        else:
-            return "[%s] (name not given)" % obj.username
+                    Q(username__icontains=term) | Q(first_name__icontains=term) | \
+                    Q(nickname__icontains=term) | Q(last_name__icontains=term))\
+                    .filter(Q(groups__name="Associate") | Q(groups__name="Alumni") | \
+                            Q(groups__name="Active") | Q( groups__name="Officer")) \
+                    .distinct()
 
     def format_match(self, obj):
         return self.format_item_display(obj)
