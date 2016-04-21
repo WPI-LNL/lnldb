@@ -131,7 +131,7 @@ def review(request, id):
             # confirm with user
             messages.add_message(request, messages.INFO, 'Event has been reviewed and is ready for billing!')
 
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(e.id,)))
+            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(e.id,)) + "#billing")
         else:
             context['formset'] = form
     else:
@@ -417,7 +417,7 @@ def extras(request, id):
         formset = mk_extra_formset(request.POST, request.FILES, instance=event)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)) + "#billing")
         else:
             context['formset'] = formset
 
@@ -448,7 +448,7 @@ def oneoff(request, id):
         formset = mk_oneoff_formset(request.POST, request.FILES, instance=event)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)) + "#billing")
         else:
             context['formset'] = formset
 
@@ -555,7 +555,7 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
         return super(BillingCreate, self).form_valid(form)
 
     def get_success_url(self):
-        return reverse("events-detail", args=(self.kwargs['event'],))
+        return reverse("events-detail", args=(self.kwargs['event'],))+ "#billing"
 
 
 class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
@@ -577,7 +577,7 @@ class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateVie
         return super(BillingUpdate, self).form_valid(form)
 
     def get_success_url(self):
-        return reverse("events-detail", args=(self.kwargs['event'],))
+        return reverse("events-detail", args=(self.kwargs['event'],)) + "#billing"
 
 
 class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
@@ -595,4 +595,4 @@ class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
             return obj
 
     def get_success_url(self):
-        return reverse("events-detail", args=(self.kwargs['event'],))
+        return reverse("events-detail", args=(self.kwargs['event'],)) + "#billing"
