@@ -1,6 +1,7 @@
 # noinspection PyProtectedMember
 from django.contrib.auth.models import AbstractUser, _user_has_perm
-from django.db.models import Q, IntegerField, CharField, TextField
+from django.db.models import Q, IntegerField, CharField, TextField, \
+        BooleanField, PositiveIntegerField
 from django.utils.six import python_2_unicode_compatible
 
 from events.models import Organization
@@ -20,10 +21,14 @@ class User(AbstractUser):
     phone = CharField(max_length=24, null=True, blank=True, verbose_name="Phone Number")
     addr = TextField(null=True, blank=True, verbose_name="Address / Office Location")
     mdc = CharField(max_length=32, null=True, blank=True, verbose_name="MDC")
+    nickname = CharField(max_length=32, null=True, blank=True, verbose_name="Nickname")
+    student_id = PositiveIntegerField(null=True, blank=True, verbose_name="Student ID")
+    locked = BooleanField(default=False)
 
     def __str__(self):
+        nick = '"%s" ' % self.nickname if self.nickname else ""
         if self.first_name or self.last_name:
-            return self.first_name + " " + self.last_name
+            return self.first_name + " " + nick + self.last_name
         return "[%s]" % self.username
 
     def has_perm(self, perm, obj=None):

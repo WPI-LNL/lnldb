@@ -23,7 +23,7 @@ class UserEditForm(FieldAccessForm):
         self.helper.layout = Layout(
 
                 Fieldset("User Info",
-                         'first_name', 'last_name', 'username', 'email',
+                         'first_name', 'last_name', 'username', 'email', 'nickname',
                          HTML("""
                      <div class="col-lg-offset-2 col-lg-8">
                          <a href="{% url 'accounts:password' object.pk %}">Set a password for non-CAS login</a>
@@ -41,18 +41,18 @@ class UserEditForm(FieldAccessForm):
 
     class Meta:
         model = get_user_model()
-        fields = ['username', 'email', 'first_name', 'last_name', 'groups', 'addr', 'wpibox', 'mdc', 'phone', ]
+        fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'groups', 'addr', 'wpibox', 'mdc', 'phone', ]
 
     class FieldAccess:
         def __init__(self):
             pass
 
         thisisme = FieldAccessLevel(
-                lambda user, instance: user == instance,
-                enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone',)
+                lambda user, instance:  (user == instance) and not user.locked,
+                enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone')
         )
         hasperm = FieldAccessLevel(
-                lambda user, instance: user.has_perm('accounts.change_user', instance),
+                lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
                 enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone',)
         )
         edit_groups = FieldAccessLevel(
