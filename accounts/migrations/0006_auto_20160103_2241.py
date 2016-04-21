@@ -5,24 +5,26 @@ from django.db import models, migrations
 
 
 def forwards(apps, schema_editor):
-    empty_table(apps, schema_editor,
-                "auth", "User_user_permissions")
-    empty_table(apps, schema_editor,
-                "auth", "User_groups")
-    empty_table(apps, schema_editor,
-                "auth", "User")
+    pass
+    # empty_table(apps, schema_editor,
+    #             "auth", "User_user_permissions")
+    # empty_table(apps, schema_editor,
+    #             "auth", "User_groups")
+    # empty_table(apps, schema_editor,
+    #             "auth", "User")
 
 
 def backwards(apps, schema_editor):
-    populate_table(apps, schema_editor,
-                   "accounts", "User",
-                   "auth", "User")
-    populate_table(apps, schema_editor,
-                   "accounts", "User_groups",
-                   "auth", "User_groups")
-    populate_table(apps, schema_editor,
-                   "accounts", "User_user_permissions",
-                   "auth", "User_user_permissions")
+    pass
+    # populate_table(apps, schema_editor,
+    #                "accounts", "User",
+    #                "auth", "User")
+    # populate_table(apps, schema_editor,
+    #                "accounts", "User_groups",
+    #                "auth", "User_groups")
+    # populate_table(apps, schema_editor,
+    #                "accounts", "User_user_permissions",
+    #                "auth", "User_user_permissions")
 
 
 def populate_table(apps, schema_editor, from_app, from_model, to_app, to_model):
