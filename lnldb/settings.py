@@ -133,7 +133,7 @@ TEMPLATES = [{
                 'data.context_processors.analytics',
                 # 'lnldb.processors.staticz',
                 'processors.navs',
-            ),
+        ),
         'debug': DEBUG
     },
 }]

@@ -155,11 +155,11 @@ def smart_login(request):
     next_url = request.GET.get("next", reverse('db'))
     if request.user.is_authenticated():
         return HttpResponseRedirect(next_url)
-    if pref_cas == "true" or use_cas == "true" or "ticket" in request.GET: 
+    if pref_cas == "true" or use_cas == "true" or "ticket" in request.GET:
         return cas_login(request, next_url)
     else:
         return local_login(request, template_name='registration/login.html',
-                            authentication_form=forms.LoginForm)
+                           authentication_form=forms.LoginForm)
 
 
 @login_required

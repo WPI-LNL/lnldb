@@ -208,7 +208,7 @@ def reopen(request, id):
     context = {}
     context['msg'] = "Event Reopened"
     event = get_object_or_404(Event, pk=id)
-    if not request.user.has_perm('events.reopen', event):
+    if not request.user.has_perm('events.reopen_event', event):
         raise PermissionDenied
     event.closed = False
     event.closed_by = None
