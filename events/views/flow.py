@@ -517,8 +517,8 @@ def extras(request, id):
 
     event = get_object_or_404(Event, pk=id)
 
-    if not (request.user.has_perm('events.adjust_event_charges')
-            or request.user.has_perm('events.adjust_event_charges', event)):
+    if not (request.user.has_perm('events.adjust_event_charges') or
+            request.user.has_perm('events.adjust_event_charges', event)):
         raise PermissionDenied
 
     context['event'] = event
@@ -557,8 +557,8 @@ def oneoff(request, id):
     event = get_object_or_404(Event, pk=id)
     context['event'] = event
 
-    if not (request.user.has_perm('events.adjust_event_charges')
-            or request.user.has_perm('events.adjust_event_charges', event)):
+    if not (request.user.has_perm('events.adjust_event_charges') or
+            request.user.has_perm('events.adjust_event_charges', event)):
         raise PermissionDenied
 
     mk_oneoff_formset = inlineformset_factory(
@@ -590,8 +590,8 @@ def oneoff(request, id):
 def viewevent(request, id):
     context = {}
     event = get_object_or_404(Event, pk=id)
-    if not (request.user.has_perm('events.view_event')
-            or request.user.has_perm('events.view_event', event)):
+    if not (request.user.has_perm('events.view_event') or
+            request.user.has_perm('events.view_event', event)):
         raise PermissionDenied
 
     context['event'] = event
