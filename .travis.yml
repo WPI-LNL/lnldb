@@ -19,8 +19,7 @@ script:
     # Run pep8 on all .py files in all subfolders
     - num_errors_before=`pep8 --exclude="*/migrations/*",".ropeproject/*" --ignore=E501,W292,E265,E266,E402,E126 . | wc -l`
     - echo $num_errors_before
-
-    - | if (( $num_errors_before > 0 )); then
+    -| if (( $num_errors_before > 0 )); then
               find . -name \*.py -not -path "*/migrations*" -exec autopep8 --verbose --recursive --aggressive --aggressive --in-place {} +
               num_errors_after=`pep8 --exclude="*/migrations/*",".ropeproject/*" --ignore=E501,W292,E265,E266,E402,E126 . | wc -l`
               echo $num_errors_after
