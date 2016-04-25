@@ -4,6 +4,7 @@ from ..models import EquipmentCategory
 
 
 class CategoryFormTest(TestCase):
+
     def setUp(self):
         self.cat = EquipmentCategory.objects.create(name="Test Category")
 
@@ -41,7 +42,8 @@ class CategoryFormTest(TestCase):
         self.assertFalse(form.is_valid())
 
     def test_make_bad_cat_sub(self):
-        subcat = EquipmentCategory.objects.create(name="Test Subcategory", parent=self.cat)
+        subcat = EquipmentCategory.objects.create(
+            name="Test Subcategory", parent=self.cat)
         form = CategoryForm({
             'name': 'Test Bad Subcategory',
             'parent': subcat.pk,
@@ -50,7 +52,8 @@ class CategoryFormTest(TestCase):
         self.assertFalse(form.is_valid())
 
     def test_make_into_subcat(self):
-        other_cat = EquipmentCategory.objects.create(name="Test New Parent Category")
+        other_cat = EquipmentCategory.objects.create(
+            name="Test New Parent Category")
         form = CategoryForm({
             'name': self.cat.name,
             'parent': other_cat.pk,
@@ -60,7 +63,8 @@ class CategoryFormTest(TestCase):
         self.assertEqual(obj.parent, other_cat)
 
     def test_make_into_root_cat(self):
-        subcat = EquipmentCategory.objects.create(name="Test Subcategory", parent=self.cat)
+        subcat = EquipmentCategory.objects.create(
+            name="Test Subcategory", parent=self.cat)
         form = CategoryForm({
             'name': subcat.name,
             'parent': None,

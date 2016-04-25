@@ -99,7 +99,8 @@ class EventManager(models.Manager):
         for emethod, details in zip(event_methods, event_method_details):
             # this totally makes sense
             if emethod == '0':  # lighting
-                level, lighting_reqs = consume_event_method(details, 'lighting')
+                level, lighting_reqs = consume_event_method(
+                    details, 'lighting')
                 for k in details:
                     lighting_extras.append((k[2:], details[k]))
                 lighting = level
@@ -170,7 +171,8 @@ class EventManager(models.Manager):
         )
         event.org.add(group)
         if otherservices_l:
-            event.otherservices.add(*otherservices_l)  # * because its a list yo.
+            # * because its a list yo.
+            event.otherservices.add(*otherservices_l)
             event.otherservice_reqs = otherdescription
 
         # raise
@@ -179,16 +181,25 @@ class EventManager(models.Manager):
             if hasattr(e[1], "__get_item__") and e[1][1]:  # for checkbox
                 event.extrainstance_set.create(extra_id=int(e[0]), quant=1)
             elif hasattr(e[1], "__get_item__") and e[1][0]:
-                event.extrainstance_set.create(extra_id=int(e[0]), quant=int(e[1][0]))
+                event.extrainstance_set.create(
+                    extra_id=int(
+                        e[0]), quant=int(
+                        e[1][0]))
 
         for e in sound_extras:
             if hasattr(e[1], "__get_item__") and e[1][1]:  # for checkbox
                 event.extrainstance_set.create(extra_id=int(e[0]), quant=1)
             if hasattr(e[1], "__get_item__") and e[1][0]:
-                event.extrainstance_set.create(extra_id=int(e[0]), quant=int(e[1][0]))
+                event.extrainstance_set.create(
+                    extra_id=int(
+                        e[0]), quant=int(
+                        e[1][0]))
         for e in projection_extras:
             if hasattr(e[1], "__get_item__") and e[1][0]:
-                event.extrainstance_set.create(extra_id=int(e[0]), quant=int(e[1][0]))
+                event.extrainstance_set.create(
+                    extra_id=int(
+                        e[0]), quant=int(
+                        e[1][0]))
         event.save()
         return event
 
@@ -214,7 +225,8 @@ class Location(models.Model):
     name = models.CharField(max_length=64)
     # booleans
     setup_only = models.BooleanField(default=False)
-    show_in_wo_form = models.BooleanField(default=True, verbose_name="Event Location")
+    show_in_wo_form = models.BooleanField(
+        default=True, verbose_name="Event Location")
     available_for_meetings = models.BooleanField(default=False)
     holds_equipment = models.BooleanField(default=False)
 
@@ -250,8 +262,12 @@ class Extra(models.Model):
     desc = models.TextField()
     services = models.ManyToManyField('Service')
     category = models.ForeignKey('Category')
-    disappear = models.BooleanField(default=False, help_text="Disappear this extra instead of disable")
-    checkbox = models.BooleanField(default=False, help_text="Use a checkbox instead of an integer entry")
+    disappear = models.BooleanField(
+        default=False,
+        help_text="Disappear this extra instead of disable")
+    checkbox = models.BooleanField(
+        default=False,
+        help_text="Use a checkbox instead of an integer entry")
 
     def __unicode__(self):
         return "%s ($%s)" % (self.name, self.cost)
@@ -326,6 +342,7 @@ class Billing(models.Model):
 
 
 class OptimizedEventManager(Manager):
+
     def get_queryset(self):
         return super(OptimizedEventManager, self).get_queryset()\
                                                  .select_related('lighting')\
@@ -341,24 +358,48 @@ class Event(models.Model):
     objects = OptimizedEventManager()
     event_mg = EventManager()
 
-    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='submitter')
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='submitter')
     submitted_ip = models.GenericIPAddressField(max_length=16)
     submitted_on = models.DateTimeField(auto_now_add=True, db_index=True)
 
     event_name = models.CharField(max_length=128, db_index=True)
     # Person
-    person_name = models.CharField(max_length=128, null=True, blank=True, verbose_name="Contact_name")  # DEPRECATED
-    contact = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, verbose_name="Contact")
-    org = models.ManyToManyField('Organization', blank=True, verbose_name="Client")
-    billing_org = models.ForeignKey('Organization', null=True, blank=True, related_name="billedevents")
-    billing_fund = models.ForeignKey('Fund', null=True, blank=True, on_delete=models.SET_NULL,
-                                     related_name="event_accounts")
-    contact_email = models.CharField(max_length=256, null=True, blank=True)  # DEPRECATED
+    person_name = models.CharField(
+        max_length=128,
+        null=True,
+        blank=True,
+        verbose_name="Contact_name")  # DEPRECATED
+    contact = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        verbose_name="Contact")
+    org = models.ManyToManyField(
+        'Organization',
+        blank=True,
+        verbose_name="Client")
+    billing_org = models.ForeignKey(
+        'Organization',
+        null=True,
+        blank=True,
+        related_name="billedevents")
+    billing_fund = models.ForeignKey(
+        'Fund',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="event_accounts")
+    contact_email = models.CharField(
+        max_length=256, null=True, blank=True)  # DEPRECATED
     contact_addr = models.TextField(null=True, blank=True)  # DEPRECATED
-    contact_phone = models.CharField(max_length=32, null=True, blank=True)  # DEPRECATED
+    contact_phone = models.CharField(
+        max_length=32, null=True, blank=True)  # DEPRECATED
 
     # Dates & Times
-    datetime_setup_start = models.DateTimeField(null=True, blank=True, db_index=True)  # DEPRECATED
+    datetime_setup_start = models.DateTimeField(
+        null=True, blank=True, db_index=True)  # DEPRECATED
     datetime_setup_complete = models.DateTimeField()
 
     datetime_start = models.DateTimeField(db_index=True)
@@ -368,9 +409,21 @@ class Event(models.Model):
     location = models.ForeignKey('Location')
 
     # service levels
-    lighting = models.ForeignKey('Lighting', null=True, blank=True, related_name='lighting')
-    sound = models.ForeignKey('Sound', null=True, blank=True, related_name='sound')
-    projection = models.ForeignKey('Projection', null=True, blank=True, related_name='projection')
+    lighting = models.ForeignKey(
+        'Lighting',
+        null=True,
+        blank=True,
+        related_name='lighting')
+    sound = models.ForeignKey(
+        'Sound',
+        null=True,
+        blank=True,
+        related_name='sound')
+    projection = models.ForeignKey(
+        'Projection',
+        null=True,
+        blank=True,
+        related_name='projection')
 
     lighting_reqs = models.TextField(null=True, blank=True)
     sound_reqs = models.TextField(null=True, blank=True)
@@ -381,32 +434,58 @@ class Event(models.Model):
     # NOT SHOWN
     otherservices = models.ManyToManyField(Service, blank=True)
     otherservice_reqs = models.TextField(null=True, blank=True)
-    setup_location = models.ForeignKey('Location', related_name="setuplocation", null=True, blank=True)  # DEPRECATED
+    setup_location = models.ForeignKey(
+        'Location',
+        related_name="setuplocation",
+        null=True,
+        blank=True)  # DEPRECATED
     # Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True, blank=True)
-    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventapprovals", null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="eventapprovals",
+        null=True,
+        blank=True)
 
     # billing reviews
     reviewed = models.BooleanField(default=False)
     reviewed_on = models.DateTimeField(null=True, blank=True)
-    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventbillingreview", null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="eventbillingreview",
+        null=True,
+        blank=True)
 
     closed = models.BooleanField(default=False)
     closed_on = models.DateTimeField(null=True, blank=True)
-    closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventclosings", null=True, blank=True)
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="eventclosings",
+        null=True,
+        blank=True)
 
     cancelled = models.BooleanField(default=False)
     cancelled_on = models.DateTimeField(null=True, blank=True)
-    cancelled_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventcancellations", null=True, blank=True)
+    cancelled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="eventcancellations",
+        null=True,
+        blank=True)
     cancelled_reason = models.TextField(null=True, blank=True)
 
     payment_amount = models.IntegerField(blank=True, null=True, default=None)
     paid = models.BooleanField(default=False, db_index=True)
 
     # reports
-    crew_chief = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='crewchiefx')
-    crew = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='crewx')
+    crew_chief = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='crewchiefx')
+    crew = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='crewx')
     ccs_needed = models.PositiveIntegerField(default=0, db_index=True)
     # ^^^ used as a cache to get around the awkward event type fields and allow for sql filtering
 
@@ -455,7 +534,13 @@ class Event(models.Model):
         self.ccs_needed = self.eventcount
         if update_fields:
             update_fields.append('ccs_needed')
-        super(Event, self).save(force_insert, force_update, using, update_fields)
+        super(
+            Event,
+            self).save(
+            force_insert,
+            force_update,
+            using,
+            update_fields)
 
     def cal_name(self):
         return self.event_name
@@ -471,7 +556,8 @@ class Event(models.Model):
         if len(ccs) > 0:
             desc += "Crew Chiefs: "
             for cc in ccs:
-                desc += cc.crew_chief.get_full_name() + " [" + cc.service.shortname + "], "
+                desc += cc.crew_chief.get_full_name() + \
+                    " [" + cc.service.shortname + "], "
             desc = desc[:-2] + ".\n"  # removes trailing comma
         if self.description:
             desc += self.description + "\n"
@@ -577,11 +663,14 @@ class Event(models.Model):
         if self.lighting:
             foo.append({"i": "glyphicon glyphicon-fire", "title": "lighting"})
         if self.sound:
-            foo.append({"i": "glyphicon glyphicon-volume-up", "title": "sound"})
+            foo.append(
+                {"i": "glyphicon glyphicon-volume-up", "title": "sound"})
         if self.projection:
-            foo.append({"i": "glyphicon glyphicon-film", "title": "projection"})
+            foo.append(
+                {"i": "glyphicon glyphicon-film", "title": "projection"})
         if self.otherservices:
-            foo.append({"i": "glyphicon glyphicon-tasks", "title": "other services"})
+            foo.append({"i": "glyphicon glyphicon-tasks",
+                        "title": "other services"})
         return foo
 
     @property
@@ -627,7 +716,9 @@ class Event(models.Model):
 
     @property
     def unpaid(self):
-        return self.billings.filter(date_paid__isnull=True, date_billed__isnull=False)
+        return self.billings.filter(
+            date_paid__isnull=True,
+            date_billed__isnull=False)
 
     @property
     def paid(self):
@@ -639,7 +730,8 @@ class Event(models.Model):
 
     @property
     def late(self):
-        return self.datetime_setup_complete - self.submitted_on < datetime.timedelta(weeks=2)
+        return self.datetime_setup_complete - \
+            self.submitted_on < datetime.timedelta(weeks=2)
 
     # Extras And Billing Calculations
     @property
@@ -680,7 +772,8 @@ class Event(models.Model):
 
     @property
     def extras_projection(self):
-        return self.extrainstance_set.filter(extra__category__name="Projection")
+        return self.extrainstance_set.filter(
+            extra__category__name="Projection")
 
     @property
     def cost_projection_extras(self):
@@ -746,7 +839,8 @@ class Event(models.Model):
     @property
     def discount_value(self):
         if self.discount_applied:
-            return decimal.Decimal(self.sound.base_cost + self.lighting.base_cost) * decimal.Decimal(".15")
+            return decimal.Decimal(
+                self.sound.base_cost + self.lighting.base_cost) * decimal.Decimal(".15")
         else:
             return decimal.Decimal("0.0")
 
@@ -764,8 +858,8 @@ class Event(models.Model):
 
     @property
     def cost_total(self):
-        return self.cost_projection_total + self.cost_lighting_total \
-            - self.discount_value + self.cost_sound_total + self.extras_total + self.oneoff_total
+        return self.cost_projection_total + self.cost_lighting_total - \
+            self.discount_value + self.cost_sound_total + self.extras_total + self.oneoff_total
 
     # org to be billed
     @property
@@ -871,7 +965,8 @@ class CCReport(models.Model):
     report = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
-    for_service_cat = models.ManyToManyField(Category, verbose_name="Services", blank=True)
+    for_service_cat = models.ManyToManyField(
+        Category, verbose_name="Services", blank=True)
 
     def __unicode__(self):
         return u'%s - %s' % (self.event, self.crew_chief)
@@ -926,7 +1021,10 @@ class Organization(models.Model):  # AKA Client
     glyphicon = 'education'
     name = models.CharField(max_length=128, unique=True)
     shortname = models.CharField(max_length=8, null=True, blank=True)
-    email = models.EmailField(null=True, blank=True, verbose_name="normal_email_unused")
+    email = models.EmailField(
+        null=True,
+        blank=True,
+        verbose_name="normal_email_unused")
     exec_email = models.EmailField(null=True, blank=True, verbose_name="Email")
 
     email_exec = models.BooleanField(default=True)
@@ -936,10 +1034,14 @@ class Organization(models.Model):  # AKA Client
 
     accounts = models.ManyToManyField(Fund, related_name='orgfunds')
 
-    user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='orgowner')
-    associated_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='orgusers')
+    user_in_charge = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='orgowner')
+    associated_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, related_name='orgusers')
 
-    associated_orgs = models.ManyToManyField("self", blank=True, verbose_name="Associated Clients")
+    associated_orgs = models.ManyToManyField(
+        "self", blank=True, verbose_name="Associated Clients")
 
     notes = models.TextField(null=True, blank=True)
     personal = models.BooleanField(default=False)
@@ -986,8 +1088,10 @@ class Organization(models.Model):  # AKA Client
 
 
 class OrganizationTransfer(models.Model):
-    new_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_new")
-    old_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_old")
+    new_user_in_charge = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="xfer_new")
+    old_user_in_charge = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="xfer_old")
     org = models.ForeignKey(Organization)
     uuid = UUIDField(auto=True)  # for the link
     created = models.DateTimeField(auto_now=True)
@@ -1007,7 +1111,9 @@ class OrganizationTransfer(models.Model):
 class OrgBillingVerificationEvent(models.Model):
     org = models.ForeignKey(Organization, related_name="verifications")
     date = models.DateField()
-    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="verification_events")
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="verification_events")
     note = models.TextField(null=True, blank=True)
 
     class Meta:
@@ -1018,9 +1124,17 @@ class OrgBillingVerificationEvent(models.Model):
 # stats and the like
 class Hours(models.Model):
     event = models.ForeignKey('Event', related_name="hours")
-    service = models.ForeignKey('Service', related_name="hours", null=True, blank=True)
+    service = models.ForeignKey(
+        'Service',
+        related_name="hours",
+        null=True,
+        blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="hours")
-    hours = models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)
+    hours = models.DecimalField(
+        null=True,
+        max_digits=7,
+        decimal_places=2,
+        blank=True)
 
     def __unicode__(self):
         return u'%s (%s)' % (self.event, self.user)
@@ -1033,7 +1147,9 @@ class Hours(models.Model):
 class EventCCInstance(models.Model):
     # the pair
     event = models.ForeignKey('Event', related_name="ccinstances")
-    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="ccinstances")
+    crew_chief = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="ccinstances")
 
     # the service
     service = models.ForeignKey(Service, related_name="ccinstances")
@@ -1080,7 +1196,9 @@ class EventCCInstance(models.Model):
 # A log of CC Report Reminders Sent
 class ReportReminder(models.Model):
     event = models.ForeignKey('Event', related_name="ccreportreminders")
-    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="ccreportreminders")
+    crew_chief = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="ccreportreminders")
     sent = models.DateTimeField(auto_now_add=True)
 
 
@@ -1091,7 +1209,8 @@ def attachment_file_name(instance, filename):
 
 class EventAttachment(models.Model):
     event = models.ForeignKey('Event', related_name="attachments")
-    for_service = models.ManyToManyField(Service, blank=True, related_name="attachments")
+    for_service = models.ManyToManyField(
+        Service, blank=True, related_name="attachments")
     attachment = models.FileField(upload_to=attachment_file_name)
     note = models.TextField(null=True, blank=True, default="")
     externally_uploaded = models.BooleanField(default=False)

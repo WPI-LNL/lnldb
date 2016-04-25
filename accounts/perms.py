@@ -2,12 +2,19 @@ from events.perms import AssocUsersCustomPermissionLogic
 
 
 class EventUserPermLogic(AssocUsersCustomPermissionLogic):
-    field_name = ['submitter__contact', 'submiter_crew_chief', 'submitter__ccinstances__crew_chief',
-                  'event__submitted_by', 'event__crew_chief', 'event__ccinstances__crew_chief',
-                  'ccinstances__event__submitted_by', 'ccinstances__event__contact',
-                  'ccinstances__event_crew_chief',
-                  'crewchiefx__contact', 'crewchiefx__submitted_by',
-                  'crewchiefx__ccinstances__crew_chief']
+    field_name = [
+        'submitter__contact',
+        'submiter_crew_chief',
+        'submitter__ccinstances__crew_chief',
+        'event__submitted_by',
+        'event__crew_chief',
+        'event__ccinstances__crew_chief',
+        'ccinstances__event__submitted_by',
+        'ccinstances__event__contact',
+        'ccinstances__event_crew_chief',
+        'crewchiefx__contact',
+        'crewchiefx__submitted_by',
+        'crewchiefx__ccinstances__crew_chief']
     perms = ('accounts.view_user',)
 
 

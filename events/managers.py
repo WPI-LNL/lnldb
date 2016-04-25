@@ -23,6 +23,7 @@ def consume_event_method(emethod, methodname):
 
 
 class EventManager(models.Manager):
+
     def consume_workorder_formwiz(self, form_fields):
         contact_fields = form_fields[0]
         org_fields = form_fields[1]
@@ -59,7 +60,8 @@ class EventManager(models.Manager):
         for emethod, details in zip(event_methods, event_method_details):
             # this totally makes sense
             if emethod == 0:  # lighting
-                level, lighting_reqs = consume_event_method(emethod, 'lighting')
+                level, lighting_reqs = consume_event_method(
+                    emethod, 'lighting')
                 for k in emethod:
                     lighting_extras.append((k[2:], emethod[k]))
                 lighting = get_level_object(level, 0)

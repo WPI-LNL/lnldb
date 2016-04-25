@@ -24,14 +24,20 @@ class EventFeed(ICalFeed):
         return super(EventFeed, self).__call__(*args, **kwargs)
 
     def items(self):
-        return list(Event.objects.filter(approved=True).exclude(Q(closed=True) |
-                                                                Q(cancelled=True) |
-                                                                Q(test_event=True) |
-                                                                Q(sensitive=True)).order_by('datetime_start').all()) + \
-            list(EventCCInstance.objects.filter(event__approved=True).exclude(Q(event__closed=True) |
-                                                                              Q(event__cancelled=True))
-                                .order_by('setup_start').all()) + \
-            list(Meeting.objects.order_by('datetime').all())
+        return list(
+            Event.objects.filter(
+                approved=True).exclude(
+                Q(
+                    closed=True) | Q(
+                    cancelled=True) | Q(
+                        test_event=True) | Q(
+                            sensitive=True)).order_by('datetime_start').all()) + list(
+                                EventCCInstance.objects.filter(
+                                    event__approved=True).exclude(
+                                        Q(
+                                            event__closed=True) | Q(
+                                                event__cancelled=True)) .order_by('setup_start').all()) + list(
+                                                    Meeting.objects.order_by('datetime').all())
 
     def item_title(self, item):
         return item.cal_name()
@@ -59,8 +65,8 @@ class EventFeed(ICalFeed):
 
 
 def cal_json(request, *args, **kwargs):
-    queryset = Event.objects.filter(approved=True).exclude(Q(closed=True) | Q(cancelled=True) |
-                                                           Q(test_event=True) | Q(sensitive=True))
+    queryset = Event.objects.filter(approved=True).exclude(
+        Q(closed=True) | Q(cancelled=True) | Q(test_event=True) | Q(sensitive=True))
     from_date = request.GET.get('from', False)
     to_date = request.GET.get('to', False)
     if from_date and to_date:

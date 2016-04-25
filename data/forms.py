@@ -7,12 +7,13 @@ from django.forms import FileField
 
 __author_orig__ = 'Killarny'
 __author__ = 'Jake Merdich'
-# Taken from https://djangosnippets.org/snippets/1148/ (it was exactly what I needed)
+# Taken from https://djangosnippets.org/snippets/1148/ (it was exactly
+# what I needed)
 
 
 def form_footer(return_text="Save", *args):
     return FormActions(
-            Submit('save', return_text), *args
+        Submit('save', return_text), *args
     )
 
 
@@ -88,7 +89,8 @@ class FieldAccessForm(forms.ModelForm):
             if getattr(field, 'disabled', False):
                 continue
 
-            value = field.widget.value_from_datadict(self.data, self.files, self.add_prefix(name))
+            value = field.widget.value_from_datadict(
+                self.data, self.files, self.add_prefix(name))
             try:
                 if isinstance(field, FileField):
                     initial = self.initial.get(name, field.initial)
@@ -104,6 +106,7 @@ class FieldAccessForm(forms.ModelForm):
 
 
 class DynamicFieldContainer(LayoutObject):
+
     def __init__(self, *fields):
         self.fields = fields
 
@@ -111,7 +114,11 @@ class DynamicFieldContainer(LayoutObject):
         fields = ''
         for field in self.fields:
             try:
-                fields += render_field(field, form, form_style, context, template_pack=template_pack)
+                fields += render_field(field,
+                                       form,
+                                       form_style,
+                                       context,
+                                       template_pack=template_pack)
             except Exception:
                 # I really wish dcf had better exception handling
                 continue

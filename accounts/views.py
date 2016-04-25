@@ -34,7 +34,10 @@ class UserAddView(mixins.HasPermMixin, generic.CreateView):
         return reverse('accounts:detail', args=(self.object.id,))
 
 
-class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, generic.UpdateView):
+class UserUpdateView(
+        mixins.HasPermOrTestMixin,
+        mixins.ConditionalFormMixin,
+        generic.UpdateView):
     model = get_user_model()
     form_class = forms.UserEditForm
     template_name = "form_crispy_cbv.html"
@@ -72,9 +75,10 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
     perms = ['account.view_user']
 
     def user_passes_test(self, request, *args, **kwargs):
-        # members looking at other members is fine, and you should always be able to look at yourself.
-        return (request.user.is_lnl and request.user.has_perm('accounts.view_member')) or \
-               request.user.pk == self.get_object().pk
+        # members looking at other members is fine, and you should always be
+        # able to look at yourself.
+        return (request.user.is_lnl and request.user.has_perm(
+            'accounts.view_member')) or request.user.pk == self.get_object().pk
 
     def get_context_data(self, **kwargs):
         context = super(UserDetailView, self).get_context_data(**kwargs)
@@ -82,8 +86,8 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
         context['hours'] = u.hours.select_related('event', 'service').all()
         context['ccs'] = u.ccinstances.select_related('event').all()
 
-        moviesccd = Event.objects.filter(Q(crew_chief=self.get_object()) | Q(ccinstances__crew_chief=self.get_object()),
-                                         projection__isnull=False).distinct()
+        moviesccd = Event.objects.filter(Q(crew_chief=self.get_object()) | Q(
+            ccinstances__crew_chief=self.get_object()), projection__isnull=False).distinct()
 
         context['moviesccd'] = moviesccd.count()
         return context
@@ -144,8 +148,14 @@ class LimboList(BaseUserList):
 
 
 class MeDirectView(generic.RedirectView):
+
     def get_redirect_url(self, *args, **kwargs):
-        return super(MeDirectView, self).get_redirect_url(self.request.user.pk, *args, **kwargs)
+        return super(
+            MeDirectView,
+            self).get_redirect_url(
+            self.request.user.pk,
+            *args,
+            **kwargs)
 
 
 def smart_login(request):
@@ -227,4 +237,11 @@ class PasswordSetView(generic.FormView):
 
     def dispatch(self, request, pk, *args, **kwargs):
         self.user = get_object_or_404(get_user_model(), pk=int(pk))
-        return super(PasswordSetView, self).dispatch(request, pk, *args, **kwargs)
+        return super(
+            PasswordSetView,
+            self).dispatch(
+            request,
+            pk,
+            *
+            args,
+            **kwargs)

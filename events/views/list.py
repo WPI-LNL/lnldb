@@ -110,9 +110,16 @@ def paginate_helper(queryset, page, sort=None, count=DEFAULT_ENTRY_COUNT):
     elif sort:
         try:
             if sort[0] == '-':
-                post_sort = sorted(queryset.all(), key=lambda m: getattr(m, sort[1:]), reverse=True)
+                post_sort = sorted(
+                    queryset.all(), key=lambda m: getattr(
+                        m, sort[
+                            1:]), reverse=True)
             else:
-                post_sort = sorted(queryset.all(), key=lambda m: getattr(m, sort))
+                post_sort = sorted(
+                    queryset.all(),
+                    key=lambda m: getattr(
+                        m,
+                        sort))
         except Exception as e:
             # print "Won't sort.", e
             post_sort = queryset
@@ -132,7 +139,8 @@ def paginate_helper(queryset, page, sort=None, count=DEFAULT_ENTRY_COUNT):
     return pag_qs
 
 
-# helper function to return start and end for open/closed/unpaid (goes back 180 days by default)
+# helper function to return start and end for open/closed/unpaid (goes
+# back 180 days by default)
 def get_farback_date_range_plus_next_week(delta=180):
     today = datetime.date.today()
     end = today + datetime.timedelta(days=7)
@@ -187,8 +195,8 @@ def upcoming(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+    events = events.select_related('location__building__shortname').prefetch_related(
+        'org') .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -199,13 +207,12 @@ def upcoming(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("upcoming")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       'crew_chief',
-                       FakeExtendedField('datetime_start', verbose_name="Starts At"),
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    context['cols'] = [
+        'event_name', 'org', 'location', 'crew_chief', FakeExtendedField(
+            'datetime_start', verbose_name="Starts At"), FakeField(
+            'short_services', verbose_name="Services", sortable=False)]
+    # must use because there are strings
+    context['cols'] = map_fields(context['cols'])
     return render(request, 'events.html', context)
 
 
@@ -220,14 +227,14 @@ def incoming(request, start=None, end=None):
         end = today + datetime.timedelta(days=365.25)
         end = end.strftime('%Y-%m-%d')
 
-    events = Event.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)) \
-        .distinct()
+    events = Event.objects.filter(approved=False).exclude(
+        Q(closed=True) | Q(cancelled=True)) .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
-        .prefetch_related('otherservices')
+    events = events.select_related('location__building__shortname').prefetch_related(
+        'org') .prefetch_related('otherservices')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -238,14 +245,13 @@ def incoming(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("incoming")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       'submitted_on',
-                       FakeExtendedField('datetime_start', verbose_name="Starts At"),
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    context['cols'] = [
+        'event_name', 'org', 'location', 'submitted_on', FakeExtendedField(
+            'datetime_start', verbose_name="Starts At"), FakeField(
+            'short_services', verbose_name="Services", sortable=False)]
 
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    # must use because there are strings
+    context['cols'] = map_fields(context['cols'])
     return render(request, 'events.html', context)
 
 
@@ -260,7 +266,8 @@ def openworkorders(request, start=None, end=None):
         end = end.strftime('%Y-%m-%d')
     context = {}
 
-    events = Event.objects.filter(approved=True).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
+    events = Event.objects.filter(approved=True).exclude(
+        Q(closed=True) | Q(cancelled=True)).distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
@@ -279,14 +286,21 @@ def openworkorders(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("open")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       'crew_chief',
-                       FakeExtendedField('datetime_start', verbose_name="Starting At"),
-                       FakeField('short_services', verbose_name="Services", sortable=False),
-                       FakeField('tasks')]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    context['cols'] = [
+        'event_name',
+        'org',
+        'location',
+        'crew_chief',
+        FakeExtendedField(
+            'datetime_start',
+            verbose_name="Starting At"),
+        FakeField(
+            'short_services',
+            verbose_name="Services",
+            sortable=False),
+        FakeField('tasks')]
+    # must use because there are strings
+    context['cols'] = map_fields(context['cols'])
     return render(request, 'events.html', context)
 
 
@@ -314,10 +328,11 @@ def findchief(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+    events = events.select_related('location__building__shortname').prefetch_related(
+        'org') .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+        events = events.exclude(Q(projection__shortname='DP') & Q(
+            lighting__isnull=True) & Q(sound__isnull=True))
 
     events, context = datefilter(events, context, start, end)
 
@@ -330,15 +345,13 @@ def findchief(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("findchief")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       FakeExtendedField('datetime_start', verbose_name="Starting At"),
-                       'submitted_on',
-                       'num_ccs',
-                       FakeField('eventcount', verbose_name="# Services"),
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    context['cols'] = [
+        'event_name', 'org', 'location', FakeExtendedField(
+            'datetime_start', verbose_name="Starting At"), 'submitted_on', 'num_ccs', FakeField(
+            'eventcount', verbose_name="# Services"), FakeField(
+                'short_services', verbose_name="Services", sortable=False)]
+    # must use because there are strings
+    context['cols'] = map_fields(context['cols'])
     return render(request, 'events.html', context)
 
 
@@ -368,8 +381,8 @@ def unreviewed(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+    events = events.select_related('location__building__shortname').prefetch_related(
+        'org') .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -380,15 +393,25 @@ def unreviewed(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("unreviewed")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       'crew_chief',
-                       FakeField('num_crew_needing_reports', sortable=True, verbose_name="Missing Reports"),
-                       FakeField('short_services', verbose_name="Services", sortable=False),
-                       FakeField('tasks')]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    context['cols'] = [
+        'event_name',
+        'org',
+        'location',
+        FakeExtendedField(
+            'datetime_start',
+            verbose_name="Event Time"),
+        'crew_chief',
+        FakeField(
+            'num_crew_needing_reports',
+            sortable=True,
+            verbose_name="Missing Reports"),
+        FakeField(
+            'short_services',
+            verbose_name="Services",
+            sortable=False),
+        FakeField('tasks')]
+    # must use because there are strings
+    context['cols'] = map_fields(context['cols'])
     return render(request, 'events.html', context)
 
 
@@ -429,13 +452,24 @@ def unbilled(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("unbilled")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       FakeField('num_crew_needing_reports', sortable=True, verbose_name="Missing Reports"),
-                       FakeField('short_services', verbose_name="Services", sortable=False), ]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    context['cols'] = [
+        'event_name',
+        'org',
+        'location',
+        FakeExtendedField(
+            'datetime_start',
+            verbose_name="Event Time"),
+        FakeField(
+            'num_crew_needing_reports',
+            sortable=True,
+            verbose_name="Missing Reports"),
+        FakeField(
+            'short_services',
+            verbose_name="Services",
+            sortable=False),
+    ]
+    # must use because there are strings
+    context['cols'] = map_fields(context['cols'])
     return render(request, 'events.html', context)
 
 
@@ -475,13 +509,12 @@ def unbilled_semester(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("unbilled-semester")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       'crew_chief',
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    context['cols'] = [
+        'event_name', 'org', 'location', FakeExtendedField(
+            'datetime_start', verbose_name="Event Time"), 'crew_chief', FakeField(
+            'short_services', verbose_name="Services", sortable=False)]
+    # must use because there are strings
+    context['cols'] = map_fields(context['cols'])
     return render(request, 'events.html', context)
 
 
@@ -519,13 +552,14 @@ def paid(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("paid")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    context['cols'] = ['event_name',
-                       'org',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       FakeField('last_billed', sortable=True),
-                       FakeField('last_paid', verbose_name="Paid On", sortable=True),
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    context['cols'] = [
+        'event_name', 'org', FakeExtendedField(
+            'datetime_start', verbose_name="Event Time"), FakeField(
+            'last_billed', sortable=True), FakeField(
+                'last_paid', verbose_name="Paid On", sortable=True), FakeField(
+                    'short_services', verbose_name="Services", sortable=False)]
+    # must use because there are strings
+    context['cols'] = map_fields(context['cols'])
 
     return render(request, 'events.html', context)
 
@@ -566,13 +600,14 @@ def unpaid(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("unpaid")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    context['cols'] = ['event_name',
-                       'org',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       FakeField('last_billed', sortable=True),
-                       FakeField('times_billed', sortable=True),
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    context['cols'] = [
+        'event_name', 'org', FakeExtendedField(
+            'datetime_start', verbose_name="Event Time"), FakeField(
+            'last_billed', sortable=True), FakeField(
+                'times_billed', sortable=True), FakeField(
+                    'short_services', verbose_name="Services", sortable=False)]
+    # must use because there are strings
+    context['cols'] = map_fields(context['cols'])
     return render(request, 'events.html', context)
 
 
@@ -602,25 +637,29 @@ def closed(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("closed")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       'crew_chief',
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    #print context['cols']
+    context['cols'] = [
+        'event_name', 'org', 'location', FakeExtendedField(
+            'datetime_start', verbose_name="Event Time"), 'crew_chief', FakeField(
+            'short_services', verbose_name="Services", sortable=False)]
+    # must use because there are strings
+    context['cols'] = map_fields(context['cols'])
+    # print context['cols']
     return render(request, 'events.html', context)
 
 
 def public_facing(request):
     context = {}
     now = datetime.datetime.now(pytz.utc)
-    events = Event.objects.filter(approved=True, closed=False, cancelled=False, test_event=False, sensitive=False) \
-        .filter(datetime_end__gte=now)
+    events = Event.objects.filter(
+        approved=True,
+        closed=False,
+        cancelled=False,
+        test_event=False,
+        sensitive=False) .filter(
+        datetime_end__gte=now)
     events = events.order_by('datetime_start')
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+    events = events.select_related('location__building__shortname').prefetch_related(
+        'org') .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     context['h2'] = "Active Events"
     context['events'] = events
 

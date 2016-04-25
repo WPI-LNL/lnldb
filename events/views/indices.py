@@ -15,7 +15,7 @@ from helpers.challenges import is_officer
 import os
 
 
-### FRONT 3 PAGES
+# FRONT 3 PAGES
 def index(request):
     """Landing Page"""
     context = {}
@@ -39,10 +39,14 @@ def admin(request, msg=None):
 
     # fuzzy delta
     today = timezone.now()
-    today_min = timezone.make_aware(datetime.datetime.combine(today.date(), datetime.time.min))
+    today_min = timezone.make_aware(
+        datetime.datetime.combine(
+            today.date(), datetime.time.min))
 
     end = today + datetime.timedelta(hours=delta)
-    end_max = timezone.make_aware(datetime.datetime.combine(end.date(), datetime.time.max))
+    end_max = timezone.make_aware(
+        datetime.datetime.combine(
+            end.date(), datetime.time.max))
 
     # get upcoming and ongoing events
     events = Event.objects.filter(
@@ -74,7 +78,8 @@ def event_search(request):
         if len(q) < 3:
             context['msg'] = "Search Query Too Short, please try something longer"
         else:
-            e = Event.objects.filter(Q(event_name__icontains=q) | Q(description__icontains=q))
+            e = Event.objects.filter(
+                Q(event_name__icontains=q) | Q(description__icontains=q))
             context['events'] = e
         return render(request, 'events_search_results.html', context)
     return render(request, 'events_search_results.html', context)

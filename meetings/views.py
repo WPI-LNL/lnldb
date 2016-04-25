@@ -47,7 +47,12 @@ def rm_att(request, mtg_id, att_id):
     if not att.meeting or att.meeting.pk != mtg.pk:
         raise PermissionDenied
     mtg.attachments.remove(att)
-    return HttpResponseRedirect(reverse('meetings.views.viewattendance', args=(mtg.pk,)))
+    return HttpResponseRedirect(
+        reverse(
+            'meetings.views.viewattendance',
+            args=(
+                mtg.pk,
+            )))
 
 
 @login_required
@@ -65,10 +70,15 @@ def modify_att(request, mtg_id, att_id):
         raise PermissionDenied
 
     if request.method == 'POST':
-        form = MtgAttachmentEditForm(instance=att, data=request.POST, files=request.FILES)
+        form = MtgAttachmentEditForm(
+            instance=att,
+            data=request.POST,
+            files=request.FILES)
         if form.is_valid():
             form.save()
-            url = reverse('meetings.views.viewattendance', args=(mtg_id,)) + "#minutes"
+            url = reverse(
+                'meetings.views.viewattendance', args=(
+                    mtg_id,)) + "#minutes"
             return HttpResponseRedirect(url)
         else:
             context['formset'] = form
@@ -95,14 +105,15 @@ def viewattendance(request, id):
     yest = now + datetime.timedelta(days=-1)
     morethanaweek = now + datetime.timedelta(days=7, hours=12)
 
-    upcoming = Event.objects.filter(datetime_start__gte=yest, datetime_start__lte=morethanaweek)
+    upcoming = Event.objects.filter(
+        datetime_start__gte=yest,
+        datetime_start__lte=morethanaweek)
     context['events'] = upcoming.prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('ccinstances__service')
 
     lessthantwoweeks = morethanaweek + datetime.timedelta(days=7)
     future = Event.objects.filter(datetime_start__gte=morethanaweek, datetime_start__lte=lessthantwoweeks).order_by(
-        'datetime_start').prefetch_related('ccinstances__crew_chief') \
-        .prefetch_related('ccinstances__service')
+        'datetime_start').prefetch_related('ccinstances__crew_chief') .prefetch_related('ccinstances__service')
     context['future'] = future
     return render(request, 'meeting_view.html', context)
 
@@ -118,14 +129,17 @@ def updateevent(request, meetingid, eventid):
         raise PermissionDenied
     context['event'] = event.event_name
 
-    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
+    cc_formset = inlineformset_factory(
+        Event, EventCCInstance, extra=3, exclude=[])
     cc_formset.form = staticmethod(curry(CCIForm, event=event))
 
     if request.method == 'POST':
         formset = cc_formset(request.POST, instance=event, prefix="main")
         if formset.is_valid():
             formset.save()
-            url = reverse('meetings.views.viewattendance', args=(meetingid,)) + "#events"
+            url = reverse(
+                'meetings.views.viewattendance', args=(
+                    meetingid,)) + "#events"
             return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
@@ -148,11 +162,23 @@ def editattendance(request, id):
         formset = MeetingAdditionForm(request.POST, request.FILES, instance=m)
         if formset.is_valid():
             for each in formset.cleaned_data['attachments']:
-                MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m, private=False)
+                MtgAttachment.objects.create(
+                    file=each,
+                    name=each.name,
+                    author=request.user,
+                    meeting=m,
+                    private=False)
             for each in formset.cleaned_data['attachments_private']:
-                MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m, private=True)
+                MtgAttachment.objects.create(
+                    file=each,
+                    name=each.name,
+                    author=request.user,
+                    meeting=m,
+                    private=True)
             m = formset.save()
-            url = reverse('meetings.views.viewattendance', args=(m.id,)) + "#attendance"
+            url = reverse(
+                'meetings.views.viewattendance', args=(
+                    m.id,)) + "#attendance"
             return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
@@ -189,7 +215,12 @@ def newattendance(request):
         formset = MeetingAdditionForm(request.POST)
         if formset.is_valid():
             m = formset.save()
-            return HttpResponseRedirect(reverse('meetings.views.viewattendance', args=(m.id,)))
+            return HttpResponseRedirect(
+                reverse(
+                    'meetings.views.viewattendance',
+                    args=(
+                        m.id,
+                    )))
         else:
             context['formset'] = formset
             context['msg'] = "New Meeting (Errors In Form)"
@@ -219,7 +250,9 @@ def mknotice(request, id):
             else:
                 success = False
             AnnounceSend.objects.create(announce=notice, sent_success=success)
-            url = reverse('meetings.views.viewattendance', args=(meeting.id,)) + "#emails"
+            url = reverse(
+                'meetings.views.viewattendance', args=(
+                    meeting.id,)) + "#emails"
             return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
@@ -253,7 +286,9 @@ def mkccnotice(request, id):
 
             notice.save()
 
-            url = reverse('meetings.views.viewattendance', args=(meeting.id,)) + "#emails"
+            url = reverse(
+                'meetings.views.viewattendance', args=(
+                    meeting.id,)) + "#emails"
             return HttpResponseRedirect(url)
         else:
             context['formset'] = formset

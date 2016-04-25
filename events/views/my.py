@@ -96,18 +96,23 @@ def myorgs(request):
 @login_required
 def myorgform(request):
     """ Organization Creation Request Form"""
-    context = {'msg': "Client Request",
-               'extra_text': 'Note: The information being requested here is not your personal information'
-                             ' This information should relate to the client account that is being requested '
-                             'and should only mirror your personal information if you are requesting a '
-                             'personal account be made.'}
+    context = {
+        'msg': "Client Request",
+        'extra_text': 'Note: The information being requested here is not your personal information'
+        ' This information should relate to the client account that is being requested '
+        'and should only mirror your personal information if you are requesting a '
+        'personal account be made.'}
     if request.method == "POST":
         form = SelfServiceOrgRequestForm(request.POST)
         if form.is_valid():
-            email_context = {'client_name': form.cleaned_data['client_name'], 'email': form.cleaned_data['email'],
-                             'address': form.cleaned_data['address'], 'phone': form.cleaned_data['phone'],
-                             'fund_info': form.cleaned_data['fund_info'], 'user': request.user,
-                             'submitted_ip': request.META['REMOTE_ADDR']}
+            email_context = {
+                'client_name': form.cleaned_data['client_name'],
+                'email': form.cleaned_data['email'],
+                'address': form.cleaned_data['address'],
+                'phone': form.cleaned_data['phone'],
+                'fund_info': form.cleaned_data['fund_info'],
+                'user': request.user,
+                'submitted_ip': request.META['REMOTE_ADDR']}
             email = generate_selfservice_notice_email(email_context)
             email.send()
             return render(request, 'org.service.html', context)
@@ -127,11 +132,14 @@ def myorgform(request):
 # @user_passes_test(is_lnlmember, login_url='/lnldb/fuckoffkitty/')
 def myevents(request):
     """ List Events That Have been CC'd / involved """
-    context = {'user': request.user, 'now': datetime.datetime.now(timezone.get_current_timezone()),
-               'ccinstances': request.user.ccinstances.select_related('event__location').all(),
-               'orgs': request.user.all_orgs.prefetch_related('event_set__location'),
-               'submitted_events': request.user.submitter.select_related('location').all(),
-               'hours': request.user.hours.select_related('event__location').all()}
+    context = {
+        'user': request.user,
+        'now': datetime.datetime.now(
+            timezone.get_current_timezone()),
+        'ccinstances': request.user.ccinstances.select_related('event__location').all(),
+        'orgs': request.user.all_orgs.prefetch_related('event_set__location'),
+        'submitted_events': request.user.submitter.select_related('location').all(),
+        'hours': request.user.hours.select_related('event__location').all()}
 
     context.update(request.user.hours.aggregate(totalhours=Sum('hours')))
 
@@ -173,19 +181,23 @@ def ccreport(request, eventid):
     uevent = user.ccinstances.filter(event__pk=eventid)
     # check that the event in question belongs to the user
     if not uevent:
-        return HttpResponse("This Event Must not Have been yours, or is closed")
+        return HttpResponse(
+            "This Event Must not Have been yours, or is closed")
 
     event = Event.objects.get(pk=eventid)
     if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past...")
+        return HttpResponse(
+            "The deadline for report submission and hours has past...")
 
     # get event
     event = uevent[0].event
     x = event.ccinstances.filter(crew_chief=user)
-    context['msg'] = "Crew Chief Report for '<em>%s</em>' (%s)" % (event, ",".join([str(i.service) for i in x]))
+    context['msg'] = "Crew Chief Report for '<em>%s</em>' (%s)" % (
+        event, ",".join([str(i.service) for i in x]))
 
     # create report
-    report, created = CCReport.objects.get_or_create(event=event, crew_chief=user)
+    report, created = CCReport.objects.get_or_create(
+        event=event, crew_chief=user)
 
     # standard save flow
     if request.method == 'POST':
@@ -213,7 +225,8 @@ def hours_list(request, eventid):
     event = user.ccinstances.filter(event__pk=eventid)
 
     if not event:
-        return HttpResponse("You must not have cc'd this event, or it's closed")
+        return HttpResponse(
+            "You must not have cc'd this event, or it's closed")
     event = event[0].event
     context['event'] = event
 
@@ -232,11 +245,13 @@ def hours_mk(request, eventid):
     uevent = user.ccinstances.filter(event__pk=eventid)
 
     if not uevent:
-        return HttpResponse("This Event Must not Have been yours, or is closed")
+        return HttpResponse(
+            "This Event Must not Have been yours, or is closed")
 
     event = Event.objects.get(pk=eventid)
     if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past...")
+        return HttpResponse(
+            "The deadline for report submission and hours has past...")
 
     event = uevent[0].event
     context['msg'] = "Hours for '%s'" % event.event_name
@@ -244,7 +259,8 @@ def hours_mk(request, eventid):
         formset = MKHoursForm(event, request.POST)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('my-cchours', args=(event.id,)))
+            return HttpResponseRedirect(
+                reverse('my-cchours', args=(event.id,)))
         else:
             context['formset'] = formset
 
@@ -264,11 +280,13 @@ def hours_edit(request, eventid, userid):
     uevent = user.ccinstances.filter(event__pk=eventid)
 
     if not uevent:
-        return HttpResponse("You must not have cc'd this event, or it's closed")
+        return HttpResponse(
+            "You must not have cc'd this event, or it's closed")
 
     event = Event.objects.get(pk=eventid)
     if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past...")
+        return HttpResponse(
+            "The deadline for report submission and hours has past...")
     event = uevent[0].event
 
     hours = get_object_or_404(Hours, event=event, user_id=userid)
@@ -278,7 +296,8 @@ def hours_edit(request, eventid, userid):
         formset = EditHoursForm(request.POST, instance=hours)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('my-cchours', args=(event.id,)))
+            return HttpResponseRedirect(
+                reverse('my-cchours', args=(event.id,)))
         else:
             context['formset'] = formset
 
@@ -298,25 +317,29 @@ def hours_bulk(request, eventid):
     uevent = user.ccinstances.filter(event__pk=eventid)
 
     if not uevent:
-        return HttpResponse("You must not have cc'd this event, or it's closed")
+        return HttpResponse(
+            "You must not have cc'd this event, or it's closed")
 
     event = Event.objects.get(pk=eventid)
     if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past...")
+        return HttpResponse(
+            "The deadline for report submission and hours has past...")
     event = uevent[0].event
 
     context['msg'] = "Bulk Hours Entry"
 
     context['event'] = event
 
-    mk_event_formset = inlineformset_factory(Event, Hours, extra=15, exclude=[])
+    mk_event_formset = inlineformset_factory(
+        Event, Hours, extra=15, exclude=[])
     mk_event_formset.form = staticmethod(curry(MKHoursForm, event=event))
 
     if request.method == 'POST':
         formset = mk_event_formset(request.POST, instance=event)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('my-cchours', args=(event.id,)))
+            return HttpResponseRedirect(
+                reverse('my-cchours', args=(event.id,)))
         else:
             context['formset'] = formset
 

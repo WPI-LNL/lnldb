@@ -27,14 +27,16 @@ def easy_tag(func):
             # otherwise just send through the original args and kwargs
             try:
                 return func(*args, **kwargs)
-            except TypeError, e:
-                raise template.TemplateSyntaxError('Bad arguments for tag "%s"' % args[0])
+            except TypeError as e:
+                raise template.TemplateSyntaxError(
+                    'Bad arguments for tag "%s"' % args[0])
     inner.__name__ = func.__name__
     inner.__doc__ = inner.__doc__
     return inner
 
 
 class AppendGetNode(template.Node):
+
     def __init__(self, in_dict):
         self.dict_pairs = {}
         for key in in_dict:
@@ -48,10 +50,12 @@ class AppendGetNode(template.Node):
 
         path = context['request'].META['PATH_INFO']
 
-        # print "&".join(["%s=%s" % (key, value) for (key, value) in get.items() if value])
+        # print "&".join(["%s=%s" % (key, value) for (key, value) in
+        # get.items() if value])
 
         if len(get):
-            path += "?%s" % "&".join(["%s=%s" % (key, value) for (key, value) in get.items() if value])
+            path += "?%s" % "&".join(["%s=%s" % (key, value)
+                                      for (key, value) in get.items() if value])
 
         return path
 

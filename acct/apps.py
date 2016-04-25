@@ -20,5 +20,6 @@ class AcctConfig(AppConfig):
 
 
 class UserSearchAdapter(watson.SearchAdapter):
+
     def get_title(self, obj):
         return obj.profile.fullname

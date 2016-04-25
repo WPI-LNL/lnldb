@@ -9,6 +9,7 @@ from helpers.challenges import is_officer
 
 
 class LoginRequiredMixin(object):
+
     @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
         return super(LoginRequiredMixin, self).dispatch(request,
@@ -16,6 +17,7 @@ class LoginRequiredMixin(object):
 
 
 class OfficerMixin(object):
+
     @method_decorator(user_passes_test(is_officer, ))
     def dispatch(self, request, *args, **kwargs):
         if 'Officer' not in request.user.groups:
@@ -73,6 +75,7 @@ class SetFormMsgMixin(object):
 
 
 class ConditionalFormMixin(object):
+
     def get_form_kwargs(self):
         kwargs = super(ConditionalFormMixin, self).get_form_kwargs()
         if kwargs is None:

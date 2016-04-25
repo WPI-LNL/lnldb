@@ -46,8 +46,13 @@ def fuckoffkitty(request):
 def status(request):
     context = {}
     try:
-        # want to keep the git revision stuff on one page ONLY, so I'll stick it all here.
-        git_change_file = open(os.path.join(settings.SITE_ROOT, '.git', 'COMMIT_EDITMSG'))
+        # want to keep the git revision stuff on one page ONLY, so I'll stick
+        # it all here.
+        git_change_file = open(
+            os.path.join(
+                settings.SITE_ROOT,
+                '.git',
+                'COMMIT_EDITMSG'))
         context['CHANGELOG'] = "\n".join(git_change_file.readlines())
         git_change_file.close()
 
@@ -56,7 +61,11 @@ def status(request):
         git_hash_file.close()
         while 'ref:' in git_hash_text:
             follow_path = re.search('^ref: (.+)$', git_hash_text).group(1)
-            followed_file = open(os.path.join(settings.SITE_ROOT, '.git', follow_path))
+            followed_file = open(
+                os.path.join(
+                    settings.SITE_ROOT,
+                    '.git',
+                    follow_path))
             git_hash_text = "\n".join(followed_file.readlines())
             followed_file.close()
         context['REVISION'] = git_hash_text[:6]
@@ -90,7 +99,7 @@ def access_log(request):
 
 
 @login_required
-### TODO: adjust for perm test
+# TODO: adjust for perm test
 def search(request):
     context = {}
     q = ""

@@ -79,43 +79,58 @@ def generate_event_start_end_emails():
     starting = Event.objects.filter(approved=True, datetime_start=now)
     ending = Event.objects.filter(approved=True, datetime_end=now)
     # print now
-    #print starting.count()
-    #print ending.count()
+    # print starting.count()
+    # print ending.count()
 
     from_email = settings.DEFAULT_FROM_ADDR
 
     if starting:
-        context_start = {'events': starting, 'string': "Events Starting Now", 'stringtwo': ""}
+        context_start = {
+            'events': starting,
+            'string': "Events Starting Now",
+            'stringtwo': ""}
 
-        content_start_txt = render_to_string('emails/email_start_end.txt', context_start)
-        content_start_html = render_to_string('emails/email_start_end.html', context_start)
+        content_start_txt = render_to_string(
+            'emails/email_start_end.txt', context_start)
+        content_start_html = render_to_string(
+            'emails/email_start_end.html', context_start)
 
-        email = EmailMultiAlternatives(subj_start, content_start_txt, from_email, [EMAIL_TARGET_START_END],
-                                       headers=headers)
+        email = EmailMultiAlternatives(
+            subj_start,
+            content_start_txt,
+            from_email,
+            [EMAIL_TARGET_START_END],
+            headers=headers)
         email.attach_alternative(content_start_html, "text/html")
         email.send()
-        #print "sent start email with %s events" % starting.count()
+        # print "sent start email with %s events" % starting.count()
 
     elif ending:
-        context_end = {'events': ending, 'string': "Events Ending Now", 'stringtwo': "Please help Strike!"}
+        context_end = {
+            'events': ending,
+            'string': "Events Ending Now",
+            'stringtwo': "Please help Strike!"}
 
-        content_end_txt = render_to_string('emails/email_start_end.txt', context_end)
-        content_end_html = render_to_string('emails/email_start_end.html', context_end)
+        content_end_txt = render_to_string(
+            'emails/email_start_end.txt', context_end)
+        content_end_html = render_to_string(
+            'emails/email_start_end.html', context_end)
 
-        email = EmailMultiAlternatives(subj_end, content_end_txt, from_email, [EMAIL_TARGET_START_END], headers=headers)
+        email = EmailMultiAlternatives(subj_end, content_end_txt, from_email, [
+                                       EMAIL_TARGET_START_END], headers=headers)
         email.attach_alternative(content_end_html, "text/html")
         email.send()
-        #print "sent end email with %s events" % ending.count()
+        # print "sent end email with %s events" % ending.count()
 
     else:
-        #print "no events starting/ending"
+        # print "no events starting/ending"
         pass
 
 
 # Cron Example
 # * * * * * ~/bin/python ~/lnldb/manage.py send_start_end
 
-#### Self Service Emails
+# Self Service Emails
 # Self service org email
 def generate_selfservice_notice_email(context):
     subject = "Self Service Form Submission"
@@ -147,6 +162,7 @@ def generate_selfmember_notice_email(context):
 
 
 class DefaultLNLEmailGenerator(object):  # yay classes
+
     def __init__(self,
                  subject="LNL Notice",
                  to_emails=settings.DEFAULT_TO_ADDR,
@@ -171,7 +187,8 @@ class DefaultLNLEmailGenerator(object):  # yay classes
         template_txt = "%s.txt" % template_basename
         content_txt = render_to_string(template_txt, context)
         # print bcc
-        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=bcc)
+        self.email = EmailMultiAlternatives(
+            subject, content_txt, from_email, to_emails, bcc=bcc, cc=bcc)
         for a in attachments:
             self.email.attach(a['name'], a['file_handle'], "application/pdf")
 

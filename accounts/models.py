@@ -1,7 +1,7 @@
 # noinspection PyProtectedMember
 from django.contrib.auth.models import AbstractUser, _user_has_perm
 from django.db.models import Q, IntegerField, CharField, TextField, \
-        BooleanField, PositiveIntegerField
+    BooleanField, PositiveIntegerField
 from django.utils.six import python_2_unicode_compatible
 
 from events.models import Organization
@@ -11,6 +11,7 @@ from events.models import Organization
 
 @python_2_unicode_compatible
 class User(AbstractUser):
+
     def save(self, *args, **kwargs):
         # gives an email from the username when first created (ie. via CAS)
         if not self.pk and not self.email:
@@ -18,11 +19,23 @@ class User(AbstractUser):
         super(User, self).save(*args, **kwargs)
 
     wpibox = IntegerField(null=True, blank=True, verbose_name="WPI Box Number")
-    phone = CharField(max_length=24, null=True, blank=True, verbose_name="Phone Number")
-    addr = TextField(null=True, blank=True, verbose_name="Address / Office Location")
+    phone = CharField(
+        max_length=24,
+        null=True,
+        blank=True,
+        verbose_name="Phone Number")
+    addr = TextField(
+        null=True,
+        blank=True,
+        verbose_name="Address / Office Location")
     mdc = CharField(max_length=32, null=True, blank=True, verbose_name="MDC")
-    nickname = CharField(max_length=32, null=True, blank=True, verbose_name="Nickname")
-    student_id = PositiveIntegerField(null=True, blank=True, verbose_name="Student ID")
+    nickname = CharField(
+        max_length=32,
+        null=True,
+        blank=True,
+        verbose_name="Nickname")
+    student_id = PositiveIntegerField(
+        null=True, blank=True, verbose_name="Student ID")
     locked = BooleanField(default=False)
 
     def __str__(self):
@@ -52,15 +65,22 @@ class User(AbstractUser):
 
     @property
     def is_lnl(self):
-        if self.groups.filter(Q(name="Alumni") | Q(name="Active") | Q(name="Officer") | Q(name="Associate") | Q(
-                name="Away") | Q(name="Inactive")).exists():
+        if self.groups.filter(
+            Q(
+                name="Alumni") | Q(
+                name="Active") | Q(
+                name="Officer") | Q(
+                    name="Associate") | Q(
+                        name="Away") | Q(
+                            name="Inactive")).exists():
             return True
         else:
             return False
 
     @property
     def is_complete(self):
-        # We can make it more strict later on, but these are the essentials. And
+        # We can make it more strict later on, but these are the essentials.
+        # And
         return self.first_name and self.last_name
 
     @property
@@ -94,14 +114,15 @@ class User(AbstractUser):
     @property
     def all_orgs(self):
         return Organization.objects.complex_filter(
-                Q(user_in_charge=self) | Q(associated_users=self)).distinct()
+            Q(user_in_charge=self) | Q(associated_users=self)).distinct()
 
     @property
     def mdc_name(self):
         max_chars = 12
         clean_first, clean_last = "", ""
 
-        # assume that Motorola can handle practically nothing. Yes, ugly, but I don't wanna regex 1000's of times
+        # assume that Motorola can handle practically nothing. Yes, ugly, but I
+        # don't wanna regex 1000's of times
         for char in self.first_name.upper().strip():
             if ord(char) == ord(' ') or ord(char) == ord('-') \
                     or ord('0') <= ord(char) <= ord('9') or ord('A') <= ord(char) <= ord('Z'):
@@ -111,8 +132,10 @@ class User(AbstractUser):
                     or ord('0') <= ord(char) <= ord('9') or ord('A') <= ord(char) <= ord('Z'):
                 clean_last += char
 
-        outstr = clean_last[:max_chars - 2] + ","  # leave room for at least an initial
-        outstr += clean_first[:max_chars - len(outstr)]  # fill whatever's left with the first name
+        # leave room for at least an initial
+        outstr = clean_last[:max_chars - 2] + ","
+        # fill whatever's left with the first name
+        outstr += clean_first[:max_chars - len(outstr)]
         return outstr
 
     class Meta:

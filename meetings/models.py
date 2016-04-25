@@ -36,17 +36,23 @@ def get_default_email():
 class Meeting(models.Model):
     glyphicon = 'briefcase'
     datetime = models.DateTimeField(verbose_name="Start Time")
-    duration = models.DurationField(default=timedelta(hours=1), null=False, blank=False)
+    duration = models.DurationField(
+        default=timedelta(
+            hours=1),
+        null=False,
+        blank=False)
     attendance = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True)
     meeting_type = models.ForeignKey('MeetingType', default=1)
     location = models.ForeignKey('events.Location', null=True, blank=True)
     agenda = models.TextField(null=True, blank=True)
     minutes = models.TextField(null=True, blank=True)
-    minutes_private = models.TextField(verbose_name="Closed Minutes", null=True, blank=True)
+    minutes_private = models.TextField(
+        verbose_name="Closed Minutes", null=True, blank=True)
 
     @property
     def name(self):
-        return "%s Meeting on %s" % (self.meeting_type.name, self.datetime.date())
+        return "%s Meeting on %s" % (
+            self.meeting_type.name, self.datetime.date())
 
     @property
     def endtime(self):
@@ -100,8 +106,14 @@ def mtg_attachment_file_name(instance, filename):
 class MtgAttachment(TimeStampedModel):
     glyphicon = 'paperclip'
     name = models.CharField(max_length=64, null=False, blank=False)
-    file = models.FileField(upload_to=mtg_attachment_file_name, blank=False, null=False)
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, editable=False, null=False)
+    file = models.FileField(
+        upload_to=mtg_attachment_file_name,
+        blank=False,
+        null=False)
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        editable=False,
+        null=False)
     meeting = models.ForeignKey(Meeting, related_name='attachments', null=True)
     private = models.BooleanField(default=False)
 
@@ -144,14 +156,16 @@ class MeetingType(models.Model):
 
 class CCNoticeSend(models.Model):
     meeting = models.ForeignKey(Meeting, related_name="meetingccnotices")
-    events = models.ManyToManyField(Event, related_name="meetingccnoticeevents")
+    events = models.ManyToManyField(
+        Event, related_name="meetingccnoticeevents")
     sent_at = models.DateTimeField(auto_now_add=True)
     sent_success = models.BooleanField(default=False)
     uuid = UUIDField(auto=True, editable=False, null=True, blank=True)
 
     email_to = models.ForeignKey('TargetEmailList', default=get_default_email)
 
-    addtl_message = models.TextField(null=True, blank=True, verbose_name="Additional Message")
+    addtl_message = models.TextField(
+        null=True, blank=True, verbose_name="Additional Message")
 
     @property
     def subject(self):

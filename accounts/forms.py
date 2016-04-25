@@ -8,61 +8,93 @@ from data.forms import FieldAccessForm, FieldAccessLevel
 
 
 class LoginForm(AuthenticationForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         super(LoginForm, self).__init__(*args, **kwargs)
-        self.helper.add_input(Submit('submit', 'Log In Locally', css_class="btn btn-lg btn-block btn-info"))
+        self.helper.add_input(
+            Submit(
+                'submit',
+                'Log In Locally',
+                css_class="btn btn-lg btn-block btn-info"))
 
 
 class UserEditForm(FieldAccessForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
         self.helper.layout = Layout(
-
-                Fieldset("User Info",
-                         'first_name', 'last_name', 'username', 'email', 'nickname',
-                         HTML("""
+            Fieldset(
+                "User Info", 'first_name', 'last_name', 'username', 'email', 'nickname', HTML("""
                      <div class="col-lg-offset-2 col-lg-8">
                          <a href="{% url 'accounts:password' object.pk %}">Set a password for non-CAS login</a>
                      </div>
-                     """)),
-                Fieldset("Contact Info",
-                         'phone', Field('addr', rows=3)),
-                Fieldset("Internal Info",
-                         'mdc', 'wpibox', 'groups'),
-                FormActions(
-                        Submit('save', 'Update Member and Return'),
-                )
-        )
+                     """)), Fieldset(
+                "Contact Info", 'phone', Field(
+                    'addr', rows=3)), Fieldset(
+                    "Internal Info", 'mdc', 'wpibox', 'groups'), FormActions(
+                        Submit(
+                            'save', 'Update Member and Return'), ))
         super(UserEditForm, self).__init__(*args, **kwargs)
 
     class Meta:
         model = get_user_model()
-        fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'groups', 'addr', 'wpibox', 'mdc', 'phone', ]
+        fields = [
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'nickname',
+            'groups',
+            'addr',
+            'wpibox',
+            'mdc',
+            'phone',
+        ]
 
     class FieldAccess:
+
         def __init__(self):
             pass
 
         thisisme = FieldAccessLevel(
-                lambda user, instance:  (user == instance) and not user.locked,
-                enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'nickname')
-        )
+            lambda user,
+            instance: (
+                user == instance) and not user.locked,
+            enable=(
+                'email',
+                'first_name',
+                'last_name',
+                'addr',
+                'wpibox',
+                'phone',
+                'nickname'))
         hasperm = FieldAccessLevel(
-                lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
-                enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone',)
-        )
+            lambda user,
+            instance: (
+                user != instance) and user.has_perm(
+                'accounts.change_user',
+                instance),
+            enable=(
+                'username',
+                'email',
+                'first_name',
+                'last_name',
+                'addr',
+                'wpibox',
+                'phone',
+            ))
         edit_groups = FieldAccessLevel(
-                lambda user, instance: user.has_perm('accounts.change_group', instance),
-                enable=('groups',)
-        )
+            lambda user, instance: user.has_perm(
+                'accounts.change_group', instance), enable=(
+                'groups',))
         edit_mdc = FieldAccessLevel(
-                lambda user, instance: user.has_perm('accounts.edit_mdc', instance),
-                enable=('mdc',)
-        )
+            lambda user, instance: user.has_perm(
+                'accounts.edit_mdc', instance), enable=(
+                'mdc',))
 
 
 class UserAddForm(UserCreationForm):
@@ -83,16 +115,16 @@ class UserAddForm(UserCreationForm):
         self.helper.form_class = "form-horizontal"
 
         self.helper.layout = Layout(
-                Row(Div('first_name', css_class='col-md-6'),
-                    Div('last_name', css_class='col-md-6')),
-                'username',
-                'email',
-                Row(Div('password1', css_class='col-md-6'),
-                    Div('password2', css_class='col-md-6')),
+            Row(Div('first_name', css_class='col-md-6'),
+                Div('last_name', css_class='col-md-6')),
+            'username',
+            'email',
+            Row(Div('password1', css_class='col-md-6'),
+                Div('password2', css_class='col-md-6')),
 
-                FormActions(
-                        Submit('save', 'Save Changes'),
-                )
+            FormActions(
+                Submit('save', 'Save Changes'),
+            )
         )
         super(UserAddForm, self).__init__(*args, **kwargs)
 

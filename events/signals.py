@@ -35,8 +35,12 @@ def email_cc_notification(sender, instance, created, raw=False, **kwargs):
             Please note that the attached Workorder PDF contains all services relating to the event,
              not just your assigned service.
             """ % (i.event.event_name, i.service, local_formatted, i.setup_location, )
-        e = DLEG(subject="Crew Chief Add Notification", to_emails=[instance.crew_chief.email], body=email_body,
-                 attachments=attachments)
+        e = DLEG(
+            subject="Crew Chief Add Notification",
+            to_emails=[
+                instance.crew_chief.email],
+            body=email_body,
+            attachments=attachments)
         e.send()
 
 
@@ -49,8 +53,10 @@ def email_billing_create(sender, instance, created, raw=False, **kwargs):
             A New LNL bill has been posted for "%s" on %s for the amount of $%s
             """ % (i.event.event_name, i.date_billed, i.amount)
 
-        e = DLEG(subject="LNL Billing Create Notification", to_emails=[i.event.contact.email], body=email_body,
-                 bcc=[settings.EMAIL_TARGET_T])
+        e = DLEG(
+            subject="LNL Billing Create Notification", to_emails=[
+                i.event.contact.email], body=email_body, bcc=[
+                settings.EMAIL_TARGET_T])
         e.send()
 
 
@@ -64,8 +70,10 @@ def email_billing_marked_paid(sender, instance, created, raw=False, **kwargs):
             Thank you for paying the bill for "%s" on %s for the amount of $%s
             """ % (i.event.event_name, i.date_paid, i.amount)
 
-            e = DLEG(subject="LNL Billing Paid Notification", to_emails=[i.event.contact.email], body=email_body,
-                     bcc=[settings.EMAIL_TARGET_T])
+            e = DLEG(
+                subject="LNL Billing Paid Notification", to_emails=[
+                    i.event.contact.email], body=email_body, bcc=[
+                    settings.EMAIL_TARGET_T])
             e.send()
 
 
@@ -77,8 +85,10 @@ def email_billing_delete(sender, instance, **kwargs):
             The bill for the amount of $%s on "%s" has been deleted
             """ % (i.amount, i.event.event_name,)
 
-        e = DLEG(subject="LNL Billing Deletion Notification", to_emails=[i.event.contact.email], body=email_body,
-                 bcc=[settings.EMAIL_TARGET_T])
+        e = DLEG(
+            subject="LNL Billing Deletion Notification", to_emails=[
+                i.event.contact.email], body=email_body, bcc=[
+                settings.EMAIL_TARGET_T])
         e.send()
 
 
@@ -91,7 +101,11 @@ def initial_user_create_notify(sender, instance, created, raw=False, **kwargs):
         %s (%s)
         """ % (i.username, i.email)
 
-        e = DLEG(subject="LNL User Joined", to_emails=[settings.EMAIL_TARGET_S], body=email_body)
+        e = DLEG(
+            subject="LNL User Joined",
+            to_emails=[
+                settings.EMAIL_TARGET_S],
+            body=email_body)
         e.send()
 
 

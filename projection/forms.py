@@ -12,6 +12,7 @@ from ajax_select.fields import AutoCompleteSelectField, AutoCompleteSelectMultip
 
 
 class ProjectionistUpdateForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -33,6 +34,7 @@ class ProjectionistUpdateForm(forms.ModelForm):
 
 
 class ProjectionistForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -48,7 +50,8 @@ class ProjectionistForm(forms.ModelForm):
             )
         )
         super(ProjectionistForm, self).__init__(*args, **kwargs)
-        self.fields['user'].queryset = get_user_model().objects.exclude(projectionist__isnull=False)
+        self.fields['user'].queryset = get_user_model(
+        ).objects.exclude(projectionist__isnull=False)
 
     user = AutoCompleteSelectField('Users', required=True, plugin_options={
         'position': "{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
@@ -59,6 +62,7 @@ class ProjectionistForm(forms.ModelForm):
 
 
 class InstanceForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_tag = False
@@ -78,6 +82,7 @@ class InstanceForm(forms.ModelForm):
 
 
 class BulkUpdateForm(forms.Form):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -93,21 +98,29 @@ class BulkUpdateForm(forms.Form):
     users = AutoCompleteSelectMultipleField('Users', required=True, plugin_options={
         'position': "{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
     date = forms.DateField()
-    pit_level = forms.ModelChoiceField(queryset=PITLevel.objects.all(), empty_label=None)
+    pit_level = forms.ModelChoiceField(
+        queryset=PITLevel.objects.all(), empty_label=None)
 
     def create_updates(self):
         i = self.cleaned_data
         for user in i['users']:
             p, created = Projectionist.objects.get_or_create(user_id=user)
-            PitInstance.objects.create(projectionist=p, pit_level=i['pit_level'], created_on=i['date'])
+            PitInstance.objects.create(
+                projectionist=p,
+                pit_level=i['pit_level'],
+                created_on=i['date'])
 
 
-PITFormset = inlineformset_factory(Projectionist, PitInstance, extra=1,
-                                   form=InstanceForm)  # ,formset=ProjectionistUpdateForm)
+PITFormset = inlineformset_factory(
+    Projectionist,
+    PitInstance,
+    extra=1,
+    form=InstanceForm)  # ,formset=ProjectionistUpdateForm)
 
 
-### ITS TIME FOR A WIZAAAAAAARD
+# ITS TIME FOR A WIZAAAAAAARD
 class BulkCreateForm(forms.Form):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -132,6 +145,7 @@ class BulkCreateForm(forms.Form):
 
 
 class DateEntryFormSetBase(forms.Form):
+
     def __init__(self, *args, **kwargs):
         # pop the date out of the iterator here
         # x = kwargs.keys()

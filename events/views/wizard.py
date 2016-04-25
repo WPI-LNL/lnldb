@@ -38,19 +38,26 @@ def show_other_services_form_condition(wizard):
 
 
 class EventWizard(NamedUrlSessionWizardView):
+
     def done(self, form_list, **kwargs):
         # return HttpResponse([form.cleaned_data for form in form_list])
         event = Event.event_mg.consume_workorder_formwiz(form_list, self)
-        # return HttpResponseRedirect(reverse('events.views.my.myeventdetail',args=(event.id,)))
+        # return
+        # HttpResponseRedirect(reverse('events.views.my.myeventdetail',args=(event.id,)))
         email_body = "You have successfully submitted an event titled %s" % event.event_name
-        email = DLEG(subject="New Event Submitted", to_emails=[event.contact.email], body=email_body,
-                     bcc=[settings.EMAIL_TARGET_VP])
+        email = DLEG(
+            subject="New Event Submitted", to_emails=[
+                event.contact.email], body=email_body, bcc=[
+                settings.EMAIL_TARGET_VP])
         email.send()
 
         if event.projection:
             email_bodyp = 'The event "%s" has a request for projection' % event.event_name
-            emailp = DLEG(subject="New Event Submitted w/ Projection", to_emails=[settings.EMAIL_TARGET_HP],
-                          body=email_bodyp)
+            emailp = DLEG(
+                subject="New Event Submitted w/ Projection",
+                to_emails=[
+                    settings.EMAIL_TARGET_HP],
+                body=email_bodyp)
             emailp.send()
         context = RequestContext(self.request)
         return render(self.request, 'wizard_finished.html', context)
@@ -61,7 +68,8 @@ class EventWizard(NamedUrlSessionWizardView):
         if step == "contact":  # contact
             u = self.request.user
             first_last = "%s %s" % (u.first_name, u.last_name)
-            initial.update({'email': u.email, "name": first_last, "phone": u.phone})
+            initial.update(
+                {'email': u.email, "name": first_last, "phone": u.phone})
         return initial
 
     # gives the form the user object to limit available orgs
@@ -91,28 +99,36 @@ class EventWizard(NamedUrlSessionWizardView):
             if step in self._form_cache:
                 form_obj = self._form_cache[step]
             else:
-                form_obj = self.get_form(step=step,
-                                         data=self.storage.get_step_data(step),
-                                         files=self.storage.get_step_files(step))
+                form_obj = self.get_form(
+                    step=step,
+                    data=self.storage.get_step_data(step),
+                    files=self.storage.get_step_files(step))
                 self._form_cache[step] = form_obj
             if form_obj.is_valid():
                 return form_obj.cleaned_data
         return None
 
     def get_context_data(self, form, **kwargs):
-        context = super(EventWizard, self).get_context_data(form=form, **kwargs)
+        context = super(
+            EventWizard,
+            self).get_context_data(
+            form=form,
+            **kwargs)
         if self.steps.current == 'lighting':
             context.update({'help_objs': Lighting.objects.all()})
             context.update({'help_name': "Lighting"})
-            context.update({'extras': list(Extra.objects.filter(category__name="Lighting").all())})
+            context.update(
+                {'extras': list(Extra.objects.filter(category__name="Lighting").all())})
         if self.steps.current == 'sound':
             context.update({'help_objs': Sound.objects.all()})
             context.update({'help_name': "Sound"})
-            context.update({'extras': Extra.objects.filter(category__name="Sound").all()})
+            context.update(
+                {'extras': Extra.objects.filter(category__name="Sound").all()})
         if self.steps.current == 'projection':
             context.update({'help_objs': Projection.objects.all()})
             context.update({'help_name': "Projection"})
-            context.update({'extras': Extra.objects.filter(category__name="Projection").all()})
+            context.update({'extras': Extra.objects.filter(
+                category__name="Projection").all()})
         percent = int(self.steps.step1 / float(self.steps.count) * 100)
         context.update({"percentage": percent})
         return context

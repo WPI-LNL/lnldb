@@ -1,3 +1,4 @@
+
 sudo: false
 language: python
 
@@ -10,10 +11,32 @@ python:
 
 install:
     - pip install --upgrade pip
+    - pip install autopep8
     - pip install --cache-dir $HOME/.pip-cache -r requirements_debug.txt
 
 script:
     - coverage run --source=. --omit="*/migrations/*" manage.py test
+    # Run pep8 on all .py files in all subfolders
+    - num_errors_before=`pep8 --exclude="*/migrations/*",".ropeproject/*" --ignore=E501,W292,E265,E266,E402,E126 . | wc -l`
+    - echo $num_errors_before
+    -| if (( $num_errors_before > 0 )); then
+              find . -name \*.py -not -path "*/migrations*" -exec autopep8 --verbose --recursive --aggressive --aggressive --in-place {} +
+              num_errors_after=`pep8 --exclude="*/migrations/*",".ropeproject/*" --ignore=E501,W292,E265,E266,E402,E126 . | wc -l`
+              echo $num_errors_after
+              if (( $num_errors_after < $num_errors_before )); then
+                  git commit -a -m "PEP-8 Fix"
+                  git config --global push.default simple
+                  # ^^^ Push only to the current branch.  
+                  git config --global user.email "lnl-bot@wpi.edu"
+                  git config --global user.name "Travis"
+                  # Make sure to make the output quiet, or else the API token will 
+                  # leak!  This works because the API key can replace your password.
+                  git remote add rw_origin https://lnl-bot:${GH_TOKEN}@github.com/WPI-LNL/lnldb.git
+                  git push rw_origin --quiet
+              fi
+        fi
+
+    # List the remaining errors - these will have to be fixed manually, and will trigger a fail
     - pep8 --exclude="*/migrations/*",".ropeproject/*" --ignore=E501,W292,E265,E266,E402,E126 .
 
 after_success:

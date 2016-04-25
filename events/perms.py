@@ -32,8 +32,10 @@ class AssocUsersCustomPermissionLogic(PermissionLogic):
             #     authorized_users = authorized_users.next()
             if hasattr(authorized_users, 'all'):
                 authorized_users = authorized_users.all()
-            if user_obj == authorized_users or \
-                    (hasattr(authorized_users, '__iter__') and user_obj in authorized_users):
+            if user_obj == authorized_users or (
+                hasattr(
+                    authorized_users,
+                    '__iter__') and user_obj in authorized_users):
                 if perm in self.denied:
                     raise PermissionDenied()
                 return True
@@ -85,19 +87,29 @@ class EventOrgOwnerPermLogic(AssocUsersCustomPermissionLogic):
 
 class WorkedAtEventPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'hours__user'
-    perms = ('events.view_event', 'events.add_event_report', 'events.event_images')
+    perms = (
+        'events.view_event',
+        'events.add_event_report',
+        'events.event_images')
 
 
 class OrgMemberPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'associated_users'
-    perms = ('events.view_org', 'events.list_org_events', 'events.list_org_members', 'events.create_org_event',
-             'events.show_org_billing')
+    perms = (
+        'events.view_org',
+        'events.list_org_events',
+        'events.list_org_members',
+        'events.create_org_event',
+        'events.show_org_billing')
 
 
 class OrgOwnerPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'user_in_charge'
-    perms = OrgMemberPermLogic.perms + ('events.edit_org', 'events.edit_org_billing', 'events.edit_org_members',
-                                        'events.transfer_org_ownership', 'events.deprecate_org',
+    perms = OrgMemberPermLogic.perms + ('events.edit_org',
+                                        'events.edit_org_billing',
+                                        'events.edit_org_members',
+                                        'events.transfer_org_ownership',
+                                        'events.deprecate_org',
                                         'events.list_org_hidden_events')
 
 

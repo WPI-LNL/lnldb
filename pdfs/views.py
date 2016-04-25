@@ -15,7 +15,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.humanize.templatetags.humanize import intcomma
 
 
-# Convert HTML URIs to absolute system paths so xhtml2pdf can access those resources
+# Convert HTML URIs to absolute system paths so xhtml2pdf can access those
+# resources
 def link_callback(uri, rel):
     # use short variable names
     surl = settings.STATIC_URL  # Typically /static/
@@ -40,11 +41,17 @@ def link_callback(uri, rel):
 def generate_projection_pdf(request):
     data = {}
     # prepare data
-    levels = PITLevel.objects.exclude(name_short__in=['PP', 'L']).order_by('ordering')
-    unlicensed_users = Projectionist.objects.exclude(pitinstances__pit_level__name_short__in=['PP', 'L'])
-    licensed_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP', 'L']).exclude(
+    levels = PITLevel.objects.exclude(
+        name_short__in=['PP', 'L']).order_by('ordering')
+    unlicensed_users = Projectionist.objects.exclude(
+        pitinstances__pit_level__name_short__in=['PP', 'L'])
+    licensed_users = Projectionist.objects.filter(
+        pitinstances__pit_level__name_short__in=[
+            'PP', 'L']).exclude(
         user__groups__name="Alumni")
-    alumni_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP', 'L']).filter(
+    alumni_users = Projectionist.objects.filter(
+        pitinstances__pit_level__name_short__in=[
+            'PP', 'L']).filter(
         user__groups__name="Alumni")
     now = datetime.datetime.now(timezone.get_current_timezone())
 
@@ -60,8 +67,16 @@ def generate_projection_pdf(request):
     if 'raw' in request.GET and bool(request.GET['raw']):
         return HttpResponse(html)
     # write file
-    pdf_pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'projection-%s.pdf' % now.date()), "w+b")
-    pisastatus = pisa.CreatePDF(html, dest=pdf_pdf_file, link_callback=link_callback)
+    pdf_pdf_file = open(
+        os.path.join(
+            settings.MEDIA_ROOT,
+            'projection-%s.pdf' %
+            now.date()),
+        "w+b")
+    pisastatus = pisa.CreatePDF(
+        html,
+        dest=pdf_pdf_file,
+        link_callback=link_callback)
 
     # return doc
     pdf_pdf_file.seek(0)
@@ -85,8 +100,14 @@ def generate_event_pdf(request, id):
         return HttpResponse(html)
 
     # Write PDF to file
-    pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'event-%s.pdf' % event.id), "w+b")
-    pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    pdf_file = open(
+        os.path.join(
+            settings.MEDIA_ROOT,
+            'event-%s.pdf' %
+            event.id),
+        "w+b")
+    pisastatus = pisa.CreatePDF(
+        html, dest=pdf_file, link_callback=link_callback)
 
     # Return PDF document through a Django HTTP response
     pdf_file.seek(0)
@@ -109,7 +130,9 @@ def generate_event_bill_pdf(request, id):
     cats = Category.objects.all()
     extras = {}
     for cat in cats:
-        e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
+        e_for_cat = ExtraInstance.objects.filter(
+            event=event).filter(
+            extra__category=cat)
         if len(e_for_cat) > 0:
             extras[cat] = e_for_cat
     data['extras'] = extras
@@ -121,15 +144,22 @@ def generate_event_bill_pdf(request, id):
         return HttpResponse(html)
 
     # Write PDF to file
-    pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'pay-%s.pdf' % event.id), "w+b")
-    pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    pdf_file = open(
+        os.path.join(
+            settings.MEDIA_ROOT,
+            'pay-%s.pdf' %
+            event.id),
+        "w+b")
+    pisastatus = pisa.CreatePDF(
+        html, dest=pdf_file, link_callback=link_callback)
 
     # Return PDF document through a Django HTTP response
     pdf_file.seek(0)
     pdf = pdf_file.read()
     pdf_file.close()  # Don't forget to close the file handle
     resp = HttpResponse(pdf, content_type='application/pdf')
-    resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
+    resp[
+        'Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
     return resp
 
 
@@ -146,8 +176,13 @@ def generate_pdfs_standalone(ids=None):
     template = get_template('pdf_templates/events.html')
     html = template.render(Context(data))
 
-    pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'event-multi.pdf'), "w+b")
-    pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    pdf_file = open(
+        os.path.join(
+            settings.MEDIA_ROOT,
+            'event-multi.pdf'),
+        "w+b")
+    pisastatus = pisa.CreatePDF(
+        html, dest=pdf_file, link_callback=link_callback)
 
     pdf_file.seek(0)
     pdf = pdf_file.read()
@@ -161,7 +196,8 @@ def generate_event_pdf_multi(request, ids=None):
     timezone.activate(timezone.get_current_timezone())
 
     if not ids:
-        return HttpResponse("Should probably give some ids to return pdfs for..")
+        return HttpResponse(
+            "Should probably give some ids to return pdfs for..")
     # Prepare IDs
     idlist = ids.split(',')
     # Prepare context
@@ -177,8 +213,13 @@ def generate_event_pdf_multi(request, ids=None):
         return HttpResponse(html)
 
     # Write PDF to file
-    pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'event-multi.pdf'), "w+b")
-    pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    pdf_file = open(
+        os.path.join(
+            settings.MEDIA_ROOT,
+            'event-multi.pdf'),
+        "w+b")
+    pisastatus = pisa.CreatePDF(
+        html, dest=pdf_file, link_callback=link_callback)
 
     # Return PDF document through a Django HTTP response
     pdf_file.seek(0)

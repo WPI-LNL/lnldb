@@ -14,6 +14,7 @@ from crispy_forms.bootstrap import Tab, TabHolder, FormActions
 
 
 class CategoryForm(ModelForm):
+
     def __init__(self, *args, **kwargs):
         super(CategoryForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
@@ -26,14 +27,18 @@ class CategoryForm(ModelForm):
                 Submit('save', 'Save changes'),
             )
         )
-        self.fields['usual_place'].queryset = EquipmentCategory.possible_locations()
+        self.fields[
+            'usual_place'].queryset = EquipmentCategory.possible_locations()
 
     def clean_parent(self):
         if self.instance.pk:
             if self.cleaned_data['parent'] == self.instance:
-                raise ValidationError('A category cannot be a subcategory of itself.')
-            if self.cleaned_data['parent'] in self.instance.get_descendants_inclusive:
-                raise ValidationError('A category cannot be a subcategory of one of its children.')
+                raise ValidationError(
+                    'A category cannot be a subcategory of itself.')
+            if self.cleaned_data[
+                    'parent'] in self.instance.get_descendants_inclusive:
+                raise ValidationError(
+                    'A category cannot be a subcategory of one of its children.')
         return self.cleaned_data['parent']
 
     class Meta:
@@ -42,8 +47,10 @@ class CategoryForm(ModelForm):
 
 
 class EquipmentItemForm(ModelForm):
-    case = AutoCompleteSelectField('EquipmentContainer', label="Put into container",
-                                   required=False)
+    case = AutoCompleteSelectField(
+        'EquipmentContainer',
+        label="Put into container",
+        required=False)
 
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
@@ -69,15 +76,23 @@ class EquipmentItemForm(ModelForm):
             if self.cleaned_data['case'] == self.instance:
                 raise ValidationError('You cannot put an item inside itself.')
             if self.cleaned_data['case'] in self.instance.get_descendants():
-                raise ValidationError('You cannot put an item inside an item inside itself.')
+                raise ValidationError(
+                    'You cannot put an item inside an item inside itself.')
         return self.cleaned_data['case']
 
     class Meta:
         model = EquipmentItem
-        fields = ('barcode', 'purchase_date', 'case', 'home', 'serial_number', 'features')
+        fields = (
+            'barcode',
+            'purchase_date',
+            'case',
+            'home',
+            'serial_number',
+            'features')
 
 
 class EquipmentClassForm(ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
@@ -114,9 +129,20 @@ class EquipmentClassForm(ModelForm):
 
     class Meta:
         model = EquipmentClass
-        fields = ('name', 'category', 'description', 'value', 'url',
-                  'model_number', 'manufacturer', 'length', 'width', 'height', 'weight',
-                  'wiki_text', 'holds_items')
+        fields = (
+            'name',
+            'category',
+            'description',
+            'value',
+            'url',
+            'model_number',
+            'manufacturer',
+            'length',
+            'width',
+            'height',
+            'weight',
+            'wiki_text',
+            'holds_items')
         widgets = {
             'description': PagedownWidget(),
             'wiki_text': PagedownWidget(),
@@ -129,12 +155,18 @@ class FastAdd(Form):
                                    label="New Item Category", required=False)
 
     num_to_add = forms.IntegerField(min_value=1)
-    item_type = AutoCompleteSelectField('EquipmentClass', help_text=None,
-                                        label="Select Existing Item Type", required=False,
-                                        plugin_options={'autoFocus': True})
+    item_type = AutoCompleteSelectField(
+        'EquipmentClass',
+        help_text=None,
+        label="Select Existing Item Type",
+        required=False,
+        plugin_options={
+            'autoFocus': True})
 
-    put_into = AutoCompleteSelectField('EquipmentContainer', label="(Optional) Put into container",
-                                       required=False)
+    put_into = AutoCompleteSelectField(
+        'EquipmentContainer',
+        label="(Optional) Put into container",
+        required=False)
 
     def __init__(self, user, *args, **kwargs):
         self.helper = FormHelper()
@@ -175,16 +207,19 @@ class FastAdd(Form):
         elif data.get('item_name', None) and data.get('item_cat', None):
             return data
         elif data.get('item_name', None) or data.get('item_cat', None):
-            raise forms.ValidationError('Provide both a name and category for the new type.')
+            raise forms.ValidationError(
+                'Provide both a name and category for the new type.')
         else:
-            raise forms.ValidationError('Choose a type or enter information for a new one')
+            raise forms.ValidationError(
+                'Choose a type or enter information for a new one')
 
     def save(self):
         data = self.cleaned_data
         if data.get('item_type', None):
             e_type = data.get('item_type', None)
         else:
-            e_type = EquipmentClass.objects.create(name=data['item_name'], category=data['item_cat'])
+            e_type = EquipmentClass.objects.create(
+                name=data['item_name'], category=data['item_cat'])
             e_type.save()
 
         EquipmentItem.objects.bulk_add_helper(e_type, data['num_to_add'])
