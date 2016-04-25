@@ -1,4 +1,7 @@
-# A little wrapper so that object permission checks are overridden by global permissions.
+# A little wrapper so that object permission checks are overridden by
+# global permissions.
+
+
 class PermissionShimBackend(object):
     supports_object_permissions = True
 

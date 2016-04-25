@@ -69,11 +69,19 @@ def addeditorgs(request, id=None):
         if formset.is_valid():
             org = formset.save()
             messages.add_message(request, messages.SUCCESS, 'Changes saved.')
-            # return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
-            return HttpResponseRedirect(reverse('events.views.orgs.orgdetail', kwargs={'id': org.pk}))
+            # return HttpResponseRedirect(reverse('events.views.admin',
+            # kwargs={'msg':SUCCESS_MSG_ORG}))
+            return HttpResponseRedirect(
+                reverse(
+                    'events.views.orgs.orgdetail',
+                    kwargs={
+                        'id': org.pk}))
         else:
             context['formset'] = formset
-            messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
+            messages.add_message(
+                request,
+                messages.WARNING,
+                'Invalid Data. Please try again.')
     else:
         formset = IOrgForm(instance=instance)
         context['formset'] = formset
@@ -111,14 +119,20 @@ def fund_edit(request, id=None, org=None):
                 try:
                     org_instance = Organization.objects.get(pk=org)
                     org_instance.accounts.add(instance)
-                    return HttpResponseRedirect(reverse('events.views.orgs.orgdetail', args=(org,)))
+                    return HttpResponseRedirect(
+                        reverse('events.views.orgs.orgdetail', args=(org,)))
                 except ObjectDoesNotExist:
-                    messages.add_message(request, messages.ERROR, 'Failed to add fund to organization.')
-            # return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
+                    messages.add_message(
+                        request, messages.ERROR, 'Failed to add fund to organization.')
+            # return HttpResponseRedirect(reverse('events.views.admin',
+            # kwargs={'msg':SUCCESS_MSG_ORG}))
             return HttpResponseRedirect(reverse('events.views.orgs.vieworgs'))
         else:
             context['formset'] = formset
-            messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
+            messages.add_message(
+                request,
+                messages.WARNING,
+                'Invalid Data. Please try again.')
     else:
         formset = FopalForm(instance=instance)
         context['formset'] = formset
@@ -133,11 +147,12 @@ def orgdetail(request, id):
     context = {}
     perms = ('events.view_org',)
     try:
-        org = Organization.objects.prefetch_related('accounts', 'associated_users').get(pk=id)
+        org = Organization.objects.prefetch_related(
+            'accounts', 'associated_users').get(pk=id)
     except (Organization.DoesNotExist, Organization.MultipleObjectsReturned):
         raise Http404('No Organization matches the given query.')
-    context['events'] = Event.objects.filter(org=org).prefetch_related('hours__user', 'ccinstances__crew_chief',
-                                                                       'location', 'org')
+    context['events'] = Event.objects.filter(org=org).prefetch_related(
+        'hours__user', 'ccinstances__crew_chief', 'location', 'org')
     if not (request.user.has_perms(perms) or
             request.user.has_perms(perms, org)):
         raise PermissionDenied
@@ -168,7 +183,8 @@ def orgedit(request, id):
         formset = ExternalOrgUpdateForm(request.POST, instance=org)
         if formset.is_valid():
             formset.save()
-            # return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
+            # return HttpResponseRedirect(reverse('events.views.admin',
+            # kwargs={'msg':SUCCESS_MSG_ORG}))
             return HttpResponseRedirect(reverse('events.views.orgs.orglist'))
 
         else:
@@ -233,7 +249,8 @@ def org_acceptxfer(request, idstr):
         context['msgclass'] = "alert-info"
 
     if transfer.is_expired:
-        context['msg'] = 'This transfer has expired, please make a new one (you had a week :-\)'
+        context[
+            'msg'] = 'This transfer has expired, please make a new one (you had a week :-\)'
         context['status'] = 'Expired'
 
     if request.user == transfer.old_user_in_charge:
@@ -242,7 +259,8 @@ def org_acceptxfer(request, idstr):
         transfer.completed_on = datetime.datetime.now(pytz.utc)
         transfer.completed = True
         transfer.save()
-        context['msg'] = 'Transfer Complete: %s is the new user in charge!' % transfer.new_user_in_charge
+        context[
+            'msg'] = 'Transfer Complete: %s is the new user in charge!' % transfer.new_user_in_charge
         context['status'] = 'Success'
         context['msgclass'] = 'alert-success'
     else:
@@ -253,7 +271,11 @@ def org_acceptxfer(request, idstr):
     return render(request, 'mytransfer.html', context)
 
 
-class OrgVerificationCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
+class OrgVerificationCreate(
+        SetFormMsgMixin,
+        HasPermMixin,
+        LoginRequiredMixin,
+        CreateView):
     model = OrgBillingVerificationEvent
     form_class = IOrgVerificationForm
     template_name = "form_crispy_cbv.html"
@@ -267,7 +289,10 @@ class OrgVerificationCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, C
         return kwargs
 
     def form_valid(self, form):
-        messages.success(self.request, "Org Marked as Validated", extra_tags='success')
+        messages.success(
+            self.request,
+            "Org Marked as Validated",
+            extra_tags='success')
         return super(OrgVerificationCreate, self).form_valid(form)
 
     def get_success_url(self):

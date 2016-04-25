@@ -9,6 +9,7 @@ __author__ = 'jmerdich'
 
 
 class UserFactory(DjangoModelFactory):
+
     class Meta:
         model = settings.AUTH_USER_MODEL
         django_get_or_create = ('username',)
@@ -27,17 +28,20 @@ class UserFactory(DjangoModelFactory):
 
 
 class BuildingFactory(DjangoModelFactory):
+
     class Meta:
         model = Building
 
 
 class LocationFactory(DjangoModelFactory):
+
     class Meta:
         model = Location
     building = SubFactory(BuildingFactory)
 
 
 class EventFactory(DjangoModelFactory):
+
     class Meta:
         model = Event
     submitted_ip = '127.0.0.1'

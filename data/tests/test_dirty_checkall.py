@@ -11,6 +11,7 @@ from django.test import modify_settings, override_settings
 # from http://lukeplant.me.uk/blog/posts/fuzzy-testing-with-assertnumqueries/
 # did we just redefine what a integer is? Oh yes we did.
 class FuzzyInt(int):
+
     def __new__(cls, lowest, highest):
         obj = super(FuzzyInt, cls).__new__(cls, highest)
         obj.lowest = lowest
@@ -25,6 +26,7 @@ class FuzzyInt(int):
 
 
 class UrlsTest(test.TestCase):
+
     def setUp(self):
         from django.contrib.auth import get_user_model
 
@@ -40,8 +42,16 @@ class UrlsTest(test.TestCase):
             self.user.user_permissions.add(perm)
 
     @override_settings(TEMPLATE_STRING_IF_INVALID='TEMPLATE_WARNING [%s]')
-    def test_responses(self, allowed_http_codes=[200, 302, 403],
-                       credentials=None, logout_url="", default_kwargs={}, quiet=False):
+    def test_responses(
+            self,
+            allowed_http_codes=[
+                200,
+                302,
+                403],
+            credentials=None,
+            logout_url="",
+            default_kwargs={},
+            quiet=False):
         """
         Test all pattern in root urlconf and included ones.
         Do GET requests only.
@@ -80,7 +90,8 @@ class UrlsTest(test.TestCase):
                     # this is an included urlconf
                     new_prefix = prefix
                     if pattern.namespace:
-                        new_prefix = prefix + (":" if prefix else "") + pattern.namespace
+                        new_prefix = prefix + \
+                            (":" if prefix else "") + pattern.namespace
                     check_urls(pattern.url_patterns, prefix=new_prefix)
                 params = {}
                 skip = False
@@ -88,15 +99,17 @@ class UrlsTest(test.TestCase):
                 if regex.groups > 0:
                     # the url expects parameters
                     # use default_kwargs supplied
-                    if regex.groups > len(regex.groupindex.keys()) \
-                            or set(regex.groupindex.keys()) - set(default_kwargs.keys()):
+                    if regex.groups > len(regex.groupindex.keys()) or set(
+                            regex.groupindex.keys()) - set(default_kwargs.keys()):
                         # there are positional parameters OR
                         # keyword parameters that are not supplied in default_kwargs
                         # so we skip the url
                         skip = True
                         skipreason = "Unknown Arguments"
                     else:
-                        for key in set(default_kwargs.keys()) & set(regex.groupindex.keys()):
+                        for key in set(
+                                default_kwargs.keys()) & set(
+                                regex.groupindex.keys()):
                             params[key] = default_kwargs[key]
                 if hasattr(pattern, "name") and pattern.name:
                     name = pattern.name
@@ -132,7 +145,9 @@ class UrlsTest(test.TestCase):
                     if quiet:
                         print('S', end='')
                     else:
-                        print("SKIP /%s/ : %s [%s]" % (regex.pattern, fullname, skipreason))
+                        print(
+                            "SKIP /%s/ : %s [%s]" %
+                            (regex.pattern, fullname, skipreason))
 
         check_urls(module.urlpatterns)
         print('')

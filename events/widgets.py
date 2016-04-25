@@ -21,7 +21,8 @@ class ExtraSelectorWidget(widgets.MultiWidget):
             # <div class="controls"><input type="text" name="extra_%s"></input></div></div>' % (zname,id))
             output.append(
                 '<div><input class="input-mini" type="text" name="extra_%s" value=0></input>'
-                '<span class="help-inline">%s</span></div><i class="glyphicon glyphicon-plus"></i>' % (id, zname))
+                '<span class="help-inline">%s</span></div><i class="glyphicon glyphicon-plus"></i>' %
+                (id, zname))
         return mark_safe(self.format_output(output))
 
     def decompress(self, value):
@@ -30,9 +31,10 @@ class ExtraSelectorWidget(widgets.MultiWidget):
         return [None, None]
 
 
-###attempt2
+# attempt2
 #
 class ValueSelectWidget(forms.MultiWidget):
+
     def __init__(self, hidetext=False, disappear=False, *args, **kwargs):
         if hidetext:
             textattrs = {'value': 0, 'class': 'hide', "disappear": disappear}
@@ -46,7 +48,13 @@ class ValueSelectWidget(forms.MultiWidget):
             forms.CheckboxInput(attrs=checkattrs)  # i forgot what this was for
 
         )
-        super(ValueSelectWidget, self).__init__(widgets_override, *args, **kwargs)
+        super(
+            ValueSelectWidget,
+            self).__init__(
+            widgets_override,
+            *
+            args,
+            **kwargs)
 
     def decompress(self, value):
         if value:
@@ -57,7 +65,15 @@ class ValueSelectWidget(forms.MultiWidget):
 
 
 class ValueSelectField(forms.MultiValueField):
-    def __init__(self, fields=None, widget=None, hidetext=False, disappear=False, *args, **kwargs):
+
+    def __init__(
+            self,
+            fields=None,
+            widget=None,
+            hidetext=False,
+            disappear=False,
+            *args,
+            **kwargs):
         # if not fields:
         fields = (
             forms.IntegerField(min_value=0, ),
@@ -65,7 +81,14 @@ class ValueSelectField(forms.MultiValueField):
         )
         widget = ValueSelectWidget(hidetext=hidetext, disappear=disappear)
         # noinspection PyArgumentList
-        super(ValueSelectField, self).__init__(fields=fields, widget=widget, *args, **kwargs)
+        super(
+            ValueSelectField,
+            self).__init__(
+            fields=fields,
+            widget=widget,
+            *
+            args,
+            **kwargs)
 
     def compress(self, data_list):
         return data_list

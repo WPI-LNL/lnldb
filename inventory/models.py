@@ -22,14 +22,21 @@ logger = logging.getLogger(__name__)
 
 class EquipmentCategory(MPTTModel):
     name = models.CharField(max_length=64, blank=False, null=False)
-    usual_place = models.ForeignKey(Location, blank=True, null=True,
-                                    help_text="Default place for items of this category. "
-                                              "Inherits from parent categories.")
+    usual_place = models.ForeignKey(
+        Location,
+        blank=True,
+        null=True,
+        help_text="Default place for items of this category. "
+        "Inherits from parent categories.")
 
-    parent = TreeForeignKey('self', null=True, blank=True,
-                            related_name='children', db_index=True,
-                            help_text="If this is a subcategory, the parent is what this is a subcategory of. "
-                                      "Choose '---' if not.")
+    parent = TreeForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        related_name='children',
+        db_index=True,
+        help_text="If this is a subcategory, the parent is what this is a subcategory of. "
+        "Choose '---' if not.")
 
     # for templates
     @cached_property
@@ -44,7 +51,8 @@ class EquipmentCategory(MPTTModel):
     def possible_locations(cls):
         return Location.objects.complex_filter(
             Q(holds_equipment=True) |  # The usual culprits
-            Q(equipmentcategory__isnull=False) |  # or is the default place of a category
+            # or is the default place of a category
+            Q(equipmentcategory__isnull=False) |
             Q(equipmentitem__isnull=False)  # or has at least one item in it.
         ).distinct()
 
@@ -53,7 +61,9 @@ class EquipmentCategory(MPTTModel):
         if self.usual_place:
             return self.usual_place
 
-        parent_places = self.get_ancestors(ascending=True).filter(usual_place__isnull=False)
+        parent_places = self.get_ancestors(
+            ascending=True).filter(
+            usual_place__isnull=False)
         if parent_places:
             return parent_places.first().usual_place
 
@@ -66,9 +76,8 @@ class EquipmentCategory(MPTTModel):
     @cached_property
     def breadcrumbs(self):
         out = [('Inventory', reverse('inventory:view_all'))]
-        out.extend([
-            (cat.name, reverse('inventory:cat', args=[cat.pk])) for cat in self.get_ancestors_inclusive
-        ])
+        out.extend([(cat.name, reverse('inventory:cat', args=[cat.pk]))
+                    for cat in self.get_ancestors_inclusive])
         return out
 
     def __str__(self):
@@ -80,6 +89,7 @@ class EquipmentCategory(MPTTModel):
 
 
 class EquimentItemManager(TreeManager):
+
     def bulk_add_helper(self, item_type, num_to_add, put_into=None):
         # items = []
 
@@ -101,7 +111,11 @@ class EquimentItemManager(TreeManager):
 
 class EquipmentItem(MPTTModel):
     objects = EquimentItemManager()
-    item_type = models.ForeignKey('EquipmentClass', related_name="items", null=False, blank=False)
+    item_type = models.ForeignKey(
+        'EquipmentClass',
+        related_name="items",
+        null=False,
+        blank=False)
     serial_number = models.CharField(max_length=256, null=True, blank=True)
     case = TreeForeignKey('self', null=True, blank=True,
                           related_name='contents', db_index=True,
@@ -109,8 +123,16 @@ class EquipmentItem(MPTTModel):
 
     barcode = models.BigIntegerField(null=True, blank=True, unique=True)
     purchase_date = models.DateField(null=False, blank=True)
-    home = models.ForeignKey(Location, null=True, blank=True, help_text="Place where this item typically resides.")
-    features = models.CharField(max_length=128, null=True, blank=True, verbose_name='Identifying Features')
+    home = models.ForeignKey(
+        Location,
+        null=True,
+        blank=True,
+        help_text="Place where this item typically resides.")
+    features = models.CharField(
+        max_length=128,
+        null=True,
+        blank=True,
+        verbose_name='Identifying Features')
 
     def save(self, *args, **kwargs):
         if self.purchase_date is None:
@@ -126,8 +148,12 @@ class EquipmentItem(MPTTModel):
         out = self.item_type.breadcrumbs
 
         out.append(
-            ("Item %s" % (self.barcode or self.pk), reverse('inventory:item_detail', args=[self.pk]))
-        )
+            ("Item %s" %
+             (self.barcode or self.pk),
+                reverse(
+                 'inventory:item_detail',
+                 args=[
+                     self.pk])))
         return out
 
     @property
@@ -169,20 +195,51 @@ class EquipmentItem(MPTTModel):
 class EquipmentClass(models.Model):
     name = models.CharField(max_length=256)
     category = TreeForeignKey(EquipmentCategory, null=False, blank=False)
-    description = models.TextField(help_text="Function, appearance, and included acessories", null=True, blank=True)
-    value = models.DecimalField(help_text="Estimated purchase value", max_digits=9, decimal_places=2,
-                                null=True, blank=True)
+    description = models.TextField(
+        help_text="Function, appearance, and included acessories",
+        null=True,
+        blank=True)
+    value = models.DecimalField(
+        help_text="Estimated purchase value",
+        max_digits=9,
+        decimal_places=2,
+        null=True,
+        blank=True)
     model_number = models.CharField(max_length=256, null=True, blank=True)
     manufacturer = models.CharField(max_length=128, null=True, blank=True)
     url = models.URLField(null=True, blank=True)
-    holds_items = models.BooleanField(default=False, help_text="Can hold other items")
+    holds_items = models.BooleanField(
+        default=False, help_text="Can hold other items")
 
-    length = models.DecimalField(help_text="Length in inches", max_digits=6, decimal_places=2, null=True, blank=True)
-    width = models.DecimalField(help_text="Width in inches", max_digits=6, decimal_places=2, null=True, blank=True)
-    height = models.DecimalField(help_text="Height in inches", max_digits=6, decimal_places=2, null=True, blank=True)
-    weight = models.DecimalField(help_text="Weight in lbs.", max_digits=6, decimal_places=2, null=True, blank=True)
+    length = models.DecimalField(
+        help_text="Length in inches",
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True)
+    width = models.DecimalField(
+        help_text="Width in inches",
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True)
+    height = models.DecimalField(
+        help_text="Height in inches",
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True)
+    weight = models.DecimalField(
+        help_text="Weight in lbs.",
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True)
 
-    wiki_text = models.TextField(help_text="How to use this item", null=True, blank=True)
+    wiki_text = models.TextField(
+        help_text="How to use this item",
+        null=True,
+        blank=True)
 
     def __unicode__(self):
         return self.name

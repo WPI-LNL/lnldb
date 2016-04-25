@@ -12,8 +12,8 @@ class OrgLookup(LookupChannel):
         return request.user.is_authenticated()
 
     def get_query(self, q, request):
-        return Organization.objects.filter(Q(name__icontains=q) | Q(shortname__icontains=q)).filter(archived=False)\
-            .distinct()
+        return Organization.objects.filter(Q(name__icontains=q) | Q(
+            shortname__icontains=q)).filter(archived=False) .distinct()
 
     def get_result(self, obj):
         return obj.name
@@ -55,15 +55,19 @@ class FundLookupLimited(LookupChannel):
 
     def get_query(self, q, request):
         user = request.user
-        return Fund.objects.filter(Q(orgfunds__user_in_charge=user) |
-                                   Q(orgfunds__associated_users__in=[user.id]) |
-                                   Q(orgfunds__associated_orgs__user_in_charge=user) |
-                                   Q(orgfunds__associated_users__in=[user.id])) \
-            .filter(Q(name__icontains=q) |
-                    Q(account__icontains=q) |
-                    Q(organization__icontains=q) |
-                    Q(fund__icontains=q))\
-            .distinct()
+        return Fund.objects.filter(
+            Q(
+                orgfunds__user_in_charge=user) | Q(
+                orgfunds__associated_users__in=[
+                    user.id]) | Q(
+                    orgfunds__associated_orgs__user_in_charge=user) | Q(
+                        orgfunds__associated_users__in=[
+                            user.id])) .filter(
+                                Q(
+                                    name__icontains=q) | Q(
+                                        account__icontains=q) | Q(
+                                            organization__icontains=q) | Q(
+                                                fund__icontains=q)) .distinct()
 
     def get_result(self, obj):
         return obj.id
@@ -84,9 +88,17 @@ class UserLimitedOrgLookup(LookupChannel):
     def get_query(self, q, request):
         user = request.user
         return Organization.objects.filter(
-            Q(user_in_charge=user) | Q(associated_users__in=[user.id]) | Q(associated_orgs__user_in_charge=user) | Q(
-                associated_users__in=[user.id]) | Q(shortname="nl")).filter(
-            Q(name__icontains=q) | Q(shortname__icontains=q))
+            Q(
+                user_in_charge=user) | Q(
+                associated_users__in=[
+                    user.id]) | Q(
+                    associated_orgs__user_in_charge=user) | Q(
+                        associated_users__in=[
+                            user.id]) | Q(
+                                shortname="nl")).filter(
+                                    Q(
+                                        name__icontains=q) | Q(
+                                            shortname__icontains=q))
 
     def get_result(self, obj):
         return obj.name

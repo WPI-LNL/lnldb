@@ -52,7 +52,8 @@ def cat(request, category_id):
         inv = EquipmentClass.objects.filter(category=category)
         context['exclusive'] = True
     else:
-        inv = EquipmentClass.objects.filter(category__in=category.get_descendants_inclusive)
+        inv = EquipmentClass.objects.filter(
+            category__in=category.get_descendants_inclusive)
         context['exclusive'] = False
 
     inv = inv.order_by('category__level', 'category__name', 'name') \
@@ -114,9 +115,14 @@ def quick_bulk_edit(request, type_id):
     if not request.user.has_perm('inventory.change_equipmentitem', e_type):
         raise PermissionDenied
 
-    can_delete = request.user.has_perm('inventory.delete_equipmentitem', e_type)
-    fs_factory = inlineformset_factory(EquipmentClass, EquipmentItem, form=EquipmentItemForm,
-                                       extra=0, can_delete=can_delete)
+    can_delete = request.user.has_perm(
+        'inventory.delete_equipmentitem', e_type)
+    fs_factory = inlineformset_factory(
+        EquipmentClass,
+        EquipmentItem,
+        form=EquipmentItemForm,
+        extra=0,
+        can_delete=can_delete)
 
     if request.method == 'POST':
         formset = fs_factory(request.POST, request.FILES, instance=e_type)
@@ -149,7 +155,8 @@ def type_edit(request, type_id):
         raise PermissionDenied
 
     if request.method == 'POST':
-        formset = EquipmentClassForm(request.POST, request.FILES, instance=e_type)
+        formset = EquipmentClassForm(
+            request.POST, request.FILES, instance=e_type)
         if formset.is_valid():
             formset.save()
             messages.add_message(request, messages.SUCCESS,
@@ -209,7 +216,9 @@ def type_rm(request, type_id):
 def cat_edit(request, category_id):
     category = get_object_or_404(EquipmentCategory, pk=category_id)
 
-    if not request.user.has_perm('inventory.change_equipmentcategory', category):
+    if not request.user.has_perm(
+            'inventory.change_equipmentcategory',
+            category):
         raise PermissionDenied
 
     if request.method == 'POST':
@@ -218,8 +227,10 @@ def cat_edit(request, category_id):
             formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Category saved.")
-            return HttpResponseRedirect(reverse('inventory:cat',
-                                                kwargs={'category_id': category_id}))
+            return HttpResponseRedirect(
+                reverse(
+                    'inventory:cat', kwargs={
+                        'category_id': category_id}))
     else:
         formset = CategoryForm(instance=category)
     return render(request, "form_crispy.html", {
@@ -241,8 +252,10 @@ def cat_mk(request):
             obj = formset.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Category added.")
-            return HttpResponseRedirect(reverse('inventory:cat',
-                                                kwargs={'category_id': obj.pk}))
+            return HttpResponseRedirect(
+                reverse(
+                    'inventory:cat', kwargs={
+                        'category_id': obj.pk}))
     else:
         formset = CategoryForm(initial={'parent': parent})
     return render(request, "form_crispy.html", {
@@ -264,9 +277,11 @@ def cat_rm(request, category_id):
 
     if request.method == 'POST':
         if ecat.get_children().exists():
-            return HttpResponseBadRequest("There are still subcategories of this type")
+            return HttpResponseBadRequest(
+                "There are still subcategories of this type")
         elif ecat.equipmentclass_set.exists():
-            return HttpResponseBadRequest("There are still items in this category")
+            return HttpResponseBadRequest(
+                "There are still items in this category")
         else:
             ecat.delete()
             return HttpResponseRedirect(return_url)
@@ -288,8 +303,11 @@ def fast_mk(request):
         formset = FastAdd(request.user, request.POST, request.FILES)
         if formset.is_valid():
             obj = formset.save()
-            messages.add_message(request, messages.SUCCESS,
-                                 "%d items added and saved. Now editing." % formset.cleaned_data['num_to_add'])
+            messages.add_message(
+                request,
+                messages.SUCCESS,
+                "%d items added and saved. Now editing." %
+                formset.cleaned_data['num_to_add'])
             return HttpResponseRedirect(reverse('inventory:bulk_edit',
                                                 kwargs={'type_id': obj.pk}))
     else:

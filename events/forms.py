@@ -82,16 +82,25 @@ def get_qs_from_event(event):
     else:
         proj_id = None
 
-    return Service.objects.filter(Q(id__in=[lighting_id]) | Q(id__in=[sound_id]) | Q(id__in=[proj_id]) | Q(
-        id__in=[i.id for i in event.otherservices.all()]))
+    return Service.objects.filter(Q(id__in=[lighting_id]) | Q(id__in=[sound_id]) | Q(
+        id__in=[proj_id]) | Q(id__in=[i.id for i in event.otherservices.all()]))
 
 
-### LNAdmin Forms
+# LNAdmin Forms
 class WorkorderSubmit(ModelForm):
+
     class Meta:
         model = Event
-        exclude = ('submitted_by', 'submitted_ip', 'approved', 'crew', 'crew_chief',
-                   'report', 'closed', 'payment_amount', 'paid')
+        exclude = (
+            'submitted_by',
+            'submitted_ip',
+            'approved',
+            'crew',
+            'crew_chief',
+            'report',
+            'closed',
+            'payment_amount',
+            'paid')
 
     def __init__(self, *args, **kwargs):
         super(WorkorderSubmit, self).__init__(*args, **kwargs)
@@ -101,7 +110,12 @@ class WorkorderSubmit(ModelForm):
 
 
 class CrewChiefAssign(forms.ModelForm):
-    crewchief = make_ajax_field(Event, 'crew_chief', 'Users', plugin_options={'minLength': 3})
+    crewchief = make_ajax_field(
+        Event,
+        'crew_chief',
+        'Users',
+        plugin_options={
+            'minLength': 3})
 
     class Meta:
         model = Event
@@ -111,6 +125,7 @@ class CrewChiefAssign(forms.ModelForm):
 
 
 class CrewAssign(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -126,11 +141,21 @@ class CrewAssign(forms.ModelForm):
         model = Event
         fields = ("crew",)
 
-    crew = make_ajax_field(Event, 'crew', 'Members', plugin_options={'minLength': 3})
+    crew = make_ajax_field(
+        Event,
+        'crew',
+        'Members',
+        plugin_options={
+            'minLength': 3})
 
 
 class CrewChiefAssign(forms.ModelForm):
-    crew_chief = make_ajax_field(Event, 'crew_chief', 'Members', plugin_options={'minLength': 3})
+    crew_chief = make_ajax_field(
+        Event,
+        'crew_chief',
+        'Members',
+        plugin_options={
+            'minLength': 3})
 
     class Meta:
         model = Event
@@ -138,6 +163,7 @@ class CrewChiefAssign(forms.ModelForm):
 
 
 class IOrgForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -173,8 +199,16 @@ class IOrgForm(forms.ModelForm):
 
     class Meta:
         model = Organization
-        fields = ('name', 'exec_email', 'address', 'phone', 'associated_orgs', 'personal',
-                  'accounts', 'user_in_charge', 'associated_users')
+        fields = (
+            'name',
+            'exec_email',
+            'address',
+            'phone',
+            'associated_orgs',
+            'personal',
+            'accounts',
+            'user_in_charge',
+            'associated_users')
     # associated_orgs = make_ajax_field(Organization,'associated_orgs','Orgs',plugin_options = {'minLength':2})
     # associated_users = make_ajax_field(Organization,'associated_users','Users',plugin_options = {'minLength':3})
     user_in_charge = AutoCompleteSelectField('Users')
@@ -184,6 +218,7 @@ class IOrgForm(forms.ModelForm):
 
 
 class IOrgVerificationForm(forms.ModelForm):
+
     def __init__(self, org, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -212,8 +247,9 @@ class IOrgVerificationForm(forms.ModelForm):
     verified_by = AutoCompleteSelectField('Officers')
 
 
-### Flow Forms
+# Flow Forms
 class EventApprovalForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -221,15 +257,30 @@ class EventApprovalForm(forms.ModelForm):
             TabHolder(
                 Tab(
                     "Standard Fields",
-                    Field('description', label="Description (optional)", css_class="col-md-6"),
-                    HTML('<p class="muted offset2">This will describe the event to your CCs</p>'),
-                    Field('internal_notes', label="Internal Notes", css_class="col-md-6"),
+                    Field(
+                        'description',
+                        label="Description (optional)",
+                        css_class="col-md-6"),
+                    HTML(
+                        '<p class="muted offset2">This will describe the event to your CCs</p>'),
+                    Field(
+                        'internal_notes',
+                        label="Internal Notes",
+                        css_class="col-md-6"),
                     markdown_at_msgs,
-                    Field('datetime_setup_complete', label="Setup Finish", css_class="dtp"),
-                    Field('datetime_start', label="Event Start", css_class="dtp"),
+                    Field(
+                        'datetime_setup_complete',
+                        label="Setup Finish",
+                        css_class="dtp"),
+                    Field(
+                        'datetime_start',
+                        label="Event Start",
+                        css_class="dtp"),
                     Field('datetime_end', label="Event End", css_class="dtp"),
                     Field('billing_fund'),
-                    Field('billed_by_semester', label="Billed by semester (for films)"),
+                    Field(
+                        'billed_by_semester',
+                        label="Billed by semester (for films)"),
                     # Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
 
                 ),
@@ -253,9 +304,22 @@ class EventApprovalForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ['description', 'internal_notes', 'datetime_start', 'datetime_end', 'billing_fund',
-                  'billed_by_semester', 'datetime_setup_complete', 'lighting', 'lighting_reqs',
-                  'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs']
+        fields = [
+            'description',
+            'internal_notes',
+            'datetime_start',
+            'datetime_end',
+            'billing_fund',
+            'billed_by_semester',
+            'datetime_setup_complete',
+            'lighting',
+            'lighting_reqs',
+            'sound',
+            'sound_reqs',
+            'projection',
+            'proj_reqs',
+            'otherservices',
+            'otherservice_reqs']
         widgets = {
             'description': PagedownWidget(),
             'internal_notes': PagedownWidget,
@@ -266,20 +330,29 @@ class EventApprovalForm(forms.ModelForm):
         }
 
     billing_fund = AutoCompleteSelectField("Funds", required=False)
-    datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
-    datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End")
+    datetime_start = forms.SplitDateTimeField(
+        initial=datetime.datetime.now(), label="Event Start")
+    datetime_end = forms.SplitDateTimeField(
+        initial=datetime.datetime.now(), label="Event End")
     # datetime_setup_start =  forms.SplitDateTimeField(initial=datetime.datetime.now())
-    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Setup Completed")
+    datetime_setup_complete = forms.SplitDateTimeField(
+        initial=datetime.datetime.now(), label="Setup Completed")
 
 
 class EventDenialForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
-            Field('cancelled_reason', label="Reason For Cancellation (optional)", css_class="col-md-6"),
+            Field(
+                'cancelled_reason',
+                label="Reason For Cancellation (optional)",
+                css_class="col-md-6"),
             FormActions(
-                Submit('save', 'Deny Event'),
+                Submit(
+                    'save',
+                    'Deny Event'),
             ),
         )
         super(EventDenialForm, self).__init__(*args, **kwargs)
@@ -293,6 +366,7 @@ class EventDenialForm(forms.ModelForm):
 
 
 class EventMeetingForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -309,15 +383,22 @@ class EventMeetingForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ['datetime_setup_start', 'datetime_setup_complete', 'crew_chief', 'crew']
+        fields = [
+            'datetime_setup_start',
+            'datetime_setup_complete',
+            'crew_chief',
+            'crew']
 
-    datetime_setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now())
+    datetime_setup_start = forms.SplitDateTimeField(
+        initial=datetime.datetime.now())
+    datetime_setup_complete = forms.SplitDateTimeField(
+        initial=datetime.datetime.now())
     crew_chief = AutoCompleteSelectMultipleField('Users', required=False)
     crew = AutoCompleteSelectMultipleField('3', required=False)
 
 
 class InternalEventForm(FieldAccessForm):
+
     def __init__(self, *args, **kwargs):
         super(InternalEventForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
@@ -352,7 +433,8 @@ class InternalEventForm(FieldAccessForm):
                             '<a class="btn btn-primary" href="#" id="samedate1" title="Cascade Dates">'
                             '<i class="glyphicon glyphicon-resize-small icon-white"></i>&nbsp;'
                             '<i class="glyphicon glyphicon-calendar icon-white"></i></a></div>'),
-                        Div(Field('datetime_start', css_class='dtp'), css_class="padleft"),
+                        Div(Field('datetime_start', css_class='dtp'),
+                            css_class="padleft"),
                     ),
                     Div(
                         HTML(
@@ -360,7 +442,8 @@ class InternalEventForm(FieldAccessForm):
                             '<a class="btn btn-primary" href="#" id="samedate2" title="Cascade Dates">'
                             '<i class="glyphicon glyphicon-resize-small icon-white"></i>&nbsp;'
                             '<i class="glyphicon glyphicon-calendar icon-white"></i></a></div>'),
-                        Div(Field('datetime_end', css_class='dtp'), css_class="padleft"),
+                        Div(Field('datetime_end', css_class='dtp'),
+                            css_class="padleft"),
                     ),
                 ),
                 Tab(
@@ -391,61 +474,88 @@ class InternalEventForm(FieldAccessForm):
         super(InternalEventForm, self).__init__(*args, **kwargs)
 
     class FieldAccess:
+
         def __init__(self):
             pass
 
         internal_notes_write = FieldAccessLevel(
-            lambda user, instance: user.has_perm("events.event_view_sensitive", instance),
-            enable=('internal_notes',)
-        )
+            lambda user, instance: user.has_perm(
+                "events.event_view_sensitive", instance), enable=(
+                'internal_notes',))
 
         hide_internal_notes = FieldAccessLevel(
-            lambda user, instance: not user.has_perm("events.event_view_sensitive", instance),
-            exclude=('internal_notes',)
-        )
+            lambda user, instance: not user.has_perm(
+                "events.event_view_sensitive", instance), exclude=(
+                'internal_notes',))
 
         event_times = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.edit_event_times', instance),
-            enable=('datetime_start', 'datetime_setup_complete', 'datetime_end')
-        )
+            lambda user, instance: user.has_perm(
+                'events.edit_event_times', instance), enable=(
+                'datetime_start', 'datetime_setup_complete', 'datetime_end'))
 
         edit_descriptions = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.edit_event_text', instance),
-            enable=('event_name', 'location', 'description',
-                    'lighting_reqs', 'sound_reqs', 'proj_reqs', 'otherservice_reqs')
-        )
+            lambda user,
+            instance: user.has_perm(
+                'events.edit_event_text',
+                instance),
+            enable=(
+                'event_name',
+                'location',
+                'description',
+                'lighting_reqs',
+                'sound_reqs',
+                'proj_reqs',
+                'otherservice_reqs'))
 
         change_owner = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.adjust_event_owner', instance),
-            enable=('contact', 'org')
-        )
+            lambda user, instance: user.has_perm(
+                'events.adjust_event_owner', instance), enable=(
+                'contact', 'org'))
 
         change_type = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.adjust_event_charges', instance),
-            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_by_semester')
-        )
+            lambda user, instance: user.has_perm(
+                'events.adjust_event_charges', instance), enable=(
+                'lighting', 'sound', 'projection', 'otherservices', 'billed_by_semester'))
 
         billing_edit = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.edit_event_fund', instance),
-            enable=('billing_fund', 'billed_by_semester')
-        )
+            lambda user, instance: user.has_perm(
+                'events.edit_event_fund', instance), enable=(
+                'billing_fund', 'billed_by_semester'))
 
         billing_view = FieldAccessLevel(
-            lambda user, instance: not user.has_perm('events.view_event_billing', instance),
-            exclude=('billing_fund', 'billed_by_semester')
-        )
+            lambda user, instance: not user.has_perm(
+                'events.view_event_billing', instance), exclude=(
+                'billing_fund', 'billed_by_semester'))
 
         change_flags = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.edit_event_flags', instance),
-            enable=('sensitive', 'test_event')
-        )
+            lambda user, instance: user.has_perm(
+                'events.edit_event_flags', instance), enable=(
+                'sensitive', 'test_event'))
 
     class Meta:
         model = Event
-        fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_fund',
-                  'billed_by_semester', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
-                  'datetime_end', 'lighting', 'lighting_reqs', 'sound', 'sound_reqs', 'projection', 'proj_reqs',
-                  'otherservices', 'otherservice_reqs', 'sensitive', 'test_event')
+        fields = (
+            'event_name',
+            'location',
+            'description',
+            'internal_notes',
+            'billing_fund',
+            'billed_by_semester',
+            'contact',
+            'org',
+            'datetime_setup_complete',
+            'datetime_start',
+            'datetime_end',
+            'lighting',
+            'lighting_reqs',
+            'sound',
+            'sound_reqs',
+            'projection',
+            'proj_reqs',
+            'otherservices',
+            'otherservice_reqs',
+            'sensitive',
+            'test_event')
         widgets = {
             'description': PagedownWidget(),
             'internal_notes': PagedownWidget,
@@ -462,14 +572,19 @@ class InternalEventForm(FieldAccessForm):
     )
     contact = AutoCompleteSelectField('Users', required=False)
     billing_fund = AutoCompleteSelectField('Funds', required=False)
-    org = AutoCompleteSelectMultipleField('Orgs', required=False, label="Client")
+    org = AutoCompleteSelectMultipleField(
+        'Orgs', required=False, label="Client")
 
-    datetime_setup_complete = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Setup Completed")
-    datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
-    datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End")
+    datetime_setup_complete = forms.SplitDateTimeField(
+        initial=datetime.datetime.now(), label="Setup Completed")
+    datetime_start = forms.SplitDateTimeField(
+        initial=datetime.datetime.now(), label="Event Start")
+    datetime_end = forms.SplitDateTimeField(
+        initial=datetime.datetime.now(), label="Event End")
 
 
 class EventReviewForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         event = kwargs.pop('event')
         self.helper = FormHelper()
@@ -499,6 +614,7 @@ class EventReviewForm(forms.ModelForm):
 
 
 class InternalReportForm(FieldAccessForm):
+
     def __init__(self, event, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()
@@ -535,10 +651,8 @@ class InternalReportForm(FieldAccessForm):
     crew_chief = AutoCompleteSelectField('Members', required=True)
 
     class FieldAccess:
-        avg_user = FieldAccessLevel(
-            lambda user, instance: not user.has_perm('events.add_event_report'),
-            exclude=('crew_chief',)
-        )
+        avg_user = FieldAccessLevel(lambda user, instance: not user.has_perm(
+            'events.add_event_report'), exclude=('crew_chief',))
         admin = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.add_event_report'),
             enable=('crew_chief',)
@@ -546,9 +660,10 @@ class InternalReportForm(FieldAccessForm):
         all = FieldAccessLevel(lambda user, instance: True, enable=('report',))
 
 
-### External Organization forms
+# External Organization forms
 
 class ExternalOrgUpdateForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -556,12 +671,16 @@ class ExternalOrgUpdateForm(forms.ModelForm):
         self.helper.form_action = ''
         self.helper.layout = Layout(
             'address',
-            Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
+            Field(
+                'phone',
+                css_class="bfh-phone",
+                data_format="(ddd) ddd dddd"),
             'associated_users',
             FormActions(
-                Submit('save', 'Save Changes'),
-            )
-        )
+                Submit(
+                    'save',
+                    'Save Changes'),
+            ))
         super(ExternalOrgUpdateForm, self).__init__(*args, **kwargs)
 
     associated_users = AutoCompleteSelectMultipleField('Users', required=True)
@@ -572,6 +691,7 @@ class ExternalOrgUpdateForm(forms.ModelForm):
 
 
 class OrgXFerForm(forms.ModelForm):
+
     def __init__(self, org, user, *args, **kwargs):
         self.user = user
         self.org = org
@@ -587,12 +707,14 @@ class OrgXFerForm(forms.ModelForm):
                 'with the Organization. A confirmation E-Mail will be sent with a link to confirm the '
                 'transfer.</p>'),
             FormActions(
-                Submit('save', 'Submit Transfer'),
-            )
-        )
+                Submit(
+                    'save',
+                    'Submit Transfer'),
+            ))
         super(OrgXFerForm, self).__init__(*args, **kwargs)
 
-        self.fields['new_user_in_charge'].queryset = org.associated_users.all().exclude(id=user.id)
+        self.fields['new_user_in_charge'].queryset = org.associated_users.all(
+        ).exclude(id=user.id)
 
     def save(self, commit=True):
         obj = super(OrgXFerForm, self).save(commit=False)
@@ -611,6 +733,7 @@ class OrgXFerForm(forms.ModelForm):
 
 
 class SelfServiceOrgRequestForm(forms.Form):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -618,27 +741,40 @@ class SelfServiceOrgRequestForm(forms.Form):
         self.helper.form_action = ''
         self.helper.help_text_inline = True
         self.helper.layout = Layout(
-            Field('client_name', help_text_inline=True),
+            Field(
+                'client_name',
+                help_text_inline=True),
             'email',
             'address',
-            Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
+            Field(
+                'phone',
+                css_class="bfh-phone",
+                data_format="(ddd) ddd dddd"),
             'fund_info',
             FormActions(
-                Submit('save', 'Submit Request'),
-            )
-        )
+                Submit(
+                    'save',
+                    'Submit Request'),
+            ))
         super(SelfServiceOrgRequestForm, self).__init__(*args, **kwargs)
 
-    client_name = forms.CharField(max_length=128, label="Client Name", help_text="EX: Lens & Lights")
-    email = forms.EmailField(help_text="EX: lnl@wpi.edu (This should be your exec board alias)")
-    address = forms.CharField(widget=forms.Textarea, help_text="EX: Campus Center 339")
+    client_name = forms.CharField(
+        max_length=128,
+        label="Client Name",
+        help_text="EX: Lens & Lights")
+    email = forms.EmailField(
+        help_text="EX: lnl@wpi.edu (This should be your exec board alias)")
+    address = forms.CharField(
+        widget=forms.Textarea,
+        help_text="EX: Campus Center 339")
     phone = forms.CharField(max_length=15, help_text="EX: (508) - 867 - 5309")
     fund_info = forms.CharField(help_text="EX: 12345-6789-8765")
 
 
-#### Internal Billing forms
+# Internal Billing forms
 
 class BillingForm(forms.ModelForm):
+
     def __init__(self, event, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -646,15 +782,23 @@ class BillingForm(forms.ModelForm):
         self.helper.form_action = ""
         self.event = event
         self.helper.layout = Layout(
-            PrependedText('date_billed', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
-            PrependedText('amount', '<strong>$</strong>'),
+            PrependedText(
+                'date_billed',
+                '<i class="glyphicon glyphicon-calendar"></i>',
+                css_class="datepick"),
+            PrependedText(
+                'amount',
+                '<strong>$</strong>'),
             Field('opt_out_initial_email'),
             Field('opt_out_update_email'),
             FormActions(
-                Submit('save', 'Save Changes'),
-                Reset('reset', 'Reset Form'),
-            )
-        )
+                Submit(
+                    'save',
+                    'Save Changes'),
+                Reset(
+                    'reset',
+                    'Reset Form'),
+            ))
         super(BillingForm, self).__init__(*args, **kwargs)
 
         self.fields['amount'].initial = "%.2f" % event.cost_total
@@ -671,10 +815,15 @@ class BillingForm(forms.ModelForm):
 
     class Meta:
         model = Billing
-        fields = ('date_billed', 'amount', 'opt_out_initial_email', 'opt_out_update_email')
+        fields = (
+            'date_billed',
+            'amount',
+            'opt_out_initial_email',
+            'opt_out_update_email')
 
 
 class BillingUpdateForm(forms.ModelForm):
+
     def __init__(self, event, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()
@@ -683,14 +832,22 @@ class BillingUpdateForm(forms.ModelForm):
         self.helper.form_action = ""
 
         self.helper.layout = Layout(
-            PrependedText('date_paid', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
-            PrependedText('amount', '<strong>$</strong>'),
+            PrependedText(
+                'date_paid',
+                '<i class="glyphicon glyphicon-calendar"></i>',
+                css_class="datepick"),
+            PrependedText(
+                'amount',
+                '<strong>$</strong>'),
             Field('opt_out_update_email'),
             FormActions(
-                Submit('save', 'Save Changes'),
-                Reset('reset', 'Reset Form'),
-            )
-        )
+                Submit(
+                    'save',
+                    'Save Changes'),
+                Reset(
+                    'reset',
+                    'Reset Form'),
+            ))
         super(BillingUpdateForm, self).__init__(*args, **kwargs)
 
         self.fields['amount'].initial = str(event.cost_total)
@@ -708,28 +865,35 @@ class BillingUpdateForm(forms.ModelForm):
         fields = ('date_paid', 'amount', 'opt_out_update_email')
 
 
-### CC Facing Forms
+# CC Facing Forms
 class ReportForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
         self.helper.form_action = ""
         self.helper.layout = Layout(
-            HTML('<h4>What you might put in the report::</h4>'
-                 '<ul><li>How was the event set up?</li>'
-                 '<li>Roughly what equipment was used?</li>'
-                 '<li>Were there any last minute changes</li>'
-                 '<li>Did you come across any issues?</li>'
-                 '<li>Would you classify this event as the level it was booked under?</li>'
-                 '<li>What information would be useful for somebody next year?</li></ul>'),
-            Field('report', css_class="col-md-10"),
+            HTML(
+                '<h4>What you might put in the report::</h4>'
+                '<ul><li>How was the event set up?</li>'
+                '<li>Roughly what equipment was used?</li>'
+                '<li>Were there any last minute changes</li>'
+                '<li>Did you come across any issues?</li>'
+                '<li>Would you classify this event as the level it was booked under?</li>'
+                '<li>What information would be useful for somebody next year?</li></ul>'),
+            Field(
+                'report',
+                css_class="col-md-10"),
             markdown_at_msgs,
             FormActions(
-                Submit('save', 'Save Changes'),
-                Reset('reset', 'Reset Form'),
-            )
-        )
+                Submit(
+                    'save',
+                    'Save Changes'),
+                Reset(
+                    'reset',
+                    'Reset Form'),
+            ))
         super(ReportForm, self).__init__(*args, **kwargs)
 
     class Meta:
@@ -741,6 +905,7 @@ class ReportForm(forms.ModelForm):
 
 
 class MKHoursForm(forms.ModelForm):
+
     def __init__(self, event, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()
@@ -775,6 +940,7 @@ class MKHoursForm(forms.ModelForm):
 
 
 class EditHoursForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -794,6 +960,7 @@ class EditHoursForm(forms.ModelForm):
 
 
 class FopalForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -817,6 +984,7 @@ class FopalForm(forms.ModelForm):
 
 
 class CCIForm(forms.ModelForm):
+
     def __init__(self, event, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()
@@ -850,7 +1018,8 @@ class CCIForm(forms.ModelForm):
     crew_chief = AutoCompleteSelectField('Members', required=True)
     setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
     setup_location = GroupedModelChoiceField(
-        queryset=Location.objects.filter(setup_only=True).select_related('building'),
+        queryset=Location.objects.filter(
+            setup_only=True).select_related('building'),
         group_by_field="building",
         group_label=lambda group: group.name,
     )
@@ -858,6 +1027,7 @@ class CCIForm(forms.ModelForm):
 
 # Forms for Inline Formsets
 class AttachmentForm(forms.ModelForm):
+
     def __init__(self, event, externally_uploaded=False, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()
@@ -889,6 +1059,7 @@ class AttachmentForm(forms.ModelForm):
 
 
 class ExtraForm(forms.ModelForm):
+
     class Meta:
         model = ExtraInstance
         fields = ('extra', 'quant')
@@ -907,10 +1078,11 @@ class ExtraForm(forms.ModelForm):
 # CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3, exclude=[])
 #CrewChiefFS.form = staticmethod(curry(CCIForm, event=request.event))
 
-### Workorder Forms
+# Workorder Forms
 
 # Workorder Repeat Form
 class WorkorderRepeatForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -952,7 +1124,8 @@ class WorkorderRepeatForm(forms.ModelForm):
         )
         super(WorkorderRepeatForm, self).__init__(*args, **kwargs)
 
-    datetime_setup_complete = forms.SplitDateTimeField(label="Setup Completed By", required=True)
+    datetime_setup_complete = forms.SplitDateTimeField(
+        label="Setup Completed By", required=True)
     datetime_start = forms.SplitDateTimeField(label="Event Starts")
     datetime_end = forms.SplitDateTimeField(label="Event Ends")
     location = GroupedModelChoiceField(
@@ -986,9 +1159,21 @@ class WorkorderRepeatForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ['location', 'event_name', 'description', 'datetime_start', 'datetime_end', 'datetime_setup_complete',
-                  'lighting', 'lighting_reqs', 'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices',
-                  'otherservice_reqs']
+        fields = [
+            'location',
+            'event_name',
+            'description',
+            'datetime_start',
+            'datetime_end',
+            'datetime_setup_complete',
+            'lighting',
+            'lighting_reqs',
+            'sound',
+            'sound_reqs',
+            'projection',
+            'proj_reqs',
+            'otherservices',
+            'otherservice_reqs']
 
     def clean(self):  # custom validation
         cleaned_data = super(WorkorderRepeatForm, self).clean()
@@ -1015,7 +1200,8 @@ class WorkorderRepeatForm(forms.ModelForm):
 
         if not (lighting or sound or projection or not otherservices):
             raise ValidationError(
-                'Please select at least one service, %s %s %s %s' % (lighting, sound, projection, otherservices))
+                'Please select at least one service, %s %s %s %s' %
+                (lighting, sound, projection, otherservices))
 
         return cleaned_data
 
@@ -1045,8 +1231,9 @@ going to your LnL account and select "Previous WorkOrders".
 """
 
 
-#FormWizard Forms
+# FormWizard Forms
 class ContactForm(forms.Form):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -1058,11 +1245,14 @@ class ContactForm(forms.Form):
         self.helper.layout = Layout(
             'name',
             'email',
-            Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
+            Field(
+                'phone',
+                css_class="bfh-phone",
+                data_format="(ddd) ddd dddd"),
             HTML(
                 '<span class="text-muted">To avoid entering this information again, update your '
-                '<a target="_blank" href="%s">contact information</a></span>' % reverse(
-                    'accounts:me')),
+                '<a target="_blank" href="%s">contact information</a></span>' %
+                reverse('accounts:me')),
         )
         super(ContactForm, self).__init__(*args, **kwargs)
 
@@ -1072,6 +1262,7 @@ class ContactForm(forms.Form):
 
 
 class OrgForm(forms.Form):
+
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user')
 
@@ -1084,27 +1275,29 @@ class OrgForm(forms.Form):
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
-        # the org nl, is a special org that everyone has access to and is not listed.
-        self.fields['group'].queryset = Organization.objects.filter(
-            Q(user_in_charge=user) | Q(associated_users__in=[user.id]) | Q(shortname="nl")).distinct()
+        # the org nl, is a special org that everyone has access to and is not
+        # listed.
+        self.fields['group'].queryset = Organization.objects.filter(Q(user_in_charge=user) | Q(
+            associated_users__in=[user.id]) | Q(shortname="nl")).distinct()
         self.helper.layout = Layout(
-            'group',
-            HTML(
+            'group', HTML(
                 '<span class="text-muted">If the client account you are looking for does not show up in the list, '
                 'please contact the person in charge of the account using <a target="_blank" href="%s">this link</a> '
                 'and request authorization to submit workorder son their behalf. If you are attempting to create a '
-                'client account which does not exist please click <a target="_blank" href="%s">this link</a></span>'
-                % (reverse('my-orgs-incharge-list'), reverse('selfserivceorg'))),
-        )
-        #super(OrgForm,self).__init__(*args,**kwargs)
+                'client account which does not exist please click <a target="_blank" href="%s">this link</a></span>' %
+                (reverse('my-orgs-incharge-list'), reverse('selfserivceorg'))), )
+        # super(OrgForm,self).__init__(*args,**kwargs)
 
-    group = forms.ModelChoiceField(queryset=Organization.objects.all(), label="Organization")
+    group = forms.ModelChoiceField(
+        queryset=Organization.objects.all(),
+        label="Organization")
     # group = AutoCompleteSelectField('UserLimitedOrgs', required=True,
     #  plugin_options={'position':"{ my : \"right top\", at: \"right bottom\",
     # of: \"#id_person_name_text\"}",'minLength':2})
 
 
 class SelectForm(forms.Form):
+
     def __init__(self, org=None, *args, **kwargs):
         super(SelectForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
@@ -1115,7 +1308,8 @@ class SelectForm(forms.Form):
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
         if org:
-            self.fields['fund'].queryset = Fund.objects.filter(Q(orgfunds=org) | Q(name='None'))
+            self.fields['fund'].queryset = Fund.objects.filter(
+                Q(orgfunds=org) | Q(name='None'))
         self.helper.layout = Layout(
             Fieldset(
                 'Name and Location',
@@ -1139,7 +1333,7 @@ class SelectForm(forms.Form):
         queryset=Fund.objects.filter(name='None')
     )
 
-    #location = forms.ModelChoiceField(
+    # location = forms.ModelChoiceField(
     # queryset = Location.objects.filter(show_in_wo_form=True)
     #)
 
@@ -1169,6 +1363,7 @@ class SelectForm(forms.Form):
 
 
 class LightingForm(forms.Form):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
@@ -1188,10 +1383,14 @@ class LightingForm(forms.Form):
         )
         super(LightingForm, self).__init__(*args, **kwargs)
         for extra in LIGHT_EXTRAS:
-            self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox,
-                                                              disappear=extra.disappear,
-                                                              label=extra.name, initial=0,
-                                                              required=False)
+            self.fields[
+                "e_%s" %
+                extra.id] = ValueSelectField(
+                hidetext=extra.checkbox,
+                disappear=extra.disappear,
+                label=extra.name,
+                initial=0,
+                required=False)
 
     lighting = forms.ModelChoiceField(
         empty_label=None,
@@ -1208,11 +1407,12 @@ class LightingForm(forms.Form):
     )
 
     #extras = ExtraSelectorField(choices=LIGHT_EXTRAS.values_list('id','name'))
-    #for extra in LIGHT_EXTRAS:
+    # for extra in LIGHT_EXTRAS:
     #"e__{{0}}" % extra.id = ValueSelectField(extra)
 
 
 class SoundForm(forms.Form):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
@@ -1233,8 +1433,14 @@ class SoundForm(forms.Form):
         )
         super(SoundForm, self).__init__(*args, **kwargs)
         for extra in SOUND_EXTRAS:
-            self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox, disappear=extra.disappear,
-                                                              label=extra.name, initial=0, required=False)
+            self.fields[
+                "e_%s" %
+                extra.id] = ValueSelectField(
+                hidetext=extra.checkbox,
+                disappear=extra.disappear,
+                label=extra.name,
+                initial=0,
+                required=False)
 
     sound = forms.ModelChoiceField(
         empty_label=None,
@@ -1250,6 +1456,7 @@ class SoundForm(forms.Form):
 
 
 class ProjectionForm(forms.Form):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
@@ -1272,8 +1479,14 @@ class ProjectionForm(forms.Form):
         )
         super(ProjectionForm, self).__init__(*args, **kwargs)
         for extra in PROJ_EXTRAS:
-            self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox, disappear=extra.disappear,
-                                                              label=extra.name, initial=0, required=False)
+            self.fields[
+                "e_%s" %
+                extra.id] = ValueSelectField(
+                hidetext=extra.checkbox,
+                disappear=extra.disappear,
+                label=extra.name,
+                initial=0,
+                required=False)
 
     projection = forms.ModelChoiceField(
         empty_label=None,
@@ -1289,6 +1502,7 @@ class ProjectionForm(forms.Form):
 
 
 class ServiceForm(forms.Form):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
@@ -1316,6 +1530,7 @@ class ServiceForm(forms.Form):
 
 
 class ScheduleForm(forms.Form):
+
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
@@ -1325,7 +1540,7 @@ class ScheduleForm(forms.Form):
         self.helper.layout = Layout(
             Fieldset(
                 'Setup',  # title
-                #Field('setup_start',css_class="dtp"),
+                # Field('setup_start',css_class="dtp"),
                 Div(
                     HTML(
                         '<div class="pull-left"><a class="btn btn-xs btn-primary" href="#" id="samedate">'
@@ -1347,8 +1562,10 @@ class ScheduleForm(forms.Form):
     noon = datetime.time(12)
     noontoday = datetime.datetime.combine(today, noon)
     # setup_start = forms.SplitDateTimeField(initial=datetime.datetime.now())
-    setup_complete = forms.SplitDateTimeField(initial=noontoday, label="Setup Completed By", required=True)
-    event_start = forms.SplitDateTimeField(initial=noontoday, label="Event Starts")
+    setup_complete = forms.SplitDateTimeField(
+        initial=noontoday, label="Setup Completed By", required=True)
+    event_start = forms.SplitDateTimeField(
+        initial=noontoday, label="Event Starts")
     event_end = forms.SplitDateTimeField(initial=noontoday, label="Event Ends")
 
     def clean(self):
@@ -1369,7 +1586,7 @@ class ScheduleForm(forms.Form):
         return cleaned_data
 
 
-#helpers for the formwizard
+# helpers for the formwizard
 named_event_forms = (
     ('contact', ContactForm),
     ('organization', OrgForm),

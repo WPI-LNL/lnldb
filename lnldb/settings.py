@@ -27,7 +27,12 @@ ADMINS = (
 )
 
 MANAGERS = ADMINS
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu', 'users.wpi.edu', 'userweb.wpi.edu']
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    'lnl.wpi.edu',
+    'users.wpi.edu',
+    'userweb.wpi.edu']
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
@@ -35,7 +40,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': from_runtime('lnldb.db'),  # DB name on the host
-        'USER': '',  # Username. Please use a unique user with limited permissions.
+        # Username. Please use a unique user with limited permissions.
+        'USER': '',
         'PASSWORD': '',  # And for the love of god, use a password.
         'HOST': '',  # Set to empty string for localhost.
         'PORT': '',  # Set to empty string for default.
@@ -286,7 +292,8 @@ AUTHENTICATION_BACKENDS = (
 # Number of hours to show on the admin landing
 LANDING_TIMEDELTA = 72
 
-# Number of days to pass before crew chief reports are no longer able to be written.
+# Number of days to pass before crew chief reports are no longer able to
+# be written.
 CCR_DAY_DELTA = 7
 
 # email stuff
@@ -343,7 +350,7 @@ try:
     local_settings_file = open(here('local_settings.py'), 'r')
     local_settings_script = local_settings_file.read()
     exec local_settings_script
-except IOError, e:
+except IOError as e:
     print "No local settings were found (%s). " \
           "If you're fine with the defaults, you can ignore this or create 'lnldb/local_settings.py'" % e
 

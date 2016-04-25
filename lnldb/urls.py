@@ -66,8 +66,10 @@ urlpatterns = patterns('',
                        # url(r'^$', 'lnldb.views.home', name='home'),
                        # url(r'^lnldb/', include('lnldb.foo.urls')),
 
-                       # Uncomment the admin/doc line below to enable admin documentation:
-                       url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
+                       # Uncomment the admin/doc line below to enable admin
+                       # documentation:
+                       url(r'^admin/doc/',
+                           include('django.contrib.admindocs.urls')),
                        url(r'^jsi18n', 'django.views.i18n.javascript_catalog'),
 
                        # Uncomment the next line to enable the admin:

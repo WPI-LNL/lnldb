@@ -15,7 +15,8 @@ class StupidCat(models.Model):
 
 
 class GlobalPerms(models.Model):
-    #it's a dummy class
+    # it's a dummy class
+
     class Meta:
         permissions = (
             ('search', 'Enables search functionality'),

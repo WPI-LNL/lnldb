@@ -66,7 +66,11 @@ class EventHoursInline(admin.TabularInline):
 
 
 class EventAdmin(reversion.VersionAdmin):
-    inlines = [EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline]
+    inlines = [
+        EventCCInline,
+        EventHoursInline,
+        EventAttachmentInline,
+        EventBillingInline]
     filter_horizontal = ('crew', 'crew_chief', 'org')
     search_fields = ['event_name']
     readonly_fields = ['submitted_on']
@@ -104,7 +108,13 @@ fieldsets = (
 
 
 class OrgAdmin(reversion.VersionAdmin):
-    list_display = ('name', 'shortname', 'email', 'exec_email', 'user_in_charge', 'archived')
+    list_display = (
+        'name',
+        'shortname',
+        'email',
+        'exec_email',
+        'user_in_charge',
+        'archived')
     list_filter = ('archived',)
     filter_horizontal = ('accounts', 'associated_users', 'associated_orgs')
     search_fields = ['name', 'shortname', 'email', 'exec_email']
@@ -113,14 +123,24 @@ class OrgAdmin(reversion.VersionAdmin):
 
 class OTAdmin(admin.ModelAdmin):
     list_display = (
-        'org', 'old_user_in_charge', 'new_user_in_charge', 'created', 'expiry', 'completed_on', 'completed',
+        'org',
+        'old_user_in_charge',
+        'new_user_in_charge',
+        'created',
+        'expiry',
+        'completed_on',
+        'completed',
         'is_expired',
         'uuid')
 
 
 class LocAdmin(admin.ModelAdmin):
     list_filter = ('show_in_wo_form', 'building', 'setup_only')
-    actions = [enable_show_in_wo_form, disable_show_in_wo_form, enable_setup_only, disable_setup_only]
+    actions = [
+        enable_show_in_wo_form,
+        disable_show_in_wo_form,
+        enable_setup_only,
+        disable_setup_only]
 
 
 class ExtraAdmin(admin.ModelAdmin):

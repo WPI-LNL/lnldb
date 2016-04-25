@@ -26,9 +26,8 @@ class ClassLookup(LookupChannel):
     def format_item_display(self, obj):
         long_cat = ">".join(map(lambda cat: cat.name,
                                 obj.category.get_ancestors_inclusive.all()))
-        return ' <span class="text-muted">[x%02d]</span> <strong>%s</strong> (%s)' % (obj.items.count(),
-                                                                                      escape(obj.name),
-                                                                                      escape(long_cat))
+        return ' <span class="text-muted">[x%02d]</span> <strong>%s</strong> (%s)' % (
+            obj.items.count(), escape(obj.name), escape(long_cat))
 
 
 class ContainerLookup(LookupChannel):
@@ -57,6 +56,5 @@ class ContainerLookup(LookupChannel):
     def format_item_display(self, obj):
         long_cat = ">".join(map(lambda cat: cat.name,
                                 obj.item_type.category.get_ancestors_inclusive.all()))
-        return ' <span class="text-muted">[%d inside]</span> <strong>%s</strong> (%s)' % (obj.get_children().count(),
-                                                                                          escape(obj),
-                                                                                          escape(long_cat))
+        return ' <span class="text-muted">[%d inside]</span> <strong>%s</strong> (%s)' % (
+            obj.get_children().count(), escape(obj), escape(long_cat))

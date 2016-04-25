@@ -43,8 +43,8 @@ def plist_detail(request):
     levels = PITLevel.objects.exclude(name_short__in=['PP', 'L']) \
         .order_by('ordering')
 
-    users = Projectionist.objects \
-        .select_related('user__first_name', 'user__last_name', 'user__username')
+    users = Projectionist.objects .select_related(
+        'user__first_name', 'user__last_name', 'user__username')
 
     licensed = Q(pitinstances__pit_level__name_short__in=['PP', 'L'])
     alumni = Q(user__groups__name="Alumni")
@@ -66,8 +66,12 @@ def projection_update(request, id):
     context['msg'] = "Updating Projectionist %s" % projectionist
 
     if request.method == "POST":
-        form = ProjectionistUpdateForm(request.POST, instance=projectionist, prefix="main")
-        formset = PITFormset(request.POST, instance=projectionist, prefix="nested")
+        form = ProjectionistUpdateForm(
+            request.POST, instance=projectionist, prefix="main")
+        formset = PITFormset(
+            request.POST,
+            instance=projectionist,
+            prefix="nested")
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
@@ -149,7 +153,7 @@ class ProjectionistDelete(LoginRequiredMixin, HasPermMixin, DeleteView):
         return reverse("projection-list-detail")
 
 
-### Non-Wizard Projection Bulk View
+# Non-Wizard Projection Bulk View
 @login_required
 @permission_required('projection.add_bulk_events', raise_exception=True)
 def bulk_projection(request):
@@ -222,7 +226,8 @@ def bulk_projection(request):
 
                             # various other important things
                             kwargs['submitted_by'] = request.user
-                            kwargs['submitted_ip'] = request.META['REMOTE_ADDR']
+                            kwargs['submitted_ip'] = request.META[
+                                'REMOTE_ADDR']
 
                             l = Location.objects.filter(name__icontains="Perreault Hall U")[
                                 0]  # change to settings later (the u is for upper)
@@ -236,25 +241,29 @@ def bulk_projection(request):
                                 t_setupcomplete = datetime.time(19, 30)
                                 t_starttime = datetime.time(20)
                                 t_endtime = datetime.time(23)
-                            # then we combine our date and time objects, cast them as EST and stuff them into the kwargs
-                            dt_setupcomplete = datetime.datetime.combine(date, t_setupcomplete)
+                            # then we combine our date and time objects, cast
+                            # them as EST and stuff them into the kwargs
+                            dt_setupcomplete = datetime.datetime.combine(
+                                date, t_setupcomplete)
                             dt_setupcomplete = tz.localize(dt_setupcomplete)
                             kwargs['datetime_setup_complete'] = dt_setupcomplete
 
-                            dt_start = datetime.datetime.combine(date, t_starttime)
+                            dt_start = datetime.datetime.combine(
+                                date, t_starttime)
                             dt_start = tz.localize(dt_start)
                             kwargs['datetime_start'] = dt_start
 
                             dt_end = datetime.datetime.combine(date, t_endtime)
                             dt_end = tz.localize(dt_end)
                             kwargs['datetime_end'] = dt_end
-                            # we'll assume its a digital projection "dp" event at this point
+                            # we'll assume its a digital projection "dp" event
+                            # at this point
                             s = ProjService.objects.get(shortname="dp")
                             kwargs['projection'] = s
                             kwargs['billed_by_semester'] = True
-                            #return HttpResponse(kwargs.values())
+                            # return HttpResponse(kwargs.values())
 
-                            #here's where this kwargs assignment pays off.
+                            # here's where this kwargs assignment pays off.
                             e = Event.objects.create(**kwargs)
                             e.org.add(billing)
                             out.append(e)
@@ -263,17 +272,24 @@ def bulk_projection(request):
                             pass
                     # after thats done
                     context['result'] = out
-                    return render(request, "form_crispy_bulk_projection_done.html", context)
+                    return render(
+                        request, "form_crispy_bulk_projection_done.html", context)
 
                 else:
                     context['form'] = filled
-                    return render(request, "form_crispy_bulk_projection_entries.html", context)
+                    return render(
+                        request,
+                        "form_crispy_bulk_projection_entries.html",
+                        context)
             else:
-                #pass back the empty form
+                # pass back the empty form
                 context['msg'] = "Bulk Movie Addition"
                 context['formset'] = formbulk
 
-                return render(request, "form_crispy_bulk_projection_entries.html", context)
+                return render(
+                    request,
+                    "form_crispy_bulk_projection_entries.html",
+                    context)
         else:
             # here we only have our params
             context['msg'] = "Bulk Movie Addition (Errors)"
