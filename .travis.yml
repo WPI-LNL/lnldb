@@ -15,7 +15,7 @@ install:
     - pip install --cache-dir $HOME/.pip-cache -r requirements_debug.txt
 
 script:
-    #- coverage run --source=. --omit="*/migrations/*" manage.py test
+    - coverage run --source=. --omit="*/migrations/*" manage.py test
     # Run pep8 on all .py files in all subfolders
     - num_errors_before=`pep8 --exclude="*/migrations/*",".ropeproject/*" --ignore=E501,W292,E265,E266,E402,E126 . | wc -l`
     - echo $num_errors_before
@@ -49,5 +49,5 @@ script:
     # List the remaining errors - these will have to be fixed manually
     - pep8 --exclude="*/migrations/*",".ropeproject/*" --ignore=E501,W292,E265,E266,E402,E126 .
 
-#after_success:
-#    coveralls
+after_success:
+    coveralls
