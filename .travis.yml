@@ -31,7 +31,7 @@ script:
     - git config --global user.name "Travis"
     - git checkout $TRAVIS_BRANCH
 
-    - find . -name \*.py -not -path "*/migrations*" -exec autopep8 --recursive --aggressive --aggressive --in-place {} +
+    - find . -name \*.py -not -path "*/migrations*" -exec autopep8 --verbose --recursive --aggressive --aggressive --in-place {} +
     - num_errors_after=`pep8 --exclude="*/migrations/*",".ropeproject/*" --ignore=E501,W292,E265,E266,E402,E126 . | wc -l`
     - echo $num_errors_after
 
