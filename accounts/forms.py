@@ -49,7 +49,7 @@ class UserEditForm(FieldAccessForm):
 
         thisisme = FieldAccessLevel(
                 lambda user, instance:  (user == instance) and not user.locked,
-                enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone')
+                enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'nickname')
         )
         hasperm = FieldAccessLevel(
                 lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
