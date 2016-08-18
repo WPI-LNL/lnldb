@@ -229,3 +229,8 @@ h3 {
 .breadcrumb {
     margin-top: -15px;
 }
+
+/* highlights row when linked to, regardless of striping */
+tr:target, .table-striped>tbody>tr:nth-of-type(odd):target {
+	background-color: darkgrey;
+}
