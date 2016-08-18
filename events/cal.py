@@ -2,6 +2,7 @@ import datetime
 from time import mktime
 import json
 from django.utils.decorators import method_decorator
+from django.utils.html import conditional_escape
 from django.views.decorators.cache import cache_page
 
 from django_ical.views import ICalFeed
@@ -82,7 +83,7 @@ def cal_json(request, *args, **kwargs):
     for event in queryset:
         field = {
             "id": event.cal_guid(),
-            "title": event.cal_name(),
+            "title": conditional_escape(event.cal_name()),
             "url": "#" + str(event.id),
             "class": '',
             "start": datetime_to_timestamp(event.cal_start() + datetime.timedelta(hours=-5)),
