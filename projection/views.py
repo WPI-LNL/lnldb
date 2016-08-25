@@ -232,14 +232,10 @@ def bulk_projection(request):
                                 0]  # change to settings later (the u is for upper)
                             kwargs['location'] = l
                             # matinee determines the time
-                            if matinee:
-                                t_setupcomplete = datetime.time(13, 30)
-                                t_starttime = datetime.time(14)
-                                t_endtime = datetime.time(17)
-                            else:
-                                t_setupcomplete = datetime.time(19, 30)
-                                t_starttime = datetime.time(20)
-                                t_endtime = datetime.time(23)
+
+                            t_setupcomplete = datetime.time(19, 30)
+                            t_starttime = datetime.time(20)
+                            t_endtime = datetime.time(23)
                             # then we combine our date and time objects, cast them as EST and stuff them into the kwargs
                             dt_setupcomplete = datetime.datetime.combine(date, t_setupcomplete)
                             dt_setupcomplete = tz.localize(dt_setupcomplete)
@@ -262,6 +258,26 @@ def bulk_projection(request):
                             e = Event.objects.create(**kwargs)
                             e.org.add(billing)
                             out.append(e)
+                            if matinee:
+                                t_setupcomplete = datetime.time(13, 30)
+                                t_starttime = datetime.time(14)
+                                t_endtime = datetime.time(17)
+                                
+                                dt_setupcomplete = datetime.datetime.combine(date, t_setupcomplete)
+                                dt_setupcomplete = tz.localize(dt_setupcomplete)
+                                kwargs['datetime_setup_complete'] = dt_setupcomplete
+    
+                                dt_start = datetime.datetime.combine(date, t_starttime)
+                                dt_start = tz.localize(dt_start)
+                                kwargs['datetime_start'] = dt_start
+    
+                                dt_end = datetime.datetime.combine(date, t_endtime)
+                                dt_end = tz.localize(dt_end)
+                                kwargs['datetime_end'] = dt_end
+                                e = Event.objects.create(**kwargs)
+                                e.org.add(billing)
+                                out.append(e)
+
                         else:
                             # no blank entries
                             pass
