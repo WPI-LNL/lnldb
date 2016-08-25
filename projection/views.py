@@ -224,6 +224,10 @@ def bulk_projection(request):
                             kwargs['submitted_by'] = request.user
                             kwargs['submitted_ip'] = request.META['REMOTE_ADDR']
 
+                            kwargs['approved_by'] = request.user
+                            kwargs['approved_on'] = timezone.now()
+                            kwargs['approved'] = True
+
                             l = Location.objects.filter(name__icontains="Perreault Hall U")[
                                 0]  # change to settings later (the u is for upper)
                             kwargs['location'] = l
