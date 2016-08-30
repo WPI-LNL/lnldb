@@ -22,6 +22,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.forms.formsets import formset_factory
 from django.utils import timezone
 from helpers.mixins import LoginRequiredMixin, HasPermMixin
+from crispy_forms.layout import Submit
 
 
 @login_required
@@ -149,6 +150,18 @@ class ProjectionistDelete(LoginRequiredMixin, HasPermMixin, DeleteView):
         return reverse("projection-list-detail")
 
 
+def get_saturdays_for_range(date_1, date_2):
+    # saturdays are used to represent the weeks, for reference
+    saturdays = []
+    # set to next saturday
+    date_1 = date_1 + datetime.timedelta(days=(5-date_1.weekday()+7)%7)
+    # and then get all of them until we hit the end
+    while date_1 <= date_2:
+        saturdays.append(date_1)
+        date_1 = date_1 + datetime.timedelta(days=7)
+    return saturdays
+
+
 ### Non-Wizard Projection Bulk View
 @login_required
 @permission_required('projection.add_bulk_events', raise_exception=True)
@@ -156,152 +169,54 @@ def bulk_projection(request):
     context = {}
     tz = timezone.get_current_timezone()
 
-    if request.GET:
-        # always build the formset
-        formbulk = BulkCreateForm(request.GET)
-        if formbulk.is_valid():
-            # create our new form and pass it back
-            date_1 = formbulk.cleaned_data.get('date_first')
-            date_2 = formbulk.cleaned_data.get('date_second')
-            # date_1 = datetime.datetime.strptime(datestr_1,"%Y-%m-%d")
-            #date_2 = datetime.datetime.strptime(datestr_2,"%Y-%m-%d")
+    if not request.GET: # Step 1: get contact info and date range
+        return render(request, "form_crispy.html", {
+            'formset': BulkCreateForm(),
+            'msg': "Bulk Movie Addition"
+            })
 
-            end_of_term_1 = date_1 + datetime.timedelta(days=56)
-            end_of_term_2 = date_2 + datetime.timedelta(days=66)
+    basicinfoform = BulkCreateForm(request.GET)
+    if not basicinfoform.is_valid(): # Bad user! Give me the contact/basics!!!
+        return render(request, "form_crispy.html", {
+            'formset': basicinfoform,
+            'msg': "Bulk Movie Addition (Errors)"
+            })
 
-            range_1 = []
-            iterator_1 = date_1
-            while iterator_1 <= end_of_term_1:
-                if iterator_1.weekday() in [5, 6]:
-                    range_1.append(iterator_1)
+    # Past this point, we have enough info for the full form
 
-                iterator_1 = iterator_1 + datetime.timedelta(days=1)
+    # create our new form and pass it back
+    date_start = basicinfoform.cleaned_data.get('date_first')
+    date_end = basicinfoform.cleaned_data.get('date_second')
 
-            range_2 = []
-            iterator_2 = date_2
-            while iterator_2 <= end_of_term_2:
-                if iterator_2.weekday() in [5, 6]:
-                    range_2.append(iterator_2)
+    # prepopulate things
+    weeks = [{"date": date} for date in get_saturdays_for_range(date_start, date_end)]
+    formset = formset_factory(DateEntryFormSetBase, extra=0)
 
-                iterator_2 = iterator_2 + datetime.timedelta(days=1)
-
-            ranges_combined = range_1 + range_2
-
-            # prepopulate things
+    # depending on the return, do other things.
+    if request.POST:
+        # here we have our params and data
+        filled = formset(request.POST, initial=weeks)
+        if filled.is_valid():
             out = []
-            for i in ranges_combined:
-                out.append({"date": i})
+            for form in filled:
+                out.extend(form.save_objects(
+                    user=request.user,
+                    contact = basicinfoform.cleaned_data.get('contact'),
+                    org = basicinfoform.cleaned_data.get('billing'),
+                    ip = request.META['REMOTE_ADDR']
+                ))
+            # after thats done
+            context['result'] = out
+            return render(request, "form_crispy_bulk_projection_done.html", context)
 
-            formset = formset_factory(DateEntryFormSetBase, extra=0)
-            form_params = formset(initial=out)
-            context['form'] = form_params
-
-            # depending on the return, do other things.
-            if request.POST:
-                # here we have our params and data
-                filled = formset(request.POST, initial=out)
-                if filled.is_valid():
-                    out = []
-                    for form in filled.cleaned_data:
-                        kwargs = {}  # this is super nice
-                        date = form['date']
-                        name = form['name']
-                        matinee = form['matinee']
-
-                        # only populate db entries if the name has been filled
-                        if name:
-                            # first lets hammer out some details
-
-                            kwargs['event_name'] = name
-                            # get stuff from our bulk create form...
-                            contact = formbulk.cleaned_data.get('contact')
-                            kwargs['contact'] = contact
-
-                            billing = formbulk.cleaned_data.get('billing')
-                            # used below in e.add(org)
-
-                            # various other important things
-                            kwargs['submitted_by'] = request.user
-                            kwargs['submitted_ip'] = request.META['REMOTE_ADDR']
-
-                            kwargs['approved_by'] = request.user
-                            kwargs['approved_on'] = timezone.now()
-                            kwargs['approved'] = True
-
-                            l = Location.objects.filter(name__icontains="Perreault Hall U")[
-                                0]  # change to settings later (the u is for upper)
-                            kwargs['location'] = l
-                            # matinee determines the time
-
-                            t_setupcomplete = datetime.time(19, 30)
-                            t_starttime = datetime.time(20)
-                            t_endtime = datetime.time(23)
-                            # then we combine our date and time objects, cast them as EST and stuff them into the kwargs
-                            dt_setupcomplete = datetime.datetime.combine(date, t_setupcomplete)
-                            dt_setupcomplete = tz.localize(dt_setupcomplete)
-                            kwargs['datetime_setup_complete'] = dt_setupcomplete
-
-                            dt_start = datetime.datetime.combine(date, t_starttime)
-                            dt_start = tz.localize(dt_start)
-                            kwargs['datetime_start'] = dt_start
-
-                            dt_end = datetime.datetime.combine(date, t_endtime)
-                            dt_end = tz.localize(dt_end)
-                            kwargs['datetime_end'] = dt_end
-                            # we'll assume its a digital projection "dp" event at this point
-                            s = ProjService.objects.get(shortname="dp")
-                            kwargs['projection'] = s
-                            kwargs['billed_by_semester'] = True
-                            #return HttpResponse(kwargs.values())
-
-                            #here's where this kwargs assignment pays off.
-                            e = Event.objects.create(**kwargs)
-                            e.org.add(billing)
-                            out.append(e)
-                            if matinee:
-                                t_setupcomplete = datetime.time(13, 30)
-                                t_starttime = datetime.time(14)
-                                t_endtime = datetime.time(17)
-                                
-                                dt_setupcomplete = datetime.datetime.combine(date, t_setupcomplete)
-                                dt_setupcomplete = tz.localize(dt_setupcomplete)
-                                kwargs['datetime_setup_complete'] = dt_setupcomplete
-    
-                                dt_start = datetime.datetime.combine(date, t_starttime)
-                                dt_start = tz.localize(dt_start)
-                                kwargs['datetime_start'] = dt_start
-    
-                                dt_end = datetime.datetime.combine(date, t_endtime)
-                                dt_end = tz.localize(dt_end)
-                                kwargs['datetime_end'] = dt_end
-                                e = Event.objects.create(**kwargs)
-                                e.org.add(billing)
-                                out.append(e)
-
-                        else:
-                            # no blank entries
-                            pass
-                    # after thats done
-                    context['result'] = out
-                    return render(request, "form_crispy_bulk_projection_done.html", context)
-
-                else:
-                    context['form'] = filled
-                    return render(request, "form_crispy_bulk_projection_entries.html", context)
-            else:
-                #pass back the empty form
-                context['msg'] = "Bulk Movie Addition"
-                context['formset'] = formbulk
-
-                return render(request, "form_crispy_bulk_projection_entries.html", context)
         else:
-            # here we only have our params
-            context['msg'] = "Bulk Movie Addition (Errors)"
-            context['formset'] = formbulk
+            context['form'] = filled
             return render(request, "form_crispy.html", context)
     else:
-        # here we have nothing
-        form = BulkCreateForm()
-        context['formset'] = form
-        context['msg'] = "Bulk Movie Addition"
+        #pass back the empty form
+        context['msg'] = "Bulk Movie Addition - Choose Movie Details"
+        context['formset'] = formset(initial=weeks)
+        context['helper'] = DateEntryFormSetBase().helper
+        context['helper'].add_input(Submit('submit', 'Submit'))
+
         return render(request, "form_crispy.html", context)

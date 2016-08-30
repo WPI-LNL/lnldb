@@ -6,10 +6,12 @@ from django.forms.models import inlineformset_factory
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Field, HTML
 from crispy_forms.bootstrap import FormActions
+from django.utils import timezone
 from django.utils.timezone import now
-from projection.models import Projectionist, PitInstance, PITLevel
 from ajax_select.fields import AutoCompleteSelectField, AutoCompleteSelectMultipleField
 
+from projection.models import Projectionist, PitInstance, PITLevel
+from events.models import Event, Location, Building, Projection as ProjService, Category
 
 class ProjectionistUpdateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -127,28 +129,86 @@ class BulkCreateForm(forms.Form):
         'position': "{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
     billing = AutoCompleteSelectField('Orgs', required=True, plugin_options={
         'position': "{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
-    date_first = forms.DateField(label="Date of first movie of first term")
-    date_second = forms.DateField(label="Date of first movie of second term")
+    date_first = forms.DateField(label="Date of first movie")
+    date_second = forms.DateField(label="Date of last movie")
 
 
 class DateEntryFormSetBase(forms.Form):
-    def __init__(self, *args, **kwargs):
-        # pop the date out of the iterator here
-        # x = kwargs.keys()
+    time_offsets = { # This names must correspond to the checkboxes above
+            'matinee': datetime.timedelta(hours=-6),
+            'friday': datetime.timedelta(days=-1),
+            'saturday': datetime.timedelta(days=0),
+            'sunday': datetime.timedelta(days=1)
+            }
 
+    def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
-        self.helper.form_class = "form-horizontal"
+        # self.helper.form_class = "form-horizontal"
+        self.helper.template = 'formset_crispy_generic.html'
         self.helper.layout = Layout(
             Field('date'),
             Field('name'),
-            Field('matinee'),
+            *self.time_offsets
         )
 
         super(DateEntryFormSetBase, self).__init__(*args, **kwargs)
 
         self.fields['date'].widget.attrs['readonly'] = True
-        #self.fields["date"].initial = dateobj
 
     date = forms.DateField()
     name = forms.CharField(required=False)
+
+    
+    friday = forms.BooleanField(required=False)
     matinee = forms.BooleanField(required=False)
+    saturday = forms.BooleanField(required=False, initial=True)
+    sunday = forms.BooleanField(required=False, initial=True)
+
+    def save_objects(self, user, contact, org, ip=None):
+        out = []
+        tz = timezone.get_current_timezone()
+        # don't count this week if not filled out
+        if not self.is_valid():
+            return out
+        if not self.cleaned_data['name']: 
+            return out
+        # the fields that go into the resulting obj, to start
+        building,_ = Building.objects.get_or_create(name="Fuller Labs", shortname="FL")
+        cat,_ = Category.objects.get_or_create(name="Projection")
+        kwargs = {
+                'event_name': self.cleaned_data['name'],
+                'contact': contact,
+                'submitted_by': user,
+                'submitted_ip': ip,
+                'location': Location.objects.get_or_create(name="Perreault Hall Upper", defaults={'building': building})[0],
+                'projection': ProjService.objects.get_or_create(longname="Digital Projection", shortname='DP', defaults={'base_cost':40, 'addtl_cost': 10, 'category': cat})[0],
+                'billed_by_semester': True,
+                }
+        # if it's possible to approve the event, do so (since there is no bulk approve)
+        if user.has_perm('events.approve_event'):
+            kwargs['approved_by'] = user
+            kwargs['approved_on'] = timezone.now()
+            kwargs['approved'] = True
+
+        date = self.cleaned_data['date']
+
+        # prepare base date/times for the usual 8PM Sat start.
+        dt_setupcomplete = datetime.datetime.combine(date, datetime.time(19,30))
+        dt_start = datetime.datetime.combine(date, datetime.time(20))
+        dt_end = datetime.datetime.combine(date, datetime.time(23))
+
+        # save for each offset (sat, sun, mat, etc.) if checked
+        for offset_name in self.time_offsets.keys():
+            # do nothing if not checked
+            if not self.cleaned_data[offset_name]:
+                continue
+
+            offset = self.time_offsets[offset_name]
+            kwargs['datetime_setup_complete'] = tz.localize(dt_setupcomplete + offset)
+            kwargs['datetime_start'] = tz.localize(dt_start + offset)
+            kwargs['datetime_end'] = tz.localize(dt_end + offset)
+
+            e = Event.objects.create(**kwargs)
+            e.org.add(org)
+            out.append(e)
+        return out

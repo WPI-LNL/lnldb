@@ -234,3 +234,7 @@ h3 {
 tr:target, .table-striped>tbody>tr:nth-of-type(odd):target {
 	background-color: darkgrey;
 }
+
+td.checkbox {
+    display: table-cell; /* i don't know why it thought a cell WASNT a cell... */
+}
