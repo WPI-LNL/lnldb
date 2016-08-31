@@ -473,7 +473,6 @@ class EventReviewForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         event = kwargs.pop('event')
         self.helper = FormHelper()
-        self.helper.form_class = "form-inline"
         self.helper.layout = Layout(
             HTML("<h5>If you'd like to override the billing org, please search for it below</h5>"),
             Field('billing_org'),
