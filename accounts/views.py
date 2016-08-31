@@ -69,7 +69,7 @@ class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, gen
 class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
     model = get_user_model()
     template_name = "userdetail.html"
-    perms = ['account.view_user']
+    perms = ['accounts.view_user']
 
     def user_passes_test(self, request, *args, **kwargs):
         # members looking at other members is fine, and you should always be able to look at yourself.
