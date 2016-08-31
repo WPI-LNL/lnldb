@@ -770,7 +770,7 @@ class MKHoursForm(forms.ModelForm):
         model = Hours
         fields = ('user', 'hours', 'service')
 
-    user = AutoCompleteSelectField('AssocMembers', required=True)
+    user = AutoCompleteSelectField('Users', required=True)
     hours = forms.DecimalField(min_value=decimal.Decimal("0.00"))
 
 
