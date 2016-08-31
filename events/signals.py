@@ -82,17 +82,17 @@ def email_billing_delete(sender, instance, **kwargs):
         e.send()
 
 
-@receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def initial_user_create_notify(sender, instance, created, raw=False, **kwargs):
-    if created and not raw:
-        i = instance
-        email_body = """
-        A new user has joined LNLDB:
-        %s (%s)
-        """ % (i.username, i.email)
+# @receiver(post_save, sender=settings.AUTH_USER_MODEL)
+# def initial_user_create_notify(sender, instance, created, raw=False, **kwargs):
+#     if created and not raw:
+#         i = instance
+#         email_body = """
+#         A new user has joined LNLDB:
+#         %s (%s)
+#         """ % (i.username, i.email)
 
-        e = DLEG(subject="LNL User Joined", to_emails=[settings.EMAIL_TARGET_S], body=email_body)
-        e.send()
+#         e = DLEG(subject="LNL User Joined", to_emails=[settings.EMAIL_TARGET_S], body=email_body)
+#         e.send()
 
 
 @receiver(pre_save, sender=Fund)
