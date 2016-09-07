@@ -13,11 +13,11 @@
             {% for instance in ccinstances %}
                 <tr>
                     <td><a href="{% url 'events-detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
-                    <td title="{{ instance.event.datetime_end }}">
-                        {% if instance.event.datetime_end > now %}
-                            {{ instance.event.datetime_end|timeuntil }} from now
+                    <td title="{{ instance.event.datetime_start }}">
+                        {% if instance.event.datetime_start > now %}
+                            {{ instance.event.datetime_start|timeuntil }} from now
                         {% else %}
-                            {{ instance.event.datetime_end|timesince }} Ago
+                            {{ instance.event.datetime_start|timesince }} Ago
                         {% endif %}
                     </td>
                     <td>{{ instance.event.location }}</td>
@@ -56,11 +56,11 @@
         {% for instance in hours %}
                 <tr>
                     <td><a href="{% url 'events-detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
-                    <td title="{{instance.event.datetime_end}}">
-                        {% if instance.event.datetime_end > now %}
-                            {{instance.event.datetime_end|timeuntil}} from now 
+                    <td title="{{instance.event.datetime_start}}">
+                        {% if instance.event.datetime_start > now %}
+                            {{instance.event.datetime_start|timeuntil}} from now 
                         {% else %}
-                            {{instance.event.datetime_end|timesince}} Ago 
+                            {{instance.event.datetime_start|timesince}} Ago 
                         {% endif %}
                     </td>
                     <td>{{instance.event.location}}</td>
