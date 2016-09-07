@@ -411,10 +411,10 @@ class Event(models.Model):
     # ^^^ used as a cache to get around the awkward event type fields and allow for sql filtering
 
     # other fields
-    internal_notes = models.TextField(null=True, blank=True)
-    billed_by_semester = models.BooleanField(default=False, db_index=True)
-    sensitive = models.BooleanField(default=False)
-    test_event = models.BooleanField(default=False)
+    internal_notes = models.TextField(null=True, blank=True, help_text="Notes that the client and general body should never see.")
+    billed_by_semester = models.BooleanField(default=False, db_index=True, help_text="Check if event will be billed in bulk")
+    sensitive = models.BooleanField(default=False, help_text="Nobody besides those directly involved should know about this event")
+    test_event = models.BooleanField(default=False, help_text="Check to lower the VP's blood pressure after they see the short-notice S4/L4")
     # nice breakout for workorder
 
     @property
