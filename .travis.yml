@@ -14,7 +14,7 @@ install:
 
 script:
     - coverage run --source=. --omit="*/migrations/*" manage.py test
-    - pep8 --exclude="*/migrations/*",".ropeproject/*" --ignore=E501,W292,E265,E266,E402,E126 .
+#   - pep8 --exclude="*/migrations/*",".ropeproject/*" --ignore=E501,W292,E265,E266,E402,E126 .
 
 after_success:
     coveralls
