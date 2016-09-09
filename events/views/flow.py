@@ -197,9 +197,17 @@ def cancel(request, id):
     event.cancelled = True
     event.cancelled_by = request.user
     event.cancelled_on = timezone.now()
-
+    
     event.save()
 
+    if e.contact and e.contact.email:
+        targets = [e.contact.email]
+    else:
+        targets = []
+    
+    email_body = 'The event "%s" has been cancelled by %s! "' % ( event.event_name, str(request.user))
+    email = DLEG(subject="Event Cancelled", to_emails=targets, body=email_body, bcc=[settings.EMAIL_TARGET_VP])
+    email.send()
     return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
 
 
