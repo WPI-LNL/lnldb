@@ -12,7 +12,7 @@ from django.db.models import Q
 from django.http import HttpResponse
 
 
-class EventFeed(ICalFeed):
+class BaseFeed(ICalFeed):
     """
     A simple event calender
     """
@@ -23,16 +23,6 @@ class EventFeed(ICalFeed):
     @method_decorator(cache_page(15 * 60))
     def __call__(self, *args, **kwargs):
         return super(EventFeed, self).__call__(*args, **kwargs)
-
-    def items(self):
-        return list(Event.objects.filter(approved=True).exclude(Q(closed=True) |
-                                                                Q(cancelled=True) |
-                                                                Q(test_event=True) |
-                                                                Q(sensitive=True)).order_by('datetime_start').all()) + \
-            list(EventCCInstance.objects.filter(event__approved=True).exclude(Q(event__closed=True) |
-                                                                              Q(event__cancelled=True))
-                                .order_by('setup_start').all()) + \
-            list(Meeting.objects.order_by('datetime').all())
 
     def item_title(self, item):
         return item.cal_name()
@@ -57,6 +47,38 @@ class EventFeed(ICalFeed):
 
     def item_end_datetime(self, item):
         return item.cal_end()
+
+
+class EventFeed(BaseFeed):
+    def items(self):
+        return list(Event.objects.filter(approved=True).exclude(Q(closed=True) |
+                                                                Q(cancelled=True) |
+                                                                Q(test_event=True) |
+                                                                Q(sensitive=True)).order_by('datetime_start').all()) + \
+            list(EventCCInstance.objects.filter(event__approved=True).exclude(Q(event__closed=True) |
+                                                                              Q(event__cancelled=True))
+                                .order_by('setup_start').all()) + \
+            list(Meeting.objects.order_by('datetime').all())
+
+
+class FullEventFeed(BaseFeed):
+    def items(self):
+        return list(Event.objects.exclude(Q(closed=True) |
+                                          Q(cancelled=True) |
+                                          Q(test_event=True) |
+                                          Q(sensitive=True)).order_by('datetime_start').all()) + \
+            list(EventCCInstance.objects.exclude(Q(event__closed=True) | Q(event__cancelled=True))
+                                .order_by('setup_start').all()) + \
+            list(Meeting.objects.order_by('datetime').all())
+
+
+class LightEventFeed(BaseFeed):
+    def items(self):
+        return list(Event.objects.filter(approved=True).exclude(Q(closed=True) |
+                                                                Q(cancelled=True) |
+                                                                Q(test_event=True) |
+                                                                Q(sensitive=True)).order_by('datetime_start').all()) + \
+            list(Meeting.objects.order_by('datetime').all())
 
 
 def cal_json(request, *args, **kwargs):

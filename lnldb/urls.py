@@ -4,7 +4,7 @@ from django.conf import settings
 from django.conf.urls import patterns, include, url
 
 from accounts.forms import LoginForm
-from events.cal import EventFeed
+from events.cal import EventFeed, FullEventFeed, LightEventFeed
 from events.forms import named_event_forms
 from events.views.wizard import EventWizard
 from events.views.wizard import show_lighting_form_condition, show_sound_form_condition, \
@@ -315,6 +315,8 @@ urlpatterns = patterns('',
 
                        url(r'^list/$', 'events.views.list.public_facing', name="list"),
                        url(r'^list/feed.ics$', EventFeed(), name='public_cal_feed'),
+                       url(r'^list/feed_full.ics$', FullEventFeed(), name='full_cal_feed'),
+                       url(r'^list/feed_light.ics$', LightEventFeed(), name='light_cal_feed'),
                        url(r'^list/json(/*?.*)*$', 'events.cal.cal_json'),
 
                        # orgs (clients)
