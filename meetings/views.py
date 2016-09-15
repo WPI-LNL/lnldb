@@ -11,18 +11,18 @@ from django.http.response import Http404
 from django.template import RequestContext
 from django.forms.models import inlineformset_factory, ModelForm
 from django.utils.functional import curry
-from events.forms import CCIForm
-from events.models import Event, EventCCInstance
-from meetings.forms import MeetingAdditionForm, MtgAttachmentEditForm
-from meetings.models import Meeting, MtgAttachment
-from meetings.forms import AnnounceSendForm
-from meetings.forms import AnnounceCCSendForm
-from meetings.models import AnnounceSend
+from django.utils import timezone
+from django.db.models.aggregates import Count
 from django.core.paginator import Paginator, InvalidPage
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
-from emails.generators import generate_notice_email
-from emails.generators import generate_notice_cc_email
-from django.db.models.aggregates import Count
+
+from events.forms import CCIForm
+from events.models import Event, EventCCInstance
+from emails.generators import generate_notice_email, generate_notice_cc_email
+
+from .forms import MeetingAdditionForm, MtgAttachmentEditForm, \
+    AnnounceSendForm, AnnounceCCSendForm
+from .models import Meeting, MtgAttachment, AnnounceSend
 
 
 @login_required
@@ -47,7 +47,7 @@ def rm_att(request, mtg_id, att_id):
     if not att.meeting or att.meeting.pk != mtg.pk:
         raise PermissionDenied
     mtg.attachments.remove(att)
-    return HttpResponseRedirect(reverse('meetings.views.viewattendance', args=(mtg.pk,)))
+    return HttpResponseRedirect(reverse('meetings:detail', args=(mtg.pk,)))
 
 
 @login_required
@@ -68,7 +68,7 @@ def modify_att(request, mtg_id, att_id):
         form = MtgAttachmentEditForm(instance=att, data=request.POST, files=request.FILES)
         if form.is_valid():
             form.save()
-            url = reverse('meetings.views.viewattendance', args=(mtg_id,)) + "#minutes"
+            url = reverse('meetings:detail', args=(mtg_id,)) + "#minutes"
             return HttpResponseRedirect(url)
         else:
             context['formset'] = form
@@ -79,11 +79,11 @@ def modify_att(request, mtg_id, att_id):
 
 
 @login_required
-def viewattendance(request, id):
+def viewattendance(request, mtg_id):
     context = {}
     perms = ('meetings.view_mtg_attendance',)
     try:
-        m = Meeting.objects.prefetch_related('attendance').get(pk=id)
+        m = Meeting.objects.prefetch_related('attendance').get(pk=mtg_id)
     except Meeting.DoesNotExist:
         raise Http404(0)
     if not (request.user.has_perms(perms) or
@@ -108,7 +108,7 @@ def viewattendance(request, id):
 
 
 @login_required
-def updateevent(request, meetingid, eventid):
+def updateevent(request, mtg_id, eventid):
     context = {}
     perms = ('meetings.edit_mtg',)
     context['msg'] = "Update Event"
@@ -125,7 +125,7 @@ def updateevent(request, meetingid, eventid):
         formset = cc_formset(request.POST, instance=event, prefix="main")
         if formset.is_valid():
             formset.save()
-            url = reverse('meetings.views.viewattendance', args=(meetingid,)) + "#events"
+            url = reverse('meeting:detail', args=(mtg_id,)) + "#events"
             return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
@@ -136,11 +136,11 @@ def updateevent(request, meetingid, eventid):
 
 
 @login_required
-def editattendance(request, id):
+def editattendance(request, mtg_id):
     context = {}
     perms = ('meetings.edit_mtg',)
     context['msg'] = "Edit Meeting"
-    m = get_object_or_404(Meeting, pk=id)
+    m = get_object_or_404(Meeting, pk=mtg_id)
     if not (request.user.has_perms(perms) or
             request.user.has_perms(perms, m)):
         raise PermissionDenied
@@ -152,7 +152,7 @@ def editattendance(request, id):
             for each in formset.cleaned_data['attachments_private']:
                 MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m, private=True)
             m = formset.save()
-            url = reverse('meetings.views.viewattendance', args=(m.id,)) + "#attendance"
+            url = reverse('meetings:detail', args=(m.id,)) + "#attendance"
             return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
@@ -166,18 +166,28 @@ def editattendance(request, id):
 @permission_required('meetings.list_mtgs', raise_exception=True)
 def listattendance(request, page=1):
     context = {}
-    attend = Meeting.objects \
+    mtgs = Meeting.objects \
         .select_related('meeting_type__name') \
-        .annotate(num_attendees=Count('attendance')) \
-        .all()
-    paginated = Paginator(attend, 10)
+        .annotate(num_attendsees=Count('attendance'))
+    past_mtgs = mtgs.filter(datetime__lte=timezone.now()) \
+            .order_by('-datetime')
+    future_mtgs = mtgs.filter(datetime__gte=timezone.now()) \
+            .order_by('datetime')
 
+    paginated = Paginator(past_mtgs, 10)
     try:
-        attend = paginated.page(page)
+        past_mtgs = paginated.page(page)
     except InvalidPage:
-        attend = paginated.page(1)
+        past_mtgs = paginated.page(1)
 
-    context['attend'] = attend
+    paginated = Paginator(future_mtgs, 10)
+    try:
+        future_mtgs = paginated.page(page)
+    except InvalidPage:
+        future_mtgs = paginated.page(1)
+
+    context['lists'] = [("Past Meetings", past_mtgs), 
+                        ("Future Meetings", future_mtgs)]
     return render(request, 'meeting_list.html', context)
 
 
@@ -189,7 +199,7 @@ def newattendance(request):
         formset = MeetingAdditionForm(request.POST)
         if formset.is_valid():
             m = formset.save()
-            return HttpResponseRedirect(reverse('meetings.views.viewattendance', args=(m.id,)))
+            return HttpResponseRedirect(reverse('meetings:detail', args=(m.id,)))
         else:
             context['formset'] = formset
             context['msg'] = "New Meeting (Errors In Form)"
@@ -201,10 +211,10 @@ def newattendance(request):
 
 
 @login_required
-def mknotice(request, id):
+def mknotice(request, mtg_id):
     context = {}
     perms = ('meetings.send_mtg_notice',)
-    meeting = get_object_or_404(Meeting, pk=id)
+    meeting = get_object_or_404(Meeting, pk=mtg_id)
     if not (request.user.has_perms(perms) or
             request.user.has_perms(perms, meeting)):
         raise PermissionDenied
@@ -219,7 +229,7 @@ def mknotice(request, id):
             else:
                 success = False
             AnnounceSend.objects.create(announce=notice, sent_success=success)
-            url = reverse('meetings.views.viewattendance', args=(meeting.id,)) + "#emails"
+            url = reverse('meetings:detail', args=(meeting.id,)) + "#emails"
             return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
@@ -232,10 +242,10 @@ def mknotice(request, id):
 
 
 @login_required
-def mkccnotice(request, id):
+def mkccnotice(request, mtg_id):
     context = {}
     perms = ('meetings.send_mtg_notice',)
-    meeting = get_object_or_404(Meeting, pk=id)
+    meeting = get_object_or_404(Meeting, pk=mtg_id)
     if not (request.user.has_perms(perms) or
             request.user.has_perms(perms, meeting)):
         raise PermissionDenied
@@ -253,7 +263,7 @@ def mkccnotice(request, id):
 
             notice.save()
 
-            url = reverse('meetings.views.viewattendance', args=(meeting.id,)) + "#emails"
+            url = reverse('meetings:detail', args=(meeting.id,)) + "#emails"
             return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
