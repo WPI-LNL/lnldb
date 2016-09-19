@@ -22,7 +22,7 @@ class BaseFeed(ICalFeed):
 
     @method_decorator(cache_page(15 * 60))
     def __call__(self, *args, **kwargs):
-        return super(EventFeed, self).__call__(*args, **kwargs)
+        return super(BaseFeed, self).__call__(*args, **kwargs)
 
     def item_title(self, item):
         return item.cal_name()
