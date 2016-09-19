@@ -7,7 +7,7 @@ urlpatterns = [
    url(r'^page/(?P<page>\d+)/$', views.listattendance, name="list_bypage"),
    url(r'^(?P<mtg_id>\d+)/', include([
        url(r'^$', views.viewattendance, name="detail"),
-       url(r'^addchief/(\d+)/$', views.updateevent, name="addchief"),
+       url(r'^addchief/(?P<event_id>\d+)/$', views.updateevent, name="addchief"),
        url(r'^edit/$', views.editattendance, name="edit"),
        url(r'^remind/mtg/$', views.mknotice, name="email"),
        url(r'^remind/cc/$', views.mkccnotice, name="cc-email"),
