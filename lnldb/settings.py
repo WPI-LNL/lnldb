@@ -17,6 +17,13 @@ def from_root(*x):
 def from_runtime(*x):
     return os.path.join(from_root('runtime'), *x)
 
+try:
+   import raven
+   path = from_root('.')
+   GIT_RELEASE = raven.fetch_git_sha(path)
+except Exception as e:
+	print(e)
+	GIT_RELEASE = "unknown build"
 
 TESTING = sys.argv[1:2] == ['test']
 
@@ -130,6 +137,7 @@ TEMPLATES = [{
             TCP + (
                 'django.template.context_processors.request',
                 'data.context_processors.airplane_mode',
+                'data.context_processors.revision',
                 'data.context_processors.analytics',
                 # 'lnldb.processors.staticz',
                 'processors.navs',
@@ -277,8 +285,8 @@ AJAX_LOOKUP_CHANNELS = {
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',  # default
+    'data.backends.PermissionShimBackend',
     'permission.backends.PermissionBackend',
-    'data.backends.PermissionShimBackend'
 )
 
 # Various Other Settings
