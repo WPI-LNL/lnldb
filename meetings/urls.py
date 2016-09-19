@@ -3,7 +3,7 @@ from . import views
 
 urlpatterns = [
    url(r'^new/$', views.newattendance, name="new"),
-   url(r'^$', views.listattendance, name="list"),
+   url(r'^(page/(?P<page>\d+)/)?$', views.listattendance, name="list"),
    url(r'^(?P<mtg_id>\d+)/', include([
        url(r'^$', views.viewattendance, name="detail"),
        url(r'^addchief/(\d+)/$', views.updateevent, name="addchief"),
