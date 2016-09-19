@@ -71,13 +71,13 @@ class Meeting(models.Model):
         return self.datetime + self.duration
 
     def cal_link(self):
-        return reverse('meeting-view', args=[self.id])
+        return reverse('meetings:detail', args=[self.id])
 
     def cal_guid(self):
         return "mtg" + str(self.id) + "@lnldb"
 
     def get_absolute_url(self):
-        return reverse('meeting-view', args=[self.id])
+        return reverse('meetings:detail', args=[self.id])
 
     def __unicode__(self):
         return "Meeting For %s" % self.datetime.date()
