@@ -2,53 +2,55 @@
 {% load staticfiles %}
 {% load bootstrap_toolkit %}
 {% block content %}
-    <h1>Meeting List </h1>
-    <div class="row">
-        <div class="col-lg-11">
-        <table class="table table-condensed">
-            <thead>
+    {% for name, mtgs in lists %}
+        <h1>{{ name }}</h1>
+        <div class="row">
+            <div class="col-lg-11">
+            <table class="table table-condensed">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Count</th>
+                    </tr>
+                </thead>
+                {% for m in mtgs %}
                 <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Count</th>
+                    <td><a href="{% url "meetings:detail" m.id %}">{{ m }}</a></td>
+                    <td>{{m.meeting_type}}</td>
+                    <td>{{ m.num_attendees }}</td>
                 </tr>
-            </thead>
-            {% for m in attend %}
-            <tr>
-                <td><a href="{% url "meetings.views.viewattendance" m.id %}">{{ m }}</a></td>
-                <td>{{m.meeting_type}}</td>
-                <td>{{ m.num_attendees }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        <ul class="pager">
+                {% endfor %}
+            </table>
+            <ul class="pager">
 
-            {% if attend.has_previous %}
-                <li class="previous">
-                <a href="{% url "meetings.views.listattendance" attend.previous_page_number %}">&larr; Newer</a>
-            {% else %}
-                <li class="previous disabled">
-                <a>&larr; Newer</a>
-            {% endif %}
-            
-            </li>
-    
-            
-            <li>
-                <a href="#">Page {{ attend.number }} of {{ attend.paginator.num_pages }}</a>
-            </li>
-    
-            {% if attend.has_next %}
-                <li class="next">
-                <a href="{% url "meetings.views.listattendance" attend.next_page_number %}">Older &rarr;</a>
-            {% else %}
-                <li class="next disabled">
-                <a>Older &rarr;</a>
-            {% endif %}
-            
-            </li>
+                {% if mtgs.has_previous %}
+                    <li class="previous">
+                    <a href="{% url "meetings:list" mtgs.previous_page_number %}">&larr; Previous</a>
+                {% else %}
+                    <li class="previous disabled">
+                    <a>&larr; Previous</a>
+                {% endif %}
+                
+                </li>
+        
+                
+                <li>
+                    <a href="#">Page {{ mtgs.number }} of {{ mtgs.paginator.num_pages }}</a>
+                </li>
+        
+                {% if mtgs.has_next %}
+                    <li class="next">
+                    <a href="{% url "meetings:list" mtgs.next_page_number %}">Next &rarr;</a>
+                {% else %}
+                    <li class="next disabled">
+                    <a>Next &rarr;</a>
+                {% endif %}
+                
+                </li>
 
-        </ul>
+            </ul>
+            </div>
         </div>
-    </div>
+    {% endfor %}
 {% endblock %}

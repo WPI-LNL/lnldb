@@ -11,7 +11,7 @@
 
         <h2>{{ m.datetime | daterange:m.endtime }}</h2>
         {% permission user has 'meetings.edit_mtg' of m %}
-            <a class="btn btn-lg btn-primary" href="{% url "meetings.views.editattendance" m.id %}">Edit</a>
+            <a class="btn btn-lg btn-primary" href="{% url "meetings:edit" m.id %}">Edit</a>
         {% endpermission %}
     </div>
     <div class="row">
@@ -159,12 +159,11 @@
 
 
                         <br />
-                    <a class="btn btn-default" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
-                    <a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>
+                    <a class="btn btn-default" href="{% url "meetings:email" m.id %}">Send Meeting E-Mail</a>
+                    <a class="btn btn-primary" href="{% url "meetings:cc-email" m.id %}">Send Crew E-Mail</a>
                     {% else %}
-                    <a class="btn btn-primary" href="{% url "meetings.views.mknotice" m.id %}">Send Meeting E-Mail</a>
+                    <a class="btn btn-primary" href="{% url "meetings:email" m.id %}">Send Meeting E-Mail</a>
                     {% endif %}
-                    <!--<a class="btn btn-primary" href="{% url "meetings.views.mkccnotice" m.id %}">Send Crew E-Mail</a>-->
                 </div>
 
                 <div class="tab-pane" id="events">

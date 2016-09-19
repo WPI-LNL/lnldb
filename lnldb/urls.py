@@ -213,22 +213,7 @@ urlpatterns = patterns('',
                        url(r'^db/search$', "data.views.search", name="search"),
 
                        # meetings
-                       url(r'^db/meetings/new/$', 'meetings.views.newattendance', name="meeting-new"),
-                       url(r'^db/meetings/$', 'meetings.views.listattendance', name="meeting-list"),
-                       url(r'^db/meetings/(\d+)/list/$', 'meetings.views.listattendance', ),
-                       url(r'^db/meetings/(\d+)/$', 'meetings.views.viewattendance', name="meeting-view"),
-                       url(r'^db/meetings/(\d+)/addchief/(\d+)/$', 'meetings.views.updateevent',
-                           name="meeting-updateevent"),
-                       url(r'^db/meetings/(\d+)/edit/$', 'meetings.views.editattendance', name="meeting-edit"),
-                       url(r'^db/meetings/(\d+)/remind/mtg/$', 'meetings.views.mknotice', name="meeting-email"),
-                       url(r'^db/meetings/(\d+)/remind/cc/$', 'meetings.views.mkccnotice',
-                           name="meeting-cc-email"),
-                       url(r'^db/meetings/(?P<mtg_id>\d+)/download/(?P<att_id>\d+)/$',
-                           'meetings.views.download_att', name="meeting-att-dl"),
-                       url(r'^db/meetings/(?P<mtg_id>\d+)/file/(?P<att_id>\d+)/$', 'meetings.views.modify_att',
-                           name="meeting-att-edit"),
-                       url(r'^db/meetings/(?P<mtg_id>\d+)/rm/(?P<att_id>\d+)/$',
-                           'meetings.views.rm_att', name="meeting-att-rm"),
+                       url(r'^db/meetings/', include('meetings.urls', namespace='meetings')),
 
                        # projection
                        url(r'^db/projection/list/$', 'projection.views.plist_detail',

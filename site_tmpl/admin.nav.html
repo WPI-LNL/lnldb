@@ -119,9 +119,9 @@
                         <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a href="{% url "meetings.views.listattendance" %}">View Meetings</a></li>
+                        <li><a href="{% url "meetings:list" %}">View Meetings</a></li>
                         {% permission request.user has 'meetings.create_mtg' %}
-                            <li><a href="{% url "meetings.views.newattendance" %}">New Meeting</a></li>
+                            <li><a href="{% url "meetings:new" %}">New Meeting</a></li>
                         {% endpermission %}
                     </ul>
                 </li>
