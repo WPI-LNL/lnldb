@@ -12,7 +12,7 @@ def getattribute(value, arg):
     if hasattr(value, str(arg)):
         return getattr(value, str(arg))
     else:
-        print "Invalid %s in %s" % (arg, value)
+        print("Invalid %s in %s" % (arg, value))
         return settings.TEMPLATE_STRING_IF_INVALID
 
 

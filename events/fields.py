@@ -1,5 +1,6 @@
+from __future__ import absolute_import
 from django import forms
-from widgets import ExtraSelectorWidget
+from .widgets import ExtraSelectorWidget
 from itertools import groupby
 
 

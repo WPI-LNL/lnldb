@@ -27,7 +27,7 @@ def easy_tag(func):
             # otherwise just send through the original args and kwargs
             try:
                 return func(*args, **kwargs)
-            except TypeError, e:
+            except TypeError as e:
                 raise template.TemplateSyntaxError('Bad arguments for tag "%s"' % args[0])
     inner.__name__ = func.__name__
     inner.__doc__ = inner.__doc__

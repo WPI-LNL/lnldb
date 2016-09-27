@@ -1,5 +1,5 @@
 from django.test import TestCase
-from generators import EventFactory, UserFactory, CCReportFactory
+from .generators import EventFactory, UserFactory, CCReportFactory
 from django.core.urlresolvers import reverse_lazy
 
 

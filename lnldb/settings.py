@@ -350,10 +350,10 @@ MPTT_ADMIN_LEVEL_INDENT = 20
 try:
     local_settings_file = open(here('local_settings.py'), 'r')
     local_settings_script = local_settings_file.read()
-    exec local_settings_script
-except IOError, e:
-    print "No local settings were found (%s). " \
-          "If you're fine with the defaults, you can ignore this or create 'lnldb/local_settings.py'" % e
+    exec(local_settings_script)
+except IOError as e:
+    print("No local settings were found (%s). " \
+          "If you're fine with the defaults, you can ignore this or create 'lnldb/local_settings.py'" % e)
 
 if not os.path.exists(STATIC_ROOT):
     os.makedirs(STATIC_ROOT)
