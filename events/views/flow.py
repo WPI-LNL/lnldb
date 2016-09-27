@@ -200,8 +200,8 @@ def cancel(request, id):
     
     event.save()
 
-    if e.contact and e.contact.email:
-        targets = [e.contact.email]
+    if event.contact and event.contact.email:
+        targets = [event.contact.email]
     else:
         targets = []
     
