@@ -3,3 +3,4 @@ coverage
 coveralls
 pep8
 factory_boy
+django-test-without-migrations

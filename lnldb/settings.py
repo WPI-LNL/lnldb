@@ -208,6 +208,14 @@ INSTALLED_APPS = (
     'pagedown',
     'compat',
 )
+if TESTING:
+    try:
+        import test_without_migrations # for really speedy testing!
+        INSTALLED_APPS += (
+            'test_without_migrations',
+                )
+    except:
+        pass
 
 SHOW_HIJACKUSER_IN_ADMIN = False
 # Needed since Hijack doesn't support custom UserAdmin
