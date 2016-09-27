@@ -1,5 +1,5 @@
 from django.test import TestCase
-from generators import EventFactory, UserFactory
+from generators import EventFactory, UserFactory, CCReportFactory
 from django.core.urlresolvers import reverse_lazy
 
 
@@ -9,6 +9,7 @@ class EventBasicViewTest(TestCase):
         self.e = EventFactory.create(event_name="Test Event")
         self.e2 = EventFactory.create(event_name="Other Test Event")
         self.user = UserFactory.create(password='123')
+        self.report = CCReportFactory.create(event = self.e)
         self.client.login(username=self.user.username, password='123')
 
     def test_detail(self):
@@ -79,6 +80,16 @@ class EventBasicViewTest(TestCase):
 
         # Empty (bad) input
         response = self.client.post(reverse_lazy('event-mkccr', args=[self.e.pk]))
+        self.assertEqual(response.status_code, 200)
+
+        # later: test post saved
+
+    def test_ccr_edit(self):
+        response = self.client.get(reverse_lazy('event-updccr', args=[self.e.pk, self.report.pk]))
+        self.assertEqual(response.status_code, 200)
+
+        # Empty (bad) input
+        response = self.client.post(reverse_lazy('event-updccr', args=[self.e.pk, self.report.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post saved

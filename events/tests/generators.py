@@ -3,7 +3,7 @@ from django.contrib.auth.hashers import make_password
 from django.conf import settings
 from django.utils import timezone
 from factory import DjangoModelFactory, SubFactory, Sequence
-from events.models import Event, Location, Organization, Building
+from events.models import Event, Location, Organization, Building, CCReport
 
 __author__ = 'jmerdich'
 
@@ -47,3 +47,10 @@ class EventFactory(DjangoModelFactory):
     event_name = "Test event"
     location = SubFactory(LocationFactory)
     submitted_by = SubFactory(UserFactory)
+
+class CCReportFactory(DjangoModelFactory):
+    class Meta:
+        model = CCReport
+
+    event = SubFactory(Event)
+    crew_chief = SubFactory(UserFactory)

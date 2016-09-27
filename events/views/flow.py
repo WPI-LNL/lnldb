@@ -506,7 +506,13 @@ class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermMixin, LoginRequir
     form_class = InternalReportForm
     template_name = "form_crispy_cbv.html"
     msg = "Update Crew Chief Report"
-    perms = 'events.add_event_report'  # TODO: check if adding a diffferent perm
+    perms = 'events.add_event_report'
+
+    def get_form_kwargs(self):
+        kwargs = super(CCRUpdate, self).get_form_kwargs()
+        event = get_object_or_404(Event, pk=self.kwargs['event'])
+        kwargs['event'] = event
+        return kwargs
 
     def form_valid(self, form):
         messages.success(self.request, "Crew Chief Report Updated!", extra_tags='success')
@@ -520,7 +526,7 @@ class CCRDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = CCReport
     template_name = "form_delete_cbv.html"
     msg = "Deleted Crew Chief Report"
-    perms = 'events.add_event_report'  # TODO: check if adding a diffferent perm
+    perms = 'events.add_event_report' 
 
     def get_object(self, queryset=None):
         """ Hook to ensure object isn't closed """
