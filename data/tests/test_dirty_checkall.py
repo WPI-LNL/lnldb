@@ -41,7 +41,7 @@ class UrlsTest(test.TestCase):
 
     @override_settings(TEMPLATE_STRING_IF_INVALID='TEMPLATE_WARNING [%s]')
     def test_responses(self, allowed_http_codes=[200, 302, 403],
-                       credentials=None, logout_url="", default_kwargs={}, quiet=False):
+                       credentials=None, logout_url="", default_kwargs={}, quiet=True):
         """
         Test all pattern in root urlconf and included ones.
         Do GET requests only.
@@ -123,7 +123,7 @@ class UrlsTest(test.TestCase):
                     else:
                         print(status + url)
                     self.assertIn(response.status_code, allowed_http_codes)
-                    self.assertNotIn("TEMPLATE_WARNING", response.content)
+                    self.assertNotIn(b"TEMPLATE_WARNING", response.content)
                     if credentials:
                         # if we just tested logout, then login again
                         self.client.login(**credentials)
