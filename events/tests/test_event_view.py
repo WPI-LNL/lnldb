@@ -77,11 +77,21 @@ class EventBasicViewTest(TestCase):
         response = self.client.get(reverse_lazy('event-mkccr', args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
-        # Bad input
+        # Empty (bad) input
         response = self.client.post(reverse_lazy('event-mkccr', args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
-        # later: test post
+        # later: test post saved
+
+    def test_myccr_add(self):
+        response = self.client.get(reverse_lazy('my-ccreport', args=[self.e.pk]))
+        self.assertEqual(response.status_code, 200)
+
+        # Bad (empty) input
+        response = self.client.post(reverse_lazy('my-ccreport', args=[self.e.pk]))
+        self.assertEqual(response.status_code, 200)
+
+        # later: test post saved
 
     def test_bill_add(self):
         response = self.client.get(reverse_lazy('event-mkbilling', args=[self.e.pk]))

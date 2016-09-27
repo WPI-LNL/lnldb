@@ -1,7 +1,7 @@
 import datetime
 
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model 
 from django.core.urlresolvers import reverse
 from django.db.models.aggregates import Sum
 from django.forms.models import inlineformset_factory
@@ -272,7 +272,7 @@ def hours_edit(request, eventid, userid):
     event = uevent[0].event
 
     hours = get_object_or_404(Hours, event=event, user_id=userid)
-    u = get_object_or_404(settings.AUTH_USER_MODEL, pk=userid)
+    u = get_object_or_404(get_user_model(), pk=userid)
     context['msg'] = "Hours for '%s' on '%s'" % (u, event.event_name)
     if request.method == 'POST':
         formset = EditHoursForm(request.POST, instance=hours)
