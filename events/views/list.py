@@ -9,6 +9,7 @@ from events.models import Event
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q, F, Count
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
+from django.utils.timezone import make_aware
 import pytz
 import re
 
@@ -79,7 +80,7 @@ def datefilter(eventqs, context, start=None, end=None):
     if start:
         context['start'] = start
         try:
-            startdate = datetime.datetime.strptime(start, '%Y-%m-%d')
+            startdate = make_aware(datetime.datetime.strptime(start, '%Y-%m-%d'))
             eventqs = eventqs.filter(datetime_start__gte=startdate)
 
         except:
@@ -90,7 +91,7 @@ def datefilter(eventqs, context, start=None, end=None):
     if end:
         context['end'] = end
         try:
-            enddate = datetime.datetime.strptime(end, '%Y-%m-%d')
+            enddate = make_aware(datetime.datetime.strptime(end, '%Y-%m-%d'))
             eventqs = eventqs.filter(datetime_end__lte=enddate)
 
         except:
