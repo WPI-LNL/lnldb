@@ -3,7 +3,7 @@ from django.contrib import admin
 
 
 # actions
-import reversion
+from reversion.admin import VersionAdmin
 
 
 def enable_show_in_wo_form(modeladmin, request, queryset):
@@ -65,7 +65,7 @@ class EventHoursInline(admin.TabularInline):
     model = Hours
 
 
-class EventAdmin(reversion.VersionAdmin):
+class EventAdmin(VersionAdmin):
     inlines = [EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline]
     filter_horizontal = ('crew', 'crew_chief', 'org')
     search_fields = ['event_name']
@@ -103,7 +103,7 @@ fieldsets = (
 )
 
 
-class OrgAdmin(reversion.VersionAdmin):
+class OrgAdmin(VersionAdmin):
     list_display = ('name', 'shortname', 'email', 'exec_email', 'user_in_charge', 'archived')
     list_filter = ('archived',)
     filter_horizontal = ('accounts', 'associated_users', 'associated_orgs')

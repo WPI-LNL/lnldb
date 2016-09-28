@@ -21,7 +21,7 @@ from django.views.generic import UpdateView, CreateView, DeleteView
 from helpers.mixins import LoginRequiredMixin, SetFormMsgMixin, HasPermMixin, ConditionalFormMixin
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
-import reversion
+from reversion.models import Version
 
 
 @login_required
@@ -476,7 +476,7 @@ def viewevent(request, id):
         raise PermissionDenied
 
     context['event'] = event
-    context['history'] = reversion.get_unique_for_object(event)
+    context['history'] = Version.objects.get_for_object(event).get_unique()
     return render(request, 'uglydetail.html', context)
 
 

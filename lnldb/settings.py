@@ -4,6 +4,7 @@ import os
 import sys
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
+TCP = list(TCP)
 
 
 def here(*x):
@@ -134,14 +135,14 @@ TEMPLATES = [{
             ]),
         ],
         'context_processors':
-            TCP + (
+            TCP + [
                 'django.template.context_processors.request',
                 'data.context_processors.airplane_mode',
                 'data.context_processors.revision',
                 'data.context_processors.analytics',
                 # 'lnldb.processors.staticz',
                 'processors.navs',
-        ),
+        ],
         'debug': DEBUG
     },
 }]

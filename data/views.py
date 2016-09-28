@@ -17,7 +17,7 @@ from data.models import StupidCat
 
 
 # Create your views here.
-import watson
+from watson import search as watson
 
 
 @login_required

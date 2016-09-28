@@ -1,5 +1,8 @@
-import watson
 from django.apps import AppConfig
+try:
+    from watson import search
+except:
+    import watson as search
 
 
 class MeetingsConfig(AppConfig):
@@ -9,4 +12,4 @@ class MeetingsConfig(AppConfig):
     def ready(self):
         # noinspection PyPep8Naming
         Meeting = self.get_model('Meeting')
-        watson.register(Meeting)
+        search.register(Meeting)

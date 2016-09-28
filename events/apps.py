@@ -1,4 +1,7 @@
-import watson
+try:
+    from watson import search
+except:
+    import watson as search
 
 __author__ = 'Jake'
 
@@ -15,13 +18,13 @@ class EventsConfig(AppConfig):
         Fund = self.get_model('Fund')
         Organization = self.get_model('Organization')
 
-        watson.register(Event, store=('id',
+        search.register(Event, store=('id',
                                       'datetime_nice',
                                       'description',
                                       'location__name',
                                       'org',
                                       'status',
                                       'short_services'))
-        watson.register(Organization)
-        watson.register(CCReport)
-        watson.register(Fund)
+        search.register(Organization)
+        search.register(CCReport)
+        search.register(Fund)

@@ -1,9 +1,9 @@
 from meetings.models import *
 from django.contrib import admin
-import reversion
+from reversion.admin import VersionAdmin
 
 
-class MAAdmin(reversion.VersionAdmin):
+class MAAdmin(VersionAdmin):
     list_display = ('added', 'uuid', 'email_to')
 
 
