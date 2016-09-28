@@ -371,6 +371,8 @@ def unreviewed(request, start=None, end=None):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building__shortname').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
+        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -381,6 +383,7 @@ def unreviewed(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("unreviewed")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['proj_hideable'] = True
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -420,6 +423,8 @@ def unbilled(request, start=None, end=None):
     events = events.select_related('location__building__shortname').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
+    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
+        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -429,6 +434,7 @@ def unbilled(request, start=None, end=None):
     context['h2'] = "Events to be Billed"
     context['events'] = events
     context['baseurl'] = reverse("unbilled")
+    context['proj_hideable'] = True
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['cols'] = ['event_name',
                        'org',
@@ -507,6 +513,8 @@ def paid(request, start=None, end=None):
     events = events.select_related('location__building__shortname').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
+    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
+        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
     events, context = datefilter(events, context, start, end)
 
     # if events:
@@ -520,6 +528,7 @@ def paid(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("paid")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['proj_hideable'] = True
     context['cols'] = ['event_name',
                        'org',
                        FakeExtendedField('datetime_start', verbose_name="Event Time"),
@@ -557,6 +566,8 @@ def unpaid(request, start=None, end=None):
     events = events.select_related('location__building__shortname').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
+    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
+        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -566,6 +577,7 @@ def unpaid(request, start=None, end=None):
     context['h2'] = "Pending Payments"
     context['events'] = events
     context['baseurl'] = reverse("unpaid")
+    context['proj_hideable'] = True
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['cols'] = ['event_name',
                        'org',
@@ -593,6 +605,8 @@ def closed(request, start=None, end=None):
     events = events.select_related('location__building__shortname').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('crew_chief')
+    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
+        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -602,6 +616,7 @@ def closed(request, start=None, end=None):
     context['h2'] = "Closed Events"
     context['events'] = events
     context['baseurl'] = reverse("closed")
+    context['proj_hideable'] = True
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['cols'] = ['event_name',
                        'org',
