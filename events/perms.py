@@ -109,6 +109,9 @@ class OrgOwnerPermLogic(AssocUsersCustomPermissionLogic):
                                         'events.transfer_org_ownership', 'events.deprecate_org',
                                         'events.list_org_hidden_events')
 
+class ReportAuthorPermLogic(AssocUsersCustomPermissionLogic):
+    field_name = 'crew_chief'
+    perms = ('events.delete_ccreport', 'events.change_ccreport')
 
 PERMISSION_LOGICS = (
     ('events.Event', CrewChiefPermLogic()),
@@ -119,4 +122,5 @@ PERMISSION_LOGICS = (
     ('events.Event', EventOrgOwnerPermLogic()),
     ('events.Organization', OrgMemberPermLogic()),
     ('events.Organization', OrgOwnerPermLogic()),
+    ('events.CCReport', ReportAuthorPermLogic()),
 )

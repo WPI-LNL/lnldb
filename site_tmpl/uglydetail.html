@@ -406,10 +406,10 @@
                                 Last Updated: {{ report.updated_on }}
                             {% endif %}
                             {% if not event.closed or not event.cancelled %}
-                                {% permission request.user has 'events.change_cc_report' of report %}
+                                {% permission request.user has 'events.change_ccreport' of report %}
                                     [<a href="{% url "event-updccr" event.id report.id %}">Edit</a>]
                                 {% endpermission %}
-                                {% permission request.user has 'events.delete_cc_report' of report %}
+                                {% permission request.user has 'events.delete_ccreport' of report %}
                                     [<a href="{% url "event-rmccr" event.id report.id %}">Delete</a>]
                                 {% endpermission %}
                             {% endif %}
