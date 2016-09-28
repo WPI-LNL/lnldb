@@ -56,7 +56,7 @@ def generate_projection_pdf(request):
 
     # Render html content through html template with context
     template = get_template('pdf_templates/projection.html')
-    html = template.render(Context(data))
+    html = template.render(data)
     if 'raw' in request.GET and bool(request.GET['raw']):
         return HttpResponse(html)
     # write file
@@ -79,7 +79,7 @@ def generate_event_pdf(request, id):
 
     # Render html content through html template with context
     template = get_template('pdf_templates/events.html')
-    html = template.render(Context(data))
+    html = template.render(data)
 
     if 'raw' in request.GET and bool(request.GET['raw']):
         return HttpResponse(html)
@@ -115,7 +115,7 @@ def generate_event_bill_pdf(request, id):
     data['extras'] = extras
     # Render html content through html template with context
     template = get_template('pdf_templates/bill-itemized.html')
-    html = template.render(Context(data))
+    html = template.render(data)
 
     if 'raw' in request.GET and bool(request.GET['raw']):
         return HttpResponse(html)
@@ -144,7 +144,7 @@ def generate_pdfs_standalone(ids=None):
     data['events'] = events
 
     template = get_template('pdf_templates/events.html')
-    html = template.render(Context(data))
+    html = template.render(data)
 
     pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'event-multi.pdf'), "w+b")
     pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
@@ -171,7 +171,7 @@ def generate_event_pdf_multi(request, ids=None):
 
     # Render html content through html template with context
     template = get_template('pdf_templates/events.html')
-    html = template.render(Context(data))
+    html = template.render(data)
 
     if 'raw' in request.GET and bool(request.GET['raw']):
         return HttpResponse(html)

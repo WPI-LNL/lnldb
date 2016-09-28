@@ -2,7 +2,6 @@
 
 from django.conf import settings
 from django.shortcuts import render
-from django.template import RequestContext
 from formtools.wizard.views import NamedUrlSessionWizardView
 
 from emails.generators import DefaultLNLEmailGenerator as DLEG
@@ -52,8 +51,7 @@ class EventWizard(NamedUrlSessionWizardView):
             emailp = DLEG(subject="New Event Submitted w/ Projection", to_emails=[settings.EMAIL_TARGET_HP],
                           body=email_bodyp)
             emailp.send()
-        context = RequestContext(self.request)
-        return render(self.request, 'wizard_finished.html', context)
+        return render(self.request, 'wizard_finished.html', {})
 
     # fills in form info on the first step
     def get_form_initial(self, step):
