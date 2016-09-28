@@ -164,9 +164,9 @@
                 {% endpermission %}
                 {% permission request.user has 'data.search' %}
                 <li>
-                    <form class="navbar-form navbar-left" action="{% url "search" %}" method="GET" role="search">
+                    <form class="navbar-form navbar-left" action="{% url "events-search" %}" method="GET" role="search">
                         <div class="form-group">
-                            <input type="text" class="form-control" name="q" placeholder="Search Everything"
+                            <input type="text" class="form-control" name="q" placeholder="Search Events"
                                     {% if q %}
                                    value="{{ q }}"
                                     {% endif %}
