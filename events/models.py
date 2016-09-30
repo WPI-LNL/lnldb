@@ -4,6 +4,7 @@ from django.db import models
 from django.conf import settings
 # Create your models here.
 from django.core.urlresolvers import reverse
+from django.core.validators import MinLengthValidator
 from django import forms
 from django.db.models import Manager
 from django.utils.functional import cached_property
@@ -868,7 +869,7 @@ class CCReport(models.Model):
     glyphicon = 'comment'
     crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL)
     event = models.ForeignKey(Event)
-    report = models.TextField()
+    report = models.TextField(validators=[MinLengthValidator(20)])
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     for_service_cat = models.ManyToManyField(Category, verbose_name="Services", blank=True)
