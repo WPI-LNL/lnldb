@@ -88,7 +88,7 @@ def denial(request, id):
             # confirm with user
             messages.add_message(request, messages.INFO, 'Denied Event')
             if e.contact and e.contact.email:
-                email_body = 'Your event "%s" has been denied! \n Reason: "%s"' % (
+                email_body = 'Sorry, but your event "%s" has been denied. \n Reason: "%s"' % (
                     event.event_name, event.cancelled_reason)
                 email = DLEG(subject="Event Denied", to_emails=[e.contact.email], body=email_body,
                              bcc=[settings.EMAIL_TARGET_VP])
@@ -205,7 +205,10 @@ def cancel(request, id):
     else:
         targets = []
     
-    email_body = 'The event "%s" has been cancelled by %s! "' % ( event.event_name, str(request.user))
+    email_body = 'The event "%s" has been cancelled by %s. If this is incorrect, please contact our vice president at lnl-vp@wpi.edu.' % ( event.event_name, str(request.user))
+    if request.user.email:
+        email_body = email_body[:-1]
+        email_body += " or try them at %s." % request.user.email
     email = DLEG(subject="Event Cancelled", to_emails=targets, body=email_body, bcc=[settings.EMAIL_TARGET_VP])
     email.send()
     return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
