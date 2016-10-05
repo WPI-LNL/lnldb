@@ -68,8 +68,8 @@ def dbg_land(request):
 @permission_required('events.view_event', raise_exception=True)
 def event_search(request):
     context = {}
-    if request.POST:
-        q = request.POST['q']
+    if request.GET:
+        q = request.GET['q']
         context['q'] = q
         if len(q) < 3:
             context['msg'] = "Search Query Too Short, please try something longer"

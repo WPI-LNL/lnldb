@@ -11,7 +11,7 @@
 </div>
 <div class="row">
     <div class="col-md-12">
-        <form class="form-search" action="" method="POST" role="form">
+        <form class="form-search" action="" method="GET" role="form">
             <div class="input-group">
                 {% csrf_token %}
                 <input type="text" class="col-md-10 form-control" name="q" placeholder="Search Events" value="{{q}}">

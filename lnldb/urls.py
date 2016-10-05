@@ -339,8 +339,6 @@ urlpatterns = patterns('',
                        # url(r'^db/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
                        # url(r'^db/misc/users/unsorted/$', 'members.views.limbousers', name="users-limbo"),
                        # # url(r'^db/misc/users/add/$', LNLAdd.as_view(), name="users-add"),
-                       url(r'^db/search$', "events.views.indices.event_search", name="events-search"),
-
 
                        # projection
                        url(r'^db/projection/list/$', 'projection.views.plist_detail',
