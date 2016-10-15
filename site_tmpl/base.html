@@ -58,7 +58,12 @@
                     });
 
                 // Collapse main navbar if too big
-                $("div.collapse ul.navbar-nav").flexMenu();
+					 function autoresize_nav (media_query) {
+								$("div.collapse ul.navbar-nav").flexMenu({'undo': !media_query.matches});
+					 }
+				    var mq = window.matchMedia('only screen and (min-width : 768px)'); // same as bootstrap sm
+					 mq.addListener(autoresize_nav);
+					 autoresize_nav(mq);
 
                 /*
                  Save tabs across reloads
