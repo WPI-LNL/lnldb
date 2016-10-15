@@ -14,7 +14,7 @@ from projection.models import Projectionist, PITLevel
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.contrib.humanize.templatetags.humanize import intcomma
-
+from django.contrib.staticfiles import finders
 
 # Convert HTML URIs to absolute system paths so xhtml2pdf can access those resources
 def link_callback(uri, rel):
@@ -28,7 +28,8 @@ def link_callback(uri, rel):
     if uri.startswith(murl):
         path = os.path.join(mroot, uri.replace(murl, ""))
     elif uri.startswith(surl):
-        path = os.path.join(sroot, uri.replace(surl, ""))
+        search_url = uri.replace(surl, "")
+        path = finders.find(search_url) or os.path.join(sroot, search_url) 
     else:
         path = ""
 
