@@ -551,7 +551,7 @@
                             <td class="tdra">${{ event.cost_total_pre_discount }} </td>
                         </tr>
                         <tr class="warning">
-                                    <td>15% Discount Applied</td>
+                                    <td>Lighting/Sound Combo Discount Applied</td>
                                     <td style="color:red;" class="tdra">-${{ event.discount_value|floatformat:2}}</td>
                                 </tr>
                         {% endif %}
@@ -572,7 +572,11 @@
                         </tr>
                     </table>
                     <h2> Bills </h2>
+							{% if event.reviewed %}
                     <a class="btn btn-primary" href="{% url 'events-pdf-bill' event.id %}">Download Invoice</a>
+							{% else %}
+                    <a class="btn btn-primary" href="{% url 'events-pdf-bill' event.id %}">Download Quote</a>
+							{% endif %}
                     {% if event.billings %}
                         <table class="table">
                             <thead>
