@@ -909,7 +909,10 @@ class Fund(models.Model):
 
     @property
     def fopal(self):
-        return "%s-%s-%s" % (self.fund, self.organization, self.account)
+        return "%s-%s-%s" %  self.as_tuple()
+
+    def as_tuple(self):
+        return (self.fund, self.organization, self.account)
 
     def get_absolute_url(self):
         return reverse('admin-fundedit', args=[self.id])

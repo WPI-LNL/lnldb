@@ -15,6 +15,8 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.contrib.humanize.templatetags.humanize import intcomma
 from django.contrib.staticfiles import finders
+from .overlay import make_idt_single
+from .utils import concat_pdf
 
 # Convert HTML URIs to absolute system paths so xhtml2pdf can access those resources
 def link_callback(uri, rel):
@@ -121,6 +123,11 @@ def generate_event_bill_pdf(request, id):
     # Write PDF to file
     pdf_file = BytesIO()
     pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    
+    # if it's actually an invoice, attach an idt, eh?
+    if event.reviewed:
+        idt = make_idt_single(event, request.user)
+        pdf_file = concat_pdf(pdf_file, idt)
 
     # Return PDF document through a Django HTTP response
     resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
@@ -172,6 +179,6 @@ def generate_event_pdf_multi(request, ids=None):
     pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
     # Return PDF document through a Django HTTP response
-    resp = HttpResponse(pdf, content_type='application/pdf')
-    resp['Content-Disposition'] = 'inline; filename="events.pdf"' % slugify(event.event_name)
+    resp = HttpResponse(pdf_file, content_type='application/pdf')
+    resp['Content-Disposition'] = 'inline; filename="events.pdf"'
     return resp

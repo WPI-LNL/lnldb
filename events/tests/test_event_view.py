@@ -26,19 +26,6 @@ class EventBasicViewTest(TestCase):
 
         # later: test post
 
-    def test_pdf(self):
-        response = self.client.get(reverse('events-pdf', args=[self.e.pk]))
-        self.assertEqual(response.status_code, 200)
-
-    # def test_pdf_bill(self):
-    #     response = self.client.get(reverse('events-pdf-bill', args=[self.e.pk]))
-    #     self.assertEqual(response.status_code, 200)
-    # # Currently requires a collectstatic. Let's not test until that's fixed
-
-    def test_pdf_multi(self):
-        response = self.client.get(reverse('events-pdf-multi', args=["%s,%s" % (self.e.pk, self.e2.pk)]))
-        self.assertEqual(response.status_code, 200)
-
     def test_cancel(self):
         response = self.client.post(reverse('event-cancel', args=[self.e.pk]))
         self.assertEqual(response.status_code, 302)
