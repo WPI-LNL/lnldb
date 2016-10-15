@@ -29,9 +29,9 @@
 
                 </td>
                 <td class="head">
-                    <h1 class="megatext">INVOICE</h1>
+                    <h1 class="megatext">{% if event.reviewed %}INVOICE{% else %}QUOTE{% endif %}</h1>
                     <h2 class="subtext">{{ event }}</h2>
-                    <h2 class="subtext"><b>Invoice Date:</b> {% now "M. j, Y" %}</h2>
+                    <h2 class="subtext"><b>Generated Date:</b> {% now "M. j, Y" %}</h2>
                 </td>
                 </tr>
             </table>
@@ -111,9 +111,14 @@
             </table>
         <hr>
 <table class="center">
+{% if event.reviewed %}
     <tr><td>Please complete the attached IDT and return it to the Lens and Lights mailbox in the Student Activities Office.</td></tr>
     <tr><td><p>For a quick guide on how to fill out the attached interdeparmental transfer form, see <a class="unstyled" href="http://lnl.wpi.edu/idt-help">lnl.wpi.edu/idt-help</a>.</td></tr>
     <tr><td><p>If you have any questions concerning this invoice, contact our treasurer at <a class="unstyled" href="mailto:lnl-t@wpi.edu">lnl-t@wpi.edu</a>.</td></tr>
+{% else %}
+    <tr><td>This is a quote of the expected charges, and may change based on a variety of factors, including additional equipment requests at the event. We will do our best to inform the listed contact of any charges in advance, but this is not guaranteed.</td></tr>
+    <tr><td><p>If you have any questions concerning this quote, contact our vice-president at <a class="unstyled" href="mailto:lnl-vp@wpi.edu">lnl-vp@wpi.edu</a>.</td></tr>
+{% endif %}
     <tr>
         <td>
             <center>THANK YOU FOR YOUR BUSINESS!</center>
