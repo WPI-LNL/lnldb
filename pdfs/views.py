@@ -2,6 +2,7 @@ import datetime
 
 import os
 from django.utils.text import slugify
+from io import BytesIO
 from xhtml2pdf import pisa
 from django.template.loader import get_template
 from django.template import Context
@@ -60,14 +61,11 @@ def generate_projection_pdf(request):
     if 'raw' in request.GET and bool(request.GET['raw']):
         return HttpResponse(html)
     # write file
-    pdf_pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'projection-%s.pdf' % now.date()), "w+b")
-    pisastatus = pisa.CreatePDF(html, dest=pdf_pdf_file, link_callback=link_callback)
+    pdf_file = BytesIO()
+    pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
     # return doc
-    pdf_pdf_file.seek(0)
-    pdf = pdf_pdf_file.read()
-    pdf_pdf_file.close()  # Don't forget to close the file handle
-    return HttpResponse(pdf, content_type='application/pdf')
+    return HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
 
 
 @login_required
@@ -85,14 +83,13 @@ def generate_event_pdf(request, id):
         return HttpResponse(html)
 
     # Write PDF to file
-    pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'event-%s.pdf' % event.id), "w+b")
+    pdf_file = BytesIO()
     pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
     # Return PDF document through a Django HTTP response
-    pdf_file.seek(0)
-    pdf = pdf_file.read()
-    pdf_file.close()  # Don't forget to close the file handle
-    return HttpResponse(pdf, content_type='application/pdf')
+    resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = 'inline; filename="%s.pdf"' % slugify(event.event_name)
+    return resp
 
 
 def currency(dollars):
@@ -121,14 +118,11 @@ def generate_event_bill_pdf(request, id):
         return HttpResponse(html)
 
     # Write PDF to file
-    pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'pay-%s.pdf' % event.id), "w+b")
+    pdf_file = BytesIO()
     pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
     # Return PDF document through a Django HTTP response
-    pdf_file.seek(0)
-    pdf = pdf_file.read()
-    pdf_file.close()  # Don't forget to close the file handle
-    resp = HttpResponse(pdf, content_type='application/pdf')
+    resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
     resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
     return resp
 
@@ -146,14 +140,10 @@ def generate_pdfs_standalone(ids=None):
     template = get_template('pdf_templates/events.html')
     html = template.render(data)
 
-    pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'event-multi.pdf'), "w+b")
+    pdf_file = BytesIO()
     pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
-    pdf_file.seek(0)
-    pdf = pdf_file.read()
-    pdf_file.close()
-
-    return pdf
+    return pdf_file.get_value()
 
 
 def generate_event_pdf_multi(request, ids=None):
@@ -177,11 +167,10 @@ def generate_event_pdf_multi(request, ids=None):
         return HttpResponse(html)
 
     # Write PDF to file
-    pdf_file = open(os.path.join(settings.MEDIA_ROOT, 'event-multi.pdf'), "w+b")
+    pdf_file = BytesIO()
     pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
     # Return PDF document through a Django HTTP response
-    pdf_file.seek(0)
-    pdf = pdf_file.read()
-    pdf_file.close()  # Don't forget to close the file handle
-    return HttpResponse(pdf, content_type='application/pdf')
+    resp = HttpResponse(pdf, content_type='application/pdf')
+    resp['Content-Disposition'] = 'inline; filename="events.pdf"' % slugify(event.event_name)
+    return resp
