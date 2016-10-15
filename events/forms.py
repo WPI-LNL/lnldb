@@ -228,6 +228,7 @@ class EventApprovalForm(forms.ModelForm):
                     Field('datetime_setup_complete', label="Setup Finish", css_class="dtp"),
                     Field('datetime_start', label="Event Start", css_class="dtp"),
                     Field('datetime_end', label="Event End", css_class="dtp"),
+                    Field('org'),
                     Field('billing_fund'),
                     Field('billed_by_semester', label="Billed by semester (for films)"),
                     # Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
@@ -255,7 +256,7 @@ class EventApprovalForm(forms.ModelForm):
         model = Event
         fields = ['description', 'internal_notes', 'datetime_start', 'datetime_end', 'billing_fund',
                   'billed_by_semester', 'datetime_setup_complete', 'lighting', 'lighting_reqs',
-                  'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs']
+                  'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs', 'org']
         widgets = {
             'description': PagedownWidget(),
             'internal_notes': PagedownWidget,
@@ -265,6 +266,7 @@ class EventApprovalForm(forms.ModelForm):
             'otherservice_reqs': PagedownWidget()
         }
 
+    org = AutoCompleteSelectMultipleField('Orgs', required=False, label="Client")
     billing_fund = AutoCompleteSelectField("Funds", required=False)
     datetime_start = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event Start")
     datetime_end = forms.SplitDateTimeField(initial=datetime.datetime.now(), label="Event End")
