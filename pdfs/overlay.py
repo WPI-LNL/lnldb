@@ -43,13 +43,13 @@ def make_idt_overlay(dep_name, fund, amount, proj_amt=0, person_name=None, descr
     c.drawString(2.15*inch,6.25*inch,"Lens and Lights")
     c.drawString(7.5*inch,6.25*inch, str(date.today()))
     if dep_name:
-        c.drawString(2.15*inch,6.75*inch,dep_name)
+        c.drawString(2.15*inch,6.75*inch,str(dep_name))
 
     if person_name:
-        c.drawString(7.5*inch,6.75*inch,person_name)
+        c.drawString(7.5*inch,6.75*inch,str(person_name))
 
     if description:
-        c.drawString(0.6*inch,2.15*inch, description)
+        c.drawString(0.6*inch,2.15*inch, str(description))
 
     # amounts on their side
     c.drawCentredString(4.3*inch,5.15*inch,to_cash(amount + proj_amt))
