@@ -125,7 +125,7 @@ def generate_event_bill_pdf(request, id):
     pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
     
     # if it's actually an invoice, attach an idt, eh?
-    if event.reviewed:
+    if event.reviewed and "invoiceonly" not in request.GET:
         idt = make_idt_single(event, request.user)
         pdf_file = concat_pdf(pdf_file, idt)
 
