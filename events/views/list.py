@@ -371,7 +371,7 @@ def unreviewed(request, start=None, end=None):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building__shortname').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
-    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
+    if not request.GET.get('hidedp') == '0':
         events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
     events, context = datefilter(events, context, start, end)
 
