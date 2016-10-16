@@ -64,7 +64,7 @@ def approval(request, id):
 		if event.org.exists() and unbilled_events:
 			messages.add_message(request, messages.WARNING, "Organization has unbilled events: %s" % ", ".join(unbilled_events))
 			form = EventApprovalForm(instance=event)
-			context['formset'] = form
+    context['formset'] = form
     return render(request, 'form_crispy.html', context)
 
 
