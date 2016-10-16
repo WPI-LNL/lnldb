@@ -3,9 +3,6 @@
 import os
 import sys
 
-from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS as TCP
-TCP = list(TCP)
-
 
 def here(*x):
     return os.path.join(os.path.abspath(os.path.dirname(__file__)), *x)
@@ -134,8 +131,11 @@ TEMPLATES = [{
                 'django.template.loaders.app_directories.Loader',
             ]),
         ],
-        'context_processors':
-            TCP + [
+        'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.request',
                 'data.context_processors.airplane_mode',
                 'data.context_processors.revision',
