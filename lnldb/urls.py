@@ -1,7 +1,7 @@
 import debug_toolbar
 from ajax_select import urls as ajax_select_urls
 from django.conf import settings
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 
 from accounts.forms import LoginForm
 from events.cal import EventFeed, FullEventFeed, LightEventFeed
@@ -61,7 +61,7 @@ handler500 = 'data.views.err500'
 
 # generics
 
-urlpatterns = patterns('',
+urlpatterns = [
                        # Examples:
                        # url(r'^$', 'lnldb.views.home', name='home'),
                        # url(r'^lnldb/', include('lnldb.foo.urls')),
@@ -380,4 +380,5 @@ urlpatterns = patterns('',
 
                        # debugging
                        url(r'^hijack/', include('hijack.urls')),
-                       url(r'^__debug__/', include(debug_toolbar.urls)))
+                       url(r'^__debug__/', include(debug_toolbar.urls))
+]
