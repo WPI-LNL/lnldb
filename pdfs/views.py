@@ -151,7 +151,7 @@ def generate_pdfs_standalone(ids=None):
     pdf_file = BytesIO()
     pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
-    return pdf_file.get_value()
+    return pdf_file.getvalue()
 
 
 def generate_event_pdf_multi(request, ids=None):
