@@ -59,12 +59,12 @@ def approval(request, id):
         else:
             context['formset'] = form
     else:
-		unbilled_events = Event.objects.filter(org__in=event.org.all()).filter(billings__date_paid__isnull=True, billings__date_billed__isnull=False).filter(closed=False).filter(cancelled=False).filter(test_event=False)
-		unbilled_events = map(str, unbilled_events)
-		if event.org.exists() and unbilled_events:
-			messages.add_message(request, messages.WARNING, "Organization has unbilled events: %s" % ", ".join(unbilled_events))
-			form = EventApprovalForm(instance=event)
-    context['formset'] = form
+        unbilled_events = Event.objects.filter(org__in=event.org.all()).filter(billings__date_paid__isnull=True, billings__date_billed__isnull=False).filter(closed=False).filter(cancelled=False).filter(test_event=False)
+        unbilled_events = map(str, unbilled_events)
+        if event.org.exists() and unbilled_events:
+            messages.add_message(request, messages.WARNING, "Organization has unbilled events: %s" % ", ".join(unbilled_events))
+        form = EventApprovalForm(instance=event)
+        context['formset'] = form
     return render(request, 'form_crispy.html', context)
 
 
