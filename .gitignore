@@ -2,6 +2,7 @@
 local_settings.py
 csvinfo/*
 env[(-l)(-d)]*/*
+.tox/*
 runtime/*
 wheelhouse/*
 src/*
