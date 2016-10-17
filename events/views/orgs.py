@@ -115,7 +115,7 @@ def fund_edit(request, id=None, org=None):
                 except ObjectDoesNotExist:
                     messages.add_message(request, messages.ERROR, 'Failed to add fund to organization.')
             # return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
-            return HttpResponseRedirect(reverse('events.views.orgs.vieworgs'))
+            return HttpResponseRedirect(reverse('orgs:list'))
         else:
             context['formset'] = formset
             messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')

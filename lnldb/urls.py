@@ -214,6 +214,7 @@ urlpatterns = [
 
                        # meetings
                        url(r'^db/meetings/', include('meetings.urls', namespace='meetings')),
+                       url(r'^db/clients/', include('events.urls.orgs', namespace='orgs')),
 
                        # projection
                        url(r'^db/projection/list/$', 'projection.views.plist_detail',
