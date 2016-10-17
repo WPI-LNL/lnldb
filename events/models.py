@@ -913,7 +913,7 @@ class Fund(models.Model):
         return (self.fund, self.organization, self.account)
 
     def get_absolute_url(self):
-        return reverse('admin-fundedit', args=[self.id])
+        return reverse('orgs:fundedit', args=[self.id])
 
     def __unicode__(self):
         return "%s (%s)" % (self.name, self.fopal)

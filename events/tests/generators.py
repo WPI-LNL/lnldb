@@ -2,8 +2,8 @@ from datetime import timedelta
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
 from django.utils import timezone
-from factory import DjangoModelFactory, SubFactory, Sequence
-from events.models import Event, Location, Organization, Building, CCReport
+from factory import DjangoModelFactory, SubFactory, Sequence, Faker
+from events.models import Event, Location, Organization, Building, CCReport, Fund
 
 __author__ = 'jmerdich'
 
@@ -13,7 +13,7 @@ class UserFactory(DjangoModelFactory):
         model = settings.AUTH_USER_MODEL
         django_get_or_create = ('username',)
     username = Sequence(lambda n: 'testuser%d' % n)
-    email = 'someone@example.com'
+    email = Faker('email')
     is_superuser = True
     password = '12345'
 
@@ -44,7 +44,7 @@ class EventFactory(DjangoModelFactory):
     datetime_setup_complete = timezone.now()
     datetime_start = timezone.now() + timedelta(hours=1)
     datetime_end = timezone.now() + timedelta(hours=3)
-    event_name = "Test event"
+    event_name = Faker('company') 
     location = SubFactory(LocationFactory)
     submitted_by = SubFactory(UserFactory)
 
@@ -59,3 +59,12 @@ class OrgFactory(DjangoModelFactory):
     class Meta:
         model = Organization
     user_in_charge = SubFactory(UserFactory)
+
+class FundFactory(DjangoModelFactory):
+    class Meta:
+        model = Fund
+    organization = Sequence(lambda n:n)
+    fund = Sequence(lambda n:n)
+    account = Sequence(lambda n:n)
+    name = Faker('company') 
+    notes = Faker('text')

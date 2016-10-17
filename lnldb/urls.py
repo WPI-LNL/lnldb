@@ -279,11 +279,6 @@ urlpatterns = [
                        url(r'^list/json(/*?.*)*$', 'events.cal.cal_json'),
 
                        # orgs (clients)
-                       url(r'^db/clients/funds/edit/(?P<id>[0-9]+)/$', 'events.views.orgs.fund_edit',
-                           name="admin-fundedit"),
-                       url(r'^db/clients/funds/add/$', 'events.views.orgs.fund_edit', name="admin-fundadd"),
-                       url(r'^db/clients/funds/add/(?P<org>[0-9]+)/$', 'events.views.orgs.fund_edit',
-                           name="admin-fundaddorg"),
 
                        # nice include statements (ie. the future)
                        url(r'^db/inventory/', include('inventory.urls', namespace='inventory')),

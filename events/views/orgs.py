@@ -84,14 +84,14 @@ def addeditorgs(request, org_id=None):
 
 
 @login_required
-def fund_edit(request, id=None, org=None):
+def fund_edit(request, fund_id=None, org=None):
     """form for adding an fund """
     # need to fix this
     context = {}
-    edit_perms = ('events.modify_fund',)
+    edit_perms = ('events.change_fund',)
     mk_perms = ('events.add_fund',)
-    if id:
-        instance = get_object_or_404(Fund, pk=id)
+    if fund_id:
+        instance = get_object_or_404(Fund, pk=fund_id)
         msg = "Edit Fund"
         if not (request.user.has_perms(edit_perms) or
                 request.user.has_perms(edit_perms, instance)):

@@ -55,20 +55,20 @@
                 {% for f in org.accounts.all %}
                     {% permission user has 'events.edit_fund' of f %}
                 <tr><td>
-                    <b><a href="{% url 'admin-fundedit' f.id %}">{{ f }}</a></b>
+                    <b><a href="{% url 'orgs:fundedit' f.id %}">{{ f }}</a></b>
                     {% if f.notes %}{{ f.notes }}{% endif %}
                 </td></tr>
                         {% elpermission user has 'events.view_fund' of f %}
                         <tr>
                             <td>
-                                <b><a href="{% url 'admin-fundedit' f.id %}">{{ f }}</a></b>
+                                <b><a href="{% url 'orgs:fundedit' f.id %}">{{ f }}</a></b>
                                 {% if f.notes %}{{ f.notes }}{% endif %}
                             </td>
                         </tr>
                     {% endpermission %}
                 {% endfor %}
                 <tr><td>
-                    <b><a href="{% url 'admin-fundaddorg' org.id %}">[Add New]</a></b>
+                    <b><a href="{% url 'orgs:fundadd' org.id %}">[Add New]</a></b>
                 </td></tr>
                 {% permission user has 'events.view_verifications' of org %}
                 <tr>
