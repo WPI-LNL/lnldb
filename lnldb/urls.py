@@ -106,8 +106,6 @@ urlpatterns = [
    # }}}
 
    # 'MY' {{{
-   url(r'^my/workorders/attach/(?P<id>[0-9]+)/$', 'events.views.flow.assignattach_external',
-       name="my-wo-attach"),
    url(r'^my/orgs/$', 'events.views.my.myorgs'),
    url(r'^my/orgs/form/$', 'events.views.my.myorgform', name="selfserivceorg"),
    url(r'^my/orgs/incharge/$', 'events.views.orgs.orglist', name="my-orgs-incharge-list"),

@@ -42,3 +42,14 @@ class MyViewTest(TestCase):
         response = self.client.get(reverse("my:workorders"))
         self.assertContains(response, self.e.event_name)
         # I see the events I submitted
+
+
+    def test_attach(self):
+        # I can get to the attachments page of an event I submitted
+        self.e.submitted_by = self.user
+        self.e.save()
+
+        response = self.client.get(reverse("my:event-attach", args=[self.e.pk]))
+        self.assertContains(response, self.e.event_name)
+
+        # TODO: check attachments functionality more thoroughly

@@ -23,7 +23,7 @@
                 <td>{{ event.status }}</td>
                 <td> 
                     {% if not event.closed and not event.cancelled and not event.over %}
-                    <a class="btn btn-primary" href="{% url "events.views.flow.assignattach_external" event.id %}">Attachments</a>
+                    <a class="btn btn-primary" href="{% url "my:event-attach" event.id %}">Attachments</a>
                     {% endif %}
                     <a class="btn btn-default"  href="{% url 'my-events-pdf' event.id %}">Workorder PDF </a>
                     {# <a class="btn btn-default">Repeat </a> #}
@@ -33,4 +33,4 @@
     {% endfor %}
 </table>
 
-{% endblock %}assignattach_external
+{% endblock %}
