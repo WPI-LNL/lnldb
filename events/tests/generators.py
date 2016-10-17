@@ -54,3 +54,8 @@ class CCReportFactory(DjangoModelFactory):
 
     event = SubFactory(Event)
     crew_chief = SubFactory(UserFactory)
+
+class OrgFactory(DjangoModelFactory):
+    class Meta:
+        model = Organization
+    user_in_charge = SubFactory(UserFactory)
