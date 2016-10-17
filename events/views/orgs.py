@@ -70,7 +70,7 @@ def addeditorgs(request, id=None):
             org = formset.save()
             messages.add_message(request, messages.SUCCESS, 'Changes saved.')
             # return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
-            return HttpResponseRedirect(reverse('events.views.orgs.orgdetail', kwargs={'id': org.pk}))
+            return HttpResponseRedirect(reverse('orgs:detail', kwargs={'org_id': org.pk}))
         else:
             context['formset'] = formset
             messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
@@ -111,7 +111,7 @@ def fund_edit(request, id=None, org=None):
                 try:
                     org_instance = Organization.objects.get(pk=org)
                     org_instance.accounts.add(instance)
-                    return HttpResponseRedirect(reverse('events.views.orgs.orgdetail', args=(org,)))
+                    return HttpResponseRedirect(reverse('orgs:detail', args=(org,)))
                 except ObjectDoesNotExist:
                     messages.add_message(request, messages.ERROR, 'Failed to add fund to organization.')
             # return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
@@ -129,11 +129,11 @@ def fund_edit(request, id=None, org=None):
 
 
 @login_required
-def orgdetail(request, id):
+def orgdetail(request, org_id):
     context = {}
     perms = ('events.view_org',)
     try:
-        org = Organization.objects.prefetch_related('accounts', 'associated_users').get(pk=id)
+        org = Organization.objects.prefetch_related('accounts', 'associated_users').get(pk=org_id)
     except (Organization.DoesNotExist, Organization.MultipleObjectsReturned):
         raise Http404('No Organization matches the given query.')
     context['events'] = Event.objects.filter(org=org).prefetch_related('hours__user', 'ccinstances__crew_chief',
@@ -271,4 +271,4 @@ class OrgVerificationCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, C
         return super(OrgVerificationCreate, self).form_valid(form)
 
     def get_success_url(self):
-        return reverse("admin-orgdetail", args=(self.kwargs['org'],))
+        return reverse("orgs:detail", args=(self.kwargs['org'],))

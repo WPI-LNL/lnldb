@@ -18,7 +18,7 @@
             <a href="{% url "accounts:detail" event.contact.id %}">{{ event.contact.get_full_name }}</a>{% else %}No
             Contact Set {% endif %}
             <br/>
-            Client(s) {% for org in event.org.all %}<span class="text-muted"><a href="{% url "admin-orgdetail" org.id %}">{{ org.retname }} </a>Last Verified: {% if org.verifications.exists %} {{ org.verifications.latest.date }} {% else %} Never {% endif %}</span>{% endfor %}
+            Client(s) {% for org in event.org.all %}<span class="text-muted"><a href="{% url "orgs:detail" org.id %}">{{ org.retname }} </a>Last Verified: {% if org.verifications.exists %} {{ org.verifications.latest.date }} {% else %} Never {% endif %}</span>{% endfor %}
         </h2>
     </div>
     <div class="col-md-4">

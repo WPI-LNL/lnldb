@@ -12,3 +12,7 @@ class OrgViewTest(TestCase):
     def test_list(self):
         response = self.client.get(reverse("orgs:list"))
         self.assertContains(response, self.o1.name)
+    
+    def test_detail(self):
+        response = self.client.get(reverse("orgs:detail", args=(self.o1.pk,)))
+        self.assertContains(response, self.o1.name)

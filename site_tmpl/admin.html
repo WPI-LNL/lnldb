@@ -31,7 +31,7 @@
                             <td>{{event.datetime_end}}</td>
                             <td>
                                 {% for org in event.org.all %}
-                                <a href="{% url "admin-orgdetail" org.id %}">{{org.name}}</a>
+                                <a href="{% url "orgs:detail" org.id %}">{{org.name}}</a>
                                 {% endfor %}
                             </td>
                             <td>{{event.location}}</td>

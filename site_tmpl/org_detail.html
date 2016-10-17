@@ -106,7 +106,7 @@
             <h3>Associated Orgs</h3>
             <ul class="list-unstyled">
                 {% for o in org.associated_orgs.all %}
-                <li><a href="{% url "admin-orgdetail" o.id %}">{{o}}</a></li>
+                <li><a href="{% url "orgs:detail" o.id %}">{{o}}</a></li>
                 {% empty %}
                 <li>No Associated Orgs</li>
                 {% endfor %}

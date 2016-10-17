@@ -9,7 +9,7 @@
         {% if result.object.phone %}| Phone: {{ result.object.phone }} {% endif %}
         {% if result.object.mdc %}| MDC: {{ result.object.mdc }}{% endif %}</h3>
     {% if result.object.orgowner.exists %}
-        <p><b>Leads:</b> {{ result.object.orgowner|linkify_join:"admin-orgdetail" }}</p>{% endif %}
+        <p><b>Leads:</b> {{ result.object.orgowner|linkify_join:"orgs:detail" }}</p>{% endif %}
     {% if result.object.orgusers.exists %}
-        <p><b>Member:</b> {{ result.object.orgusers|linkify_join:"admin-orgdetail" }}</p>{% endif %}
+        <p><b>Member:</b> {{ result.object.orgusers|linkify_join:"orgs:detail" }}</p>{% endif %}
 {% endblock %}

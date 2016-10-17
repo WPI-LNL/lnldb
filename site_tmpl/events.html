@@ -116,7 +116,7 @@
                         {% elif field.name == 'org' %}
                             <td class="event-orgs">
                                 {% for org in event.org.all %}
-                                    <a href="{% url "admin-orgdetail" org.id %}">{{ org.name }}</a>
+                                    <a href="{% url "orgs:detail" org.id %}">{{ org.name }}</a>
                                 {% endfor %}
                             </td>
 

@@ -12,13 +12,13 @@
     </tr>
     {% for org in ownedorgs %}
             <tr>
-                <td><a href="{% url 'events.views.orgs.orgdetail' org.pk %}">{{ org }}</a></td>
+                <td><a href="{% url 'orgs:detail' org.pk %}">{{ org }}</a></td>
                 <td>Owner</td>
             </tr>
     {% endfor %}
     {% for org in memberorgs %}
         <tr>
-            <td><a href="{% url 'events.views.orgs.orgdetail' org.pk %}">{{ org }}</a></td>
+            <td><a href="{% url 'orgs:detail' org.pk %}">{{ org }}</a></td>
             <td>Member</td>
         </tr>
     {% endfor %}

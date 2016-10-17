@@ -965,7 +965,7 @@ class Organization(models.Model):  # AKA Client
         return self.shortname or self.name
 
     def get_absolute_url(self):
-        return reverse('admin-orgdetail', args=[self.id])
+        return reverse('orgs:detail', args=[self.id])
 
     class Meta:
         ordering = ['name']

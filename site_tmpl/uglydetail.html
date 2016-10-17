@@ -59,7 +59,7 @@
             </div>
         <div class="jumbo-event-info">
             <h3>Client{% if event.org.count > 1 %}s{% endif %}:
-                {% for org in event.org.all %}<a href="{% url "admin-orgdetail" org.id %}">{{ org.retname }}</a>
+                {% for org in event.org.all %}<a href="{% url "orgs:detail" org.id %}">{{ org.retname }}</a>
                     &nbsp;{% empty %}[None listed]{% endfor %}</h3>
             </div>
     </div>

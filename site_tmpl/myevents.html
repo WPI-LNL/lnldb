@@ -110,7 +110,7 @@
     {% if user.all_orgs %}
         <h1>Events by Organization </h1>
         {% for org in orgs %}
-            <h3><a href="{% url 'events.views.orgs.orgdetail' org.pk %}">{{ org }}</a></h3>
+            <h3><a href="{% url 'orgs:detail' org.pk %}">{{ org }}</a></h3>
             <table class="table table-striped table-bordered">
                 <tr>
                     <th>Name</th>

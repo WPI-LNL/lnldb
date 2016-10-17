@@ -306,8 +306,6 @@ urlpatterns = [
                        url(r'^list/json(/*?.*)*$', 'events.cal.cal_json'),
 
                        # orgs (clients)
-                       url(r'^db/clients/$', 'events.views.orgs.vieworgs', name="admin-orglist"),
-                       url(r'^db/clients/(?P<id>[0-9]+)/$', 'events.views.orgs.orgdetail', name="admin-orgdetail"),
                        url(r'^db/clients/(?P<org>\d+)/verify/$', OrgVerificationCreate.as_view(),
                            name="admin-org-verify"),
                        url(r'^db/clients/add/$', 'events.views.orgs.addeditorgs', name="admin-orgadd"),
