@@ -16,7 +16,7 @@
                  ({{ org.shortname }})
                  {% endif %}
                 {% permission user has 'events.edit_org' of org %}
-                 <a class="btn btn-lg btn-primary" href="{% url "events.views.orgs.addeditorgs" org.id %}">Edit</a>
+                 <a class="btn btn-lg btn-primary" href="{% url "orgs:edit" org.id %}">Edit</a>
                 {% endpermission %}
             </div>
         </div>

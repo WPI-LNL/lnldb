@@ -46,14 +46,14 @@ def vieworgs(request):
 
 @login_required
 # TODO: edit form with perm logic
-def addeditorgs(request, id=None):
+def addeditorgs(request, org_id=None):
     """form for adding an org """
     # need to fix this
     context = {}
     edit_perms = ('events.edit_org',)
     mk_perms = ('events.add_org',)
-    if id:
-        instance = get_object_or_404(Organization, pk=id)
+    if org_id:
+        instance = get_object_or_404(Organization, pk=org_id)
         msg = "Edit Client"
         if not (request.user.has_perms(edit_perms) or
                 request.user.has_perms(edit_perms, instance)):
