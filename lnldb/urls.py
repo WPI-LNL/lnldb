@@ -66,6 +66,7 @@ urlpatterns = [
    url(r'^db/clients/', include('events.urls.orgs', namespace='orgs')),
    url(r'^db/inventory/', include('inventory.urls', namespace='inventory')),
    url(r'^db/events/', include('events.urls.events', namespace='events')),
+   url(r'^my/', include('events.urls.my', namespace='my')),
    url(r'', include('accounts.urls', namespace='accounts')),
 
    # AUTHENTICATION {{{
@@ -105,7 +106,6 @@ urlpatterns = [
    # }}}
 
    # 'MY' {{{
-   url(r'^my/workorders/$', 'events.views.my.mywo', name="my-wo"),
    url(r'^my/workorders/attach/(?P<id>[0-9]+)/$', 'events.views.flow.assignattach_external',
        name="my-wo-attach"),
    url(r'^my/orgs/$', 'events.views.my.myorgs'),

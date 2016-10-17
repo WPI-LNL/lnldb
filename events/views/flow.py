@@ -399,7 +399,7 @@ def assignattach_external(request, id):
             for i in f:
                 i.externally_uploaded = True
                 i.save()
-            return HttpResponseRedirect(reverse('my-wo', ))
+            return HttpResponseRedirect(reverse('my:workorders', ))
         else:
             context['formset'] = formset
 

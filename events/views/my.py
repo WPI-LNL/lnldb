@@ -1,5 +1,6 @@
 import datetime
 
+from itertools import chain
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model 
 from django.core.urlresolvers import reverse
@@ -37,8 +38,9 @@ def mywo(request):
 
     # events = Event.objects.filter(org__in=values)
     l = {}
-    for org in orgs:
+    for org in chain(orgs,ic_orgs):
         l[org.name] = Event.objects.filter(org=org)
+    l["Submitted by Me"] = Event.objects.filter(submitted_by=user)
 
     # context['events'] = events
     context['events'] = l
