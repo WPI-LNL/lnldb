@@ -106,7 +106,6 @@ urlpatterns = [
    # }}}
 
    # 'MY' {{{
-   url(r'^my/orgs/$', 'events.views.my.myorgs'),
    url(r'^my/orgs/form/$', 'events.views.my.myorgform', name="selfserivceorg"),
    url(r'^my/orgs/incharge/$', 'events.views.orgs.orglist', name="my-orgs-incharge-list"),
    url(r'^my/orgs/incharge/(?P<id>[0-9a-f]+)/$', 'events.views.orgs.orgedit',

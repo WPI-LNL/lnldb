@@ -53,3 +53,9 @@ class MyViewTest(TestCase):
         self.assertContains(response, self.e.event_name)
 
         # TODO: check attachments functionality more thoroughly
+
+    def test_orgs(self):
+        # I see both orgs that I own and orgs I am a member of in My Orgs
+        response = self.client.get(reverse("my:workorders"))
+        self.assertContains(response, self.org.name)
+        self.assertContains(response, self.org2.name)

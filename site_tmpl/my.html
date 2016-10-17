@@ -25,7 +25,7 @@
         <div class="col-md-3">
             <img class="img-circle" src="{% static 'img/Org.gif' %}"/>
             <h2> My Orgs </h2>
-            <a href="{% url "events.views.my.myorgs" %}" class="btn btn-lg btn-primary">Associated Orgs</a>
+            <a href="{% url "my:orgs" %}" class="btn btn-lg btn-primary">Associated Orgs</a>
         </div>
 
         {% if is_lnl %}

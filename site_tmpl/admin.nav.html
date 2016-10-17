@@ -74,7 +74,7 @@
                         <b class="caret"></b>
                       </a>
                     <ul class="dropdown-menu">
-                        <li><a href="{% url "events.views.my.myorgs" %}">My Organizations</a></li>
+                        <li><a href="{% url "my:orgs" %}">My Organizations</a></li>
                         {% permission request.user has 'events.view_org' %}
                             <li><a href="{% url "orgs:list" %}">View Organizations</a></li>
                         {% endpermission %}
