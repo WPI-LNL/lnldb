@@ -109,7 +109,6 @@ urlpatterns = [
                        # static
 
                        # user facing shit
-                       # url(r'^my/contact/$', LNLUpdate.as_view(), name="my-lnl"),
                        url(r'^my/workorders/$', 'events.views.my.mywo', name="my-wo"),
                        url(r'^my/workorders/attach/(?P<id>[0-9]+)/$', 'events.views.flow.assignattach_external',
                            name="my-wo-attach"),
@@ -121,11 +120,7 @@ urlpatterns = [
                        url(r'^my/orgs/transfer/(?P<id>[0-9]+)/$', 'events.views.orgs.org_mkxfer', name="my-orgs-xfer"),
                        url(r'^my/orgs/transfer/(?P<idstr>[0-9a-f]+)/$', 'events.views.orgs.org_acceptxfer',
                            name="my-orgs-acceptxfer"),
-                       # url(r'^my/acct/$', AcctUpdate.as_view(), name="my-acct"),
-                       # url(r'^my/acct/send_lnl_member_request/$', 'acct.views.send_member_request',
-                       #     name="my-acct-request-lnl"),
                        url(r'^my/events/$', 'events.views.my.myevents', name="my-events"),
-                       # url(r'^my/events/(?P<id>[0-9]+)$', 'events.views.my.myeventdetail', name="my-event-detail"),
                        url(r'^my/events/(?P<id>[0-9a-f]+)/pdf/$', 'pdfs.views.generate_event_pdf',
                            name="my-events-pdf"),
                        url(r'^my/events/(?P<eventid>[0-9]+)/files/$', 'events.views.my.eventfiles',
@@ -189,26 +184,6 @@ urlpatterns = [
                            'events.views.list.upcoming'),
 
 
-                       # members
-                       # url(r'^list/mdc/raw/$', 'members.views.mdc_raw', name="mdc_raw"),
-                       # url(r'^list/mdc/$', 'members.views.mdc'),
-                       # url(r'^db/members/officers/$', 'members.views.officers'),
-                       # url(r'^db/members/active/$', 'members.views.active'),
-                       # url(r'^db/members/associate/$', 'members.views.associate'),
-                       # url(r'^db/members/alum/$', 'members.views.alum'),
-                       # url(r'^db/members/away/$', 'members.views.away'),
-                       # url(r'^db/members/inactive/$', 'members.views.inactive'),
-                       # url(r'^db/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail', name="memberdetail"),
-                       # url(r'^db/members/detail/(?P<username>[^/]+)/$', 'members.views.named_detail',
-                       #     name="namedmemberdetail"),
-                       # url(r'^db/members/edit/(?P<pk>[0-9a-f]+)/$', UserUpdate.as_view(), name="memberupdate"),
-                       # url(r'^db/members/editcontact/(?P<pk>[0-9a-f]+)/$', MemberUpdate.as_view(),
-                       #     name="membercontact"),
-
-                       # misc
-                       # url(r'^db/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
-                       # url(r'^db/misc/users/unsorted/$', 'members.views.limbousers', name="users-limbo"),
-                       # url(r'^db/misc/users/add/$', LNLAdd.as_view(), name="users-add"),
                        url(r'^db/oldsearch$', "events.views.indices.event_search", name="events-search"),
                        url(r'^db/search$', "data.views.search", name="search"),
 
@@ -221,8 +196,6 @@ urlpatterns = [
                            name="projection-list-detail"),
                        url(r'^db/projection/list/other/$', 'projection.views.plist', name="projection-list"),
                        url(r'^db/projection/bulk/$', BulkUpdateView.as_view(), name="projection-bulk-update"),
-                       # url(r'^db/projection/update/(?P<pk>[0-9a-f]+)/$', ProjectionUpdate.as_view(),
-                       # name="projection-update"),
                        url(r'^db/projection/update/(?P<id>[0-9a-f]+)/$', "projection.views.projection_update",
                            name="projection-update"),
                        url(r'^db/projection/rm/(?P<pk>[0-9a-f]+)/$', ProjectionistDelete.as_view(),
@@ -315,44 +288,6 @@ urlpatterns = [
                        # nice include statements (ie. the future)
                        url(r'^db/inventory/', include('inventory.urls', namespace='inventory')),
                        url(r'', include('accounts.urls', namespace='accounts')),
-                       #
-                       # #members
-                       # url(r'^list/mdc/raw/$', 'members.views.mdc_raw'),
-                       # url(r'^list/mdc/$', 'members.views.mdc'),
-                       # url(r'^db/members/officers/$', 'members.views.officers'),
-                       # url(r'^db/members/active/$', 'members.views.active'),
-                       # url(r'^db/members/associate/$', 'members.views.associate'),
-                       # url(r'^db/members/alum/$', 'members.views.alum'),
-                       # url(r'^db/members/away/$', 'members.views.away'),
-                       # url(r'^db/members/inactive/$', 'members.views.inactive'),
-                       # url(r'^db/members/detail/(?P<id>[0-9a-f]+)/$', 'members.views.detail', name="memberdetail"),
-                       # # url(r'^db/members/edit/(?P<pk>[0-9a-f]+)/$', UserUpdate.as_view(), name="memberupdate"),
-                       # # url(r'^db/members/editcontact/(?P<pk>[0-9a-f]+)/$', MemberUpdate.as_view(),
-                       # #     name="membercontact"),
-                       #
-                       # #misc
-                       # url(r'^db/misc/users/contact/$', 'members.views.contactusers', name="users-contact"),
-                       # url(r'^db/misc/users/unsorted/$', 'members.views.limbousers', name="users-limbo"),
-                       # # url(r'^db/misc/users/add/$', LNLAdd.as_view(), name="users-add"),
-
-                       # projection
-                       url(r'^db/projection/list/$', 'projection.views.plist_detail',
-                           name="projection-list-detail"),
-                       url(r'^db/projection/list/other/$', 'projection.views.plist', name="projection-list"),
-                       url(r'^db/projection/bulk/$', BulkUpdateView.as_view(), name="projection-bulk-update"),
-                       # url(r'^db/projection/update/(?P<pk>[0-9a-f]+)/$',
-                       #     ProjectionUpdate.as_view(),
-                       #     name="projection-update"),
-                       url(r'^db/projection/update/(?P<id>[0-9a-f]+)/$', "projection.views.projection_update",
-                           name="projection-update"),
-                       url(r'^db/projection/rm/(?P<pk>[0-9a-f]+)/$', ProjectionistDelete.as_view(),
-                           name="projection-delete"),
-                       url(r'^db/projection/mk/$', ProjectionCreate.as_view(), name="projection-create"),
-                       url(r'^db/projection/list/detail/pdf/$', 'pdfs.views.generate_projection_pdf',
-                           name="events-pdf-multi"),
-
-                       url(r'^db/projection/bulkevents/$', 'projection.views.bulk_projection',
-                           name="projection-bulk2"),
 
                        # emails
                        url(r'^email/announce/(?P<slug>[0-9a-f]+)/$', MeetingAnnounceView.as_view(),
@@ -371,7 +306,6 @@ urlpatterns = [
 
                        # keep old urls
                        url(r'^lnadmin/(?P<newpath>.+)$', RedirectView.as_view(url="/db/%(newpath)s", permanent=True)),
-                       # url(r'^db/(?P<msg>\w+)/$', 'events.views.indices.admin'),
 
                        # debugging
                        url(r'^hijack/', include('hijack.urls')),
