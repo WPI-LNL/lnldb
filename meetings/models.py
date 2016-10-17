@@ -6,7 +6,6 @@ from django_extensions.db.models import TimeStampedModel
 from events.models import Event, Location
 # Create your models here.
 
-from uuidfield import UUIDField
 from datetime import timedelta
 
 
@@ -114,7 +113,7 @@ class MeetingAnnounce(models.Model):
     email_to = models.ForeignKey('TargetEmailList')
 
     added = models.DateTimeField(auto_now_add=True)
-    uuid = UUIDField(auto=True, editable=False, null=True, blank=True)
+    uuid = models.UUIDField(editable=False, null=True, blank=True)
 
     @property
     def reverse_ordered_events(self):
@@ -147,7 +146,7 @@ class CCNoticeSend(models.Model):
     events = models.ManyToManyField(Event, related_name="meetingccnoticeevents")
     sent_at = models.DateTimeField(auto_now_add=True)
     sent_success = models.BooleanField(default=False)
-    uuid = UUIDField(auto=True, editable=False, null=True, blank=True)
+    uuid = models.UUIDField(editable=False, null=True, blank=True)
 
     email_to = models.ForeignKey('TargetEmailList', default=get_default_email)
 

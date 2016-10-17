@@ -12,8 +12,6 @@ from django.utils.functional import cached_property
 import pytz
 import decimal
 
-from uuidfield import UUIDField
-
 # if settings unset, have sane defaults
 if settings.CCR_DAY_DELTA:
     CCR_DELTA = settings.CCR_DAY_DELTA
@@ -993,7 +991,7 @@ class OrganizationTransfer(models.Model):
     new_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_new")
     old_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_old")
     org = models.ForeignKey(Organization)
-    uuid = UUIDField(auto=True)  # for the link
+    uuid = models.UUIDField()  # for the link
     created = models.DateTimeField(auto_now=True)
     completed_on = models.DateTimeField(null=True, blank=True)
     expiry = models.DateTimeField(null=True, blank=True)
