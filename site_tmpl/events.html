@@ -46,14 +46,14 @@
                         <hr>
                         <ul class="nav nav-pills">
                             <li class="disabled"><a href="#">View This Range as</a></li>
-                            <li><a href="{% url "events.views.list.incoming" start end %}{% append_to_get page=1 %}">Incoming</a></li>
-                            <li><a href="{% url "events.views.list.upcoming" start end %}{% append_to_get page=1 %}">Upcoming</a></li>
-                            <li><a href="{% url "events.views.list.openworkorders" start end %}{% append_to_get page=1 %}">Open</a></li>
-                            <li><a href="{% url "events.views.list.unreviewed" start end %}{% append_to_get page=1 %}">Unreviewed</a></li>
-                            <li><a href="{% url "events.views.list.unbilled" start end %}{% append_to_get page=1 %}">Unbilled</a></li>
-                            <li><a href="{% url "events.views.list.unpaid" start end %}{% append_to_get page=1 %}">Billed/UnPaid</a></li>
-                            <li><a href="{% url "events.views.list.paid" start end %}{% append_to_get page=1 %}">Paid</a></li>
-                            <li><a href="{% url "events.views.list.closed" start end %}{% append_to_get page=1 %}">Closed</a></li>
+                            <li><a href="{% url "events:incoming" start end %}{% append_to_get page=1 %}">Incoming</a></li>
+                            <li><a href="{% url "events:upcoming" start end %}{% append_to_get page=1 %}">Upcoming</a></li>
+                            <li><a href="{% url "events:open" start end %}{% append_to_get page=1 %}">Open</a></li>
+                            <li><a href="{% url "events:unreviewed" start end %}{% append_to_get page=1 %}">Unreviewed</a></li>
+                            <li><a href="{% url "events:unbilled" start end %}{% append_to_get page=1 %}">Unbilled</a></li>
+                            <li><a href="{% url "events:unpaid" start end %}{% append_to_get page=1 %}">Billed/UnPaid</a></li>
+                            <li><a href="{% url "events:paid" start end %}{% append_to_get page=1 %}">Paid</a></li>
+                            <li><a href="{% url "events:closed" start end %}{% append_to_get page=1 %}">Closed</a></li>
                             
                         </ul>
                         {% endif %}

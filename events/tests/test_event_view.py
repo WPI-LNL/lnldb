@@ -4,7 +4,6 @@ from django.core.urlresolvers import reverse
 
 
 class EventBasicViewTest(TestCase):
-
     def setUp(self):
         self.e = EventFactory.create(event_name="Test Event")
         self.e2 = EventFactory.create(event_name="Other Test Event")
@@ -100,3 +99,49 @@ class EventBasicViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # later: test post
+class EventListBasicViewTest(TestCase):
+    def setUp(self):
+        self.e = EventFactory.create(event_name="Test Event")
+        self.e2 = EventFactory.create(event_name="Other Test Event")
+        self.user = UserFactory.create(password='123')
+        self.client.login(username=self.user.username, password='123')
+
+    def incoming(self):
+        response = self.client.get(reverse('events:incoming'))
+        self.assertEqual(response.status_code, 200)
+
+    def upcoming(self):
+        response = self.client.get(reverse('events:upcoming'))
+        self.assertEqual(response.status_code, 200)
+
+    def findchief(self):
+        response = self.client.get(reverse('events:findchief'))
+        self.assertEqual(response.status_code, 200)
+
+    def open(self):
+        response = self.client.get(reverse('events:open'))
+        self.assertEqual(response.status_code, 200)
+
+    def unreviewed(self):
+        response = self.client.get(reverse('events:unreviewed'))
+        self.assertEqual(response.status_code, 200)
+
+    def unbilled(self):
+        response = self.client.get(reverse('events:unbilled'))
+        self.assertEqual(response.status_code, 200)
+
+    def unbilled_semester(self):
+        response = self.client.get(reverse('events:unbilled-semester'))
+        self.assertEqual(response.status_code, 200)
+
+    def paid(self):
+        response = self.client.get(reverse('events:paid'))
+        self.assertEqual(response.status_code, 200)
+
+    def unpaid(self):
+        response = self.client.get(reverse('events:unpaid'))
+        self.assertEqual(response.status_code, 200)
+
+    def closed(self):
+        response = self.client.get(reverse('events:closed'))
+        self.assertEqual(response.status_code, 200)

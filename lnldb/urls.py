@@ -12,16 +12,19 @@ import permission
 
 from accounts.forms import LoginForm
 from accounts.views import smart_login
+import data.views
 from emails.views import MeetingAnnounceView
 from emails.views import MeetingAnnounceCCView
 from events.cal import EventFeed, FullEventFeed, LightEventFeed
 from events.forms import named_event_forms
 from events.views.flow import BillingCreate, BillingUpdate, BillingDelete
 from events.views.flow import CCRCreate, CCRUpdate, CCRDelete
+from events.views.indices import admin as db_home, event_search
 from events.views.orgs import OrgVerificationCreate
 from events.views.wizard import EventWizard
 from events.views.wizard import show_lighting_form_condition, show_sound_form_condition, \
     show_projection_form_condition, show_other_services_form_condition
+from pages.views import page as view_page
 from projection.views import ProjectionCreate
 from projection.views import BulkUpdateView
 from projection.views import ProjectionistDelete
@@ -61,6 +64,7 @@ urlpatterns = [
    url(r'^db/meetings/', include('meetings.urls', namespace='meetings')),
    url(r'^db/clients/', include('events.urls.orgs', namespace='orgs')),
    url(r'^db/inventory/', include('inventory.urls', namespace='inventory')),
+   url(r'^db/events/', include('events.urls.events', namespace='events')),
    url(r'', include('accounts.urls', namespace='accounts')),
 
    # AUTHENTICATION {{{
@@ -201,61 +205,6 @@ urlpatterns = [
     # }}}
 
    # event lists {{{ 
-   url(r'^db/events/upcoming/$', 'events.views.list.upcoming', name="upcoming"),
-   url(r'^db/events/upcoming/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.upcoming'),
-   url(r'^db/events/upcoming/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.upcoming'),
-
-   url(r'^db/events/findchief/$', 'events.views.list.findchief', name="findchief"),
-   url(r'^db/events/findchief/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.findchief'),
-   url(r'^db/events/findchief/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.findchief'),
-
-   url(r'^db/events/incoming/$', 'events.views.list.incoming', name="incoming"),
-   url(r'^db/events/incoming/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.incoming'),
-   url(r'^db/events/incoming/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.incoming'),
-
-   url(r'^db/events/open/$', 'events.views.list.openworkorders', name="open"),
-   url(r'^db/events/open/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.openworkorders'),
-   url(r'^db/events/open/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.openworkorders'),
-
-   url(r'^db/events/unreviewed/$', 'events.views.list.unreviewed', name="unreviewed"),
-   url(r'^db/events/unreviewed/(?P<start>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.unreviewed'),
-   url(r'^db/events/unreviewed/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.unreviewed'),
-
-   url(r'^db/events/unbilled/$', 'events.views.list.unbilled', name="unbilled"),
-   url(r'^db/events/unbilled/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unbilled'),
-   url(r'^db/events/unbilled/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.unbilled'),
-
-   url(r'^db/events/unbilledsemester/$', 'events.views.list.unbilled_semester',
-       name="unbilled-semester"),
-   url(r'^db/events/unbilledsemester/(?P<start>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.unbilled_semester'),
-   url(r'^db/events/unbilledsemester/'
-       r'(?P<start>\d{4}-\d{2}-\d{2})/'
-       r'(?P<end>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.unbilled_semester'),
-
-   url(r'^db/events/paid/$', 'events.views.list.paid', name="paid"),
-   url(r'^db/events/paid/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.paid'),
-   url(r'^db/events/paid/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.paid'),
-   url(r'^db/events/unpaid/$', 'events.views.list.unpaid', name="unpaid"),
-   url(r'^db/events/unpaid/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.unpaid'),
-   url(r'^db/events/unpaid/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.unpaid'),
-
-   url(r'^db/events/closed/$', 'events.views.list.closed', name="closed"),
-   url(r'^db/events/closed/(?P<start>\d{4}-\d{2}-\d{2})/$', 'events.views.list.closed'),
-   url(r'^db/events/closed/(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$',
-       'events.views.list.closed'),
-
-
    url(r'^list/$', 'events.views.list.public_facing', name="list"),
    url(r'^list/feed.ics$', EventFeed(), name='public_cal_feed'),
    url(r'^list/feed_full.ics$', FullEventFeed(), name='full_cal_feed'),
@@ -270,14 +219,14 @@ urlpatterns = [
        name="email-view-announce-cc"),
 
    # special urls
-   url(r'^status/$', "data.views.status"),
-   url(r'^db/accesslog/$', 'data.views.access_log', name="access-log"),
-   url(r'^NOTOUCHING/$', 'data.views.fuckoffkitty'),
+   url(r'^status/$', data.views.status),
+   url(r'^db/accesslog/$', data.views.access_log, name="access-log"),
+   url(r'^NOTOUCHING/$', data.views.fuckoffkitty),
    url(r'^lnldb/fuckoffkitty/$', RedirectView.as_view(url="/NOTOUCHING/", permanent=False)),
-   url(r'^db/$', 'events.views.indices.admin', name="db"),
-   url(r'^(?P<slug>[-\w]+)/$', 'pages.views.page'),
-   url(r'^db/oldsearch$', "events.views.indices.event_search", name="events-search"),
-   url(r'^db/search$', "data.views.search", name="search"),
+   url(r'^db/$', db_home, name="db"),
+   url(r'^(?P<slug>[-\w]+)/$', view_page),
+   url(r'^db/oldsearch$', event_search, name="events-search"),
+   url(r'^db/search$', data.views.search, name="search"),
    
    # Uncomment to have javascript translation support
    #url(r'^jsi18n', 'django.views.i18n.javascript_catalog'),

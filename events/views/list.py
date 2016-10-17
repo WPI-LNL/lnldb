@@ -198,7 +198,7 @@ def upcoming(request, start=None, end=None):
 
     context['h2'] = "Upcoming Events"
     context['events'] = events
-    context['baseurl'] = reverse("upcoming")
+    context['baseurl'] = reverse("events:upcoming")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['cols'] = ['event_name',
                        'org',
@@ -237,7 +237,7 @@ def incoming(request, start=None, end=None):
 
     context['h2'] = "Incoming Events"
     context['events'] = events
-    context['baseurl'] = reverse("incoming")
+    context['baseurl'] = reverse("events:incoming")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['cols'] = ['event_name',
                        'org',
@@ -278,7 +278,7 @@ def openworkorders(request, start=None, end=None):
 
     context['h2'] = "Open Events"
     context['events'] = events
-    context['baseurl'] = reverse("open")
+    context['baseurl'] = reverse("events:open")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['cols'] = ['event_name',
                        'org',
@@ -329,7 +329,7 @@ def findchief(request, start=None, end=None):
     context['h2'] = "Needs a Crew Chief"
     context['proj_hideable'] = True
     context['events'] = events
-    context['baseurl'] = reverse("findchief")
+    context['baseurl'] = reverse("events:findchief")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['cols'] = ['event_name',
                        'org',
@@ -381,7 +381,7 @@ def unreviewed(request, start=None, end=None):
 
     context['h2'] = "Events Pending Billing Review"
     context['events'] = events
-    context['baseurl'] = reverse("unreviewed")
+    context['baseurl'] = reverse("events:unreviewed")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['proj_hideable'] = True
     context['cols'] = ['event_name',
@@ -433,7 +433,7 @@ def unbilled(request, start=None, end=None):
 
     context['h2'] = "Events to be Billed"
     context['events'] = events
-    context['baseurl'] = reverse("unbilled")
+    context['baseurl'] = reverse("events:unbilled")
     context['proj_hideable'] = True
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['cols'] = ['event_name',
@@ -480,7 +480,7 @@ def unbilled_semester(request, start=None, end=None):
 
     context['h2'] = "Events to be Billed (Films)"
     context['events'] = events
-    context['baseurl'] = reverse("unbilled-semester")
+    context['baseurl'] = reverse("events:unbilled-semester")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['cols'] = ['event_name',
                        'org',
@@ -526,7 +526,7 @@ def paid(request, start=None, end=None):
 
     context['h2'] = "Paid Events"
     context['events'] = events
-    context['baseurl'] = reverse("paid")
+    context['baseurl'] = reverse("events:paid")
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['proj_hideable'] = True
     context['cols'] = ['event_name',
@@ -576,7 +576,7 @@ def unpaid(request, start=None, end=None):
 
     context['h2'] = "Pending Payments"
     context['events'] = events
-    context['baseurl'] = reverse("unpaid")
+    context['baseurl'] = reverse("events:unpaid")
     context['proj_hideable'] = True
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['cols'] = ['event_name',
@@ -615,7 +615,7 @@ def closed(request, start=None, end=None):
 
     context['h2'] = "Closed Events"
     context['events'] = events
-    context['baseurl'] = reverse("closed")
+    context['baseurl'] = reverse("events:closed")
     context['proj_hideable'] = True
     context['pdfurl'] = reverse('events-pdf-multi-empty')
     context['cols'] = ['event_name',
