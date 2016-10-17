@@ -59,6 +59,7 @@ class OrgFactory(DjangoModelFactory):
     class Meta:
         model = Organization
     user_in_charge = SubFactory(UserFactory)
+    name = Faker('company')
 
 class FundFactory(DjangoModelFactory):
     class Meta:
