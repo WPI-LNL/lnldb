@@ -15,11 +15,12 @@ from accounts.views import smart_login
 import data.views
 from emails.views import MeetingAnnounceView
 from emails.views import MeetingAnnounceCCView
-from events.cal import EventFeed, FullEventFeed, LightEventFeed
+from events.cal import EventFeed, FullEventFeed, LightEventFeed, cal_json
 from events.forms import named_event_forms
 from events.views.flow import BillingCreate, BillingUpdate, BillingDelete
 from events.views.flow import CCRCreate, CCRUpdate, CCRDelete
 from events.views.indices import admin as db_home, event_search
+from events.views.list import public_facing
 from events.views.orgs import OrgVerificationCreate
 from events.views.wizard import EventWizard
 from events.views.wizard import show_lighting_form_condition, show_sound_form_condition, \
@@ -205,11 +206,11 @@ urlpatterns = [
     # }}}
 
    # event lists {{{ 
-   url(r'^list/$', 'events.views.list.public_facing', name="list"),
+   url(r'^list/$', public_facing, name="list"),
    url(r'^list/feed.ics$', EventFeed(), name='public_cal_feed'),
    url(r'^list/feed_full.ics$', FullEventFeed(), name='full_cal_feed'),
    url(r'^list/feed_light.ics$', LightEventFeed(), name='light_cal_feed'),
-   url(r'^list/json(/*?.*)*$', 'events.cal.cal_json'),
+   url(r'^list/json(/*?.*)*$', cal_json),
    # }}}
 
    # emails
