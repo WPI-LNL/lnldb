@@ -79,7 +79,7 @@
                             <li><a href="{% url "orgs:list" %}">View Organizations</a></li>
                         {% endpermission %}
                         {% permission request.user has 'events.add_org' %}
-                            <li><a href="{% url "events.views.orgs.addeditorgs" %}">Add Organization</a></li>
+                            <li><a href="{% url "orgs:add" %}">Add Organization</a></li>
                             {% else %}
                             <li><a href="{% url "events.views.my.myorgform" %}">Request Organization</a></li>
                         {% endpermission %}
