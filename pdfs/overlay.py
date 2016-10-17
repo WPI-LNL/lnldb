@@ -88,7 +88,7 @@ def make_idt_single(event, user=None):
     overlay = make_idt_overlay(
             dep_name=event.billing_org or event.org.first(),
             fund=event.billing_fund.as_tuple() if event.billing_fund else None, 
-            amount=event.cost_total - event.cost_projection_total/2, 
+            amount=float(event.cost_total) - event.cost_projection_total/2, 
             proj_amt= event.cost_projection_total/2, 
             person_name=str(user) if user else None, 
             description="LNL Services for %s" % str(event)
@@ -98,7 +98,7 @@ def make_idt_single(event, user=None):
     return output
 
 def make_idt_bulk(events, user=None, org_for=None, fund_for=None):
-    total = sum([e.cost_total for e in events])
+    total = float(sum([e.cost_total for e in events]))
     proj_total = sum([e.cost_projection_total for e in events])/2
     total -= proj_total
 
