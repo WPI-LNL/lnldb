@@ -82,7 +82,7 @@
                         <p class="muted text-muted">No verification created</p>
                         {% endif %}
                         {% permission user has 'events.add_verification' of org %}
-                        <a href="{% url "admin-org-verify" org.id %}">Create Verification</a>
+                        <a href="{% url "orgs:verify" org.id %}">Create Verification</a>
                         {% endpermission %}
                     </td>
                 </tr>

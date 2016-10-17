@@ -8,6 +8,7 @@ urlpatterns = [
    url(r'^(?P<org_id>[0-9]+)/', include([
        url(r'^$', views.orgs.orgdetail, name="detail"),
        url(r'^edit/$', views.orgs.addeditorgs, name="edit"),
+       url(r'^verify/$', views.orgs.OrgVerificationCreate.as_view(), name="verify"),
    ])),
 
     # redirects {{{

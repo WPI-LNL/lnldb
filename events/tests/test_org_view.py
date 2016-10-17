@@ -56,3 +56,9 @@ class OrgViewTest(TestCase):
         
         self.assertTrue(models.Organization.objects.filter(pk=self.o1.pk,**sample_data).exists())
         # successfully edited it
+    
+    def test_verify(self):
+        response = self.client.get(reverse("orgs:verify", args=(self.o1.pk,)))
+        self.assertEqual(response.status_code, 200)
+
+        #TODO: make a full form test for this.

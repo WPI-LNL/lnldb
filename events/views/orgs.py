@@ -258,11 +258,11 @@ class OrgVerificationCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, C
     form_class = IOrgVerificationForm
     template_name = "form_crispy_cbv.html"
     msg = "Mark Client billing as valid"
-    perms = ('events.verify_org',)
+    perms = ('events.create_verifications',)
 
     def get_form_kwargs(self):
         kwargs = super(OrgVerificationCreate, self).get_form_kwargs()
-        org = get_object_or_404(Organization, pk=self.kwargs['org'])
+        org = get_object_or_404(Organization, pk=self.kwargs['org_id'])
         kwargs['org'] = org
         return kwargs
 
