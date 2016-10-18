@@ -59,3 +59,8 @@ class MyViewTest(TestCase):
         response = self.client.get(reverse("my:workorders"))
         self.assertContains(response, self.org.name)
         self.assertContains(response, self.org2.name)
+    
+    def test_org_req_blank(self):
+        # check that the request form shows a valid page
+        response = self.client.get(reverse("my:org-request"))
+        self.assertEqual(response.status_code, 200)
