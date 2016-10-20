@@ -1,0 +1,4054 @@
+[
+{
+  "fields": {
+    "shortname": "N/A",
+    "name": "None"
+  },
+  "model": "events.building",
+  "pk": 1
+},
+{
+  "fields": {
+    "shortname": "AK",
+    "name": "Atwater Kent"
+  },
+  "model": "events.building",
+  "pk": 2
+},
+{
+  "fields": {
+    "shortname": "AM",
+    "name": "Alden Memorial"
+  },
+  "model": "events.building",
+  "pk": 3
+},
+{
+  "fields": {
+    "shortname": "AG",
+    "name": "Alumni Gymnasium"
+  },
+  "model": "events.building",
+  "pk": 4
+},
+{
+  "fields": {
+    "shortname": "BC",
+    "name": "Bartlett Center"
+  },
+  "model": "events.building",
+  "pk": 5
+},
+{
+  "fields": {
+    "shortname": "FL",
+    "name": "Fuller Laboratories"
+  },
+  "model": "events.building",
+  "pk": 6
+},
+{
+  "fields": {
+    "shortname": "CC",
+    "name": "Campus Center"
+  },
+  "model": "events.building",
+  "pk": 7
+},
+{
+  "fields": {
+    "shortname": "OC",
+    "name": "Off Campus"
+  },
+  "model": "events.building",
+  "pk": 8
+},
+{
+  "fields": {
+    "shortname": "HA",
+    "name": "Harrington Auditorium"
+  },
+  "model": "events.building",
+  "pk": 9
+},
+{
+  "fields": {
+    "shortname": "O",
+    "name": "Outdoors"
+  },
+  "model": "events.building",
+  "pk": 10
+},
+{
+  "fields": {
+    "shortname": "FH",
+    "name": "Founders Hall"
+  },
+  "model": "events.building",
+  "pk": 11
+},
+{
+  "fields": {
+    "shortname": "HH",
+    "name": "Higgins House"
+  },
+  "model": "events.building",
+  "pk": 12
+},
+{
+  "fields": {
+    "shortname": "HL",
+    "name": "Higgins Laboratories"
+  },
+  "model": "events.building",
+  "pk": 13
+},
+{
+  "fields": {
+    "shortname": "KH",
+    "name": "Kaven Hall"
+  },
+  "model": "events.building",
+  "pk": 14
+},
+{
+  "fields": {
+    "shortname": "KH",
+    "name": "Kinnicutt Hall"
+  },
+  "model": "events.building",
+  "pk": 15
+},
+{
+  "fields": {
+    "shortname": "SRH",
+    "name": "Sanford Riley Hall"
+  },
+  "model": "events.building",
+  "pk": 16
+},
+{
+  "fields": {
+    "shortname": "MH",
+    "name": "Morgan Hall"
+  },
+  "model": "events.building",
+  "pk": 17
+},
+{
+  "fields": {
+    "shortname": "OH",
+    "name": "Olin Hall"
+  },
+  "model": "events.building",
+  "pk": 18
+},
+{
+  "fields": {
+    "shortname": "GH",
+    "name": "Greek Houses"
+  },
+  "model": "events.building",
+  "pk": 19
+},
+{
+  "fields": {
+    "shortname": "SL",
+    "name": "Salisbury Labs"
+  },
+  "model": "events.building",
+  "pk": 20
+},
+{
+  "fields": {
+    "shortname": "REC",
+    "name": "Sports & Recreation Center"
+  },
+  "model": "events.building",
+  "pk": 21
+},
+{
+  "fields": {
+    "shortname": "SH",
+    "name": "Stratton Hall"
+  },
+  "model": "events.building",
+  "pk": 22
+},
+{
+  "fields": {
+    "shortname": "\u2205",
+    "name": "[NOT LISTED]"
+  },
+  "model": "events.building",
+  "pk": 23
+},
+{
+  "fields": {
+    "shortname": "Lib",
+    "name": "George C. Gordon Library"
+  },
+  "model": "events.building",
+  "pk": 24
+},
+{
+  "fields": {
+    "shortname": "FD",
+    "name": "Faraday Hall"
+  },
+  "model": "events.building",
+  "pk": 25
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden Memorial",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 1
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "The Goat's Head",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 2
+},
+{
+  "fields": {
+    "building": 11,
+    "holds_equipment": true,
+    "name": "Goat's Head ",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 3
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Patio",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 4
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 5
+},
+{
+  "fields": {
+    "building": 3,
+    "holds_equipment": true,
+    "name": "Alden Hall",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 6
+},
+{
+  "fields": {
+    "building": 12,
+    "holds_equipment": false,
+    "name": "Higgins House East Courtyard",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 7
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 8
+},
+{
+  "fields": {
+    "building": 8,
+    "holds_equipment": false,
+    "name": "Union Station, Worcester",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 9
+},
+{
+  "fields": {
+    "building": 12,
+    "holds_equipment": false,
+    "name": "Higgins House Great Hall",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 10
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Le Quad",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 11
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Harrington Gym",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 12
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "HH Lower Lawn",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 13
+},
+{
+  "fields": {
+    "building": 9,
+    "holds_equipment": true,
+    "name": "Harrington  ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 14
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "CC          ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 15
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Higgins House",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 16
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Quad        ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 17
+},
+{
+  "fields": {
+    "building": 3,
+    "holds_equipment": true,
+    "name": "Alden SB    ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": true
+  },
+  "model": "events.location",
+  "pk": 18
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": true,
+    "name": "Office   ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": true
+  },
+  "model": "events.location",
+  "pk": 19
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Sigma Alpha Epsilon House at 6 H",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 20
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Founders    ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 21
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden Great Hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 22
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum All ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 23
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Perreault",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 24
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Flupper     ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 25
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "GH          ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 26
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Patio",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 27
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "TBD         ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 28
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Pres office ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 29
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Odeum B&C",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 30
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Odeum",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 31
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Lower FLAUD",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 32
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Outside Bartlett Center - Quad S",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 33
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden       ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 34
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "CCC         ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 35
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Goats Head ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 36
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Upper FLAUD",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 37
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "SL115",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 38
+},
+{
+  "fields": {
+    "building": 16,
+    "holds_equipment": true,
+    "name": "Riley Commons",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 39
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum A&B",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 40
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Other",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 41
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "TBA         ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 42
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "CC Odeum",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 43
+},
+{
+  "fields": {
+    "building": 17,
+    "holds_equipment": false,
+    "name": "Pulse on Dining",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 44
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden Sub   ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 45
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Bank        ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 46
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Fountain",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 47
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "FLAUD",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 48
+},
+{
+  "fields": {
+    "building": 6,
+    "holds_equipment": false,
+    "name": "Projection Booth       ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 49
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Great Hall Alden Memorial",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 50
+},
+{
+  "fields": {
+    "building": 20,
+    "holds_equipment": false,
+    "name": "SL 305",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 51
+},
+{
+  "fields": {
+    "building": 2,
+    "holds_equipment": false,
+    "name": "AK 116",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 52
+},
+{
+  "fields": {
+    "building": 20,
+    "holds_equipment": false,
+    "name": "SL 115",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 53
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "The Wreck",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 54
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Wreck",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 55
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Riley       ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 56
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odium A & B",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 57
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Patio & Higgins House",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 58
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden (maybe",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 59
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Officer  ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 60
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Fuller Upper Auditorium",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 61
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Goat's Head Restaurant",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 62
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "ghdf        ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 63
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": " Odeum All",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 64
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Hig. House  ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 65
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Campus Center Patio / Grill area",
+    "show_in_wo_form": false,
+    "available_for_meetings": true,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 66
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Grass Area",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 67
+},
+{
+  "fields": {
+    "building": 12,
+    "holds_equipment": false,
+    "name": "Higgins House Patio",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 68
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center back patio",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 69
+},
+{
+  "fields": {
+    "building": 8,
+    "holds_equipment": false,
+    "name": "Club Maxine",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 70
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Higgins House Lawns",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 71
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Patio Outdoors",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 72
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Saint Spyridon Cathedral",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 73
+},
+{
+  "fields": {
+    "building": 9,
+    "holds_equipment": false,
+    "name": "Court Floor",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 74
+},
+{
+  "fields": {
+    "building": 6,
+    "holds_equipment": true,
+    "name": "Perreault Hall UPR",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 75
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alumni",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 76
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "AHSB        ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 77
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeums A and B",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 78
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Rental",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 79
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum A & B",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 80
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "HL218",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 81
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "*           ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 82
+},
+{
+  "fields": {
+    "building": 12,
+    "holds_equipment": false,
+    "name": "Higgins House Lawn",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 83
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum (All)",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 84
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Stage",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 85
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Goat's Head Pub",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 86
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Forkey Stage",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 87
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Quad (rain location Alden)",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 88
+},
+{
+  "fields": {
+    "building": 12,
+    "holds_equipment": false,
+    "name": "Higgins House Back Lawn",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 89
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Stage",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 90
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "0",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 91
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Worcester Union Station",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 92
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum A, B",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 93
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "US Coast Guard Academy",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 94
+},
+{
+  "fields": {
+    "building": 14,
+    "holds_equipment": false,
+    "name": "2nd Floor Hallway",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 95
+},
+{
+  "fields": {
+    "building": 6,
+    "holds_equipment": false,
+    "name": "Perreault Hall LWR",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 96
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alumni Basketball Court",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 97
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum B and C",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 98
+},
+{
+  "fields": {
+    "building": 4,
+    "holds_equipment": false,
+    "name": "Alumni Gym",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 99
+},
+{
+  "fields": {
+    "building": 17,
+    "holds_equipment": false,
+    "name": "Morgan Dining Commons",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 100
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "The Goat's Head Restaurant",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 101
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": true,
+    "name": "Odeum All",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 102
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Cente",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 103
+},
+{
+  "fields": {
+    "building": 16,
+    "holds_equipment": false,
+    "name": "Riley Hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 104
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden, The Great Hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 105
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "----        ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 106
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Goats Head Restaurant",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 107
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "----------  ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 108
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "?           ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 109
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Higgens House GH",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 110
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Higgins Hous",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 111
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Higgens House Lawn",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 112
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Library Parking lot",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 113
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Odeum A,B,C",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 114
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "DONE        ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 115
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Founders Lob",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 116
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden - Thur",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 117
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Quad (Rain Location: Campus Center)",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 118
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "------      ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 119
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "-------     ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 120
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "EMAIL       ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 121
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "---         ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 122
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum A",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 123
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus center",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 124
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Morgan Hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 125
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum B,C",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 126
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alumni Gym BB Court",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 127
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Salisbury Labs 115",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 128
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum, Campus Center",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 129
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "FLAUU       ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 130
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden Hall Great Hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 131
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "FLUU        ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 132
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Kinnicutt Hall, Salisbury Labs",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 133
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Food Court",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 134
+},
+{
+  "fields": {
+    "building": 5,
+    "holds_equipment": false,
+    "name": "Exterior ",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 135
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Harrington  Gym",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 136
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Olin Hall 107",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 137
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Odeum A&B",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 138
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "142",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 139
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Quad/Odeum",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 140
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "[email]     ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 141
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Sun: Quad // Rain: Harrington",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 142
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Stage / Forkey Lou",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 143
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "N/A",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 144
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Forkey Commons",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 145
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum A/B/C",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 146
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Rental",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 147
+},
+{
+  "fields": {
+    "building": 19,
+    "holds_equipment": false,
+    "name": "Sigma Pi House",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 148
+},
+{
+  "fields": {
+    "building": 12,
+    "holds_equipment": false,
+    "name": "Higgins House Library",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 149
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "The Quad",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 150
+},
+{
+  "fields": {
+    "building": 17,
+    "holds_equipment": false,
+    "name": "The Wedge",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 151
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden Memorial Hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 152
+},
+{
+  "fields": {
+    "building": 13,
+    "holds_equipment": false,
+    "name": "HL 218",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 153
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "CC?         ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 154
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Fuller 3rd Flr",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 155
+},
+{
+  "fields": {
+    "building": 8,
+    "holds_equipment": false,
+    "name": "St. Spyridon Church",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 156
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "OLIN 107",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 157
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Quad/Riley Commons",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 158
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Odeum A&B",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 159
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "CC/Riley    ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 160
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Salisbury 115",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 161
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum C",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 162
+},
+{
+  "fields": {
+    "building": 9,
+    "holds_equipment": false,
+    "name": "Forkey Conference",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 163
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Quad/Harrington",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 164
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "FLAUD [Fake ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 165
+},
+{
+  "fields": {
+    "building": 16,
+    "holds_equipment": false,
+    "name": "Little Theatre",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 166
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "-",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 167
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum B & C",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 168
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "iCC         ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 169
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "iAlden      ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 170
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum A-C",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 171
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Lee St. Scho",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 172
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "iFLAUD      ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 173
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Goats Head Pub",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 174
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum A, B & C",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 175
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "AOE         ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 176
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "CC Patio/ CC Stage if RAIN",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 177
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Everywhere!",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 178
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Quad (Rain Location: Wedge)",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 179
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Quad (Rain Location: Alden)",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 180
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "@Equipment  ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 181
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum A and B",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 182
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Fuller Labs, 3rd Floor lounge",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 183
+},
+{
+  "fields": {
+    "building": 8,
+    "holds_equipment": false,
+    "name": "First Unitarian Church",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 184
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum B+C",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 185
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Here",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 186
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Outside Salisbury Labs, both top",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 187
+},
+{
+  "fields": {
+    "building": 12,
+    "holds_equipment": false,
+    "name": "Higgins House West Courtyard",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 188
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden Sub-ba",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 189
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum B     ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 190
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Patio (Rain Location: Stage)",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 191
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Ctr Back Patio",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 192
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum B&C",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 193
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "The Turf",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 194
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Turf        ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 195
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden -- CC ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 196
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "AFF",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 197
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Perrault Hal",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 198
+},
+{
+  "fields": {
+    "building": 16,
+    "holds_equipment": false,
+    "name": "Riley Commons/Little Theatre",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 199
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campu Center",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 200
+},
+{
+  "fields": {
+    "building": 12,
+    "holds_equipment": false,
+    "name": "Higgins House Lower Lawn",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 201
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "CC-Odeum",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 202
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "-Campus Center patio",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 203
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Patio, Campus Center",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 204
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Seal",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 205
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Perrault Hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 206
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Fuller Auditorium",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 207
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Forkey Commons (Stage)",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 208
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum - Campus Center",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 209
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Canpus Cente",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 210
+},
+{
+  "fields": {
+    "building": 2,
+    "holds_equipment": false,
+    "name": "Pumkin Lounge",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 211
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Salisbury Lab",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 212
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Everywhere",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 213
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum A,B,C",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 214
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "14:00",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 215
+},
+{
+  "fields": {
+    "building": 12,
+    "holds_equipment": false,
+    "name": "Higgins Lawn",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 216
+},
+{
+  "fields": {
+    "building": 12,
+    "holds_equipment": false,
+    "name": "Higgins House East Lawn",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 217
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Quad (Rain Location: Harrington)",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 218
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": true,
+    "name": "Off Campus",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 219
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum A,B,C in campus center",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 220
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Perreault Hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 221
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "On Campus",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 222
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Odeum (A,B,C)",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 223
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Forkey",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 224
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Quad-Harrington",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 225
+},
+{
+  "fields": {
+    "building": 3,
+    "holds_equipment": false,
+    "name": "Alden Chapel",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 226
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": " Campus Cent",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 227
+},
+{
+  "fields": {
+    "building": 20,
+    "holds_equipment": false,
+    "name": "SL 115 (Kinnicutt Hall)",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 228
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "16:00",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 229
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Food Court Stage",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 230
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Harrignton Gym",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 231
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Food Court",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 232
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Harr. Front",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 233
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "FLUAD",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 234
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "BBQ",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 235
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "harrington/quad",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 236
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Stage/Ground Floor",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 237
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center  Odeum",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 238
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Forkey Stage - Campus Center",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 239
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Power = ?",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 240
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Food Court, Campus Center",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 241
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center-Forkey Commons",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 242
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Odeums",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 243
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Pres House",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 244
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Quad (Harrington for rain)",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 245
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Harrington Aud",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 246
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden Hall, Great Hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 247
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Outside of the campus center",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 248
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "QUAD \\ Forkey CC (rain)",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 249
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Bookstore",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 250
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Harr",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 251
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center lower Level Stage",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 252
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Fuller Aud",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 253
+},
+{
+  "fields": {
+    "building": 18,
+    "holds_equipment": false,
+    "name": "Olin 107",
+    "show_in_wo_form": true,
+    "available_for_meetings": true,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 254
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Founders Dining hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 255
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Stage Area",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 256
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden Hall (Main Room)",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 257
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "All Saints Church",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 258
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Founders Dinning Hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 259
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Oduem",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 260
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Food Court",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 261
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Campus Center Food Court Area",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 262
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Quadrangle",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 263
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Kinnicutt Hall (Salisbury)",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 264
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden Dock",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 265
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Burt Terrace, Campus Center (Rai",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 266
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "CCO Office",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 267
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Burt Terrace/Campus Center",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 268
+},
+{
+  "fields": {
+    "building": 8,
+    "holds_equipment": false,
+    "name": "President's House",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 269
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "TBA via E-ma",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 270
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden/Alden",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 271
+},
+{
+  "fields": {
+    "building": 6,
+    "holds_equipment": true,
+    "name": "Booth",
+    "show_in_wo_form": false,
+    "available_for_meetings": true,
+    "setup_only": true
+  },
+  "model": "events.location",
+  "pk": 272
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "CC-Office",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 273
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "CampusCenter",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 274
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "meeting",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 275
+},
+{
+  "fields": {
+    "building": 2,
+    "holds_equipment": false,
+    "name": "AK",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 276
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Pres. house",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 277
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Quad (Rain Location: Rec)",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 278
+},
+{
+  "fields": {
+    "building": 1,
+    "holds_equipment": false,
+    "name": "Alden Memorial Hall",
+    "show_in_wo_form": false,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 279
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Morgan Room",
+    "show_in_wo_form": false,
+    "available_for_meetings": true,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 280
+},
+{
+  "fields": {
+    "building": 2,
+    "holds_equipment": false,
+    "name": "AK 233",
+    "show_in_wo_form": false,
+    "available_for_meetings": true,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 281
+},
+{
+  "fields": {
+    "building": 2,
+    "holds_equipment": false,
+    "name": "AK 219",
+    "show_in_wo_form": false,
+    "available_for_meetings": true,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 282
+},
+{
+  "fields": {
+    "building": 21,
+    "holds_equipment": false,
+    "name": "Track Level",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 283
+},
+{
+  "fields": {
+    "building": 20,
+    "holds_equipment": false,
+    "name": "SL 402",
+    "show_in_wo_form": true,
+    "available_for_meetings": true,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 284
+},
+{
+  "fields": {
+    "building": 22,
+    "holds_equipment": false,
+    "name": "SH 308",
+    "show_in_wo_form": true,
+    "available_for_meetings": true,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 285
+},
+{
+  "fields": {
+    "building": 5,
+    "holds_equipment": false,
+    "name": "Interior",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 286
+},
+{
+  "fields": {
+    "building": 21,
+    "holds_equipment": false,
+    "name": "Robot Pits",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 287
+},
+{
+  "fields": {
+    "building": 21,
+    "holds_equipment": false,
+    "name": "Courts All",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 288
+},
+{
+  "fields": {
+    "building": 21,
+    "holds_equipment": false,
+    "name": "Courts Mondo",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 289
+},
+{
+  "fields": {
+    "building": 21,
+    "holds_equipment": false,
+    "name": "Courts Hardwood",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 290
+},
+{
+  "fields": {
+    "building": 21,
+    "holds_equipment": false,
+    "name": "Atrium",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 291
+},
+{
+  "fields": {
+    "building": 23,
+    "holds_equipment": false,
+    "name": "[NOT LISTED]",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 292
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Quad (Rain Location: CANCEL EVENT)",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 293
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Higgins Gardens Reflection Pond",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 294
+},
+{
+  "fields": {
+    "building": 24,
+    "holds_equipment": false,
+    "name": "Gordon Library 3rd Floor",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 295
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Rec Center Traffic Circle",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 296
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Rec Center Carr Plaza",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 297
+},
+{
+  "fields": {
+    "building": 8,
+    "holds_equipment": false,
+    "name": "Mechanics Hall",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 298
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Quad (Rain Location: Riley Commons)",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 299
+},
+{
+  "fields": {
+    "building": 3,
+    "holds_equipment": false,
+    "name": "Spaulding Recital Hall",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 300
+},
+{
+  "fields": {
+    "building": 21,
+    "holds_equipment": false,
+    "name": "Schwaber Dance Studio",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 301
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Quad Tent ",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 302
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Morgan Terrace",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 303
+},
+{
+  "fields": {
+    "building": 21,
+    "holds_equipment": false,
+    "name": "Green Zone",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 304
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Main Level",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 305
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Odeum A",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 306
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Odeum B",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 307
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Odeum C",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 308
+},
+{
+  "fields": {
+    "building": 25,
+    "holds_equipment": false,
+    "name": "Farquad",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 309
+},
+{
+  "fields": {
+    "building": 3,
+    "holds_equipment": false,
+    "name": "Janet Earle Room",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 310
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "All Floors",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 311
+},
+{
+  "fields": {
+    "building": 7,
+    "holds_equipment": false,
+    "name": "Odeum All (Rain Location:Harrington)  ",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 312
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "President's House",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 313
+},
+{
+  "fields": {
+    "building": 22,
+    "holds_equipment": false,
+    "name": "SH 202",
+    "show_in_wo_form": false,
+    "available_for_meetings": true,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 314
+},
+{
+  "fields": {
+    "building": 2,
+    "holds_equipment": false,
+    "name": "Atwater Kent, 3rd Floor Hallway",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 315
+},
+{
+  "fields": {
+    "building": 12,
+    "holds_equipment": false,
+    "name": "East Courtyard, Rain Location: CC Stage)",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 316
+},
+{
+  "fields": {
+    "building": 9,
+    "holds_equipment": false,
+    "name": "Harrington Patio",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 317
+},
+{
+  "fields": {
+    "building": 21,
+    "holds_equipment": false,
+    "name": "Kazin Conference Room",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 318
+},
+{
+  "fields": {
+    "building": 21,
+    "holds_equipment": false,
+    "name": " '08 Lounge/'61 Conference Room ",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 319
+},
+{
+  "fields": {
+    "building": 10,
+    "holds_equipment": false,
+    "name": "Freeman Plaza",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 320
+},
+{
+  "fields": {
+    "building": 8,
+    "holds_equipment": false,
+    "name": "CC Grass",
+    "show_in_wo_form": true,
+    "available_for_meetings": false,
+    "setup_only": false
+  },
+  "model": "events.location",
+  "pk": 321
+}
+]

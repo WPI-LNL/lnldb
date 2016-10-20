@@ -1,0 +1,371 @@
+[
+{
+  "fields": {},
+  "model": "events.projection",
+  "pk": 7
+},
+{
+  "fields": {},
+  "model": "events.projection",
+  "pk": 8
+},
+{
+  "fields": {},
+  "model": "events.projection",
+  "pk": 9
+},
+{
+  "fields": {},
+  "model": "events.projection",
+  "pk": 15
+},
+{
+  "fields": {},
+  "model": "events.sound",
+  "pk": 4
+},
+{
+  "fields": {},
+  "model": "events.sound",
+  "pk": 5
+},
+{
+  "fields": {},
+  "model": "events.sound",
+  "pk": 6
+},
+{
+  "fields": {},
+  "model": "events.sound",
+  "pk": 11
+},
+{
+  "fields": {},
+  "model": "events.lighting",
+  "pk": 1
+},
+{
+  "fields": {},
+  "model": "events.lighting",
+  "pk": 2
+},
+{
+  "fields": {},
+  "model": "events.lighting",
+  "pk": 3
+},
+{
+  "fields": {},
+  "model": "events.lighting",
+  "pk": 10
+},
+{
+  "fields": {
+    "category": 1,
+    "checkbox": false,
+    "name": "Moving Head Fixtures",
+    "cost": "30.00",
+    "services": [
+      1,
+      2,
+      3,
+      10
+    ],
+    "disappear": false,
+    "desc": "Add moving head lighting to your lighting event."
+  },
+  "model": "events.extra",
+  "pk": 4
+},
+{
+  "fields": {
+    "category": 1,
+    "checkbox": true,
+    "name": "Outdoor Event",
+    "cost": "30.00",
+    "services": [
+      1,
+      2
+    ],
+    "disappear": false,
+    "desc": "This surcharge is assessed for an event which is held outdoors."
+  },
+  "model": "events.extra",
+  "pk": 5
+},
+{
+  "fields": {
+    "category": 1,
+    "checkbox": false,
+    "name": "Strobe Light",
+    "cost": "10.00",
+    "services": [
+      1,
+      2,
+      3,
+      10
+    ],
+    "disappear": false,
+    "desc": "A surcharge for a specialty strobe light. This line item is per strobe light, not per pair however we suggest requesting them in pairs."
+  },
+  "model": "events.extra",
+  "pk": 6
+},
+{
+  "fields": {
+    "category": 1,
+    "checkbox": false,
+    "name": "Blacklight",
+    "cost": "10.00",
+    "services": [
+      1,
+      2,
+      3,
+      10
+    ],
+    "disappear": false,
+    "desc": "This surcharge is for 1 custom high output blacklight blaster. Blacklights are a great add on for any dance or party type event. "
+  },
+  "model": "events.extra",
+  "pk": 7
+},
+{
+  "fields": {
+    "category": 1,
+    "checkbox": false,
+    "name": "Followspot",
+    "cost": "30.00",
+    "services": [
+      1,
+      2,
+      3,
+      10
+    ],
+    "disappear": false,
+    "desc": "Highlight an important person or object. NOTE: There is an additional per-hour surcharge for this item. Contact lnl-vp@wpi.edu for further details."
+  },
+  "model": "events.extra",
+  "pk": 8
+},
+{
+  "fields": {
+    "category": 1,
+    "checkbox": false,
+    "name": "Outdoor Light",
+    "cost": "15.00",
+    "services": [
+      1,
+      2,
+      3,
+      10
+    ],
+    "disappear": false,
+    "desc": "Shine a light on the outside of your favorite campus building! We have a variety of fixtures to chose from that can generate all different types of effects and/or looks."
+  },
+  "model": "events.extra",
+  "pk": 9
+},
+{
+  "fields": {
+    "category": 2,
+    "checkbox": false,
+    "name": "Wireless Microphone",
+    "cost": "10.00",
+    "services": [
+      4,
+      5,
+      6,
+      11
+    ],
+    "disappear": false,
+    "desc": "Get rid of that pesky cord! Make sure your audience can hear you wherever you are. We have a variety of different types of transmitters that allow a performer hold, clip, or wear their microphone. Contact lnl-vp@wpi.edu for further information. "
+  },
+  "model": "events.extra",
+  "pk": 10
+},
+{
+  "fields": {
+    "category": 2,
+    "checkbox": true,
+    "name": "Live Performer Package",
+    "cost": "50.00",
+    "services": [
+      4,
+      5,
+      6,
+      11
+    ],
+    "disappear": false,
+    "desc": "This package allows for the use of compressors and delays. This package also includes two (2) monitor mixes. "
+  },
+  "model": "events.extra",
+  "pk": 11
+},
+{
+  "fields": {
+    "category": 2,
+    "checkbox": true,
+    "name": "Concert Package",
+    "cost": "150.00",
+    "services": [
+      4,
+      5,
+      6,
+      11
+    ],
+    "disappear": false,
+    "desc": "This package induces the use of up to 40 channels as well as the use of compressors and delays. This package also includes four (4) monitor mixes. "
+  },
+  "model": "events.extra",
+  "pk": 12
+},
+{
+  "fields": {
+    "category": 2,
+    "checkbox": false,
+    "name": "Monitor Mix",
+    "cost": "25.00",
+    "services": [
+      4,
+      5,
+      6,
+      11
+    ],
+    "disappear": false,
+    "desc": "Allow your performers to hear each-other and themselves. This item induces up to two (2) speakers per mix."
+  },
+  "model": "events.extra",
+  "pk": 13
+},
+{
+  "fields": {
+    "category": 2,
+    "checkbox": false,
+    "name": "CD Player",
+    "cost": "10.00",
+    "services": [
+      4,
+      5,
+      6,
+      11
+    ],
+    "disappear": false,
+    "desc": "A magical devices that plays the magical shinny round disks. This is a must have for those who do not trust the cloud."
+  },
+  "model": "events.extra",
+  "pk": 14
+},
+{
+  "fields": {
+    "category": 2,
+    "checkbox": true,
+    "name": "Additional 16 Inputs",
+    "cost": "50.00",
+    "services": [
+      4,
+      5,
+      6,
+      11
+    ],
+    "disappear": false,
+    "desc": "This upgrade allow your event to use an additional sixteen (16) inputs on top of the number of inputs already allowed for your event type. "
+  },
+  "model": "events.extra",
+  "pk": 15
+},
+{
+  "fields": {
+    "category": 3,
+    "checkbox": false,
+    "name": "16mm Film Reel ",
+    "cost": "12.00",
+    "services": [
+      7
+    ],
+    "disappear": false,
+    "desc": "Its round and spins!"
+  },
+  "model": "events.extra",
+  "pk": 16
+},
+{
+  "fields": {
+    "category": 3,
+    "checkbox": false,
+    "name": "35mm Film Reel",
+    "cost": "10.00",
+    "services": [
+      8
+    ],
+    "disappear": false,
+    "desc": "Its round and spins!"
+  },
+  "model": "events.extra",
+  "pk": 17
+},
+{
+  "fields": {
+    "category": 3,
+    "checkbox": false,
+    "name": "70mm Film Reel",
+    "cost": "15.00",
+    "services": [
+      9
+    ],
+    "disappear": false,
+    "desc": "Its round and spins!"
+  },
+  "model": "events.extra",
+  "pk": 18
+},
+{
+  "fields": {
+    "category": 3,
+    "checkbox": false,
+    "name": "Additional 20 Minutes Digital Projection",
+    "cost": "7.00",
+    "services": [
+      15
+    ],
+    "disappear": false,
+    "desc": "Each Additional 20 Minutes of Digital Projection"
+  },
+  "model": "events.extra",
+  "pk": 19
+},
+{
+  "fields": {
+    "name": "Lighting"
+  },
+  "model": "events.category",
+  "pk": 1
+},
+{
+  "fields": {
+    "name": "Sound"
+  },
+  "model": "events.category",
+  "pk": 2
+},
+{
+  "fields": {
+    "name": "Projection"
+  },
+  "model": "events.category",
+  "pk": 3
+},
+{
+  "fields": {
+    "name": "Power"
+  },
+  "model": "events.category",
+  "pk": 4
+},
+{
+  "fields": {
+    "name": "Misc"
+  },
+  "model": "events.category",
+  "pk": 5
+}
+]
