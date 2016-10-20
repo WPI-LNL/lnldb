@@ -10,9 +10,7 @@ except:
 
 server_pool = ldap3.ServerPool(('ldaps://ldapv2back.wpi.edu', 'ldaps://vmldapalt.wpi.edu', 'ldaps://ldapv2.wpi.edu'), pool_strategy=ldap3.FIRST, active=True, exhaust=True)
 
-
-def search_users(q):
-    ldap_q = "(& " + "".join(map(lambda tok: "(|(uid=%s*)(givenName=%s*)(sn=%s*))" % (tok, tok, tok), q.split(" "))) + ")"
+def get_ldap_settings():
     conn_args = {}
     conn_args['client_strategy']=ldap3.SYNC
     conn_args['read_only']=True
@@ -20,6 +18,11 @@ def search_users(q):
     if CCC_PASS:
         conn_args['user'] = 'wpieduPersonUUID=a7188b7da454ce4e2396e0e09abd3333,ou=People,dc=WPI,dc=EDU' # ie. the lnl CCC account dn
         conn_args['password'] = CCC_PASS
+    return conn_args
+
+def search_users(q):
+    ldap_q = "(& " + "".join(map(lambda tok: "(|(uid=%s*)(givenName=%s*)(sn=%s*))" % (tok, tok, tok), q.split(" "))) + ")"
+    conn_args = get_ldap_settings()
 
     with ldap3.Connection(server_pool, **conn_args) as conn:
         conn.search(search_base='ou=People,dc=wpi,dc=edu', search_filter=ldap_q, search_scope=ldap3.LEVEL, attributes=('givenName', 'sn', 'mail', 'uid'), paged_size=15)
@@ -47,12 +50,20 @@ def search_or_create_users(q):
 def fill_in_user(user):
     if user.first_name and user.last_name:
         return user
+    conn_args = get_ldap_settings()
 
     with ldap3.Connection(server_pool, **conn_args) as conn:
-        conn.search(search_base='ou=People,dc=wpi,dc=edu', search_filter=ldap_q, search_scope=ldap3.LEVEL, attributes=('givenName', 'sn'), paged_size=1)
+        conn.search(search_base='ou=People,dc=wpi,dc=edu', search_filter=("(uid=%s)" % user.username), search_scope=ldap3.LEVEL, attributes=('givenName', 'sn'), paged_size=1)
         resp = conn.response
-    return resp
-
+    if len(resp):
+        resp = resp[0]['attributes']
+        if not user.first_name:
+            user.first_name = resp.get('givenName', [''])[0]
+        if not user.last_name:
+            user.last_name = resp.get('sn', [''])[0]
+        if not user.email:
+            user.email = resp.get('mail', [False])[0] or user.username + "@wpi.edu",
+    return user
 
 
 if __name__ == "__main__":
