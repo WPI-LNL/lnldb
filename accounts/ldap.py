@@ -7,6 +7,8 @@ except:
     # there's a chance we won't get some results, but it still goes through
     CCC_PASS = None
 
+NAME_LENGTH = 30
+# the size of first_name and last_name fields
 
 server_pool = ldap3.ServerPool(('ldaps://ldapv2back.wpi.edu', 'ldaps://vmldapalt.wpi.edu', 'ldaps://ldapv2.wpi.edu'), pool_strategy=ldap3.FIRST, active=True, exhaust=True)
 
@@ -40,8 +42,8 @@ def search_or_create_users(q):
                 username=ldap_u['uid'][0],
                 defaults = {
                     'email': ldap_u.get('mail', [False])[0] or ldap_u['uid'][0] + "@wpi.edu",
-                    'first_name':ldap_u.get('givenName', [''])[0],
-                    'last_name':ldap_u.get('sn', [''])[0]
+                    'first_name':ldap_u.get('givenName', [''])[0][0:NAME_LENGTH-1],
+                    'last_name':ldap_u.get('sn', [''])[0][0:NAME_LENGTH-1]
                 }
             )
         objs.append(u)
@@ -58,9 +60,9 @@ def fill_in_user(user):
     if len(resp):
         resp = resp[0]['attributes']
         if not user.first_name:
-            user.first_name = resp.get('givenName', [''])[0]
+            user.first_name = resp.get('givenName', [''])[0][0:NAME_LENGTH-1]
         if not user.last_name:
-            user.last_name = resp.get('sn', [''])[0]
+            user.last_name = resp.get('sn', [''])[0][0:NAME_LENGTH-1]
         if not user.email:
             user.email = resp.get('mail', [False])[0] or user.username + "@wpi.edu",
     return user

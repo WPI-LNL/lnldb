@@ -11,7 +11,11 @@ class Command(BaseCommand):
         num_updated = 0
         with atomic():
             for u in users_needing_update:
-                ldap.fill_in_user(u)
-                u.save()
-                num_updated += 1
+                try:
+                    ldap.fill_in_user(u)
+                    u.save()
+                    num_updated += 1
+                except Exception:
+                    self.stderr.write("Error in '%s'" % str(u))
+                    raise
         self.stdout.write("%d users updated." % num_updated)
