@@ -64,7 +64,7 @@ def fill_in_user(user):
         if not user.last_name:
             user.last_name = resp.get('sn', [''])[0][0:NAME_LENGTH-1]
         if not user.email:
-            user.email = resp.get('mail', [False])[0] or user.username + "@wpi.edu",
+            user.email = resp.get('mail', [False])[0][0] or user.username + "@wpi.edu",
     return user
 
 
