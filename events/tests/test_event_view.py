@@ -99,6 +99,8 @@ class EventBasicViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # later: test post
+
+
 class EventListBasicViewTest(TestCase):
     def setUp(self):
         self.e = EventFactory.create(event_name="Test Event")
@@ -106,35 +108,35 @@ class EventListBasicViewTest(TestCase):
         self.user = UserFactory.create(password='123')
         self.client.login(username=self.user.username, password='123')
 
-    def incoming(self):
+    def test_incoming(self):
         response = self.client.get(reverse('events:incoming'))
         self.assertEqual(response.status_code, 200)
 
-    def upcoming(self):
+    def test_upcoming(self):
         response = self.client.get(reverse('events:upcoming'))
         self.assertEqual(response.status_code, 200)
 
-    def findchief(self):
+    def test_findchief(self):
         response = self.client.get(reverse('events:findchief'))
         self.assertEqual(response.status_code, 200)
 
-    def open(self):
+    def test_open(self):
         response = self.client.get(reverse('events:open'))
         self.assertEqual(response.status_code, 200)
 
-    def unreviewed(self):
+    def test_unreviewed(self):
         response = self.client.get(reverse('events:unreviewed'))
         self.assertEqual(response.status_code, 200)
 
-    def unbilled(self):
+    def test_unbilled(self):
         response = self.client.get(reverse('events:unbilled'))
         self.assertEqual(response.status_code, 200)
 
-    def unbilled_semester(self):
+    def test_unbilled_semester(self):
         response = self.client.get(reverse('events:unbilled-semester'))
         self.assertEqual(response.status_code, 200)
 
-    def paid(self):
+    def test_paid(self):
         response = self.client.get(reverse('events:paid'))
         self.assertEqual(response.status_code, 200)
 
