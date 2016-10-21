@@ -56,7 +56,7 @@ class MyViewTest(TestCase):
 
     def test_orgs(self):
         # I see both orgs that I own and orgs I am a member of in My Orgs
-        response = self.client.get(reverse("my:workorders"))
+        response = self.client.get(reverse("my:orgs"))
         self.assertContains(response, self.org.name)
         self.assertContains(response, self.org2.name)
     
