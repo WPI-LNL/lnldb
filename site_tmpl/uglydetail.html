@@ -465,7 +465,7 @@
                     <h2>Price Breakdown</h2>
                     <h3>Charge from 
                         {% if event.billing_fund %}
-                            <a href="{% url 'admin-fundedit' event.billing_fund.id %}">{{ event.billing_fund }}.</a>
+                            <a href="{% url 'orgs:fundedit' event.billing_fund.id %}">{{ event.billing_fund }}.</a>
                         {% else %}
                             (no account given).
                         {% endif %}
