@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.utils.functional import curry
 
 from emails.generators import generate_selfservice_notice_email
-from events.forms import ReportForm, MKHoursForm, EditHoursForm, SelfServiceOrgRequestForm, WorkorderRepeatForm
+from events.forms import InternalReportForm, MKHoursForm, EditHoursForm, SelfServiceOrgRequestForm, WorkorderRepeatForm
 from events.models import Event, CCReport, Hours
 
 
