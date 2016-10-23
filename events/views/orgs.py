@@ -191,7 +191,7 @@ def org_mkxfer(request, id):
     org = get_object_or_404(orgs, pk=id)
 
     context['msg'] = 'Orgs: <a href="%s">%s</a> &middot; Transfer Ownership' % (
-        reverse("my-orgs-incharge-edit", args=(org.id,)), org.name)
+        reverse("orgs:detail", args=(org.id,)), org.name)
 
     user = request.user
 

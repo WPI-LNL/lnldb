@@ -1102,7 +1102,7 @@ class OrgForm(forms.Form):
                 'please contact the person in charge of the account using <a target="_blank" href="%s">this link</a> '
                 'and request authorization to submit workorder son their behalf. If you are attempting to create a '
                 'client account which does not exist please click <a target="_blank" href="%s">this link</a></span>'
-                % (reverse('my-orgs-incharge-list'), reverse('selfserivceorg'))),
+                % (reverse('my:orgs'), reverse('my:org-request'))),
         )
         #super(OrgForm,self).__init__(*args,**kwargs)
 
