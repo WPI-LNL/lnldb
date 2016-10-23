@@ -194,7 +194,7 @@ def ccreport(request, eventid):
         
     # standard save flow
     if request.method == 'POST':
-        formset = InternalReportForm(request.POST, event=event, instance=report)
+        formset = InternalReportForm(request.POST, event=event, user=user, instance=report)
         if formset.is_valid():
             formset.save()
             return HttpResponseRedirect(reverse('my-events'))
@@ -202,7 +202,7 @@ def ccreport(request, eventid):
             context['formset'] = formset
 
     else:
-        formset = InternalReportForm(event=event, instance=report)
+        formset = InternalReportForm(event=event, user=user, instance=report)
 
         context['formset'] = formset
 
