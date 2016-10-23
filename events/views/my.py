@@ -187,11 +187,14 @@ def ccreport(request, eventid):
     context['msg'] = "Crew Chief Report for '<em>%s</em>' (%s)" % (event, ",".join([str(i.service) for i in x]))
 
     # create report
-    report, created = CCReport.objects.get_or_create(event=event, crew_chief=user)
-
+    try:
+        report = CCReport.objects.get(event=event, crew_chief=user)
+    except CCReport.DoesNotExist:
+        report = None
+        
     # standard save flow
     if request.method == 'POST':
-        formset = ReportForm(request.POST, instance=report)
+        formset = InternalReportForm(request.POST, event=event, instance=report)
         if formset.is_valid():
             formset.save()
             return HttpResponseRedirect(reverse('my-events'))
@@ -199,7 +202,7 @@ def ccreport(request, eventid):
             context['formset'] = formset
 
     else:
-        formset = ReportForm(instance=report)
+        formset = InternalReportForm(event=event, instance=report)
 
         context['formset'] = formset
 
