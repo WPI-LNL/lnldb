@@ -769,6 +769,13 @@ class MKHoursForm(forms.ModelForm):
         super(MKHoursForm, self).__init__(*args, **kwargs)
         self.fields['service'].queryset = get_qs_from_event(event)
 
+    def clean(self):
+        super(MKHoursForm, self).clean()
+        service= self.cleaned_data['service']
+        user = self.cleaned_data['user']
+        if self.event.hours.filter(user=user, service=service).exists():
+            raise ValidationError("User already has hours for this service. Edit those instead")
+
     def save(self, commit=True):
         obj = super(MKHoursForm, self).save(commit=False)
         obj.event = self.event
