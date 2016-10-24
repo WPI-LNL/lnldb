@@ -26,8 +26,12 @@ def email_cc_notification(sender, instance, created, raw=False, **kwargs):
         filename = "%s.workorder.pdf" % slugify(event.event_name)
         attachments = [{"file_handle": pdf_handle, "name": filename}]
 
-        local = timezone.localtime(i.setup_start)
-        local_formatted = local.strftime("%A %B %d at %I:%M %p")
+        if i.setup_start:
+            local = timezone.localtime(i.setup_start)
+            local_formatted = local.strftime("%A %B %d at %I:%M %p")
+        else:
+            local_formatted = "a time of your choice "
+
         email_body = """
             You\'ve been added as a crew chief to the event "%s". \n
             You have signed up to be crew chief for %s, with your setup starting on %s in the %s \n

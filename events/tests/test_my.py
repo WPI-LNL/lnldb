@@ -1,12 +1,15 @@
 
 from django.test import TestCase
-from .generators import EventFactory, UserFactory, OrgFactory
 from django.core.urlresolvers import reverse
+from model_mommy import mommy
+from .generators import EventFactory, UserFactory, OrgFactory
+from ..models import Event, EventCCInstance
 
 
 class MyViewTest(TestCase):
     def setUp(self):
-        self.e = EventFactory.create(event_name="Test Event")
+        #self.e = EventFactory.create(event_name="Test Event")
+        self.e = mommy.make(Event, event_name="foobar", _fill_optional=True)
         self.e2 = EventFactory.create(event_name="Other Test Event")
         self.user = UserFactory.create(password='123')
         self.org = OrgFactory.create(user_in_charge=self.user)
@@ -50,7 +53,7 @@ class MyViewTest(TestCase):
         self.e.save()
 
         response = self.client.get(reverse("my:event-attach", args=[self.e.pk]))
-        self.assertContains(response, self.e.event_name)
+        self.assertEqual(response.status_code, 200)
 
         # TODO: check attachments functionality more thoroughly
 
@@ -64,3 +67,26 @@ class MyViewTest(TestCase):
         # check that the request form shows a valid page
         response = self.client.get(reverse("my:org-request"))
         self.assertEqual(response.status_code, 200)
+
+    def test_cc_report_blank(self):
+        cc = mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
+        response = self.client.get(reverse("my-ccreport", args=[self.e.pk]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_cc_report_error_post(self):
+        cc = mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
+        response = self.client.post( reverse("my-ccreport", args=[self.e.pk]),)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(self.e.ccreport_set.filter(crew_chief=self.user)), [])
+
+    def test_cc_report_post(self):
+        cc = mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
+        response = self.client.post(
+                reverse("my-ccreport", args=[self.e.pk]),
+                data={
+                    'report': "lorem ipsum something or another", 
+                    'crew_chief': self.user.pk}
+                )
+        self.assertEqual(response.status_code, 302)
+        self.assertIsNotNone(self.e.ccreport_set.get(crew_chief=self.user))
+    

@@ -523,6 +523,8 @@ class InternalReportForm(FieldAccessForm):
             )
         )
         super(InternalReportForm, self).__init__(*args, **kwargs)
+        if not self.fields['crew_chief'].initial:
+            self.fields['crew_chief'].initial = self.user
 
     def save(self, commit=True):
         obj = super(InternalReportForm, self).save(commit=False)
