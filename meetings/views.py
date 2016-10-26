@@ -125,7 +125,7 @@ def updateevent(request, mtg_id, event_id):
         formset = cc_formset(request.POST, instance=event, prefix="main")
         if formset.is_valid():
             formset.save()
-            url = reverse('meeting:detail', args=(mtg_id,)) + "#events"
+            url = reverse('meetings:detail', args=(mtg_id,)) + "#events"
             return HttpResponseRedirect(url)
         else:
             context['formset'] = formset
