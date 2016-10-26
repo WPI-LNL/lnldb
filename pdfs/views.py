@@ -179,6 +179,6 @@ def generate_event_pdf_multi(request, ids=None):
     pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
     # Return PDF document through a Django HTTP response
-    resp = HttpResponse(pdf_file, content_type='application/pdf')
+    resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
     resp['Content-Disposition'] = 'inline; filename="events.pdf"'
     return resp
