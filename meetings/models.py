@@ -3,6 +3,8 @@ from django.db import models
 from django.conf import settings
 from django_extensions.db.models import TimeStampedModel
 
+import uuid
+
 from events.models import Event, Location
 # Create your models here.
 
@@ -107,13 +109,13 @@ class MtgAttachment(TimeStampedModel):
 
 class MeetingAnnounce(models.Model):
     meeting = models.ForeignKey(Meeting)
-    events = models.ManyToManyField(Event, related_name="meetingannouncements")
+    events = models.ManyToManyField(Event, related_name="meetingannouncements", blank=True)
     subject = models.CharField(max_length=128)
     message = models.TextField()
     email_to = models.ForeignKey('TargetEmailList')
 
     added = models.DateTimeField(auto_now_add=True)
-    uuid = models.UUIDField(editable=False, null=True, blank=True)
+    uuid = models.UUIDField(editable=False, default=uuid.uuid4, blank=True)
 
     @property
     def reverse_ordered_events(self):
@@ -143,10 +145,10 @@ class MeetingType(models.Model):
 
 class CCNoticeSend(models.Model):
     meeting = models.ForeignKey(Meeting, related_name="meetingccnotices")
-    events = models.ManyToManyField(Event, related_name="meetingccnoticeevents")
+    events = models.ManyToManyField(Event, related_name="meetingccnoticeevents", blank=True)
     sent_at = models.DateTimeField(auto_now_add=True)
     sent_success = models.BooleanField(default=False)
-    uuid = models.UUIDField(editable=False, null=True, blank=True)
+    uuid = models.UUIDField(editable=False, default=uuid.uuid4, blank=True)
 
     email_to = models.ForeignKey('TargetEmailList', default=get_default_email)
 

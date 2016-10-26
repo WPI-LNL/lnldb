@@ -210,9 +210,9 @@ urlpatterns = [
    # }}}
 
    # emails
-   url(r'^email/announce/(?P<slug>[0-9a-f]+)/$', MeetingAnnounceView.as_view(),
+   url(r'^email/announce/(?P<slug>[-0-9a-f]+)/$', MeetingAnnounceView.as_view(),
        name="email-view-announce"),
-   url(r'^email/announcecc/(?P<slug>[0-9a-f]+)/$', MeetingAnnounceCCView.as_view(),
+   url(r'^email/announcecc/(?P<slug>[-0-9a-f]+)/$', MeetingAnnounceCCView.as_view(),
        name="email-view-announce-cc"),
 
    # special urls
