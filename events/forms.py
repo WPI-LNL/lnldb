@@ -773,7 +773,7 @@ class MKHoursForm(forms.ModelForm):
         super(MKHoursForm, self).clean()
         service= self.cleaned_data['service']
         user = self.cleaned_data['user']
-        if self.event.hours.filter(user=user, service=service).exists():
+        if self.event.hours.filter(user=user, service=service).exists() and not self.instance.pk:
             raise ValidationError("User already has hours for this service. Edit those instead")
 
     def save(self, commit=True):
