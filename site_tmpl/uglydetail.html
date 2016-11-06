@@ -428,7 +428,7 @@
                         <ul>
                         {% for crew in event.crew_needing_reports %}
                             <li>
-                                <a href="{% url "accounts:detail" crew.crew_chief.id %}">{{ crew.crew_chief.get_full_name }}</a>
+                                <a href="{% url "accounts:detail" crew.crew_chief.id %}">{{ crew.crew_chief }}</a>
                             </li>
                         {% endfor %}
                         </ul>
