@@ -1,6 +1,4 @@
 {% extends 'base_admin.html' %}
-{% load at_user_linking %}
-{% load at_event_linking %}
 {% load markdown_deux_tags %}
 {% load crispy_forms_tags %}
 
@@ -42,7 +40,7 @@
             </em>
             
             <blockquote>
-                {{ report.report|mduserlink|markdown }}
+                {{ report.report|markdown }}
                 {% comment %} <small>For {{ report.pretty_cat_list }}</small>{% endcomment %}
             </blockquote> 
         {% endfor %}

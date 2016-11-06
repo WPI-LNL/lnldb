@@ -35,6 +35,8 @@ class UserAddView(mixins.HasPermMixin, generic.CreateView):
 
 
 class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, generic.UpdateView):
+    slug_field = "username"
+    slug_url_kwarg = "username"
     model = get_user_model()
     form_class = forms.UserEditForm
     template_name = "form_crispy_cbv.html"
@@ -67,6 +69,8 @@ class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, gen
 
 
 class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
+    slug_field = "username"
+    slug_url_kwarg = "username"
     model = get_user_model()
     template_name = "userdetail.html"
     perms = ['accounts.view_user']

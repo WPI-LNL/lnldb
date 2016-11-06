@@ -1,6 +1,4 @@
 {% extends 'base_admin.html' %}
-{% load at_user_linking %}
-{% load at_event_linking %}
 {% load markdown_deux_tags %}
 {% load bootstrap_toolkit %}
 {% load permissionif %}
@@ -46,7 +44,7 @@
 
                     <div class="note-body agenda">
                         {% if m.agenda %}
-                            {{ m.agenda | mduserlink | mdeventlink | markdown }}
+                            {{ m.agenda | markdown }}
                         {% else %}
                             <i>There is nothing here</i>
                         {% endif %}
@@ -58,7 +56,7 @@
 
                     <div class="note-body minutes">
                         {% if m.minutes %}
-                            {{ m.minutes | mduserlink | mdeventlink | markdown }}
+                            {{ m.minutes | markdown }}
                         {% else %}
                             <i>There is nothing here</i>
                         {% endif %}
@@ -71,7 +69,7 @@
 
                         <div class="note-body closed-minutes">
                             {% if m.minutes_private %}
-                                {{ m.minutes_private | mduserlink | mdeventlink | markdown }}
+                                {{ m.minutes_private | markdown }}
                             {% else %}
                                 <i>There is nothing here</i>
                             {% endif %}
@@ -212,7 +210,7 @@
                             <tr>
                                 <td colspan="6">
                                     <div class="collapse" id="entry{{e.id}}">
-                                    {{ e.description|mduserlink|mdeventlink|markdown }}
+                                    {{ e.description|markdown }}
                                     </div>
                                 </td>
                             </tr>
@@ -256,7 +254,7 @@
                             <tr>
                                 <td colspan="6">
                                     <div class="collapse" id="entry{{e.id}}">
-                                    {{ e.description|mduserlink|mdeventlink|markdown }}
+                                    {{ e.description|markdown }}
                                     </div>
                                 </td>
                             </tr>

@@ -1,6 +1,11 @@
-from django.conf.urls import url
+from django.conf.urls import url, include
 
 from . import views
+
+each_member_pattern = [
+    url(r'^edit/$', views.UserUpdateView.as_view(), name="update"),
+    url(r'^detail/$', views.UserDetailView.as_view(), name="detail"),
+        ]
 
 urlpatterns = [
     url(r'^me/$', views.MeDirectView.as_view(permanent=False, pattern_name='accounts:detail'), name="me"),
@@ -17,8 +22,9 @@ urlpatterns = [
 
     url(r'^list/mdc/raw/$', views.mdc_raw, name='mdc_raw'),
     url(r'^list/mdc/$', views.mdc, name='mdc'),
+    url(r'^db/members/(?P<pk>[0-9]+)/set_password/$', views.PasswordSetView.as_view(), name="password"),
 
-    url(r'^db/members/(?P<pk>[0-9a-f]+)/edit/$', views.UserUpdateView.as_view(), name="update"),
-    url(r'^db/members/(?P<pk>[0-9a-f]+)/set_password/$', views.PasswordSetView.as_view(), name="password"),
-    url(r'^db/members/(?P<pk>[0-9a-f]+)/detail/$', views.UserDetailView.as_view(), name="detail"),
+    url(r'^db/members/(?P<pk>[0-9]+)/', include(each_member_pattern)),
+    url(r'^db/members/(?P<username>[A-Za-z][A-Za-z0-9]*)/', include(each_member_pattern, namespace='by-name')),
+
 ]

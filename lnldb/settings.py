@@ -2,6 +2,11 @@
 
 import os
 import sys
+import re
+try:
+    from django.urls import reverse, NoReverseMatch
+except ImportError:
+    from django.core.urlresolvers import reverse, NoReverseMatch
 
 
 def here(*x):
@@ -316,15 +321,33 @@ CRISPY_TEMPLATE_PACK = 'bootstrap3'
 # Don't mess with builtins just for the sake of permissions
 PERMISSION_REPLACE_BUILTIN_IF = False
 
+def reverse_noexcept(url, args=None, kwargs=None):
+    try:
+        url_out = reverse(url, args=args, kwargs=kwargs)
+    except NoReverseMatch:
+        url_out = "#" # dont change the url
+    return url_out
+
 # markdown deux configuration
 MARKDOWN_DEUX_STYLES = {
     "default": {
+        "link_patterns": [
+            (re.compile("@([A-Za-z][A-Za-z0-9]*)"), lambda m: reverse_noexcept("accounts:by-name:detail", kwargs={'username':m.group(1)})),
+            (re.compile("@([0-9]+)"), lambda m: reverse_noexcept("events-detail", args=[m.group(1)])),
+            ],
         "extras": {
             "code-friendly": None,
+            "break-on-newline": None,
+            "strike": None,
+            "smarty-pants": None,
+            "tables": None,
+            "link-patterns": None
         },
-        "safe_mode": False,
+        "safe_mode": "escape",
     },
 }
+# and for the html editor
+EXTENSIONS = ["newlines", "smart-strong", "strikethrough", "smartypants", "tables"]
 
 CACHES = {
     'default': {
@@ -334,6 +357,7 @@ CACHES = {
 }
 
 MPTT_ADMIN_LEVEL_INDENT = 20
+
 
 # Local Settings Imports
 try:
