@@ -508,7 +508,7 @@ class InternalReportForm(FieldAccessForm):
         self.helper.form_action = ""
         self.helper.layout = Layout(
             DynamicFieldContainer('crew_chief'),
-            HTML('<h4>What you might put in the report::</h4>'
+            HTML('<h4>What you might put in the report:</h4>'
                  '<ul><li>How was the event set up?</li>'
                  '<li>Roughly what equipment was used?</li>'
                  '<li>Were there any last minute changes</li>'
@@ -524,8 +524,8 @@ class InternalReportForm(FieldAccessForm):
         )
         super(InternalReportForm, self).__init__(*args, **kwargs)
         if 'crew_chief' in self.fields and not self.fields['crew_chief'].initial:
-            self.fields['crew_chief'].initial = self.user
-
+            self.fields['crew_chief'].initial = self.user.pk
+    
     def save(self, commit=True):
         obj = super(InternalReportForm, self).save(commit=False)
         if 'crew_chief' not in self.cleaned_data:
@@ -542,7 +542,7 @@ class InternalReportForm(FieldAccessForm):
         widgets = {
             'report': PagedownWidget()
         }
-    crew_chief = AutoCompleteSelectField('Members', required=True)
+    crew_chief = AutoCompleteSelectField('Members', required=False)
 
     class FieldAccess:
         avg_user = FieldAccessLevel(
@@ -719,37 +719,6 @@ class BillingUpdateForm(forms.ModelForm):
 
 
 ### CC Facing Forms
-class ReportForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        self.helper = FormHelper()
-        self.helper.form_class = "form-horizontal"
-        self.helper.form_method = "post"
-        self.helper.form_action = ""
-        self.helper.layout = Layout(
-            HTML('<h4>What you might put in the report::</h4>'
-                 '<ul><li>How was the event set up?</li>'
-                 '<li>Roughly what equipment was used?</li>'
-                 '<li>Were there any last minute changes</li>'
-                 '<li>Did you come across any issues?</li>'
-                 '<li>Would you classify this event as the level it was booked under?</li>'
-                 '<li>What information would be useful for somebody next year?</li></ul>'),
-            Field('report', css_class="col-md-10"),
-            markdown_at_msgs,
-            FormActions(
-                Submit('save', 'Save Changes'),
-                Reset('reset', 'Reset Form'),
-            )
-        )
-        super(ReportForm, self).__init__(*args, **kwargs)
-
-    class Meta:
-        model = CCReport
-        fields = ('report',)
-        widgets = {
-            'report': PagedownWidget()
-        }
-
-
 class MKHoursForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
         self.event = event
@@ -851,7 +820,9 @@ class CCIForm(forms.ModelForm):
 
         # x = self.instance.event.lighting
         self.fields['service'].queryset = get_qs_from_event(event)
-        self.fields['setup_start'].initial = self.event.datetime_setup_complete
+        self.fields['setup_start'].initial = self.fields['setup_start'].prepare_value(
+                self.event.datetime_setup_complete.replace(second=0, microsecond=0)
+                )
 
     def save(self, commit=True):
         obj = super(CCIForm, self).save(commit=False)
