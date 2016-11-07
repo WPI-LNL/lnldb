@@ -72,12 +72,12 @@ def make_idt_overlay(dep_name, fund, amount, proj_amt=0, person_name=None, descr
     # our fund
     c.drawCentredString(5.25*inch,5.15*inch,str(81720))
     c.drawCentredString(6.1*inch,5.15*inch,str(72810))
-    c.drawCentredString(6.95*inch,5.15*inch,str(7649))
+    c.drawCentredString(6.95*inch,5.15*inch,str(5910))
 
     if proj_amt:
         c.drawCentredString(5.25*inch,4.8*inch,str(83100))
         c.drawCentredString(6.1*inch,4.8*inch,str(72800))
-        c.drawCentredString(6.95*inch,4.8*inch,str(7649))
+        c.drawCentredString(6.95*inch,4.8*inch,str(5910))
 
     c.save()
     outfile.flush()
