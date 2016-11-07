@@ -87,7 +87,8 @@ def make_idt_single(event, user=None):
     # possible penny-off bug if the projection cost is odd. 
     overlay = make_idt_overlay(
             dep_name=event.billing_org or event.org.first(),
-            fund=event.billing_fund.as_tuple() if event.billing_fund else None, 
+            #fund=event.billing_fund.as_tuple() if event.billing_fund else None, 
+            fund=None,
             amount=float(event.cost_total) - event.cost_projection_total/2, 
             proj_amt= event.cost_projection_total/2, 
             person_name=str(user) if user else None, 
@@ -112,10 +113,11 @@ def make_idt_bulk(events, user=None, org_for=None, fund_for=None):
             org_for = orgs.pop()
    
     # likewise with funds 
-    if fund_for is None:
-        funds = set([e.billing_fund for e in events])
-        if len(funds) == 1:
-            fund_for = funds.pop()
+    #if fund_for is None:
+    #    funds = set([e.billing_fund for e in events])
+    #    if len(funds) == 1:
+    #        fund_for = funds.pop()
+    fund_for=None # let the client write their own acct num
 
     overlay = make_idt_overlay(
             dep_name=org_for,
