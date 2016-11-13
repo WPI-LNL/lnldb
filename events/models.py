@@ -91,7 +91,7 @@ class EventManager(models.Manager):
         event_name = event_details['eventname']
         location = event_details['location']
         general_description = event_details['general_description']
-        event_fund = event_details['fund']
+        event_fund = event_details.get('fund', None)
         event_location = location
 
         # event_methods

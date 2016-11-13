@@ -1102,15 +1102,12 @@ class SelectForm(forms.Form):
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
-        if org:
-            self.fields['fund'].queryset = Fund.objects.filter(Q(orgfunds=org) | Q(name='None'))
         self.helper.layout = Layout(
             Fieldset(
                 'Name and Location',
                 Field('eventname', css_class="col-md-6"),
                 Field('location', css_class="col-md-6"),
                 Field('general_description', css_class="col-md-6"),
-                Field('fund'),
             ),
             Fieldset(
                 'Services',
@@ -1123,9 +1120,6 @@ class SelectForm(forms.Form):
         required=True
     )
 
-    fund = ModelChoiceField(
-        queryset=Fund.objects.filter(name='None')
-    )
 
     #location = forms.ModelChoiceField(
     # queryset = Location.objects.filter(show_in_wo_form=True)
