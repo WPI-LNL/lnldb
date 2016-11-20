@@ -352,7 +352,7 @@ class Event(models.Model):
     billing_org = models.ForeignKey('Organization', null=True, blank=True, related_name="billedevents")
     billing_fund = models.ForeignKey('Fund', null=True, blank=True, on_delete=models.SET_NULL,
                                      related_name="event_accounts")
-    contact_email = models.CharField(max_length=256, null=True, blank=True)  # DEPRECATED
+    contact_email = models.CharField(max_length=180, null=True, blank=True)  # DEPRECATED
     contact_addr = models.TextField(null=True, blank=True)  # DEPRECATED
     contact_phone = models.CharField(max_length=32, null=True, blank=True)  # DEPRECATED
 

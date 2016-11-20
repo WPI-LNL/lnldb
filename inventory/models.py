@@ -102,7 +102,7 @@ class EquimentItemManager(TreeManager):
 class EquipmentItem(MPTTModel):
     objects = EquimentItemManager()
     item_type = models.ForeignKey('EquipmentClass', related_name="items", null=False, blank=False)
-    serial_number = models.CharField(max_length=256, null=True, blank=True)
+    serial_number = models.CharField(max_length=190, null=True, blank=True)
     case = TreeForeignKey('self', null=True, blank=True,
                           related_name='contents', db_index=True,
                           help_text="Case or item that contains this item")
@@ -167,12 +167,12 @@ class EquipmentItem(MPTTModel):
 
 
 class EquipmentClass(models.Model):
-    name = models.CharField(max_length=256)
+    name = models.CharField(max_length=190)
     category = TreeForeignKey(EquipmentCategory, null=False, blank=False)
     description = models.TextField(help_text="Function, appearance, and included acessories", null=True, blank=True)
     value = models.DecimalField(help_text="Estimated purchase value", max_digits=9, decimal_places=2,
                                 null=True, blank=True)
-    model_number = models.CharField(max_length=256, null=True, blank=True)
+    model_number = models.CharField(max_length=190, null=True, blank=True)
     manufacturer = models.CharField(max_length=128, null=True, blank=True)
     url = models.URLField(null=True, blank=True)
     holds_items = models.BooleanField(default=False, help_text="Can hold other items")

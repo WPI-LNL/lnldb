@@ -42,18 +42,28 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu', 'users.wpi.edu', 'user
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DATABASES = {
-    'default': {
+    'default': { # for testing
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': from_runtime('lnldb.db'),  # DB name on the host
-        'USER': '',  # Username. Please use a unique user with limited permissions.
-        'PASSWORD': '',  # And for the love of god, use a password.
-        'HOST': '',  # Set to empty string for localhost.
-        'PORT': '',  # Set to empty string for default.
-        # 'OPTIONS': {
-        #     'sql_mode': 'TRADITIONAL',
-        #     'charset': 'utf8',
-        # }  # Now we have a mild degree of confidence :-)
+        'NAME': from_runtime('lnldb.db'),  
     }
+    # #  mysql template
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME': 'lnldb2012',
+    #     'USER': 'lnlcgi',
+    #     'PASSWORD': '<...>',
+    #     'HOST': 'mysql.wpi.edu',
+    #     'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+    #     'OPTIONS': {
+    #         'sql_mode': 'TRADITIONAL',
+    #         'charset': 'utf8mb4',
+    #         'init_command': 'SET '
+    #             'storage_engine=INNODB,'
+    #             'character_set_connection=utf8mb4,'
+    #             'collation_connection=utf8mb4_unicode_ci,'
+    #             'SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
+    #     }  # Now we have a mild degree of confidence :-) Oh, MySQL....
+    # }
 }
 
 # Local time zone for this installation. Choices can be found here:
