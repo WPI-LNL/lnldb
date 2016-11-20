@@ -10,6 +10,7 @@ urlpatterns = [
     url(r'^orgs/', include([
         url(r'^$', views.my.myorgs, name="orgs"),
         url(r'^form/$', views.my.myorgform, name="org-request"),
+        url(r'^(?P<id>[0-9a-f]+)/$', views.orgs.orgedit, name="org-edit"),
     ])),
 
 ]
