@@ -1,8 +1,9 @@
 # Django settings for lnldb project.
 
 import os
-import sys
 import re
+import sys
+
 try:
     from django.urls import reverse, NoReverseMatch
 except ImportError:
@@ -135,7 +136,7 @@ STATICFILES_DIRS = (
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
 # Make this unique, and don't share it with anybody.
