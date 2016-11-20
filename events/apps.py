@@ -27,3 +27,4 @@ class EventsConfig(AppConfig):
         search.register(Organization)
         search.register(CCReport)
         search.register(Fund)
+        from . import signals # NOQA

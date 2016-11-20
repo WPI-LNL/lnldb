@@ -8,8 +8,10 @@ from django.core.validators import MinLengthValidator
 from django import forms
 from django.db.models import Manager
 from django.utils.functional import cached_property
+from django.utils import timezone
 
 import pytz
+import datetime
 import decimal
 
 # if settings unset, have sane defaults
@@ -907,7 +909,7 @@ class Fund(models.Model):
 
     @property
     def fopal(self):
-        return "%s-%s-%s" %  self.as_tuple()
+        return "%s-%s-%s" % self.as_tuple()
 
     def as_tuple(self):
         return (self.fund, self.organization, self.account)
@@ -1118,8 +1120,3 @@ class EventArbitrary(models.Model):
     @property
     def abs_cost(self):
         return abs(self.totalcost)
-
-
-# SIGNALS IMPORT, DO NOT TOUCH
-# noinspection PyPep8
-from events.signals import *

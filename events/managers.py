@@ -1,16 +1,14 @@
-# from events.models import Organization
-from events.models import *
-# Lighting,Sound,Projection
+from . import models
 
 
 def get_level_object(level, etype):
     lo = None
     if etype == 0:  # lighting
-        lo = Lighting.objects.get(shortname__endswith=str(level))
+        lo = models.Lighting.objects.get(shortname__endswith=str(level))
     elif etype == 1:  # sound
-        lo = Sound.objects.get(shortname__endswith=str(level))
+        lo = models.Sound.objects.get(shortname__endswith=str(level))
     elif etype == 2:  # projection
-        lo = Projection.objects.get(shortname=str(level))
+        lo = models.Projection.objects.get(shortname=str(level))
 
     return lo
 
@@ -25,7 +23,7 @@ def consume_event_method(emethod, methodname):
 class EventManager(models.Manager):
     def consume_workorder_formwiz(self, form_fields):
         contact_fields = form_fields[0]
-        org_fields = form_fields[1]
+        # org_fields = form_fields[1]
         event_details = form_fields[2]
         event_method_details = form_fields[3:-2]
         event_schedule = form_fields[-1]
@@ -36,7 +34,7 @@ class EventManager(models.Manager):
         person_name = contact_fields['name']
 
         # group stuff
-        group = Organization.objects.get(pk=1)  # do this later
+        group = models.Organization.objects.get(pk=1)  # do this later
 
         # set levels
         lighting = None
