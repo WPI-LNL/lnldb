@@ -1,10 +1,13 @@
-from ajax_select import LookupChannel
-from .models import *
 from django.utils.html import escape
+from django.db.models import Q
+
+from ajax_select import LookupChannel
+
+from . import models
 
 
 class ClassLookup(LookupChannel):
-    model = EquipmentClass
+    model = models.EquipmentClass
 
     def check_auth(self, request):
         return request.user.has_perm('inventory.view_equipment')
@@ -15,7 +18,7 @@ class ClassLookup(LookupChannel):
         if q.isdigit():
             filters |= Q(items__barcode=int(q))
 
-        return EquipmentClass.objects.filter(filters).all()
+        return models.EquipmentClass.objects.filter(filters).all()
 
     def get_result(self, obj):
         return obj.name
@@ -32,7 +35,7 @@ class ClassLookup(LookupChannel):
 
 
 class ContainerLookup(LookupChannel):
-    model = EquipmentItem
+    model = models.EquipmentItem
 
     def check_auth(self, request):
         return request.user.has_perm('inventory.view_equipment')

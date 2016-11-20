@@ -1,16 +1,17 @@
-from ajax_select.fields import AutoCompleteSelectField, autoselect_fields_check_can_add
 from django import forms
 from django.core.exceptions import ValidationError
-from django.forms import ModelForm, Form, ModelChoiceField, CharField
+from django.forms import ModelForm, Form, CharField
+
 from mptt.forms import TreeNodeChoiceField
 from pagedown.widgets import PagedownWidget
-from inventory.models import *
-
+from ajax_select.fields import AutoCompleteSelectField
 
 from crispy_forms.helper import FormHelper
 from crispy_forms import layout
-from crispy_forms.layout import Layout, Fieldset, Submit, Field, Hidden, Column, Div, HTML, Button
+from crispy_forms.layout import Layout, Submit, Field, Div, HTML
 from crispy_forms.bootstrap import Tab, TabHolder, FormActions
+
+from . import models
 
 
 class CategoryForm(ModelForm):
@@ -26,7 +27,7 @@ class CategoryForm(ModelForm):
                 Submit('save', 'Save changes'),
             )
         )
-        self.fields['usual_place'].queryset = EquipmentCategory.possible_locations()
+        self.fields['usual_place'].queryset = models.EquipmentCategory.possible_locations()
 
     def clean_parent(self):
         if self.instance.pk:
@@ -37,7 +38,7 @@ class CategoryForm(ModelForm):
         return self.cleaned_data['parent']
 
     class Meta:
-        model = EquipmentCategory
+        model = models.EquipmentCategory
         fields = ('name', 'usual_place', 'parent')
 
 
@@ -62,7 +63,7 @@ class EquipmentItemForm(ModelForm):
             )
         )
         super(EquipmentItemForm, self).__init__(*args, **kwargs)
-        self.fields['home'].queryset = EquipmentCategory.possible_locations()
+        self.fields['home'].queryset = models.EquipmentCategory.possible_locations()
 
     def clean_case(self):
         if self.instance.pk:
@@ -73,7 +74,7 @@ class EquipmentItemForm(ModelForm):
         return self.cleaned_data['case']
 
     class Meta:
-        model = EquipmentItem
+        model = models.EquipmentItem
         fields = ('barcode', 'purchase_date', 'case', 'home', 'serial_number', 'features')
 
 
@@ -113,7 +114,7 @@ class EquipmentClassForm(ModelForm):
         super(EquipmentClassForm, self).__init__(*args, **kwargs)
 
     class Meta:
-        model = EquipmentClass
+        model = models.EquipmentClass
         fields = ('name', 'category', 'description', 'value', 'url',
                   'model_number', 'manufacturer', 'length', 'width', 'height', 'weight',
                   'wiki_text', 'holds_items')
@@ -125,7 +126,7 @@ class EquipmentClassForm(ModelForm):
 
 class FastAdd(Form):
     item_name = CharField(label="New Item Type Name", required=False)
-    item_cat = TreeNodeChoiceField(EquipmentCategory.objects.all(),
+    item_cat = TreeNodeChoiceField(models.EquipmentCategory.objects.all(),
                                    label="New Item Category", required=False)
 
     num_to_add = forms.IntegerField(min_value=1)
@@ -184,10 +185,10 @@ class FastAdd(Form):
         if data.get('item_type', None):
             e_type = data.get('item_type', None)
         else:
-            e_type = EquipmentClass.objects.create(name=data['item_name'], category=data['item_cat'])
+            e_type = models.EquipmentClass.objects.create(name=data['item_name'], category=data['item_cat'])
             e_type.save()
 
-        EquipmentItem.objects.bulk_add_helper(e_type, data['num_to_add'])
+        models.EquipmentItem.objects.bulk_add_helper(e_type, data['num_to_add'])
 
         return e_type
 
