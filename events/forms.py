@@ -6,7 +6,7 @@ from pagedown.widgets import PagedownWidget
 from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer
 
 from django import forms
-from django.forms import ModelForm, ModelChoiceField
+from django.forms import ModelForm
 from django.forms.extras.widgets import SelectDateWidget
 from django.utils import timezone
 from django.db.models import Q
@@ -87,7 +87,7 @@ def get_qs_from_event(event):
         id__in=[i.id for i in event.otherservices.all()]))
 
 
-### LNAdmin Forms
+# LNAdmin Forms
 class WorkorderSubmit(ModelForm):
     class Meta:
         model = Event
@@ -99,16 +99,6 @@ class WorkorderSubmit(ModelForm):
         self.fields['datetime_setup_start'].widget = SelectDateWidget()
         # self.fields['datetime_start'].widget = datetime()
         # self.fields['datetime_end'].widget = datetime()
-
-
-class CrewChiefAssign(forms.ModelForm):
-    crewchief = make_ajax_field(Event, 'crew_chief', 'Users', plugin_options={'minLength': 3})
-
-    class Meta:
-        model = Event
-        fields = ("crewchief",)
-
-        # crew_chief = AutoCompleteSelectMultipleField('crew_chief',plugin_options = {'minLength':3})
 
 
 class CrewAssign(forms.ModelForm):
@@ -213,7 +203,7 @@ class IOrgVerificationForm(forms.ModelForm):
     verified_by = AutoCompleteSelectField('Officers')
 
 
-### Flow Forms
+# Flow Forms
 class EventApprovalForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
@@ -526,7 +516,7 @@ class InternalReportForm(FieldAccessForm):
         super(InternalReportForm, self).__init__(*args, **kwargs)
         if 'crew_chief' in self.fields and not self.fields['crew_chief'].initial:
             self.fields['crew_chief'].initial = self.user.pk
-    
+
     def save(self, commit=True):
         obj = super(InternalReportForm, self).save(commit=False)
         if 'crew_chief' not in self.cleaned_data:
@@ -557,7 +547,7 @@ class InternalReportForm(FieldAccessForm):
         all = FieldAccessLevel(lambda user, instance: True, enable=('report',))
 
 
-### External Organization forms
+# External Organization forms
 
 class ExternalOrgUpdateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -647,7 +637,7 @@ class SelfServiceOrgRequestForm(forms.Form):
     fund_info = forms.CharField(help_text="EX: 12345-6789-8765")
 
 
-#### Internal Billing forms
+# Internal Billing forms
 
 class BillingForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
@@ -719,7 +709,7 @@ class BillingUpdateForm(forms.ModelForm):
         fields = ('date_paid', 'amount', 'opt_out_update_email')
 
 
-### CC Facing Forms
+# CC Facing Forms
 class MKHoursForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
         self.event = event
@@ -741,7 +731,7 @@ class MKHoursForm(forms.ModelForm):
 
     def clean(self):
         super(MKHoursForm, self).clean()
-        service= self.cleaned_data['service']
+        service = self.cleaned_data['service']
         user = self.cleaned_data['user']
         if self.event.hours.filter(user=user, service=service).exists() and not self.instance.pk:
             raise ValidationError("User already has hours for this service. Edit those instead")
@@ -822,8 +812,8 @@ class CCIForm(forms.ModelForm):
         # x = self.instance.event.lighting
         self.fields['service'].queryset = get_qs_from_event(event)
         self.fields['setup_start'].initial = self.fields['setup_start'].prepare_value(
-                self.event.datetime_setup_complete.replace(second=0, microsecond=0)
-                )
+            self.event.datetime_setup_complete.replace(second=0, microsecond=0)
+        )
 
     def save(self, commit=True):
         obj = super(CCIForm, self).save(commit=False)
@@ -894,9 +884,9 @@ class ExtraForm(forms.ModelForm):
 
 # usage
 # CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3, exclude=[])
-#CrewChiefFS.form = staticmethod(curry(CCIForm, event=request.event))
+# CrewChiefFS.form = staticmethod(curry(CCIForm, event=request.event))
 
-### Workorder Forms
+# Workorder Forms
 
 # Workorder Repeat Form
 class WorkorderRepeatForm(forms.ModelForm):
@@ -1008,24 +998,24 @@ class WorkorderRepeatForm(forms.ModelForm):
 
         return cleaned_data
 
-        # __        __         _                 _
-        #\ \      / /__  _ __| | _____  _ __ __| | ___ _ __
-        #\ \ /\ / / _ \| '__| |/ / _ \| '__/ _` |/ _ \ '__|
-        #\ V  V / (_) | |  |   < (_) | | | (_| |  __/ |
-        #\_/\_/ \___/|_|  |_|\_\___/|_|  \__,_|\___|_|
 
-        #_____                            _                  _
-        #|  ___|__  _ __ _ __ _____      _(_)______ _ _ __ __| |
-        #| |_ / _ \| '__| '_ ` _ \ \ /\ / / |_  / _` | '__/ _` |
-        #|  _| (_) | |  | | | | | \ V  V /| |/ / (_| | | | (_| |
-        #|_|  \___/|_|  |_| |_| |_|\_/\_/ |_/___\__,_|_|  \__,_|
+# __        __         _                 _
+# \ \      / /__  _ __| | _____  _ __ __| | ___ _ __
+#  \ \ /\ / / _ \| '__| |/ / _ \| '__/ _` |/ _ \ '__|
+#   \ V  V / (_) | |  |   < (_) | | | (_| |  __/ |
+#    \_/\_/ \___/|_|  |_|\_\___/|_|  \__,_|\___|_|
 
-        #_____
+#  _____                            _                  _
+# |  ___|__  _ __ _ __ _____      _(_)______ _ _ __ __| |
+# | |_ / _ \| '__| '_ ` _ \ \ /\ / / |_  / _` | '__/ _` |
+# |  _| (_) | |  | | | | | \ V  V /| |/ / (_| | | | (_| |
+# |_|  \___/|_|  |_| |_| |_|\_/\_/ |_/___\__,_|_|  \__,_|
 
-#|  ___|__  _ __ _ __ ___  ___
-#| |_ / _ \| '__| '_ ` _ \/ __|
-#|  _| (_) | |  | | | | | \__ \
-#|_|  \___/|_|  |_| |_| |_|___/
+#  _____
+# |  ___|__  _ __ _ __ ___  ___
+# | |_ / _ \| '__| '_ ` _ \/ __|
+# |  _| (_) | |  | | | | | \__ \
+# |_|  \___/|_|  |_| |_| |_|___/
 
 SERVICE_INFO_HELP_TEXT = """
 Note: Any riders or documentation provided to you from the artist/performer which may help LnL
@@ -1034,7 +1024,7 @@ going to your LnL account and select "Previous WorkOrders".
 """
 
 
-#FormWizard Forms
+# FormWizard Forms
 class ContactForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
@@ -1085,7 +1075,7 @@ class OrgForm(forms.Form):
                 'client account which does not exist please click <a target="_blank" href="%s">this link</a></span>'
                 % (reverse('my:orgs'), reverse('my:org-request'))),
         )
-        #super(OrgForm,self).__init__(*args,**kwargs)
+        # super(OrgForm,self).__init__(*args,**kwargs)
 
     group = forms.ModelChoiceField(queryset=Organization.objects.all(), label="Organization")
     # group = AutoCompleteSelectField('UserLimitedOrgs', required=True,
@@ -1121,10 +1111,9 @@ class SelectForm(forms.Form):
         required=True
     )
 
-
-    #location = forms.ModelChoiceField(
+    # location = forms.ModelChoiceField(
     # queryset = Location.objects.filter(show_in_wo_form=True)
-    #)
+    # )
 
     # soon to be a
     location = GroupedModelChoiceField(
@@ -1190,9 +1179,9 @@ class LightingForm(forms.Form):
         required=False,
     )
 
-    #extras = ExtraSelectorField(choices=LIGHT_EXTRAS.values_list('id','name'))
-    #for extra in LIGHT_EXTRAS:
-    #"e__{{0}}" % extra.id = ValueSelectField(extra)
+    # extras = ExtraSelectorField(choices=LIGHT_EXTRAS.values_list('id','name'))
+    # for extra in LIGHT_EXTRAS:
+    # "e__{{0}}" % extra.id = ValueSelectField(extra)
 
 
 class SoundForm(forms.Form):
@@ -1308,7 +1297,7 @@ class ScheduleForm(forms.Form):
         self.helper.layout = Layout(
             Fieldset(
                 'Setup',  # title
-                #Field('setup_start',css_class="dtp"),
+                # Field('setup_start',css_class="dtp"),
                 Div(
                     HTML(
                         '<div class="pull-left"><a class="btn btn-xs btn-primary" href="#" id="samedate">'
@@ -1352,7 +1341,7 @@ class ScheduleForm(forms.Form):
         return cleaned_data
 
 
-#helpers for the formwizard
+# helpers for the formwizard
 named_event_forms = (
     ('contact', ContactForm),
     ('organization', OrgForm),

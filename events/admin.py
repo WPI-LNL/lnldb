@@ -1,7 +1,5 @@
-from events.models import *
+from . import models
 from django.contrib import admin
-
-
 # actions
 from reversion.admin import VersionAdmin
 
@@ -50,19 +48,19 @@ client_unarchive.short_description = "UN-Set As Archived"
 
 # modeladmins
 class EventBillingInline(admin.TabularInline):
-    model = Billing
+    model = models.Billing
 
 
 class EventCCInline(admin.TabularInline):
-    model = EventCCInstance
+    model = models.EventCCInstance
 
 
 class EventAttachmentInline(admin.TabularInline):
-    model = EventAttachment
+    model = models.EventAttachment
 
 
 class EventHoursInline(admin.TabularInline):
-    model = Hours
+    model = models.Hours
 
 
 class EventAdmin(VersionAdmin):
@@ -132,22 +130,22 @@ class FundAdmin(admin.ModelAdmin):
     search_fields = ['name', 'notes', 'fund', 'account', 'organization']
 
 
-admin.site.register(Fund, FundAdmin)
-admin.site.register(Billing)
-admin.site.register(Hours)
-admin.site.register(Building)
-admin.site.register(Location, LocAdmin)
-admin.site.register(Event, EventAdmin)
-admin.site.register(CCReport)
-admin.site.register(Organization, OrgAdmin)
-admin.site.register(OrganizationTransfer, OTAdmin)
-admin.site.register(Extra, ExtraAdmin)
-admin.site.register(ExtraInstance)
+admin.site.register(models.Fund, FundAdmin)
+admin.site.register(models.Billing)
+admin.site.register(models.Hours)
+admin.site.register(models.Building)
+admin.site.register(models.Location, LocAdmin)
+admin.site.register(models.Event, EventAdmin)
+admin.site.register(models.CCReport)
+admin.site.register(models.Organization, OrgAdmin)
+admin.site.register(models.OrganizationTransfer, OTAdmin)
+admin.site.register(models.Extra, ExtraAdmin)
+admin.site.register(models.ExtraInstance)
 
-admin.site.register(Lighting)
-admin.site.register(Sound)
-admin.site.register(Projection)
+admin.site.register(models.Lighting)
+admin.site.register(models.Sound)
+admin.site.register(models.Projection)
 
-admin.site.register(Category)
+admin.site.register(models.Category)
 
-admin.site.register(Service)
+admin.site.register(models.Service)
