@@ -144,7 +144,7 @@ SECRET_KEY = '*am$3w(-v2p+i)m-6t8f0d%)%g60cr+tj6$_x1_u-$wx^0$fu%'
 _tmpl_loaders = [
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',
-    ]
+]
 if not DEBUG:
     _tmpl_loaders = [('django.template.loaders.cached.Loader', _tmpl_loaders)]
 
@@ -155,18 +155,18 @@ TEMPLATES = [{
     'OPTIONS': {
         'loaders': _tmpl_loaders,
         'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'django.template.context_processors.request',
-                'django.core.context_processors.static',
-                'django.core.context_processors.media',
-                'data.context_processors.airplane_mode',
-                'data.context_processors.revision',
-                'data.context_processors.analytics',
-                # 'lnldb.processors.staticz',
-                'processors.navs',
+            'django.template.context_processors.debug',
+            'django.template.context_processors.request',
+            'django.contrib.auth.context_processors.auth',
+            'django.contrib.messages.context_processors.messages',
+            'django.template.context_processors.request',
+            'django.core.context_processors.static',
+            'django.core.context_processors.media',
+            'data.context_processors.airplane_mode',
+            'data.context_processors.revision',
+            'data.context_processors.analytics',
+            # 'lnldb.processors.staticz',
+            'processors.navs',
         ],
         'debug': DEBUG
     },
@@ -355,11 +355,15 @@ MARKDOWN_DEUX_STYLES = {
         "link_patterns": [
             (re.compile("@([A-Za-z][A-Za-z0-9]*)"),
                 lambda m: reverse_noexcept("accounts:by-name:detail",
-                                           kwargs={'username': m.group(1)})),
+                                           kwargs={'username': m.group(1)}
+                                           )
+             ),
             (re.compile("@([0-9]+)"),
                 lambda m: reverse_noexcept("events-detail",
-                                           args=[m.group(1)])),
-            ],
+                                           args=[m.group(1)]
+                                           )
+             ),
+        ],
         "extras": {
             "code-friendly": None,
             "break-on-newline": None,

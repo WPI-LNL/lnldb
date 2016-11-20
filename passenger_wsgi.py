@@ -11,7 +11,7 @@ if sys.executable != INTERP:
     os.execl(INTERP, INTERP, *sys.argv)
 
 os.environ['DJANGO_SETTINGS_MODULE'] = "lnldb.settings"
-from django.core.wsgi import get_wsgi_application
+from django.core.wsgi import get_wsgi_application  # NOQA
 application = get_wsgi_application()
 
 # Test application (for when importing doesn't work)
