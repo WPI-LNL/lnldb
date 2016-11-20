@@ -16,7 +16,7 @@ class ExtraSelectorField(forms.MultiValueField):
 # shamelessly grabbed from http://djangosnippets.org/snippets/2622/
 # modified because:
 # a, forms.MCI doesnt exist, while forms.models.MCI does
-#b, something in the group_label became a string instead of a function
+# b, something in the group_label became a string instead of a function
 
 class GroupedModelChoiceField(forms.ModelChoiceField):
     def __init__(self, queryset, group_by_field, group_label=None, *args, **kwargs):
@@ -49,10 +49,9 @@ class GroupedModelChoiceIterator(forms.models.ModelChoiceIterator):
         for group, choices in groupby(self.queryset.all(),
                                       key=lambda row: getattr(row, self.field.group_by_field)):
             yield (self.field.group_label(group), [self.choice(ch) for ch in choices])
-            #yield (self.field.group_label, [self.choice(ch) for ch in choices])
 
 
-#was going to use this for fancier grouped dropdowns. Leaving it here, but no calls to it
+# was going to use this for fancier grouped dropdowns. Leaving it here, but no calls to it
 def get_key(row, field):
     if callable(field):
         return field(row)

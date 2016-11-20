@@ -30,8 +30,7 @@ class ExtraSelectorWidget(widgets.MultiWidget):
         return [None, None]
 
 
-###attempt2
-#
+# attempt2
 class ValueSelectWidget(forms.MultiWidget):
     def __init__(self, hidetext=False, disappear=False, *args, **kwargs):
         if hidetext:

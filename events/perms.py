@@ -5,6 +5,7 @@ import logging
 from logging import debug
 logging.basicConfig(filename='/home/lnl/perms.log', level=logging.DEBUG)
 
+
 class AssocUsersCustomPermissionLogic(PermissionLogic):
     field_name = 'authorized_users'
     perms = []
@@ -109,9 +110,11 @@ class OrgOwnerPermLogic(AssocUsersCustomPermissionLogic):
                                         'events.transfer_org_ownership', 'events.deprecate_org',
                                         'events.list_org_hidden_events')
 
+
 class ReportAuthorPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'crew_chief'
     perms = ('events.delete_ccreport', 'events.change_ccreport')
+
 
 PERMISSION_LOGICS = (
     ('events.Event', CrewChiefPermLogic()),

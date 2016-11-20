@@ -7,7 +7,7 @@ from django.utils import timezone
 import datetime
 
 from emails.generators import DefaultLNLEmailGenerator as DLEG
-from events.models import Billing, Fund, Event
+from events.models import Billing, Fund
 from events.models import EventCCInstance
 from django.utils.text import slugify
 

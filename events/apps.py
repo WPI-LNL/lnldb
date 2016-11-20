@@ -1,11 +1,10 @@
+from django.apps import AppConfig
 try:
     from watson import search
 except:
     import watson as search
 
 __author__ = 'Jake'
-
-from django.apps import AppConfig
 
 
 class EventsConfig(AppConfig):

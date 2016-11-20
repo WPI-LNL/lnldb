@@ -2,6 +2,7 @@ from django import template
 
 register = template.Library()
 
+
 @register.simple_tag(takes_context=True)
 def append_to_get(context, replace=True, **kwargs):
     """
@@ -11,7 +12,7 @@ def append_to_get(context, replace=True, **kwargs):
     @argument replace: If true, any existing argument
       named in kwargs will have their value overridden.
       If false, kwargs are appended only.
-    @argument kwargs: key-val pairs to add, with a value of 
+    @argument kwargs: key-val pairs to add, with a value of
       None for deletion. (Use "None" if you don't want that)
     """
     updated = context['request'].GET.copy()
