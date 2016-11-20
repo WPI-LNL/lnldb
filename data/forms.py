@@ -12,7 +12,7 @@ __author__ = 'Jake Merdich'
 
 def form_footer(return_text="Save", *args):
     return FormActions(
-            Submit('save', return_text), *args
+        Submit('save', return_text), *args
     )
 
 

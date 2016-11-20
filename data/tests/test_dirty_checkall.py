@@ -5,7 +5,7 @@ from django.contrib.auth.models import Permission
 from django.core.urlresolvers import reverse
 from django.conf import settings
 import importlib
-from django.test import modify_settings, override_settings
+from django.test import override_settings
 
 
 # from http://lukeplant.me.uk/blog/posts/fuzzy-testing-with-assertnumqueries/

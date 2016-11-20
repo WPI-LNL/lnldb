@@ -7,7 +7,7 @@ from django.views.static import was_modified_since
 import os
 from django.conf import settings
 from django.core.urlresolvers import reverse
-from django.http import HttpResponseRedirect, FileResponse, HttpResponseNotModified, HttpResponseGone, HttpResponse
+from django.http import HttpResponseRedirect, FileResponse, HttpResponseNotModified, HttpResponse
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required, permission_required
 from django.utils.datastructures import MultiValueDictKeyError
@@ -90,7 +90,7 @@ def access_log(request):
 
 
 @login_required
-### TODO: adjust for perm test
+# TODO: adjust for perm test
 def search(request):
     context = {}
     q = ""

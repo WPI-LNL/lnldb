@@ -9,6 +9,7 @@ def airplane_mode(request):
 def analytics(request):
     return {'GA_ID': settings.GA_ID}
 
+
 def revision(request):
     return {'GIT_RELEASE': settings.GIT_RELEASE[:7],
             'GIT_RELEASE_FULL': settings.GIT_RELEASE}
