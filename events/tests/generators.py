@@ -44,9 +44,10 @@ class EventFactory(DjangoModelFactory):
     datetime_setup_complete = timezone.now()
     datetime_start = timezone.now() + timedelta(hours=1)
     datetime_end = timezone.now() + timedelta(hours=3)
-    event_name = Faker('company') 
+    event_name = Faker('company')
     location = SubFactory(LocationFactory)
     submitted_by = SubFactory(UserFactory)
+
 
 class CCReportFactory(DjangoModelFactory):
     class Meta:
@@ -55,17 +56,19 @@ class CCReportFactory(DjangoModelFactory):
     event = SubFactory(Event)
     crew_chief = SubFactory(UserFactory)
 
+
 class OrgFactory(DjangoModelFactory):
     class Meta:
         model = Organization
     user_in_charge = SubFactory(UserFactory)
     name = Faker('company')
 
+
 class FundFactory(DjangoModelFactory):
     class Meta:
         model = Fund
-    organization = Sequence(lambda n:n)
-    fund = Sequence(lambda n:n)
-    account = Sequence(lambda n:n)
-    name = Faker('company') 
+    organization = Sequence(lambda n: n)
+    fund = Sequence(lambda n: n)
+    account = Sequence(lambda n: n)
+    name = Faker('company')
     notes = Faker('text')

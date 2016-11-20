@@ -1,7 +1,8 @@
 from django.test import TestCase
-from .generators import EventFactory, UserFactory, OrgFactory
-from .. import models
 from django.core.urlresolvers import reverse
+
+from .generators import UserFactory, OrgFactory
+# from .. import models
 
 
 class DeprecationTest(TestCase):
@@ -20,5 +21,5 @@ class DeprecationTest(TestCase):
         return super(DeprecationTest, self).assertRedirects(response, expected_url, status_code, **kwargs)
 
     def test_org_edit(self):
-        self.assertRedirects("/db/clients/edit/%d/" % self.o1.pk, 
+        self.assertRedirects("/db/clients/edit/%d/" % self.o1.pk,
                              reverse("orgs:edit", args=(self.o1.pk,)))

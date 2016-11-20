@@ -8,7 +8,7 @@ class EventBasicViewTest(TestCase):
         self.e = EventFactory.create(event_name="Test Event")
         self.e2 = EventFactory.create(event_name="Other Test Event")
         self.user = UserFactory.create(password='123')
-        self.report = CCReportFactory.create(event = self.e)
+        self.report = CCReportFactory.create(event=self.e)
         self.client.login(username=self.user.username, password='123')
 
     def test_detail(self):
