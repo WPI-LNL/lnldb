@@ -1,9 +1,9 @@
-# Create your tests here.
-
 from django import test
-from . import models, ldap
-from six import StringIO
 from django.core import management
+from six import StringIO
+
+from . import models, ldap
+
 
 class LdapTestCase(test.TestCase):
 
@@ -18,7 +18,7 @@ class LdapTestCase(test.TestCase):
 
     def test_search_or_create(self):
         # test that we get *some* results, and that they are saved as users
-        test_query="a"
+        test_query = "a"
         resp = ldap.search_or_create_users(test_query)
         self.assertGreater(len(resp), 0)
         self.assertIsInstance(resp[0], models.User)
@@ -27,10 +27,10 @@ class LdapTestCase(test.TestCase):
         # if a user is on the ldap server and lacking a name, it will retrieve it
         u = ldap.fill_in_user(self.some_user)
         self.assertNotEquals(u.first_name, "")
-    
+
     def test_fill_no_overwrite(self):
         # if the user has a first and/or last name, fetching it won't overwrite it.
-        self.some_user.first_name = "foo" # does not match ldap name
+        self.some_user.first_name = "foo"  # does not match ldap name
         self.some_user.save()
 
         u = ldap.fill_in_user(self.some_user)
@@ -48,4 +48,3 @@ class LdapTestCase(test.TestCase):
         self.some_user.refresh_from_db()
         self.assertNotEquals(self.some_user.first_name, "")
         # assert that it fill in some info and saves it.
-

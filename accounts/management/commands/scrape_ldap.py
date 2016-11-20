@@ -3,6 +3,7 @@ from django.db.transaction import atomic
 from ...models import User
 from ... import ldap
 
+
 class Command(BaseCommand):
     help = "Searches ldap for info on users without it"
 

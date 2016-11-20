@@ -5,7 +5,7 @@ from . import views
 each_member_pattern = [
     url(r'^edit/$', views.UserUpdateView.as_view(), name="update"),
     url(r'^detail/$', views.UserDetailView.as_view(), name="detail"),
-        ]
+]
 
 urlpatterns = [
     url(r'^me/$', views.MeDirectView.as_view(permanent=False, pattern_name='accounts:detail'), name="me"),

@@ -15,14 +15,16 @@ def linkify_map(value, page, escape=True, title_callback=None, id_callback=None)
         value.__iter__
     except AttributeError:
         value = value.all()
-    return map(lambda item: mark_safe(format_html("<a href=\"{0}\">{1}</a>",
-                                                  reverse(page, args=[
-                                                      conditional_escape(id_callback(item)) if escape else id_callback(
-                                                              item)
-                                                  ]),
-                                                  conditional_escape(
-                                                          title_callback(item)) if escape else title_callback(item))),
-               value)
+    return map(
+        lambda item:
+            mark_safe(
+                format_html("<a href=\"{0}\">{1}</a>",
+                            reverse(
+                                page,
+                                args=[conditional_escape(id_callback(item)) if escape else id_callback(item)]
+                            ),
+                            conditional_escape(title_callback(item)) if escape else title_callback(item))),
+        value)
 
 
 @register.filter

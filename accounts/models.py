@@ -1,7 +1,7 @@
 # noinspection PyProtectedMember
 from django.contrib.auth.models import AbstractUser, _user_has_perm
 from django.db.models import Q, IntegerField, CharField, TextField, \
-        BooleanField, PositiveIntegerField
+    BooleanField, PositiveIntegerField
 from django.utils.six import python_2_unicode_compatible
 
 from events.models import Organization
@@ -94,7 +94,8 @@ class User(AbstractUser):
     @property
     def all_orgs(self):
         return Organization.objects.complex_filter(
-                Q(user_in_charge=self) | Q(associated_users=self)).distinct()
+            Q(user_in_charge=self) | Q(associated_users=self)
+        ).distinct()
 
     @property
     def mdc_name(self):
