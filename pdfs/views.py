@@ -5,7 +5,6 @@ from django.utils.text import slugify
 from io import BytesIO
 from xhtml2pdf import pisa
 from django.template.loader import get_template
-from django.template import Context
 from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -17,6 +16,7 @@ from django.contrib.humanize.templatetags.humanize import intcomma
 from django.contrib.staticfiles import finders
 from .overlay import make_idt_single
 from .utils import concat_pdf
+
 
 # Convert HTML URIs to absolute system paths so xhtml2pdf can access those resources
 def link_callback(uri, rel):
@@ -31,7 +31,7 @@ def link_callback(uri, rel):
         path = os.path.join(mroot, uri.replace(murl, ""))
     elif uri.startswith(surl):
         search_url = uri.replace(surl, "")
-        path = finders.find(search_url) or os.path.join(sroot, search_url) 
+        path = finders.find(search_url) or os.path.join(sroot, search_url)
     else:
         path = ""
 
@@ -65,7 +65,7 @@ def generate_projection_pdf(request):
         return HttpResponse(html)
     # write file
     pdf_file = BytesIO()
-    pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
     # return doc
     return HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
@@ -87,7 +87,7 @@ def generate_event_pdf(request, id):
 
     # Write PDF to file
     pdf_file = BytesIO()
-    pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
     # Return PDF document through a Django HTTP response
     resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
@@ -122,8 +122,8 @@ def generate_event_bill_pdf(request, id):
 
     # Write PDF to file
     pdf_file = BytesIO()
-    pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
-    
+    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+
     # if it's actually an invoice, attach an idt, eh?
     if event.reviewed and "invoiceonly" not in request.GET:
         idt = make_idt_single(event, request.user)
@@ -149,7 +149,7 @@ def generate_pdfs_standalone(ids=None):
     html = template.render(data)
 
     pdf_file = BytesIO()
-    pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
     return pdf_file.getvalue()
 
@@ -176,7 +176,7 @@ def generate_event_pdf_multi(request, ids=None):
 
     # Write PDF to file
     pdf_file = BytesIO()
-    pisastatus = pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
     # Return PDF document through a Django HTTP response
     resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
