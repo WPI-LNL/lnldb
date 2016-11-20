@@ -1,1 +1,1 @@
-from . import flow, indices, list, my, orgs, wizard
+from . import flow, indices, list, my, orgs, wizard  # NOQA

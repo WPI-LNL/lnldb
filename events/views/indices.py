@@ -1,21 +1,17 @@
-# Create your views here.
-
 import datetime
 
 from django.http import HttpResponse
 from django.shortcuts import render
-from django.template import RequestContext
-from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.utils import timezone
 from django.conf import settings
 from django.db.models import Q
-from events.forms import WorkorderSubmit
 from events.models import Event
 from helpers.challenges import is_officer
 import os
 
 
-### FRONT 3 PAGES
+# FRONT 3 PAGES
 def index(request):
     """Landing Page"""
     context = {}

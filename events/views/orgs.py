@@ -51,7 +51,7 @@ def addeditorgs(request, org_id=None):
     # need to fix this
     context = {}
     edit_perms = ('events.edit_org',)
-    mk_perms = ('events.add_org',)
+    # mk_perms = ('events.add_org',)
     if org_id:
         instance = get_object_or_404(Organization, pk=org_id)
         msg = "Edit Client"

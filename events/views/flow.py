@@ -1,11 +1,8 @@
-import datetime
-
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
-from django.template import RequestContext
 from django.conf import settings
-from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.forms.models import inlineformset_factory
 from django.utils.functional import curry
@@ -146,8 +143,6 @@ def review(request, id):
 
 @login_required
 def reviewremind(request, id, uid):
-    context = {}
-
     event = get_object_or_404(Event, pk=id)
     if event.closed or event.reviewed:
         return HttpResponse("Event Closed")
@@ -201,15 +196,14 @@ def cancel(request, id):
     event.cancelled = True
     event.cancelled_by = request.user
     event.cancelled_on = timezone.now()
-    
     event.save()
 
     if event.contact and event.contact.email:
         targets = [event.contact.email]
     else:
         targets = []
-    
-    email_body = 'The event "%s" has been cancelled by %s. If this is incorrect, please contact our vice president at lnl-vp@wpi.edu.' % ( event.event_name, str(request.user))
+
+    email_body = 'The event "%s" has been cancelled by %s. If this is incorrect, please contact our vice president at lnl-vp@wpi.edu.' % (event.event_name, str(request.user))
     if request.user.email:
         email_body = email_body[:-1]
         email_body += " or try them at %s." % request.user.email
@@ -274,7 +268,6 @@ def assigncrew(request, id):
 @login_required
 def hours_bulk_admin(request, id):
     context = {}
-    user = request.user
 
     context['msg'] = "Bulk Hours Entry"
     event = get_object_or_404(Event, pk=id)
@@ -305,7 +298,6 @@ def hours_bulk_admin(request, id):
 
 @login_required
 def rmcc(request, id, user):
-    context = {}
     event = get_object_or_404(Event, pk=id)
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event)):
@@ -533,7 +525,7 @@ class CCRDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = CCReport
     template_name = "form_delete_cbv.html"
     msg = "Deleted Crew Chief Report"
-    perms = 'events.add_event_report' 
+    perms = 'events.add_event_report'
 
     def get_object(self, queryset=None):
         """ Hook to ensure object isn't closed """
@@ -576,7 +568,7 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
         return super(BillingCreate, self).form_valid(form)
 
     def get_success_url(self):
-        return reverse("events-detail", args=(self.kwargs['event'],))+ "#billing"
+        return reverse("events-detail", args=(self.kwargs['event'],)) + "#billing"
 
 
 class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateView):

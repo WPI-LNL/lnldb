@@ -14,7 +14,7 @@ from django.contrib.auth.decorators import login_required
 def eventnew(request, id=None):
     context = {}
     edit_perms = ('events.view_event',)
-    mk_perms = ('events.add_raw_event',)
+    # mk_perms = ('events.add_raw_event',)
     # get instance if id is passed in
     if id:
         instance = get_object_or_404(Event, pk=id)

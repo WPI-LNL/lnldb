@@ -2,7 +2,7 @@ import datetime
 
 from itertools import chain
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import get_user_model 
+from django.contrib.auth import get_user_model
 from django.core.urlresolvers import reverse
 from django.db.models.aggregates import Sum
 from django.forms.models import inlineformset_factory
@@ -38,7 +38,7 @@ def mywo(request):
 
     # events = Event.objects.filter(org__in=values)
     l = {}
-    for org in chain(orgs,ic_orgs):
+    for org in chain(orgs, ic_orgs):
         l[org.name] = Event.objects.filter(org=org)
     l["Submitted by Me"] = Event.objects.filter(submitted_by=user)
 
@@ -191,7 +191,7 @@ def ccreport(request, eventid):
         report = CCReport.objects.get(event=event, crew_chief=user)
     except CCReport.DoesNotExist:
         report = None
-        
+
     # standard save flow
     if request.method == 'POST':
         formset = InternalReportForm(data=request.POST, event=event, request_user=user, instance=report)

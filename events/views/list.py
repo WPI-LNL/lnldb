@@ -1,14 +1,11 @@
-# Create your views here.
 import datetime
-import time
 
 from django.core.urlresolvers import reverse
-from django.shortcuts import render, render
-from django.template import RequestContext
+from django.shortcuts import render
 from events.models import Event
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q, F, Count
-from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.utils.timezone import make_aware
 import pytz
 import re
@@ -114,7 +111,7 @@ def paginate_helper(queryset, page, sort=None, count=DEFAULT_ENTRY_COUNT):
                 post_sort = sorted(queryset.all(), key=lambda m: getattr(m, sort[1:]), reverse=True)
             else:
                 post_sort = sorted(queryset.all(), key=lambda m: getattr(m, sort))
-        except Exception as e:
+        except Exception:
             # print "Won't sort.", e
             post_sort = queryset
     else:
@@ -548,8 +545,6 @@ def unpaid(request, start=None, end=None):
     if not start and not end:
         start, end = get_farback_date_range_plus_next_week()
 
-    today = datetime.date.today()
-    now = time.time()
     # events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now())
     # .filter(date_setup_start__lte=today)
     events = Event.objects.annotate(numpaid=Count('billings__date_paid')) \
@@ -625,7 +620,7 @@ def closed(request, start=None, end=None):
                        'crew_chief',
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    #print context['cols']
+    # print context['cols']
     return render(request, 'events.html', context)
 
 
