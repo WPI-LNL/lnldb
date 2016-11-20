@@ -1,4 +1,4 @@
-from pages.models import *
+from pages import models
 from django.contrib import admin
 
 
@@ -9,5 +9,5 @@ class PageAdmin(admin.ModelAdmin):
     filter_horizontal = ['imgs', ]
 
 
-admin.site.register(Page, PageAdmin)
-admin.site.register(CarouselImg)
+admin.site.register(models.Page, PageAdmin)
+admin.site.register(models.CarouselImg)

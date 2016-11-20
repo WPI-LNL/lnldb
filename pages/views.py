@@ -1,11 +1,7 @@
-from pages.models import Page
-
 from django.shortcuts import render, get_object_or_404
-from django.template import RequestContext
 
+from pages.models import Page
 from processors import navs
-
-# Create your views here.
 
 
 def page(request, slug):
