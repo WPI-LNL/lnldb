@@ -1,4 +1,4 @@
-from meetings.models import *
+from . import models
 from django.contrib import admin
 from reversion.admin import VersionAdmin
 
@@ -11,10 +11,10 @@ class CCAdmin(admin.ModelAdmin):
     list_display = ('uuid',)
 
 
-admin.site.register(Meeting)
-admin.site.register(MeetingType)
-admin.site.register(MeetingAnnounce, MAAdmin)
-admin.site.register(TargetEmailList)
-admin.site.register(AnnounceSend)
-admin.site.register(CCNoticeSend, CCAdmin)
-admin.site.register(MtgAttachment)
+admin.site.register(models.Meeting)
+admin.site.register(models.MeetingType)
+admin.site.register(models.MeetingAnnounce, MAAdmin)
+admin.site.register(models.TargetEmailList)
+admin.site.register(models.AnnounceSend)
+admin.site.register(models.CCNoticeSend, CCAdmin)
+admin.site.register(models.MtgAttachment)

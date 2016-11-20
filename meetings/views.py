@@ -1,21 +1,18 @@
-# Create your views here.
-
 import datetime
-from data.views import serve_file
-from django.core.exceptions import PermissionDenied
 
+from django.contrib.auth.decorators import login_required, permission_required
+from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
+from django.core.paginator import Paginator, InvalidPage
+from django.db.models.aggregates import Count
+from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404
 from django.http.response import Http404
-from django.template import RequestContext
-from django.forms.models import inlineformset_factory, ModelForm
+from django.shortcuts import render, get_object_or_404
 from django.utils.functional import curry
 from django.utils import timezone
-from django.db.models.aggregates import Count
-from django.core.paginator import Paginator, InvalidPage
-from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 
+from data.views import serve_file
 from events.forms import CCIForm
 from events.models import Event, EventCCInstance
 from emails.generators import generate_notice_email, generate_notice_cc_email
@@ -170,9 +167,9 @@ def listattendance(request, page=1):
         .select_related('meeting_type__name') \
         .annotate(num_attendsees=Count('attendance'))
     past_mtgs = mtgs.filter(datetime__lte=timezone.now()) \
-            .order_by('-datetime')
+        .order_by('-datetime')
     future_mtgs = mtgs.filter(datetime__gte=timezone.now()) \
-            .order_by('datetime')
+        .order_by('datetime')
 
     paginated = Paginator(past_mtgs, 10)
     try:
@@ -186,7 +183,7 @@ def listattendance(request, page=1):
     except InvalidPage:
         future_mtgs = paginated.page(1)
 
-    context['lists'] = [("Past Meetings", past_mtgs), 
+    context['lists'] = [("Past Meetings", past_mtgs),
                         ("Future Meetings", future_mtgs)]
     return render(request, 'meeting_list.html', context)
 

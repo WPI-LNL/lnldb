@@ -1,14 +1,13 @@
-from django.core.urlresolvers import reverse
-from django.db import models
-from django.conf import settings
-from django_extensions.db.models import TimeStampedModel
-
+from datetime import timedelta
 import uuid
 
-from events.models import Event, Location
-# Create your models here.
+from django.conf import settings
+from django.core.urlresolvers import reverse
+from django.db import models
 
-from datetime import timedelta
+from django_extensions.db.models import TimeStampedModel
+
+from events.models import Event
 
 
 def get_default_email():
