@@ -6,7 +6,7 @@ from django.db.models import Count
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import render, get_object_or_404
-from django.urls.utility import reverse
+from django.core.urlresolvers import reverse
 
 from .import forms, models
 
