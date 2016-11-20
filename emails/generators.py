@@ -78,9 +78,6 @@ def generate_event_start_end_emails():
     # for the start
     starting = Event.objects.filter(approved=True, datetime_start=now)
     ending = Event.objects.filter(approved=True, datetime_end=now)
-    # print now
-    #print starting.count()
-    #print ending.count()
 
     from_email = settings.DEFAULT_FROM_ADDR
 
@@ -94,7 +91,6 @@ def generate_event_start_end_emails():
                                        headers=headers)
         email.attach_alternative(content_start_html, "text/html")
         email.send()
-        #print "sent start email with %s events" % starting.count()
 
     elif ending:
         context_end = {'events': ending, 'string': "Events Ending Now", 'stringtwo': "Please help Strike!"}
@@ -105,17 +101,12 @@ def generate_event_start_end_emails():
         email = EmailMultiAlternatives(subj_end, content_end_txt, from_email, [EMAIL_TARGET_START_END], headers=headers)
         email.attach_alternative(content_end_html, "text/html")
         email.send()
-        #print "sent end email with %s events" % ending.count()
-
-    else:
-        #print "no events starting/ending"
-        pass
 
 
 # Cron Example
 # * * * * * ~/bin/python ~/lnldb/manage.py send_start_end
 
-#### Self Service Emails
+# Self Service Emails
 # Self service org email
 def generate_selfservice_notice_email(context):
     subject = "Self Service Form Submission"

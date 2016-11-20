@@ -1,5 +1,3 @@
-# Create your views here.
-
 from django.views.generic.detail import DetailView
 
 from meetings.models import MeetingAnnounce, CCNoticeSend
@@ -13,7 +11,7 @@ class MeetingAnnounceView(DetailView):
     # def get_context_data(self, **kwargs):
     # context = super(ArticleDetailView, self).get_context_data(**kwargs)
     # context['now'] = timezone.now()
-    #return context
+    # return context
 
 
 class MeetingAnnounceCCView(DetailView):
@@ -24,4 +22,4 @@ class MeetingAnnounceCCView(DetailView):
     # def get_context_data(self, **kwargs):
     # context = super(ArticleDetailView, self).get_context_data(**kwargs)
     # context['now'] = timezone.now()
-    #return context
+    # return context
