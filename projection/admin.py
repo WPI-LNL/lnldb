@@ -1,5 +1,5 @@
 from django.contrib import admin
-from projection.models import *
+from projection.models import PITLevel, Projectionist, PitInstance
 
 
 class LevelAdmin(admin.ModelAdmin):

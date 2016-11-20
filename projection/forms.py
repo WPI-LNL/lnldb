@@ -7,11 +7,11 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Field, HTML
 from crispy_forms.bootstrap import FormActions
 from django.utils import timezone
-from django.utils.timezone import now
 from ajax_select.fields import AutoCompleteSelectField, AutoCompleteSelectMultipleField
 
 from projection.models import Projectionist, PitInstance, PITLevel
 from events.models import Event, Location, Building, Projection as ProjService, Category
+
 
 class ProjectionistUpdateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -108,7 +108,7 @@ PITFormset = inlineformset_factory(Projectionist, PitInstance, extra=1,
                                    form=InstanceForm)  # ,formset=ProjectionistUpdateForm)
 
 
-### ITS TIME FOR A WIZAAAAAAARD
+# ITS TIME FOR A WIZAAAAAAARD
 class BulkCreateForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
@@ -134,12 +134,12 @@ class BulkCreateForm(forms.Form):
 
 
 class DateEntryFormSetBase(forms.Form):
-    time_offsets = { # This names must correspond to the checkboxes above
-            'matinee': datetime.timedelta(hours=-6),
-            'friday': datetime.timedelta(days=-1),
-            'saturday': datetime.timedelta(days=0),
-            'sunday': datetime.timedelta(days=1)
-            }
+    time_offsets = {  # This names must correspond to the checkboxes above
+        'matinee': datetime.timedelta(hours=-6),
+        'friday': datetime.timedelta(days=-1),
+        'saturday': datetime.timedelta(days=0),
+        'sunday': datetime.timedelta(days=1)
+    }
 
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
@@ -158,7 +158,6 @@ class DateEntryFormSetBase(forms.Form):
     date = forms.DateField()
     name = forms.CharField(required=False)
 
-    
     friday = forms.BooleanField(required=False)
     matinee = forms.BooleanField(required=False)
     saturday = forms.BooleanField(required=False, initial=True)
@@ -170,20 +169,23 @@ class DateEntryFormSetBase(forms.Form):
         # don't count this week if not filled out
         if not self.is_valid():
             return out
-        if not self.cleaned_data['name']: 
+        if not self.cleaned_data['name']:
             return out
         # the fields that go into the resulting obj, to start
-        building,_ = Building.objects.get_or_create(name="Fuller Labs", shortname="FL")
-        cat,_ = Category.objects.get_or_create(name="Projection")
+        building, _ = Building.objects.get_or_create(name="Fuller Labs", shortname="FL")
+        cat, _ = Category.objects.get_or_create(name="Projection")
         kwargs = {
-                'event_name': self.cleaned_data['name'],
-                'contact': contact,
-                'submitted_by': user,
-                'submitted_ip': ip,
-                'location': Location.objects.get_or_create(name="Perreault Hall Upper", defaults={'building': building})[0],
-                'projection': ProjService.objects.get_or_create(longname="Digital Projection", shortname='DP', defaults={'base_cost':40, 'addtl_cost': 10, 'category': cat})[0],
-                'billed_by_semester': True,
-                }
+            'event_name': self.cleaned_data['name'],
+            'contact': contact,
+            'submitted_by': user,
+            'submitted_ip': ip,
+            'location': Location.objects.get_or_create(name="Perreault Hall Upper", defaults={'building': building})[0],
+            'projection': ProjService.objects.get_or_create(
+                longname="Digital Projection", shortname='DP',
+                defaults={'base_cost': 40, 'addtl_cost': 10, 'category': cat}
+            )[0],
+            'billed_by_semester': True,
+        }
         # if it's possible to approve the event, do so (since there is no bulk approve)
         if user.has_perm('events.approve_event'):
             kwargs['approved_by'] = user
@@ -193,7 +195,7 @@ class DateEntryFormSetBase(forms.Form):
         date = self.cleaned_data['date']
 
         # prepare base date/times for the usual 8PM Sat start.
-        dt_setupcomplete = datetime.datetime.combine(date, datetime.time(19,30))
+        dt_setupcomplete = datetime.datetime.combine(date, datetime.time(19, 30))
         dt_start = datetime.datetime.combine(date, datetime.time(20))
         dt_end = datetime.datetime.combine(date, datetime.time(23))
 

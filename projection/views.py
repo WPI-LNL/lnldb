@@ -4,14 +4,11 @@ import datetime
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
-from django.db.models import Q, Prefetch
+from django.db.models import Q
 from django.views.generic.edit import CreateView
 from django.views.generic.edit import DeleteView
 from django.views.generic.edit import FormView
-from events.models import Event
-from events.models import Projection as ProjService
-from events.models import Location
-from projection.models import Projectionist, PITLevel, PitInstance
+from projection.models import Projectionist, PITLevel
 from projection.forms import ProjectionistUpdateForm
 from projection.forms import ProjectionistForm
 from projection.forms import PITFormset
@@ -20,7 +17,6 @@ from projection.forms import BulkCreateForm
 from projection.forms import DateEntryFormSetBase
 from django.contrib.auth.decorators import login_required, permission_required
 from django.forms.formsets import formset_factory
-from django.utils import timezone
 from helpers.mixins import LoginRequiredMixin, HasPermMixin
 from crispy_forms.layout import Submit
 
@@ -154,7 +150,7 @@ def get_saturdays_for_range(date_1, date_2):
     # saturdays are used to represent the weeks, for reference
     saturdays = []
     # set to next saturday
-    date_1 = date_1 + datetime.timedelta(days=(5-date_1.weekday()+7)%7)
+    date_1 = date_1 + datetime.timedelta(days=(5 - date_1.weekday() + 7) % 7)
     # and then get all of them until we hit the end
     while date_1 <= date_2:
         saturdays.append(date_1)
@@ -162,25 +158,24 @@ def get_saturdays_for_range(date_1, date_2):
     return saturdays
 
 
-### Non-Wizard Projection Bulk View
+# Non-Wizard Projection Bulk View
 @login_required
 @permission_required('projection.add_bulk_events', raise_exception=True)
 def bulk_projection(request):
     context = {}
-    tz = timezone.get_current_timezone()
 
-    if not request.GET: # Step 1: get contact info and date range
+    if not request.GET:  # Step 1: get contact info and date range
         return render(request, "form_crispy.html", {
             'formset': BulkCreateForm(),
             'msg': "Bulk Movie Addition"
-            })
+        })
 
     basicinfoform = BulkCreateForm(request.GET)
-    if not basicinfoform.is_valid(): # Bad user! Give me the contact/basics!!!
+    if not basicinfoform.is_valid():  # Bad user! Give me the contact/basics!!!
         return render(request, "form_crispy.html", {
             'formset': basicinfoform,
             'msg': "Bulk Movie Addition (Errors)"
-            })
+        })
 
     # Past this point, we have enough info for the full form
 
@@ -201,9 +196,9 @@ def bulk_projection(request):
             for form in filled:
                 out.extend(form.save_objects(
                     user=request.user,
-                    contact = basicinfoform.cleaned_data.get('contact'),
-                    org = basicinfoform.cleaned_data.get('billing'),
-                    ip = request.META['REMOTE_ADDR']
+                    contact=basicinfoform.cleaned_data.get('contact'),
+                    org=basicinfoform.cleaned_data.get('billing'),
+                    ip=request.META['REMOTE_ADDR']
                 ))
             # after thats done
             context['result'] = out
@@ -213,7 +208,7 @@ def bulk_projection(request):
             context['form'] = filled
             return render(request, "form_crispy.html", context)
     else:
-        #pass back the empty form
+        # pass back the empty form
         context['msg'] = "Bulk Movie Addition - Choose Movie Details"
         context['formset'] = formset(initial=weeks)
         context['helper'] = DateEntryFormSetBase().helper
