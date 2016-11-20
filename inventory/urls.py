@@ -1,6 +1,6 @@
-from django.conf.urls import url, include
-from . import views
+from django.conf.urls import include, url
 
+from . import views
 
 # Inventory Url Patterns
 # Use include() liberally. A bit harder to read,

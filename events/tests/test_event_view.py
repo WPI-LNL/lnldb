@@ -1,6 +1,7 @@
-from django.test import TestCase
-from .generators import EventFactory, UserFactory, CCReportFactory
 from django.core.urlresolvers import reverse
+from django.test import TestCase
+
+from .generators import CCReportFactory, EventFactory, UserFactory
 
 
 class EventBasicViewTest(TestCase):

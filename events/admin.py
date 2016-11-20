@@ -1,7 +1,8 @@
-from . import models
 from django.contrib import admin
 # actions
 from reversion.admin import VersionAdmin
+
+from . import models
 
 
 def enable_show_in_wo_form(modeladmin, request, queryset):

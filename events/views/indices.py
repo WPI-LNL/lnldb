@@ -1,14 +1,15 @@
 import datetime
+import os
 
+from django.conf import settings
+from django.contrib.auth.decorators import login_required, permission_required
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required, permission_required
 from django.utils import timezone
-from django.conf import settings
-from django.db.models import Q
+
 from events.models import Event
 from helpers.challenges import is_officer
-import os
 
 
 # FRONT 3 PAGES

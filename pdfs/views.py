@@ -1,19 +1,21 @@
 import datetime
-
 import os
-from django.utils.text import slugify
 from io import BytesIO
-from xhtml2pdf import pisa
-from django.template.loader import get_template
+
 from django.conf import settings
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
-from events.models import Event, Category, ExtraInstance
-from projection.models import Projectionist, PITLevel
-from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.contrib.humanize.templatetags.humanize import intcomma
 from django.contrib.staticfiles import finders
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.template.loader import get_template
+from django.utils import timezone
+from django.utils.text import slugify
+from xhtml2pdf import pisa
+
+from events.models import Category, Event, ExtraInstance
+from projection.models import PITLevel, Projectionist
+
 from .overlay import make_idt_single
 from .utils import concat_pdf
 

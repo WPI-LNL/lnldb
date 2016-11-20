@@ -1,7 +1,8 @@
-from django.test import TestCase
-from .generators import UserFactory, OrgFactory, FundFactory
-from .. import models
 from django.core.urlresolvers import reverse
+from django.test import TestCase
+
+from .. import models
+from .generators import FundFactory, OrgFactory, UserFactory
 
 
 class OrgViewTest(TestCase):

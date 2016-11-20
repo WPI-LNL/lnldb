@@ -1,9 +1,9 @@
 import datetime
 
 from ajax_select.fields import AutoCompleteSelectMultipleField
-from crispy_forms.bootstrap import FormActions, TabHolder, Tab
+from crispy_forms.bootstrap import FormActions, Tab, TabHolder
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Submit, Field, Button
+from crispy_forms.layout import Button, Field, Layout, Submit
 from django import forms
 from django.core.urlresolvers import reverse
 from django.db.models import Q
@@ -13,7 +13,8 @@ from natural_duration import NaturalDurationField
 from pagedown.widgets import PagedownWidget
 
 from events.models import Event, Location
-from meetings.models import Meeting, MeetingAnnounce, CCNoticeSend, MtgAttachment
+from meetings.models import (CCNoticeSend, Meeting, MeetingAnnounce,
+                             MtgAttachment)
 
 
 class MeetingAdditionForm(forms.ModelForm):

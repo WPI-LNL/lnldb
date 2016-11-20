@@ -1,9 +1,10 @@
 
-from django.test import TestCase
 from django.core.urlresolvers import reverse
+from django.test import TestCase
 from model_mommy import mommy
-from .generators import EventFactory, UserFactory, OrgFactory
+
 from ..models import Event, EventCCInstance
+from .generators import EventFactory, OrgFactory, UserFactory
 
 
 class MyViewTest(TestCase):

@@ -1,9 +1,12 @@
 from datetime import timedelta
-from django.contrib.auth.hashers import make_password
+
 from django.conf import settings
+from django.contrib.auth.hashers import make_password
 from django.utils import timezone
-from factory import DjangoModelFactory, SubFactory, Sequence, Faker
-from events.models import Event, Location, Organization, Building, CCReport, Fund
+from factory import DjangoModelFactory, Faker, Sequence, SubFactory
+
+from events.models import (Building, CCReport, Event, Fund, Location,
+                           Organization)
 
 __author__ = 'jmerdich'
 

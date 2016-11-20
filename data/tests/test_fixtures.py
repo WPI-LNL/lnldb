@@ -1,6 +1,7 @@
-from django.test import TestCase
-from django.core import management
 from glob import glob
+
+from django.core import management
+from django.test import TestCase
 from six import StringIO
 
 

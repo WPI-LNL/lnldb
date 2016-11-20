@@ -1,6 +1,6 @@
 from django.views.generic.detail import DetailView
 
-from meetings.models import MeetingAnnounce, CCNoticeSend
+from meetings.models import CCNoticeSend, MeetingAnnounce
 
 
 class MeetingAnnounceView(DetailView):

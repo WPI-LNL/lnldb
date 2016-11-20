@@ -1,10 +1,11 @@
 from __future__ import print_function
 
+import importlib
+
 from django import test
+from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.core.urlresolvers import reverse
-from django.conf import settings
-import importlib
 from django.test import override_settings
 
 

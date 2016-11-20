@@ -1,12 +1,12 @@
 # shamelessly borrowed from http://greenash.net.au/thoughts/2010/06/an-inline-image-django-template-filter/
 # but built upon with the love of gabe
+import re
+
 from django import template
+from django.core.urlresolvers import reverse
 from django.template.defaultfilters import stringfilter
 
-from django.core.urlresolvers import reverse
 from events.models import Event
-
-import re
 
 register = template.Library()
 

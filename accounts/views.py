@@ -2,19 +2,20 @@ from crispy_forms.helper import FormHelper
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
-from django.contrib.auth.forms import SetPasswordForm, PasswordChangeForm
+from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
+from django.contrib.auth.views import login as local_login
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.views import generic
 from django_cas_ng.views import login as cas_login
-from django.contrib.auth.views import login as local_login
 
 from data.forms import form_footer
 from events.models import Event
 from helpers import mixins
+
 from . import forms
 
 

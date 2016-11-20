@@ -1,14 +1,15 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.core.urlresolvers import reverse
 from django.db.models import Count
 from django.forms.models import inlineformset_factory
-from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpResponseNotFound
-from django.shortcuts import render, get_object_or_404
-from django.core.urlresolvers import reverse
+from django.http import (HttpResponseBadRequest, HttpResponseNotFound,
+                         HttpResponseRedirect)
+from django.shortcuts import get_object_or_404, render
 
-from .import forms, models
+from . import forms, models
 
 NUM_IN_PAGE = 25
 

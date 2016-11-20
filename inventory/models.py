@@ -1,17 +1,16 @@
-from django.conf import settings
-from django.db import models
-
+import datetime
 # Create your models here.
 import logging
-import datetime
 
-from django.db.models import Q
+from django.conf import settings
 from django.core.urlresolvers import reverse
-
+from django.db import models
+from django.db.models import Q
 from django.utils.functional import cached_property
 from mptt.fields import TreeForeignKey
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel
+
 from events.models import Location
 
 GLOBAL_LOC_DEFAULT = {'name': "Office", "building__name": "Campus Center"}

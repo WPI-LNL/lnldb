@@ -1,11 +1,11 @@
+import os.path
 from datetime import date
 from io import BytesIO
-import os.path
 
+from PyPDF2 import PdfFileReader, PdfFileWriter
 from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
-from PyPDF2 import PdfFileReader, PdfFileWriter
 
 
 def get_base(name):

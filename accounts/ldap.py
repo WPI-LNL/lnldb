@@ -1,5 +1,7 @@
-import ldap3
 import sys
+
+import ldap3
+
 try:
     from django.contrib.auth import get_user_model
     from django.conf.settings import CCC_PASS

@@ -1,33 +1,35 @@
 import datetime
 import decimal
 
-# python multithreading bug workaround
-from pagedown.widgets import PagedownWidget
-from data.forms import FieldAccessForm, FieldAccessLevel, DynamicFieldContainer
-
+import pytz
+from ajax_select import make_ajax_field
+from ajax_select.fields import (AutoCompleteSelectField,
+                                AutoCompleteSelectMultipleField)
+from crispy_forms.bootstrap import (FormActions, InlineCheckboxes,
+                                    InlineRadios, PrependedText, Tab,
+                                    TabHolder)
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import (HTML, Div, Field, Fieldset, Hidden, Layout,
+                                 Reset, Submit)
 from django import forms
+from django.core.exceptions import ValidationError
+from django.core.urlresolvers import reverse
+from django.db.models import Q
 from django.forms import ModelForm
 from django.forms.extras.widgets import SelectDateWidget
 from django.utils import timezone
-from django.db.models import Q
-from helpers.form_text import markdown_at_msgs
-from django.core.urlresolvers import reverse
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, Submit, Div, Field, HTML, Hidden, \
-    Reset
-from crispy_forms.bootstrap import InlineCheckboxes, InlineRadios, Tab, TabHolder, FormActions, \
-    PrependedText
-from events.models import Event, Organization, OrganizationTransfer, OrgBillingVerificationEvent, Fund
-from events.models import Extra, Location, Lighting, Sound, Projection, Service, EventCCInstance, EventAttachment, \
-    ExtraInstance
-from events.models import Billing, CCReport, Hours
-from events.widgets import ValueSelectField
-from events.fields import GroupedModelChoiceField
-from django.core.exceptions import ValidationError
-import pytz
-from ajax_select import make_ajax_field
-from ajax_select.fields import AutoCompleteSelectMultipleField, AutoCompleteSelectField
+# python multithreading bug workaround
+from pagedown.widgets import PagedownWidget
 
+from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
+from events.fields import GroupedModelChoiceField
+from events.models import (Billing, CCReport, Event, EventAttachment,
+                           EventCCInstance, Extra, ExtraInstance, Fund, Hours,
+                           Lighting, Location, Organization,
+                           OrganizationTransfer, OrgBillingVerificationEvent,
+                           Projection, Service, Sound)
+from events.widgets import ValueSelectField
+from helpers.form_text import markdown_at_msgs
 
 LIGHT_EXTRAS = Extra.objects.filter(category__name="Lighting")
 LIGHT_EXTRAS_ID_NAME = LIGHT_EXTRAS.values_list('id', 'name')

@@ -1,23 +1,21 @@
 import mimetypes
-
+import os
 import re
 import stat
+
+from django.conf import settings
+from django.contrib.auth.decorators import login_required, permission_required
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.core.urlresolvers import reverse
+from django.http import (FileResponse, HttpResponse, HttpResponseNotModified,
+                         HttpResponseRedirect)
+from django.shortcuts import render
+from django.utils.datastructures import MultiValueDictKeyError
 from django.utils.http import http_date, urlquote_plus
 from django.views.static import was_modified_since
-import os
-from django.conf import settings
-from django.core.urlresolvers import reverse
-from django.http import HttpResponseRedirect, FileResponse, HttpResponseNotModified, HttpResponse
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required, permission_required
-from django.utils.datastructures import MultiValueDictKeyError
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from watson import search as watson
 
 from data.models import StupidCat
-
-
-# Create your views here.
-from watson import search as watson
 
 
 @login_required

@@ -1,7 +1,9 @@
-from django.test import TestCase
 from django.core.urlresolvers import reverse
+from django.test import TestCase
 
-from .generators import UserFactory, OrgFactory
+from .generators import OrgFactory, UserFactory
+
+
 # from .. import models
 
 

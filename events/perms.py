@@ -1,8 +1,10 @@
+import logging
+from logging import debug
+
 from django.core.exceptions import PermissionDenied
 from permission.logics import PermissionLogic
 from permission.utils.field_lookup import field_lookup
-import logging
-from logging import debug
+
 logging.basicConfig(filename='/home/lnl/perms.log', level=logging.DEBUG)
 
 

@@ -1,5 +1,6 @@
-from pages import models
 from django.contrib import admin
+
+from pages import models
 
 
 class PageAdmin(admin.ModelAdmin):

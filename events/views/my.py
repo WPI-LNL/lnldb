@@ -1,19 +1,20 @@
 import datetime
-
 from itertools import chain
-from django.contrib.auth.decorators import login_required
+
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.db.models.aggregates import Sum
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.utils.functional import curry
 
 from emails.generators import generate_selfservice_notice_email
-from events.forms import InternalReportForm, MKHoursForm, EditHoursForm, SelfServiceOrgRequestForm, WorkorderRepeatForm
-from events.models import Event, CCReport, Hours
+from events.forms import (EditHoursForm, InternalReportForm, MKHoursForm,
+                          SelfServiceOrgRequestForm, WorkorderRepeatForm)
+from events.models import CCReport, Event, Hours
 
 
 @login_required

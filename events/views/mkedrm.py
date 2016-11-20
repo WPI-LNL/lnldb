@@ -1,12 +1,11 @@
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from events.models import Event
-from events.forms import InternalEventForm
-
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404, render
 
-from django.contrib.auth.decorators import login_required
+from events.forms import InternalEventForm
+from events.models import Event
 
 
 @login_required

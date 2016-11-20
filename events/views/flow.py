@@ -1,24 +1,28 @@
-from django.core.urlresolvers import reverse
-from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404
 from django.conf import settings
-from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.urlresolvers import reverse
 from django.forms.models import inlineformset_factory
-from django.utils.functional import curry
-from emails.generators import DefaultLNLEmailGenerator as DLEG
-from events.forms import EventApprovalForm, EventDenialForm, BillingForm, BillingUpdateForm, EventReviewForm, \
-    InternalReportForm
-from events.forms import CrewAssign, CCIForm, AttachmentForm, ExtraForm, MKHoursForm
-from events.models import Event, Billing, EventCCInstance, EventAttachment, ExtraInstance, \
-    EventArbitrary, CCReport, Hours, ReportReminder
-from django.utils.text import slugify
-from pdfs.views import generate_pdfs_standalone
-from django.views.generic import UpdateView, CreateView, DeleteView
-from helpers.mixins import LoginRequiredMixin, SetFormMsgMixin, HasPermMixin, ConditionalFormMixin
-from django.core.exceptions import ValidationError, PermissionDenied
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
+from django.utils.functional import curry
+from django.utils.text import slugify
+from django.views.generic import CreateView, DeleteView, UpdateView
 from reversion.models import Version
+
+from emails.generators import DefaultLNLEmailGenerator as DLEG
+from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm,
+                          CCIForm, CrewAssign, EventApprovalForm,
+                          EventDenialForm, EventReviewForm, ExtraForm,
+                          InternalReportForm, MKHoursForm)
+from events.models import (Billing, CCReport, Event, EventArbitrary,
+                           EventAttachment, EventCCInstance, ExtraInstance,
+                           Hours, ReportReminder)
+from helpers.mixins import (ConditionalFormMixin, HasPermMixin,
+                            LoginRequiredMixin, SetFormMsgMixin)
+from pdfs.views import generate_pdfs_standalone
 
 
 @login_required

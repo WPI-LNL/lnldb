@@ -1,24 +1,20 @@
 # Create your views here.
 import datetime
 
-from django.core.urlresolvers import reverse
-from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404
-from django.db.models import Q
-from django.views.generic.edit import CreateView
-from django.views.generic.edit import DeleteView
-from django.views.generic.edit import FormView
-from projection.models import Projectionist, PITLevel
-from projection.forms import ProjectionistUpdateForm
-from projection.forms import ProjectionistForm
-from projection.forms import PITFormset
-from projection.forms import BulkUpdateForm
-from projection.forms import BulkCreateForm
-from projection.forms import DateEntryFormSetBase
-from django.contrib.auth.decorators import login_required, permission_required
-from django.forms.formsets import formset_factory
-from helpers.mixins import LoginRequiredMixin, HasPermMixin
 from crispy_forms.layout import Submit
+from django.contrib.auth.decorators import login_required, permission_required
+from django.core.urlresolvers import reverse
+from django.db.models import Q
+from django.forms.formsets import formset_factory
+from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
+from django.views.generic.edit import CreateView, DeleteView, FormView
+
+from helpers.mixins import HasPermMixin, LoginRequiredMixin
+from projection.forms import (BulkCreateForm, BulkUpdateForm,
+                              DateEntryFormSetBase, PITFormset,
+                              ProjectionistForm, ProjectionistUpdateForm)
+from projection.models import PITLevel, Projectionist
 
 
 @login_required

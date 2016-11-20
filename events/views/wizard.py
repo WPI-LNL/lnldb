@@ -6,8 +6,7 @@ from formtools.wizard.views import NamedUrlSessionWizardView
 
 from emails.generators import DefaultLNLEmailGenerator as DLEG
 from events.forms import named_event_tmpls
-from events.models import Event, Extra
-from events.models import Lighting, Sound, Projection
+from events.models import Event, Extra, Lighting, Projection, Sound
 
 
 # CBV NuEventForm

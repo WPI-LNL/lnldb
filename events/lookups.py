@@ -1,8 +1,8 @@
 from ajax_select import LookupChannel
-from django.utils.html import escape
 from django.db.models import Q
+from django.utils.html import escape
 
-from events.models import Organization, Fund
+from events.models import Fund, Organization
 
 
 class OrgLookup(LookupChannel):

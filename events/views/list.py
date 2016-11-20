@@ -1,15 +1,15 @@
 import datetime
-
-from django.core.urlresolvers import reverse
-from django.shortcuts import render
-from events.models import Event
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q, F, Count
-from django.contrib.auth.decorators import login_required, permission_required
-from django.utils.timezone import make_aware
-import pytz
 import re
 
+import pytz
+from django.contrib.auth.decorators import login_required, permission_required
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.core.urlresolvers import reverse
+from django.db.models import Count, F, Q
+from django.shortcuts import render
+from django.utils.timezone import make_aware
+
+from events.models import Event
 
 DEFAULT_ENTRY_COUNT = 40
 

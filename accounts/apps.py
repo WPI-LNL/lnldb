@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+
 try:
     from watson import search
 except:

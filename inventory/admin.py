@@ -1,6 +1,7 @@
-from mptt.admin import MPTTModelAdmin
-from inventory import models
 from django.contrib import admin
+from mptt.admin import MPTTModelAdmin
+
+from inventory import models
 
 # It's a tree, so it's special...
 admin.site.register(models.EquipmentCategory, MPTTModelAdmin)

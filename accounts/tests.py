@@ -2,7 +2,7 @@ from django import test
 from django.core import management
 from six import StringIO
 
-from . import models, ldap
+from . import ldap, models
 
 
 class LdapTestCase(test.TestCase):

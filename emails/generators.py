@@ -1,12 +1,11 @@
-from django.template.loader import render_to_string
-from django.core.mail import EmailMultiAlternatives
-
-import pytz
 import datetime
 
-from events.models import Event
-
+import pytz
 from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+
+from events.models import Event
 
 EMAIL_KEY_START_END = settings.EMAIL_KEY_START_END
 EMAIL_TARGET_START_END = settings.EMAIL_TARGET_START_END

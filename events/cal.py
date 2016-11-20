@@ -1,15 +1,16 @@
 import datetime
-from time import mktime
 import json
+from time import mktime
+
+from django.db.models import Q
+from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.utils.html import conditional_escape
 from django.views.decorators.cache import cache_page
-
 from django_ical.views import ICalFeed
+
 from events.models import Event, EventCCInstance
 from meetings.models import Meeting
-from django.db.models import Q
-from django.http import HttpResponse
 
 
 class BaseFeed(ICalFeed):

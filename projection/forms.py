@@ -1,16 +1,18 @@
 import datetime
 
+from ajax_select.fields import (AutoCompleteSelectField,
+                                AutoCompleteSelectMultipleField)
+from crispy_forms.bootstrap import FormActions
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import HTML, Field, Layout, Submit
 from django import forms
 from django.contrib.auth import get_user_model
 from django.forms.models import inlineformset_factory
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Submit, Field, HTML
-from crispy_forms.bootstrap import FormActions
 from django.utils import timezone
-from ajax_select.fields import AutoCompleteSelectField, AutoCompleteSelectMultipleField
 
-from projection.models import Projectionist, PitInstance, PITLevel
-from events.models import Event, Location, Building, Projection as ProjService, Category
+from events.models import Projection as ProjService
+from events.models import Building, Category, Event, Location
+from projection.models import PitInstance, PITLevel, Projectionist
 
 
 class ProjectionistUpdateForm(forms.ModelForm):

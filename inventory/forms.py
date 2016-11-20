@@ -1,15 +1,13 @@
+from ajax_select.fields import AutoCompleteSelectField
+from crispy_forms import layout
+from crispy_forms.bootstrap import FormActions, Tab, TabHolder
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import HTML, Div, Field, Layout, Submit
 from django import forms
 from django.core.exceptions import ValidationError
-from django.forms import ModelForm, Form, CharField
-
+from django.forms import CharField, Form, ModelForm
 from mptt.forms import TreeNodeChoiceField
 from pagedown.widgets import PagedownWidget
-from ajax_select.fields import AutoCompleteSelectField
-
-from crispy_forms.helper import FormHelper
-from crispy_forms import layout
-from crispy_forms.layout import Layout, Submit, Field, Div, HTML
-from crispy_forms.bootstrap import Tab, TabHolder, FormActions
 
 from . import models
 

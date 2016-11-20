@@ -1,8 +1,10 @@
 # from ..overlay import make_idt
 from django.test import TestCase
+
 from events.tests.generators import EventFactory, UserFactory
+
+from ..overlay import make_idt_bulk, make_idt_single
 from ..views import generate_pdfs_standalone
-from ..overlay import make_idt_single, make_idt_bulk
 
 
 class PdfViewTest(TestCase):

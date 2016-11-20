@@ -1,34 +1,32 @@
+import debug_toolbar
+import django.contrib.auth.views
+import django_cas_ng.views
+import permission
+from ajax_select import urls as ajax_select_urls
 from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
 from django.contrib.auth.decorators import login_required
-import django.contrib.auth.views
 from django.views.generic.base import RedirectView
 
-from ajax_select import urls as ajax_select_urls
-import django_cas_ng.views
-import debug_toolbar
-import permission
-
+import data.views
 from accounts.forms import LoginForm
 from accounts.views import smart_login
-import data.views
-from emails.views import MeetingAnnounceView
-from emails.views import MeetingAnnounceCCView
+from emails.views import MeetingAnnounceCCView, MeetingAnnounceView
 from events.cal import EventFeed, FullEventFeed, LightEventFeed, cal_json
 from events.forms import named_event_forms
-from events.views.flow import BillingCreate, BillingUpdate, BillingDelete
-from events.views.flow import CCRCreate, CCRUpdate, CCRDelete
-from events.views.indices import admin as db_home, event_search
+from events.views.flow import (BillingCreate, BillingDelete, BillingUpdate,
+                               CCRCreate, CCRDelete, CCRUpdate)
+from events.views.indices import admin as db_home
+from events.views.indices import event_search
 from events.views.list import public_facing
-from events.views.wizard import EventWizard
-from events.views.wizard import show_lighting_form_condition, show_sound_form_condition, \
-    show_projection_form_condition, show_other_services_form_condition
+from events.views.wizard import (EventWizard, show_lighting_form_condition,
+                                 show_other_services_form_condition,
+                                 show_projection_form_condition,
+                                 show_sound_form_condition)
 from pages.views import page as view_page
-from projection.views import ProjectionCreate
-from projection.views import BulkUpdateView
-from projection.views import ProjectionistDelete
-
+from projection.views import (BulkUpdateView, ProjectionCreate,
+                              ProjectionistDelete)
 
 admin.autodiscover()
 permission.autodiscover()

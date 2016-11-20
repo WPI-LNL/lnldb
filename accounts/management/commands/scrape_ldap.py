@@ -1,7 +1,8 @@
 from django.core.management.base import BaseCommand
 from django.db.transaction import atomic
-from ...models import User
+
 from ... import ldap
+from ...models import User
 
 
 class Command(BaseCommand):

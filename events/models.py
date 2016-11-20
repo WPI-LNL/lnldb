@@ -1,18 +1,18 @@
-from django.db import models
+import datetime
+import decimal
+
+import pytz
+from django import forms
 # from events.managers import EventManager
 # noinspection PyUnresolvedReferences
 from django.conf import settings
 # Create your models here.
 from django.core.urlresolvers import reverse
 from django.core.validators import MinLengthValidator
-from django import forms
+from django.db import models
 from django.db.models import Manager
-from django.utils.functional import cached_property
 from django.utils import timezone
-
-import pytz
-import datetime
-import decimal
+from django.utils.functional import cached_property
 
 # if settings unset, have sane defaults
 if settings.CCR_DAY_DELTA:

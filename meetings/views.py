@@ -2,24 +2,24 @@ import datetime
 
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import InvalidPage, Paginator
 from django.core.urlresolvers import reverse
-from django.core.paginator import Paginator, InvalidPage
 from django.db.models.aggregates import Count
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect
 from django.http.response import Http404
-from django.shortcuts import render, get_object_or_404
-from django.utils.functional import curry
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
+from django.utils.functional import curry
 
 from data.views import serve_file
+from emails.generators import generate_notice_cc_email, generate_notice_email
 from events.forms import CCIForm
 from events.models import Event, EventCCInstance
-from emails.generators import generate_notice_email, generate_notice_cc_email
 
-from .forms import MeetingAdditionForm, MtgAttachmentEditForm, \
-    AnnounceSendForm, AnnounceCCSendForm
-from .models import Meeting, MtgAttachment, AnnounceSend
+from .forms import (AnnounceCCSendForm, AnnounceSendForm, MeetingAdditionForm,
+                    MtgAttachmentEditForm)
+from .models import AnnounceSend, Meeting, MtgAttachment
 
 
 @login_required

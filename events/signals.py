@@ -1,16 +1,13 @@
-from django.conf import settings
-from django.db.models.signals import post_save, pre_save
-from django.db.models.signals import pre_delete
-from django.dispatch import receiver
-from django.utils import timezone
-
 import datetime
 
-from emails.generators import DefaultLNLEmailGenerator as DLEG
-from events.models import Billing, Fund
-from events.models import EventCCInstance
+from django.conf import settings
+from django.db.models.signals import post_save, pre_delete, pre_save
+from django.dispatch import receiver
+from django.utils import timezone
 from django.utils.text import slugify
 
+from emails.generators import DefaultLNLEmailGenerator as DLEG
+from events.models import Billing, EventCCInstance, Fund
 from pdfs.views import generate_pdfs_standalone
 
 __all__ = [
