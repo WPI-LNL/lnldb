@@ -5,11 +5,10 @@ LNLDB runs under Python2.x and Django.
 
 ## To Install (Testing)
 ##### Install required system packages
-You are going to need some basic Python/Git tools to run the code. The most important are python2 (not 3) and virtualenv
-(which allows you to install python libs without root).
+You are going to need some basic Python/Git tools to run the code. The most important are python2 (not 3) and virtualenv (which allows you to install python libs without root). The rest are to compile the python binary libraries, namely MySQL and image manipulation. 
 
 ```
-sudo apt-get install python2.7 python2.7-dev python-pip python-virtualenv git
+sudo apt-get install python2.7 python2.7-dev python-pip python-virtualenv git libtiff5-dev libjpeg8-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev libmysqlclient-dev
 ```
 
 It is certainly possible to run via Windows practically without changes, but figuring out that setup is left as an
