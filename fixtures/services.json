@@ -62,6 +62,210 @@
 {
   "fields": {
     "category": 1,
+    "help_desc": "We'll design, hang, and run a lighting setup to make you look great, but we'll only use a few fixtures (12 tops) and will just keep them lit for the entire show. This is definitely not enough light for the Alden main stage.",
+    "addtl_cost": "0.00",
+    "longname": "L1: Static Lighting",
+    "shortname": "L1",
+    "base_cost": "50.00"
+  },
+  "model": "events.service",
+  "pk": 1
+},
+{
+  "fields": {
+    "category": 1,
+    "help_desc": "We'll design, hang, and run a lighting setup to make you look great, and we'll use enough fixtures to fulfill most campus events. We'll also dim and adjust these how you like during the show, which includes using the colored or moving lights. This is still not enough light for the Alden main stage.",
+    "addtl_cost": "0.00",
+    "longname": "L2: Basic Dynamic Lighting",
+    "shortname": "L2",
+    "base_cost": "100.00"
+  },
+  "model": "events.service",
+  "pk": 2
+},
+{
+  "fields": {
+    "category": 1,
+    "help_desc": "We'll design, hang, and run a lighting setup to make you look great, and we'll use plenty of fixtures to fulfill all but the biggest of campus events. We'll dim and adjust these how you like during the show, including cues for any colored or moving lights, dramatic effects for concerts, etc.",
+    "addtl_cost": "0.00",
+    "longname": "L3: Standard Dynamic Lighting",
+    "shortname": "L3",
+    "base_cost": "200.00"
+  },
+  "model": "events.service",
+  "pk": 3
+},
+{
+  "fields": {
+    "category": 2,
+    "help_desc": "We come in, set up microphones, and mix your show over an existing speakers. Note that this can only be used in places with a house sound system (for example, Alden or the Odeum) and typically fits small events with multiple people talking. ",
+    "addtl_cost": "0.00",
+    "longname": "S1: House Sound System",
+    "shortname": "S1",
+    "base_cost": "30.00"
+  },
+  "model": "events.service",
+  "pk": 4
+},
+{
+  "fields": {
+    "category": 2,
+    "help_desc": "We bring in microphones, mixers, and a pair of our smaller speakers (they're still big and plenty loud, though!). We'll mix and tweak the show. This can be done anywhere, though if the event is on the entire Quad or you're doing a high-profile show in Alden, you might want something a bit bigger.",
+    "addtl_cost": "0.00",
+    "longname": "S2: Basic Sound Event",
+    "shortname": "S2",
+    "base_cost": "150.00"
+  },
+  "model": "events.service",
+  "pk": 5
+},
+{
+  "fields": {
+    "category": 2,
+    "help_desc": "We bring in microphones, mixers, and a pair of our big speakers with matching subwoofers. We'll mix and tweak the show, going the extra mile to make it sound as good as possible. This can be done anywhere, and will fill just about any venue with the glorious sound of your voice. We can also add additional communication (ie. cues backstage) for shows in Alden.",
+    "addtl_cost": "0.00",
+    "longname": "S3: Large Sound Event",
+    "shortname": "S3",
+    "base_cost": "250.00"
+  },
+  "model": "events.service",
+  "pk": 6
+},
+{
+  "fields": {
+    "category": 3,
+    "help_desc": "16mm Projection:\r\n$20 plus $12 for every 40-minute reel. This includes benching and de-benching 40-minute reels, CD/house sound before and after movie (if provided).",
+    "addtl_cost": "0.00",
+    "longname": "16mm",
+    "shortname": "16",
+    "base_cost": "20.00"
+  },
+  "model": "events.service",
+  "pk": 7
+},
+{
+  "fields": {
+    "category": 3,
+    "help_desc": "35mm Projection:\r\n$30 plus $10 for every 20-minute reel. This includes benching and de-benching 20-minute reels, CD/house sound before and after movie (if provided), projection of 16mm cartoon before (if provided) and projection of previews (if provided).",
+    "addtl_cost": "0.00",
+    "longname": "35mm",
+    "shortname": "35",
+    "base_cost": "30.00"
+  },
+  "model": "events.service",
+  "pk": 8
+},
+{
+  "fields": {
+    "category": 3,
+    "help_desc": "70mm Projection:\r\n$55 plus $15 for every 20-minute reel. This includes benching and de-benching 20-minute reels, CD/house sound before and after movie (if provided), projection of 16mm cartoon before (if provided) and projection of previews (if provided).",
+    "addtl_cost": "0.00",
+    "longname": "70mm",
+    "shortname": "70",
+    "base_cost": "55.00"
+  },
+  "model": "events.service",
+  "pk": 9
+},
+{
+  "fields": {
+    "category": 1,
+    "help_desc": "We'll design, hang, and run a lighting setup to make you glow, and we'll use as many fixtures as needed to make your large event shine. We'll dim and adjust these how you like during the show, including cues for any colored or moving lights, dramatic effects for concerts, etc.",
+    "addtl_cost": "0.00",
+    "longname": "L4: Advanced Dynamic Lighting",
+    "shortname": "L4",
+    "base_cost": "300.00"
+  },
+  "model": "events.service",
+  "pk": 10
+},
+{
+  "fields": {
+    "category": 2,
+    "help_desc": "What's better than two big speakers? Four big speakers, with four matching subwoofers. For the largest of events, this will blow the roof or let you hear the faintest timbres of a piano. We'll mic, mix, tweak thoroughly, and make sure it fits your needs. *For small venues, this is definitely overkill*.",
+    "addtl_cost": "0.00",
+    "longname": "S4: Advanced Sound Event",
+    "shortname": "S4",
+    "base_cost": "300.00"
+  },
+  "model": "events.service",
+  "pk": 11
+},
+{
+  "fields": {
+    "category": 4,
+    "help_desc": null,
+    "addtl_cost": "0.00",
+    "longname": "P1: 6 X 20A Circuits",
+    "shortname": "P1",
+    "base_cost": "30.00"
+  },
+  "model": "events.service",
+  "pk": 12
+},
+{
+  "fields": {
+    "category": 4,
+    "help_desc": null,
+    "addtl_cost": "0.00",
+    "longname": "P2: 12 X 20A Circuits",
+    "shortname": "P2",
+    "base_cost": "40.00"
+  },
+  "model": "events.service",
+  "pk": 13
+},
+{
+  "fields": {
+    "category": 4,
+    "help_desc": null,
+    "addtl_cost": "0.00",
+    "longname": "P3: 18 X 20A Circuits",
+    "shortname": "P3",
+    "base_cost": "50.00"
+  },
+  "model": "events.service",
+  "pk": 14
+},
+{
+  "fields": {
+    "category": 3,
+    "help_desc": "Digital Projection:\r\n$20 for the first 20 minutes of use, $7 for each additional 20 minutes of use.",
+    "addtl_cost": "0.00",
+    "longname": "Digital Projection",
+    "shortname": "DP",
+    "base_cost": "20.00"
+  },
+  "model": "events.service",
+  "pk": 15
+},
+{
+  "fields": {
+    "category": 5,
+    "help_desc": "",
+    "addtl_cost": "0.00",
+    "longname": "Rental",
+    "shortname": "PS",
+    "base_cost": "0.00"
+  },
+  "model": "events.service",
+  "pk": 16
+},
+{
+  "fields": {
+    "category": 5,
+    "help_desc": "",
+    "addtl_cost": "0.00",
+    "longname": "Tickets, Sales, Security",
+    "shortname": "TS",
+    "base_cost": "0.00"
+  },
+  "model": "events.service",
+  "pk": 17
+},
+{
+  "fields": {
+    "category": 1,
     "checkbox": false,
     "name": "Moving Head Fixtures",
     "cost": "30.00",
