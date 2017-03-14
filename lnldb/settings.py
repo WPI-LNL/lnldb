@@ -243,6 +243,8 @@ if TESTING:
     except:
         pass
 
+MIGRATION_MODULES = {'redirects': 'data.redirects_migrations'}
+
 SHOW_HIJACKUSER_IN_ADMIN = False
 HIJACK_ALLOW_GET_REQUESTS = True
 # Needed since Hijack doesn't support custom UserAdmin
