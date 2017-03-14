@@ -126,14 +126,14 @@ def serve_file(request, att_file, forced_name=None):
 
 def err403(request, *args, **kwargs):
     context = {}
-    return render(request, '403.html', context)
+    return render(request, '403.html', context, status=403)
 
 
 def err404(request, *args, **kwargs):
     context = {}
-    return render(request, '404.html', context)
+    return render(request, '404.html', context, status=404)
 
 
 def err500(request, *args, **kwargs):
     context = {}
-    return render(request, '500.html', context)
+    return render(request, '500.html', context, status=500)
