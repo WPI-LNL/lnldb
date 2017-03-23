@@ -125,9 +125,6 @@ urlpatterns = [
     # }}}
 
     # events {{{
-    url(r'^db/events/approve/(?P<id>[0-9a-f]+)/$', 'events.views.flow.approval',
-        name="event-approve"),
-    url(r'^db/events/deny/(?P<id>[0-9a-f]+)/$', 'events.views.flow.denial', name="event-deny"),
     url(r'^db/events/review/(?P<id>[0-9a-f]+)/$', 'events.views.flow.review',
         name="event-review"),
     url(r'^db/events/review/(?P<id>[0-9a-f]+)/remind/(?P<uid>[0-9a-f]+)/$',
