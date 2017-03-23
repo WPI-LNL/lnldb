@@ -37,7 +37,7 @@
                     {% else %}
                         {% if not event.reviewed %}
                             {% permission request.user has 'events.review_event' of event %}
-                                <a class="btn btn-success btn-lg" href="{% url "events.views.flow.review" event.id %}">Review
+                                <a class="btn btn-success btn-lg" href="{% url "events:review" event.id %}">Review
                                     For Billing</a>
                             {% endpermission %}
                         {% else %}

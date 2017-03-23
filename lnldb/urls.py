@@ -125,8 +125,6 @@ urlpatterns = [
     # }}}
 
     # events {{{
-    url(r'^db/events/review/(?P<id>[0-9a-f]+)/$', 'events.views.flow.review',
-        name="event-review"),
     url(r'^db/events/review/(?P<id>[0-9a-f]+)/remind/(?P<uid>[0-9a-f]+)/$',
         'events.views.flow.reviewremind', name="event-review-remind"),
     url(r'^db/events/close/(?P<id>[0-9a-f]+)/$', 'events.views.flow.close', name="event-close"),
