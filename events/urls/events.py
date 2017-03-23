@@ -1,6 +1,7 @@
 from django.conf.urls import include, url
 
 from ..views import list as list_views, flow as flow_views
+from pdfs import views as pdf_views
 
 
 def generate_date_patterns(func, name):
@@ -29,4 +30,7 @@ urlpatterns = [
     # TODO: make a url structure that doesn't suck.
 
     url(r'^view/(?P<id>[0-9a-f]+)/$', flow_views.viewevent, name="detail"),
+    url(r'^pdf/(?P<ids>\d+(,\d+)*)?/?$', pdf_views.generate_event_pdf_multi,
+        name="pdf-multi"),
+    url(r'^view/(?P<id>[0-9a-f]+)/pdf/$', pdf_views.generate_event_pdf, name="pdf"),
 ]

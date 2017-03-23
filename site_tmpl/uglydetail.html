@@ -11,7 +11,7 @@
             <h3>Status: <b>{{ event.status }}</b></h3>
 
             <div class="btn-group">
-                <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
+                <a class="btn btn-info btn-lg" href="{% url "events:pdf" event.id %}">PDF</a>
                 {% if event.closed or event.cancelled %}
                     {% permission request.user has 'events.reopen_event' of event %}
                         <a class="btn btn-default btn-lg" href="#reopenModal" role="button"
