@@ -291,7 +291,7 @@
                     </table>
                 </div>
                 <div id="services" class="tab-pane">
-                    <div class="pull-right"><a class="btn btn-lg btn-info" href="{% url "eventextras" event.id %}">Modify Extras</a></div>
+                    <div class="pull-right"><a class="btn btn-lg btn-info" href="{% url "events:extras" event.id %}">Modify Extras</a></div>
                     {% if event.lighting %}
                         <h2>Lighting Services ({{ event.lighting }})</h2>
                         <h3>Requirements:</h3>
@@ -455,8 +455,8 @@
                 <div id="billing" class="tab-pane">
                     {% permission request.user has 'events.adjust_event_charges' of event %}
                         <div class="pull-right btn-group">
-                            <a class="btn btn-lg btn-primary" href="{% url "eventextras" event.id %}">Modify Extras</a>
-                            <a class="btn btn-lg btn-info" href="{% url "eventoneoff" event.id %}">Add OneOff
+                            <a class="btn btn-lg btn-primary" href="{% url "events:extras" event.id %}">Modify Extras</a>
+                            <a class="btn btn-lg btn-info" href="{% url "events:oneoffs" event.id %}">Add OneOff
                                 Charges</a>
                         </div>
                     {% endpermission %}
