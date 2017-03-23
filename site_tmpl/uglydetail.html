@@ -379,7 +379,7 @@
                         {% endfor %}
                     </table>
                     {% comment %}
-                    <a class="btn btn-lg btn-info pull-right" href="{% url "events.views.flow.assigncrew" event.id %}">Modify</a>
+                    <a class="btn btn-lg btn-info pull-right" href="{% url "events:add-crew" event.id %}">Modify</a>
                     <h2> Crew </h2>
                     <ul>
                         {% for c in event.crew.all %}
@@ -431,7 +431,7 @@
                         {% endfor %}
                         </ul>
                     {% endif %}
-                    <div class="pull-right"><a class="btn btn-primary btn-lg" href="{% url "admin-cchours-bulk" event.id %}">Edit</a></div>
+                    <div class="pull-right"><a class="btn btn-primary btn-lg" href="{% url "events:add-bulk-crew" event.id %}">Edit</a></div>
                     <h2> Hours </h2>
                     <table class="table">
                         <thead>

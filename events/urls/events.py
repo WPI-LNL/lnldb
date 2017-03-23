@@ -43,6 +43,11 @@ urlpatterns = [
     url(r'^close/(?P<id>[0-9a-f]+)/$', flow_views.close, name="close"),
     url(r'^cancel/(?P<id>[0-9a-f]+)/$', flow_views.cancel, name="cancel"),
     url(r'^reopen/(?P<id>[0-9a-f]+)/$', flow_views.reopen, name="reopen"),
+    url(r'^crew/(?P<id>[0-9a-f]+)/$', flow_views.assigncrew, name="add-crew"),
+    url(r'^rmcrew/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$',
+        flow_views.rmcrew, name="remove-crew"),
+    url(r'^(?P<id>[0-9]+)/hours/bulk/$', flow_views.hours_bulk_admin,
+        name="add-bulk-crew"),
 
     # The nice url structure. TODO: fit the rest in here (with deprecation, of course)
     url(r'^view/(?P<event>[0-9]+)/', include([
