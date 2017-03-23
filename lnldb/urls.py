@@ -125,19 +125,12 @@ urlpatterns = [
     # }}}
 
     # events {{{
-    url(r'^db/events/view/(?P<id>[0-9]+)/billing/pdf/$', 'pdfs.views.generate_event_bill_pdf',
-        name="events-pdf-bill"),
     url(r'^db/events/view/(?P<event>[0-9]+)/billing/mk/$', BillingCreate.as_view(),
         name="event-mkbilling"),
     url(r'^db/events/view/(?P<event>[0-9]+)/billing/update/(?P<pk>[0-9]+)/$',
         BillingUpdate.as_view(), name="event-updbilling"),
     url(r'^db/events/view/(?P<event>[0-9]+)/billing/rm/(?P<pk>[0-9]+)/$',
         BillingDelete.as_view(), name="event-rmbilling"),
-    url(r'^db/events/view/(?P<event>[0-9]+)/report/mk/$', CCRCreate.as_view(), name="event-mkccr"),
-    url(r'^db/events/view/(?P<event>[0-9]+)/report/update/(?P<pk>[0-9]+)/$', CCRUpdate.as_view(),
-        name="event-updccr"),
-    url(r'^db/events/view/(?P<event>[0-9]+)/report/rm/(?P<pk>[0-9]+)/$', CCRDelete.as_view(),
-        name="event-rmccr"),
     url(r'^db/events/crew/(?P<id>[0-9a-f]+)/$', 'events.views.flow.assigncrew'),
     url(r'^db/events/rmcrew/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$',
         'events.views.flow.rmcrew'),

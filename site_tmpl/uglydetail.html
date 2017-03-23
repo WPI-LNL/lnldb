@@ -392,7 +392,7 @@
                 <div id="reports" class="tab-pane">
                     {% if not event.closed or not event.cancelled %}
                         <div class="pull-right">
-                            <a class="btn btn-primary btn-lg" href="{% url "event-mkccr" event.id%}">New</a>
+                            <a class="btn btn-primary btn-lg" href="{% url "events:reports:new" event.id%}">New</a>
                         </div>
                     {% endif %}
                     <h2>Reports</h2>
@@ -405,10 +405,10 @@
                             {% endif %}
                             {% if not event.closed or not event.cancelled %}
                                 {% permission request.user has 'events.change_ccreport' of report %}
-                                    [<a href="{% url "event-updccr" event.id report.id %}">Edit</a>]
+                                    [<a href="{% url "events:reports:edit" event.id report.id %}">Edit</a>]
                                 {% endpermission %}
                                 {% permission request.user has 'events.delete_ccreport' of report %}
-                                    [<a href="{% url "event-rmccr" event.id report.id %}">Delete</a>]
+                                    [<a href="{% url "events:reports:remove" event.id report.id %}">Delete</a>]
                                 {% endpermission %}
                             {% endif %}
                         </em>
@@ -571,9 +571,9 @@
                     </table>
                     <h2> Bills </h2>
 							{% if event.reviewed %}
-                    <a class="btn btn-primary" href="{% url 'events-pdf-bill' event.id %}">Download Invoice</a>
+                    <a class="btn btn-primary" href="{% url "events:pdf-bill" event.id %}">Download Invoice</a>
 							{% else %}
-                    <a class="btn btn-primary" href="{% url 'events-pdf-bill' event.id %}">Download Quote</a>
+                    <a class="btn btn-primary" href="{% url "events:pdf-bill" event.id %}">Download Quote</a>
 							{% endif %}
                     {% if event.billings %}
                         <table class="table">

@@ -62,21 +62,21 @@ class EventBasicViewTest(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_ccr_add(self):
-        response = self.client.get(reverse('event-mkccr', args=[self.e.pk]))
+        response = self.client.get(reverse("events:reports:new", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Empty (bad) input
-        response = self.client.post(reverse('event-mkccr', args=[self.e.pk]))
+        response = self.client.post(reverse("events:reports:new", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post saved
 
     def test_ccr_edit(self):
-        response = self.client.get(reverse('event-updccr', args=[self.e.pk, self.report.pk]))
+        response = self.client.get(reverse("events:reports:edit", args=[self.e.pk, self.report.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Empty (bad) input
-        response = self.client.post(reverse('event-updccr', args=[self.e.pk, self.report.pk]))
+        response = self.client.post(reverse("events:reports:edit", args=[self.e.pk, self.report.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post saved
