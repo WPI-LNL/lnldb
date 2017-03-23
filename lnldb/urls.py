@@ -124,14 +124,7 @@ urlpatterns = [
     # }}}
 
     # events {{{
-    url(r'^db/events/crew/(?P<id>[0-9a-f]+)/$', 'events.views.flow.assigncrew'),
-    url(r'^db/events/rmcrew/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$',
-        'events.views.flow.rmcrew'),
     url(r'^db/events/crewchief/(?P<id>[0-9a-f]+)/$', 'events.views.flow.assigncc'),
-
-    url(r'^db/events/(?P<id>[0-9]+)/hours/bulk/$', 'events.views.flow.hours_bulk_admin',
-        name="admin-cchours-bulk"),
-
     url(r'^db/events/attachments/(?P<id>[0-9a-f]+)/$', 'events.views.flow.assignattach',
         name="eventattachments"),
     url(r'^db/events/extras/(?P<id>[0-9a-f]+)/$', 'events.views.flow.extras',

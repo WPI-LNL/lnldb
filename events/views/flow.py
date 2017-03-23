@@ -239,7 +239,7 @@ def rmcrew(request, id, user):
             request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
     event.crew.remove(user)
-    return HttpResponseRedirect(reverse('events.views.flow.assigncrew', args=(event.id,)))
+    return HttpResponseRedirect(reverse("events:add-crew", args=(event.id,)))
 
 
 @login_required
