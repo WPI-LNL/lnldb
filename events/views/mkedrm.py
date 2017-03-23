@@ -43,7 +43,7 @@ def eventnew(request, id=None):
                 res.submitted_ip = request.META.get('REMOTE_ADDR')
                 res.save()
                 form.save_m2m()
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(res.id,)))
+            return HttpResponseRedirect(reverse('events:detail', args=(res.id,)))
         else:
             context['e'] = form.errors
             context['formset'] = form

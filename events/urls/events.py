@@ -1,6 +1,6 @@
 from django.conf.urls import include, url
 
-from ..views import list as list_views
+from ..views import list as list_views, flow as flow_views
 
 
 def generate_date_patterns(func, name):
@@ -24,4 +24,9 @@ urlpatterns = [
     url(r'^paid/', generate_date_patterns(list_views.paid, name="paid")),
     url(r'^unpaid/', generate_date_patterns(list_views.unpaid, name="unpaid")),
     url(r'^closed/', generate_date_patterns(list_views.closed, name="closed")),
+
+    # Actual event pages
+    # TODO: make a url structure that doesn't suck.
+
+    url(r'^view/(?P<id>[0-9a-f]+)/$', flow_views.viewevent, name="detail"),
 ]
