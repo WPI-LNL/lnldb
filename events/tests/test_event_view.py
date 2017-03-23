@@ -35,7 +35,7 @@ class EventBasicViewTest(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_close(self):
-        response = self.client.post(reverse('event-close', args=[self.e.pk]))
+        response = self.client.post(reverse("events:close", args=[self.e.pk]))
         self.assertEqual(response.status_code, 302)
 
     def test_reopen(self):
