@@ -27,7 +27,6 @@ urlpatterns = [
     url(r'^closed/', generate_date_patterns(list_views.closed, name="closed")),
 
     # Actual event pages
-    # TODO: make a url structure that doesn't suck.
 
     url(r'^view/(?P<id>[0-9a-f]+)/$', flow_views.viewevent, name="detail"),
     url(r'^pdf/(?P<ids>\d+(,\d+)*)?/?$', pdf_views.generate_event_pdf_multi,
@@ -44,8 +43,8 @@ urlpatterns = [
     url(r'^close/(?P<id>[0-9a-f]+)/$', flow_views.close, name="close"),
     url(r'^cancel/(?P<id>[0-9a-f]+)/$', flow_views.cancel, name="cancel"),
     url(r'^reopen/(?P<id>[0-9a-f]+)/$', flow_views.reopen, name="reopen"),
-    url(r'^view/(?P<id>[0-9]+)/billing/pdf/$', pdf_views.generate_event_bill_pdf,
-        name="pdf-bill"),
+
+    # The nice url structure. TODO: fit the rest in here (with deprecation, of course)
     url(r'^view/(?P<event>[0-9]+)/', include([
         url(r'^billing/', view=include([
             url(r'^mk/$', flow_views.BillingCreate.as_view(), name="new"),
@@ -53,6 +52,7 @@ urlpatterns = [
                 name="edit"),
             url(r'^rm/(?P<pk>[0-9]+)/$', flow_views.BillingDelete.as_view(),
                 name="remove"),
+            url(r'^pdf/$', pdf_views.generate_event_bill_pdf, name="pdf"),
         ], namespace="bills")),
         url(r'^report/', view=include([
             url(r'^mk/$', flow_views.CCRCreate.as_view(), name="new"),
