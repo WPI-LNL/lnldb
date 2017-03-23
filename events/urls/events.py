@@ -44,4 +44,14 @@ urlpatterns = [
     url(r'^close/(?P<id>[0-9a-f]+)/$', flow_views.close, name="close"),
     url(r'^cancel/(?P<id>[0-9a-f]+)/$', flow_views.cancel, name="cancel"),
     url(r'^reopen/(?P<id>[0-9a-f]+)/$', flow_views.reopen, name="reopen"),
+    url(r'^view/(?P<id>[0-9]+)/billing/pdf/$', pdf_views.generate_event_bill_pdf,
+        name="pdf-bill"),
+    url(r'^view/(?P<event>[0-9]+)/', include([
+        url(r'^report/', view=include([
+            url(r'^mk/$', flow_views.CCRCreate.as_view(), name="new"),
+            url(r'^update/(?P<pk>[0-9]+)/$', flow_views.CCRUpdate.as_view(),
+                name="edit"),
+            url(r'^rm/(?P<pk>[0-9]+)/$', flow_views.CCRDelete.as_view(), name="remove")
+        ], namespace="reports")),
+    ]))
 ]
