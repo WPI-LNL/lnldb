@@ -23,7 +23,7 @@
                     <td>{{ instance.event.location }}</td>
                     <td>
                         <div class="btn-group">
-                            <a class="btn btn-default" href="{% url 'my-events-pdf' instance.event.id %}">Workorder
+                            <a class="btn btn-default" href="{% url 'events:pdf' instance.event.id %}">Workorder
                                 PDF </a>
                             {% if instance.event.reports_editable %}
                                 <a class="btn btn-primary" href="{% url 'my-ccreport' instance.event.id %}">CC

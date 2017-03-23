@@ -7,7 +7,7 @@
     {% permission request.user has 'projection.edit_pits' %}
         <a class="btn btn-info btn-lg" href="{% url "projection-bulk-update" %}"><i class="glyphicon glyphicon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
     {% endpermission %}
-    <a class="btn btn-info btn-lg" href="{% url "events-pdf-multi" %}"><i class="glyphicon glyphicon-print icon-white"></i>PDF</a>
+    <a class="btn btn-info btn-lg" href="{% url "events:pdf-multi" %}"><i class="glyphicon glyphicon-print icon-white"></i>PDF</a>
 </div>
 <h2> {{ h2 }} </h2>
 <table class="table table-striped table-bordered">

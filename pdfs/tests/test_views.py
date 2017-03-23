@@ -16,7 +16,7 @@ class PdfViewTest(TestCase):
         self.client.login(username=self.user.username, password='123')
 
     def test_pdf(self):
-        response = self.client.get(reverse('events-pdf', args=[self.e.pk]))
+        response = self.client.get(reverse('events:pdf', args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
     def test_pdf_bill(self):
@@ -28,5 +28,5 @@ class PdfViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_pdf_multi(self):
-        response = self.client.get(reverse('events-pdf-multi', args=["%s,%s" % (self.e.pk, self.e2.pk)]))
+        response = self.client.get(reverse('events:pdf-multi', args=["%s,%s" % (self.e.pk, self.e2.pk)]))
         self.assertEqual(response.status_code, 200)

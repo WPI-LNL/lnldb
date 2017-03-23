@@ -107,8 +107,6 @@ urlpatterns = [
     url(r'^my/orgs/transfer/(?P<idstr>[0-9a-f]+)/$', 'events.views.orgs.org_acceptxfer',
         name="my-orgs-acceptxfer"),
     url(r'^my/events/$', 'events.views.my.myevents', name="my-events"),
-    url(r'^my/events/(?P<id>[0-9a-f]+)/pdf/$', 'pdfs.views.generate_event_pdf',
-        name="my-events-pdf"),
     url(r'^my/events/(?P<eventid>[0-9]+)/files/$', 'events.views.my.eventfiles',
         name="my-eventfiles"),
     url(r'^my/events/(?P<eventid>[0-9]+)/report/$', 'events.views.my.ccreport', name="my-ccreport"),
@@ -127,12 +125,6 @@ urlpatterns = [
     # }}}
 
     # events {{{
-    url(r'^db/events/view/(?P<id>[0-9a-f]+)/pdf/$', 'pdfs.views.generate_event_pdf',
-        name="events-pdf"),
-    url(r'^db/events/pdf/(?P<ids>\d+(,\d+)*)/$', 'pdfs.views.generate_event_pdf_multi',
-        name="events-pdf-multi"),
-    url(r'^db/events/pdf/$', 'pdfs.views.generate_event_pdf_multi',
-        name="events-pdf-multi-empty"),
     url(r'^db/events/mk/$', 'events.views.mkedrm.eventnew', name="event-new"),
     url(r'^db/events/edit/(?P<id>[0-9a-f]+)/$', 'events.views.mkedrm.eventnew',
         name="event-edit"),
@@ -187,7 +179,7 @@ urlpatterns = [
         name="projection-delete"),
     url(r'^db/projection/mk/$', ProjectionCreate.as_view(), name="projection-create"),
     url(r'^db/projection/list/detail/pdf/$', 'pdfs.views.generate_projection_pdf',
-        name="events-pdf-multi"),
+        name="proj-pdf-multi"),
 
     url(r'^db/projection/bulkevents/$', 'projection.views.bulk_projection',
         name="projection-bulk2"),
