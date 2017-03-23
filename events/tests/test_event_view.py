@@ -92,11 +92,11 @@ class EventBasicViewTest(TestCase):
         # later: test post saved
 
     def test_bill_add(self):
-        response = self.client.get(reverse('event-mkbilling', args=[self.e.pk]))
+        response = self.client.get(reverse("events:bills:new", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Bad input
-        response = self.client.post(reverse('event-mkbilling', args=[self.e.pk]))
+        response = self.client.post(reverse("events:bills:new", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post
