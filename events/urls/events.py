@@ -50,6 +50,8 @@ urlpatterns = [
         name="add-bulk-crew"),
     url(r'^crewchief/(?P<id>[0-9a-f]+)/$', flow_views.assigncc, name="chiefs"),
     url(r'^rmcc/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$', flow_views.rmcc, name="remove-chief"),
+    url(r'^attachments/(?P<id>[0-9a-f]+)/$', flow_views.assignattach,
+        name="files"),
 
     # The nice url structure. TODO: fit the rest in here (with deprecation, of course)
     url(r'^view/(?P<event>[0-9]+)/', include([
