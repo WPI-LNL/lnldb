@@ -44,11 +44,11 @@ class EventBasicViewTest(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_approve(self):
-        response = self.client.get(reverse('event-approve', args=[self.e.pk]))
+        response = self.client.get(reverse("events:approve", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Bad input
-        response = self.client.post(reverse('event-approve', args=[self.e.pk]))
+        response = self.client.post(reverse("events:approve", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post

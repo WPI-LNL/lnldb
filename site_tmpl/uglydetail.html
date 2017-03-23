@@ -30,7 +30,7 @@
                     {% endif %}
                     {% if not event.approved %}
                         {% permission request.user has 'events.approve_event' of event %}
-                            <a class="btn btn-success btn-lg" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
+                            <a class="btn btn-success btn-lg" href="{% url "events:approve" event.id %}">Approve</a>
                             <a class="btn btn-danger btn-lg"
                                href="{% url "events.views.flow.denial" event.id %}">Deny</a>
                         {% endpermission %}
