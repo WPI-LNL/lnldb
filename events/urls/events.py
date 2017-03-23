@@ -48,6 +48,8 @@ urlpatterns = [
         flow_views.rmcrew, name="remove-crew"),
     url(r'^(?P<id>[0-9]+)/hours/bulk/$', flow_views.hours_bulk_admin,
         name="add-bulk-crew"),
+    url(r'^crewchief/(?P<id>[0-9a-f]+)/$', flow_views.assigncc, name="chiefs"),
+    url(r'^rmcc/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$', flow_views.rmcc, name="remove-chief"),
 
     # The nice url structure. TODO: fit the rest in here (with deprecation, of course)
     url(r'^view/(?P<event>[0-9]+)/', include([
