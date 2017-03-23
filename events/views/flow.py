@@ -307,7 +307,7 @@ def rmcc(request, id, user):
             request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
     event.crew_chief.remove(user)
-    return HttpResponseRedirect(reverse('events.views.flow.assigncc', args=(event.id,)))
+    return HttpResponseRedirect(reverse("events:chiefs", args=(event.id,)))
 
 
 @login_required
