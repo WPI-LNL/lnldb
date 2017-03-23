@@ -35,7 +35,7 @@
                         <li><a href="{% url 'event' %}">Event Wizard</a></li>
 
                         {% permission request.user has 'events.add_raw_event' %}
-                        <li><a href="{% url "events.views.mkedrm.eventnew" %}">Add Event</a></li>
+                        <li><a href="{% url "events:new" %}">Add Event</a></li>
                         {% endpermission %}
 
                         {% permission request.user has 'events.view_event' %}
