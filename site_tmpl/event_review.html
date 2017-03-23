@@ -51,7 +51,7 @@
         <tr>
             <td>{{ crew.crew_chief.get_full_name }}</td>
             <td><a class="btn btn-warning btn-default btn-xs"
-                   href={% url "event-review-remind" id=event.id uid=crew.crew_chief.id %}>Remind</a></td>
+                   href={% url "events:remind" id=event.id uid=crew.crew_chief.id %}>Remind</a></td>
         </tr>
         {% endfor %}
         </table>
