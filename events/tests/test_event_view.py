@@ -13,7 +13,7 @@ class EventBasicViewTest(TestCase):
         self.client.login(username=self.user.username, password='123')
 
     def test_detail(self):
-        response = self.client.get(reverse('events-detail', args=[self.e.pk]))
+        response = self.client.get(reverse('events:detail', args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
     def test_edit(self):

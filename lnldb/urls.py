@@ -127,8 +127,6 @@ urlpatterns = [
     # }}}
 
     # events {{{
-    url(r'^db/events/view/(?P<id>[0-9a-f]+)/$', 'events.views.flow.viewevent',
-        name="events-detail"),
     url(r'^db/events/view/(?P<id>[0-9a-f]+)/pdf/$', 'pdfs.views.generate_event_pdf',
         name="events-pdf"),
     url(r'^db/events/pdf/(?P<ids>\d+(,\d+)*)/$', 'pdfs.views.generate_event_pdf_multi',

@@ -392,7 +392,7 @@ MARKDOWN_DEUX_STYLES = {
                                            )
              ),
             (re.compile("@([0-9]+)"),
-                lambda m: reverse_noexcept("events-detail",
+                lambda m: reverse_noexcept("events:detail",
                                            args=[m.group(1)]
                                            )
              ),

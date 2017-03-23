@@ -12,7 +12,7 @@
             </tr>
             {% for instance in ccinstances %}
                 <tr>
-                    <td><a href="{% url 'events-detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
+                    <td><a href="{% url 'events:detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
                     <td title="{{ instance.event.datetime_start }}">
                         {% if instance.event.datetime_start > now %}
                             {{ instance.event.datetime_start|timeuntil }} from now
@@ -55,7 +55,7 @@
         </tr>
         {% for instance in hours %}
                 <tr>
-                    <td><a href="{% url 'events-detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
+                    <td><a href="{% url 'events:detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
                     <td title="{{instance.event.datetime_start}}">
                         {% if instance.event.datetime_start > now %}
                             {{instance.event.datetime_start|timeuntil}} from now 
@@ -90,7 +90,7 @@
             </tr>
             {% for event in submitted_events %}
                     <tr>
-                        <td><a href="{% url 'events-detail' event.pk %}">{{ event.event_name }}</a></td>
+                        <td><a href="{% url 'events:detail' event.pk %}">{{ event.event_name }}</a></td>
                         <td title="{{event.datetime_end}}">
                             {% if event.datetime_end > now %}
                                 {{event.datetime_end|timeuntil}} from now 
@@ -120,7 +120,7 @@
                 </tr>
                 {% for event in org.event_set.all %}
                     <tr>
-                        <td><a href="{% url 'events-detail' event.pk %}">{{ event.event_name }}</a></td>
+                        <td><a href="{% url 'events:detail' event.pk %}">{{ event.event_name }}</a></td>
                         <td title="{{ event.datetime_end }}">
                             {% if event.datetime_end > now %}
                                 {{ event.datetime_end|timeuntil }} from now

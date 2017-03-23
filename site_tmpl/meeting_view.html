@@ -177,7 +177,7 @@
                         </tr>
                         {% for e in events %}
                             <tr data-toggle="collapse" data-target="#entry{{e.id}}">
-                                <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
+                                <td><a href="{% url "events:detail" e.id %}">{{ e.event_name }}</a></td>
                                 <td>
                                     {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
                                     {% if e.sound %} {{ e.sound.shortname }} {% endif %}
@@ -228,7 +228,7 @@
                         </tr>
                         {% for e in future %}
                             <tr data-toggle="collapse" data-target="#entry{{e.id}}">
-                                <td><a href="{% url "events.views.flow.viewevent" e.id %}">{{ e.event_name }}</a></td>
+                                <td><a href="{% url "events:detail" e.id %}">{{ e.event_name }}</a></td>
                                 <td>
                                     {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
                                     {% if e.sound %} {{ e.sound.shortname }} {% endif %}
