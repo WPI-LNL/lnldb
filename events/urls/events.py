@@ -42,4 +42,5 @@ urlpatterns = [
     url(r'^review/(?P<id>[0-9a-f]+)/remind/(?P<uid>[0-9a-f]+)/$',
         flow_views.reviewremind, name="remind"),
     url(r'^close/(?P<id>[0-9a-f]+)/$', flow_views.close, name="close"),
+    url(r'^cancel/(?P<id>[0-9a-f]+)/$', flow_views.cancel, name="cancel"),
 ]
