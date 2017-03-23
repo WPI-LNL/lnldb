@@ -103,10 +103,10 @@ def currency(dollars):
 
 
 @login_required
-def generate_event_bill_pdf(request, id):
+def generate_event_bill_pdf(request, event):
     # Prepare context
     data = {}
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(Event, pk=event)
     data['event'] = event
     cats = Category.objects.all()
     extras = {}
