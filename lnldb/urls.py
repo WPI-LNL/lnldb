@@ -124,8 +124,6 @@ urlpatterns = [
     # }}}
 
     # events {{{
-    url(r'^db/events/attachments/(?P<id>[0-9a-f]+)/$', 'events.views.flow.assignattach',
-        name="eventattachments"),
     url(r'^db/events/extras/(?P<id>[0-9a-f]+)/$', 'events.views.flow.extras',
         name="eventextras"),
     url(r'^db/events/oneoff/(?P<id>[0-9a-f]+)/$', 'events.views.flow.oneoff',

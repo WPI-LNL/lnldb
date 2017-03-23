@@ -618,7 +618,7 @@
                 </div>
                 {% endpermission %}
                 <div id="files" class="tab-pane">
-                    <div class="pull-right">{% if not event.closed %}<a class="btn btn-warning" href="{% url "eventattachments" event.id %}">Edit</a>{% endif %}</div>
+                    <div class="pull-right">{% if not event.closed %}<a class="btn btn-warning" href="{% url "events:files" event.id %}">Edit</a>{% endif %}</div>
                     <h2> Files </h2> 
                     <table class="table">
                         <tr>
