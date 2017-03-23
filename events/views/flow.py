@@ -169,7 +169,7 @@ def reviewremind(request, id, uid):
                      attachments=attachments)
         email.send()
         messages.add_message(request, messages.INFO, 'Reminder Sent')
-        return HttpResponseRedirect(reverse('event-review', args=(event.id,)))
+        return HttpResponseRedirect(reverse("events:review", args=(event.id,)))
     else:
         return HttpResponse("Bad Call")
 
