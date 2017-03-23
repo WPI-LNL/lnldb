@@ -52,6 +52,8 @@ urlpatterns = [
     url(r'^rmcc/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$', flow_views.rmcc, name="remove-chief"),
     url(r'^attachments/(?P<id>[0-9a-f]+)/$', flow_views.assignattach,
         name="files"),
+    url(r'^extras/(?P<id>[0-9a-f]+)/$', flow_views.extras, name="extras"),
+    url(r'^oneoff/(?P<id>[0-9a-f]+)/$', flow_views.oneoff, name="oneoffs"),
 
     # The nice url structure. TODO: fit the rest in here (with deprecation, of course)
     url(r'^view/(?P<event>[0-9]+)/', include([

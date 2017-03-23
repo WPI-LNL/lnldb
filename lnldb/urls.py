@@ -123,13 +123,6 @@ urlpatterns = [
     url(r'^my/events/(?P<eventid>[0-9]+)/repeat/$', 'events.views.my.myworepeat', name="my-repeat"),
     # }}}
 
-    # events {{{
-    url(r'^db/events/extras/(?P<id>[0-9a-f]+)/$', 'events.views.flow.extras',
-        name="eventextras"),
-    url(r'^db/events/oneoff/(?P<id>[0-9a-f]+)/$', 'events.views.flow.oneoff',
-        name="eventoneoff"),
-    # }}}
-
     # projection {{{
     url(r'^db/projection/list/$', 'projection.views.plist_detail',
         name="projection-list-detail"),
