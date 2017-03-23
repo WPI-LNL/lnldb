@@ -15,8 +15,7 @@ from accounts.views import smart_login
 from emails.views import MeetingAnnounceCCView, MeetingAnnounceView
 from events.cal import EventFeed, FullEventFeed, LightEventFeed, cal_json
 from events.forms import named_event_forms
-from events.views.flow import (BillingCreate, BillingDelete, BillingUpdate,
-                               CCRCreate, CCRDelete, CCRUpdate)
+from events.views.flow import CCRCreate, CCRDelete, CCRUpdate
 from events.views.indices import admin as db_home
 from events.views.indices import event_search
 from events.views.list import public_facing
@@ -125,12 +124,6 @@ urlpatterns = [
     # }}}
 
     # events {{{
-    url(r'^db/events/view/(?P<event>[0-9]+)/billing/mk/$', BillingCreate.as_view(),
-        name="event-mkbilling"),
-    url(r'^db/events/view/(?P<event>[0-9]+)/billing/update/(?P<pk>[0-9]+)/$',
-        BillingUpdate.as_view(), name="event-updbilling"),
-    url(r'^db/events/view/(?P<event>[0-9]+)/billing/rm/(?P<pk>[0-9]+)/$',
-        BillingDelete.as_view(), name="event-rmbilling"),
     url(r'^db/events/crew/(?P<id>[0-9a-f]+)/$', 'events.views.flow.assigncrew'),
     url(r'^db/events/rmcrew/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$',
         'events.views.flow.rmcrew'),

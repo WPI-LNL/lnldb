@@ -42,7 +42,7 @@
                             {% endpermission %}
                         {% else %}
                             {% permission request.user has 'events.bill_event' of event %}
-                                <a class="btn btn-primary btn-lg" href="{% url "event-mkbilling" event.id %}">Create
+                                <a class="btn btn-primary btn-lg" href="{% url "events:bills:new" event.id %}">Create
                                     Bill</a>
                             {% endpermission %}
                             {% permission request.user has 'events.close_event' of event %}
@@ -596,9 +596,9 @@
                                         <td>
                                             {% if not event.closed %}
                                                 <a class="btn btn-link"
-                                                   href="{% url "event-updbilling" event.id billing.id %}">Update</a>
+                                                   href="{% url "events:bills:edit" event.id billing.id %}">Update</a>
                                                 {% if not billing.date_paid %}<a class="btn btn-link"
-                                                                                 href="{% url "event-rmbilling" event.id billing.id %}">Delete</a>
+                                                                                 href="{% url "events:bills:remove" event.id billing.id %}">Delete</a>
                                                 {% endif %}
                                             {% endif %}
                                         </td>
