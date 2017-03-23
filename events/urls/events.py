@@ -1,6 +1,6 @@
 from django.conf.urls import include, url
 
-from ..views import list as list_views, flow as flow_views
+from ..views import list as list_views, flow as flow_views, mkedrm as mkedrm_views
 from pdfs import views as pdf_views
 
 
@@ -33,4 +33,7 @@ urlpatterns = [
     url(r'^pdf/(?P<ids>\d+(,\d+)*)?/?$', pdf_views.generate_event_pdf_multi,
         name="pdf-multi"),
     url(r'^view/(?P<id>[0-9a-f]+)/pdf/$', pdf_views.generate_event_pdf, name="pdf"),
+    # url(r'^db/events/mk/$', 'events.views.mkedrm.eventnew', name="event-new"),
+    url(r'^mk/$', mkedrm_views.eventnew, name="new"),
+    url(r'^edit/(?P<id>[0-9a-f]+)/$', mkedrm_views.eventnew, name="edit"),
 ]

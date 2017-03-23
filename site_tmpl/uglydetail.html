@@ -20,7 +20,7 @@
                 {% else %}
                     {% permission request.user has 'events.edit_event_text' of event or request.user has 'events.edit_event_times' of event %}
                         <a class="btn btn-warning btn-lg"
-                           href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
+                           href="{% url "events:edit" event.id %}">Edit</a>
                     {% endpermission %}
                     {% if not event.reviewed %}
                         {% permission request.user has 'events.cancel_event' of event %}

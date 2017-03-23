@@ -17,11 +17,11 @@ class EventBasicViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_edit(self):
-        response = self.client.get(reverse('event-edit', args=[self.e.pk]))
+        response = self.client.get(reverse('events:edit', args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Bad input
-        response = self.client.post(reverse('event-edit', args=[self.e.pk]))
+        response = self.client.post(reverse('events:edit', args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post
