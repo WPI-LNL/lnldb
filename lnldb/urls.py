@@ -125,7 +125,6 @@ urlpatterns = [
     # }}}
 
     # events {{{
-    url(r'^db/events/reopen/(?P<id>[0-9a-f]+)/$', 'events.views.flow.reopen', name="event-reopen"),
     url(r'^db/events/view/(?P<id>[0-9]+)/billing/pdf/$', 'pdfs.views.generate_event_bill_pdf',
         name="events-pdf-bill"),
     url(r'^db/events/view/(?P<event>[0-9]+)/billing/mk/$', BillingCreate.as_view(),
