@@ -12,7 +12,7 @@
             <div {% if is_officer %}class="col-md-4" {% else %}class="col-md-6"{% endif %}>
                 <h2>Workorders</h2>
 
-                <p><a class="btn btn-primary" href="{% url 'event' %}">Submit A Workorder &raquo;</a></p>
+                <p><a class="btn btn-primary" href="{% url 'wizard:start' %}">Submit A Workorder &raquo;</a></p>
             </div><!--/span-->
 
             <div {% if is_officer %}class="col-md-4" {% else %}class="col-md-6"{% endif %}>

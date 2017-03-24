@@ -32,7 +32,7 @@
                     </a>
                     <ul class="dropdown-menu">
                         <li><a href="{% url 'events.views.my.myevents' %}">My Events</a></li>
-                        <li><a href="{% url 'event' %}">Event Wizard</a></li>
+                        <li><a href="{% url 'wizard:start' %}">Event Wizard</a></li>
 
                         {% permission request.user has 'events.add_raw_event' %}
                         <li><a href="{% url "events:new" %}">Add Event</a></li>
