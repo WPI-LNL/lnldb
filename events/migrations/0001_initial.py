@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 
 import django.db.models.deletion
-import uuidfield.fields
 from django.conf import settings
 from django.db import migrations, models
 
@@ -238,7 +237,7 @@ class Migration(migrations.Migration):
             name='OrganizationTransfer',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
+                ('uuid', models.CharField(unique=True, max_length=32, editable=False, blank=True)),
                 ('created', models.DateTimeField(auto_now=True)),
                 ('completed_on', models.DateTimeField(null=True, blank=True)),
                 ('expiry', models.DateTimeField(null=True, blank=True)),

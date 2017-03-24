@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-import uuidfield.fields
 from django.conf import settings
 from django.db import migrations, models
 
@@ -29,7 +28,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('sent_at', models.DateTimeField(auto_now_add=True)),
                 ('sent_success', models.BooleanField(default=False)),
-                ('uuid', uuidfield.fields.UUIDField(max_length=32, unique=True, null=True, editable=False, blank=True)),
+                ('uuid', models.CharField(max_length=32, unique=True, null=True, editable=False, blank=True)),
                 ('addtl_message', models.TextField(null=True, verbose_name=b'Additional Message', blank=True)),
             ],
         ),
@@ -52,7 +51,7 @@ class Migration(migrations.Migration):
                 ('subject', models.CharField(max_length=128)),
                 ('message', models.TextField()),
                 ('added', models.DateTimeField(auto_now_add=True)),
-                ('uuid', uuidfield.fields.UUIDField(max_length=32, unique=True, null=True, editable=False, blank=True)),
+                ('uuid', models.CharField(max_length=32, unique=True, null=True, editable=False, blank=True)),
             ],
         ),
         migrations.CreateModel(
