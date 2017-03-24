@@ -9,12 +9,10 @@ from django.views.generic.base import RedirectView
 
 import data.views
 from emails.views import MeetingAnnounceCCView, MeetingAnnounceView
-from events.cal import EventFeed, FullEventFeed, LightEventFeed, cal_json
 from events.forms import named_event_forms
 from events.views.flow import CCRCreate, CCRDelete, CCRUpdate
 from events.views.indices import admin as db_home
 from events.views.indices import event_search
-from events.views.list import public_facing
 from pages.views import page as view_page
 
 admin.autodiscover()
@@ -44,6 +42,7 @@ urlpatterns = [
     url(r'^db/events/', include('events.urls.events', namespace='events')),
     url(r'^workorder/', include('events.urls.wizard', namespace='wizard')),
     url(r'^my/', include('events.urls.my', namespace='my')),
+    url(r'^list/', include('events.urls.cal', namespace='cal')),
     url(r'', include('accounts.urls', namespace='accounts')),
 
     # 'MY' {{{
@@ -62,14 +61,6 @@ urlpatterns = [
     url(r'^my/events/(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', 'events.views.my.hours_edit',
         name="my-cchours-edit"),
     url(r'^my/events/(?P<eventid>[0-9]+)/repeat/$', 'events.views.my.myworepeat', name="my-repeat"),
-    # }}}
-
-    # event lists {{{
-    url(r'^list/$', public_facing, name="list"),
-    url(r'^list/feed.ics$', EventFeed(), name='public_cal_feed'),
-    url(r'^list/feed_full.ics$', FullEventFeed(), name='full_cal_feed'),
-    url(r'^list/feed_light.ics$', LightEventFeed(), name='light_cal_feed'),
-    url(r'^list/json(/*?.*)*$', cal_json),
     # }}}
 
     # emails
