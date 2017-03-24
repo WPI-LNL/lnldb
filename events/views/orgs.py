@@ -170,7 +170,7 @@ def orgedit(request, id):
         if formset.is_valid():
             formset.save()
             # return HttpResponseRedirect(reverse("home", kwargs={'msg':SUCCESS_MSG_ORG}))
-            return HttpResponseRedirect(reverse('events.views.orgs.orglist'))
+            return HttpResponseRedirect(reverse('orgs:list'))
 
         else:
             context['formset'] = formset
