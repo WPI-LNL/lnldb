@@ -497,7 +497,7 @@ class Event(models.Model):
         return self.org.first()
 
     def ccreport_url(self):
-        return reverse("my-ccreport", args=(self.id,))
+        return reverse("my:report", args=(self.id,))
 
     def usercanseeevent(self, user):
 

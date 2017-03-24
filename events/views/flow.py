@@ -164,7 +164,7 @@ def reviewremind(request, id, uid):
         email_body = 'This is a reminder that you have a pending crew chief report for "%s" \n' \
                      ' Please Visit %s%s to complete it' % (event.event_name,
                                                             request.get_host(),
-                                                            reverse("my-ccreport", args=[event.id]))
+                                                            reverse("my:report", args=[event.id]))
         email = DLEG(subject="LNL Crew Chief Report Reminder Email", to_emails=[cci.crew_chief.email], body=email_body,
                      attachments=attachments)
         email.send()

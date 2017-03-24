@@ -20,8 +20,19 @@ urlpatterns = [
     url(r'^events/', include([
         url(r'^$', views.my.myevents, name="events"),
 
-        # TODO: move these
+        # TODO: merge these with their events equivalents.
         url(r'^(?P<eventid>[0-9]+)/files/$', views.my.eventfiles, name="event-files"),
+        url(r'^(?P<eventid>[0-9]+)/report/$', views.my.ccreport, name="report"),
+        url(r'^(?P<eventid>[0-9]+)/hours/$', views.my.hours_list, name="hours-list"),
+        url(r'^(?P<eventid>[0-9]+)/hours/bulk/$', views.my.hours_bulk,
+            name="hours-bulk"),
+        url(r'^(?P<eventid>[0-9]+)/hours/mk/$', views.my.hours_mk,
+            name="hours-new"),
+        url(r'^(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', views.my.hours_edit,
+            name="hours-edit"),
+
+        # TODO: kill this with fire "foo.bar"
+        url(r'^(?P<eventid>[0-9]+)/repeat/$', views.my.myworepeat, name="repeat"),
     ]))
 
 ]
