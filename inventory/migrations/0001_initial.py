@@ -32,9 +32,9 @@ class Migration(migrations.Migration):
                 ('road_case', models.CharField(max_length=16)),
                 ('manufacturer', models.CharField(max_length=128)),
                 ('home', models.CharField(blank=True, max_length=2, null=True,
-                                          choices=[(b'CC', b'Campus Center'), (b'AH', b'Alden Memorial'),
-                                                   (b'FH', b'Founders Hall'), (b'RH', b'Riley Hall'),
-                                                   (b'HA', b'Harrington')])),
+                                          choices=[('CC', 'Campus Center'), ('AH', 'Alden Memorial'),
+                                                   ('FH', 'Founders Hall'), ('RH', 'Riley Hall'),
+                                                   ('HA', 'Harrington')])),
             ],
         ),
         migrations.CreateModel(

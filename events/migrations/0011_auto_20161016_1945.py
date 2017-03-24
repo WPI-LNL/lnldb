@@ -24,17 +24,17 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='event',
             name='billed_by_semester',
-            field=models.BooleanField(default=False, help_text=b'Check if event will be billed in bulk', db_index=True),
+            field=models.BooleanField(default=False, help_text='Check if event will be billed in bulk', db_index=True),
         ),
         migrations.AlterField(
             model_name='event',
             name='internal_notes',
-            field=models.TextField(help_text=b'Notes that the client and general body should never see.', null=True, blank=True),
+            field=models.TextField(help_text='Notes that the client and general body should never see.', null=True, blank=True),
         ),
         migrations.AlterField(
             model_name='event',
             name='sensitive',
-            field=models.BooleanField(default=False, help_text=b'Nobody besides those directly involved should know about this event'),
+            field=models.BooleanField(default=False, help_text='Nobody besides those directly involved should know about this event'),
         ),
         migrations.AlterField(
             model_name='event',

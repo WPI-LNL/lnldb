@@ -14,8 +14,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('ts', models.DateTimeField(auto_now_add=True)),
-                ('place', models.CharField(default=b'AK219', max_length=32)),
-                ('time', models.TimeField(default=b'17:00')),
+                ('place', models.CharField(default='AK219', max_length=32)),
+                ('time', models.TimeField(default='17:00')),
                 ('date', models.DateField()),
                 ('note', models.TextField()),
                 ('start_param', models.DateField()),

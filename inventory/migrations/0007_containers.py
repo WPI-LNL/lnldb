@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='equipmentclass',
             name='holds_items',
-            field=models.BooleanField(default=False, help_text=b'Can hold other items'),
+            field=models.BooleanField(default=False, help_text='Can hold other items'),
         ),
         migrations.AddField(
             model_name='equipmentitem',
@@ -44,6 +44,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='equipmentitem',
             name='case',
-            field=mptt.fields.TreeForeignKey(related_name='contents', blank=True, to='inventory.EquipmentItem', help_text=b'Case or item that contains this item', null=True),
+            field=mptt.fields.TreeForeignKey(related_name='contents', blank=True, to='inventory.EquipmentItem', help_text='Case or item that contains this item', null=True),
         ),
     ]

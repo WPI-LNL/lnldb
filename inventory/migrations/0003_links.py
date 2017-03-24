@@ -24,13 +24,13 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='equipmentclass',
             name='height',
-            field=models.DecimalField(help_text=b'Height in inches', null=True, max_digits=6, decimal_places=2,
+            field=models.DecimalField(help_text='Height in inches', null=True, max_digits=6, decimal_places=2,
                                       blank=True),
         ),
         migrations.AlterField(
             model_name='equipmentclass',
             name='length',
-            field=models.DecimalField(help_text=b'Length in inches', null=True, max_digits=6, decimal_places=2,
+            field=models.DecimalField(help_text='Length in inches', null=True, max_digits=6, decimal_places=2,
                                       blank=True),
         ),
         migrations.AlterField(
@@ -46,19 +46,19 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='equipmentclass',
             name='value',
-            field=models.DecimalField(help_text=b'Estimated purchase value', null=True, max_digits=9, decimal_places=2,
+            field=models.DecimalField(help_text='Estimated purchase value', null=True, max_digits=9, decimal_places=2,
                                       blank=True),
         ),
         migrations.AlterField(
             model_name='equipmentclass',
             name='weight',
-            field=models.DecimalField(help_text=b'Weight in lbs.', null=True, max_digits=6, decimal_places=2,
+            field=models.DecimalField(help_text='Weight in lbs.', null=True, max_digits=6, decimal_places=2,
                                       blank=True),
         ),
         migrations.AlterField(
             model_name='equipmentclass',
             name='width',
-            field=models.DecimalField(help_text=b'Width in inches', null=True, max_digits=6, decimal_places=2,
+            field=models.DecimalField(help_text='Width in inches', null=True, max_digits=6, decimal_places=2,
                                       blank=True),
         ),
     ]

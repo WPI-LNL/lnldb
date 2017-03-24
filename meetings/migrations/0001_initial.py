@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                 ('sent_at', models.DateTimeField(auto_now_add=True)),
                 ('sent_success', models.BooleanField(default=False)),
                 ('uuid', models.CharField(max_length=32, unique=True, null=True, editable=False, blank=True)),
-                ('addtl_message', models.TextField(null=True, verbose_name=b'Additional Message', blank=True)),
+                ('addtl_message', models.TextField(null=True, verbose_name='Additional Message', blank=True)),
             ],
         ),
         migrations.CreateModel(

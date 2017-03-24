@@ -18,21 +18,21 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='user',
             name='addr',
-            field=models.TextField(null=True, verbose_name=b'Address / Office Location', blank=True),
+            field=models.TextField(null=True, verbose_name='Address / Office Location', blank=True),
         ),
         migrations.AddField(
             model_name='user',
             name='mdc',
-            field=models.CharField(max_length=32, null=True, verbose_name=b'MDC', blank=True),
+            field=models.CharField(max_length=32, null=True, verbose_name='MDC', blank=True),
         ),
         migrations.AddField(
             model_name='user',
             name='phone',
-            field=models.CharField(max_length=24, null=True, verbose_name=b'Phone Number', blank=True),
+            field=models.CharField(max_length=24, null=True, verbose_name='Phone Number', blank=True),
         ),
         migrations.AddField(
             model_name='user',
             name='wpibox',
-            field=models.IntegerField(null=True, verbose_name=b'WPI Box Number', blank=True),
+            field=models.IntegerField(null=True, verbose_name='WPI Box Number', blank=True),
         ),
     ]
