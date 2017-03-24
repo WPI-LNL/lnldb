@@ -47,9 +47,6 @@ urlpatterns = [
     url(r'', include('accounts.urls', namespace='accounts')),
 
     # 'MY' {{{
-    url(r'^my/orgs/transfer/(?P<id>[0-9]+)/$', 'events.views.orgs.org_mkxfer', name="my-orgs-xfer"),
-    url(r'^my/orgs/transfer/(?P<idstr>[0-9a-f]+)/$', 'events.views.orgs.org_acceptxfer',
-        name="my-orgs-acceptxfer"),
     url(r'^my/events/$', 'events.views.my.myevents', name="my-events"),
     url(r'^my/events/(?P<eventid>[0-9]+)/files/$', 'events.views.my.eventfiles',
         name="my-eventfiles"),
