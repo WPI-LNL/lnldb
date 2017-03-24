@@ -47,8 +47,6 @@ urlpatterns = [
     url(r'', include('accounts.urls', namespace='accounts')),
 
     # 'MY' {{{
-    url(r'^my/events/(?P<eventid>[0-9]+)/files/$', 'events.views.my.eventfiles',
-        name="my-eventfiles"),
     url(r'^my/events/(?P<eventid>[0-9]+)/report/$', 'events.views.my.ccreport', name="my-ccreport"),
     url(r'^my/events/(?P<eventid>[0-9]+)/hours/$', 'events.views.my.hours_list', name="my-cchours"),
     url(r'^my/events/(?P<eventid>[0-9]+)/hours/bulk/$', 'events.views.my.hours_bulk',
