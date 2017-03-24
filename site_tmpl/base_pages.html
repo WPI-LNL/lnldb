@@ -247,13 +247,13 @@
                         <span class="icon-bar"></span>
                         <span class="icon-bar"></span>
                     </button>
-                    <a class="navbar-brand" href="{% url "pages.views.page" "index" %}">Lens and Lights</a>
+                    <a class="navbar-brand" href="{% url "page" "index" %}">Lens and Lights</a>
                 </div>
                 <div class="navbar-collapse collapse">
                     <ul class="nav navbar-nav">
                         {% for nav in navs.navs %}
                             <li {% if nav == page %} class="active" {% endif %}><a
-                                    href="{% url "pages.views.page" nav.slug %}">{{ nav.title }}</a></li>
+                                    href="{% url "page" nav.slug %}">{{ nav.title }}</a></li>
                         {% endfor %}
                         <li><a href="#PriceModal" data-toggle="modal">Price List</a></li>
                         <li><a href="{% url 'wizard:start' %}">Workorder</a></li>
@@ -278,12 +278,12 @@
             <span class="glyphicon glyphicon-bar"></span>
             <span class="glyphicon glyphicon-bar"></span>
           </a>
-          <a class="navbar-brand" href="{% url "pages.views.page" "index" %}">Lens and Lights</a>
+          <a class="navbar-brand" href="{% url "page" "index" %}">Lens and Lights</a>
           <!-- Responsive Navbar Part 2: Place all navbar contents you want collapsed withing .navbar-collapse.collapse. -->
           <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
               {% for nav in navs.navs %}
-              <li {% if nav = page %} class="active" {% endif %}><a href="{% url "pages.views.page" nav.slug %}">{{ nav.title }}</a></li>
+              <li {% if nav = page %} class="active" {% endif %}><a href="{% url "page" nav.slug %}">{{ nav.title }}</a></li>
               {% endfor %}
               <li><a href="#PriceModal" data-toggle="modal">Price List</a></li>
               <li><a href="/workorder">Workorder</a></li>
