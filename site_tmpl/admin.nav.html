@@ -105,10 +105,6 @@
                             <li class="divider"></li>
                             <li><a href="{% url "accounts:add" %}">Add User</a></li>
                         {% endpermission %}
-                        {% permission request.user has 'events.event_view_granular' %}
-                            <li class="divider"></li>
-                            <li><a href="{% url "access-log" %}">Access Log</a>
-                        {% endpermission %}
                     </ul>
                 </li>
                 {% endpermission %}

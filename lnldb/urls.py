@@ -61,10 +61,6 @@ urlpatterns = [
     # emails
 
     # special urls
-    url(r'^status/$', data.views.status),
-    url(r'^db/accesslog/$', data.views.access_log, name="access-log"),
-    url(r'^NOTOUCHING/$', data.views.fuckoffkitty),
-    url(r'^lnldb/fuckoffkitty/$', RedirectView.as_view(url="/NOTOUCHING/", permanent=False)),
     url(r'^db/$', db_home, name="db"),
     url(r'^(?P<slug>[-\w]+)/$', view_page),
     url(r'^db/oldsearch$', event_search, name="events-search"),

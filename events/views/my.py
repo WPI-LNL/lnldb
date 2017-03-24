@@ -128,7 +128,6 @@ def myorgform(request):
 # lnl facing
 
 @login_required
-# @user_passes_test(is_lnlmember, login_url='/lnldb/fuckoffkitty/')
 def myevents(request):
     """ List Events That Have been CC'd / involved """
     context = {'user': request.user, 'now': datetime.datetime.now(timezone.get_current_timezone()),
