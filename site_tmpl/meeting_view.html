@@ -121,7 +121,7 @@
                                         {% endif %}
 
                                         <br/>
-                                        <a href="{% url "email-view-announce" announce.uuid %}" class="cm-webversion">View
+                                        <a href="{% url "emails:pre-meeting" announce.uuid %}" class="cm-webversion">View
                                             Online</a>
                                     </div>
                                 </div>
@@ -148,7 +148,7 @@
                                             {% endfor %}
                                         {% endif %}
 
-                                    <a href="{% url "email-view-announce-cc" announce.uuid %}" class="cm-webversion">View Online</a>
+                                    <a href="{% url "emails:post-meeting" announce.uuid %}" class="cm-webversion">View Online</a>
                                     </div>
                                 </div>
                             </div>
