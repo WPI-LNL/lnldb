@@ -39,7 +39,7 @@ class EventWizard(NamedUrlSessionWizardView):
     def done(self, form_list, **kwargs):
         # return HttpResponse([form.cleaned_data for form in form_list])
         event = Event.event_mg.consume_workorder_formwiz(form_list, self)
-        # return HttpResponseRedirect(reverse('events.views.my.myeventdetail',args=(event.id,)))
+        # return HttpResponseRedirect(reverse('events:detail',args=(event.id,)))
         email_body = "You have successfully submitted an event titled %s" % event.event_name
         email = DLEG(subject="New Event Submitted", to_emails=[event.contact.email], body=email_body,
                      bcc=[settings.EMAIL_TARGET_VP])
