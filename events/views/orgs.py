@@ -70,7 +70,7 @@ def addeditorgs(request, org_id=None):
         if formset.is_valid():
             org = formset.save()
             messages.add_message(request, messages.SUCCESS, 'Changes saved.')
-            # return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
+            # return HttpResponseRedirect(reverse("home", kwargs={'msg':SUCCESS_MSG_ORG}))
             return HttpResponseRedirect(reverse('orgs:detail', kwargs={'org_id': org.pk}))
         else:
             context['formset'] = formset
@@ -115,7 +115,7 @@ def fund_edit(request, fund_id=None, org=None):
                     return HttpResponseRedirect(reverse('orgs:detail', args=(org,)))
                 except ObjectDoesNotExist:
                     messages.add_message(request, messages.ERROR, 'Failed to add fund to organization.')
-            # return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
+            # return HttpResponseRedirect(reverse("home", kwargs={'msg':SUCCESS_MSG_ORG}))
             return HttpResponseRedirect(reverse('orgs:list'))
         else:
             context['formset'] = formset
@@ -169,7 +169,7 @@ def orgedit(request, id):
         formset = ExternalOrgUpdateForm(request.POST, instance=org)
         if formset.is_valid():
             formset.save()
-            # return HttpResponseRedirect(reverse('events.views.admin', kwargs={'msg':SUCCESS_MSG_ORG}))
+            # return HttpResponseRedirect(reverse("home", kwargs={'msg':SUCCESS_MSG_ORG}))
             return HttpResponseRedirect(reverse('events.views.orgs.orglist'))
 
         else:
