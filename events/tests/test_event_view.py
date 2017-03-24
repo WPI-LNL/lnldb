@@ -109,6 +109,20 @@ class EventListBasicViewTest(TestCase):
         self.user = UserFactory.create(password='123')
         self.client.login(username=self.user.username, password='123')
 
+    def test_public(self):
+        response = self.client.get(reverse('cal:list'))
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(reverse('cal:api'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_cal(self):
+        response = self.client.get(reverse('cal:feed'))
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(reverse('cal:feed-full'))
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(reverse('cal:feed-light'))
+        self.assertEqual(response.status_code, 200)
+
     def test_incoming(self):
         response = self.client.get(reverse('events:incoming'))
         self.assertEqual(response.status_code, 200)
