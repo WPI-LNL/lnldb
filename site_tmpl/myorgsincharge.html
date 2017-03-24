@@ -13,7 +13,7 @@
     {% for org in orgs %}
             <tr>
                 <td><a href="{% url 'my:org-edit' org.id %}">{{org}}</a></td>
-                <td><a href="{% url 'my-orgs-xfer' org.id %}">Transfer Ownership</a>
+                <td><a href="{% url "my:org-transfer" org.id %}">Transfer Ownership</a>
             </tr>
     {% empty %}
         <tr>
