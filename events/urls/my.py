@@ -19,6 +19,9 @@ urlpatterns = [
 
     url(r'^events/', include([
         url(r'^$', views.my.myevents, name="events"),
+
+        # TODO: move these
+        url(r'^(?P<eventid>[0-9]+)/files/$', views.my.eventfiles, name="event-files"),
     ]))
 
 ]

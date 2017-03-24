@@ -31,7 +31,7 @@
                                 <a class="btn btn-info" href="{% url 'my-cchours' instance.event.id %}">Crew Hours</a>
                                 {% endif %}
                             {% if instance.event.attachments %}
-                                <a class="btn btn-info" href="{% url 'my-eventfiles' instance.event.id %}">Files</a>
+                                <a class="btn btn-info" href="{% url "my:event-files" instance.event.id %}">Files</a>
                             {% endif %}
 
                         </div>
