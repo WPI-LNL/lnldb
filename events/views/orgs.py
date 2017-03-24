@@ -36,9 +36,7 @@ def vieworgs(request):
     orgs = Organization.objects \
         .filter(archived=False) \
         .annotate(fund_count=Count('accounts')) \
-        .select_related('user_in_charge__first_name',
-                        'user_in_charge__last_name',
-                        'user_in_charge__username', ).all()
+        .select_related('user_in_charge').all()
 
     context['orgs'] = orgs
 

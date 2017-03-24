@@ -164,7 +164,7 @@ def editattendance(request, mtg_id):
 def listattendance(request, page=1):
     context = {}
     mtgs = Meeting.objects \
-        .select_related('meeting_type__name') \
+        .select_related('meeting_type') \
         .annotate(num_attendsees=Count('attendance'))
     past_mtgs = mtgs.filter(datetime__lte=timezone.now()) \
         .order_by('-datetime')

@@ -31,7 +31,7 @@ class Projectionist(models.Model):
     @property
     def level(self):
         return self.pitinstances.filter(valid=True) \
-            .select_related('pit_level__name_short').order_by('-pit_level__ordering') \
+            .select_related('pit_level').order_by('-pit_level__ordering') \
             .first()
 
     @property
