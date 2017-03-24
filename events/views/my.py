@@ -199,7 +199,7 @@ def ccreport(request, eventid):
         formset = InternalReportForm(data=request.POST, event=event, request_user=user, instance=report)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('my-events'))
+            return HttpResponseRedirect(reverse("my:events"))
         else:
             context['formset'] = formset
 

@@ -1,7 +1,7 @@
 {% extends 'base_admin.html' %}
 
 {% block content %}
-    <h1><a href="{% url "my-events" %}">My</a> Hours for '<em>{{event}}</em>'</h1>
+    <h1><a href="{% url "my:events" %}">My</a> Hours for '<em>{{event}}</em>'</h1>
     <table class="table">
         <thead>
         <tr>
@@ -22,5 +22,5 @@
     </table>
     <a class="btn btn-primary btn-lg" href="{% url "my-cchours-bulk" event.id %}">Bulk Add</a>
     <a class="btn btn-warning btn-lg" href="{% url "my-cchours-mk" event.id %}">Single Add</a>
-    <a class="btn btn-warning btn-lg" href="{% url "my-events" %}">Done</a>
+    <a class="btn btn-warning btn-lg" href="{% url "my:events" %}">Done</a>
 {% endblock %}

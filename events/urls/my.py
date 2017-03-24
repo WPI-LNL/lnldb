@@ -17,4 +17,8 @@ urlpatterns = [
             name="org-accept"),
     ])),
 
+    url(r'^events/', include([
+        url(r'^$', views.my.myevents, name="events"),
+    ]))
+
 ]
