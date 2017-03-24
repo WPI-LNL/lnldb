@@ -48,7 +48,7 @@ urlpatterns = [
 
     # special urls
     url(r'^db/$', db_home, name="db"),
-    url(r'^(?P<slug>[-\w]+)/$', view_page),
+    url(r'^(?P<slug>[-\w]+)/$', view_page, name="page"),
     url(r'^db/oldsearch$', event_search, name="events-search"),
     url(r'^db/search$', data.views.search, name="search"),
 
