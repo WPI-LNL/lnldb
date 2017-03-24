@@ -1,6 +1,5 @@
 import debug_toolbar
 import django.contrib.auth.views
-import django_cas_ng.views
 import permission
 from ajax_select import urls as ajax_select_urls
 from django.conf import settings
@@ -10,8 +9,6 @@ from django.contrib.auth.decorators import login_required
 from django.views.generic.base import RedirectView
 
 import data.views
-from accounts.forms import LoginForm
-from accounts.views import smart_login
 from emails.views import MeetingAnnounceCCView, MeetingAnnounceView
 from events.cal import EventFeed, FullEventFeed, LightEventFeed, cal_json
 from events.forms import named_event_forms
@@ -64,42 +61,6 @@ urlpatterns = [
     url(r'^db/events/', include('events.urls.events', namespace='events')),
     url(r'^my/', include('events.urls.my', namespace='my')),
     url(r'', include('accounts.urls', namespace='accounts')),
-
-    # AUTHENTICATION {{{
-
-    # use the nice redirector for login
-    url(r'^login/$', smart_login, name="login"),
-
-    # best use CAS for logout, since it's guaranteed to log the user out
-    #  (without immediately signing them back in)
-    url(r'^logout/$', django_cas_ng.views.logout, name="logout"),
-
-    url(r'^cas/login/$', django_cas_ng.views.login, name="cas-explicit-login"),
-    url(r'^cas/logout/$', django_cas_ng.views.logout, name="cas-logout"),
-    # maybe we do
-    url(r'^local/login/$', django.contrib.auth.views.login,
-        {'template_name': 'registration/login.html',
-         'authentication_form': LoginForm},
-        name="local-login"),
-    url(r'^local/logout/$', django.contrib.auth.views.logout,
-        {'template_name': 'registration/logout.html'},
-        name="local-logout"),
-
-    url(r'^local/reset/$', django.contrib.auth.views.password_reset,
-        {'template_name': 'registration/reset_password.html',
-         'from_email': settings.DEFAULT_FROM_ADDR},
-        name='password_reset'),
-    url(r'^local/reset/confirm/(?P<uidb64>[0-9A-Za-z]+)-(?P<token>.+)/$',
-        django.contrib.auth.views.password_reset_confirm,
-        {'template_name': 'registration/reset_password_form.html'},
-        name='password_reset_confirm'),
-    url(r'^local/reset/sent/$', django.contrib.auth.views.password_reset_done,
-        {'template_name': 'registration/reset_password_sent.html'},
-        name='password_reset_done'),
-    url(r'^local/reset/done/$', django.contrib.auth.views.password_reset_complete,
-        {'template_name': 'registration/reset_password_finished.html'},
-        name='password_reset_complete'),
-    # }}}
 
     # 'MY' {{{
     url(r'^my/orgs/transfer/(?P<id>[0-9]+)/$', 'events.views.orgs.org_mkxfer', name="my-orgs-xfer"),

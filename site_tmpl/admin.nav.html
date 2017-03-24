@@ -20,9 +20,9 @@
                     Logged in as <a href="{% url  "accounts:detail" request.user.pk %}"
                                     class="navbar-link">{{ request.user }}</a>
                 &middot;
-                <a href="{% url 'logout' %}">Log Out</a>
+                <a href="{% url "accounts:logout" %}">Log Out</a>
                 {% else %}
-                    <a href="{% url 'login' %}">Log In</a>
+                    <a href="{% url "accounts:login" %}">Log In</a>
                 {% endif %}
             </p>
             <ul class="nav navbar-nav">
