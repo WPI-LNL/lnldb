@@ -8,6 +8,7 @@ class PdfViewTest(TestCase):
     """
     The simplest cases. Just measures if the pdf generators return successfully.
     """
+    # TODO: test projection pdfs
 
     def setUp(self):
         self.e = EventFactory.create(event_name="Test Event")
