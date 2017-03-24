@@ -5,7 +5,6 @@ from ajax_select import urls as ajax_select_urls
 from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
-from django.contrib.auth.decorators import login_required
 from django.views.generic.base import RedirectView
 
 import data.views
@@ -16,10 +15,6 @@ from events.views.flow import CCRCreate, CCRDelete, CCRUpdate
 from events.views.indices import admin as db_home
 from events.views.indices import event_search
 from events.views.list import public_facing
-from events.views.wizard import (EventWizard, show_lighting_form_condition,
-                                 show_other_services_form_condition,
-                                 show_projection_form_condition,
-                                 show_sound_form_condition)
 from pages.views import page as view_page
 from projection.views import (BulkUpdateView, ProjectionCreate,
                               ProjectionistDelete)
@@ -27,17 +22,6 @@ from projection.views import (BulkUpdateView, ProjectionCreate,
 admin.autodiscover()
 permission.autodiscover()
 
-event_wizard = EventWizard.as_view(
-    named_event_forms,
-    url_name='event_step',
-    done_step_name='finished',
-    condition_dict={
-        'lighting': show_lighting_form_condition,
-        'sound': show_sound_form_condition,
-        'projection': show_projection_form_condition,
-        'other': show_other_services_form_condition,
-    }
-)
 
 # Error pages
 handler403 = 'data.views.err403'
@@ -59,6 +43,7 @@ urlpatterns = [
     url(r'^db/clients/', include('events.urls.orgs', namespace='orgs')),
     url(r'^db/inventory/', include('inventory.urls', namespace='inventory')),
     url(r'^db/events/', include('events.urls.events', namespace='events')),
+    url(r'^workorder/', include('events.urls.wizard', namespace='wizard')),
     url(r'^my/', include('events.urls.my', namespace='my')),
     url(r'', include('accounts.urls', namespace='accounts')),
 
@@ -77,10 +62,6 @@ urlpatterns = [
         name="my-cchours-mk"),
     url(r'^my/events/(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', 'events.views.my.hours_edit',
         name="my-cchours-edit"),
-    # }}}
-    # workorders {{{
-    url(r'^workorder/(?P<step>.+)/$', login_required(event_wizard), name='event_step'),
-    url(r'^workorder/$', login_required(event_wizard), name='event'),
     url(r'^my/events/(?P<eventid>[0-9]+)/repeat/$', 'events.views.my.myworepeat', name="my-repeat"),
     # }}}
 

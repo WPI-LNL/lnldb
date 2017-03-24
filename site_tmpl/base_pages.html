@@ -256,7 +256,7 @@
                                     href="{% url "pages.views.page" nav.slug %}">{{ nav.title }}</a></li>
                         {% endfor %}
                         <li><a href="#PriceModal" data-toggle="modal">Price List</a></li>
-                        <li><a href="{% url 'event' %}">Workorder</a></li>
+                        <li><a href="{% url 'wizard:start' %}">Workorder</a></li>
                         <li><a href="{% url "accounts:me" %}">My Account</a></li>
                     </ul>
                 </div>
