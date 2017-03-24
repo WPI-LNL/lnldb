@@ -1,9 +1,11 @@
 from django.db import models
 
+from django.utils.encoding import python_2_unicode_compatible
 
 # Create your models here.
 
 
+@python_2_unicode_compatible
 class Page(models.Model):
     title = models.CharField(max_length=64)
     slug = models.SlugField(max_length=64)
@@ -18,12 +20,13 @@ class Page(models.Model):
 
     imgs = models.ManyToManyField('CarouselImg', blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.title
 
     ordering = ['nav_pos']
 
 
+@python_2_unicode_compatible
 class CarouselImg(models.Model):
     internal_name = models.CharField(max_length=64)
     img = models.ImageField(upload_to='carousel')
@@ -31,5 +34,5 @@ class CarouselImg(models.Model):
     href_words = models.CharField(max_length=64, null=True, blank=True)
     href_desc = models.CharField(max_length=128, null=True, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.internal_name

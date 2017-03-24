@@ -3,6 +3,7 @@ import datetime
 from django.conf import settings
 from django.db import models
 from django.utils.functional import cached_property
+from django.utils.encoding import python_2_unicode_compatible
 
 EXPIRY_WARNING_DAYS = 30
 
@@ -18,6 +19,7 @@ PIT_CHOICES = (
 )
 
 
+@python_2_unicode_compatible
 class Projectionist(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL)
     # pit_level = models.CharField(choices=PIT_CHOICES,max_length=2,null=True,blank=True)
@@ -25,7 +27,7 @@ class Projectionist(models.Model):
     license_number = models.CharField(max_length=10, null=True, blank=True)
     license_expiry = models.DateField(null=True, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.user.get_full_name()
 
     @property
@@ -67,12 +69,13 @@ class Projectionist(models.Model):
         )
 
 
+@python_2_unicode_compatible
 class PITLevel(models.Model):
     name_short = models.CharField(max_length=3)
     name_long = models.CharField(max_length=16)
     ordering = models.IntegerField(default=0)
 
-    def __unicode__(self):
+    def __str__(self):
         return u'%s (%s)' % (self.name_long, self.name_short)
 
 

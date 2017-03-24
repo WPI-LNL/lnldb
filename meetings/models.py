@@ -4,6 +4,8 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.db import models
+from django.utils.encoding import python_2_unicode_compatible
+
 from django_extensions.db.models import TimeStampedModel
 
 from events.models import Event
@@ -32,6 +34,7 @@ def get_default_email():
 #         db_table = 'meetings_meeting_attendance'
 
 
+@python_2_unicode_compatible
 class Meeting(models.Model):
     glyphicon = 'briefcase'
     datetime = models.DateTimeField(verbose_name="Start Time")
@@ -78,7 +81,7 @@ class Meeting(models.Model):
     def get_absolute_url(self):
         return reverse('meetings:detail', args=[self.id])
 
-    def __unicode__(self):
+    def __str__(self):
         return "Meeting For %s" % self.datetime.date()
 
     class Meta:
@@ -120,11 +123,12 @@ class MeetingAnnounce(models.Model):
         return self.events.order_by('datetime_start')
 
 
+@python_2_unicode_compatible
 class TargetEmailList(models.Model):
     name = models.CharField(max_length=16)
     email = models.EmailField()
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s (%s)" % (self.name, self.email)
 
 
@@ -134,10 +138,11 @@ class AnnounceSend(models.Model):
     sent_success = models.BooleanField(default=False)
 
 
+@python_2_unicode_compatible
 class MeetingType(models.Model):
     name = models.CharField(max_length=32)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
