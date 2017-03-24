@@ -16,11 +16,11 @@
             <td>{{ hour.user.get_full_name }}</td>
             <td>{{ hour.hours }}</td>
             <td>{{ hour.service }}</td>
-            <td><a href="{% url "my-cchours-edit" event.id hour.user.id %}">Update</a>
+            <td><a href="{% url "my:hours-edit" event.id hour.user.id %}">Update</a>
         </tr>
     {% endfor %}
     </table>
-    <a class="btn btn-primary btn-lg" href="{% url "my-cchours-bulk" event.id %}">Bulk Add</a>
-    <a class="btn btn-warning btn-lg" href="{% url "my-cchours-mk" event.id %}">Single Add</a>
+    <a class="btn btn-primary btn-lg" href="{% url "my:hours-bulk" event.id %}">Bulk Add</a>
+    <a class="btn btn-warning btn-lg" href="{% url "my:hours-new" event.id %}">Single Add</a>
     <a class="btn btn-warning btn-lg" href="{% url "my:events" %}">Done</a>
 {% endblock %}

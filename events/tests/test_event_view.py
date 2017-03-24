@@ -82,11 +82,11 @@ class EventBasicViewTest(TestCase):
         # later: test post saved
 
     def test_myccr_add(self):
-        response = self.client.get(reverse('my-ccreport', args=[self.e.pk]))
+        response = self.client.get(reverse("my:report", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Bad (empty) input
-        response = self.client.post(reverse('my-ccreport', args=[self.e.pk]))
+        response = self.client.post(reverse("my:report", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post saved

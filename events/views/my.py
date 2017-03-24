@@ -250,7 +250,7 @@ def hours_mk(request, eventid):
         formset = MKHoursForm(event, request.POST)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('my-cchours', args=(event.id,)))
+            return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
         else:
             context['formset'] = formset
 
@@ -284,7 +284,7 @@ def hours_edit(request, eventid, userid):
         formset = EditHoursForm(request.POST, instance=hours)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('my-cchours', args=(event.id,)))
+            return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
         else:
             context['formset'] = formset
 
@@ -322,7 +322,7 @@ def hours_bulk(request, eventid):
         formset = mk_event_formset(request.POST, instance=event)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('my-cchours', args=(event.id,)))
+            return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
         else:
             context['formset'] = formset
 

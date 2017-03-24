@@ -26,8 +26,8 @@ handler500 = 'data.views.err500'
 
 urlpatterns = [
     # Examples:
-    # url(r'^$', 'lnldb.views.home', name='home'),
-    # url(r'^lnldb/', include('lnldb.foo.urls')),
+    # url(r'^$', some_function, name='home'),
+    # url(r'^lnldb/', include('lnldb.foo.urls', [namespace='foo'])),
 
     # Include other modules
     url(r'^admin/', include(admin.site.urls)),
@@ -46,32 +46,13 @@ urlpatterns = [
     url(r'^email/', include('emails.urls', namespace='emails')),
     url(r'', include('accounts.urls', namespace='accounts')),
 
-    # 'MY' {{{
-    url(r'^my/events/(?P<eventid>[0-9]+)/report/$', 'events.views.my.ccreport', name="my-ccreport"),
-    url(r'^my/events/(?P<eventid>[0-9]+)/hours/$', 'events.views.my.hours_list', name="my-cchours"),
-    url(r'^my/events/(?P<eventid>[0-9]+)/hours/bulk/$', 'events.views.my.hours_bulk',
-        name="my-cchours-bulk"),
-    url(r'^my/events/(?P<eventid>[0-9]+)/hours/mk/$', 'events.views.my.hours_mk',
-        name="my-cchours-mk"),
-    url(r'^my/events/(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', 'events.views.my.hours_edit',
-        name="my-cchours-edit"),
-    url(r'^my/events/(?P<eventid>[0-9]+)/repeat/$', 'events.views.my.myworepeat', name="my-repeat"),
-    # }}}
-
-    # emails
-
     # special urls
     url(r'^db/$', db_home, name="db"),
     url(r'^(?P<slug>[-\w]+)/$', view_page),
     url(r'^db/oldsearch$', event_search, name="events-search"),
     url(r'^db/search$', data.views.search, name="search"),
 
-    # Uncomment to have javascript translation support
-    # url(r'^jsi18n', 'django.views.i18n.javascript_catalog'),
-
     # keep old urls
     url(r'^lnadmin/$', RedirectView.as_view(url="/db/", permanent=True)),
     url(r'^lnadmin/(?P<newpath>.+)$', RedirectView.as_view(url="/db/%(newpath)s", permanent=True)),
-
-    # debugging
 ]
