@@ -43,6 +43,7 @@ urlpatterns = [
     url(r'^workorder/', include('events.urls.wizard', namespace='wizard')),
     url(r'^my/', include('events.urls.my', namespace='my')),
     url(r'^list/', include('events.urls.cal', namespace='cal')),
+    url(r'^email/', include('emails.urls', namespace='emails')),
     url(r'', include('accounts.urls', namespace='accounts')),
 
     # 'MY' {{{
@@ -64,10 +65,6 @@ urlpatterns = [
     # }}}
 
     # emails
-    url(r'^email/announce/(?P<slug>[-0-9a-f]+)/$', MeetingAnnounceView.as_view(),
-        name="email-view-announce"),
-    url(r'^email/announcecc/(?P<slug>[-0-9a-f]+)/$', MeetingAnnounceCCView.as_view(),
-        name="email-view-announce-cc"),
 
     # special urls
     url(r'^status/$', data.views.status),
