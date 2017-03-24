@@ -16,8 +16,6 @@ from events.views.indices import admin as db_home
 from events.views.indices import event_search
 from events.views.list import public_facing
 from pages.views import page as view_page
-from projection.views import (BulkUpdateView, ProjectionCreate,
-                              ProjectionistDelete)
 
 admin.autodiscover()
 permission.autodiscover()
@@ -42,6 +40,7 @@ urlpatterns = [
     url(r'^db/meetings/', include('meetings.urls', namespace='meetings')),
     url(r'^db/clients/', include('events.urls.orgs', namespace='orgs')),
     url(r'^db/inventory/', include('inventory.urls', namespace='inventory')),
+    url(r'^db/projection/', include('projection.urls', namespace='projection')),
     url(r'^db/events/', include('events.urls.events', namespace='events')),
     url(r'^workorder/', include('events.urls.wizard', namespace='wizard')),
     url(r'^my/', include('events.urls.my', namespace='my')),
@@ -63,23 +62,6 @@ urlpatterns = [
     url(r'^my/events/(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', 'events.views.my.hours_edit',
         name="my-cchours-edit"),
     url(r'^my/events/(?P<eventid>[0-9]+)/repeat/$', 'events.views.my.myworepeat', name="my-repeat"),
-    # }}}
-
-    # projection {{{
-    url(r'^db/projection/list/$', 'projection.views.plist_detail',
-        name="projection-list-detail"),
-    url(r'^db/projection/list/other/$', 'projection.views.plist', name="projection-list"),
-    url(r'^db/projection/bulk/$', BulkUpdateView.as_view(), name="projection-bulk-update"),
-    url(r'^db/projection/update/(?P<id>[0-9a-f]+)/$', "projection.views.projection_update",
-        name="projection-update"),
-    url(r'^db/projection/rm/(?P<pk>[0-9a-f]+)/$', ProjectionistDelete.as_view(),
-        name="projection-delete"),
-    url(r'^db/projection/mk/$', ProjectionCreate.as_view(), name="projection-create"),
-    url(r'^db/projection/list/detail/pdf/$', 'pdfs.views.generate_projection_pdf',
-        name="proj-pdf-multi"),
-
-    url(r'^db/projection/bulkevents/$', 'projection.views.bulk_projection',
-        name="projection-bulk2"),
     # }}}
 
     # event lists {{{

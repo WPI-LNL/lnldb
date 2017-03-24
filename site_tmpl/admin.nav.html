@@ -151,13 +151,13 @@
                         </a>
                         <ul class="dropdown-menu">
                             {% permission request.user has 'projection.view_pits' %}
-                                <li><a href="{% url "projection.views.plist_detail" %}">View Projectionists</a></li>
+                                <li><a href="{% url "projection:grid" %}">View Projectionists</a></li>
                             {% endpermission %}
                             {% permission request.user has 'projection.edit_pits' %}
-                                <li><a href="{% url "projection-bulk-update" %}">Bulk Update Projectionists</a></li>
+                                <li><a href="{% url "projection:bulk-edit" %}">Bulk Update Projectionists</a></li>
                             {% endpermission %}
                             {% permission request.user has 'projection.add_bulk_events' %}
-                                <li><a href="{% url "projection-bulk2" %}">Bulk Add Movies</a></li>
+                                <li><a href="{% url "projection:add-movies" %}">Bulk Add Movies</a></li>
                             {% endpermission %}
                         </ul>
                     </li>
