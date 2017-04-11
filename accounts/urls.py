@@ -11,6 +11,17 @@ each_member_pattern = [
     url(r'^detail/$', views.UserDetailView.as_view(), name="detail"),
 ]
 
+# Usually use CAS for logout, since it's guaranteed to log the user out
+#  (without immediately signing them back in), and will ignore our
+#  local users.
+# But when we're doing development, we can't use cas, as there's 
+#  no server to send login info to.
+if settings.CAS_SERVER_URL:
+    best_logout_url = url(r'^logout/$', django_cas_ng.views.logout, name="logout")
+else:
+    best_logout_url = url(r'^logout/$', auth_views.logout, {'template_name': 'registration/logout.html'},
+            name="logout")
+
 urlpatterns = [
     url(r'^me/$', views.MeDirectView.as_view(permanent=False, pattern_name='accounts:detail'), name="me"),
     url(r'^my/$', views.MeDirectView.as_view(permanent=False, pattern_name='accounts:detail')),
@@ -34,10 +45,7 @@ urlpatterns = [
     # AUTH
     # use the nice redirector for login
     url(r'^login/$', views.smart_login, name="login"),
-
-    # best use CAS for logout, since it's guaranteed to log the user out
-    #  (without immediately signing them back in)
-    url(r'^logout/$', django_cas_ng.views.logout, name="logout"),
+    best_logout_url,
 
     # now for logical separation of the two auth portals
     url(r'^cas/', include([
@@ -51,7 +59,7 @@ urlpatterns = [
              'authentication_form': forms.LoginForm},
             name="login"),
 
-        url(r'^local/logout/$', auth_views.logout,
+        url(r'^logout/$', auth_views.logout,
             {'template_name': 'registration/logout.html'},
             name="logout"),
     ], namespace="local")),
