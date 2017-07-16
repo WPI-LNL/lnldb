@@ -2,6 +2,7 @@ import datetime
 import json
 from time import mktime
 
+from django.conf import settings
 from django.db.models import Q
 from django.http import HttpResponse
 from django.utils.decorators import method_decorator
@@ -17,7 +18,7 @@ class BaseFeed(ICalFeed):
     """
     A simple event calender
     """
-    product_id = '-//lnl.wpi.edu//LNLDB//EN'
+    product_id = '-//' + settings.ALLOWED_HOSTS[0] + ' //LNLDB//EN'
     timezone = 'UTC'
     file_name = "event.ics"
 

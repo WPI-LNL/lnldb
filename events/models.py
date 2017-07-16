@@ -27,6 +27,16 @@ PROJECTIONS = (
 )
 
 
+def get_host():
+    out = ''
+    if settings.SECURE_SSL_REDIRECT:
+        out += 'https://'
+    else:
+        out += 'http://'
+    out += settings.ALLOWED_HOSTS[0]
+    return out
+
+
 # MANAGERS
 
 
@@ -488,7 +498,7 @@ class Event(models.Model):
         return self.datetime_end
 
     def cal_link(self):
-        return "http://lnl.wpi.edu/db/events/view/" + str(self.id)
+        return get_host() + reverse('events:detail', args=[self.id])
 
     def cal_guid(self):
         return "event" + str(self.id) + "@lnldb"
@@ -1072,7 +1082,7 @@ class EventCCInstance(models.Model):
             return self.event.datetime_start
 
     def cal_link(self):
-        return "http://lnl.wpi.edu/db/events/view/" + str(self.event.id)
+        return get_host() + reverse('events:detail', args=[self.event.id])
 
     def cal_guid(self):
         return "setup" + str(self.id) + "@lnldb"
