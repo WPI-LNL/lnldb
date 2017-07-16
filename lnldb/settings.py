@@ -52,7 +52,23 @@ MANAGERS = ADMINS
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu',
                  'users.wpi.edu', 'userweb.wpi.edu'] + env.list("ALLOWED_HOSTS", default=[])
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+if env.email_url('EMAIL_URL', default=False):
+    vars().update(env.email_url("EMAIL_URL"))
+elif env.str("SENDGRID_USERNAME", False):
+    EMAIL_HOST = 'smtp.sendgrid.net'
+    EMAIL_HOST_USER = env.str("SENDGRID_USERNAME")
+    EMAIL_HOST_PASSWORD = env.str("SENDGRID_PASSWORD")
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+elif env.str("MAILGUN_SMTP_LOGIN", False):
+    EMAIL_HOST = env.str("MAILGUN_SMTP_SERVER")
+    EMAIL_HOST_USER = env.str("MAILGUN_SMTP_LOGIN")
+    EMAIL_HOST_PASSWORD = env.str("MAILGUN_SMTP_PASSWORD")
+    EMAIL_PORT = env.int("MAILGUN_SMTP_PORT")
+    EMAIL_USE_TLS = True
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    print("Warning: using console as an email server.")
 
 DATABASES = {
     'default': env.db(default="sqlite://" + from_runtime('lnldb.db'))
