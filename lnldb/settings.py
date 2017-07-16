@@ -33,7 +33,7 @@ except Exception as e:
     print(e)
     GIT_RELEASE = "unknown build"
 
-sentry_uri = env.get("SENTRY_DSN", default=None)
+sentry_uri = env.get_value("SENTRY_DSN", default=None)
 if sentry_uri is not None:
     RAVEN_CONFIG = {
         'dsn': sentry_uri,
