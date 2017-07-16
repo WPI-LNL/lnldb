@@ -42,7 +42,7 @@ if sentry_uri is not None:
 
 TESTING = sys.argv[1:2] == ['test']
 
-DEBUG = True
+DEBUG = env.bool("DEBUG", True)
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -51,6 +51,7 @@ ADMINS = (
 MANAGERS = ADMINS
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu',
                  'users.wpi.edu', 'userweb.wpi.edu'] + env.list("ALLOWED_HOSTS", default=[])
+INTERNAL_IPS = env.list("INTERNAL_IPS", [])
 
 if env.str('EMAIL_URL', ""):
     vars().update(env.email_url("EMAIL_URL"))
