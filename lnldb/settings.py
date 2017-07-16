@@ -52,15 +52,15 @@ MANAGERS = ADMINS
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu',
                  'users.wpi.edu', 'userweb.wpi.edu'] + env.list("ALLOWED_HOSTS", default=[])
 
-if env.str('EMAIL_URL', default=False):
+if env.str('EMAIL_URL', ""):
     vars().update(env.email_url("EMAIL_URL"))
-elif env.str("SENDGRID_USERNAME", False):
+elif env.str("SENDGRID_USERNAME", ""):
     EMAIL_HOST = 'smtp.sendgrid.net'
     EMAIL_HOST_USER = env.str("SENDGRID_USERNAME")
     EMAIL_HOST_PASSWORD = env.str("SENDGRID_PASSWORD")
     EMAIL_PORT = 587
     EMAIL_USE_TLS = True
-elif env.str("MAILGUN_SMTP_LOGIN", False):
+elif env.str("MAILGUN_SMTP_LOGIN", ""):
     EMAIL_HOST = env.str("MAILGUN_SMTP_SERVER")
     EMAIL_HOST_USER = env.str("MAILGUN_SMTP_LOGIN")
     EMAIL_HOST_PASSWORD = env.str("MAILGUN_SMTP_PASSWORD")
