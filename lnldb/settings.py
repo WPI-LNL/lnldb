@@ -6,7 +6,7 @@ import sys
 import environ
 
 env = environ.Env()
-env.read_env()
+env.read_env("../.env")
 
 try:
     from django.urls import reverse, NoReverseMatch
