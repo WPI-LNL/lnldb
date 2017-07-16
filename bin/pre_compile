@@ -1,0 +1,6 @@
+#!/bin/bash
+# run as heroku code is recieved
+
+# heroku deletes the git tree, so save the current build num
+echo "Build version ($SOURCE_VERSION) saved to .env"
+echo "SOURCE_VERSION=$SOURCE_VERSION" > .env
