@@ -25,13 +25,15 @@ def from_runtime(*x):
     return os.path.join(from_root('runtime'), *x)
 
 
-try:
-    import raven
-    path = from_root('.')
-    GIT_RELEASE = raven.fetch_git_sha(path)
-except Exception as e:
-    print(e)
-    GIT_RELEASE = "unknown build"
+GIT_RELEASE = env.str("SOURCE_VERSION", None)
+if GIT_RELEASE is None:
+    try:
+        import raven
+        path = from_root('.')
+        GIT_RELEASE = raven.fetch_git_sha(path)
+    except Exception as e:
+        print(e)
+        GIT_RELEASE = "unknown build"
 
 sentry_uri = env.get_value("SENTRY_DSN", default=None)
 if sentry_uri is not None:
