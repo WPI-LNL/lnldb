@@ -5,8 +5,6 @@ import re
 import sys
 import environ
 
-env = environ.Env()
-env.read_env("../.env")
 
 try:
     from django.urls import reverse, NoReverseMatch
@@ -25,6 +23,9 @@ def from_root(*x):
 def from_runtime(*x):
     return os.path.join(from_root('runtime'), *x)
 
+
+env = environ.Env()
+env.read_env(from_root(".env"))
 
 GIT_RELEASE = env.str("SOURCE_VERSION", None)
 if GIT_RELEASE is None:
