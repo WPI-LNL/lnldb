@@ -33,6 +33,13 @@ except Exception as e:
     print(e)
     GIT_RELEASE = "unknown build"
 
+sentry_uri = env.get("SENTRY_DSN", default=None)
+if sentry_uri is not None:
+    RAVEN_CONFIG = {
+        'dsn': sentry_uri,
+        'release': GIT_RELEASE,
+    }
+
 TESTING = sys.argv[1:2] == ['test']
 
 DEBUG = True
@@ -48,7 +55,7 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu',
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DATABASES = {
-        'default': env.db(default= "sqlite://" + from_runtime('lnldb.db'))
+    'default': env.db(default="sqlite://" + from_runtime('lnldb.db'))
 }
 
 # options we don't want in our env variables...
@@ -56,17 +63,17 @@ for key in DATABASES:
     db = DATABASES[key]
     # use relatively persistent connections
     db['CONN_MAX_AGE'] = 30
-    
+
     # fix mysql unicode stupidity
     if db['ENGINE'] == 'django.db.backends.mysql':
         db['OPTIONS'].update({
             'sql_mode': 'TRADITIONAL',
             'charset': 'utf8mb4',
             'init_command': 'SET '
-                'storage_engine=INNODB,'
-                'character_set_connection=utf8mb4,'
-                'collation_connection=utf8mb4_unicode_ci,'
-                'SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
+                            'storage_engine=INNODB,'
+                            'character_set_connection=utf8mb4,'
+                            'collation_connection=utf8mb4_unicode_ci,'
+                            'SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
         })  # Now we have a mild degree of confidence :-) Oh, MySQL....
 
 
