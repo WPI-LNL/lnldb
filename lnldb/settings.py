@@ -180,8 +180,11 @@ TEMPLATES = [{
     },
 }]
 
+USE_WHITENOISE = env.bool("USE_WHITENOISE", default=False)
+
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
+) + ('whitenoise.middleware.WhiteNoiseMiddleware',) if USE_WHITENOISE else tuple() + (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'watson.middleware.SearchContextMiddleware',
