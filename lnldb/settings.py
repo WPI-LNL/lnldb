@@ -5,6 +5,8 @@ import re
 import sys
 import environ
 
+env = environ.Env()
+
 try:
     from django.urls import reverse, NoReverseMatch
 except ImportError:
