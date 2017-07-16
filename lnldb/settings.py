@@ -50,7 +50,7 @@ ADMINS = (
 
 MANAGERS = ADMINS
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu',
-                 'users.wpi.edu', 'userweb.wpi.edu']
+                 'users.wpi.edu', 'userweb.wpi.edu'] + env.list("ALLOWED_HOSTS", default=[])
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
