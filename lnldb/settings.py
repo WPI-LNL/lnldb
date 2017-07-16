@@ -3,6 +3,7 @@
 import os
 import re
 import sys
+import environ
 
 try:
     from django.urls import reverse, NoReverseMatch
@@ -45,30 +46,27 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu',
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DATABASES = {
-    'default': {  # for testing
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': from_runtime('lnldb.db'),
-    }
-    # #  mysql template
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.mysql',
-    #     'NAME': 'lnldb2012',
-    #     'USER': 'lnlcgi',
-    #     'PASSWORD': '<...>',
-    #     'HOST': 'mysql.wpi.edu',
-    #     'PORT': '',
-    #     'CONN_MAX_AGE': 30,
-    #     'OPTIONS': {
-    #         'sql_mode': 'TRADITIONAL',
-    #         'charset': 'utf8mb4',
-    #         'init_command': 'SET '
-    #             'storage_engine=INNODB,'
-    #             'character_set_connection=utf8mb4,'
-    #             'collation_connection=utf8mb4_unicode_ci,'
-    #             'SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
-    #     }  # Now we have a mild degree of confidence :-) Oh, MySQL....
-    # }
+        'default': env.db(default= "sqlite://" + from_runtime('lnldb.db'))
 }
+
+# options we don't want in our env variables...
+for key in DATABASES:
+    db = DATABASES[key]
+    # use relatively persistent connections
+    db['CONN_MAX_AGE'] = 30
+    
+    # fix mysql unicode stupidity
+    if db['ENGINE'] == 'django.db.backends.mysql':
+        db['OPTIONS'].update({
+            'sql_mode': 'TRADITIONAL',
+            'charset': 'utf8mb4',
+            'init_command': 'SET '
+                'storage_engine=INNODB,'
+                'character_set_connection=utf8mb4,'
+                'collation_connection=utf8mb4_unicode_ci,'
+                'SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
+        })  # Now we have a mild degree of confidence :-) Oh, MySQL....
+
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
