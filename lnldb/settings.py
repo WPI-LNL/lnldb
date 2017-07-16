@@ -52,7 +52,7 @@ MANAGERS = ADMINS
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'lnl.wpi.edu',
                  'users.wpi.edu', 'userweb.wpi.edu'] + env.list("ALLOWED_HOSTS", default=[])
 
-if env.email_url('EMAIL_URL', default=False):
+if env.str('EMAIL_URL', default=False):
     vars().update(env.email_url("EMAIL_URL"))
 elif env.str("SENDGRID_USERNAME", False):
     EMAIL_HOST = 'smtp.sendgrid.net'
