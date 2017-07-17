@@ -79,7 +79,8 @@ else:
 DATABASES = {
     'default': env.db(default="sqlite:///" + from_runtime('lnldb.db'))
 }
-print(DATABASES)
+CCC_PASS = env.str("CCC_PASS", "")
+SECRET_KEY = env.str("SECRET_KEY", "I am insecure.")
 
 # options we don't want in our env variables...
 for key in DATABASES:
@@ -176,9 +177,6 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
     # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
-
-# Make this unique, and don't share it with anybody.
-SECRET_KEY = '*am$3w(-v2p+i)m-6t8f0d%)%g60cr+tj6$_x1_u-$wx^0$fu%'
 
 _tmpl_loaders = [
     'django.template.loaders.filesystem.Loader',
@@ -295,7 +293,7 @@ HIJACK_ALLOW_GET_REQUESTS = True
 # Needed since Hijack doesn't support custom UserAdmin
 
 
-GA_ID = ""
+GA_ID = env.str("GA_ID", "")
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
