@@ -71,9 +71,9 @@ Note that in future sessions, you must first call `source env/bin/activate` to s
 You can now deploy a test server using one button! Well.... almost. You still need to figure out s3, and make a login.
 
 1. Fill in the allowed_hosts field with eg. 'yourappname.herokuapp.com,yourcustomdomain.com'
-2. Make an [S3 bucket](https://console.aws.amazon.com/s3/home). Just leave everything disabled. Copy the bucket name and region id (eg. us-east-1) into the form.
-3. Make an [IAM identity](https://console.aws.amazon.com/iam/home) to log in under. Copy the id and secret key into the form.
-4. Add a IAM Inline Policy to grant permission to read/write on the bucket. A good base is below.
+2. (Not required unless storing uploads) Make an [S3 bucket](https://console.aws.amazon.com/s3/home). Just leave everything disabled. Copy the bucket name and region id (eg. us-east-1) into the form.
+3. (Not required unless storing uploads) Make an [IAM identity](https://console.aws.amazon.com/iam/home) to log in under. Copy the id and secret key into the form.
+4. (Not required unless storing uploads) Add a IAM Inline Policy to grant permission to read/write on the bucket. A good base is below.
 5. Hit deploy and wait.
 6. `heroku run python manage.py createsuperuser`
 
