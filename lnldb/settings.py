@@ -56,7 +56,7 @@ MANAGERS = ADMINS
 
 # important: first of these are used for absolute links in some places
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + ['lnl.wpi.edu', '127.0.0.1', 'localhost', 'users.wpi.edu', 'userweb.wpi.edu']
-INTERNAL_IPS = ['127.0.0.1'] + env.list("INTERNAL_IPS", default=[])
+INTERNAL_IPS = ['127.0.0.1']
 
 if env.str('EMAIL_URL', ""):
     vars().update(env.email_url("EMAIL_URL"))
