@@ -13,15 +13,15 @@ except ImportError:
 
 
 def here(*x):
-    return os.path.join(os.path.abspath(os.path.dirname(__file__)), *x)
+    return os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), *x))
 
 
 def from_root(*x):
-    return os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', *x)
+    return here('..', *x)
 
 
 def from_runtime(*x):
-    return os.path.join(from_root('runtime'), *x)
+    return here(from_root('runtime'), *x)
 
 
 env = environ.Env()
@@ -77,8 +77,9 @@ else:
     print("Warning: using console as an email server.")
 
 DATABASES = {
-    'default': env.db(default="sqlite://" + from_runtime('lnldb.db'))
+    'default': env.db(default="sqlite:///" + from_runtime('lnldb.db'))
 }
+print(DATABASES)
 
 # options we don't want in our env variables...
 for key in DATABASES:
