@@ -17,15 +17,15 @@
       "generator": "secret"
     },
     "ALLOWED_HOSTS": {
-      "description": "A lists of hostnames that the server will respond to"
+      "description": "A lists of hostnames that the server will respond to. A good starter is 'yourappname.herokuapp.com'"
     },
     "CCC_PASS": {
-      "description": "The CCC password. Used to bypass rate limits on LDAP",
-      "required": "false"
+      "description": "The WPI CCC password. LDAP returns info more reliably with this.",
+      "required": false
     },
     "CAS_SERVER_URL": {
       "description": "The CAS server to use, if any. Note that many CAS servers run on a whitelist.",
-      "required": "false"
+      "required": false
     },
     "AWS_ACCESS_KEY_ID": {
       "description": "AWS S3 creds: id"
@@ -41,15 +41,15 @@
     },
     "GA_ID": {
       "description": "Google analytics ID",
-      "required": "false"
+      "required": false
     },
     "USE_WHITENOISE": {
-        "description": "Host static files via django",
-        "default": "true"
+        "description": "Host static files via django. Unless you're running a separate server in front of this (cough, userweb), you want this. ",
+        "value": "True"
     },
     "DEBUG": {
       "description": "Sets debug mode on/off for the site. If enabled, insecure (but soooo convenient...)",
-      "value": "true"
+      "value": "True"
     }
   },
   "addons": [
