@@ -29,9 +29,9 @@ def link_callback(uri, rel):
     mroot = settings.MEDIA_ROOT  # Typically /home/userX/project_static/media/
 
     # convert URIs to absolute system paths
-    if uri.startswith(murl):
+    if murl and uri.startswith(murl):
         path = os.path.join(mroot, uri.replace(murl, ""))
-    elif uri.startswith(surl):
+    elif surl and uri.startswith(surl):
         search_url = uri.replace(surl, "")
         path = finders.find(search_url) or os.path.join(sroot, search_url)
     else:
