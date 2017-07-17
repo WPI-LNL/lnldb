@@ -210,7 +210,7 @@ TEMPLATES = [{
 }]
 
 DEBUG_TOOLBAR_CONFIG = {
-    'SHOW_TOOLBAR_CALLBACK': lambda x: DEBUG
+    'SHOW_TOOLBAR_CALLBACK': lambda x: DEBUG and x.META['SERVER_NAME'] != "testserver"
 }
 
 USE_WHITENOISE = env.bool("USE_WHITENOISE", default=False)
