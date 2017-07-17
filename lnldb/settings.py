@@ -210,6 +210,10 @@ TEMPLATES = [{
     },
 }]
 
+DEBUG_TOOLBAR_CONFIG = {
+    'SHOW_TOOLBAR_CALLBACK': lambda x: DEBUG
+}
+
 USE_WHITENOISE = env.bool("USE_WHITENOISE", default=False)
 WN_MIDDLEWARE = ('whitenoise.middleware.WhiteNoiseMiddleware',) if USE_WHITENOISE else tuple()
 MIDDLEWARE_CLASSES = (
