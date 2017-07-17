@@ -28,16 +28,20 @@
       "required": false
     },
     "AWS_ACCESS_KEY_ID": {
-      "description": "AWS S3 creds: id"
+      "description": "(Required for file storage) AWS S3 creds: id",
+      "required": false
     },
     "AWS_SECRET_ACCESS_KEY": {
-      "description": "AWS S3 creds: password"
+      "description": "(Required for file storage) AWS S3 creds: password",
+      "required": false
     },
     "AWS_STORAGE_BUCKET_NAME": {
-      "description": "AWS S3 creds: bucket"
+      "description": "(Required for file storage) AWS S3 creds: bucket",
+      "required": false
     },
     "AWS_S3_REGION_NAME": {
-      "description": "AWS S3 creds: region name"
+      "description": "(Required for file storage) AWS S3 creds: region name",
+      "required": false
     },
     "GA_ID": {
       "description": "Google analytics ID",
