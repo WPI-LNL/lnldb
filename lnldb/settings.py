@@ -443,8 +443,8 @@ try:
 except IOError as e:
     pass
 
-if not os.path.exists(STATIC_ROOT):
+if "STATIC_ROOT" in locals() and not os.path.exists(STATIC_ROOT):
     os.makedirs(STATIC_ROOT)
 
-if not os.path.exists(MEDIA_ROOT):
+if "MEDIA_ROOT" in locals() and not os.path.exists(MEDIA_ROOT):
     os.makedirs(MEDIA_ROOT)
