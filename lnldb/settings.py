@@ -199,7 +199,7 @@ TEMPLATES = [{
             'django.template.context_processors.request',
             'django.core.context_processors.static',
             'django.core.context_processors.media',
-            'data.context_processors.airplane_mode',
+            'data.context_processors.flags',
             'data.context_processors.revision',
             'data.context_processors.analytics',
             # 'lnldb.processors.staticz',
@@ -437,6 +437,13 @@ CACHES = {
 
 MPTT_ADMIN_LEVEL_INDENT = 20
 
+if env.str("CAS_SERVER_URL", ""):
+    CAS_SERVER_URL = env.str("CAS_SERVER_URL")
+    #CAS_LOGOUT_COMPLETELY = True
+    CAS_REDIRECT_URL = '/db/'
+    USE_CAS = True
+else:
+    USE_CAS = False
 
 # Local Settings Imports
 try:
