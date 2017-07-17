@@ -130,15 +130,22 @@ TIME_INPUT_FORMATS = ['%I:%M %p', '%I:%M:%S.%f %p', '%I:%M %p',
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = True
 
-# Absolute filesystem path to the directory that will hold user-uploaded files.
-# Example: "/home/media/media.lawrence.com/media/"
-# noinspection PyUnresolvedReferences
-MEDIA_ROOT = from_runtime('media/')
 
-# URL that handles the media served from MEDIA_ROOT. Make sure to use a
-# trailing slash.
-# Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
-MEDIA_URL = '/media/'
+if env.str("AWS_ACCESS_KEY_ID", ""):
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_ACCESS_KEY_ID = env.str('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = env.str('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = env.str('AWS_STORAGE_BUCKET_NAME')
+    if env.str("AWS_S3_HOST", ""):
+        AWS_S3_HOST = env.str("AWS_S3_HOST")
+        S3_USE_SIGV4 = True
+else:
+    # Absolute filesystem path to the directory that will hold user-uploaded files.
+    # Example: "/home/media/media.lawrence.com/media/"
+    # noinspection PyUnresolvedReferences
+    print("Warning: using local storage for a file store")
+    MEDIA_ROOT = from_runtime('media/')
+    MEDIA_URL = '/media/'
 
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files
