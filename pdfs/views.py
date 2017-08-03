@@ -3,7 +3,7 @@ import os
 from io import BytesIO
 
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.humanize.templatetags.humanize import intcomma
 from django.contrib.staticfiles import finders
 from django.http import HttpResponse
@@ -42,7 +42,8 @@ def link_callback(uri, rel):
         raise Exception('media URI must start with %s or %s' % (surl, murl))
     return path
 
-
+@login_required
+@permission_required("projection.view_pits", raise_exception=True)
 def generate_projection_pdf(request):
     data = {}
     # prepare data
@@ -103,10 +104,10 @@ def currency(dollars):
 
 
 @login_required
-def generate_event_bill_pdf(request, id):
+def generate_event_bill_pdf(request, event):
     # Prepare context
     data = {}
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(Event, pk=event)
     data['event'] = event
     cats = Category.objects.all()
     extras = {}

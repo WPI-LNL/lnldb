@@ -3,7 +3,7 @@
 {% block search_result %}
     <h2><span class="glyphicon glyphicon-{{ result.object.glyphicon|default_if_none:'asterisk' }}"
               aria-hidden="true"></span> <a
-            href="{% url 'events-detail' result.object.id %}">{{ result.title }}
+            href="{% url 'events:detail' result.object.id %}">{{ result.title }}
         ({{ result.object.short_services }})</a>
         <span class="result-subtitle">Event - {{ result.object.status }}</span></h2>
     <h3>{{ result.object.datetime_nice }} - {{ result.object.location.name }}</h3>

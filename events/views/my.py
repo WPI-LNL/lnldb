@@ -128,7 +128,6 @@ def myorgform(request):
 # lnl facing
 
 @login_required
-# @user_passes_test(is_lnlmember, login_url='/lnldb/fuckoffkitty/')
 def myevents(request):
     """ List Events That Have been CC'd / involved """
     context = {'user': request.user, 'now': datetime.datetime.now(timezone.get_current_timezone()),
@@ -199,7 +198,7 @@ def ccreport(request, eventid):
         formset = InternalReportForm(data=request.POST, event=event, request_user=user, instance=report)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('my-events'))
+            return HttpResponseRedirect(reverse("my:events"))
         else:
             context['formset'] = formset
 
@@ -251,7 +250,7 @@ def hours_mk(request, eventid):
         formset = MKHoursForm(event, request.POST)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('my-cchours', args=(event.id,)))
+            return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
         else:
             context['formset'] = formset
 
@@ -285,7 +284,7 @@ def hours_edit(request, eventid, userid):
         formset = EditHoursForm(request.POST, instance=hours)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('my-cchours', args=(event.id,)))
+            return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
         else:
             context['formset'] = formset
 
@@ -323,7 +322,7 @@ def hours_bulk(request, eventid):
         formset = mk_event_formset(request.POST, instance=event)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('my-cchours', args=(event.id,)))
+            return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
         else:
             context['formset'] = formset
 

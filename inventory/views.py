@@ -309,7 +309,7 @@ def fast_mk(request):
 #         formset = InvForm(request.POST)
 #         if formset.is_valid():
 #             formset.save()
-#             # return HttpResponseRedirect(reverse('lnldb.events.views.admin',
+#             # return HttpResponseRedirect(reverse("home",
 #  kwargs={'msg':slugify(SUCCESS_MSG_INV)}))
 #             return HttpResponseRedirect(reverse('inventory:view'))
 #

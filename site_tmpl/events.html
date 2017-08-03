@@ -110,7 +110,7 @@
                     {% for field in cols %}
                         {% if field.name == 'event_name' %}
                             <td class="event-name"><a
-                                    href="{% url "events.views.flow.viewevent" event.id %}">{{ event.event_name }}</a>
+                                    href="{% url "events:detail" event.id %}">{{ event.event_name }}</a>
                             </td>
 
                         {% elif field.name == 'org' %}
@@ -163,7 +163,7 @@
                         {% elif field.name == 'tasks' %}
                             <td class="tasks">
                                 <span class="crewtask"><a
-                                        href="{% url "events.views.flow.assigncrew" event.id %}">Crew</a></span>
+                                        href="{% url "events:add-crew" event.id %}">Crew</a></span>
                             </td>
 
                         {% else %}

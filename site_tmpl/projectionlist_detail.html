@@ -3,11 +3,11 @@
 {% load permissionif %}
 {% block content %}
 <div class="pull-right">
-    <a class="btn btn-warning btn-lg" href="{% url "projection-list" %}"><i class="glyphicon glyphicon-th-large icon-white"></i>&nbsp;Standard List</a>
+    <a class="btn btn-warning btn-lg" href="{% url "projection:list" %}"><i class="glyphicon glyphicon-th-large icon-white"></i>&nbsp;Standard List</a>
     {% permission request.user has 'projection.edit_pits' %}
-        <a class="btn btn-info btn-lg" href="{% url "projection-bulk-update" %}"><i class="glyphicon glyphicon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
+        <a class="btn btn-info btn-lg" href="{% url "projection:bulk-edit" %}"><i class="glyphicon glyphicon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
     {% endpermission %}
-    <a class="btn btn-info btn-lg" href="{% url "events-pdf-multi" %}"><i class="glyphicon glyphicon-print icon-white"></i>PDF</a>
+    <a class="btn btn-info btn-lg" href="{% url "projection:pdf" %}"><i class="glyphicon glyphicon-print icon-white"></i>PDF</a>
 </div>
 <h2> {{ h2 }} </h2>
 <h3> Projectionists In Training </h3>
@@ -29,7 +29,7 @@
                 
                 <td>
                     {% permission request.user has 'projection.edit_pits' %}
-                        <a href="{% url "projection-update" user.id %}">{{ user }}</a>
+                        <a href="{% url "projection:edit" user.id %}">{{ user }}</a>
                     {% else %}
                         {{ user }}
                     {% endpermission %}
@@ -51,7 +51,7 @@
 {% for user in licensed_users %}
     <li>
         {% permission request.user has 'projection.edit_pits' %}
-            <a href="{% url "projection-update" user.id %}">{{ user }}</a>
+            <a href="{% url "projection:edit" user.id %}">{{ user }}</a>
         {% else %}
             {{ user }}
         {% endpermission %}
@@ -75,7 +75,7 @@
 {% for user in alumni_users %}
     <li>
         {% permission request.user has 'projection.edit_pits' %}
-            <a href="{% url "projection-update" user.id %}">{{ user }}</a>
+            <a href="{% url "projection:edit" user.id %}">{{ user }}</a>
         {% else %}
             {{ user }}
         {% endpermission %}
@@ -94,7 +94,7 @@
 {% endfor %}
 </ul>
 {% permission request.user has 'projection.edit_pits' %}
-    <a class="btn btn-lg btn-primary" href="{% url "projection-create" %}">Create</a>
+    <a class="btn btn-lg btn-primary" href="{% url "projection:new" %}">Create</a>
 {% endpermission %}
 
 {% endblock %}

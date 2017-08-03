@@ -8,7 +8,7 @@
             <ul>
             {% for event in result %}
                 <li>
-                    <a href="{% url "events.views.flow.viewevent" event.id %}">{{event.event_name}}</a>
+                    <a href="{% url "events:detail" event.id %}">{{event.event_name}}</a>
                 </li>
             {% empty %}
             No Events Added

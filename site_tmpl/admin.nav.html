@@ -11,7 +11,7 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-                <a class="navbar-brand" href="{% url "events.views.indices.admin" %}">LNLDB</a>
+                <a class="navbar-brand" href="{% url "home" %}">LNLDB</a>
         </div>
 
             <div class="collapse navbar-collapse" id="db-navbar-collapse-1">
@@ -20,9 +20,9 @@
                     Logged in as <a href="{% url  "accounts:detail" request.user.pk %}"
                                     class="navbar-link">{{ request.user }}</a>
                 &middot;
-                <a href="{% url 'logout' %}">Log Out</a>
+                <a href="{% url "accounts:logout" %}">Log Out</a>
                 {% else %}
-                    <a href="{% url 'login' %}">Log In</a>
+                    <a href="{% url "accounts:login" %}">Log In</a>
                 {% endif %}
             </p>
             <ul class="nav navbar-nav">
@@ -31,11 +31,11 @@
                         Events <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a href="{% url 'events.views.my.myevents' %}">My Events</a></li>
-                        <li><a href="{% url 'event' %}">Event Wizard</a></li>
+                        <li><a href="{% url "my:events" %}">My Events</a></li>
+                        <li><a href="{% url 'wizard:start' %}">Event Wizard</a></li>
 
                         {% permission request.user has 'events.add_raw_event' %}
-                        <li><a href="{% url "events.views.mkedrm.eventnew" %}">Add Event</a></li>
+                        <li><a href="{% url "events:new" %}">Add Event</a></li>
                         {% endpermission %}
 
                         {% permission request.user has 'events.view_event' %}
@@ -105,10 +105,6 @@
                             <li class="divider"></li>
                             <li><a href="{% url "accounts:add" %}">Add User</a></li>
                         {% endpermission %}
-                        {% permission request.user has 'events.event_view_granular' %}
-                            <li class="divider"></li>
-                            <li><a href="{% url "access-log" %}">Access Log</a>
-                        {% endpermission %}
                     </ul>
                 </li>
                 {% endpermission %}
@@ -151,13 +147,13 @@
                         </a>
                         <ul class="dropdown-menu">
                             {% permission request.user has 'projection.view_pits' %}
-                                <li><a href="{% url "projection.views.plist_detail" %}">View Projectionists</a></li>
+                                <li><a href="{% url "projection:grid" %}">View Projectionists</a></li>
                             {% endpermission %}
                             {% permission request.user has 'projection.edit_pits' %}
-                                <li><a href="{% url "projection-bulk-update" %}">Bulk Update Projectionists</a></li>
+                                <li><a href="{% url "projection:bulk-edit" %}">Bulk Update Projectionists</a></li>
                             {% endpermission %}
                             {% permission request.user has 'projection.add_bulk_events' %}
-                                <li><a href="{% url "projection-bulk2" %}">Bulk Add Movies</a></li>
+                                <li><a href="{% url "projection:add-movies" %}">Bulk Add Movies</a></li>
                             {% endpermission %}
                         </ul>
                     </li>

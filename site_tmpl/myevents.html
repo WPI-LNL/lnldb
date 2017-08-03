@@ -12,7 +12,7 @@
             </tr>
             {% for instance in ccinstances %}
                 <tr>
-                    <td><a href="{% url 'events-detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
+                    <td><a href="{% url 'events:detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
                     <td title="{{ instance.event.datetime_start }}">
                         {% if instance.event.datetime_start > now %}
                             {{ instance.event.datetime_start|timeuntil }} from now
@@ -23,15 +23,15 @@
                     <td>{{ instance.event.location }}</td>
                     <td>
                         <div class="btn-group">
-                            <a class="btn btn-default" href="{% url 'my-events-pdf' instance.event.id %}">Workorder
+                            <a class="btn btn-default" href="{% url 'events:pdf' instance.event.id %}">Workorder
                                 PDF </a>
                             {% if instance.event.reports_editable %}
-                                <a class="btn btn-primary" href="{% url 'my-ccreport' instance.event.id %}">CC
+                                <a class="btn btn-primary" href="{% url "my:report" instance.event.id %}">CC
                                     Report</a>
-                                <a class="btn btn-info" href="{% url 'my-cchours' instance.event.id %}">Crew Hours</a>
+                                <a class="btn btn-info" href="{% url "my:hours-list" instance.event.id %}">Crew Hours</a>
                                 {% endif %}
                             {% if instance.event.attachments %}
-                                <a class="btn btn-info" href="{% url 'my-eventfiles' instance.event.id %}">Files</a>
+                                <a class="btn btn-info" href="{% url "my:event-files" instance.event.id %}">Files</a>
                             {% endif %}
 
                         </div>
@@ -55,7 +55,7 @@
         </tr>
         {% for instance in hours %}
                 <tr>
-                    <td><a href="{% url 'events-detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
+                    <td><a href="{% url 'events:detail' instance.event.pk %}">{{ instance.event.event_name }}</a></td>
                     <td title="{{instance.event.datetime_start}}">
                         {% if instance.event.datetime_start > now %}
                             {{instance.event.datetime_start|timeuntil}} from now 
@@ -90,7 +90,7 @@
             </tr>
             {% for event in submitted_events %}
                     <tr>
-                        <td><a href="{% url 'events-detail' event.pk %}">{{ event.event_name }}</a></td>
+                        <td><a href="{% url 'events:detail' event.pk %}">{{ event.event_name }}</a></td>
                         <td title="{{event.datetime_end}}">
                             {% if event.datetime_end > now %}
                                 {{event.datetime_end|timeuntil}} from now 
@@ -120,7 +120,7 @@
                 </tr>
                 {% for event in org.event_set.all %}
                     <tr>
-                        <td><a href="{% url 'events-detail' event.pk %}">{{ event.event_name }}</a></td>
+                        <td><a href="{% url 'events:detail' event.pk %}">{{ event.event_name }}</a></td>
                         <td title="{{ event.datetime_end }}">
                             {% if event.datetime_end > now %}
                                 {{ event.datetime_end|timeuntil }} from now
