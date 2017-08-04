@@ -50,6 +50,4 @@ wheel==0.24.0
 xhtml2pdf==0.0.6
 django-cas-ng==3.5.3
 ldap3==1.4.0
-# until pagedown 0.1.2
--e git+https://github.com/timmyomahony/django-pagedown.git@978817494d581b9c61b90ec2545b77bb80da21c7#egg=django-pagedown
-# django-pagedown==0.1.2
+django-pagedown==0.1.3
