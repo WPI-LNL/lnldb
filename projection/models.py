@@ -38,6 +38,9 @@ class Projectionist(models.Model):
 
     @property
     def expiring(self):
+        if self.license_expiry is None:
+            return None
+
         today = datetime.date.today()
         delta = today + datetime.timedelta(days=EXPIRY_WARNING_DAYS)
         if delta > self.license_expiry > today:
@@ -47,7 +50,9 @@ class Projectionist(models.Model):
 
     @property
     def expired(self):
-        if datetime.date.today() >= self.license_expiry:
+        if self.license_expiry is None:
+            return None
+        elif datetime.date.today() >= self.license_expiry:
             return True
         else:
             return False
