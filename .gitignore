@@ -10,3 +10,4 @@ src/*
 .coverage
 htmlcov/*
 tags
+.env
