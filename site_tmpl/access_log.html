@@ -10,7 +10,7 @@
     </tr>
     {% for access in accesses %}
             <tr>
-                <td><a href="{% url "projection-update" access.user.id %}">{{ access.user }}</a></td>
+                <td><a href="{% url "projection:edit" access.user.id %}">{{ access.user }}</a></td>
                 <td>
                     {{ access.user_ip }}
                 </td>

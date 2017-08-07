@@ -196,7 +196,7 @@ def upcoming(request, start=None, end=None):
     context['h2'] = "Upcoming Events"
     context['events'] = events
     context['baseurl'] = reverse("events:upcoming")
-    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -235,7 +235,7 @@ def incoming(request, start=None, end=None):
     context['h2'] = "Incoming Events"
     context['events'] = events
     context['baseurl'] = reverse("events:incoming")
-    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -276,7 +276,7 @@ def openworkorders(request, start=None, end=None):
     context['h2'] = "Open Events"
     context['events'] = events
     context['baseurl'] = reverse("events:open")
-    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -327,7 +327,7 @@ def findchief(request, start=None, end=None):
     context['proj_hideable'] = True
     context['events'] = events
     context['baseurl'] = reverse("events:findchief")
-    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -379,7 +379,7 @@ def unreviewed(request, start=None, end=None):
     context['h2'] = "Events Pending Billing Review"
     context['events'] = events
     context['baseurl'] = reverse("events:unreviewed")
-    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['pdfurl'] = reverse('events:pdf-multi')
     context['proj_hideable'] = True
     context['cols'] = ['event_name',
                        'org',
@@ -432,7 +432,7 @@ def unbilled(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:unbilled")
     context['proj_hideable'] = True
-    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -478,7 +478,7 @@ def unbilled_semester(request, start=None, end=None):
     context['h2'] = "Events to be Billed (Films)"
     context['events'] = events
     context['baseurl'] = reverse("events:unbilled-semester")
-    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -524,7 +524,7 @@ def paid(request, start=None, end=None):
     context['h2'] = "Paid Events"
     context['events'] = events
     context['baseurl'] = reverse("events:paid")
-    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['pdfurl'] = reverse('events:pdf-multi')
     context['proj_hideable'] = True
     context['cols'] = ['event_name',
                        'org',
@@ -573,7 +573,7 @@ def unpaid(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:unpaid")
     context['proj_hideable'] = True
-    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
                        FakeExtendedField('datetime_start', verbose_name="Event Time"),
@@ -612,7 +612,7 @@ def closed(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:closed")
     context['proj_hideable'] = True
-    context['pdfurl'] = reverse('events-pdf-multi-empty')
+    context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
                        'location',

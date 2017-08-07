@@ -70,19 +70,19 @@ class MyViewTest(TestCase):
 
     def test_cc_report_blank(self):
         mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
-        response = self.client.get(reverse("my-ccreport", args=[self.e.pk]))
+        response = self.client.get(reverse("my:report", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
     def test_cc_report_error_post(self):
         mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
-        response = self.client.post(reverse("my-ccreport", args=[self.e.pk]),)
+        response = self.client.post(reverse("my:report", args=[self.e.pk]),)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(self.e.ccreport_set.filter(crew_chief=self.user)), [])
 
     def test_cc_report_post(self):
         mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
         response = self.client.post(
-            reverse("my-ccreport", args=[self.e.pk]),
+            reverse("my:report", args=[self.e.pk]),
             data={
                 'report': "lorem ipsum something or another",
                 'crew_chief': self.user.pk

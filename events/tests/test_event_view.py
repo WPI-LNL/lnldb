@@ -13,90 +13,90 @@ class EventBasicViewTest(TestCase):
         self.client.login(username=self.user.username, password='123')
 
     def test_detail(self):
-        response = self.client.get(reverse('events-detail', args=[self.e.pk]))
+        response = self.client.get(reverse('events:detail', args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
     def test_edit(self):
-        response = self.client.get(reverse('event-edit', args=[self.e.pk]))
+        response = self.client.get(reverse('events:edit', args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Bad input
-        response = self.client.post(reverse('event-edit', args=[self.e.pk]))
+        response = self.client.post(reverse('events:edit', args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post
 
     def test_cancel(self):
-        response = self.client.post(reverse('event-cancel', args=[self.e.pk]))
+        response = self.client.post(reverse("events:cancel", args=[self.e.pk]))
         self.assertEqual(response.status_code, 302)
 
     def test_deny(self):
-        response = self.client.post(reverse('event-deny', args=[self.e.pk]))
+        response = self.client.post(reverse("events:deny", args=[self.e.pk]))
         self.assertEqual(response.status_code, 302)
 
     def test_close(self):
-        response = self.client.post(reverse('event-close', args=[self.e.pk]))
+        response = self.client.post(reverse("events:close", args=[self.e.pk]))
         self.assertEqual(response.status_code, 302)
 
     def test_reopen(self):
         self.test_close()
-        response = self.client.post(reverse('event-reopen', args=[self.e.pk]))
+        response = self.client.post(reverse("events:reopen", args=[self.e.pk]))
         self.assertEqual(response.status_code, 302)
 
     def test_approve(self):
-        response = self.client.get(reverse('event-approve', args=[self.e.pk]))
+        response = self.client.get(reverse("events:approve", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Bad input
-        response = self.client.post(reverse('event-approve', args=[self.e.pk]))
+        response = self.client.post(reverse("events:approve", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post
 
     def test_review(self):
-        response = self.client.get(reverse('event-review', args=[self.e.pk]))
+        response = self.client.get(reverse("events:review", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Default input should be good
-        response = self.client.post(reverse('event-review', args=[self.e.pk]))
+        response = self.client.post(reverse("events:review", args=[self.e.pk]))
         self.assertEqual(response.status_code, 302)
 
     def test_ccr_add(self):
-        response = self.client.get(reverse('event-mkccr', args=[self.e.pk]))
+        response = self.client.get(reverse("events:reports:new", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Empty (bad) input
-        response = self.client.post(reverse('event-mkccr', args=[self.e.pk]))
+        response = self.client.post(reverse("events:reports:new", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post saved
 
     def test_ccr_edit(self):
-        response = self.client.get(reverse('event-updccr', args=[self.e.pk, self.report.pk]))
+        response = self.client.get(reverse("events:reports:edit", args=[self.e.pk, self.report.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Empty (bad) input
-        response = self.client.post(reverse('event-updccr', args=[self.e.pk, self.report.pk]))
+        response = self.client.post(reverse("events:reports:edit", args=[self.e.pk, self.report.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post saved
 
     def test_myccr_add(self):
-        response = self.client.get(reverse('my-ccreport', args=[self.e.pk]))
+        response = self.client.get(reverse("my:report", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Bad (empty) input
-        response = self.client.post(reverse('my-ccreport', args=[self.e.pk]))
+        response = self.client.post(reverse("my:report", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post saved
 
     def test_bill_add(self):
-        response = self.client.get(reverse('event-mkbilling', args=[self.e.pk]))
+        response = self.client.get(reverse("events:bills:new", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # Bad input
-        response = self.client.post(reverse('event-mkbilling', args=[self.e.pk]))
+        response = self.client.post(reverse("events:bills:new", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
 
         # later: test post
@@ -108,6 +108,20 @@ class EventListBasicViewTest(TestCase):
         self.e2 = EventFactory.create(event_name="Other Test Event")
         self.user = UserFactory.create(password='123')
         self.client.login(username=self.user.username, password='123')
+
+    def test_public(self):
+        response = self.client.get(reverse('cal:list'))
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(reverse('cal:api'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_cal(self):
+        response = self.client.get(reverse('cal:feed'))
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(reverse('cal:feed-full'))
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(reverse('cal:feed-light'))
+        self.assertEqual(response.status_code, 200)
 
     def test_incoming(self):
         response = self.client.get(reverse('events:incoming'))

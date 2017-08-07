@@ -22,7 +22,7 @@
             <div class="carousel-caption">
               <h1>{{ img.href }}</h1>
               <p>{{ img.href_desc }}</p>
-              <p><a class="btn btn-lg btn-primary" href="{% url "pages.views.page" img.href.slug %}">{{ img.href_words }}</a></p>
+              <p><a class="btn btn-lg btn-primary" href="{% url "page" img.href.slug %}">{{ img.href_words }}</a></p>
             </div>
             {% else %}
             <div class="carousel-caption">

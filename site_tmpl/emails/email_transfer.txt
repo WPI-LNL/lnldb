@@ -2,4 +2,4 @@ Organization Transfer Email
 
 Please Follow the link below in order to complete your organizational transfer.
 
-{% url "my-orgs-acceptxfer" object.uuid.hex %}
+{% url "my:org-accept" object.uuid.hex %}

@@ -42,12 +42,12 @@
                     Automatically send me to CAS in the future.
                 </label>
             </form>
-            <a class="btn btn-lg btn-block btn-primary" href="{% url "login" %}?force_cas=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}"> CAS Login</a>
+            <a class="btn btn-lg btn-block btn-primary" href="{% url "accounts:login" %}?force_cas=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}"> CAS Login</a>
         </div>
         <div class="col-md-5 login">
             <h2> Login via Local Account </h2>
             {% crispy form %}
-            <p class="muted text-muted"><a href="{% url "django.contrib.auth.views.password_reset" %}"> Forgot your password? </a></p>
+            <p class="muted text-muted"><a href="{% url "accounts:reset:start" %}"> Forgot your password? </a></p>
         </div>
 
     </div>

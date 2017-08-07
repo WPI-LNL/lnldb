@@ -40,7 +40,7 @@
             </tr>
             {% for event in events %}
                     <tr class="event-status-{{ event.status | slugify }}">
-                        <td class="event-name"><a href="{% url "events.views.flow.viewevent" event.id %}">{{event.event_name}}</a></td>
+                        <td class="event-name"><a href="{% url "events:detail" event.id %}">{{event.event_name}}</a></td>
                         <td class="event-start">{{event.datetime_start}}</td>
                         <td class="event-orgs">
                             {% for org in event.org.all %}
@@ -76,7 +76,7 @@
                             {% if event.otherservices.count %} Y {% else %} N {% endif %}
                         </td>
                         <td class="tasks">
-                            <span class="crewtask"><a href="{% url "events.views.flow.assigncrew" event.id %}">Crew</a></span>
+                            <span class="crewtask"><a href="{% url "events:add-crew" event.id %}">Crew</a></span>
                             <input type="checkbox" class="hide eventselect" title="Select {{ event.event_name }}"
                                    value="{{ event.id }}">
                         </td>

@@ -11,7 +11,7 @@
                     {% for crew in event.crew.all %}
                     
                     <tr>
-                        <td> <a href="{% url "events.views.flow.rmcrew" event.id crew.id %}"><i class="glyphicon glyphicon-remove"></i></a>
+                        <td> <a href="{% url "events:remove-crew" event.id crew.id %}"><i class="glyphicon glyphicon-remove"></i></a>
                         <td> {{ crew.first_name }} {{crew.last_name}} </td>
                         
                     </tr>
