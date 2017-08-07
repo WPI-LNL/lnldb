@@ -185,7 +185,7 @@ def upcoming(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
+    events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     events, context = datefilter(events, context, start, end)
 
@@ -224,7 +224,7 @@ def incoming(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
+    events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices')
     events, context = datefilter(events, context, start, end)
 
@@ -263,7 +263,7 @@ def openworkorders(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
+    events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings') \
         .prefetch_related('crew_chief')
@@ -312,7 +312,7 @@ def findchief(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
+    events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
         events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
@@ -366,7 +366,7 @@ def unreviewed(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
+    events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     if not request.GET.get('hidedp') == '0':
         events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
@@ -417,7 +417,7 @@ def unbilled(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
+    events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
     if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
@@ -466,7 +466,7 @@ def unbilled_semester(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
+    events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
     events, context = datefilter(events, context, start, end)
@@ -507,7 +507,7 @@ def paid(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
+    events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
     if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
@@ -558,7 +558,7 @@ def unpaid(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
+    events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
     if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
@@ -597,7 +597,7 @@ def closed(request, start=None, end=None):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
+    events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('crew_chief')
     if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
@@ -630,7 +630,7 @@ def public_facing(request):
     events = Event.objects.filter(approved=True, closed=False, cancelled=False, test_event=False, sensitive=False) \
         .filter(datetime_end__gte=now)
     events = events.order_by('datetime_start')
-    events = events.select_related('location__building__shortname').prefetch_related('org') \
+    events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
     context['h2'] = "Active Events"
     context['events'] = events

@@ -198,10 +198,10 @@ TEMPLATES = [{
             'django.template.context_processors.request',
             'django.contrib.auth.context_processors.auth',
             'django.contrib.messages.context_processors.messages',
-            'django.template.context_processors.request',
-            'django.core.context_processors.static',
-            'django.core.context_processors.media',
-            'data.context_processors.flags',
+            'django.template.context_processors.request',  # removed in 1.10
+            'django.template.context_processors.static',
+            'django.template.context_processors.media',
+            'data.context_processors.airplane_mode',
             'data.context_processors.revision',
             'data.context_processors.analytics',
             # 'lnldb.processors.staticz',
@@ -230,7 +230,7 @@ MIDDLEWARE_CLASSES = (
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # 'events.middleware.ContactReminderMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
-    'django.contrib.redirects.middleware.RedirectFallbackMiddleware',
+    'data.middleware.SwappableRedirectMiddleware',
 )
 
 ROOT_URLCONF = 'lnldb.urls'
@@ -243,7 +243,6 @@ INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
-    'django.contrib.redirects',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Uncomment the next line to enable the admin:

@@ -1,3 +1,4 @@
+from functools import wraps, partial
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
@@ -7,7 +8,6 @@ from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
-from django.utils.functional import curry
 from django.utils.text import slugify
 from django.views.generic import CreateView, DeleteView, UpdateView
 from reversion.models import Version
@@ -23,6 +23,10 @@ from events.models import (Billing, CCReport, Event, EventArbitrary,
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
 from pdfs.views import generate_pdfs_standalone
+
+
+def curry_class(cls, *args, **kwargs):
+    return wraps(cls)(partial(cls, *args, **kwargs))
 
 
 @login_required
@@ -282,7 +286,7 @@ def hours_bulk_admin(request, id):
     context['event'] = event
 
     mk_hours_formset = inlineformset_factory(Event, Hours, extra=15, exclude=[])
-    mk_hours_formset.form = staticmethod(curry(MKHoursForm, event=event))
+    mk_hours_formset.form = curry_class(MKHoursForm, event=event)
 
     if request.method == 'POST':
         formset = mk_hours_formset(request.POST, instance=event)
@@ -324,7 +328,7 @@ def assigncc(request, id):
     context['event'] = event
 
     cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
-    cc_formset.form = staticmethod(curry(CCIForm, event=event))
+    cc_formset.form = curry_class(CCIForm, event=event)
 
     if request.method == 'POST':
         formset = cc_formset(request.POST, instance=event)
@@ -354,7 +358,7 @@ def assignattach(request, id):
     context['event'] = event
 
     att_formset = inlineformset_factory(Event, EventAttachment, extra=1, exclude=[])
-    att_formset.form = staticmethod(curry(AttachmentForm, event=event))
+    att_formset.form = curry_class(AttachmentForm, event=event)
 
     if request.method == 'POST':
         formset = att_formset(request.POST, request.FILES, instance=event)
@@ -385,7 +389,7 @@ def assignattach_external(request, id):
 
     mk_att_formset = inlineformset_factory(Event, EventAttachment, extra=1, exclude=[])
     # mk_att_formset.queryset = mk_att_formset.queryset.filter(externally_uploaded=True)
-    mk_att_formset.form = staticmethod(curry(AttachmentForm, event=event, externally_uploaded=True))
+    mk_att_formset.form = curry_class(AttachmentForm, event=event, externally_uploaded=True)
 
     if request.method == 'POST':
         formset = mk_att_formset(request.POST, request.FILES, instance=event,
@@ -422,7 +426,7 @@ def extras(request, id):
     context['event'] = event
 
     mk_extra_formset = inlineformset_factory(Event, ExtraInstance, extra=1, exclude=[])
-    mk_extra_formset.form = staticmethod(curry(ExtraForm))
+    mk_extra_formset.form = ExtraForm
 
     if request.method == 'POST':
         formset = mk_extra_formset(request.POST, request.FILES, instance=event)

@@ -19,11 +19,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='user',
             name='nickname',
-            field=models.CharField(max_length=32, null=True, verbose_name=b'Nickname', blank=True),
+            field=models.CharField(max_length=32, null=True, verbose_name='Nickname', blank=True),
         ),
         migrations.AddField(
             model_name='user',
             name='student_id',
-            field=models.PositiveIntegerField(null=True, verbose_name=b'Student ID', blank=True),
+            field=models.PositiveIntegerField(null=True, verbose_name='Student ID', blank=True),
         ),
     ]

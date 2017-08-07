@@ -1123,7 +1123,7 @@ class SelectForm(forms.Form):
     # soon to be a
     location = GroupedModelChoiceField(
         queryset=Location.objects.filter(show_in_wo_form=True)
-                         .select_related('building__name'),
+                         .select_related('building'),
         group_by_field="building",
         group_label=lambda group: group.name,
     )

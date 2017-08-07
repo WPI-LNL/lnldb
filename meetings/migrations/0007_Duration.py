@@ -22,12 +22,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='meeting',
             name='datetime',
-            field=models.DateTimeField(verbose_name=b'Start Time'),
+            field=models.DateTimeField(verbose_name='Start Time'),
         ),
         migrations.AlterField(
             model_name='meeting',
             name='minutes_private',
-            field=models.TextField(null=True, verbose_name=b'Closed Minutes', blank=True),
+            field=models.TextField(null=True, verbose_name='Closed Minutes', blank=True),
         ),
         migrations.AlterField(
             model_name='mtgattachment',

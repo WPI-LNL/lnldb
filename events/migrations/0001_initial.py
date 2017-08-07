@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 
 import django.db.models.deletion
-import uuidfield.fields
 from django.conf import settings
 from django.db import migrations, models
 
@@ -130,7 +129,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('attachment', models.FileField(upload_to=events.models.attachment_file_name)),
-                ('note', models.TextField(default=b'', null=True, blank=True)),
+                ('note', models.TextField(default='', null=True, blank=True)),
                 ('externally_uploaded', models.BooleanField(default=False)),
                 ('event', models.ForeignKey(related_name='attachments', to='events.Event')),
             ],
@@ -154,9 +153,9 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=64)),
                 ('cost', models.DecimalField(max_digits=8, decimal_places=2)),
                 ('desc', models.TextField()),
-                ('disappear', models.BooleanField(default=False, help_text=b'Disappear this extra instead of disable')),
+                ('disappear', models.BooleanField(default=False, help_text='Disappear this extra instead of disable')),
                 ('checkbox',
-                 models.BooleanField(default=False, help_text=b'Use a checkbox instead of an integer entry')),
+                 models.BooleanField(default=False, help_text='Use a checkbox instead of an integer entry')),
                 ('category', models.ForeignKey(to='events.Category')),
             ],
         ),
@@ -196,7 +195,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('name', models.CharField(max_length=64)),
                 ('setup_only', models.BooleanField(default=False)),
-                ('show_in_wo_form', models.BooleanField(default=True, verbose_name=b'Event Location')),
+                ('show_in_wo_form', models.BooleanField(default=True, verbose_name='Event Location')),
                 ('available_for_meetings', models.BooleanField(default=False)),
                 ('building', models.ForeignKey(to='events.Building')),
             ],
@@ -211,8 +210,8 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(unique=True, max_length=128)),
                 ('shortname', models.CharField(max_length=8, null=True, blank=True)),
                 (
-                'email', models.EmailField(max_length=254, null=True, verbose_name=b'normal_email_unused', blank=True)),
-                ('exec_email', models.EmailField(max_length=254, null=True, verbose_name=b'EMail', blank=True)),
+                'email', models.EmailField(max_length=254, null=True, verbose_name='normal_email_unused', blank=True)),
+                ('exec_email', models.EmailField(max_length=254, null=True, verbose_name='EMail', blank=True)),
                 ('email_exec', models.BooleanField(default=True)),
                 ('email_normal', models.BooleanField(default=False)),
                 ('address', models.TextField(null=True, blank=True)),
@@ -223,7 +222,7 @@ class Migration(migrations.Migration):
                 ('archived', models.BooleanField(default=False)),
                 ('accounts', models.ManyToManyField(related_name='orgfunds', to='events.Fund')),
                 ('associated_orgs',
-                 models.ManyToManyField(related_name='associated_orgs_rel_+', verbose_name=b'Associated Clients',
+                 models.ManyToManyField(related_name='associated_orgs_rel_+', verbose_name='Associated Clients',
                                         to='events.Organization', blank=True)),
                 ('associated_users', models.ManyToManyField(related_name='orgusers', to=settings.AUTH_USER_MODEL)),
                 ('user_in_charge', models.ForeignKey(related_name='orgowner', to=settings.AUTH_USER_MODEL)),
@@ -238,7 +237,7 @@ class Migration(migrations.Migration):
             name='OrganizationTransfer',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('uuid', uuidfield.fields.UUIDField(unique=True, max_length=32, editable=False, blank=True)),
+                ('uuid', models.CharField(unique=True, max_length=32, editable=False, blank=True)),
                 ('created', models.DateTimeField(auto_now=True)),
                 ('completed_on', models.DateTimeField(null=True, blank=True)),
                 ('expiry', models.DateTimeField(null=True, blank=True)),
@@ -369,7 +368,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='contact',
-            field=models.ForeignKey(verbose_name=b'Contact', blank=True, to=settings.AUTH_USER_MODEL, null=True),
+            field=models.ForeignKey(verbose_name='Contact', blank=True, to=settings.AUTH_USER_MODEL, null=True),
         ),
         migrations.AddField(
             model_name='event',
@@ -389,7 +388,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='org',
-            field=models.ManyToManyField(to='events.Organization', verbose_name=b'Client', blank=True),
+            field=models.ManyToManyField(to='events.Organization', verbose_name='Client', blank=True),
         ),
         migrations.AddField(
             model_name='event',
@@ -420,7 +419,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='ccreport',
             name='for_service_cat',
-            field=models.ManyToManyField(to='events.Category', verbose_name=b'Services', blank=True),
+            field=models.ManyToManyField(to='events.Category', verbose_name='Services', blank=True),
         ),
         migrations.AddField(
             model_name='billing',

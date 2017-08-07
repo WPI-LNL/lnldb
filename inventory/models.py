@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Q
+from django.utils.encoding import python_2_unicode_compatible
 from django.utils.functional import cached_property
 from mptt.fields import TreeForeignKey
 from mptt.managers import TreeManager
@@ -165,6 +166,7 @@ class EquipmentItem(MPTTModel):
         parent_attr = 'case'
 
 
+@python_2_unicode_compatible
 class EquipmentClass(models.Model):
     name = models.CharField(max_length=190)
     category = TreeForeignKey(EquipmentCategory, null=False, blank=False)
@@ -183,7 +185,7 @@ class EquipmentClass(models.Model):
 
     wiki_text = models.TextField(help_text="How to use this item", null=True, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     @cached_property
@@ -208,14 +210,16 @@ class EquipmentClass(models.Model):
 
 
 # Eg. 'In Repair', 'Out on rental', 'In service'
+@python_2_unicode_compatible
 class EquipmentStatus(models.Model):
     name = models.CharField(max_length=32)
     glyphicon = models.CharField(max_length=32)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
+@python_2_unicode_compatible
 class EquipmentMaintEntry(models.Model):
     date = models.DateTimeField(auto_now_add=True)
 
@@ -228,7 +232,7 @@ class EquipmentMaintEntry(models.Model):
                                   null=False, blank=False)
     status = models.ForeignKey(EquipmentStatus, null=False, blank=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return str(self.date)
 
     class Meta:
