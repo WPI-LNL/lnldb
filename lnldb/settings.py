@@ -148,7 +148,7 @@ else:
     # Example: "/home/media/media.lawrence.com/media/"
     # noinspection PyUnresolvedReferences
     print("Warning: using local storage for a file store")
-    MEDIA_ROOT = from_runtime('media/')
+    MEDIA_ROOT = env.str("MEDIA_ROOT", from_runtime('media/'))
     MEDIA_URL = '/media/'
 
 # Absolute path to the directory static files should be collected to.
@@ -156,7 +156,7 @@ else:
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
 # noinspection PyUnresolvedReferences
-STATIC_ROOT = from_runtime('static')
+STATIC_ROOT = env.str("STATIC_ROOT", from_runtime('static'))
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
