@@ -23,7 +23,7 @@
                             program (look for 'Add by URL' or 'Internet Calendar').</p>
                         <div class="input-group">
                             <input class="form-control" id="cal_url" type="text" readonly onclick="$(this).select();"
-                                   value="http{% if request.is_secure %}s{% endif %}://{% firstof request.META.HTTP_HOST 'lnl.wpi.edu' %}{% url "cal:feed" %}" >
+                                   value="{{ request.scheme }}://{{ request.get_host }}{% url 'cal:feed' %}" >
                             <span class="input-group-btn">
                                 <button class="btn btn-default" type="button"
                                         onclick="$('#cal_url').select();document.execCommand('copy');">

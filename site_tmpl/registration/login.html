@@ -30,6 +30,7 @@
 
 <div class="container marketing" style="text-align:center;">
     <div class="row">
+        {% if settings.USE_CAS %}
         <div class="col-md-5 offset1">
             <h2> Login via WPI CAS </h2>
 
@@ -44,6 +45,7 @@
             </form>
             <a class="btn btn-lg btn-block btn-primary" href="{% url "accounts:login" %}?force_cas=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}"> CAS Login</a>
         </div>
+        {% endif %}
         <div class="col-md-5 login">
             <h2> Login via Local Account </h2>
             {% crispy form %}

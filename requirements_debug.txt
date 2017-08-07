@@ -1,4 +1,4 @@
--r requirements.txt
+-r requirements_base.txt
 coverage
 coveralls
 pep8

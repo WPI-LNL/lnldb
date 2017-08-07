@@ -1,9 +1,10 @@
 from django.conf import settings
 
 
-def airplane_mode(request):
-    # return the value you want as a dictionnary. you may add multiple values in there.
-    return {'AIRPLANE_MODE': settings.AIRPLANE_MODE}
+def flags(request):
+    # return the value you want as a dictionary. you may add multiple values in there.
+    return {'AIRPLANE_MODE': settings.AIRPLANE_MODE,
+            "USE_CAS": settings.USE_CAS}
 
 
 def analytics(request):
