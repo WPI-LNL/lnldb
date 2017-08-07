@@ -72,7 +72,8 @@ urlpatterns = [
             name='start'),
         url(r'^confirm/(?P<uidb64>[0-9A-Za-z]+)-(?P<token>.+)/$',
             auth_views.password_reset_confirm,
-            {'template_name': 'registration/reset_password_form.html'},
+            {'template_name': 'registration/reset_password_form.html'
+             'post_reset_redirect': 'accounts:reset:sent'},
             name='confirm'),
         url(r'^sent/$', auth_views.password_reset_done,
             {'template_name': 'registration/reset_password_sent.html'},
