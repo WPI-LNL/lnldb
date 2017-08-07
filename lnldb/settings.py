@@ -50,6 +50,7 @@ DEBUG = env.bool("DEBUG", default=True)
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
+    ('LNL Webmaster', 'lnl-w@wpi.edu'),
 )
 
 MANAGERS = ADMINS
@@ -169,6 +170,7 @@ STATICFILES_DIRS = (
     # Don't forget to use absolute paths, not relative paths.
     from_root("static"),
 )
+FILE_UPLOAD_PERMISSIONS = 0644
 
 # List of finder classes that know how to find static files in
 # various locations.
@@ -364,7 +366,7 @@ AUTHENTICATION_BACKENDS = (
 LANDING_TIMEDELTA = 72
 
 # Number of days to pass before crew chief reports are locked
-CCR_DAY_DELTA = 7
+CCR_DAY_DELTA = 14
 
 # email stuff
 DEFAULT_TO_ADDR = "lnl@wpi.edu"
@@ -377,14 +379,14 @@ EMAIL_TARGET_TD = "lnl-td@wpi.edu"
 EMAIL_TARGET_W = "lnl-w@wpi.edu"
 EMAIL_TARGET_HP = "lnl-hp@wpi.edu"
 
-SEND_EMAIL_ORG_TRANSFER = True
-SEND_START_END_EMAILS = True
+SEND_EMAIL_ORG_TRANSFER = False
+SEND_START_END_EMAILS = False
 
 EMAIL_TARGET_START_END = "gmp@h4xmb.org"
 EMAIL_KEY_START_END = None
 
-LOGIN_URL = "/local/login/"
-LOGIN_REDIRECT_URL = "/my/"
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/db/"
 
 CAS_FORCE_POST_LOGIN = False
 
