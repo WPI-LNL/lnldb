@@ -201,7 +201,7 @@ TEMPLATES = [{
             'django.template.context_processors.request',  # removed in 1.10
             'django.template.context_processors.static',
             'django.template.context_processors.media',
-            'data.context_processors.airplane_mode',
+            'data.context_processors.flags',
             'data.context_processors.revision',
             'data.context_processors.analytics',
             # 'lnldb.processors.staticz',
