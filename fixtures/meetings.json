@@ -1,0 +1,37 @@
+[
+  {
+    "fields": {
+      "name": "General"
+    },
+    "model": "meetings.meetingtype",
+    "pk": 1
+  },
+  {
+    "fields": {
+      "name": "Exec"
+    },
+    "model": "meetings.meetingtype",
+    "pk": 2
+  },
+  {
+    "fields": {
+      "name": "Training"
+    },
+    "model": "meetings.meetingtype",
+    "pk": 3
+  },
+  {
+    "fields": {
+      "name": "Committee"
+    },
+    "model": "meetings.meetingtype",
+    "pk": 4
+  },
+  {
+    "fields": {
+      "name": "Social"
+    },
+    "model": "meetings.meetingtype",
+    "pk": 5
+  }
+]
