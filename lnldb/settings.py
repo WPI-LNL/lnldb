@@ -450,6 +450,9 @@ if env.str("CAS_SERVER_URL", ""):
     CAS_SERVER_URL = env.str("CAS_SERVER_URL")
     #CAS_LOGOUT_COMPLETELY = True
     CAS_REDIRECT_URL = '/db/'
+    AUTHENTICATION_BACKENDS = AUTHENTICATION_BACKENDS + (
+        'django_cas_ng.backends.CASBackend',
+    )
     USE_CAS = True
 else:
     USE_CAS = False
