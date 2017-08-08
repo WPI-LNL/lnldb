@@ -38,7 +38,7 @@ class SwappableRedirectMiddleware(object):
             try:
                 r = self.redirect_model.objects.get(
                     site=current_site,
-                    old_path=request.get_full_path(force_append_slash=True),
+                    old_path=request.get_full_path(),
                 )
             except self.redirect_model.DoesNotExist:
                 pass
