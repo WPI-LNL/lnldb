@@ -25,3 +25,8 @@ script:
 
 after_success:
     coveralls
+
+matrix:
+      exclude:
+       - python: "2.7"
+         env: DJANGO="https://github.com/django/django/archive/master.tar.gz"
