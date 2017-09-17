@@ -91,6 +91,8 @@ for key in DATABASES:
 
     # fix mysql unicode stupidity
     if db['ENGINE'] == 'django.db.backends.mysql':
+        if not 'OPTIONS' in db:
+            db['OPTIONS'] = {}
         db['OPTIONS'].update({
             'sql_mode': 'TRADITIONAL',
             'charset': 'utf8mb4',
