@@ -1,0 +1,12 @@
+doc-warnings: true
+strictness: medium
+max-line-length: 120
+pylint:
+  disable:
+    - unused-argument
+uses:
+  - django
+ignore-patterns:
+  - (^|/)migrations(/|$)
+python-targets:
+  - 2

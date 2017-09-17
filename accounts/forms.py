@@ -3,6 +3,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Div, Field, Fieldset, Layout, Row, Submit
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.forms import ModelForm
 
 from data.forms import FieldAccessForm, FieldAccessLevel
 
@@ -103,8 +104,8 @@ class UserAddForm(UserCreationForm):
             return ""
 
     def save(self, commit=True):
-        # we want to bypass UserCreationForm. Here's how:
-        user = super(UserCreationForm, self).save(commit=False)
+        # we want to bypass UserCreationForm's save.
+        user = ModelForm.save(self, commit=False)
 
         # only set a pass if the form is filled
         if self.cleaned_data['password1']:

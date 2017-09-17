@@ -1,0 +1,71 @@
+{
+  "name": "LNL DB",
+  "description": "Manages our events.",
+  "keywords": [
+    "productivity",
+    "HTML5"
+  ],
+  "website": "https://lnl.wpi.edu/",
+  "repository": "https://github.com/WPI-LNL/lnldb/",
+  "success_url": "/list",
+  "scripts": {
+    "postdeploy": "python manage.py loaddata fixtures/*.json"
+  },
+  "env": {
+    "SECRET_KEY": {
+      "description": "A secret key for verifying the integrity of signed cookies.",
+      "generator": "secret"
+    },
+    "ALLOWED_HOSTS": {
+      "description": "A lists of hostnames that the server will respond to. A good starter is 'yourappname.herokuapp.com'"
+    },
+    "CCC_PASS": {
+      "description": "The WPI CCC password. LDAP returns info more reliably with this.",
+      "required": false
+    },
+    "CAS_SERVER_URL": {
+      "description": "The CAS server to use, if any. Note that many CAS servers run on a whitelist.",
+      "required": false
+    },
+    "AWS_ACCESS_KEY_ID": {
+      "description": "(Required for file storage) AWS S3 creds: id",
+      "required": false
+    },
+    "AWS_SECRET_ACCESS_KEY": {
+      "description": "(Required for file storage) AWS S3 creds: password",
+      "required": false
+    },
+    "AWS_STORAGE_BUCKET_NAME": {
+      "description": "(Required for file storage) AWS S3 creds: bucket",
+      "required": false
+    },
+    "AWS_S3_REGION_NAME": {
+      "description": "(Required for file storage) AWS S3 creds: region name",
+      "required": false
+    },
+    "GA_ID": {
+      "description": "Google analytics ID",
+      "required": false
+    },
+    "USE_WHITENOISE": {
+        "description": "Host static files via django. Unless you're running a separate server in front of this (cough, userweb), you want this. ",
+        "value": "True"
+    },
+    "DEBUG": {
+      "description": "Sets debug mode on/off for the site. If enabled, insecure (but soooo convenient...)",
+      "value": "True"
+    }
+  },
+  "addons": [
+    "sendgrid",
+    "sentry",
+    "heroku-postgresql"
+  ],
+  "environments": {
+    "test": {
+      "scripts": {
+        "test": "python manage.py test"
+      }
+    }
+  }
+}

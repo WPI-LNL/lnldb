@@ -476,7 +476,7 @@ class EventReviewForm(forms.ModelForm):
                 HTML('<h4> Does this look good to you?</h4>'),
                 Submit('save', 'Yes!', css_class='btn btn-lg btn-danger'),
                 HTML(
-                    '<a class="btn btn-lg btn-success" href="{%% url "events.views.flow.viewevent" %s %%}"> No... </a>'
+                    '<a class="btn btn-lg btn-success" href="{%% url "events:detail" %s %%}"> No... </a>'
                     % event.id),
             ),
         )
@@ -733,8 +733,11 @@ class MKHoursForm(forms.ModelForm):
 
     def clean(self):
         super(MKHoursForm, self).clean()
-        service = self.cleaned_data['service']
-        user = self.cleaned_data['user']
+        service = self.cleaned_data.get('service')
+        user = self.cleaned_data.get('user')
+        if service is None or user is None:
+            # required fields are missing; checked elsewhere
+            return
         if self.event.hours.filter(user=user, service=service).exists() and not self.instance.pk:
             raise ValidationError("User already has hours for this service. Edit those instead")
 
@@ -1120,7 +1123,7 @@ class SelectForm(forms.Form):
     # soon to be a
     location = GroupedModelChoiceField(
         queryset=Location.objects.filter(show_in_wo_form=True)
-                         .select_related('building__name'),
+                         .select_related('building'),
         group_by_field="building",
         group_label=lambda group: group.name,
     )

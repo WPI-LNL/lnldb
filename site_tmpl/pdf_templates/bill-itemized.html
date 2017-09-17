@@ -7,8 +7,6 @@
     XHTML2PDF/Pisa supports a subset of HTML0 and CSS0. Everything is finicky, and anything past a single-
         element selector is just asking for disaster. Also, nothing was displayed without a table. I'm taking a chance
         just by writing this comment. FUCK THIS CODE.
-
-    Oh, also run ./manage.py collectstatic before testing, as it doesn't understand django's remapping of assets.
 -->
 <div>
             <table>
@@ -24,7 +22,7 @@
                             <li>Office: 508-831-5595</li>
                             <li>Fax: 508-831-6045</li>
                             <li><a href="mailto:lnl@wpi.edu" class="unstyled">lnl@wpi.edu</a></li>
-                            <li><a href="http://lnl.wpi.edu/" class="unstyled">http://lnl.wpi.edu/</a></li>
+                            <li><a href="{{ request.scheme }}://{{ request.get_host }}/" class="unstyled">{{ request.scheme }}://{{ request.get_host }}/</a></li>
                         </ul>
 
                 </td>
@@ -113,7 +111,7 @@
 <table class="center">
 {% if event.reviewed %}
     <tr><td>Please complete the attached IDT and return it to the Lens and Lights mailbox in the Student Activities Office.</td></tr>
-    <tr><td><p>For a quick guide on how to fill out the attached interdeparmental transfer form, see <a class="unstyled" href="http://lnl.wpi.edu/idt-help">lnl.wpi.edu/idt-help</a>.</td></tr>
+    <tr><td><p>For a quick guide on how to fill out the attached interdeparmental transfer form, see <a class="unstyled" href="{{ request.scheme }}://{{ request.get_host }}/idt-help">{{ request.get_host }}/idt-help</a>.</td></tr>
     <tr><td><p>If you have any questions concerning this invoice, contact our treasurer at <a class="unstyled" href="mailto:lnl-t@wpi.edu">lnl-t@wpi.edu</a>.</td></tr>
 {% else %}
     <tr><td>This is a quote of the expected charges, and may change based on a variety of factors, including additional equipment requests at the event. We will do our best to inform the listed contact of any charges in advance, but this is not guaranteed.</td></tr>

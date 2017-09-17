@@ -157,7 +157,7 @@ def smart_login(request):
     pref_cas = request.COOKIES.get('prefer_cas', None)
     use_cas = request.GET.get("force_cas", None)
 
-    next_url = request.GET.get("next", reverse('db'))
+    next_url = request.GET.get("next", reverse('home'))
     if request.user.is_authenticated():
         return HttpResponseRedirect(next_url)
     if pref_cas == "true" or use_cas == "true" or "ticket" in request.GET:

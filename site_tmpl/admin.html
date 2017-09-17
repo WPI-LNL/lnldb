@@ -26,7 +26,7 @@
                 </tr>
                 {% for event in events %}
                         <tr>
-                            <td><a href="{% url "events.views.flow.viewevent" event.id %}">{{event.event_name}}</a></td>
+                            <td><a href="{% url "events:detail" event.id %}">{{event.event_name}}</a></td>
                             <td>{{event.datetime_start}}</td>
                             <td>{{event.datetime_end}}</td>
                             <td>

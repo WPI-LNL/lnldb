@@ -2,7 +2,8 @@
 {% load bootstrap_calendar %}
 
 {% block extras %}
-{% bootstrap_calendar_js events_url="/list/json" %}
+{% url 'cal:api' as bootcal_endpoint %}
+{% bootstrap_calendar_js events_url=bootcal_endpoint %}
 {% bootstrap_calendar_css %}
 {% endblock %}
 
@@ -22,7 +23,7 @@
                             program (look for 'Add by URL' or 'Internet Calendar').</p>
                         <div class="input-group">
                             <input class="form-control" id="cal_url" type="text" readonly onclick="$(this).select();"
-                                   value="http{% if request.is_secure %}s{% endif %}://{% firstof request.META.HTTP_HOST 'lnl.wpi.edu' %}{% url 'public_cal_feed' %}" >
+                                   value="{{ request.scheme }}://{{ request.get_host }}{% url 'cal:feed' %}" >
                             <span class="input-group-btn">
                                 <button class="btn btn-default" type="button"
                                         onclick="$('#cal_url').select();document.execCommand('copy');">
@@ -71,7 +72,7 @@
             </tr>
             {% for event in events %}
                     <tr id="{{event.id}}">
-                        <td><a href="{% url "events-detail" event.pk %}">{{event.event_name}}</a> - <b>{{ event.short_services }}</b></td> 
+                        <td><a href="{% url "events:detail" event.pk %}">{{event.event_name}}</a> - <b>{{ event.short_services }}</b></td> 
                         <td>{{event.location}} ({{event.location.building }})</td>
                         <td>
                             {% for cc in event.ccinstances.all|dictsort:"setup_start" %}

@@ -11,7 +11,7 @@
             <h3>Status: <b>{{ event.status }}</b></h3>
 
             <div class="btn-group">
-                <a class="btn btn-info btn-lg" href="{% url "events-pdf" event.id %}">PDF</a>
+                <a class="btn btn-info btn-lg" href="{% url "events:pdf" event.id %}">PDF</a>
                 {% if event.closed or event.cancelled %}
                     {% permission request.user has 'events.reopen_event' of event %}
                         <a class="btn btn-default btn-lg" href="#reopenModal" role="button"
@@ -20,7 +20,7 @@
                 {% else %}
                     {% permission request.user has 'events.edit_event_text' of event or request.user has 'events.edit_event_times' of event %}
                         <a class="btn btn-warning btn-lg"
-                           href="{% url "events.views.mkedrm.eventnew" event.id %}">Edit</a>
+                           href="{% url "events:edit" event.id %}">Edit</a>
                     {% endpermission %}
                     {% if not event.reviewed %}
                         {% permission request.user has 'events.cancel_event' of event %}
@@ -30,19 +30,19 @@
                     {% endif %}
                     {% if not event.approved %}
                         {% permission request.user has 'events.approve_event' of event %}
-                            <a class="btn btn-success btn-lg" href="{% url "events.views.flow.approval" event.id %}">Approve</a>
+                            <a class="btn btn-success btn-lg" href="{% url "events:approve" event.id %}">Approve</a>
                             <a class="btn btn-danger btn-lg"
-                               href="{% url "events.views.flow.denial" event.id %}">Deny</a>
+                               href="{% url "events:deny" event.id %}">Deny</a>
                         {% endpermission %}
                     {% else %}
                         {% if not event.reviewed %}
                             {% permission request.user has 'events.review_event' of event %}
-                                <a class="btn btn-success btn-lg" href="{% url "events.views.flow.review" event.id %}">Review
+                                <a class="btn btn-success btn-lg" href="{% url "events:review" event.id %}">Review
                                     For Billing</a>
                             {% endpermission %}
                         {% else %}
                             {% permission request.user has 'events.bill_event' of event %}
-                                <a class="btn btn-primary btn-lg" href="{% url "event-mkbilling" event.id %}">Create
+                                <a class="btn btn-primary btn-lg" href="{% url "events:bills:new" event.id %}">Create
                                     Bill</a>
                             {% endpermission %}
                             {% permission request.user has 'events.close_event' of event %}
@@ -76,7 +76,7 @@
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
-                        <a class="btn btn-primary" href="{% url "event-close" event.id %}">Close Event</a>
+                        <a class="btn btn-primary" href="{% url "events:close" event.id %}">Close Event</a>
                     </div>
                 </div>
             </div>
@@ -100,7 +100,7 @@
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
-                        <a class="btn btn-primary" href="{% url "event-cancel" event.id %}">Cancel Event</a>
+                        <a class="btn btn-primary" href="{% url "events:cancel" event.id %}">Cancel Event</a>
                     </div>
                 </div>
             </div>
@@ -123,7 +123,7 @@
                         </div>
                         <div class="modal-footer">
                             <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
-                            <a class="btn btn-primary" href="{% url "event-reopen" event.id %}">Reopen Event</a>
+                            <a class="btn btn-primary" href="{% url "events:reopen" event.id %}">Reopen Event</a>
                         </div>
                     </div>
                 </div>
@@ -291,7 +291,7 @@
                     </table>
                 </div>
                 <div id="services" class="tab-pane">
-                    <div class="pull-right"><a class="btn btn-lg btn-info" href="{% url "eventextras" event.id %}">Modify Extras</a></div>
+                    <div class="pull-right"><a class="btn btn-lg btn-info" href="{% url "events:extras" event.id %}">Modify Extras</a></div>
                     {% if event.lighting %}
                         <h2>Lighting Services ({{ event.lighting }})</h2>
                         <h3>Requirements:</h3>
@@ -353,7 +353,7 @@
                     
                 </div>
                 <div id="crew" class="tab-pane">
-                    <a class="btn btn-lg btn-info pull-right" href="{% url "events.views.flow.assigncc" event.id %}">Modify</a>
+                    <a class="btn btn-lg btn-info pull-right" href="{% url "events:chiefs" event.id %}">Modify</a>
                     <h2> Crew Chief(s) </h2>
                     <table class="table">
                         <tr>
@@ -379,7 +379,7 @@
                         {% endfor %}
                     </table>
                     {% comment %}
-                    <a class="btn btn-lg btn-info pull-right" href="{% url "events.views.flow.assigncrew" event.id %}">Modify</a>
+                    <a class="btn btn-lg btn-info pull-right" href="{% url "events:add-crew" event.id %}">Modify</a>
                     <h2> Crew </h2>
                     <ul>
                         {% for c in event.crew.all %}
@@ -392,7 +392,7 @@
                 <div id="reports" class="tab-pane">
                     {% if not event.closed or not event.cancelled %}
                         <div class="pull-right">
-                            <a class="btn btn-primary btn-lg" href="{% url "event-mkccr" event.id%}">New</a>
+                            <a class="btn btn-primary btn-lg" href="{% url "events:reports:new" event.id%}">New</a>
                         </div>
                     {% endif %}
                     <h2>Reports</h2>
@@ -405,10 +405,10 @@
                             {% endif %}
                             {% if not event.closed or not event.cancelled %}
                                 {% permission request.user has 'events.change_ccreport' of report %}
-                                    [<a href="{% url "event-updccr" event.id report.id %}">Edit</a>]
+                                    [<a href="{% url "events:reports:edit" event.id report.id %}">Edit</a>]
                                 {% endpermission %}
                                 {% permission request.user has 'events.delete_ccreport' of report %}
-                                    [<a href="{% url "event-rmccr" event.id report.id %}">Delete</a>]
+                                    [<a href="{% url "events:reports:remove" event.id report.id %}">Delete</a>]
                                 {% endpermission %}
                             {% endif %}
                         </em>
@@ -431,7 +431,7 @@
                         {% endfor %}
                         </ul>
                     {% endif %}
-                    <div class="pull-right"><a class="btn btn-primary btn-lg" href="{% url "admin-cchours-bulk" event.id %}">Edit</a></div>
+                    <div class="pull-right"><a class="btn btn-primary btn-lg" href="{% url "events:add-bulk-crew" event.id %}">Edit</a></div>
                     <h2> Hours </h2>
                     <table class="table">
                         <thead>
@@ -455,8 +455,8 @@
                 <div id="billing" class="tab-pane">
                     {% permission request.user has 'events.adjust_event_charges' of event %}
                         <div class="pull-right btn-group">
-                            <a class="btn btn-lg btn-primary" href="{% url "eventextras" event.id %}">Modify Extras</a>
-                            <a class="btn btn-lg btn-info" href="{% url "eventoneoff" event.id %}">Add OneOff
+                            <a class="btn btn-lg btn-primary" href="{% url "events:extras" event.id %}">Modify Extras</a>
+                            <a class="btn btn-lg btn-info" href="{% url "events:oneoffs" event.id %}">Add OneOff
                                 Charges</a>
                         </div>
                     {% endpermission %}
@@ -571,9 +571,9 @@
                     </table>
                     <h2> Bills </h2>
 							{% if event.reviewed %}
-                    <a class="btn btn-primary" href="{% url 'events-pdf-bill' event.id %}">Download Invoice</a>
+                    <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Invoice</a>
 							{% else %}
-                    <a class="btn btn-primary" href="{% url 'events-pdf-bill' event.id %}">Download Quote</a>
+                    <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Quote</a>
 							{% endif %}
                     {% if event.billings %}
                         <table class="table">
@@ -596,9 +596,9 @@
                                         <td>
                                             {% if not event.closed %}
                                                 <a class="btn btn-link"
-                                                   href="{% url "event-updbilling" event.id billing.id %}">Update</a>
+                                                   href="{% url "events:bills:edit" event.id billing.id %}">Update</a>
                                                 {% if not billing.date_paid %}<a class="btn btn-link"
-                                                                                 href="{% url "event-rmbilling" event.id billing.id %}">Delete</a>
+                                                                                 href="{% url "events:bills:remove" event.id billing.id %}">Delete</a>
                                                 {% endif %}
                                             {% endif %}
                                         </td>
@@ -618,7 +618,7 @@
                 </div>
                 {% endpermission %}
                 <div id="files" class="tab-pane">
-                    <div class="pull-right">{% if not event.closed %}<a class="btn btn-warning" href="{% url "eventattachments" event.id %}">Edit</a>{% endif %}</div>
+                    <div class="pull-right">{% if not event.closed %}<a class="btn btn-warning" href="{% url "events:files" event.id %}">Edit</a>{% endif %}</div>
                     <h2> Files </h2> 
                     <table class="table">
                         <tr>

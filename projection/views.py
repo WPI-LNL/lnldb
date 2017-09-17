@@ -21,7 +21,7 @@ from projection.models import PITLevel, Projectionist
 @permission_required('projection.view_pits', raise_exception=True)
 def plist(request):
     context = {}
-    users = Projectionist.objects.select_related().order_by('user__last_name')
+    users = Projectionist.objects.select_related('user').order_by('user__last_name')
 
     context['users'] = users
     context['h2'] = "Projectionist List"
@@ -37,7 +37,7 @@ def plist_detail(request):
         .order_by('ordering')
 
     users = Projectionist.objects \
-        .select_related('user__first_name', 'user__last_name', 'user__username')
+        .select_related('user')
 
     licensed = Q(pitinstances__pit_level__name_short__in=['PP', 'L'])
     alumni = Q(user__groups__name="Alumni")
@@ -64,7 +64,7 @@ def projection_update(request, id):
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
-            return HttpResponseRedirect(reverse("projection-list-detail"))
+            return HttpResponseRedirect(reverse("projection:grid"))
         else:
             context['form'] = form
             context['formset'] = formset
@@ -109,11 +109,11 @@ class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
     model = Projectionist
     template_name = "form_crispy_projection.html"
     form_class = ProjectionistForm
-    # success_url = reverse("projection-list")
+    # success_url = reverse("projection:list")
 
     @property
     def success_url(self):
-        return reverse('projection-list-detail')
+        return reverse("projection:grid")
 
 
 class BulkUpdateView(LoginRequiredMixin, HasPermMixin, FormView):
@@ -123,7 +123,7 @@ class BulkUpdateView(LoginRequiredMixin, HasPermMixin, FormView):
 
     @property
     def success_url(self):
-        return reverse('projection-list-detail')
+        return reverse("projection:grid")
 
     def form_valid(self, form):
         # This method is called when valid form data has been POSTed.
@@ -139,7 +139,7 @@ class ProjectionistDelete(LoginRequiredMixin, HasPermMixin, DeleteView):
     perms = 'projection.edit_pits'
 
     def get_success_url(self):
-        return reverse("projection-list-detail")
+        return reverse("projection:grid")
 
 
 def get_saturdays_for_range(date_1, date_2):

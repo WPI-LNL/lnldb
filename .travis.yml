@@ -8,9 +8,14 @@ cache:
 python:
     - "2.7"
 
+env:
+    - DJANGO="Django<1.9>1.8"
+    - DJANGO="Django<2>1.11"
+
 install:
     - pip install --upgrade pip
     - pip install --cache-dir $HOME/.pip-cache -r requirements_debug.txt
+    - pip install $DJANGO
 
 script:
     - coverage run --source=. --omit="*/migrations/*" manage.py test

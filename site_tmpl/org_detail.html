@@ -140,7 +140,7 @@
                 {% permission user has 'events.view_event' of e %}
             <tr>
                 <td>
-                    <a href="{% url "events.views.flow.viewevent" e.id %}">{{ e }}</a>
+                    <a href="{% url "events:detail" e.id %}">{{ e }}</a>
                 </td>
                 <td>
                     {{ e.datetime_end }}

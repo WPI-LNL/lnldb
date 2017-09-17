@@ -89,7 +89,7 @@ class MtgAttachmentEditForm(forms.ModelForm):
         super(MtgAttachmentEditForm, self).__init__(*args, **kwargs)
         self.helper.add_input(Button('delete', 'Delete',
                                      onClick='window.location.href="{}"'
-                                     .format(reverse('meetings.views.rm_att',
+                                     .format(reverse('meetings:att-rm',
                                                      args=(self.instance.meeting.pk, self.instance.pk))),
                                      css_class='btn-danger'))
 

@@ -1,3 +1,4 @@
+from functools import wraps, partial
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
@@ -7,7 +8,6 @@ from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
-from django.utils.functional import curry
 from django.utils.text import slugify
 from django.views.generic import CreateView, DeleteView, UpdateView
 from reversion.models import Version
@@ -25,6 +25,10 @@ from helpers.mixins import (ConditionalFormMixin, HasPermMixin,
 from pdfs.views import generate_pdfs_standalone
 
 
+def curry_class(cls, *args, **kwargs):
+    return wraps(cls)(partial(cls, *args, **kwargs))
+
+
 @login_required
 @permission_required('events.approve_event', raise_exception=True)
 def approval(request, id):
@@ -35,7 +39,7 @@ def approval(request, id):
         raise PermissionDenied
     if event.approved:
         messages.add_message(request, messages.INFO, 'Event has already been approved!')
-        return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
     if request.method == 'POST':
         form = EventApprovalForm(request.POST, instance=event)
@@ -56,7 +60,7 @@ def approval(request, id):
                 messages.add_message(request, messages.INFO,
                                      'No contact info on file for approval. Please give them the good news!')
 
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(e.id,)))
+            return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
         else:
             context['formset'] = form
     else:
@@ -78,7 +82,7 @@ def denial(request, id):
         raise PermissionDenied
     if event.cancelled:
         messages.add_message(request, messages.INFO, 'Event has already been cancelled!')
-        return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
     if request.method == 'POST':
         form = EventDenialForm(request.POST, instance=event)
@@ -101,7 +105,7 @@ def denial(request, id):
             else:
                 messages.add_message(request, messages.INFO,
                                      'No contact info on file for denial. Please give them the bad news.')
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(e.id,)))
+            return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
         else:
             context['formset'] = form
     else:
@@ -121,7 +125,7 @@ def review(request, id):
 
     if event.reviewed:
         messages.add_message(request, messages.INFO, 'Event has already been reviewed!')
-        return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
     context['event'] = event
 
@@ -136,7 +140,7 @@ def review(request, id):
             # confirm with user
             messages.add_message(request, messages.INFO, 'Event has been reviewed and is ready for billing!')
 
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(e.id,)) + "#billing")
+            return HttpResponseRedirect(reverse('events:detail', args=(e.id,)) + "#billing")
         else:
             context['formset'] = form
     else:
@@ -164,12 +168,12 @@ def reviewremind(request, id, uid):
         email_body = 'This is a reminder that you have a pending crew chief report for "%s" \n' \
                      ' Please Visit %s%s to complete it' % (event.event_name,
                                                             request.get_host(),
-                                                            reverse("my-ccreport", args=[event.id]))
+                                                            reverse("my:report", args=[event.id]))
         email = DLEG(subject="LNL Crew Chief Report Reminder Email", to_emails=[cci.crew_chief.email], body=email_body,
                      attachments=attachments)
         email.send()
         messages.add_message(request, messages.INFO, 'Reminder Sent')
-        return HttpResponseRedirect(reverse('event-review', args=(event.id,)))
+        return HttpResponseRedirect(reverse("events:review", args=(event.id,)))
     else:
         return HttpResponse("Bad Call")
 
@@ -187,7 +191,7 @@ def close(request, id):
 
     event.save()
 
-    return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+    return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
 
 @login_required
@@ -213,7 +217,7 @@ def cancel(request, id):
         email_body += " or try them at %s." % request.user.email
     email = DLEG(subject="Event Cancelled", to_emails=targets, body=email_body, bcc=[settings.EMAIL_TARGET_VP])
     email.send()
-    return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+    return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
 
 @login_required
@@ -229,7 +233,7 @@ def reopen(request, id):
 
     event.save()
 
-    return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+    return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
 
 @login_required
@@ -239,7 +243,7 @@ def rmcrew(request, id, user):
             request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
     event.crew.remove(user)
-    return HttpResponseRedirect(reverse('events.views.flow.assigncrew', args=(event.id,)))
+    return HttpResponseRedirect(reverse("events:add-crew", args=(event.id,)))
 
 
 @login_required
@@ -257,7 +261,7 @@ def assigncrew(request, id):
         formset = CrewAssign(request.POST, instance=event)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+            return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
         else:
             context['formset'] = formset
 
@@ -282,13 +286,13 @@ def hours_bulk_admin(request, id):
     context['event'] = event
 
     mk_hours_formset = inlineformset_factory(Event, Hours, extra=15, exclude=[])
-    mk_hours_formset.form = staticmethod(curry(MKHoursForm, event=event))
+    mk_hours_formset.form = curry_class(MKHoursForm, event=event)
 
     if request.method == 'POST':
         formset = mk_hours_formset(request.POST, instance=event)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+            return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
         else:
             context['formset'] = formset
 
@@ -307,7 +311,7 @@ def rmcc(request, id, user):
             request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
     event.crew_chief.remove(user)
-    return HttpResponseRedirect(reverse('events.views.flow.assigncc', args=(event.id,)))
+    return HttpResponseRedirect(reverse("events:chiefs", args=(event.id,)))
 
 
 @login_required
@@ -324,13 +328,13 @@ def assigncc(request, id):
     context['event'] = event
 
     cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
-    cc_formset.form = staticmethod(curry(CCIForm, event=event))
+    cc_formset.form = curry_class(CCIForm, event=event)
 
     if request.method == 'POST':
         formset = cc_formset(request.POST, instance=event)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+            return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
         else:
             context['formset'] = formset
 
@@ -354,13 +358,13 @@ def assignattach(request, id):
     context['event'] = event
 
     att_formset = inlineformset_factory(Event, EventAttachment, extra=1, exclude=[])
-    att_formset.form = staticmethod(curry(AttachmentForm, event=event))
+    att_formset.form = curry_class(AttachmentForm, event=event)
 
     if request.method == 'POST':
         formset = att_formset(request.POST, request.FILES, instance=event)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)))
+            return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
         else:
             context['formset'] = formset
 
@@ -385,7 +389,7 @@ def assignattach_external(request, id):
 
     mk_att_formset = inlineformset_factory(Event, EventAttachment, extra=1, exclude=[])
     # mk_att_formset.queryset = mk_att_formset.queryset.filter(externally_uploaded=True)
-    mk_att_formset.form = staticmethod(curry(AttachmentForm, event=event, externally_uploaded=True))
+    mk_att_formset.form = curry_class(AttachmentForm, event=event, externally_uploaded=True)
 
     if request.method == 'POST':
         formset = mk_att_formset(request.POST, request.FILES, instance=event,
@@ -422,13 +426,13 @@ def extras(request, id):
     context['event'] = event
 
     mk_extra_formset = inlineformset_factory(Event, ExtraInstance, extra=1, exclude=[])
-    mk_extra_formset.form = staticmethod(curry(ExtraForm))
+    mk_extra_formset.form = ExtraForm
 
     if request.method == 'POST':
         formset = mk_extra_formset(request.POST, request.FILES, instance=event)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)) + "#billing")
+            return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#billing")
         else:
             context['formset'] = formset
 
@@ -459,7 +463,7 @@ def oneoff(request, id):
         formset = mk_oneoff_formset(request.POST, request.FILES, instance=event)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('events.views.flow.viewevent', args=(event.id,)) + "#billing")
+            return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#billing")
         else:
             context['formset'] = formset
 
@@ -501,7 +505,7 @@ class CCRCreate(SetFormMsgMixin, HasPermMixin, ConditionalFormMixin, LoginRequir
         return super(CCRCreate, self).form_valid(form)
 
     def get_success_url(self):
-        return reverse("events-detail", args=(self.kwargs['event'],))
+        return reverse("events:detail", args=(self.kwargs['event'],))
 
 
 class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
@@ -522,7 +526,7 @@ class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermMixin, LoginRequir
         return super(CCRUpdate, self).form_valid(form)
 
     def get_success_url(self):
-        return reverse("events-detail", args=(self.kwargs['event'],))
+        return reverse("events:detail", args=(self.kwargs['event'],))
 
 
 class CCRDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
@@ -540,7 +544,7 @@ class CCRDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
             return obj
 
     def get_success_url(self):
-        return reverse("events-detail", args=(self.kwargs['event'],))
+        return reverse("events:detail", args=(self.kwargs['event'],))
 
 
 class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
@@ -572,7 +576,7 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
         return super(BillingCreate, self).form_valid(form)
 
     def get_success_url(self):
-        return reverse("events-detail", args=(self.kwargs['event'],)) + "#billing"
+        return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
 
 
 class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
@@ -594,7 +598,7 @@ class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateVie
         return super(BillingUpdate, self).form_valid(form)
 
     def get_success_url(self):
-        return reverse("events-detail", args=(self.kwargs['event'],)) + "#billing"
+        return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
 
 
 class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
@@ -612,4 +616,4 @@ class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
             return obj
 
     def get_success_url(self):
-        return reverse("events-detail", args=(self.kwargs['event'],)) + "#billing"
+        return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"

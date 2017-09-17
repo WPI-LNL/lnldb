@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('internal_name', models.CharField(max_length=64)),
-                ('img', models.ImageField(upload_to=b'carousel')),
+                ('img', models.ImageField(upload_to='carousel')),
                 ('href_words', models.CharField(max_length=64, null=True, blank=True)),
                 ('href_desc', models.CharField(max_length=128, null=True, blank=True)),
             ],
@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                 ('body_in_hero', models.BooleanField(default=False)),
                 ('main_nav', models.BooleanField(default=False)),
                 ('nav_pos', models.IntegerField()),
-                ('carousel_css', models.CharField(default=b'custom', max_length=32)),
+                ('carousel_css', models.CharField(default='custom', max_length=32)),
                 ('imgs', models.ManyToManyField(to='pages.CarouselImg', blank=True)),
             ],
         ),

@@ -42,6 +42,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='organization',
             name='exec_email',
-            field=models.EmailField(max_length=254, null=True, verbose_name=b'Email', blank=True),
+            field=models.EmailField(max_length=254, null=True, verbose_name='Email', blank=True),
         ),
     ]

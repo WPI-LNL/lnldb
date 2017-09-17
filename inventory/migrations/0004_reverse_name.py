@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='equipmentclass',
             name='wiki_text',
-            field=models.TextField(help_text=b'How to use this item', null=True, blank=True),
+            field=models.TextField(help_text='How to use this item', null=True, blank=True),
         ),
         migrations.AlterField(
             model_name='equipmentitem',

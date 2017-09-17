@@ -13,6 +13,7 @@ from django.db import models
 from django.db.models import Manager
 from django.utils import timezone
 from django.utils.functional import cached_property
+from django.utils.encoding import python_2_unicode_compatible
 
 # if settings unset, have sane defaults
 if settings.CCR_DAY_DELTA:
@@ -25,6 +26,16 @@ PROJECTIONS = (
     ('35', '35mm'),
     ('70', '70mm'),
 )
+
+
+def get_host():
+    out = ''
+    if settings.SECURE_SSL_REDIRECT:
+        out += 'https://'
+    else:
+        out += 'http://'
+    out += settings.ALLOWED_HOSTS[0]
+    return out
 
 
 # MANAGERS
@@ -195,14 +206,14 @@ class EventManager(models.Manager):
 
 
 # MODELS
-
+@python_2_unicode_compatible
 class Building(models.Model):
     """ Used to group locations together in forms """
 
     name = models.CharField(max_length=128)
     shortname = models.CharField(max_length=4)
 
-    def __unicode__(self):
+    def __str__(self):
         # return "<Building (%s,%s)>" % (self.name, self.shortname)
         return self.name
 
@@ -210,6 +221,7 @@ class Building(models.Model):
         ordering = ['name']
 
 
+@python_2_unicode_compatible
 class Location(models.Model):
     """ A place where an event, event setup or meeting can happen"""
     name = models.CharField(max_length=64)
@@ -222,7 +234,7 @@ class Location(models.Model):
     #
     building = models.ForeignKey(Building)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     class Meta:
@@ -244,6 +256,7 @@ class ExtraInstance(models.Model):
         return self.extra.cost
 
 
+@python_2_unicode_compatible
 class Extra(models.Model):
     """ An additional charge to be added to an event. """
     name = models.CharField(max_length=64)
@@ -254,7 +267,7 @@ class Extra(models.Model):
     disappear = models.BooleanField(default=False, help_text="Disappear this extra instead of disable")
     checkbox = models.BooleanField(default=False, help_text="Use a checkbox instead of an integer entry")
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s ($%s)" % (self.name, self.cost)
 
     @property
@@ -265,14 +278,16 @@ class Extra(models.Model):
             return forms.IntegerField(min_value=0, ),
 
 
+@python_2_unicode_compatible
 class Category(models.Model):
     """ A category """
     name = models.CharField(max_length=16)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
+@python_2_unicode_compatible
 class Service(models.Model):
     """
         Some chargable service that is added to an event,
@@ -287,7 +302,7 @@ class Service(models.Model):
     # for the workorder form. Nice And Pretty Descriptions
     help_desc = models.TextField(null=True, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.longname
 
 
@@ -303,6 +318,7 @@ class Projection(Service):
     pass
 
 
+@python_2_unicode_compatible
 class Billing(models.Model):
     """
         A billing instance that is sent to a client
@@ -316,7 +332,7 @@ class Billing(models.Model):
     opt_out_initial_email = models.BooleanField(default=False)
     opt_out_update_email = models.BooleanField(default=False)
 
-    def __unicode__(self):
+    def __str__(self):
         out = "Bill for %s" % self.event.event_name
         if self.date_paid:
             out += " (PAID)"
@@ -334,6 +350,7 @@ class OptimizedEventManager(Manager):
                                                  .select_related('projection')
 
 
+@python_2_unicode_compatible
 class Event(models.Model):
     """
         An Event, What everything ends up pointing to
@@ -488,7 +505,7 @@ class Event(models.Model):
         return self.datetime_end
 
     def cal_link(self):
-        return "http://lnl.wpi.edu/db/events/view/" + str(self.id)
+        return get_host() + reverse('events:detail', args=[self.id])
 
     def cal_guid(self):
         return "event" + str(self.id) + "@lnldb"
@@ -497,7 +514,7 @@ class Event(models.Model):
         return self.org.first()
 
     def ccreport_url(self):
-        return reverse("my-ccreport", args=(self.id,))
+        return reverse("my:report", args=(self.id,))
 
     def usercanseeevent(self, user):
 
@@ -528,7 +545,7 @@ class Event(models.Model):
 
         return out
 
-    def __unicode__(self):
+    def __str__(self):
         return self.event_name
 
     # Report Properties
@@ -865,6 +882,7 @@ class Event(models.Model):
         ordering = ['-datetime_start']
 
 
+@python_2_unicode_compatible
 class CCReport(models.Model):
     glyphicon = 'comment'
     crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL)
@@ -874,7 +892,7 @@ class CCReport(models.Model):
     updated_on = models.DateTimeField(auto_now=True)
     for_service_cat = models.ManyToManyField(Category, verbose_name="Services", blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return u'%s - %s' % (self.event, self.crew_chief)
 
     @property
@@ -892,7 +910,7 @@ class CCReport(models.Model):
 # organization = models.IntegerField()
 # account = models.IntegerField(default=71973)
 
-
+@python_2_unicode_compatible
 class Fund(models.Model):
     glyphicon = 'credit-card'
     fund = models.IntegerField()
@@ -917,8 +935,8 @@ class Fund(models.Model):
     def get_absolute_url(self):
         return reverse('orgs:fundedit', args=[self.id])
 
-    def __unicode__(self):
-        return "%s (%s)" % (self.name, self.fopal)
+    def __str__(self):
+        return u"%s (%s)" % (self.name, self.fopal)
 
     class Meta:
         permissions = (
@@ -926,6 +944,7 @@ class Fund(models.Model):
         )
 
 
+@python_2_unicode_compatible
 class Organization(models.Model):  # AKA Client
     glyphicon = 'education'
     name = models.CharField(max_length=128, unique=True)
@@ -955,7 +974,7 @@ class Organization(models.Model):  # AKA Client
     def fopals(self):
         return ", ".join([f.fopal for f in self.accounts.all()])
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     @property
@@ -1020,13 +1039,14 @@ class OrgBillingVerificationEvent(models.Model):
 
 
 # stats and the like
+@python_2_unicode_compatible
 class Hours(models.Model):
     event = models.ForeignKey('Event', related_name="hours")
     service = models.ForeignKey('Service', related_name="hours", null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="hours")
     hours = models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return u'%s (%s)' % (self.event, self.user)
 
     class Meta:
@@ -1072,7 +1092,7 @@ class EventCCInstance(models.Model):
             return self.event.datetime_start
 
     def cal_link(self):
-        return "http://lnl.wpi.edu/db/events/view/" + str(self.event.id)
+        return get_host() + reverse('events:detail', args=[self.event.id])
 
     def cal_guid(self):
         return "setup" + str(self.id) + "@lnldb"
