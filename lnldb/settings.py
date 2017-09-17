@@ -172,7 +172,7 @@ STATICFILES_DIRS = (
     # Don't forget to use absolute paths, not relative paths.
     from_root("static"),
 )
-FILE_UPLOAD_PERMISSIONS = 0644
+FILE_UPLOAD_PERMISSIONS = 0o644
 
 # List of finder classes that know how to find static files in
 # various locations.
