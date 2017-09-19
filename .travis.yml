@@ -7,10 +7,12 @@ cache:
 
 python:
     - "2.7"
+    - "3.6"
 
 env:
     - DJANGO="Django<1.9>1.8"
     - DJANGO="Django<2>1.11"
+    - DJANGO="https://github.com/django/django/archive/master.tar.gz"
 
 install:
     - pip install --upgrade pip
@@ -23,3 +25,8 @@ script:
 
 after_success:
     coveralls
+
+matrix:
+      exclude:
+       - python: "2.7"
+         env: DJANGO="https://github.com/django/django/archive/master.tar.gz"
