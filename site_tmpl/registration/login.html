@@ -6,6 +6,7 @@
 {% endblock %}
 
 {% block extras %}
+    {% if USE_CAS %}
     <script type="application/javascript">
 
         $(function () {
@@ -24,13 +25,14 @@
         });
 
     </script>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
 
 <div class="container marketing" style="text-align:center;">
     <div class="row">
-        {% if settings.USE_CAS %}
+        {% if USE_CAS %}
         <div class="col-md-5 offset1">
             <h2> Login via WPI CAS </h2>
 
