@@ -10,7 +10,7 @@
     </tr>
     {% for user in users %}
             <tr>
-                <td>{{ user.last_name }}, {{ user.first_name }}</td>
+                <td><a href="{% url 'accounts:detail' user %}">{{ user }}</a></td>
                 <td>{{ user.mdc_name }}</td>
                 <td>{{ user.mdc }}</td>
             </tr>
