@@ -33,6 +33,7 @@ ul.ui-autocomplete {
 
 .navbar-right {
     margin-right: 5px;
+    text-align: center;
 }
 
 /* make side-scrolling not ruin the navbar on mobile */
