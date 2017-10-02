@@ -1,7 +1,3 @@
-body {
-    padding-bottom: 40px;
-}
-
 .navbar-collapse.in {
     overflow-y: visible;
     max-height: none;
@@ -37,6 +33,13 @@ ul.ui-autocomplete {
 
 .navbar-right {
     margin-right: 5px;
+}
+
+/* make side-scrolling not ruin the navbar on mobile */
+.content {
+    overflow-x: auto;
+    min-height: calc(100vh - 70px);
+    padding-bottom: 40px;
 }
 
 .dropdown-menu .dropdown-toggle {
