@@ -17,5 +17,8 @@ class ViewTestCase(TestCase):
 
         self.assertTrue(self.client.login(username='testuser', password='12345'))
 
-    def assertOk(self, response, status_code=200):
-        return self.assertNotContains(response, "TEMPLATE_WARNING", status_code)
+    def assertOk(self, response, status_code=200, binary=False):
+        if binary:
+            return response.status_code == status_code
+        else:
+            return self.assertNotContains(response, "TEMPLATE_WARNING", status_code)
