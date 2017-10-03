@@ -223,6 +223,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
 ) + WN_MIDDLEWARE + (
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'silk.middleware.SilkyMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'watson.middleware.SearchContextMiddleware',
     'reversion.middleware.RevisionMiddleware',
@@ -281,6 +282,7 @@ INSTALLED_APPS = (
     'hijack',
     'pagedown',
     'compat',
+    'silk',
 )
 if TESTING:
     # bypass migrations for unit tests. **MUCH** faster
@@ -447,6 +449,12 @@ CACHES = {
 }
 
 MPTT_ADMIN_LEVEL_INDENT = 20
+
+# settings for profiler
+SILKY_AUTHENTICATION = True          # Must be logged in to see profiler
+SILKY_AUTHORISATION = True           # Must be staff to see profiler
+SILKY_MAX_RESPONSE_BODY_SIZE = 0     # Don't record bodies of responses
+SILKY_MAX_RECORDED_REQUESTS = 1000   # Only save the last n requests
 
 if env.str("CAS_SERVER_URL", ""):
     CAS_SERVER_URL = env.str("CAS_SERVER_URL")
