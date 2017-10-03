@@ -219,11 +219,17 @@ DEBUG_TOOLBAR_CONFIG = {
 
 USE_WHITENOISE = env.bool("USE_WHITENOISE", default=False)
 WN_MIDDLEWARE = ('whitenoise.middleware.WhiteNoiseMiddleware',) if USE_WHITENOISE else tuple()
+
+USE_SILKY = not TESTING
+SILKY_MIDDLEWARE = (
+    'silk.middleware.SilkyMiddleware',
+) if USE_SILKY else tuple()
+
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
 ) + WN_MIDDLEWARE + (
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'silk.middleware.SilkyMiddleware',
+) + SILKY_MIDDLEWARE + (
     'django.middleware.csrf.CsrfViewMiddleware',
     'watson.middleware.SearchContextMiddleware',
     'reversion.middleware.RevisionMiddleware',
@@ -455,6 +461,7 @@ SILKY_AUTHENTICATION = True          # Must be logged in to see profiler
 SILKY_AUTHORISATION = True           # Must be staff to see profiler
 SILKY_MAX_RESPONSE_BODY_SIZE = 0     # Don't record bodies of responses
 SILKY_MAX_RECORDED_REQUESTS = 1000   # Only save the last n requests
+SILKY_META = True                    # Note how much time we take to profile
 
 if env.str("CAS_SERVER_URL", ""):
     CAS_SERVER_URL = env.str("CAS_SERVER_URL")
