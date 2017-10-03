@@ -22,7 +22,9 @@
                             <li>Office: 508-831-5595</li>
                             <li>Fax: 508-831-6045</li>
                             <li><a href="mailto:lnl@wpi.edu" class="unstyled">lnl@wpi.edu</a></li>
+                            {% if request %}
                             <li><a href="{{ request.scheme }}://{{ request.get_host }}/" class="unstyled">{{ request.scheme }}://{{ request.get_host }}/</a></li>
+                            {% endif %}
                         </ul>
 
                 </td>
