@@ -2,8 +2,8 @@ sudo: false
 language: python
 
 cache:
-      directories:
-              - $HOME/.pip-cache/
+    directories:
+        - $HOME/.pip-cache/
 
 python:
     - "2.7"
@@ -27,6 +27,10 @@ after_success:
     coveralls
 
 matrix:
-      exclude:
-       - python: "2.7"
-         env: DJANGO="https://github.com/django/django/archive/master.tar.gz"
+    exclude:
+        - python: "2.7"
+          env: DJANGO="https://github.com/django/django/archive/master.tar.gz"
+    allow_failures:
+        - python: "3.6"
+          env: DJANGO="https://github.com/django/django/archive/master.tar.gz"
+    fast_finish: true
