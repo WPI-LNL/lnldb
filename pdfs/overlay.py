@@ -98,7 +98,7 @@ def make_idt_single(event, user=None):
         fund=None,
         amount=float(event.cost_total) - float(event.cost_projection_total) / 2,
         proj_amt=event.cost_projection_total / 2,
-        person_name=str(user) if user else None,
+        person_name=user.get_full_name() if user else None,
         description="LNL Services for %s" % str(event)
     )
     with open(get_base("idt.pdf"), "rb") as base:
@@ -132,7 +132,7 @@ def make_idt_bulk(events, user=None, org_for=None, fund_for=None):
         fund=fund_for.as_tuple() if fund_for else None,
         amount=total,
         proj_amt=proj_total,
-        person_name=str(user) if user else None,
+        person_name=user.get_full_name() if user else None,
         description=description
     )
     with open(get_base("idt.pdf"), "rb") as base:
