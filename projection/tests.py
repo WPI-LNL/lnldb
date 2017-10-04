@@ -23,7 +23,7 @@ class ProjViewTest(ViewTestCase):
 
     def test_plist_detail(self):
         # make sure normies can't see this
-        self.assertOk(self.client.get(reverse("projection:list")), 403)
+        self.assertOk(self.client.get(reverse("projection:grid")), 403)
 
         permission = Permission.objects.get(codename='view_pits')
         self.user.user_permissions.add(permission)
@@ -34,7 +34,7 @@ class ProjViewTest(ViewTestCase):
         proj.save()
 
         # with people
-        self.assertOk(self.client.get(reverse("projection:list")))
+        self.assertOk(self.client.get(reverse("projection:grid")))
 
     def test_pdf(self):
         # make sure normies can't see this
@@ -44,13 +44,15 @@ class ProjViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # blank
-        self.assertOk(self.client.get(reverse("projection:pdf")))
+        self.assertOk(self.client.get(reverse("projection:pdf")+"?raw=true"))
+        self.assertOk(self.client.get(reverse("projection:pdf")), binary=True)
 
         proj = models.Projectionist.objects.create(user=self.user)
         proj.save()
 
         # with people
-        self.assertOk(self.client.get(reverse("projection:list")))
+        self.assertOk(self.client.get(reverse("projection:pdf")+"?raw=true"))
+        self.assertOk(self.client.get(reverse("projection:pdf")), binary=True)
 
     def test_create(self):
         valid_form_data = {

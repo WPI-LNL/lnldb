@@ -5,12 +5,12 @@
             </div>
             <div class="subheading">
                 <center>Student Activities Office - WPI - 100 Institute Road - Worcester, MA - 01609-2280 <br />
-                    508-831-5595 - Fax: 508-831-6045 - lnl@wpi.edu - {{ request.scheme }}://{{ request.get_host }}/</center>
+                    508-831-5595 - Fax: 508-831-6045 - lnl@wpi.edu{% if request %} - {{ request.scheme }}://{{ request.get_host }}/{% endif %}</center>
             </div>
             <hr>
             <table>
                 <tr>
-                    <td class="tdleft" valign="top">
+                    <td class="tdleft" valign="top" width="35%">
                         <h3>Contact</h3>
                         <ul class="list-unstyled">
                             <li>{{ event.org.all|join:", " }}</li>
@@ -20,7 +20,7 @@
                             <li>{{ event.contact_addr }}</li>
                         </ul>
                     </td>
-                    <td class="tdright">
+                    <td class="tdright" width="65%">
                         <h3>Organization</h3>
                         {% if event.firstorg %}
                         <ul class="list-unstyled">
@@ -38,13 +38,13 @@
             <hr>
             <table>
                 <tr>
-                    <th class="tdl41">
+                    <th class="tdl41" width="15%" align="left">
                         Event Name
                     </th>
-                    <td class="tdl42">
+                    <td class="tdl42" width="20%">
                         {{ event }}
                     </td>
-                    <td class="tdright" rowspan="11" valign="top">
+                    <td class="tdright" rowspan="11" valign="top" width="65%">
                         <h5>Event Description</h5>
                         {% if event.description %}
                             {{ event.description | markdown }}
@@ -138,7 +138,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <th class="tdl41">
+                    <th class="tdl41" align="left">
                         Location
                     </th>
                     <td class="tdl42">
@@ -146,7 +146,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <th class="tdl41">
+                    <th class="tdl41" align="left">
                         Event Type
                     </th>
                     <td class="tdl42">
@@ -154,7 +154,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <th class="tdl41">
+                    <th class="tdl41" align="left">
                         Setup Date
                     </th>
                     <td class="tdl42">
@@ -162,7 +162,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <th class="tdl41">
+                    <th class="tdl41" align="left">
                         Setup Time
                     </th>
                     <td class="tdl42">
@@ -170,7 +170,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <th class="tdl41">
+                    <th class="tdl41" align="left">
                         Start Date
                     </th>
                     <td class="tdl42">
@@ -178,7 +178,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <th class="tdl41">
+                    <th class="tdl41" align="left">
                         Start Time
                     </th>
                     <td class="tdl42">
@@ -186,7 +186,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <th class="tdl41">
+                    <th class="tdl41" align="left">
                         End Date
                     </th>
                     <td class="tdl42">
@@ -194,10 +194,10 @@
                     </td>
                 </tr>
                 <tr>
-                    <th class="tdl41">
+                    <th class="tdl41" align="left">
                         End Time
                     </th>
-                    <td class="tdl42">
+                    <td class="tdl42" align="left">
                         {{ event.datetime_end|localtime|time:"TIME_FORMAT" }}
                     </td>
                 </tr>

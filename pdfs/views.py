@@ -8,7 +8,7 @@ from django.contrib.humanize.templatetags.humanize import intcomma
 from django.contrib.staticfiles import finders
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django.template.loader import get_template
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.text import slugify
 from xhtml2pdf import pisa
@@ -62,8 +62,9 @@ def generate_projection_pdf(request):
     data['levels'] = levels
 
     # Render html content through html template with context
-    template = get_template('pdf_templates/projection.html')
-    html = template.render(data)
+    html = render_to_string('pdf_templates/projection.html',
+                            context=data,
+                            request=request)
     if 'raw' in request.GET and bool(request.GET['raw']):
         return HttpResponse(html)
     # write file
@@ -82,8 +83,9 @@ def generate_event_pdf(request, id):
     data['events'] = [event]
 
     # Render html content through html template with context
-    template = get_template('pdf_templates/events.html')
-    html = template.render(data)
+    html = render_to_string('pdf_templates/events.html',
+                            context=data,
+                            request=request)
 
     if 'raw' in request.GET and bool(request.GET['raw']):
         return HttpResponse(html)
@@ -117,8 +119,9 @@ def generate_event_bill_pdf(request, event):
             extras[cat] = e_for_cat
     data['extras'] = extras
     # Render html content through html template with context
-    template = get_template('pdf_templates/bill-itemized.html')
-    html = template.render(data)
+    html = render_to_string('pdf_templates/bill-itemized.html',
+                            context=data,
+                            request=request)
 
     if 'raw' in request.GET and bool(request.GET['raw']):
         return HttpResponse(html)
@@ -148,8 +151,8 @@ def generate_pdfs_standalone(ids=None):
     events = Event.objects.filter(pk__in=ids)
     data['events'] = events
 
-    template = get_template('pdf_templates/events.html')
-    html = template.render(data)
+    html = render_to_string('pdf_templates/events.html',
+                            context=data)
 
     pdf_file = BytesIO()
     pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
@@ -171,8 +174,9 @@ def generate_event_pdf_multi(request, ids=None):
     data['events'] = events
 
     # Render html content through html template with context
-    template = get_template('pdf_templates/events.html')
-    html = template.render(data)
+    html = render_to_string('pdf_templates/events.html',
+                            context=data,
+                            request=request)
 
     if 'raw' in request.GET and bool(request.GET['raw']):
         return HttpResponse(html)
