@@ -6,7 +6,7 @@
         <div class="clearfix">
             <h1><span class="glyphicon glyphicon-{{ event.glyphicon }} jumboglyph"
                       aria-hidden="true"></span>{{ event }}</h1>
-            </div>
+        </div>
         <div class="actions pull-right">
             <h3>Status: <b>{{ event.status }}</b></h3>
 
@@ -54,85 +54,83 @@
                     {% endif %}
                 {% endif %}
             </div>
-            </div>
+        </div>
         <div class="jumbo-event-info">
             <h3>Client{% if event.org.count > 1 %}s{% endif %}:
                 {% for org in event.org.all %}<a href="{% url "orgs:detail" org.id %}">{{ org.retname }}</a>
                     &nbsp;{% empty %}[None listed]{% endfor %}</h3>
-            </div>
+        </div>
     </div>
     {% permission request.user has 'events.close_event' of event %}
-        <!-- CloseModal -->
-        <div id="closeModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="closeModalLabel"
-             aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                        <h3 id="closeModalLabel">Confirm Close Event</h3>
-                    </div>
-                    <div class="modal-body">
-                        <p>Closing will lock the event for edits, and cannot be easily undone.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
-                        <a class="btn btn-primary" href="{% url "events:close" event.id %}">Close Event</a>
-                    </div>
+    <!-- CloseModal -->
+    <div id="closeModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="closeModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h3 id="closeModalLabel">Confirm Close Event</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Closing will lock the event for edits, and cannot be easily undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                    <a class="btn btn-primary" href="{% url "events:close" event.id %}">Close Event</a>
                 </div>
             </div>
         </div>
+    </div>
     {% endpermission %}
 
     {% permission request.user has 'events.cancel_event' of event %}
-        <!-- CancelModal -->
-        <div id="cancelModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="cancelModalLabel"
-             aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                        <h3 id="cancelModalLabel">Confirm Cancel Event</h3>
-                    </div>
-                    <div class="modal-body">
-                        <p>Cancelling an event locks the event for edits, and cannot be easily undone. This should
-                            only be used if an event does not actually occur, and this information was given before any
-                            setups/rentals were done.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
-                        <a class="btn btn-primary" href="{% url "events:cancel" event.id %}">Cancel Event</a>
-                    </div>
+    <!-- CancelModal -->
+    <div id="cancelModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="cancelModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h3 id="cancelModalLabel">Confirm Cancel Event</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Cancelling an event locks the event for edits, and cannot be easily undone. This should
+                        only be used if an event does not actually occur, and this information was given before any
+                        setups/rentals were done.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                    <a class="btn btn-primary" href="{% url "events:cancel" event.id %}">Cancel Event</a>
                 </div>
             </div>
-            </div>
+        </div>
+    </div>
     {% endpermission %}
 
     {% permission request.user has 'events.reopen_event' of event %}
-        <!-- ReopenModal -->
-        <div id="reopenModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="reopenModalLabel"
-             aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                            <h3 id="reopenModalLabel">Confirm Reopen Event</h3>
-                        </div>
-                        <div class="modal-body">
-                            <p>Reopening an event should be considered a last resort option, and removes all records
-                                of the event being closed to begin with.</p>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
-                            <a class="btn btn-primary" href="{% url "events:reopen" event.id %}">Reopen Event</a>
-                        </div>
-                    </div>
+    <!-- ReopenModal -->
+    <div id="reopenModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="reopenModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h3 id="reopenModalLabel">Confirm Reopen Event</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Reopening an event should be considered a last resort option, and removes all records
+                        of the event being closed to begin with.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                    <a class="btn btn-primary" href="{% url "events:reopen" event.id %}">Reopen Event</a>
                 </div>
             </div>
+        </div>
+    </div>
     {% endpermission %}
             
             
-        </div>
-    </div>
     <div class="container-fluid">
         <div class="col-md-12">
             <ul class="nav nav-tabs">
