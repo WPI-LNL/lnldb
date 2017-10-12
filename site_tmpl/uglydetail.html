@@ -351,7 +351,9 @@
                     
                 </div>
                 <div id="crew" class="tab-pane">
+                    {% permission request.user has 'events.edit_event_hours' of event %}
                     <a class="btn btn-lg btn-info pull-right" href="{% url "events:chiefs" event.id %}">Modify</a>
+                    {% endpermission %}
                     <h2> Crew Chief(s) </h2>
                     <table class="table">
                         <tr>
