@@ -1,5 +1,7 @@
 # Django settings for lnldb project.
 
+from __future__ import print_function
+
 import os
 import re
 import sys
@@ -34,7 +36,7 @@ if GIT_RELEASE is None:
         path = from_root('.')
         GIT_RELEASE = raven.fetch_git_sha(path)
     except Exception as e:
-        print(e)
+        print(e, file=sys.stderr)
         GIT_RELEASE = "unknown build"
 
 sentry_uri = env.get_value("SENTRY_DSN", default=None)
@@ -75,7 +77,7 @@ elif env.str("MAILGUN_SMTP_LOGIN", ""):
     EMAIL_USE_TLS = True
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    print("Warning: using console as an email server.")
+    print("Warning: using console as an email server.", file=sys.stderr)
 
 DATABASES = {
     'default': env.db(default="sqlite:///" + from_runtime('lnldb.db'))
@@ -149,7 +151,7 @@ else:
     # Absolute filesystem path to the directory that will hold user-uploaded files.
     # Example: "/home/media/media.lawrence.com/media/"
     # noinspection PyUnresolvedReferences
-    print("Warning: using local storage for a file store")
+    print("Warning: using local storage for a file store", file=sys.stderr)
     MEDIA_ROOT = env.str("MEDIA_ROOT", from_runtime('media/'))
     MEDIA_URL = '/media/'
 
@@ -464,7 +466,7 @@ try:
     local_settings_file = open(here('local_settings.py'), 'r')
     local_settings_script = local_settings_file.read()
     exec(local_settings_script)
-    print("Successfully loaded local settings file")
+    print("Successfully loaded local settings file", file=sys.stderr)
 except IOError as e:
     pass
 
