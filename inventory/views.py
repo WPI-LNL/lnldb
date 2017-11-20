@@ -151,7 +151,7 @@ def type_edit(request, type_id):
         raise PermissionDenied
 
     if request.method == 'POST':
-        formset = models.EquipmentClassForm(request.POST, request.FILES, instance=e_type)
+        formset = forms.EquipmentClassForm(request.POST, request.FILES, instance=e_type)
         if formset.is_valid():
             formset.save()
             messages.add_message(request, messages.SUCCESS,
