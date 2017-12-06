@@ -1,8 +1,10 @@
 {% extends "emails/email_base.html" %}
 {% load tz %}
 {% load markdown_deux_tags %}
+{% load lnldb_tags %}
+
 {% block perma %}
-<a href="{{ request.scheme }}://{{ request.get_host}}{% url "emails:pre-meeting" object.uuid %}/" class="cm-webversion">View Online</a>
+<a href="{% get_base_url %}{% url "emails:pre-meeting" object.uuid %}/" class="cm-webversion">View Online</a>
 {% endblock %}
 
 {% block unsub %}
