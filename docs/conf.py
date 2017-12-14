@@ -199,7 +199,7 @@ def get_class_that_defined_method(meth):
         return getattr(meth, '__objclass__', None)  # handle special descriptor objects
 
 def default_to_parent_docstr(app, what, name, obj, options, lines):
-    if inspect.isfunction(obj) and obj.__doc__ is None and len(lines) == 0:
+    if inspect.ismethod(obj) and obj.__doc__ is None and len(lines) == 0:
         cls = get_class_that_defined_method(obj)
         if cls is not None:
             mro = inspect.getmro(cls)
