@@ -3,7 +3,7 @@
 # frozen versions from prod.
 app-version==0.2.1
 dealer==2.0.4
-Django<1.9,>=1.8.12
+Django<2,>=1.11
 django-compat==1.0.13
 # I trust django not to have any breaking issues in their security patches.
 django-ajax-selects==1.5.0
