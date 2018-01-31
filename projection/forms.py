@@ -1,4 +1,6 @@
+from __future__ import division
 import datetime
+from math import ceil
 
 from ajax_select.fields import (AutoCompleteSelectField,
                                 AutoCompleteSelectMultipleField)
@@ -10,7 +12,7 @@ from django.contrib.auth import get_user_model
 from django.forms.models import inlineformset_factory
 from django.utils import timezone
 
-from events.models import Projection as ProjService
+from events.models import Projection as ProjService, Extra, ExtraInstance
 from events.models import Building, Category, Event, Location
 from projection.models import PitInstance, PITLevel, Projectionist
 
@@ -159,6 +161,7 @@ class DateEntryFormSetBase(forms.Form):
 
     date = forms.DateField()
     name = forms.CharField(required=False)
+    mins = forms.IntegerField(required=False, label="Duration (mins)")
 
     friday = forms.BooleanField(required=False)
     matinee = forms.BooleanField(required=False)
@@ -196,6 +199,16 @@ class DateEntryFormSetBase(forms.Form):
 
         date = self.cleaned_data['date']
 
+        reels = 0
+        if self.cleaned_data['mins'] is not None:
+            reels = ceil(self.cleaned_data['mins'] / 20) - 1
+        addon = Extra.objects.get_or_create(name="Additional 20 Minutes Digital Projection",
+                                            defaults={
+                                                'cost': 7,
+                                                'desc': 'Each Additional 20 Minutes of Digital Projection',
+                                                'category': cat
+                                            })[0]
+
         # prepare base date/times for the usual 8PM Sat start.
         dt_setupcomplete = datetime.datetime.combine(date, datetime.time(19, 30))
         dt_start = datetime.datetime.combine(date, datetime.time(20))
@@ -214,5 +227,7 @@ class DateEntryFormSetBase(forms.Form):
 
             e = Event.objects.create(**kwargs)
             e.org.add(org)
+            if reels > 0:
+                ExtraInstance.objects.create(event=e, extra=addon, quant=reels)
             out.append(e)
         return out
