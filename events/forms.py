@@ -1068,21 +1068,20 @@ class OrgForm(forms.Form):
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
+        # If we ever decide to restrict organization selection to their members, uncomment this
         # the org nl, is a special org that everyone has access to and is not listed.
-        self.fields['group'].queryset = Organization.objects.filter(
-            Q(user_in_charge=user) | Q(associated_users__in=[user.id]) | Q(shortname="nl")).distinct()
+        #self.fields['group'].queryset = Organization.objects.filter(
+        #    Q(user_in_charge=user) | Q(associated_users__in=[user.id]) | Q(shortname="nl")).distinct()
         self.helper.layout = Layout(
             'group',
             HTML(
                 '<span class="text-muted">If the client account you are looking for does not show up in the list, '
-                'please contact the person in charge of the account using <a target="_blank" href="%s">this link</a> '
-                'and request authorization to submit workorder son their behalf. If you are attempting to create a '
-                'client account which does not exist please click <a target="_blank" href="%s">this link</a></span>'
-                % (reverse('my:orgs'), reverse('my:org-request'))),
+                'please select "NOT LISTED" or <a target="_blank" href="%s">request it be added</a>.</span> '
+                % reverse('my:org-request')),
         )
         # super(OrgForm,self).__init__(*args,**kwargs)
 
-    group = forms.ModelChoiceField(queryset=Organization.objects.all(), label="Organization")
+    group = forms.ModelChoiceField(queryset=Organization.objects.all(), label="Organization to be Billed")
     # group = AutoCompleteSelectField('UserLimitedOrgs', required=True,
     #  plugin_options={'position':"{ my : \"right top\", at: \"right bottom\",
     # of: \"#id_person_name_text\"}",'minLength':2})
