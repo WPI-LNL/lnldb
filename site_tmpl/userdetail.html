@@ -6,6 +6,9 @@
                 <h1> {{u}} </h1>
                 <h3>{{ u.groups.all|join:", " }}</h3>
                 <div class="pull-right">
+                    {% if request.user.is_superuser %}
+                        <a class="btn btn-danger btn-lg" href="{% url "hijack:login_with_id" u.id %}">Impersonate</a>
+                    {% endif %}
                     <a class="btn btn-info btn-lg" href="{% url "accounts:update" u.id %}">Modify</a>
                 </div>
             </div>

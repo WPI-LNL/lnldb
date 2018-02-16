@@ -5,3 +5,4 @@ pep8
 factory_boy
 model_mommy
 django-test-without-migrations
+sphinx

@@ -1,3 +1,4 @@
+{% load lnldb_tags %}
 <html>
     <head>
         <title></title>
@@ -192,7 +193,7 @@
                     <table class="w325" width="350" cellpadding="0" cellspacing="0" border="0">
                         <tbody><tr><td class="w325" width="350" height="8"></td></tr>
                     </tbody></table>
-                    <div class="header-content">{% block perma %}<a href="#GABE ADD STUFF HERE" class="cm-webversion">View Online</a>{% endblock %}</div>
+                    <div class="header-content">{% block perma %}{% endblock %}</div>
                     <table class="w325" width="350" cellpadding="0" cellspacing="0" border="0">
                         <tbody><tr><td class="w325" width="350" height="8"></td></tr>
                     </tbody></table>
@@ -233,7 +234,7 @@
                     <td class="w580" width="580">
                         <div align="center" id="headline">
                             <p>
-                            <strong><a href="{{ request.scheme }}://{{ request.get_host }}/"><span class="cm-singleline" label="Title">WPI Lens and Lights</span></a></strong>
+                            <strong><a href="{% get_base_url %}/"><span class="cm-singleline" label="Title">WPI Lens and Lights</span></a></strong>
                             </p>
                         </div>
                     </td>
