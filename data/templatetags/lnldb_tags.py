@@ -1,5 +1,6 @@
 from django import template
 from django.utils.timezone import localtime
+from django.conf import settings
 
 register = template.Library()
 
@@ -20,3 +21,15 @@ def daterange(datetime_start, datetime_end):
 @register.filter()
 def is_list(string):
     return hasattr(string, '__iter__') and not isinstance(string, basestring)
+
+@register.simple_tag(takes_context=True)
+def get_base_url(context):
+    if 'request' in context:
+        request = context['request']
+        return "%s://%s" % (request.scheme, request.get_host())
+    # try to guess if the server has https
+    is_secure = settings.SECURE_SSL_REDIRECT or settings.SESSION_COOKIE_SECURE\
+            or settings.SECURE_HSTS_SECONDS
+    scheme = 'https' if is_secure else 'http'
+    return '%s://%s' % (scheme, settings.ALLOWED_HOSTS[0])
+
