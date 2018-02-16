@@ -33,6 +33,7 @@ urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
     url(r'^hijack/', include('hijack.urls')),
+    url(r'^profiling/', include('silk.urls', namespace='silk')),
     url(r'^__debug__/', include(debug_toolbar.urls)),
     url(r'^db/lookups/', include(ajax_select_urls)),
     url(r'^db/meetings/', include('meetings.urls', namespace='meetings')),
