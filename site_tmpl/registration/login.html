@@ -19,7 +19,7 @@
 
             $("#prefer_cas").change(function () {
                 var d = new Date();
-                d.setTime(d.getTime() + (24 * 60 * 60 * 365)); // a year is plenty
+                d.setTime(d.getTime() + (24 * 60 * 60 * 365 * 1000)); // a year is plenty
                 document.cookie = "prefer_cas=" + $(this).is(":checked") + ";expires=" + d.toUTCString() + ";path=/";
             });
         });
