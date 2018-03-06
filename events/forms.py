@@ -1068,10 +1068,10 @@ class OrgForm(forms.Form):
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
-        # If we ever decide to restrict organization selection to their members, uncomment this
+        # If we ever decide to restrict organization selection to their members, remove the Q(archived=False)
         # the org nl, is a special org that everyone has access to and is not listed.
-        #self.fields['group'].queryset = Organization.objects.filter(
-        #    Q(user_in_charge=user) | Q(associated_users__in=[user.id]) | Q(shortname="nl")).distinct()
+        self.fields['group'].queryset = Organization.objects.filter(
+            Q(archived=False) | Q(user_in_charge=user) | Q(associated_users__in=[user.id]) | Q(shortname="nl")).distinct()
         self.helper.layout = Layout(
             'group',
             HTML(
