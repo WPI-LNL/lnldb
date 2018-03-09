@@ -187,6 +187,14 @@ def upcoming(request, start=None, end=None):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -196,6 +204,7 @@ def upcoming(request, start=None, end=None):
     context['h2'] = "Upcoming Events"
     context['events'] = events
     context['baseurl'] = reverse("events:upcoming")
+    context['service_filterable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
@@ -226,6 +235,14 @@ def incoming(request, start=None, end=None):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices')
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -235,6 +252,7 @@ def incoming(request, start=None, end=None):
     context['h2'] = "Incoming Events"
     context['events'] = events
     context['baseurl'] = reverse("events:incoming")
+    context['service_filterable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
@@ -267,6 +285,14 @@ def openworkorders(request, start=None, end=None):
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings') \
         .prefetch_related('crew_chief')
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -276,6 +302,7 @@ def openworkorders(request, start=None, end=None):
     context['h2'] = "Open Events"
     context['events'] = events
     context['baseurl'] = reverse("events:open")
+    context['service_filterable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
@@ -314,9 +341,14 @@ def findchief(request, start=None, end=None):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
-    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
-
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -324,9 +356,9 @@ def findchief(request, start=None, end=None):
     events = paginate_helper(events, page, sort)
 
     context['h2'] = "Needs a Crew Chief"
-    context['proj_hideable'] = True
     context['events'] = events
     context['baseurl'] = reverse("events:findchief")
+    context['service_filterable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
@@ -353,11 +385,11 @@ def unreviewed(request, start=None, end=None):
         end = end.strftime('%Y-%m-%d')
 
     now = datetime.datetime.now(pytz.utc)
-    # events = Event.objects.filter(approved=True).filter(paid=True)
     events = Event.objects.exclude(Q(closed=True) |
                                    Q(cancelled=True) |
                                    Q(approved=False)) \
         .filter(reviewed=False) \
+        .filter(billed_by_semester=False) \
         .filter(datetime_end__lte=now) \
         .order_by('datetime_start') \
         .prefetch_related('crew_chief') \
@@ -368,8 +400,14 @@ def unreviewed(request, start=None, end=None):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
-    if not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -379,8 +417,67 @@ def unreviewed(request, start=None, end=None):
     context['h2'] = "Events Pending Billing Review"
     context['events'] = events
     context['baseurl'] = reverse("events:unreviewed")
+    context['service_filterable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
-    context['proj_hideable'] = True
+    context['cols'] = ['event_name',
+                       'org',
+                       'location',
+                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       'crew_chief',
+                       FakeField('num_crew_needing_reports', sortable=True, verbose_name="Missing Reports"),
+                       FakeField('short_services', verbose_name="Services", sortable=False),
+                       FakeField('tasks')]
+    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    return render(request, 'events.html', context)
+
+
+@login_required
+@permission_required('events.review_event', raise_exception=True)
+def unreviewed_semester(request, start=None, end=None):
+    context = {}
+
+    if not start and not end:
+        today = datetime.date.today()
+        start = today - datetime.timedelta(days=180)
+        start = start.strftime('%Y-%m-%d')
+        end = today + datetime.timedelta(days=180)
+        end = end.strftime('%Y-%m-%d')
+
+    now = datetime.datetime.now(pytz.utc)
+    events = Event.objects.exclude(Q(closed=True) |
+                                   Q(cancelled=True) |
+                                   Q(approved=False)) \
+        .filter(reviewed=False) \
+        .filter(billed_by_semester=True) \
+        .filter(datetime_end__lte=now) \
+        .order_by('datetime_start') \
+        .prefetch_related('crew_chief') \
+        .distinct()
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
+    events, context = datefilter(events, context, start, end)
+
+    page = request.GET.get('page')
+    sort = request.GET.get('sort')
+    events = paginate_helper(events, page, sort)
+
+    context['h2'] = u"Events Pending Billing Review \u2013 Semester Billing"
+    context['events'] = events
+    context['baseurl'] = reverse("events:unreviewed-semester")
+    context['service_filterable'] = True
+    context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -398,7 +495,6 @@ def unreviewed(request, start=None, end=None):
 def unbilled(request, start=None, end=None):
     context = {}
 
-    # events = Event.objects.filter(approved=True).filter(paid=True)
     if not start and not end:
         today = datetime.date.today()
         start = today - datetime.timedelta(days=3652.5)
@@ -420,8 +516,14 @@ def unbilled(request, start=None, end=None):
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
-    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -431,7 +533,7 @@ def unbilled(request, start=None, end=None):
     context['h2'] = "Events to be Billed"
     context['events'] = events
     context['baseurl'] = reverse("events:unbilled")
-    context['proj_hideable'] = True
+    context['service_filterable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
@@ -448,13 +550,13 @@ def unbilled(request, start=None, end=None):
 def unbilled_semester(request, start=None, end=None):
     context = {}
 
-    # events = Event.objects.filter(approved=True).filter(paid=True)
     if not start and not end:
         today = datetime.date.today()
         start = today - datetime.timedelta(days=3652.5)
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
+
     events = Event.objects.filter(billings__isnull=True) \
         .exclude(Q(closed=True) |
                  Q(cancelled=True)) \
@@ -469,15 +571,24 @@ def unbilled_semester(request, start=None, end=None):
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
     sort = request.GET.get('sort')
     events = paginate_helper(events, page, sort)
 
-    context['h2'] = "Events to be Billed (Films)"
+    context['h2'] = u"Events to be Billed \u2013 Semester Billing"
     context['events'] = events
     context['baseurl'] = reverse("events:unbilled-semester")
+    context['service_filterable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
@@ -510,8 +621,14 @@ def paid(request, start=None, end=None):
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
-    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
     events, context = datefilter(events, context, start, end)
 
     # if events:
@@ -524,8 +641,8 @@ def paid(request, start=None, end=None):
     context['h2'] = "Paid Events"
     context['events'] = events
     context['baseurl'] = reverse("events:paid")
+    context['service_filterable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
-    context['proj_hideable'] = True
     context['cols'] = ['event_name',
                        'org',
                        FakeExtendedField('datetime_start', verbose_name="Event Time"),
@@ -553,6 +670,7 @@ def unpaid(request, start=None, end=None):
         .exclude(cancelled=True) \
         .exclude(numpaid__gt=0) \
         .filter(reviewed=True) \
+        .filter(billed_by_semester=False) \
         .order_by('datetime_start').distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
@@ -561,8 +679,14 @@ def unpaid(request, start=None, end=None):
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
-    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -572,7 +696,61 @@ def unpaid(request, start=None, end=None):
     context['h2'] = "Pending Payments"
     context['events'] = events
     context['baseurl'] = reverse("events:unpaid")
-    context['proj_hideable'] = True
+    context['service_filterable'] = True
+    context['pdfurl'] = reverse('events:pdf-multi')
+    context['cols'] = ['event_name',
+                       'org',
+                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       FakeField('last_billed', sortable=True),
+                       FakeField('times_billed', sortable=True),
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    return render(request, 'events.html', context)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def unpaid_semester(request, start=None, end=None):
+    context = {}
+
+    if not start and not end:
+        start, end = get_farback_date_range_plus_next_week()
+
+    # events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now())
+    # .filter(date_setup_start__lte=today)
+    events = Event.objects.annotate(numpaid=Count('billings__date_paid')) \
+        .filter(billings__date_billed__isnull=False) \
+        .exclude(closed=True) \
+        .exclude(cancelled=True) \
+        .exclude(numpaid__gt=0) \
+        .filter(reviewed=True) \
+        .filter(billed_by_semester=True) \
+        .order_by('datetime_start').distinct()
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
+        .prefetch_related('billings')
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
+    events, context = datefilter(events, context, start, end)
+
+    page = request.GET.get('page')
+    sort = request.GET.get('sort')
+    events = paginate_helper(events, page, sort)
+
+    context['h2'] = u"Pending Payments \u2013 Semester Billing"
+    context['events'] = events
+    context['baseurl'] = reverse("events:unpaid-semester")
+    context['service_filterable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
@@ -600,8 +778,14 @@ def closed(request, start=None, end=None):
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('crew_chief')
-    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -611,7 +795,7 @@ def closed(request, start=None, end=None):
     context['h2'] = "Closed Events"
     context['events'] = events
     context['baseurl'] = reverse("events:closed")
-    context['proj_hideable'] = True
+    context['service_filterable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',

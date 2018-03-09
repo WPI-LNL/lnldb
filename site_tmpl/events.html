@@ -51,18 +51,21 @@
                             <li><a href="{% url "events:open" start end %}{% append_to_get page=1 %}">Open</a></li>
                             <li><a href="{% url "events:unreviewed" start end %}{% append_to_get page=1 %}">Unreviewed</a></li>
                             <li><a href="{% url "events:unbilled" start end %}{% append_to_get page=1 %}">Unbilled</a></li>
-                            <li><a href="{% url "events:unpaid" start end %}{% append_to_get page=1 %}">Billed/UnPaid</a></li>
+                            <li><a href="{% url "events:unpaid" start end %}{% append_to_get page=1 %}">Billed/Unpaid</a></li>
+                            <li><a href="{% url "events:unreviewed-semester" start end %}{% append_to_get page=1 %}">Unreviewed-Semester</a></li>
+                            <li><a href="{% url "events:unbilled-semester" start end %}{% append_to_get page=1 %}">Unbilled-Semester</a></li>
+                            <li><a href="{% url "events:unpaid-semester" start end %}{% append_to_get page=1 %}">Billed/Unpaid-Semester</a></li>
                             <li><a href="{% url "events:paid" start end %}{% append_to_get page=1 %}">Paid</a></li>
                             <li><a href="{% url "events:closed" start end %}{% append_to_get page=1 %}">Closed</a></li>
-                            
                         </ul>
                         {% endif %}
-                        {% if proj_hideable %}
+                        {% if service_filterable %}
                         <hr>
                             <ul class="nav nav-pills">
-                                <li class="disabled"><a href="#">Projection Events</a></li>
-                                <li><a href="{% append_to_get page=1 hidedp=0 %}">Show</a></li>
-                                <li><a href="{% append_to_get page=1 hidedp=1 %}">Hide</a></li>
+                                <li class="disabled"><a href="#">Service Type</a></li>
+                                <li><a href="{% append_to_get page=1 serviceType='lighting' %}">Lighting</a></li>
+                                <li><a href="{% append_to_get page=1 serviceType='sound' %}">Sound</a></li>
+                                <li><a href="{% append_to_get page=1 serviceType='projection' %}">Projection</a></li>
                             </ul>
                         {% endif %}
                         <hr>

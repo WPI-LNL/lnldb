@@ -57,13 +57,19 @@
 
                         {% permission request.user has 'events.view_event_billing' %}
                         <li role="presentation" class="divider"></li>
-                        <li role="presentation" class="dropdown-header">Event Payments</li>
+                        <li role="presentation" class="dropdown-header">Billing</li>
 
                         <li><a href="{% url "events:unreviewed" %}">Events Pending Review</a></li>
                         <li><a href="{% url "events:unbilled" %}">Events to be Billed</a></li>
-                        <li><a href="{% url "events:unbilled-semester" %}">Events to be Billed - Semester (Films)</a></li>
                         <li><a href="{% url "events:unpaid" %}">Events Billed, Pending Payment</a></li>
                         <li><a href="{% url "events:paid" %}">Events Paid</a></li>
+
+                        <li role="presentation" class="divider"></li>
+                        <li role="presentation" class="dropdown-header">Semester Billing</li>
+ 
+                        <li><a href="{% url "events:unreviewed-semester" %}">Events Pending Review</a></li>
+                        <li><a href="{% url "events:unbilled-semester" %}">Events to be Billed</a></li>
+                        <li><a href="{% url "events:unpaid-semester" %}">Events Billed, Pending Payment</a></li>
                         {% endpermission %}
 
                     </ul>
