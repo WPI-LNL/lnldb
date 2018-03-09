@@ -828,6 +828,14 @@ def approved(request, start=None, end=None):
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings') \
         .prefetch_related('crew_chief')
+    if request.GET.get('serviceType'):
+        serviceType = request.GET.get('serviceType')
+        if serviceType == 'lighting':
+            events = events.filter(lighting__isnull=False);
+        elif serviceType =='sound':
+            events = events.filter(sound__isnull=False);
+        elif serviceType == 'projection':
+            events = events.filter(projection__isnull=False);
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -837,6 +845,7 @@ def approved(request, start=None, end=None):
     context['h2'] = "Approved Events"
     context['events'] = events
     context['baseurl'] = reverse("events:approved")
+    context['service_filterable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
