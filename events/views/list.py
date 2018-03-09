@@ -808,6 +808,46 @@ def closed(request, start=None, end=None):
     return render(request, 'events.html', context)
 
 
+@login_required
+@permission_required('events.view_event', raise_exception=True)
+def approved(request, start=None, end=None):
+    if not start and not end:
+        today = datetime.date.today()
+        start = today - datetime.timedelta(days=3652.5)
+        start = start.strftime('%Y-%m-%d')
+        end = today + datetime.timedelta(days=3652.5)
+        end = end.strftime('%Y-%m-%d')
+    context = {}
+
+    events = Event.objects.filter(approved=True).distinct()
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.event_view_debug'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building').prefetch_related('org') \
+        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
+        .prefetch_related('billings') \
+        .prefetch_related('crew_chief')
+    events, context = datefilter(events, context, start, end)
+
+    page = request.GET.get('page')
+    sort = request.GET.get('sort')
+    events = paginate_helper(events, page, sort)
+
+    context['h2'] = "Approved Events"
+    context['events'] = events
+    context['baseurl'] = reverse("events:approved")
+    context['pdfurl'] = reverse('events:pdf-multi')
+    context['cols'] = ['event_name',
+                       'org',
+                       'location',
+                       'crew_chief',
+                       FakeExtendedField('datetime_start', verbose_name="Starting At"),
+                       FakeField('short_services', verbose_name="Services", sortable=False),
+                       FakeField('tasks')]
+    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    return render(request, 'events.html', context)
+
 def public_facing(request):
     context = {}
     now = datetime.datetime.now(pytz.utc)
