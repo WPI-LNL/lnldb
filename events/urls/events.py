@@ -25,6 +25,7 @@ urlpatterns = [
     url(r'^paid/', generate_date_patterns(list_views.paid, name="paid")),
     url(r'^unpaid/', generate_date_patterns(list_views.unpaid, name="unpaid")),
     url(r'^closed/', generate_date_patterns(list_views.closed, name="closed")),
+    url(r'^approved/', generate_date_patterns(list_views.approved, name="approved")),
 
     # Actual event pages
 
