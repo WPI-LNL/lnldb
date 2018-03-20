@@ -626,7 +626,7 @@ def closed(request, start=None, end=None):
 
 @login_required
 @permission_required('events.view_event', raise_exception=True)
-def approved(request, start=None, end=None):
+def all(request, start=None, end=None):
     if not start and not end:
         today = datetime.date.today()
         start = today - datetime.timedelta(days=3652.5)
@@ -635,11 +635,13 @@ def approved(request, start=None, end=None):
         end = end.strftime('%Y-%m-%d')
     context = {}
 
-    events = Event.objects.filter(approved=True).distinct()
+    events = Event.objects.distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.event_view_debug'):
         events = events.exclude(test_event=True)
+    if not request.user.has_perm('events.approve_event'):
+        events = events.exclude(approved=False)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings') \
@@ -650,9 +652,9 @@ def approved(request, start=None, end=None):
     sort = request.GET.get('sort')
     events = paginate_helper(events, page, sort)
 
-    context['h2'] = "Approved Events"
+    context['h2'] = "All Events"
     context['events'] = events
-    context['baseurl'] = reverse("events:approved")
+    context['baseurl'] = reverse("events:all")
     context['pdfurl'] = reverse('events:pdf-multi')
     context['cols'] = ['event_name',
                        'org',
