@@ -476,7 +476,7 @@ class EventReviewForm(forms.ModelForm):
                 HTML('<h4> Does this look good to you?</h4>'),
                 Submit('save', 'Yes!', css_class='btn btn-lg btn-success'),
                 HTML(
-                    '<a class="btn btn-lg btn-danger" href="{%% url "events:detail" %s %%}"> No... </a>'
+                    '<a class="btn btn-lg btn-danger" href="{%% url "events:detail" %s %%}"> Cancel </a>'
                     % event.id),
             ),
         )
