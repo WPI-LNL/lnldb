@@ -55,8 +55,8 @@ def email_billing_create(sender, instance, created, raw=False, **kwargs):
         email_body = """
             A New LNL bill has been posted for "%s" on %s for the amount of $%s
             """ % (i.event.event_name, i.date_billed, i.amount)
-
-        e = DLEG(subject="LNL Billing Create Notification", to_emails=[i.event.contact.email], body=email_body,
+        contact_emails = [i.event.contact.email] if i.event.contact is not None else []
+        e = DLEG(subject="LNL Billing Create Notification", to_emails=contact_emails, body=email_body,
                  bcc=[settings.EMAIL_TARGET_T])
         e.send()
 
@@ -71,7 +71,8 @@ def email_billing_marked_paid(sender, instance, created, raw=False, **kwargs):
             Thank you for paying the bill for "%s" on %s for the amount of $%s
             """ % (i.event.event_name, i.date_paid, i.amount)
 
-            e = DLEG(subject="LNL Billing Paid Notification", to_emails=[i.event.contact.email], body=email_body,
+            contact_emails = [i.event.contact.email] if i.event.contact is not None else []
+            e = DLEG(subject="LNL Billing Paid Notification", to_emails=contact_emails, body=email_body,
                      bcc=[settings.EMAIL_TARGET_T])
             e.send()
 
@@ -84,7 +85,8 @@ def email_billing_delete(sender, instance, **kwargs):
             The bill for the amount of $%s on "%s" has been deleted
             """ % (i.amount, i.event.event_name,)
 
-        e = DLEG(subject="LNL Billing Deletion Notification", to_emails=[i.event.contact.email], body=email_body,
+        contact_emails = [i.event.contact.email] if i.event.contact is not None else []
+        e = DLEG(subject="LNL Billing Deletion Notification", to_emails=contact_emails, body=email_body,
                  bcc=[settings.EMAIL_TARGET_T])
         e.send()
 

@@ -595,11 +595,19 @@
                                     {% permission request.user has 'events.bill_event' of event %}
                                         <td>
                                             {% if not event.closed %}
-                                                <a class="btn btn-link"
-                                                   href="{% url "events:bills:edit" event.id billing.id %}">Update</a>
-                                                {% if not billing.date_paid %}<a class="btn btn-link"
-                                                                                 href="{% url "events:bills:remove" event.id billing.id %}">Delete</a>
-                                                {% endif %}
+                                                <form class="form-inline" action="{% url "events:bills:pay" event.id billing.id %}" method="post">
+                                                    <div class="form-group">
+                                                    {% if not billing.date_paid %}
+                                                        {% csrf_token %}
+                                                        <button class="btn btn-link" type="submit">Mark Paid</button>
+                                                    {% endif %}
+                                                    <a class="btn btn-link"
+                                                       href="{% url "events:bills:edit" event.id billing.id %}">Update</a>
+                                                    {% if not billing.date_paid %}
+                                                        <a class="btn btn-link" href="{% url "events:bills:remove" event.id billing.id %}">Delete</a>
+                                                    {% endif %}
+                                                    </div>
+                                                </form>
                                             {% endif %}
                                         </td>
                                     {% endpermission %}

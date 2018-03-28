@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.generic import CreateView, DeleteView, UpdateView
+from django.views.decorators.http import require_POST
 from reversion.models import Version
 
 from emails.generators import DefaultLNLEmailGenerator as DLEG
@@ -617,3 +618,22 @@ class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
 
     def get_success_url(self):
         return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
+
+
+@require_POST
+@login_required
+def pay_bill(request, event, pk):
+    """
+    Quietly pays a bill, showing a message on the next page. POST only
+    """
+    bill = get_object_or_404(Billing, event_id=event, id=pk)
+    if not request.user.has_perm('events.bill_event', bill.event):
+        raise PermissionDenied
+
+    if bill.date_paid:
+        messages.info(request, "Bill has already been paid", extra_tags="info")
+    else:
+        bill.date_paid = timezone.now()
+        bill.save()
+        messages.success(request, "Bill paid!", extra_tags="success")
+    return HttpResponseRedirect(reverse('events:detail', args=(bill.event_id,)) + "#billing")

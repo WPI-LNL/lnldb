@@ -62,6 +62,8 @@ urlpatterns = [
             url(r'^mk/$', flow_views.BillingCreate.as_view(), name="new"),
             url(r'^update/(?P<pk>[0-9]+)/$', flow_views.BillingUpdate.as_view(),
                 name="edit"),
+            url(r'^pay/(?P<pk>[0-9]+)/$', flow_views.pay_bill,
+                name="pay"),
             url(r'^rm/(?P<pk>[0-9]+)/$', flow_views.BillingDelete.as_view(),
                 name="remove"),
             url(r'^pdf/$', pdf_views.generate_event_bill_pdf, name="pdf"),

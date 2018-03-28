@@ -1,3 +1,4 @@
+import datetime
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 
@@ -11,6 +12,24 @@ class EventBasicViewTest(TestCase):
         self.user = UserFactory.create(password='123')
         self.report = CCReportFactory.create(event=self.e)
         self.client.login(username=self.user.username, password='123')
+
+    def test_pay(self):
+        b = self.e.billings.create(date_billed=datetime.date(2000, 1, 1),
+                                   amount=3.14,
+                                   opt_out_initial_email=True)
+
+        # random clicks wont work
+        response = self.client.get(reverse('events:bills:pay', args=[self.e.pk, b.pk]))
+        self.assertEqual(response.status_code, 405)
+
+        # on success, redirects to event page
+        response = self.client.post(reverse('events:bills:pay', args=[self.e.pk, b.pk]))
+        self.assertEqual(response.status_code, 302)
+
+        # check it is actually paid
+        b.refresh_from_db()
+        self.assertIsNotNone(b.date_paid)
+        self.assertTrue(self.e.paid)
 
     def test_detail(self):
         response = self.client.get(reverse('events:detail', args=[self.e.pk]))
