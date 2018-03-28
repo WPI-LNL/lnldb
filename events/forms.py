@@ -474,9 +474,9 @@ class EventReviewForm(forms.ModelForm):
             Field('internal_notes', css_class="col-md-6", size="15"),
             FormActions(
                 HTML('<h4> Does this look good to you?</h4>'),
-                Submit('save', 'Yes!', css_class='btn btn-lg btn-danger'),
+                Submit('save', 'Yes!', css_class='btn btn-lg btn-success'),
                 HTML(
-                    '<a class="btn btn-lg btn-success" href="{%% url "events:detail" %s %%}"> No... </a>'
+                    '<a class="btn btn-lg btn-danger" href="{%% url "events:detail" %s %%}"> Cancel </a>'
                     % event.id),
             ),
         )
