@@ -101,15 +101,15 @@ class EventWizard(NamedUrlSessionWizardView):
         if self.steps.current == 'lighting':
             context.update({'help_objs': Lighting.objects.all()})
             context.update({'help_name': "Lighting"})
-            context.update({'extras': list(Extra.objects.filter(category__name="Lighting").all())})
+            context.update({'extras': Extra.objects.exclude(disappear=True).filter(category__name="Lighting")})
         if self.steps.current == 'sound':
             context.update({'help_objs': Sound.objects.all()})
             context.update({'help_name': "Sound"})
-            context.update({'extras': Extra.objects.filter(category__name="Sound").all()})
+            context.update({'extras': Extra.objects.exclude(disappear=True).filter(category__name="Sound")})
         if self.steps.current == 'projection':
             context.update({'help_objs': Projection.objects.all()})
             context.update({'help_name': "Projection"})
-            context.update({'extras': Extra.objects.filter(category__name="Projection").all()})
+            context.update({'extras': Extra.objects.exclude(disappear=True).filter(category__name="Projection")})
         percent = int(self.steps.step1 / float(self.steps.count) * 100)
         context.update({"percentage": percent})
         return context
