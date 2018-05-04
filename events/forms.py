@@ -31,15 +31,15 @@ from events.models import (Billing, CCReport, Event, EventAttachment,
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 
-LIGHT_EXTRAS = Extra.objects.filter(category__name="Lighting")
+LIGHT_EXTRAS = Extra.objects.exclude(disappear=True).filter(category__name="Lighting")
 LIGHT_EXTRAS_ID_NAME = LIGHT_EXTRAS.values_list('id', 'name')
 LIGHT_EXTRAS_NAMES = LIGHT_EXTRAS.values('name')
 
-SOUND_EXTRAS = Extra.objects.filter(category__name="Sound")
+SOUND_EXTRAS = Extra.objects.exclude(disappear=True).filter(category__name="Sound")
 SOUND_EXTRAS_ID_NAME = SOUND_EXTRAS.values_list('id', 'name')
 SOUND_EXTRAS_NAMES = SOUND_EXTRAS.values('name')
 
-PROJ_EXTRAS = Extra.objects.filter(category__name="Projection")
+PROJ_EXTRAS = Extra.objects.exclude(disappear=True).filter(category__name="Projection")
 PROJ_EXTRAS_ID_NAME = PROJ_EXTRAS.values_list('id', 'name')
 PROJ_EXTRAS_NAMES = PROJ_EXTRAS.values('name')
 
