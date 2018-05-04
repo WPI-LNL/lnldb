@@ -49,7 +49,7 @@ class GroupedModelChoiceIterator(forms.models.ModelChoiceIterator):
     def __iter__(self):
         if self.field.empty_label is not None:
             yield (u"", self.field.empty_label)
-        for group, choices in groupby(self.queryset.all(),
+        for group, choices in groupby(self.queryset.all().order_by(self.field.group_by_field),
                                       key=lambda row: getattr(row, self.field.group_by_field)):
             yield (self.field.group_label(group), [self.choice(ch) for ch in choices])
 
