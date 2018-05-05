@@ -325,7 +325,6 @@ def rmcc(request, id, user):
 @login_required
 def assigncc(request, id):
     context = {}
-    context['msg'] = "CrewChief"
 
     event = get_object_or_404(Event, pk=id)
 
@@ -335,7 +334,7 @@ def assigncc(request, id):
 
     context['event'] = event
 
-    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
+    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=5, exclude=[])
     cc_formset.form = curry_class(CCIForm, event=event)
 
     if request.method == 'POST':

@@ -108,7 +108,6 @@ def viewattendance(request, mtg_id):
 def updateevent(request, mtg_id, event_id):
     context = {}
     perms = ('meetings.edit_mtg',)
-    context['msg'] = "Update Event"
     event = get_object_or_404(Event, pk=event_id)
     if not (request.user.has_perms(perms) or
             request.user.has_perms(perms, event)):
