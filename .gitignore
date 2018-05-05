@@ -11,4 +11,5 @@ src/*
 htmlcov/*
 tags
 .env
+env/
 docs/_build/*
