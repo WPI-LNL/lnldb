@@ -4,7 +4,7 @@
 {% block content %}
     <div class="row">
         <div class="col-md-12">
-                <h2> {{msg }} Crew Chiefs for "{{ event }}"</h2>
+                <h2>Attachments for "{{ event }}"</h2>
                 <form method="post" action="" class="form-inline" enctype="multipart/form-data">
                 {% csrf_token %}
                 {{ formset.management_form }}

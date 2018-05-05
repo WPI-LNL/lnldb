@@ -356,7 +356,6 @@ def assigncc(request, id):
 @login_required
 def assignattach(request, id):
     context = {}
-    context['msg'] = "Attachments"
 
     event = get_object_or_404(Event, pk=id)
     if not (request.user.has_perm('events.event_attachments') or
@@ -386,7 +385,6 @@ def assignattach(request, id):
 @login_required
 def assignattach_external(request, id):
     context = {}
-    context['msg'] = "Attachments"
 
     event = get_object_or_404(Event, pk=id)
     if event.closed or event.cancelled:
