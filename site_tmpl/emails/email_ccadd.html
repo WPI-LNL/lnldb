@@ -1,0 +1,46 @@
+{% extends "emails/email_base.html" %}
+{% load tz %}
+{% load lnldb_tags %}
+{% block perma %}
+{% endblock %}
+
+{% block unsub %}
+{% endblock %}
+
+{% block content %}
+<table class="w960" width="960" cellpadding="10" cellspacing="0" border="0">
+    <tbody>
+        <tr>
+            <td class="w960" width="960">
+                <p align="left" class="article-title">{{ subject }}</p>
+                <div align="left" class="article-content">
+                <p>You've been added as a crew chief to the event {{ ccinstance.event }}.<br>
+                You have signed up to be crew chief for {{ ccinstance.service }},
+                with your setup starting on {{ ccinstance.setup_start }} in the {{ ccinstance.setup_location }}.</p>
+
+                <p>Please note that the attached Workorder PDF contains all services relating to the event, not just your assigned service.</p>
+
+                <p><b>{{ ccinstance.event }}</b><br>
+                <i>{{ ccinstance.event.location }}</i><br>
+                Start: {{ ccinstance.event.datetime_start }}<br>
+                End: {{ ccinstance.event.datetime_end }}<br>
+                Setup start: {{ ccinstance.setup_start }}<br>
+                Setup complete: {{ ccinstance.event.datetime_setup_complete }}</p>
+
+                <p>See full details of this event <a href="{% get_base_url %}{% url 'events:detail' ccinstance.event.id %}">here</a>.</p>
+
+                <p>Submit your crew chief report <a href="{% get_base_url %}{% url 'my:report' ccinstance.event.id %}">here</a>.</p>
+
+                <p>Submit crew hours <a href="{% get_base_url %}{% url 'my:hours-list' ccinstance.event.id %}">here</a>.</p>
+
+                <p>If you have any questions or concerns about the above information, contact the Vice President at
+                <a href="mailto:lnl-vp@wpi.edu">lnl-vp@wpi.edu</a>.</p>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="w960" width="960" height="10"></td>
+        </tr>
+        </tbody>
+</table>
+{% endblock %}

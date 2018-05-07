@@ -6,7 +6,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.text import slugify
 
-from emails.generators import DefaultLNLEmailGenerator as DLEG
+from emails.generators import CcAddEmailGenerator, DefaultLNLEmailGenerator as DLEG
 from events.models import Billing, EventCCInstance, Fund
 from pdfs.views import generate_pdfs_standalone
 
@@ -19,7 +19,7 @@ __all__ = [
 
 @receiver(post_save, sender=EventCCInstance)
 def email_cc_notification(sender, instance, created, raw=False, **kwargs):
-    """ Sends an email to a crew cheif to notify them of being made one """
+    """ Sends an email to a crew chief to notify them of being made one """
     if created and not raw:
         i = instance
 
@@ -35,15 +35,7 @@ def email_cc_notification(sender, instance, created, raw=False, **kwargs):
         else:
             local_formatted = "a time of your choice "
 
-        email_body = """
-            You\'ve been added as a crew chief to the event "%s". \n
-            You have signed up to be crew chief for %s, with your setup starting on %s in the %s \n
-            \n
-            Please note that the attached Workorder PDF contains all services relating to the event,
-             not just your assigned service.
-            """ % (i.event.event_name, i.service, local_formatted, i.setup_location, )
-        e = DLEG(subject="Crew Chief Add Notification", to_emails=[instance.crew_chief.email], body=email_body,
-                 attachments=attachments)
+        e = CcAddEmailGenerator(ccinstance=i, attachments=attachments)
         e.send()
 
 

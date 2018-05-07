@@ -4,7 +4,7 @@ from django.conf import settings
 from django.shortcuts import render
 from formtools.wizard.views import NamedUrlSessionWizardView
 
-from emails.generators import DefaultLNLEmailGenerator as DLEG
+from emails.generators import EventEmailGenerator
 from events.forms import named_event_tmpls
 from events.models import Event, Extra, Lighting, Projection, Sound
 
@@ -39,15 +39,14 @@ class EventWizard(NamedUrlSessionWizardView):
     def done(self, form_list, **kwargs):
         # return HttpResponse([form.cleaned_data for form in form_list])
         event = Event.event_mg.consume_workorder_formwiz(form_list, self)
-        # return HttpResponseRedirect(reverse('events:detail',args=(event.id,)))
-        email_body = "You have successfully submitted an event titled %s" % event.event_name
-        email = DLEG(subject="New Event Submitted", to_emails=[event.contact.email], body=email_body,
+        email_body = "You have successfully submitted the following event."
+        email = EventEmailGenerator(event=event, subject="New Event Submitted", to_emails=[event.contact.email], body=email_body,
                      bcc=[settings.EMAIL_TARGET_VP])
         email.send()
 
         if event.projection:
-            email_bodyp = 'The event "%s" has a request for projection' % event.event_name
-            emailp = DLEG(subject="New Event Submitted w/ Projection", to_emails=[settings.EMAIL_TARGET_HP],
+            email_bodyp = 'The following event was just submitted with projection.'
+            emailp = EventEmailGenerator(event=event, subject="New Event Submitted w/ Projection", to_emails=[settings.EMAIL_TARGET_HP],
                           body=email_bodyp)
             emailp.send()
         return render(self.request, 'wizard_finished.html', {})

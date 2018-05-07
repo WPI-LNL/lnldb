@@ -13,7 +13,7 @@ from django.views.generic import CreateView, DeleteView, UpdateView
 from django.views.decorators.http import require_POST
 from reversion.models import Version
 
-from emails.generators import DefaultLNLEmailGenerator as DLEG
+from emails.generators import ReportReminderEmailGenerator, DefaultLNLEmailGenerator as DLEG
 from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm,
                           CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm,
@@ -172,18 +172,46 @@ def reviewremind(request, id, uid):
         attachments = [{"file_handle": pdf_handle, "name": filename}]
 
         cci = cci[0]
-        ReportReminder.objects.create(event=cci.event, crew_chief=cci.crew_chief)
-        email_body = 'This is a reminder that you have a pending crew chief report for "%s" \n' \
-                     ' Please Visit %s%s to complete it' % (event.event_name,
-                                                            request.get_host(),
-                                                            reverse("my:report", args=[event.id]))
-        email = DLEG(subject="LNL Crew Chief Report Reminder Email", to_emails=[cci.crew_chief.email], body=email_body,
-                     attachments=attachments)
+        reminder = ReportReminder.objects.create(event=cci.event, crew_chief=cci.crew_chief)
+        email = ReportReminderEmailGenerator(reminder=reminder, attachments=attachments)
         email.send()
         messages.add_message(request, messages.INFO, 'Reminder Sent')
         return HttpResponseRedirect(reverse("events:review", args=(event.id,)))
     else:
         return HttpResponse("Bad Call")
+
+
+@login_required
+def remindall(request, id):
+    event = get_object_or_404(Event, pk=id)
+    if not (request.user.has_perm('events.review_event') or
+            request.user.has_perm('events.review_event', event)):
+        raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    if event.reviewed or not event.approved:
+        messages.add_message(request, messages.ERROR, 'Can only send reminders for an event that is approved and not reviewed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+
+    if event.num_crew_needing_reports == 0:
+        messages.add_message(request, messages.INFO, 'All crew chiefs have already submitted reports.')
+        return HttpResponseRedirect(reverse("events:review", args=(event.id,)))
+
+    pdf_handle = generate_pdfs_standalone([event.id])
+    filename = "%s.workorder.pdf" % slugify(event.event_name)
+    attachments = [{"file_handle": pdf_handle, "name": filename}]
+
+    for cci in event.crew_needing_reports:
+        reminder = ReportReminder.objects.create(event=event, crew_chief=cci.crew_chief)
+        email = ReportReminderEmailGenerator(reminder=reminder, attachments=attachments)
+        email.send()
+
+    messages.add_message(request, messages.INFO, 'Reminders sent to all crew chiefs needing reports for %s' % event.event_name)
+    if 'next' in request.GET:
+        return HttpResponseRedirect(request.GET['next'])
+    else:
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
 
 @login_required
