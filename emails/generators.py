@@ -160,8 +160,7 @@ class DefaultLNLEmailGenerator(object):  # yay classes
 
         template_txt = "%s.txt" % template_basename
         content_txt = render_to_string(template_txt, context)
-        # print bcc
-        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=bcc)
+        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=cc)
         for a in attachments:
             self.email.attach(a['name'], a['file_handle'], "application/pdf")
 
