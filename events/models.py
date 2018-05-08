@@ -154,11 +154,6 @@ class EventManager(models.Manager):
             submitted_ip=wiz.request.META['REMOTE_ADDR'],
             event_name=event_name,
 
-            person_name=person_name,
-            # org = group, add to another method self.org.add(
-            contact_email=contact_email,
-            contact_phone=contact_phone,
-
             # datetime_setup_start = setup_start,
             datetime_setup_complete=setup_complete,
             datetime_start=event_start,
@@ -405,7 +400,6 @@ class Event(models.Model):
     approved_on = models.DateTimeField(null=True, blank=True)
     approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventapprovals", null=True, blank=True)
 
-    # billing reviews
     reviewed = models.BooleanField(default=False)
     reviewed_on = models.DateTimeField(null=True, blank=True)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventbillingreview", null=True, blank=True)
@@ -551,20 +545,8 @@ class Event(models.Model):
     # Report Properties
     @property
     def crew_needing_reports(self):
-        # chiefs = self.crew_chief.values_list('id','first_name','last_name')
-        # chiefs_with_lists = self.ccreport_set.values_list('crew_chief__id',
-        # 'crew_chief__first_name','crew_chief__last_name').distinct()
         reports = self.ccreport_set.all().values_list('crew_chief', flat=True)
-        pending = self.ccinstances.exclude(crew_chief__in=reports).all()
-
-        # chiefspending
-        # chiefs = self.crew_chief.values_list('id')
-        # chiefs_with_lists = self.ccreeport_set.values_list('crew_chief').distinct()
-
-        # k =  [u[0] for u in chiefs if u not in chiefs_with_lists]
-
-        # return self.crew_chief.filter(id__in=k)
-        return pending
+        return self.ccinstances.exclude(crew_chief__in=reports)
 
     @property
     def num_crew_needing_reports(self):
@@ -789,7 +771,7 @@ class Event(models.Model):
     @property
     def org_to_be_billed(self):
         if not self.billing_org:
-            if self.org:
+            if self.org.count() != 0:
                 return self.org.all()[0]
             else:
                 return None

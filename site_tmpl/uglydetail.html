@@ -570,11 +570,11 @@
                         </tr>
                     </table>
                     <h2> Bills </h2>
-							{% if event.reviewed %}
-                    <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Invoice</a>
-							{% else %}
-                    <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Quote</a>
-							{% endif %}
+                    {% if event.reviewed %}
+                        <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Invoice</a>
+                    {% else %}
+                        <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Quote</a>
+                    {% endif %}
                     {% if event.billings %}
                         <table class="table">
                             <thead>

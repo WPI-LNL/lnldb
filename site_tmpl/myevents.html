@@ -29,7 +29,7 @@
                                 <a class="btn btn-primary" href="{% url "my:report" instance.event.id %}">CC
                                     Report</a>
                                 <a class="btn btn-info" href="{% url "my:hours-list" instance.event.id %}">Crew Hours</a>
-                                {% endif %}
+                            {% endif %}
                             {% if instance.event.attachments %}
                                 <a class="btn btn-info" href="{% url "my:event-files" instance.event.id %}">Files</a>
                             {% endif %}

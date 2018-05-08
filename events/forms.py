@@ -330,7 +330,6 @@ class InternalEventForm(FieldAccessForm):
                 ),
                 Tab(
                     'Contact',
-                    # 'person_name',
                     'contact',
                     'org',
                     DynamicFieldContainer('billing_fund'),

@@ -97,8 +97,9 @@ def denial(request, id):
         if form.is_valid():
             e = form.save(commit=False)
             e.cancelled = True
-            e.cancelled_on = timezone.now()
             e.cancelled_by = request.user
+            e.cancelled_on = timezone.now()
+            e.closed = True
             e.closed_by = request.user
             e.closed_on = timezone.now()
             e.save()
@@ -301,14 +302,10 @@ def hours_bulk_admin(request, id):
         if formset.is_valid():
             formset.save()
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-        else:
-            context['formset'] = formset
-
     else:
         formset = mk_hours_formset(instance=event)
 
-        context['formset'] = formset
-
+    context['formset'] = formset
     return render(request, 'formset_hours_bulk.html', context)
 
 
