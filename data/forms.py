@@ -68,7 +68,7 @@ class FieldAccessForm(forms.ModelForm):
                 exclude += level.exclude
 
         # disable all fields except those in enable or exclude
-        for field_name, field in self.fields.items():
+        for field_name, field in list(self.fields.items()):
             if exclude and field_name in exclude:
                 self.fields.pop(field_name)
             elif not enable or field_name not in enable:
