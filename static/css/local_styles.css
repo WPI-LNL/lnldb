@@ -245,3 +245,12 @@ tr:target, .table-striped>tbody>tr:nth-of-type(odd):target {
 td.checkbox {
     display: table-cell; /* i don't know why it thought a cell WASNT a cell... */
 }
+
+/* Bootstrap calls it alert-danger, but django messages calls it alert-error.
+   bootstrap-admin.css defines both, but most pages don't use that file, they use bootstrap.min.css
+   There is probably a better way to fix this than pasting the block here */
+.alert-error {
+    color: #b94a48;
+    background-color: #f2dede;
+    border-color: #eed3d7;
+}
