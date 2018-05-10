@@ -140,7 +140,9 @@
                 <li><a href="#schedule" data-toggle="tab">Schedule</a></li>
                 <li><a href="#services" data-toggle="tab">Services</a></li>
                 <li><a href="#crew" data-toggle="tab">Crew</a></li>
-                <li><a href="#reports" data-toggle="tab">Reports</a></li>
+                {% permission request.user has 'events.view_event_reports' of event %}
+                    <li><a href="#reports" data-toggle="tab">Reports</a></li>
+                {% endpermission %}
                 {% permission request.user has 'events.view_event_billing' of event %}
                     <li><a href="#billing" data-toggle="tab">Billing</a></li>
                 {% endpermission %}
@@ -399,9 +401,10 @@
                     {% endcomment %}
                     
                 </div>
+                {% permission request.user has 'events.view_event_reports' of event %}
                 <div id="reports" class="tab-pane">
                     {% if not event.closed %}
-                        {% permission request.user has 'events.add_event_report' of event %}
+                        {% permission request.user has 'events.add_ccreport' of event %}
                             <div class="pull-right">
                                 <a class="btn btn-primary btn-lg" href="{% url "events:reports:new" event.id%}">New</a>
                             </div>
@@ -469,6 +472,7 @@
                         {% endfor %}
                     </table>
                 </div>
+                {% endpermission %}
                 {% permission request.user has 'events.view_event_billing' of event %}
                 <div id="billing" class="tab-pane">
                     {% if not event.closed %}

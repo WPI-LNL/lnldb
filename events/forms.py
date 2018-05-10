@@ -538,11 +538,11 @@ class InternalReportForm(FieldAccessForm):
 
     class FieldAccess:
         avg_user = FieldAccessLevel(
-            lambda user, instance: not user.has_perm('events.add_event_report'),
+            lambda user, instance: not user.has_perm('events.add_ccreport'),
             exclude=('crew_chief',)
         )
         admin = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.add_event_report'),
+            lambda user, instance: user.has_perm('events.add_ccreport'),
             enable=('crew_chief',)
         )
         all = FieldAccessLevel(lambda user, instance: True, enable=('report',))

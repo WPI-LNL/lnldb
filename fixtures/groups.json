@@ -69,12 +69,12 @@
         "ccreport"
       ],
       [
-        "add_event",
+        "delete_ccreport",
         "events",
-        "event"
+        "ccreport"
       ],
       [
-        "add_event_report",
+        "add_event",
         "events",
         "event"
       ],
@@ -195,6 +195,11 @@
       ],
       [
         "view_event_billing",
+        "events",
+        "event"
+      ],
+      [
+        "view_event_reports",
         "events",
         "event"
       ],
@@ -615,6 +620,11 @@
         "event"
       ],
       [
+        "view_event_reports",
+        "events",
+        "event"
+      ],
+      [
         "list_org_events",
         "events",
         "organization"
@@ -708,6 +718,11 @@
         "event"
       ],
       [
+        "view_event_reports",
+        "events",
+        "event"
+      ],
+      [
         "list_org_events",
         "events",
         "organization"
@@ -772,6 +787,11 @@
       ],
       [
         "view_event",
+        "events",
+        "event"
+      ],
+      [
+        "view_event_reports",
         "events",
         "event"
       ],
