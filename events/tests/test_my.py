@@ -50,10 +50,17 @@ class MyViewTest(TestCase):
     def test_attach(self):
         # I can get to the attachments page of an event I submitted
         self.e.submitted_by = self.user
+        self.e.closed = False
         self.e.save()
 
         response = self.client.get(reverse("my:event-attach", args=[self.e.pk]))
         self.assertEqual(response.status_code, 200)
+
+        self.e.closed = True
+        self.e.save()
+
+        response = self.client.get(reverse("my:event-attach", args=[self.e.pk]))
+        self.assertEqual(response.status_code, 302)
 
         # TODO: check attachments functionality more thoroughly
 

@@ -38,6 +38,9 @@ def approval(request, id):
     event = get_object_or_404(Event, pk=id)
     if not request.user.has_perm('events.approve_event', event):
         raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     if event.approved:
         messages.add_message(request, messages.INFO, 'Event has already been approved!')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
@@ -88,6 +91,9 @@ def denial(request, id):
     event = get_object_or_404(Event, pk=id)
     if not request.user.has_perm('events.decline_event', event):
         raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     if event.cancelled:
         messages.add_message(request, messages.INFO, 'Event has already been cancelled!')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
@@ -128,10 +134,11 @@ def review(request, id):
     context = {}
     context['h2'] = "Review Event for Billing"
     event = get_object_or_404(Event, pk=id)
-
     if not request.user.has_perm('events.review_event', event):
         raise PermissionDenied
-
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     if event.reviewed:
         messages.add_message(request, messages.INFO, 'Event has already been reviewed!')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
@@ -161,8 +168,15 @@ def review(request, id):
 @login_required
 def reviewremind(request, id, uid):
     event = get_object_or_404(Event, pk=id)
-    if event.closed or event.reviewed:
-        return HttpResponse("Event Closed")
+    if not (request.user.has_perm('events.review_event') or
+            request.user.has_perm('events.review_event', event)):
+        raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    if event.reviewed or not event.approved:
+        messages.add_message(request, messages.ERROR, 'Can only send reminders for an event that is approved and not reviewed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
     cci = event.ccinstances.filter(crew_chief_id=uid)
     if cci:
@@ -210,6 +224,9 @@ def cancel(request, id):
     event = get_object_or_404(Event, pk=id)
     if not request.user.has_perm('events.cancel_event', event):
         raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     event.cancelled = True
     event.cancelled_by = request.user
     event.cancelled_on = timezone.now()
@@ -251,6 +268,9 @@ def rmcrew(request, id, user):
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     event.crew.remove(user)
     return HttpResponseRedirect(reverse("events:add-crew", args=(event.id,)))
 
@@ -264,6 +284,9 @@ def assigncrew(request, id):
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     context['event'] = event
 
     if request.method == 'POST':
@@ -291,7 +314,9 @@ def hours_bulk_admin(request, id):
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
-
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     context['event'] = event
 
     mk_hours_formset = inlineformset_factory(Event, Hours, extra=15, exclude=[])
@@ -315,6 +340,9 @@ def rmcc(request, id, user):
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     event.crew_chief.remove(user)
     return HttpResponseRedirect(reverse("events:chiefs", args=(event.id,)))
 
@@ -328,7 +356,9 @@ def assigncc(request, id):
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
-
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     context['event'] = event
 
     cc_formset = inlineformset_factory(Event, EventCCInstance, extra=5, exclude=[])
@@ -358,6 +388,9 @@ def assignattach(request, id):
     if not (request.user.has_perm('events.event_attachments') or
             request.user.has_perm('events.event_attachments', event)):
         raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     context['event'] = event
 
     att_formset = inlineformset_factory(Event, EventAttachment, extra=1, exclude=[])
@@ -384,8 +417,9 @@ def assignattach_external(request, id):
     context = {}
 
     event = get_object_or_404(Event, pk=id)
-    if event.closed or event.cancelled:
-        return HttpResponse("Event does not allow attachment upload at this time")
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
     context['event'] = event
 
@@ -421,10 +455,12 @@ def extras(request, id):
 
     event = get_object_or_404(Event, pk=id)
 
-    if not (request.user.has_perm('events.adjust_event_charges') or request.user.has_perm('events.adjust_event_charges',
-                                                                                          event)):
+    if not (request.user.has_perm('events.adjust_event_charges') or
+            request.user.has_perm('events.adjust_event_charges', event)):
         raise PermissionDenied
-
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     context['event'] = event
 
     mk_extra_formset = inlineformset_factory(Event, ExtraInstance, extra=1, exclude=[])
@@ -455,9 +491,12 @@ def oneoff(request, id):
     event = get_object_or_404(Event, pk=id)
     context['event'] = event
 
-    if not (request.user.has_perm('events.adjust_event_charges') or request.user.has_perm('events.adjust_event_charges',
-                                                                                          event)):
+    if not (request.user.has_perm('events.adjust_event_charges') or
+            request.user.has_perm('events.adjust_event_charges', event)):
         raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
     mk_oneoff_formset = inlineformset_factory(Event, EventArbitrary, extra=1, exclude=[])
 
@@ -630,7 +669,9 @@ def pay_bill(request, event, pk):
     bill = get_object_or_404(Billing, event_id=event, id=pk)
     if not request.user.has_perm('events.bill_event', bill.event):
         raise PermissionDenied
-
+    if bill.event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     if bill.date_paid:
         messages.info(request, "Bill has already been paid", extra_tags="info")
     else:
