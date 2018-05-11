@@ -160,8 +160,7 @@ class DefaultLNLEmailGenerator(object):  # yay classes
 
         template_txt = "%s.txt" % template_basename
         content_txt = render_to_string(template_txt, context)
-        # print bcc
-        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=bcc)
+        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=cc)
         for a in attachments:
             self.email.attach(a['name'], a['file_handle'], "application/pdf")
 
@@ -172,3 +171,92 @@ class DefaultLNLEmailGenerator(object):  # yay classes
 
     def send(self):
         self.email.send()
+
+
+class EventEmailGenerator(DefaultLNLEmailGenerator):
+    def __init__(self,
+            event=None,
+            subject="LNL Event",
+            to_emails=settings.DEFAULT_TO_ADDR,
+            from_email=settings.DEFAULT_FROM_ADDR,
+            context=None,
+            template_basename="emails/email_event",
+            build_html=True,
+            body=None,
+            bcc=None,
+            cc=None,
+            attachments=None):
+        if context is None:
+            context = {}
+        context['event'] = event
+        super(EventEmailGenerator, self).__init__(
+                subject=subject,
+                to_emails=to_emails,
+                from_email=from_email,
+                context=context,
+                template_basename=template_basename,
+                build_html=build_html,
+                body=body,
+                bcc=bcc,
+                cc=cc,
+                attachments=attachments)
+
+
+class CcAddEmailGenerator(DefaultLNLEmailGenerator):
+    def __init__(self,
+            ccinstance=None,
+            subject="Crew Chief Add Notification",
+            to_emails=None,
+            from_email=settings.DEFAULT_FROM_ADDR,
+            context=None,
+            template_basename="emails/email_ccadd",
+            build_html=True,
+            bcc=None,
+            cc=None,
+            attachments=None):
+        if to_emails is None:
+            to_emails = [ccinstance.crew_chief.email]
+        if context is None:
+            context = {}
+        context['ccinstance'] = ccinstance
+        super(CcAddEmailGenerator, self).__init__(
+                subject=subject,
+                to_emails=to_emails,
+                from_email=from_email,
+                context=context,
+                template_basename=template_basename,
+                build_html=build_html,
+                body=None,
+                bcc=bcc,
+                cc=cc,
+                attachments=attachments)
+
+
+class ReportReminderEmailGenerator(DefaultLNLEmailGenerator):
+    def __init__(self,
+            reminder=None,
+            subject="LNL Crew Chief Report Reminder Email",
+            to_emails=None,
+            from_email=settings.DEFAULT_FROM_ADDR,
+            context=None,
+            template_basename="emails/email_reportreminder",
+            build_html=True,
+            bcc=None,
+            cc=None,
+            attachments=None):
+        if to_emails is None:
+            to_emails = [reminder.crew_chief.email]
+        if context is None:
+            context = {}
+        context['reminder'] = reminder
+        super(ReportReminderEmailGenerator, self).__init__(
+                subject=subject,
+                to_emails=to_emails,
+                from_email=from_email,
+                context=context,
+                template_basename=template_basename,
+                build_html=build_html,
+                body=None,
+                bcc=bcc,
+                cc=cc,
+                attachments=attachments)

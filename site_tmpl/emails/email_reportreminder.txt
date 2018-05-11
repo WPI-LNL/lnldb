@@ -1,0 +1,24 @@
+{% load tz %}
+{% load lnldb_tags %}
+{{ subject }}
+
+This is a reminder that you have a pending crew chief report for {{ reminder.event }}.
+
+Submitting a crew chief report and recording crew hours are required parts of being a crew chief. These tasks are expected to be completed shortly after an event while you still have all details of the event fresh in your mind. Delaying submitting your crew chief report directly delays the billing of this event.
+
+Crew chief reports exist for two purposes: 1) to serve as a guide for crew chiefs of this event in future years, allowing us to remember what worked well and what didn't, to avoid past mistakes, and to know what unexpected situations to look out for; and 2) to allow those who are responsible for billing this event to know what work was actually done and equipment was actually used, so that the event can be billed accordingly.
+
+Submit your crew chief report at {% get_base_url %}{% url 'my:report' reminder.event.id %}.
+
+Submit crew hours at {% get_base_url %}{% url 'my:hours-list' reminder.event.id %}.
+
+For your convenience, the Workorder PDF is attached.
+
+{{ reminder.event }}
+Location: {{ reminder.event.location }}
+Start: {{ reminder.event.datetime_start }}
+End: {{ reminder.event.datetime_end }}
+Setup start: {{ reminder.setup_start }}
+Setup complete: {{ reminder.event.datetime_setup_complete }}
+
+See full details of this event at {% get_base_url %}{% url 'events:detail' reminder.event.id %}.
