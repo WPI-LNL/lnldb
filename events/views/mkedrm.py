@@ -73,7 +73,7 @@ def eventnew(request, id=None):
                     to_emails=[]
                     if request.user.email:
                         to_emails.append(request.user.email)
-                    email = EventEmailGenerator(event=res, subject=subject, to_emails=to_emails, body=email_body, cc=bcc)
+                    email = EventEmailGenerator(event=res, subject=subject, to_emails=to_emails, body=email_body, bcc=bcc)
                     email.send()
             else:
                 res = form.save(commit=False)
