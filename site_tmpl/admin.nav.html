@@ -100,6 +100,7 @@
                         <li><a href="{% url "accounts:inactive" %}">Inactive</a></li>
                         <li><a href="{% url "accounts:associate" %}">Associate</a></li>
                         <li><a href="{% url "accounts:alumni" %}">Alumni</a></li>
+                        <li><a href="{% url "accounts:allmembers" %}">All Members</a></li>
                         {% permission request.user has 'accounts.view_user' %}
                             <li><a href="{% url "accounts:limbo" %}">Unafiliated Users</a></li>
                         {% endpermission %}

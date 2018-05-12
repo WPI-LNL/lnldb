@@ -33,6 +33,7 @@ urlpatterns = [
     url(r'^db/members/alum/$', views.AlumniList.as_view(), name='alumni'),
     url(r'^db/members/away/$', views.AwayList.as_view(), name='away'),
     url(r'^db/members/inactive/$', views.InactiveList.as_view(), name='inactive'),
+    url(r'^db/members/all/$', views.AllMembersList.as_view(), name="allmembers"),
     url(r'^db/members/unsorted/$', views.LimboList.as_view(), name="limbo"),
 
     url(r'^db/members/mdc/raw/$', views.mdc_raw, name='mdc_raw'),

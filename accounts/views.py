@@ -143,6 +143,12 @@ class InactiveList(BaseUserList):
     name = "Inactive List"
 
 
+class AllMembersList(BaseUserList):
+    perms = ['accounts.view_member']
+    queryset = get_user_model().objects.filter(groups__isnull=False).distinct()
+    name = "All Members List"
+
+
 class LimboList(BaseUserList):
     queryset = get_user_model().objects.filter(groups__isnull=True)
     name = "Users without Association"
