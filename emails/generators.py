@@ -15,6 +15,7 @@ DEFAULT_TO_ADDR = settings.DEFAULT_TO_ADDR
 def generate_notice_email(notice):
     subject = notice.subject
     from_email = settings.DEFAULT_FROM_ADDR
+    reply_to_email = settings.EMAIL_TARGET_S
     to_email = notice.email_to.email
 
     context = {'object': notice}
@@ -22,7 +23,7 @@ def generate_notice_email(notice):
     cont_html = render_to_string('emails/email_notice.html', context)
     cont_text = render_to_string('emails/email_notice.txt', context)
 
-    email = EmailMultiAlternatives(subject, cont_text, from_email, [to_email])
+    email = EmailMultiAlternatives(subject, cont_text, from_email, [to_email], reply_to=[reply_to_email])
     email.attach_alternative(cont_html, "text/html")
 
     return email
