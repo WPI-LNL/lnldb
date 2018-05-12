@@ -35,8 +35,8 @@ urlpatterns = [
     url(r'^db/members/inactive/$', views.InactiveList.as_view(), name='inactive'),
     url(r'^db/members/unsorted/$', views.LimboList.as_view(), name="limbo"),
 
-    url(r'^list/mdc/raw/$', views.mdc_raw, name='mdc_raw'),
-    url(r'^list/mdc/$', views.mdc, name='mdc'),
+    url(r'^db/members/mdc/raw/$', views.mdc_raw, name='mdc_raw'),
+    url(r'^db/members/mdc/$', views.mdc, name='mdc'),
     url(r'^db/members/(?P<pk>[0-9]+)/set_password/$', views.PasswordSetView.as_view(), name="password"),
 
     url(r'^db/members/(?P<pk>[0-9]+)/', include(each_member_pattern)),
