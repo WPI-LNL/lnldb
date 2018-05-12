@@ -13,6 +13,8 @@ from django_ical.views import ICalFeed
 from events.models import Event, EventCCInstance
 from meetings.models import Meeting
 
+from six import string_types
+
 
 class BaseFeed(ICalFeed):
     """
@@ -124,7 +126,7 @@ def timestamp_to_datetime(timestamp):
     Converts string timestamp to datetime
     with json fix
     """
-    if isinstance(timestamp, (str, unicode)):
+    if isinstance(timestamp, string_types):
 
         if len(timestamp) == 13:
             timestamp = int(timestamp) / 1000
