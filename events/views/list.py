@@ -753,11 +753,12 @@ def all(request, start=None, end=None):
                        'org',
                        'location',
                        'crew_chief',
-                       FakeExtendedField('datetime_start', verbose_name="Starting At"),
+                       FakeExtendedField('datetime_start', verbose_name="Event Start"),
+                       FakeExtendedField('datetime_end', verbose_name="Event End"),
                        FakeField('short_services', verbose_name="Services", sortable=False),
                        FakeField('tasks')]
     if request.user.has_perm('events.approve_event'):
-        context['cols'].append('approved')
+        context['cols'].append(FakeField('approval'))
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render(request, 'events.html', context)
 

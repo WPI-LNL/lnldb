@@ -173,7 +173,16 @@
                                     {% endpermission %}
                                 {% endif %}
                             </td>
-
+                        {% elif field.name == 'approval' %}
+                            <td class="approval">
+                                {% if event.approved %}
+                                    <span class="glyphicon glyphicon-ok"></span>
+                                {% elif event.closed %}
+                                    <span class="glyphicon glyphicon-remove"></span>
+                                {% else %}
+                                    <span class="glyphicon glyphicon-minus"></span>
+                                {% endif %}
+                            </td>
                         {% else %}
                             <td class="{{ field.name }}">{{ event|getattribute:field.name }}</td>
                         {% endif %}
