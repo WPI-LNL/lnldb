@@ -188,9 +188,14 @@ class IOrgForm(FieldAccessForm):
         def __init__(self):
             pass
 
-        hide_internal_notes = FieldAccessLevel(
+        internal_notes_view = FieldAccessLevel(
             lambda user, instance: not user.has_perm("events.view_org_notes", instance),
             exclude=('notes',)
+        )
+
+        internal_notes_edit = FieldAccessLevel(
+            lambda user, instance: user.has_perm("events.view_org_notes", instance),
+            enable=('notes',)
         )
 
         billing_view = FieldAccessLevel(
