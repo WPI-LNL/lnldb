@@ -58,6 +58,7 @@
                             <li><a href="{% url "events:unpaid" start end %}{% append_to_get page=1 %}">Billed/UnPaid</a></li>
                             <li><a href="{% url "events:paid" start end %}{% append_to_get page=1 %}">Paid</a></li>
                             <li><a href="{% url "events:closed" start end %}{% append_to_get page=1 %}">Closed</a></li>
+                            <li><a href="{% url "events:all" start end %}{% append_to_get page=1 %}">All</a></li>
                         </ul>
                         {% endif %}
                         {% if proj_hideable %}
