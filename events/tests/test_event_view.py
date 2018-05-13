@@ -131,7 +131,7 @@ class EventListBasicViewTest(TestCase):
     def test_public(self):
         response = self.client.get(reverse('cal:list'))
         self.assertEqual(response.status_code, 200)
-        response = self.client.get(reverse('cal:api'))
+        response = self.client.get(reverse('cal:api-public'))
         self.assertEqual(response.status_code, 200)
 
     def test_cal(self):
