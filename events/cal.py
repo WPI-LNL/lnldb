@@ -102,7 +102,7 @@ class PublicFacingCalJsonView(BaseCalJsonView):
 
         from_date = request.GET.get('from', False)
         to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        return HttpResponse(generate_cal_json_publicfacing(queryset, from_date, to_date))
 
 
 class FindChiefCalJsonView(BaseCalJsonView):
@@ -116,7 +116,7 @@ class FindChiefCalJsonView(BaseCalJsonView):
 
         from_date = request.GET.get('from', False)
         to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json_publicfacing(queryset, from_date, to_date))
+        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
 
 
 class IncomingCalJsonView(BaseCalJsonView):
