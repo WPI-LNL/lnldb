@@ -1,0 +1,27 @@
+{% extends 'base_admin.html' %}
+{% load bootstrap_calendar %}
+
+{% block extras %}
+{% bootstrap_calendar_js events_url=bootcal_endpoint %}
+{% bootstrap_calendar_css %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>{{h2}}</h2>
+    </div>
+</div>
+<div class="panel panel-default">
+    <div class="row cal-ctl panel-heading">
+        <div class="btn-group cal-ctl">
+            <a href="{{listurl}}" class="btn btn-primary">View List</a>
+        </div>
+        {% bootstrap_controls 'cal-ctl' %}
+        <h3 id="cal-header-title" class="panel-title"></h3>
+    </div>
+    <div class="panel-body">
+        {% bootstrap_calendar 'cal-body' %}
+    </div>
+</div>
+{% endblock %}

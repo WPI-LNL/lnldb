@@ -5,10 +5,13 @@
 {% block extras %}
 {% include 'js_event_checkboxes.tmpl' %}
 {% endblock %}
-{% block content %}    
+{% block content %}
 <div class="row">
     <div class="col-md-12">
         <div class="pull-right">
+            {% if calurl %}
+                <a href="{{calurl}}" class="btn btn-primary">Calendar</a>
+            {% endif %}
             <a href="#" class="btn btn-warning" id="showselect">PDF Select</a>
             <a href="#" class="btn hide btn-default eventselect" id="submitselect">Submit Selections</a>
         </div>
@@ -55,7 +58,6 @@
                             <li><a href="{% url "events:unpaid" start end %}{% append_to_get page=1 %}">Billed/UnPaid</a></li>
                             <li><a href="{% url "events:paid" start end %}{% append_to_get page=1 %}">Paid</a></li>
                             <li><a href="{% url "events:closed" start end %}{% append_to_get page=1 %}">Closed</a></li>
-                            
                         </ul>
                         {% endif %}
                         {% if proj_hideable %}

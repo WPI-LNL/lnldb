@@ -27,6 +27,18 @@ urlpatterns = [
     url(r'^closed/', generate_date_patterns(list_views.closed, name="closed")),
     url(r'^all/', generate_date_patterns(list_views.all, name="all")),
 
+    # calendar views corresponding to the list views
+    url(r'^findchief/calendar/', generate_date_patterns(list_views.findchief_cal, name="findchief-cal")),
+    url(r'^incoming/calendar/', generate_date_patterns(list_views.incoming_cal, name="incoming-cal")),
+    url(r'^open/calendar/', generate_date_patterns(list_views.openworkorders_cal, name="open-cal")),
+    url(r'^unreviewed/calendar/', generate_date_patterns(list_views.unreviewed_cal, name="unreviewed-cal")),
+    url(r'^unbilled/calendar/', generate_date_patterns(list_views.unbilled_cal, name="unbilled-cal")),
+    url(r'^unbilledsemester/calendar/', generate_date_patterns(list_views.unbilled_semester_cal, name="unbilled-semester-cal")),
+    url(r'^paid/calendar/', generate_date_patterns(list_views.paid_cal, name="paid-cal")),
+    url(r'^unpaid/calendar/', generate_date_patterns(list_views.unpaid_cal, name="unpaid-cal")),
+    url(r'^closed/calendar/', generate_date_patterns(list_views.closed_cal, name="closed-cal")),
+    url(r'^all/calendar/', generate_date_patterns(list_views.all_cal, name="all-cal")),
+
     # Actual event pages
 
     url(r'^view/(?P<id>[0-9a-f]+)/$', flow_views.viewevent, name="detail"),

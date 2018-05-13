@@ -179,11 +179,10 @@ def upcoming(request, start=None, end=None):
 
     # events = Event.objects.filter(approved=True).filter(closed=False).filter(paid=False)
     # .filter(datetime_start__gte=today)
-    events = Event.objects.filter(approved=True).exclude(
-        Q(closed=True) | Q(cancelled=True)).distinct()  # .filter(paid=False)
+    events = Event.objects.filter(Q(approved=True) | Q(closed=False) | Q(cancelled=False)).distinct()  # .filter(paid=False)
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.event_view_debug'):
+    if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
@@ -197,6 +196,7 @@ def upcoming(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:upcoming")
     context['pdfurl'] = reverse('events:pdf-multi')
+    context['calurl'] = reverse('cal:list')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -222,7 +222,7 @@ def incoming(request, start=None, end=None):
         .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.event_view_debug'):
+    if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices')
@@ -236,6 +236,7 @@ def incoming(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:incoming")
     context['pdfurl'] = reverse('events:pdf-multi')
+    context['calurl'] = reverse('events:incoming-cal')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -245,6 +246,16 @@ def incoming(request, start=None, end=None):
 
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render(request, 'events.html', context)
+
+
+@login_required()
+@permission_required('events.approve_event', raise_exception=True)
+def incoming_cal(request, start=None, end=None):
+    context = {}
+    context['h2'] = "Incoming Events"
+    context['listurl'] = reverse('events:incoming')
+    context['bootcal_endpoint'] = reverse('cal:api-incoming')
+    return render(request, 'events_cal.html', context)
 
 
 @login_required
@@ -261,7 +272,7 @@ def openworkorders(request, start=None, end=None):
     events = Event.objects.filter(approved=True).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.event_view_debug'):
+    if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
@@ -277,6 +288,7 @@ def openworkorders(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:open")
     context['pdfurl'] = reverse('events:pdf-multi')
+    context['calurl'] = reverse('events:open-cal')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -286,6 +298,16 @@ def openworkorders(request, start=None, end=None):
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render(request, 'events.html', context)
+
+
+@login_required()
+@permission_required('events.view_event', raise_exception=True)
+def openworkorders_cal(request, start=None, end=None):
+    context = {}
+    context['h2'] = "Open Events"
+    context['listurl'] = reverse('events:open')
+    context['bootcal_endpoint'] = reverse('cal:api-open')
+    return render(request, 'events_cal.html', context)
 
 
 @login_required()
@@ -310,7 +332,7 @@ def findchief(request, start=None, end=None):
 
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.event_view_debug'):
+    if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
@@ -328,6 +350,7 @@ def findchief(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:findchief")
     context['pdfurl'] = reverse('events:pdf-multi')
+    context['calurl'] = reverse('events:findchief-cal')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -338,6 +361,16 @@ def findchief(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render(request, 'events.html', context)
+
+
+@login_required()
+@permission_required('events.view_event', raise_exception=True)
+def findchief_cal(request, start=None, end=None):
+    context = {}
+    context['h2'] = "Needs a Crew Chief"
+    context['listurl'] = reverse('events:findchief')
+    context['bootcal_endpoint'] = reverse('cal:api-findchief')
+    return render(request, 'events_cal.html', context)
 
 
 @login_required
@@ -353,10 +386,7 @@ def unreviewed(request, start=None, end=None):
         end = end.strftime('%Y-%m-%d')
 
     now = datetime.datetime.now(pytz.utc)
-    # events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.exclude(Q(closed=True) |
-                                   Q(cancelled=True) |
-                                   Q(approved=False)) \
+    events = Event.objects.filter(Q(approved=True) | Q(closed=False) | Q(cancelled=False)) \
         .filter(reviewed=False) \
         .filter(datetime_end__lte=now) \
         .order_by('datetime_start') \
@@ -364,7 +394,7 @@ def unreviewed(request, start=None, end=None):
         .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.event_view_debug'):
+    if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
@@ -380,6 +410,7 @@ def unreviewed(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:unreviewed")
     context['pdfurl'] = reverse('events:pdf-multi')
+    context['calurl'] = reverse('events:unreviewed-cal')
     context['proj_hideable'] = True
     context['cols'] = ['event_name',
                        'org',
@@ -391,6 +422,16 @@ def unreviewed(request, start=None, end=None):
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render(request, 'events.html', context)
+
+
+@login_required()
+@permission_required('events.review_event', raise_exception=True)
+def unreviewed_cal(request, start=None, end=None):
+    context = {}
+    context['h2'] = "Events Pending Billing Review"
+    context['listurl'] = reverse('events:unreviewed')
+    context['bootcal_endpoint'] = reverse('cal:api-unreviewed')
+    return render(request, 'events_cal.html', context)
 
 
 @login_required
@@ -406,16 +447,15 @@ def unbilled(request, start=None, end=None):
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
 
-    events = Event.objects.filter(billings__isnull=True) \
-        .exclude(Q(closed=True) |
-                 Q(cancelled=True)) \
+    events = Event.objects.filter(Q(closed=False) | Q(cancelled=False)) \
         .filter(reviewed=True) \
+        .filter(billings__isnull=True) \
         .filter(billed_by_semester=False) \
         .order_by('datetime_start') \
         .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.event_view_debug'):
+    if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
@@ -433,6 +473,7 @@ def unbilled(request, start=None, end=None):
     context['baseurl'] = reverse("events:unbilled")
     context['proj_hideable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
+    context['calurl'] = reverse('events:unbilled-cal')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -441,6 +482,16 @@ def unbilled(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False), ]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render(request, 'events.html', context)
+
+
+@login_required()
+@permission_required('events.bill_event', raise_exception=True)
+def unbilled_cal(request, start=None, end=None):
+    context = {}
+    context['h2'] = "Events to be Billed"
+    context['listurl'] = reverse('events:unbilled')
+    context['bootcal_endpoint'] = reverse('cal:api-unbilled')
+    return render(request, 'events_cal.html', context)
 
 
 @login_required
@@ -455,16 +506,15 @@ def unbilled_semester(request, start=None, end=None):
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
-    events = Event.objects.filter(billings__isnull=True) \
-        .exclude(Q(closed=True) |
-                 Q(cancelled=True)) \
+    events = Event.objects.filter(Q(closed=False) | Q(cancelled=False)) \
         .filter(reviewed=True) \
+        .filter(billings__isnull=True) \
         .filter(billed_by_semester=True) \
         .order_by('datetime_start') \
         .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.event_view_debug'):
+    if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
@@ -479,6 +529,7 @@ def unbilled_semester(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:unbilled-semester")
     context['pdfurl'] = reverse('events:pdf-multi')
+    context['calurl'] = reverse('events:unbilled-semester-cal')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -487,6 +538,16 @@ def unbilled_semester(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render(request, 'events.html', context)
+
+
+@login_required()
+@permission_required('events.bill_event', raise_exception=True)
+def unbilled_semester_cal(request, start=None, end=None):
+    context = {}
+    context['h2'] = "Events to be Billed (Films)"
+    context['listurl'] = reverse('events:unbilled-semester')
+    context['bootcal_endpoint'] = reverse('cal:api-unbilled-semester')
+    return render(request, 'events_cal.html', context)
 
 
 @login_required
@@ -498,14 +559,12 @@ def paid(request, start=None, end=None):
         start, end = get_farback_date_range_plus_next_week()
 
     # events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(billings__date_paid__isnull=False) \
-        .exclude(Q(closed=True) |
-                 Q(cancelled=True)) \
-        .filter(reviewed=True) \
+    events = Event.objects.filter(Q(closed=False) | Q(cancelled=False)) \
+        .filter(billings__date_paid__isnull=False) \
         .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.event_view_debug'):
+    if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
@@ -525,6 +584,7 @@ def paid(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:paid")
     context['pdfurl'] = reverse('events:pdf-multi')
+    context['calurl'] = reverse('events:paid-cal')
     context['proj_hideable'] = True
     context['cols'] = ['event_name',
                        'org',
@@ -535,6 +595,16 @@ def paid(request, start=None, end=None):
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
 
     return render(request, 'events.html', context)
+
+
+@login_required()
+@permission_required('events.close_event', raise_exception=True)
+def paid_cal(request, start=None, end=None):
+    context = {}
+    context['h2'] = "Paid Events"
+    context['listurl'] = reverse('events:paid')
+    context['bootcal_endpoint'] = reverse('cal:api-paid')
+    return render(request, 'events_cal.html', context)
 
 
 @login_required
@@ -556,7 +626,7 @@ def unpaid(request, start=None, end=None):
         .order_by('datetime_start').distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.event_view_debug'):
+    if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
@@ -574,6 +644,7 @@ def unpaid(request, start=None, end=None):
     context['baseurl'] = reverse("events:unpaid")
     context['proj_hideable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
+    context['calurl'] = reverse('events:unpaid-cal')
     context['cols'] = ['event_name',
                        'org',
                        FakeExtendedField('datetime_start', verbose_name="Event Time"),
@@ -582,6 +653,16 @@ def unpaid(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render(request, 'events.html', context)
+
+
+@login_required()
+@permission_required('events.bill_event', raise_exception=True)
+def unpaid_cal(request, start=None, end=None):
+    context = {}
+    context['h2'] = "Pending Payments"
+    context['listurl'] = reverse('events:unpaid')
+    context['bootcal_endpoint'] = reverse('cal:api-unpaid')
+    return render(request, 'events_cal.html', context)
 
 
 @login_required
@@ -595,7 +676,7 @@ def closed(request, start=None, end=None):
     events = Event.objects.filter(closed=True)
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.event_view_debug'):
+    if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
@@ -613,6 +694,7 @@ def closed(request, start=None, end=None):
     context['baseurl'] = reverse("events:closed")
     context['proj_hideable'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
+    context['calurl'] = reverse('events:closed-cal')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -622,6 +704,16 @@ def closed(request, start=None, end=None):
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     # print context['cols']
     return render(request, 'events.html', context)
+
+
+@login_required()
+@permission_required('events.view_event', raise_exception=True)
+def closed_cal(request, start=None, end=None):
+    context = {}
+    context['h2'] = "Closed Events"
+    context['listurl'] = reverse('events:closed')
+    context['bootcal_endpoint'] = reverse('cal:api-closed')
+    return render(request, 'events_cal.html', context)
 
 
 @login_required
@@ -638,7 +730,7 @@ def all(request, start=None, end=None):
     events = Event.objects.distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.event_view_debug'):
+    if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     if not request.user.has_perm('events.approve_event'):
         events = events.exclude(approved=False)
@@ -656,6 +748,7 @@ def all(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:all")
     context['pdfurl'] = reverse('events:pdf-multi')
+    context['calurl'] = reverse('events:all-cal')
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -667,6 +760,17 @@ def all(request, start=None, end=None):
         context['cols'].append('approved')
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render(request, 'events.html', context)
+
+
+@login_required()
+@permission_required('events.view_event', raise_exception=True)
+def all_cal(request, start=None, end=None):
+    context = {}
+    context['h2'] = "All Events"
+    context['listurl'] = reverse('events:all')
+    context['bootcal_endpoint'] = reverse('cal:api-all')
+    return render(request, 'events_cal.html', context)
+
 
 def public_facing(request):
     context = {}
