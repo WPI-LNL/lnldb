@@ -131,8 +131,8 @@
         </div>
     </div>
     {% endpermission %}
-            
-            
+
+
     <div class="container-fluid">
         <div class="col-md-12">
             <ul class="nav nav-tabs">
@@ -149,7 +149,7 @@
                 <li><a href="#files" data-toggle="tab">Files</a></li>
                 <li><a href="#history" data-toggle="tab">History</a></li>
             </ul>
-            
+
             <div class="tab-content">
                 <div id="home" class="tab-pane active">
                     <table class="table">
@@ -263,7 +263,7 @@
                             <tr>
                                 <th>Internal Notes</th>
                                 <td>{% if event.internal_notes %}
-                                    {{ event.internal_notes|markdown }}{% else %}
+                                    {{ event.internal_notes | markdown }}{% else %}
                                     None {% endif %}</td>
                             </tr>
                         {% endpermission %}

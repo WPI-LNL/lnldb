@@ -990,7 +990,8 @@ class Organization(models.Model):  # AKA Client
                        ('create_verifications', 'Create proofs of Org account ownership'),
                        ('transfer_org_ownership', 'Give an Org a new owner'),
                        ('add_org', 'Create an Organization'),
-                       ('deprecate_org', 'Mark an Organization as defunct'))
+                       ('deprecate_org', 'Mark an Organization as defunct'),
+                       ('view_org_notes', 'View internal notes for an org'))
 
 
 class OrganizationTransfer(models.Model):

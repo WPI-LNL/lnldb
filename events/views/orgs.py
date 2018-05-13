@@ -44,27 +44,26 @@ def vieworgs(request):
 
 
 @login_required
-# TODO: edit form with perm logic
 def addeditorgs(request, org_id=None):
     """form for adding an org """
-    # need to fix this
     context = {}
-    edit_perms = ('events.edit_org',)
-    # mk_perms = ('events.add_org',)
     if org_id:
+        # edit perms are checked on a per-field basis in IOrgForm
+        edit_perms = ('events.view_org',)
         instance = get_object_or_404(Organization, pk=org_id)
         msg = "Edit Client"
         if not (request.user.has_perms(edit_perms) or
                 request.user.has_perms(edit_perms, instance)):
             raise PermissionDenied
     else:
+        edit_perms = ('events.add_org',)
         instance = None
         msg = "New Client"
         if not request.user.has_perms(edit_perms):
             raise PermissionDenied
 
     if request.method == 'POST':
-        formset = IOrgForm(request.POST, instance=instance)
+        formset = IOrgForm(request.user, request.POST, instance=instance)
         if formset.is_valid():
             org = formset.save()
             messages.add_message(request, messages.SUCCESS, 'Changes saved.')
@@ -74,7 +73,7 @@ def addeditorgs(request, org_id=None):
             context['formset'] = formset
             messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
     else:
-        formset = IOrgForm(instance=instance)
+        formset = IOrgForm(request.user, instance=instance)
         context['formset'] = formset
 
     context['msg'] = msg

@@ -1,4 +1,5 @@
 {% extends 'base_admin.html' %}
+{% load markdown_deux_tags %}
 {% load permissionif %}
 {% block extrajs %}
     $(document).ready(function () {
@@ -45,10 +46,9 @@
                     <th>User in charge </th>
                     <td> {{ org.user_in_charge }} </td>
                 </tr>
-            
             </table>
         </div>
-        {% permission user has 'events.list_org_fund' of org %}
+        {% permission user has 'events.show_org_billing' of org %}
         <div class="col-md-3">
             <h3>Money</h3>
             <table>
@@ -87,7 +87,6 @@
                     </td>
                 </tr>
                 {% endpermission %}
-                
             </table>
         </div>
         {% endpermission %}
@@ -113,6 +112,16 @@
             </ul>
         </div>
     </div>
+    {% permission user has 'events.view_org_notes' of org %}
+        <hr>
+        <div class="row">
+            <div class="col-md-12">
+                <h3>Internal Notes</h3>
+                {{ org.notes | markdown }}
+            </div>
+        </div>
+        <hr>
+    {% endpermission %}
     <div class="row">
         <div class="col-md-12">
         <h3>Events</h3>

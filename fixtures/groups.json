@@ -334,6 +334,11 @@
         "organization"
       ],
       [
+        "view_org_notes",
+        "events",
+        "organization"
+      ],
+      [
         "view_verifications",
         "events",
         "organization"

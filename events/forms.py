@@ -129,51 +129,99 @@ class CrewChiefAssign(forms.ModelForm):
         model = Event
         fields = ("crew_chief",)
 
-
-class IOrgForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
+class IOrgForm(FieldAccessForm):
+    def __init__(self, request_user, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
-        self.helper.layout = Layout(
-            TabHolder(
+        tabs = []
+        if request_user.has_perm('events.view_org_notes'):
+            tabs.append(
                 Tab(
-                    'Contact',
-                    Field('name'),
-                    'exec_email',
-                    'address',
-                    Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
-                ),
-                Tab(
-                    'Options',
-                    'associated_orgs',
-                    Field('personal', )
-                ),
-                Tab(
-                    'Money',
-                    'accounts'
-                ),
-                Tab(
-                    'People',
-                    'user_in_charge',
-                    'associated_users',
+                    'Notes',
+                    'notes',
                 )
+            )
+        tabs.extend([
+            Tab(
+                'Contact',
+                Field('name'),
+                'exec_email',
+                'address',
+                Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
             ),
+            Tab(
+                'Options',
+                'associated_orgs',
+                Field('personal', )
+            ),
+            Tab(
+                'Money',
+                'accounts'
+            ),
+            Tab(
+                'People',
+                'user_in_charge',
+                'associated_users',
+            )
+        ])
+        self.helper.layout = Layout(
+            TabHolder(*tabs),
             FormActions(
                 Submit('save', 'Save Changes'),
             )
         )
-        super(IOrgForm, self).__init__(*args, **kwargs)
+        super(IOrgForm, self).__init__(request_user, *args, **kwargs)
 
     class Meta:
         model = Organization
         fields = ('name', 'exec_email', 'address', 'phone', 'associated_orgs', 'personal',
-                  'accounts', 'user_in_charge', 'associated_users')
+                  'accounts', 'user_in_charge', 'associated_users', 'notes')
     # associated_orgs = make_ajax_field(Organization,'associated_orgs','Orgs',plugin_options = {'minLength':2})
     # associated_users = make_ajax_field(Organization,'associated_users','Users',plugin_options = {'minLength':3})
     user_in_charge = AutoCompleteSelectField('Users')
     associated_orgs = AutoCompleteSelectMultipleField('Orgs', required=False)
     associated_users = AutoCompleteSelectMultipleField('Users', required=False)
     accounts = AutoCompleteSelectMultipleField('Funds', required=False)
+    notes = forms.CharField(widget=PagedownWidget(), label="Internal Notes", required=False)
+
+    class FieldAccess:
+        def __init__(self):
+            pass
+
+        hide_internal_notes = FieldAccessLevel(
+            lambda user, instance: not user.has_perm("events.view_org_notes", instance),
+            exclude=('notes',)
+        )
+
+        billing_view = FieldAccessLevel(
+            lambda user, instance: not user.has_perm("events.show_org_billing", instance),
+            exclude=('accounts',)
+        )
+
+        billing_edit = FieldAccessLevel(
+            lambda user, instance: user.has_perm("events.edit_org_billing", instance),
+            enable=('accounts',)
+        )
+
+        members_view = FieldAccessLevel(
+            lambda user, instance: not user.has_perm("events.list_org_members", instance),
+            exclude=('user_in_charge', 'associated_users',)
+        )
+
+        members_edit = FieldAccessLevel(
+            lambda user, instance: user.has_perm("events.edit_org_members", instance),
+            enable=('associated_users',)
+        )
+
+        owner_edit = FieldAccessLevel(
+            lambda user, instance: user.has_perm("events.transfer_org_ownership", instance),
+            enable=('user_in_charge',)
+        )
+
+        everything_else_edit = FieldAccessLevel(
+            lambda user, instance: user.has_perm("events.edit_org", instance),
+            enable=('name', 'exec_email', 'address', 'phone', 'associated_orgs', 'personal')
+        )
 
 
 class IOrgVerificationForm(forms.ModelForm):
