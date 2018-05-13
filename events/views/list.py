@@ -179,7 +179,7 @@ def upcoming(request, start=None, end=None):
 
     # events = Event.objects.filter(approved=True).filter(closed=False).filter(paid=False)
     # .filter(datetime_start__gte=today)
-    events = Event.objects.filter(Q(approved=True) | Q(closed=False) | Q(cancelled=False)).distinct()  # .filter(paid=False)
+    events = Event.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)).distinct()  # .filter(paid=False)
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
@@ -386,7 +386,7 @@ def unreviewed(request, start=None, end=None):
         end = end.strftime('%Y-%m-%d')
 
     now = datetime.datetime.now(pytz.utc)
-    events = Event.objects.filter(Q(approved=True) | Q(closed=False) | Q(cancelled=False)) \
+    events = Event.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)) \
         .filter(reviewed=False) \
         .filter(datetime_end__lte=now) \
         .order_by('datetime_start') \
@@ -447,7 +447,7 @@ def unbilled(request, start=None, end=None):
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
 
-    events = Event.objects.filter(Q(closed=False) | Q(cancelled=False)) \
+    events = Event.objects.filter(Q(closed=False) & Q(cancelled=False)) \
         .filter(reviewed=True) \
         .filter(billings__isnull=True) \
         .filter(billed_by_semester=False) \
@@ -506,7 +506,7 @@ def unbilled_semester(request, start=None, end=None):
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
-    events = Event.objects.filter(Q(closed=False) | Q(cancelled=False)) \
+    events = Event.objects.filter(Q(closed=False) & Q(cancelled=False)) \
         .filter(reviewed=True) \
         .filter(billings__isnull=True) \
         .filter(billed_by_semester=True) \
@@ -559,7 +559,7 @@ def paid(request, start=None, end=None):
         start, end = get_farback_date_range_plus_next_week()
 
     # events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(Q(closed=False) | Q(cancelled=False)) \
+    events = Event.objects.filter(Q(closed=False) & Q(cancelled=False)) \
         .filter(billings__date_paid__isnull=False) \
         .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
