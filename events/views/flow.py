@@ -526,7 +526,7 @@ def oneoff(request, id):
         messages.add_message(request, messages.ERROR, 'Event is closed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
-    mk_oneoff_formset = inlineformset_factory(Event, EventArbitrary, extra=1, exclude=[])
+    mk_oneoff_formset = inlineformset_factory(Event, EventArbitrary, extra=3, exclude=[])
 
     if request.method == 'POST':
         formset = mk_oneoff_formset(request.POST, request.FILES, instance=event)
