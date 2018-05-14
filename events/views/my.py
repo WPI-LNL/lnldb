@@ -180,7 +180,7 @@ def ccreport(request, eventid):
 
     event = Event.objects.get(pk=eventid)
     if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past...")
+        return HttpResponse("The deadline for report submission and hours has past.")
 
     # get event
     event = uevent[0].event
@@ -242,7 +242,7 @@ def hours_mk(request, eventid):
 
     event = Event.objects.get(pk=eventid)
     if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past...")
+        return HttpResponse("The deadline for report submission and hours has past.")
 
     event = uevent[0].event
     context['msg'] = "Hours for '%s'" % event.event_name
@@ -274,7 +274,7 @@ def hours_edit(request, eventid, userid):
 
     event = Event.objects.get(pk=eventid)
     if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past...")
+        return HttpResponse("The deadline for report submission and hours has past.")
     event = uevent[0].event
 
     hours = get_object_or_404(Hours, event=event, user_id=userid)
@@ -308,7 +308,7 @@ def hours_bulk(request, eventid):
 
     event = Event.objects.get(pk=eventid)
     if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past...")
+        return HttpResponse("The deadline for report submission and hours has past.")
     event = uevent[0].event
 
     context['msg'] = "Bulk Hours Entry"

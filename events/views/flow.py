@@ -340,7 +340,7 @@ def hours_bulk_admin(request, id):
     context['msg'] = "Bulk Hours Entry"
     event = get_object_or_404(Event, pk=id)
     if not (request.user.has_perm('events.edit_event_hours') or
-            request.user.has_perm('events.edit_event_hours', event)):
+            request.user.has_perm('events.edit_event_hours', event) and event.reports_editable):
         raise PermissionDenied
     if event.closed:
         messages.add_message(request, messages.ERROR, 'Event is closed.')
@@ -568,7 +568,7 @@ class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, Login
         return super(CCRCreate, self).dispatch(request, *args, **kwargs)
 
     def user_passes_test(self, request, *args, **kwargs):
-        return request.user.has_perm(self.perms, self.event)
+        return self.event.reports_editable and request.user.has_perm(self.perms, self.event)
 
     def get_form_kwargs(self):
         kwargs = super(CCRCreate, self).get_form_kwargs()
