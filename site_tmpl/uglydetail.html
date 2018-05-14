@@ -404,7 +404,7 @@
                 {% permission request.user has 'events.view_event_reports' of event %}
                 <div id="reports" class="tab-pane">
                     {% if not event.closed %}
-                        {% permission request.user has 'events.add_ccreport' of event %}
+                        {% permission request.user has 'events.add_event_report' of event %}
                             <div class="pull-right">
                                 <a class="btn btn-primary btn-lg" href="{% url "events:reports:new" event.id%}">New</a>
                             </div>

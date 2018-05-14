@@ -21,7 +21,7 @@ from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm,
 from events.models import (Billing, CCReport, Event, EventArbitrary,
                            EventAttachment, EventCCInstance, ExtraInstance,
                            Hours, ReportReminder)
-from helpers.mixins import (ConditionalFormMixin, HasPermMixin,
+from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
 from pdfs.views import generate_pdfs_standalone
 
@@ -556,17 +556,23 @@ def viewevent(request, id):
     return render(request, 'uglydetail.html', context)
 
 
-class CCRCreate(SetFormMsgMixin, HasPermMixin, ConditionalFormMixin, LoginRequiredMixin, CreateView):
+class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, LoginRequiredMixin, CreateView):
     model = CCReport
     form_class = InternalReportForm
     template_name = "form_crispy_cbv.html"
     msg = "New Crew Chief Report"
-    perms = 'events.add_ccreport'
+    perms = 'events.add_event_report'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.event = get_object_or_404(Event, pk=kwargs['event'])
+        return super(CCRCreate, self).dispatch(request, *args, **kwargs)
+
+    def user_passes_test(self, request, *args, **kwargs):
+        return request.user.has_perm(self.perms, self.event)
 
     def get_form_kwargs(self):
         kwargs = super(CCRCreate, self).get_form_kwargs()
-        event = get_object_or_404(Event, pk=self.kwargs['event'])
-        kwargs['event'] = event
+        kwargs['event'] = self.event
         return kwargs
 
     def form_valid(self, form):

@@ -59,9 +59,9 @@
         "building"
       ],
       [
-        "add_ccreport",
+        "add_event_report",
         "events",
-        "ccreport"
+        "event"
       ],
       [
         "change_ccreport",
