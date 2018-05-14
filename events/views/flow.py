@@ -421,7 +421,7 @@ def assignattach(request, id):
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     context['event'] = event
 
-    att_formset = inlineformset_factory(Event, EventAttachment, extra=1, exclude=[])
+    att_formset = inlineformset_factory(Event, EventAttachment, extra=2, exclude=[])
     att_formset.form = curry_class(AttachmentForm, event=event)
 
     if request.method == 'POST':
