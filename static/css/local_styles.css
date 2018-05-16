@@ -19,6 +19,20 @@ ul.ui-autocomplete {
     text-decoration: line-through;
 }
 
+[data-event-class="cal-status-cancelled"] {
+	text-decoration: line-through;
+}
+
+#cal-slide-content .cal-status-cancelled,
+.events-list .cal-status-cancelled {
+	background-color: yellow;
+}
+
+#cal-slide-content .cal-status-awaiting-approval,
+.events-list .cal-status-awaiting-approval {
+	background-color: blue;
+}
+
 .flexfix {
     display: flex;
 }

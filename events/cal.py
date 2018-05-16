@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.db.models import Count, F, Q
 from django.http import HttpResponse
+from django.template.defaultfilters import slugify
 from django.utils.decorators import method_decorator
 from django.utils.html import conditional_escape
 from django.views.generic.base import View
@@ -322,7 +323,7 @@ def generate_cal_json(queryset, from_date=None, to_date=None):
                 "id": event.cal_guid(),
                 "title": conditional_escape(event.cal_name()),
                 "url": reverse('events:detail', args=[event.id]),
-                "class": '',
+                "class": 'cal-status-' + slugify(event.status),
                 "start": datetime_to_timestamp(event.cal_start() + datetime.timedelta(hours=-5)),
                 "end": datetime_to_timestamp(event.cal_end() + datetime.timedelta(hours=-5))
             }
