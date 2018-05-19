@@ -1,3 +1,4 @@
+import datetime
 from functools import wraps, partial
 from django.conf import settings
 from django.contrib import messages
@@ -13,17 +14,18 @@ from django.views.generic import CreateView, DeleteView, UpdateView
 from django.views.decorators.http import require_POST
 from reversion.models import Version
 
-from emails.generators import ReportReminderEmailGenerator, DefaultLNLEmailGenerator as DLEG
+from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator,
+                               DefaultLNLEmailGenerator as DLEG)
 from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm,
                           CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm,
-                          InternalReportForm, MKHoursForm)
-from events.models import (Billing, CCReport, Event, EventArbitrary,
+                          InternalReportForm, MKHoursForm, BillingEmailForm)
+from events.models import (Billing, BillingEmail, CCReport, Event, EventArbitrary,
                            EventAttachment, EventCCInstance, ExtraInstance,
                            Hours, ReportReminder)
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
-from pdfs.views import generate_pdfs_standalone
+from pdfs.views import generate_pdfs_standalone, generate_event_bill_pdf_standalone
 
 
 def curry_class(cls, *args, **kwargs):
@@ -66,7 +68,7 @@ def approval(request, id):
 
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
         else:
-            context['formset'] = form
+            context['form'] = form
     else:
         # has a bill, but no paid bills, and is not otherwise closed
         unbilled_events = Event.objects.filter(org__in=event.org.all())\
@@ -80,7 +82,7 @@ def approval(request, id):
         if event.org.exists() and unbilled_events:
             messages.add_message(request, messages.WARNING, "Organization has unbilled events: %s" % ", ".join(unbilled_events))
         form = EventApprovalForm(instance=event)
-        context['formset'] = form
+        context['form'] = form
     return render(request, 'form_crispy.html', context)
 
 
@@ -122,10 +124,10 @@ def denial(request, id):
                                      'No contact info on file for denial. Please give them the bad news.')
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
         else:
-            context['formset'] = form
+            context['form'] = form
     else:
         form = EventDenialForm(instance=event)
-        context['formset'] = form
+        context['form'] = form
     return render(request, 'form_crispy.html', context)
 
 
@@ -656,7 +658,10 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
         return super(BillingCreate, self).form_valid(form)
 
     def get_success_url(self):
-        return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
+        if 'save-and-make-email' in self.request.POST:
+            return reverse("events:bills:email", args=(self.kwargs['event'], self.object.pk))
+        else:
+            return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
 
 
 class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
@@ -723,3 +728,42 @@ def pay_bill(request, event, pk):
         bill.save()
         messages.success(request, "Bill paid!", extra_tags="success")
     return HttpResponseRedirect(reverse('events:detail', args=(bill.event_id,)) + "#billing")
+
+
+class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
+    model = BillingEmail
+    form_class = BillingEmailForm
+    template_name = "form_crispy.html"
+    msg = "New Billing Email"
+    perms = 'events.bill_event'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.billing = get_object_or_404(Billing, pk=self.kwargs['billing'])
+        return super(BillingEmailCreate, self).dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        # pass "user" keyword argument with the current user to your form
+        kwargs = super(BillingEmailCreate, self).get_form_kwargs()
+        kwargs['billing'] = self.billing
+        return kwargs
+
+    def form_valid(self, form):
+        messages.success(self.request, "Billing Email Created!", extra_tags='success')
+        response = super(BillingEmailCreate, self).form_valid(form)
+        # send the email
+        i = form.instance
+        event = self.billing.event
+        to = list(i.email_to_users.values_list('email', flat=True))
+        to.extend(list(i.email_to_orgs.values_list('exec_email', flat=True)))
+        pdf_handle = generate_event_bill_pdf_standalone(event, self.request.user)
+        filename = "%s-bill.pdf" % slugify(event.event_name)
+        attachments = [{"file_handle": pdf_handle, "name": filename}]
+        email = EventEmailGenerator(event=event, subject=i.subject, body=i.message,
+                                    to_emails=to, bcc=[settings.EMAIL_TARGET_T], attachments=attachments)
+        email.send()
+        i.sent_at = timezone.now()
+        i.save()
+        return response
+
+    def get_success_url(self):
+        return reverse("events:detail", args=(self.billing.event_id,)) + "#billing"

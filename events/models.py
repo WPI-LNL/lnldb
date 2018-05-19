@@ -323,10 +323,6 @@ class Billing(models.Model):
     event = models.ForeignKey('Event', related_name="billings")
     amount = models.DecimalField(max_digits=8, decimal_places=2)
 
-    # bools
-    opt_out_initial_email = models.BooleanField(default=False)
-    opt_out_update_email = models.BooleanField(default=False)
-
     def __str__(self):
         out = "Bill for %s" % self.event.event_name
         if self.date_paid:
@@ -335,6 +331,20 @@ class Billing(models.Model):
 
     class Meta:
         ordering = ("-date_billed", "date_paid")
+
+
+@python_2_unicode_compatible
+class BillingEmail(models.Model):
+    billing = models.ForeignKey('Billing')
+    subject = models.CharField(max_length=128)
+    message = models.TextField()
+    email_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL)
+    email_to_orgs = models.ManyToManyField('Organization')
+    sent_at = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return 'Billing email sent %s for %s' % (self.sent_at if self.sent_at is not None else 'never',
+                                                 self.billing.event.event_name)
 
 
 class OptimizedEventManager(Manager):

@@ -141,6 +141,31 @@ def generate_event_bill_pdf(request, event):
     return resp
 
 
+def generate_event_bill_pdf_standalone(event, idt_originator):
+    data = {}
+    data['event'] = event
+    cats = Category.objects.all()
+    extras = {}
+    for cat in cats:
+        e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
+        if len(e_for_cat) > 0:
+            extras[cat] = e_for_cat
+    data['extras'] = extras
+    # Render html content through html template with context
+    html = render_to_string('pdf_templates/bill-itemized.html', context=data)
+
+    # Write PDF to file
+    pdf_file = BytesIO()
+    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+
+    # if it's actually an invoice, attach an idt, eh?
+    if event.reviewed:
+        idt = make_idt_single(event, idt_originator)
+        pdf_file = concat_pdf(pdf_file, idt)
+
+    return pdf_file.getvalue()
+
+
 def generate_pdfs_standalone(ids=None):
     if ids is None:
         ids = []

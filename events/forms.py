@@ -23,7 +23,7 @@ from pagedown.widgets import PagedownWidget
 
 from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
 from events.fields import GroupedModelChoiceField
-from events.models import (Billing, CCReport, Event, EventAttachment,
+from events.models import (Billing, BillingEmail, CCReport, Event, EventAttachment,
                            EventCCInstance, Extra, ExtraInstance, Fund, Hours,
                            Lighting, Location, Organization,
                            OrganizationTransfer, OrgBillingVerificationEvent,
@@ -708,10 +708,9 @@ class BillingForm(forms.ModelForm):
         self.helper.layout = Layout(
             PrependedText('date_billed', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
             PrependedText('amount', '<strong>$</strong>'),
-            Field('opt_out_initial_email'),
-            Field('opt_out_update_email'),
             FormActions(
-                Submit('save', 'Save Changes'),
+                Submit('save-and-return', 'Save and Return'),
+                Submit('save-and-make-email', 'Save and Make Email'),
                 Reset('reset', 'Reset Form'),
             )
         )
@@ -719,8 +718,6 @@ class BillingForm(forms.ModelForm):
 
         self.fields['amount'].initial = "%.2f" % event.cost_total
         self.fields['date_billed'].initial = datetime.date.today()
-        self.fields['opt_out_initial_email'].initial = True
-        self.fields['opt_out_update_email'].initial = True
 
     def save(self, commit=True):
         obj = super(BillingForm, self).save(commit=False)
@@ -731,7 +728,7 @@ class BillingForm(forms.ModelForm):
 
     class Meta:
         model = Billing
-        fields = ('date_billed', 'amount', 'opt_out_initial_email', 'opt_out_update_email')
+        fields = ('date_billed', 'amount')
 
 
 class BillingUpdateForm(forms.ModelForm):
@@ -745,7 +742,6 @@ class BillingUpdateForm(forms.ModelForm):
         self.helper.layout = Layout(
             PrependedText('date_paid', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
             PrependedText('amount', '<strong>$</strong>'),
-            Field('opt_out_update_email'),
             FormActions(
                 Submit('save', 'Save Changes'),
                 Reset('reset', 'Reset Form'),
@@ -765,7 +761,62 @@ class BillingUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Billing
-        fields = ('date_paid', 'amount', 'opt_out_update_email')
+        fields = ('date_paid', 'amount')
+
+
+class BillingEmailForm(forms.ModelForm):
+    def __init__(self, billing, *args, **kwargs):
+        super(BillingEmailForm, self).__init__(*args, **kwargs)
+        self.billing = billing
+        contacts = billing.event.org.all()
+        self.fields["email_to_orgs"].queryset = contacts
+        self.fields["email_to_orgs"].initial = contacts
+        self.fields["email_to_users"].initial = [billing.event.contact.pk]
+        self.helper = FormHelper()
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-10'
+        self.helper.layout = Layout(
+            HTML('<p class="text-muted">The bill PDF for this event will be attached to the email.'
+                 'The message you type below is not the entire contents of the email; identifying '
+                 'information about the event being billed will be added to the email below your message.</p>'),
+            'subject',
+            'message',
+            'email_to_users',
+            'email_to_orgs',
+            FormActions(
+                Submit('save', 'Send Email'),
+            )
+        )
+
+    def clean(self):
+        cleaned_data = super(BillingEmailForm, self).clean()
+        if not cleaned_data.get('email_to_users', None) and not cleaned_data.get('email_to_orgs', None):
+            raise ValidationError('No recipients')
+        return cleaned_data
+
+    def save(self, commit=True):
+        self.instance = super(BillingEmailForm, self).save(commit=False)
+        self.instance.billing = self.billing
+        if commit:
+            self.instance.save()
+            self.save_m2m()
+        return self.instance
+
+    class Meta:
+        model = BillingEmail
+        fields = ('subject', 'message', 'email_to_users', 'email_to_orgs')
+        widgets = {
+            'message': PagedownWidget(),
+        }
+
+    email_to_users = AutoCompleteSelectMultipleField('Users', required=False, label="User Recipients")
+    email_to_orgs = forms.ModelMultipleChoiceField(
+        queryset=Organization.objects.all(),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
+        required=False, label="Client Recipients",
+        help_text="The email will be addressed to the client's exec email alias on file."
+    )
 
 
 # CC Facing Forms

@@ -162,14 +162,14 @@ def bulk_projection(request):
 
     if not request.GET:  # Step 1: get contact info and date range
         return render(request, "form_crispy.html", {
-            'formset': BulkCreateForm(),
+            'form': BulkCreateForm(),
             'msg': "Bulk Movie Addition"
         })
 
     basicinfoform = BulkCreateForm(request.GET)
     if not basicinfoform.is_valid():  # Bad user! Give me the contact/basics!!!
         return render(request, "form_crispy.html", {
-            'formset': basicinfoform,
+            'form': basicinfoform,
             'msg': "Bulk Movie Addition (Errors)"
         })
 
@@ -206,7 +206,7 @@ def bulk_projection(request):
     else:
         # pass back the empty form
         context['msg'] = "Bulk Movie Addition - Choose Movie Details"
-        context['formset'] = formset(initial=weeks)
+        context['form'] = formset(initial=weeks)
         context['helper'] = DateEntryFormSetBase().helper
         context['helper'].add_input(Submit('submit', 'Submit'))
 

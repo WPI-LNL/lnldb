@@ -7,13 +7,11 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from emails.generators import CcAddEmailGenerator, DefaultLNLEmailGenerator as DLEG
-from events.models import Billing, EventCCInstance, Fund
+from events.models import EventCCInstance, Fund
 from pdfs.views import generate_pdfs_standalone
 
 __all__ = [
-    'email_cc_notification', 'email_billing_create',
-    'email_billing_marked_paid', 'email_billing_delete',
-    'update_fund_time'
+    'email_cc_notification', 'update_fund_time'
 ]
 
 
@@ -36,50 +34,6 @@ def email_cc_notification(sender, instance, created, raw=False, **kwargs):
             local_formatted = "a time of your choice "
 
         e = CcAddEmailGenerator(ccinstance=i, attachments=attachments)
-        e.send()
-
-
-@receiver(post_save, sender=Billing)
-def email_billing_create(sender, instance, created, raw=False, **kwargs):
-    """ Sends an email to the client to notify of a bill being created """
-    if created and not instance.opt_out_initial_email and not raw:
-        i = instance
-        email_body = """
-            A New LNL bill has been posted for "%s" on %s for the amount of $%s
-            """ % (i.event.event_name, i.date_billed, i.amount)
-        contact_emails = [i.event.contact.email] if i.event.contact is not None else []
-        e = DLEG(subject="LNL Billing Create Notification", to_emails=contact_emails, body=email_body,
-                 bcc=[settings.EMAIL_TARGET_T])
-        e.send()
-
-
-@receiver(post_save, sender=Billing)
-def email_billing_marked_paid(sender, instance, created, raw=False, **kwargs):
-    """ Sends an email to the client to notify of a bill having been paid """
-    if not created and not raw:
-        if instance.date_paid and not instance.opt_out_update_email:
-            i = instance
-            email_body = """
-            Thank you for paying the bill for "%s" on %s for the amount of $%s
-            """ % (i.event.event_name, i.date_paid, i.amount)
-
-            contact_emails = [i.event.contact.email] if i.event.contact is not None else []
-            e = DLEG(subject="LNL Billing Paid Notification", to_emails=contact_emails, body=email_body,
-                     bcc=[settings.EMAIL_TARGET_T])
-            e.send()
-
-
-@receiver(pre_delete, sender=Billing)
-def email_billing_delete(sender, instance, **kwargs):
-    if not instance.opt_out_update_email:
-        i = instance
-        email_body = """
-            The bill for the amount of $%s on "%s" has been deleted
-            """ % (i.amount, i.event.event_name,)
-
-        contact_emails = [i.event.contact.email] if i.event.contact is not None else []
-        e = DLEG(subject="LNL Billing Deletion Notification", to_emails=contact_emails, body=email_body,
-                 bcc=[settings.EMAIL_TARGET_T])
         e.send()
 
 

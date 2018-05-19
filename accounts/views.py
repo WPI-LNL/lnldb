@@ -25,12 +25,6 @@ class UserAddView(mixins.HasPermMixin, generic.CreateView):
     perms = 'accounts.add_user'
     template_name = 'form_crispy.html'
 
-    def get_context_data(self, **kwargs):
-        context = super(UserAddView, self).get_context_data(**kwargs)
-        if 'form' in context:
-            context['formset'] = context['form']
-        return context
-
     def get_success_url(self):
         return reverse('accounts:detail', args=(self.object.id,))
 
@@ -215,7 +209,7 @@ class PasswordSetView(generic.FormView):
 
     def get_context_data(self, form, **kwargs):
         context = super(PasswordSetView, self).get_context_data(**kwargs)
-        context['formset'] = form
+        context['form'] = form
         form.helper = FormHelper(form)
         form.helper.layout.fields.append(form_footer("Set Password"))
         return context

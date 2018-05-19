@@ -63,18 +63,18 @@ def addeditorgs(request, org_id=None):
             raise PermissionDenied
 
     if request.method == 'POST':
-        formset = IOrgForm(request.user, request.POST, instance=instance)
-        if formset.is_valid():
-            org = formset.save()
+        form = IOrgForm(request.user, request.POST, instance=instance)
+        if form.is_valid():
+            org = form.save()
             messages.add_message(request, messages.SUCCESS, 'Changes saved.')
             # return HttpResponseRedirect(reverse("home", kwargs={'msg':SUCCESS_MSG_ORG}))
             return HttpResponseRedirect(reverse('orgs:detail', kwargs={'org_id': org.pk}))
         else:
-            context['formset'] = formset
+            context['form'] = form
             messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
     else:
-        formset = IOrgForm(request.user, instance=instance)
-        context['formset'] = formset
+        form = IOrgForm(request.user, instance=instance)
+        context['form'] = form
 
     context['msg'] = msg
 
@@ -101,9 +101,9 @@ def fund_edit(request, fund_id=None, org=None):
             raise PermissionDenied
 
     if request.method == 'POST':
-        formset = FopalForm(request.POST, instance=instance)
-        if formset.is_valid():
-            instance = formset.save()
+        form = FopalForm(request.POST, instance=instance)
+        if form.is_valid():
+            instance = form.save()
             messages.add_message(request, messages.SUCCESS, 'Changes saved.')
             if org:
                 try:
@@ -115,11 +115,11 @@ def fund_edit(request, fund_id=None, org=None):
             # return HttpResponseRedirect(reverse("home", kwargs={'msg':SUCCESS_MSG_ORG}))
             return HttpResponseRedirect(reverse('orgs:list'))
         else:
-            context['formset'] = formset
+            context['form'] = form
             messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
     else:
-        formset = FopalForm(instance=instance)
-        context['formset'] = formset
+        form = FopalForm(instance=instance)
+        context['form'] = form
 
     context['msg'] = msg
 

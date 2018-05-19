@@ -84,7 +84,7 @@ def eventnew(request, id=None):
             return HttpResponseRedirect(reverse('events:detail', args=(res.id,)))
         else:
             context['e'] = form.errors
-            context['formset'] = form
+            context['form'] = form
     else:
         form = InternalEventForm(request_user=request.user,
                                  instance=instance)
@@ -92,6 +92,6 @@ def eventnew(request, id=None):
             context['msg'] = "Edit Event"
         else:
             context['msg'] = "New Event"
-        context['formset'] = form
+        context['form'] = form
 
     return render(request, 'form_crispy.html', context)

@@ -607,6 +607,7 @@
                                 <th>Date Paid</th>
                                 <th>Amount</th>
                                 {% permission request.user has 'events.bill_event' of event %}
+                                    <th>Email Sent</th>
                                     <th>&nbsp;</th>
                                 {% endpermission %}
                             </tr>
@@ -617,6 +618,15 @@
                                     <td>{{ billing.date_paid }}</td>
                                     <td>{{ billing.amount }}</td>
                                     {% permission request.user has 'events.bill_event' of event %}
+                                        <td>
+                                            {% for email in billing.billingemail_set.all %}
+                                                {% if email.sent_at %}
+                                                    {{ email.sent_at }}<br>
+                                                {% else %}
+                                                    <span class="glyphicon glyphicon-exclamation-sign" title="This shouldn't happen!"></span> Never<br>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
                                         <td>
                                             {% if not event.closed %}
                                                 <form class="form-inline" action="{% url "events:bills:pay" event.id billing.id %}" method="post">

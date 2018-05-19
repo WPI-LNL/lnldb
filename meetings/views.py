@@ -68,10 +68,10 @@ def modify_att(request, mtg_id, att_id):
             url = reverse('meetings:detail', args=(mtg_id,)) + "#minutes"
             return HttpResponseRedirect(url)
         else:
-            context['formset'] = form
+            context['form'] = form
     else:
         form = MtgAttachmentEditForm(instance=att)
-        context['formset'] = form
+        context['form'] = form
     return render(request, 'form_crispy.html', context)
 
 
@@ -141,20 +141,20 @@ def editattendance(request, mtg_id):
             request.user.has_perms(perms, m)):
         raise PermissionDenied
     if request.method == 'POST':
-        formset = MeetingAdditionForm(request.POST, request.FILES, instance=m)
-        if formset.is_valid():
-            for each in formset.cleaned_data['attachments']:
+        form = MeetingAdditionForm(request.POST, request.FILES, instance=m)
+        if form.is_valid():
+            for each in form.cleaned_data['attachments']:
                 MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m, private=False)
-            for each in formset.cleaned_data['attachments_private']:
+            for each in form.cleaned_data['attachments_private']:
                 MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m, private=True)
-            m = formset.save()
+            m = form.save()
             url = reverse('meetings:detail', args=(m.id,)) + "#attendance"
             return HttpResponseRedirect(url)
         else:
-            context['formset'] = formset
+            context['form'] = form
     else:
-        formset = MeetingAdditionForm(instance=m)
-        context['formset'] = formset
+        form = MeetingAdditionForm(instance=m)
+        context['form'] = form
     return render(request, 'form_crispy.html', context)
 
 
@@ -192,16 +192,16 @@ def listattendance(request, page=1):
 def newattendance(request):
     context = {}
     if request.method == 'POST':
-        formset = MeetingAdditionForm(request.POST)
-        if formset.is_valid():
-            m = formset.save()
+        form = MeetingAdditionForm(request.POST)
+        if form.is_valid():
+            m = form.save()
             return HttpResponseRedirect(reverse('meetings:detail', args=(m.id,)))
         else:
-            context['formset'] = formset
+            context['form'] = form
             context['msg'] = "New Meeting (Errors In Form)"
     else:
-        formset = MeetingAdditionForm()
-        context['formset'] = formset
+        form = MeetingAdditionForm()
+        context['form'] = form
         context['msg'] = "New Meeting"
     return render(request, 'form_crispy.html', context)
 
@@ -215,9 +215,9 @@ def mknotice(request, mtg_id):
             request.user.has_perms(perms, meeting)):
         raise PermissionDenied
     if request.method == 'POST':
-        formset = AnnounceSendForm(meeting, request.POST)
-        if formset.is_valid():
-            notice = formset.save()
+        form = AnnounceSendForm(meeting, request.POST)
+        if form.is_valid():
+            notice = form.save()
             email = generate_notice_email(notice)
             res = email.send()
             if res == 1:
@@ -228,11 +228,11 @@ def mknotice(request, mtg_id):
             url = reverse('meetings:detail', args=(meeting.id,)) + "#emails"
             return HttpResponseRedirect(url)
         else:
-            context['formset'] = formset
+            context['form'] = form
 
     else:
-        formset = AnnounceSendForm(meeting)
-        context['formset'] = formset
+        form = AnnounceSendForm(meeting)
+        context['form'] = form
         context['msg'] = "New Meeting Notice"
     return render(request, 'form_crispy.html', context)
 
@@ -247,9 +247,9 @@ def mkccnotice(request, mtg_id):
         raise PermissionDenied
 
     if request.method == 'POST':
-        formset = AnnounceCCSendForm(meeting, request.POST)
-        if formset.is_valid():
-            notice = formset.save()
+        form = AnnounceCCSendForm(meeting, request.POST)
+        if form.is_valid():
+            notice = form.save()
             email = generate_notice_cc_email(notice)
             res = email.send()
             if res == 1:
@@ -262,10 +262,10 @@ def mkccnotice(request, mtg_id):
             url = reverse('meetings:detail', args=(meeting.id,)) + "#emails"
             return HttpResponseRedirect(url)
         else:
-            context['formset'] = formset
+            context['form'] = form
 
     else:
-        formset = AnnounceCCSendForm(meeting)
-        context['formset'] = formset
+        form = AnnounceCCSendForm(meeting)
+        context['form'] = form
         context['msg'] = "CC Meeting Notice"
     return render(request, 'form_crispy.html', context)

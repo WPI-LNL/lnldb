@@ -75,6 +75,8 @@ urlpatterns = [
             url(r'^mk/$', flow_views.BillingCreate.as_view(), name="new"),
             url(r'^update/(?P<pk>[0-9]+)/$', flow_views.BillingUpdate.as_view(),
                 name="edit"),
+            url(r'^email/(?P<billing>[0-9]+)/$', flow_views.BillingEmailCreate.as_view(),
+                name="email"),
             url(r'^pay/(?P<pk>[0-9]+)/$', flow_views.pay_bill,
                 name="pay"),
             url(r'^rm/(?P<pk>[0-9]+)/$', flow_views.BillingDelete.as_view(),

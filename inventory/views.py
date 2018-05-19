@@ -151,18 +151,18 @@ def type_edit(request, type_id):
         raise PermissionDenied
 
     if request.method == 'POST':
-        formset = forms.EquipmentClassForm(request.POST, request.FILES, instance=e_type)
-        if formset.is_valid():
-            formset.save()
+        form = forms.EquipmentClassForm(request.POST, request.FILES, instance=e_type)
+        if form.is_valid():
+            form.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Equipment type saved.")
             return HttpResponseRedirect(reverse('inventory:type_detail',
                                                 kwargs={'type_id': type_id}))
     else:
-        formset = forms.EquipmentClassForm(instance=e_type)
+        form = forms.EquipmentClassForm(instance=e_type)
     return render(request, "form_crispy.html", {
         'msg': "Edit '%s'" % e_type.name,
-        "formset": formset,
+        "form": form,
     })
 
 
@@ -174,18 +174,18 @@ def type_mk(request):
     category = request.GET.get('default_cat')
 
     if request.method == 'POST':
-        formset = forms.EquipmentClassForm(request.POST, request.FILES)
-        if formset.is_valid():
-            obj = formset.save()
+        form = forms.EquipmentClassForm(request.POST, request.FILES)
+        if form.is_valid():
+            obj = form.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Equipment type added.")
             return HttpResponseRedirect(reverse('inventory:type_detail',
                                                 kwargs={'type_id': obj.pk}))
     else:
-        formset = forms.EquipmentClassForm(initial={'category': category})
+        form = forms.EquipmentClassForm(initial={'category': category})
     return render(request, "form_crispy.html", {
         'msg': "Create Equipment Type",
-        "formset": formset,
+        "form": form,
     })
 
 
@@ -215,18 +215,18 @@ def cat_edit(request, category_id):
         raise PermissionDenied
 
     if request.method == 'POST':
-        formset = forms.CategoryForm(request.POST, request.FILES, instance=category)
-        if formset.is_valid():
-            formset.save()
+        form = forms.CategoryForm(request.POST, request.FILES, instance=category)
+        if form.is_valid():
+            form.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Category saved.")
             return HttpResponseRedirect(reverse('inventory:cat',
                                                 kwargs={'category_id': category_id}))
     else:
-        formset = forms.CategoryForm(instance=category)
+        form = forms.CategoryForm(instance=category)
     return render(request, "form_crispy.html", {
         'msg': "Edit Category",
-        "formset": formset,
+        "form": form,
     })
 
 
@@ -238,18 +238,18 @@ def cat_mk(request):
     parent = request.GET.get('parent')
 
     if request.method == 'POST':
-        formset = forms.CategoryForm(request.POST, request.FILES)
-        if formset.is_valid():
-            obj = formset.save()
+        form = forms.CategoryForm(request.POST, request.FILES)
+        if form.is_valid():
+            obj = form.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Category added.")
             return HttpResponseRedirect(reverse('inventory:cat',
                                                 kwargs={'category_id': obj.pk}))
     else:
-        formset = forms.CategoryForm(initial={'parent': parent})
+        form = forms.CategoryForm(initial={'parent': parent})
     return render(request, "form_crispy.html", {
         'msg': "Create Category",
-        "formset": formset,
+        "form": form,
     })
 
 
@@ -287,18 +287,18 @@ def fast_mk(request):
         category = None
 
     if request.method == 'POST':
-        formset = forms.FastAdd(request.user, request.POST, request.FILES)
-        if formset.is_valid():
-            obj = formset.save()
+        form = forms.FastAdd(request.user, request.POST, request.FILES)
+        if form.is_valid():
+            obj = form.save()
             messages.add_message(request, messages.SUCCESS,
-                                 "%d items added and saved. Now editing." % formset.cleaned_data['num_to_add'])
+                                 "%d items added and saved. Now editing." % form.cleaned_data['num_to_add'])
             return HttpResponseRedirect(reverse('inventory:bulk_edit',
                                                 kwargs={'type_id': obj.pk}))
     else:
-        formset = forms.FastAdd(request.user, initial={'item_cat': category})
+        form = forms.FastAdd(request.user, initial={'item_cat': category})
     return render(request, "form_crispy.html", {
         'msg': "Fast Add Item(s)",
-        "formset": formset,
+        "form": form,
     })
 
 
@@ -306,20 +306,20 @@ def fast_mk(request):
 #     context = {}
 #
 #     if request.method == 'POST':
-#         formset = InvForm(request.POST)
-#         if formset.is_valid():
-#             formset.save()
+#         form = InvForm(request.POST)
+#         if form.is_valid():
+#             form.save()
 #             # return HttpResponseRedirect(reverse("home",
 #  kwargs={'msg':slugify(SUCCESS_MSG_INV)}))
 #             return HttpResponseRedirect(reverse('inventory:view'))
 #
 #         else:
-#             context['formset'] = formset
+#             context['form'] = form
 #     else:
 #         msg = "New Inventory"
-#         formset = InvForm()
+#         form = InvForm()
 #
-#         context['formset'] = formset
+#         context['form'] = form
 #         context['msg'] = msg
 #
 #     return render(request, 'form_crispy.html', context)
@@ -359,18 +359,18 @@ def item_edit(request, item_id):
         raise PermissionDenied
 
     if request.method == 'POST':
-        formset = forms.EquipmentItemForm(request.POST, request.FILES, instance=item)
-        if formset.is_valid():
-            formset.save()
+        form = forms.EquipmentItemForm(request.POST, request.FILES, instance=item)
+        if form.is_valid():
+            form.save()
             messages.add_message(request, messages.SUCCESS,
                                  "Item saved.")
             return HttpResponseRedirect(reverse('inventory:item_detail',
                                                 kwargs={'item_id': item_id}))
     else:
-        formset = forms.EquipmentItemForm(instance=item)
+        form = forms.EquipmentItemForm(instance=item)
     return render(request, "form_crispy.html", {
         'msg': "Edit '%s'" % str(item),
-        "formset": formset,
+        "form": form,
     })
 
 
@@ -401,17 +401,17 @@ def item_rm(request, item_id):
 #     inv = get_object_or_404(Equipment, pk=id)
 #
 #     if request.method == 'POST':
-#         formset = EntryForm(request.user, inv, request.POST)
-#         if formset.is_valid():
-#             formset.save()
+#         form = EntryForm(request.user, inv, request.POST)
+#         if form.is_valid():
+#             form.save()
 #             return HttpResponseRedirect(reverse('inv-detail', args=(id,)))
 #
 #         else:
-#             context['formset'] = formset
+#             context['form'] = form
 #     else:
 #
-#         formset = EntryForm(request.user, inv)
+#         form = EntryForm(request.user, inv)
 #
-#         context['formset'] = formset
+#         context['form'] = form
 #
 #     return render(request, 'form_crispy.html', context)
