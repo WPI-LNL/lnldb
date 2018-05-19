@@ -196,6 +196,7 @@ def reviewremind(request, id, uid):
         return HttpResponse("Bad Call")
 
 
+@require_POST
 @login_required
 def remindall(request, id):
     event = get_object_or_404(Event, pk=id)
