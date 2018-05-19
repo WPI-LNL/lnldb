@@ -819,6 +819,11 @@ class Event(models.Model):
             return self.billings.order_by('-date_billed').first().date_billed
 
     @property
+    def last_bill(self):
+        if self.billings:
+            return self.billings.order_by('-date_billed').first()
+
+    @property
     def times_billed(self):
         if self.billings:
             return self.billings.count()

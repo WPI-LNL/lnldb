@@ -177,6 +177,14 @@
                                         </form>
                                     {% endpermission %}
                                 {% endif %}
+                                {% if event.reviewed and event.last_bill and not event.paid %}
+                                    {% permission request.user has 'events.bill_event' of event %}
+                                        <form class="form-inline" action="{% url 'events:bills:pay' event.id event.last_bill.id %}?next={{ request.get_full_path }}" method="post">
+                                            {% csrf_token %}
+                                            <span class="markpaidtask"><button class="btn btn-link" type="submit">Mark&nbsp;Paid</button></span>
+                                        </form>
+                                    {% endpermission %}
+                                {% endif %}
                             </td>
                         {% elif field.name == 'approval' %}
                             <td class="approval">

@@ -726,8 +726,14 @@ def pay_bill(request, event, pk):
     else:
         bill.date_paid = timezone.now()
         bill.save()
-        messages.success(request, "Bill paid!", extra_tags="success")
-    return HttpResponseRedirect(reverse('events:detail', args=(bill.event_id,)) + "#billing")
+        if 'next' in request.GET:
+            messages.success(request, "Marked latest bill paid for %s" % bill.event.event_name, extra_tags="success")
+        else:
+            messages.success(request, "Bill paid!", extra_tags="success")
+    if 'next' in request.GET:
+        return HttpResponseRedirect(request.GET['next'])
+    else:
+        return HttpResponseRedirect(reverse('events:detail', args=(bill.event_id,)) + "#billing")
 
 
 class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
