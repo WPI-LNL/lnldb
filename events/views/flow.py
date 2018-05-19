@@ -628,13 +628,18 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
     form_class = BillingForm
     template_name = "form_crispy_cbv.html"
     msg = "New Bill"
-
     perms = 'events.bill_event'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.event = get_object_or_404(Event, pk=self.kwargs['event'])
+        if self.event.closed:
+            messages.add_message(request, messages.ERROR, 'Event is closed.')
+            return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))
+        return super(BillingCreate, self).dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super(BillingCreate, self).get_context_data(**kwargs)
-        event = get_object_or_404(Event, pk=self.kwargs['event'])
-        orgs = event.org.all()
+        orgs = self.event.org.all()
         orgstrings = ",".join(["%s's billing account was last verified: %s" % (
             o.name, o.verifications.latest().date if o.verifications.exists() else "Never") for o in orgs])
         context['extra'] = orgstrings
@@ -643,8 +648,7 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
     def get_form_kwargs(self):
         # pass "user" keyword argument with the current user to your form
         kwargs = super(BillingCreate, self).get_form_kwargs()
-        event = get_object_or_404(Event, pk=self.kwargs['event'])
-        kwargs['event'] = event
+        kwargs['event'] = self.event
         return kwargs
 
     def form_valid(self, form):
@@ -662,11 +666,17 @@ class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateVie
     msg = "Update Bill"
     perms = 'events.bill_event'
 
+    def dispatch(self, request, *args, **kwargs):
+        self.event = get_object_or_404(Event, pk=self.kwargs['event'])
+        if self.event.closed:
+            messages.add_message(request, messages.ERROR, 'Event is closed.')
+            return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))
+        return super(BillingUpdate, self).dispatch(request, *args, **kwargs)
+
     def get_form_kwargs(self):
         # pass "user" keyword argument with the current user to your form
         kwargs = super(BillingUpdate, self).get_form_kwargs()
-        event = get_object_or_404(Event, pk=self.kwargs['event'])
-        kwargs['event'] = event
+        kwargs['event'] = self.event
         return kwargs
 
     def form_valid(self, form):
@@ -683,13 +693,12 @@ class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
     msg = "Deleted Bill"
     perms = 'events.bill_event'
 
-    def get_object(self, queryset=None):
-        """ Hook to ensure object isn't closed """
-        obj = super(BillingDelete, self).get_object()
-        if obj.event.closed:
-            raise ValidationError("Event is closed")
-        else:
-            return obj
+    def dispatch(self, request, *args, **kwargs):
+        self.event = get_object_or_404(Event, pk=self.kwargs['event'])
+        if self.event.closed:
+            messages.add_message(request, messages.ERROR, 'Event is closed.')
+            return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))
+        return super(BillingDelete, self).dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
         return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
