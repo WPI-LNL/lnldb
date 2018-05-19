@@ -166,7 +166,9 @@
 
                         {% elif field.name == 'tasks' %}
                             <td class="tasks">
-                                <span class="crewtask"><a href="{% url "events:add-crew" event.id %}">Crew</a></span>
+                                {% if event.approved and event.reports_editable %}
+                                    <span class="crewtask"><a href="{% url "events:add-crew" event.id %}">Crew</a></span>
+                                {% endif %}
                                 {% if event.approved and not event.reviewed and event.crew_needing_reports %}
                                     {% permission request.user has 'events.review_event' of event %}
                                         <form class="form-inline" action="{% url 'events:remindall' event.id %}?next={{ request.get_full_path }}" method="post">
