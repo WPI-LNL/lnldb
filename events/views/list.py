@@ -5,11 +5,11 @@ import pytz
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.core.urlresolvers import reverse
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, Q, Sum, Case, When, IntegerField
 from django.shortcuts import render
 from django.utils.timezone import make_aware
 
-from events.models import Event
+from events.models import Event, MultiBilling
 
 DEFAULT_ENTRY_COUNT = 40
 
@@ -38,8 +38,8 @@ class FakeExtendedField(object):
     def __getattr__(self, item):
         return getattr(self.fieldref, item)
 
-    def __init__(self, name, favicon=None, verbose_name=None, sortable=True):
-        self.fieldref = Event._meta.get_field(name)
+    def __init__(self, name, model=Event, favicon=None, verbose_name=None, sortable=True):
+        self.fieldref = model._meta.get_field(name)
         self.name = name
         if verbose_name:
             self.verbose_name = verbose_name
@@ -269,7 +269,7 @@ def openworkorders(request, start=None, end=None):
         end = end.strftime('%Y-%m-%d')
     context = {}
 
-    events = Event.objects.filter(approved=True).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
+    events = Event.objects.filter(approved=True, closed=False, cancelled=False).distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
@@ -386,7 +386,7 @@ def unreviewed(request, start=None, end=None):
         end = end.strftime('%Y-%m-%d')
 
     now = datetime.datetime.now(pytz.utc)
-    events = Event.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)) \
+    events = Event.objects.filter(approved=True, closed=False, cancelled=False) \
         .filter(reviewed=False) \
         .filter(datetime_end__lte=now) \
         .order_by('datetime_start') \
@@ -447,9 +447,9 @@ def unbilled(request, start=None, end=None):
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
 
-    events = Event.objects.filter(Q(closed=False) & Q(cancelled=False)) \
+    events = Event.objects.filter(closed=False) \
         .filter(reviewed=True) \
-        .filter(billings__isnull=True) \
+        .filter(billings__isnull=True, multibillings__isnull=True) \
         .filter(billed_by_semester=False) \
         .order_by('datetime_start') \
         .distinct()
@@ -506,9 +506,9 @@ def unbilled_semester(request, start=None, end=None):
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=3652.5)
         end = end.strftime('%Y-%m-%d')
-    events = Event.objects.filter(Q(closed=False) & Q(cancelled=False)) \
+    events = Event.objects.filter(closed=False) \
         .filter(reviewed=True) \
-        .filter(billings__isnull=True) \
+        .filter(billings__isnull=True, multibillings__isnull=True) \
         .filter(billed_by_semester=True) \
         .order_by('datetime_start') \
         .distinct()
@@ -559,8 +559,8 @@ def paid(request, start=None, end=None):
         start, end = get_farback_date_range_plus_next_week()
 
     # events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(Q(closed=False) & Q(cancelled=False)) \
-        .filter(billings__date_paid__isnull=False) \
+    events = Event.objects.filter(closed=False) \
+        .filter(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)) \
         .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
@@ -617,10 +617,10 @@ def unpaid(request, start=None, end=None):
 
     # events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now())
     # .filter(date_setup_start__lte=today)
-    events = Event.objects.annotate(numpaid=Count('billings__date_paid')) \
-        .filter(billings__date_billed__isnull=False) \
+    events = Event.objects.annotate(
+        numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
+        .filter(Q(billings__date_billed__isnull=False) | Q(multibillings__date_billed__isnull=False)) \
         .exclude(closed=True) \
-        .exclude(cancelled=True) \
         .exclude(numpaid__gt=0) \
         .filter(reviewed=True) \
         .order_by('datetime_start').distinct()
@@ -786,3 +786,31 @@ def public_facing(request):
     context['events'] = events
 
     return render(request, "events_public.html", context)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def multibillings(request):
+    context = {}
+
+    multibillings = MultiBilling.objects \
+        .annotate(num_closed_events=Sum(Case(
+            When(events__closed=True, then=1),
+            default=0,
+            output_field=IntegerField())))
+
+    page = request.GET.get('page')
+    sort = request.GET.get('sort')
+    multibillings = paginate_helper(multibillings, page, sort)
+
+    context['h2'] = "MultiBills"
+    context['multibillings'] = multibillings
+    context['cols'] = ['events',
+                       FakeField('org', verbose_name="Client", sortable=True),
+                       FakeExtendedField('date_billed', model=MultiBilling),
+                       FakeExtendedField('date_paid', model=MultiBilling),
+                       'amount',
+                       FakeField('email_sent'),
+                       FakeField('tasks')]
+    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    return render(request, 'multibillings.html', context)

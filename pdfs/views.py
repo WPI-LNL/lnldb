@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.humanize.templatetags.humanize import intcomma
 from django.contrib.staticfiles import finders
+from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
@@ -13,10 +14,10 @@ from django.utils import timezone
 from django.utils.text import slugify
 from xhtml2pdf import pisa
 
-from events.models import Category, Event, ExtraInstance
+from events.models import Category, Event, ExtraInstance, MultiBilling
 from projection.models import PITLevel, Projectionist
 
-from .overlay import make_idt_single
+from .overlay import make_idt_single, make_idt_bulk
 from .utils import concat_pdf
 
 
@@ -77,6 +78,8 @@ def generate_projection_pdf(request):
 
 @login_required
 def generate_event_pdf(request, id):
+    if not request.user.has_perm('events.view_event'):
+        raise PermissionDenied
     # Prepare context
     data = {}
     event = get_object_or_404(Event, pk=id)
@@ -107,6 +110,8 @@ def currency(dollars):
 
 @login_required
 def generate_event_bill_pdf(request, event):
+    if not request.user.has_perm('events.view_event_billing', event):
+        raise PermissionDenied
     # Prepare context
     data = {}
     event = get_object_or_404(Event, pk=event)
@@ -166,6 +171,76 @@ def generate_event_bill_pdf_standalone(event, idt_originator):
     return pdf_file.getvalue()
 
 
+@login_required
+def generate_multibill_pdf(request, multibilling):
+    if not request.user.has_perm('events.view_event_billing'):
+        raise PermissionDenied
+    # Prepare context
+    data = {}
+    multibilling = get_object_or_404(MultiBilling.objects.annotate(num_events=Count('events')), pk=multibilling)
+    data['multibilling'] = multibilling
+    orgsets = map(lambda event : event.org.all(), multibilling.events.all())
+    orgs = next(orgsets)
+    for orgset in orgsets:
+        orgs |= orgset
+    orgs = orgs.distinct()
+    data['orgs'] = orgs
+    billing_org = multibilling.events.first().org_to_be_billed
+    data['billing_org'] = billing_org
+    events = multibilling.events.order_by('datetime_start')
+    data['events'] = events
+    data['total_cost'] = sum(map(lambda event : event.cost_total, multibilling.events.all()))
+    # Render html content through html template with context
+    html = render_to_string('pdf_templates/bill-multi.html',
+                            context=data,
+                            request=request)
+
+    if 'raw' in request.GET and bool(request.GET['raw']):
+        return HttpResponse(html)
+
+    # Write PDF to file
+    pdf_file = BytesIO()
+    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+
+    if "invoiceonly" not in request.GET:
+        idt = make_idt_bulk(events, request.user, billing_org)
+        pdf_file = concat_pdf(pdf_file, idt)
+
+    # Return PDF document through a Django HTTP response
+    resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = 'inline; filename="bill.pdf"'
+    return resp
+
+
+def generate_multibill_pdf_standalone(multibilling, idt_originator):
+    # Prepare context
+    data = {}
+    multibilling = MultiBilling.objects.annotate(num_events=Count('events')).get(id=multibilling.id)
+    data['multibilling'] = multibilling
+    orgsets = map(lambda event : event.org.all(), multibilling.events.all())
+    orgs = next(orgsets)
+    for orgset in orgsets:
+        orgs |= orgset
+    orgs = orgs.distinct()
+    data['orgs'] = orgs
+    billing_org = multibilling.events.first().org_to_be_billed
+    data['billing_org'] = billing_org
+    events = multibilling.events.order_by('datetime_start')
+    data['events'] = events
+    data['total_cost'] = sum(map(lambda event : event.cost_total, multibilling.events.all()))
+    # Render html content through html template with context
+    html = render_to_string('pdf_templates/bill-multi.html', context=data)
+
+    # Write PDF to file
+    pdf_file = BytesIO()
+    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+
+    idt = make_idt_bulk(events, idt_originator, billing_org)
+    pdf_file = concat_pdf(pdf_file, idt)
+
+    return pdf_file.getvalue()
+
+
 def generate_pdfs_standalone(ids=None):
     if ids is None:
         ids = []
@@ -186,6 +261,8 @@ def generate_pdfs_standalone(ids=None):
 
 
 def generate_event_pdf_multi(request, ids=None):
+    if not request.user.has_perm('events.view_event'):
+        raise PermissionDenied
     # this shoud fix UTC showing up in PDFs
     timezone.activate(timezone.get_current_timezone())
 

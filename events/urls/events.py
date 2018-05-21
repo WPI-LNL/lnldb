@@ -33,7 +33,8 @@ urlpatterns = [
     url(r'^open/calendar/', generate_date_patterns(list_views.openworkorders_cal, name="open-cal")),
     url(r'^unreviewed/calendar/', generate_date_patterns(list_views.unreviewed_cal, name="unreviewed-cal")),
     url(r'^unbilled/calendar/', generate_date_patterns(list_views.unbilled_cal, name="unbilled-cal")),
-    url(r'^unbilledsemester/calendar/', generate_date_patterns(list_views.unbilled_semester_cal, name="unbilled-semester-cal")),
+    url(r'^unbilledsemester/calendar/', generate_date_patterns(list_views.unbilled_semester_cal,
+                                                               name="unbilled-semester-cal")),
     url(r'^paid/calendar/', generate_date_patterns(list_views.paid_cal, name="paid-cal")),
     url(r'^unpaid/calendar/', generate_date_patterns(list_views.unpaid_cal, name="unpaid-cal")),
     url(r'^closed/calendar/', generate_date_patterns(list_views.closed_cal, name="closed-cal")),
@@ -89,5 +90,13 @@ urlpatterns = [
                 name="edit"),
             url(r'^rm/(?P<pk>[0-9]+)/$', flow_views.CCRDelete.as_view(), name="remove")
         ], namespace="reports")),
-    ]))
+    ])),
+    url(r'^multibills/', include([
+        url(r'^$', list_views.multibillings, name="list"),
+        url(r'^mk/$', flow_views.MultiBillingCreate.as_view(), name="new"),
+        url(r'^update/(?P<pk>[0-9]+)/$', flow_views.MultiBillingUpdate.as_view(), name="edit"),
+        url(r'^rm/(?P<pk>[0-9]+)/$', flow_views.MultiBillingDelete.as_view(), name="remove"),
+        url(r'^email/(?P<multibilling>[0-9]+)/$', flow_views.MultiBillingEmailCreate.as_view(), name="email"),
+        url(r'^pdf/(?P<multibilling>[0-9]+)/$', pdf_views.generate_multibill_pdf, name="pdf"),
+    ], namespace="multibillings")),
 ]

@@ -16,16 +16,17 @@ from reversion.models import Version
 
 from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator,
                                DefaultLNLEmailGenerator as DLEG)
-from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm,
-                          CCIForm, CrewAssign, EventApprovalForm,
+from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
+                          MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm,
-                          InternalReportForm, MKHoursForm, BillingEmailForm)
-from events.models import (Billing, BillingEmail, CCReport, Event, EventArbitrary,
-                           EventAttachment, EventCCInstance, ExtraInstance,
-                           Hours, ReportReminder)
+                          InternalReportForm, MKHoursForm, BillingEmailForm, MultiBillingEmailForm)
+from events.models import (Billing, MultiBilling, BillingEmail, MultiBillingEmail, CCReport, Event,
+                           EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
+                           ReportReminder)
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
-from pdfs.views import generate_pdfs_standalone, generate_event_bill_pdf_standalone
+from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standalone,
+                        generate_multibill_pdf_standalone)
 
 
 def curry_class(cls, *args, **kwargs):
@@ -641,6 +642,8 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
 
     def get_context_data(self, **kwargs):
         context = super(BillingCreate, self).get_context_data(**kwargs)
+        if self.event.closed:
+            raise PermissionDenied
         orgs = self.event.org.all()
         orgstrings = ",".join(["%s's billing account was last verified: %s" % (
             o.name, o.verifications.latest().date if o.verifications.exists() else "Never") for o in orgs])
@@ -678,8 +681,15 @@ class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateVie
             return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))
         return super(BillingUpdate, self).dispatch(request, *args, **kwargs)
 
+    def get_object(self, *args, **kwargs):
+        """ Validate preconditions for editing a bill """
+        obj = super(BillingUpdate, self).get_object(*args, **kwargs)
+        if obj.event.closed:
+            raise PermissionDenied
+        else:
+            return obj
+
     def get_form_kwargs(self):
-        # pass "user" keyword argument with the current user to your form
         kwargs = super(BillingUpdate, self).get_form_kwargs()
         kwargs['event'] = self.event
         return kwargs
@@ -705,8 +715,79 @@ class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
             return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))
         return super(BillingDelete, self).dispatch(request, *args, **kwargs)
 
+    def get_object(self, *args, **kwargs):
+        """ Validate preconditions for deleting a bill """
+        obj = super(BillingDelete, self).get_object(*args, **kwargs)
+        if obj.date_paid:
+            raise PermissionDenied
+        if obj.event.closed:
+            raise PermissionDenied
+        else:
+            return obj
+
     def get_success_url(self):
         return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
+
+
+class MultiBillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
+    model = MultiBilling
+    form_class = MultiBillingForm
+    template_name = "form_crispy.html"
+    msg = "New MultiBill"
+    perms = 'events.bill_event'
+
+    def form_valid(self, form):
+        messages.success(self.request, "MultiBill Created!", extra_tags='success')
+        return super(MultiBillingCreate, self).form_valid(form)
+
+    def get_success_url(self):
+        if 'save-and-make-email' in self.request.POST:
+            return reverse("events:multibillings:email", args=(self.object.pk,))
+        else:
+            return reverse("events:multibillings:list")
+
+
+class MultiBillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
+    model = MultiBilling
+    form_class = MultiBillingUpdateForm
+    template_name = "form_crispy.html"
+    msg = "Update MultiBill"
+    perms = 'events.bill_event'
+
+    def get_object(self, *args, **kwargs):
+        """ Validate preconditions for editing a multibill """
+        obj = super(MultiBillingUpdate, self).get_object(*args, **kwargs)
+        if obj.events.filter(closed=True).exists():
+            raise PermissionDenied
+        else:
+            return obj
+
+    def form_valid(self, form):
+        messages.success(self.request, "MultiBill Updated!", extra_tags='success')
+        return super(MultiBillingUpdate, self).form_valid(form)
+
+    def get_success_url(self):
+        return reverse("events:multibillings:list")
+
+
+class MultiBillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
+    model = MultiBilling
+    template_name = "form_delete_cbv.html"
+    msg = "Delete MultiBill"
+    perms = 'events.bill_event'
+
+    def get_object(self, *args, **kwargs):
+        """ Validate preconditions for deleting a multibill """
+        obj = super(MultiBillingDelete, self).get_object(*args, **kwargs)
+        if obj.date_paid:
+            raise PermissionDenied
+        if obj.events.filter(closed=True).exists():
+            raise PermissionDenied
+        else:
+            return obj
+
+    def get_success_url(self):
+        return reverse("events:multibillings:list")
 
 
 @require_POST
@@ -773,3 +854,41 @@ class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Crea
 
     def get_success_url(self):
         return reverse("events:detail", args=(self.billing.event_id,)) + "#billing"
+
+
+class MultiBillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
+    model = MultiBillingEmail
+    form_class = MultiBillingEmailForm
+    template_name = "form_crispy.html"
+    msg = "New Billing Email"
+    perms = 'events.bill_event'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.multibilling = get_object_or_404(MultiBilling, pk=self.kwargs['multibilling'])
+        return super(MultiBillingEmailCreate, self).dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        # pass "user" keyword argument with the current user to your form
+        kwargs = super(MultiBillingEmailCreate, self).get_form_kwargs()
+        kwargs['multibilling'] = self.multibilling
+        return kwargs
+
+    def form_valid(self, form):
+        messages.success(self.request, "Billing Email Created!", extra_tags='success')
+        response = super(MultiBillingEmailCreate, self).form_valid(form)
+        # send the email
+        i = form.instance
+        to = list(i.email_to_users.values_list('email', flat=True))
+        to.extend(list(i.email_to_orgs.values_list('exec_email', flat=True)))
+        pdf_handle = generate_multibill_pdf_standalone(self.multibilling, self.request.user)
+        filename = "bill.pdf"
+        attachments = [{"file_handle": pdf_handle, "name": filename}]
+        email = DLEG(subject=i.subject, body=i.message, to_emails=to, bcc=[settings.EMAIL_TARGET_T],
+                     attachments=attachments)
+        email.send()
+        i.sent_at = timezone.now()
+        i.save()
+        return response
+
+    def get_success_url(self):
+        return reverse("events:multibillings:list")

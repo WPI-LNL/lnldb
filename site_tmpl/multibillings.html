@@ -1,0 +1,111 @@
+{% extends 'base_admin.html' %}
+{% load get_attribute %}
+{% load append_get %}
+{% load permissionif %}
+{% block extras %}
+{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="pull-right">
+            <a href="{% url 'events:multibillings:new' %}" class="btn btn-primary">New MultiBill</a>
+        </div>
+        <h2>{{h2}}</h2>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+        <table class="table table-striped table-bordered">
+            <tr>
+                {% for field in cols %}
+                    <th>{{ field.verbose_name | title }}
+                        {% if field.favicon %}
+                            <span class="glyphicon glyphicon-{{ field.favicon }}" aria-hidden="true"></span>
+                        {% endif %}
+                        {% if field.sortable %}
+                        <div class="btn-group flexfix" role="group"
+                             aria-label="{{ field.verbose_name | title }} Sorts">
+                            <a role="button" class="btn btn-default btn-xs"
+                               href="?sort={{ field.name }}"
+                               aria-label="Sort {{ field.verbose_name | title }} Ascending">
+                                <span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span>
+                            </a>
+                            <a role="button" class="btn btn-default btn-xs"
+                               href="?sort=-{{ field.name }}"
+                               aria-label="Sort {{ field.verbose_name | title }} Descending">
+                                <span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>
+                            </a>
+                        </div>
+                    {% endif %}
+                    </th>
+                {% endfor %}
+
+            </tr>
+            {% for multibilling in multibillings %}
+                <tr>
+                    {% for field in cols %}
+                        {% if field.name == 'events' %}
+                            <td class="events">
+                                {% for event in multibilling.events.all %}
+                                    <a href="{% url 'events:detail' event.id %}">{{ event.event_name }}</a><br>
+                                {% endfor %}
+                            </td>
+                        {% elif field.name == 'org' %}
+                            <td class="org">
+                                <a href="{% url 'orgs:detail' multibilling.events.first.org_to_be_billed.id %}">{{ multibilling.events.first.org_to_be_billed }}</a>
+                            </td>
+                        {% elif field.name == 'email_sent' %}
+                            <td class="email_sent">
+                                {% for email in multibilling.multibillingemail_set.all %}
+                                    {% if email.sent_at %}
+                                        {{ email.sent_at }}<br>
+                                    {% else %}
+                                        <span class="glyphicon glyphicon-exclamation-sign" title="This shouldn't happen!"></span> Never<br>
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                        {% elif field.name == 'tasks' %}
+                            <td class="tasks">
+                                <a href="{% url "events:multibillings:pdf" multibilling.id %}">PDF</a>
+                                {% if not multibilling.num_closed_events %}
+                                    <a href="{% url "events:multibillings:edit" multibilling.id %}">Update</a>
+                                    {% if not multibilling.date_paid %}
+                                        <a href="{% url "events:multibillings:remove" multibilling.id %}">Delete</a>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        {% else %}
+                            <td class="{{ field.name }}">{{ multibilling|getattribute:field.name }}</td>
+                        {% endif %}
+                    {% endfor %}
+
+
+                    </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+<div class="row">
+    <ul class="pager">
+        {% if multibillings.has_previous %}
+            <li class="previous">
+            <a href="{% append_to_get page=multibillings.previous_page_number %}">&larr; Newer</a>
+        {% else %}
+            <li class="previous disabled">
+            <a href="#" >&larr; Newer</a>
+        {% endif %}
+        </li>
+        <li class="current">
+            <a href="#">Page {{ multibillings.number }} of {{ multibillings.paginator.num_pages }}.</a>
+        </li>
+        {% if multibillings.has_next %}
+            <li class="next">
+            <a href="{% append_to_get page=multibillings.next_page_number %}">Older &rarr;</a>
+        {% else %}
+            <li class="next disabled">
+            <a href="#">Older &rarr;</a>
+        {% endif %}
+        </li>
+    </ul>
+</div>
+{% endblock %}

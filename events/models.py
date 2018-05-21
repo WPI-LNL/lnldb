@@ -334,6 +334,26 @@ class Billing(models.Model):
 
 
 @python_2_unicode_compatible
+class MultiBilling(models.Model):
+    """
+        A billing instance for multiple events that is sent to a client
+    """
+    date_billed = models.DateField()
+    date_paid = models.DateField(null=True, blank=True)
+    events = models.ManyToManyField('Event', related_name='multibillings')
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+
+    def __str__(self):
+        out = 'MultiBill for ' + ', '.join(map(lambda event : event.event_name, self.events.all()))
+        if self.date_paid:
+            out += ' (PAID)'
+        return out
+
+    class Meta:
+        ordering = ('-date_billed', 'date_paid')
+
+
+@python_2_unicode_compatible
 class BillingEmail(models.Model):
     billing = models.ForeignKey('Billing')
     subject = models.CharField(max_length=128)
@@ -345,6 +365,21 @@ class BillingEmail(models.Model):
     def __str__(self):
         return 'Billing email sent %s for %s' % (self.sent_at if self.sent_at is not None else 'never',
                                                  self.billing.event.event_name)
+
+
+@python_2_unicode_compatible
+class MultiBillingEmail(models.Model):
+    multibilling = models.ForeignKey('MultiBilling')
+    subject = models.CharField(max_length=128)
+    message = models.TextField()
+    email_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL)
+    email_to_orgs = models.ManyToManyField('Organization')
+    sent_at = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return 'MultiBilling email sent %s for %s' % (
+            self.sent_at if self.sent_at is not None else 'never',
+            ', '.join(map(lambda event : event.event_name, self.multibilling.events.all())))
 
 
 class OptimizedEventManager(Manager):
@@ -637,11 +672,13 @@ class Event(models.Model):
 
     @property
     def unpaid(self):
-        return self.billings.filter(date_paid__isnull=True, date_billed__isnull=False)
+        return self.billings.filter(date_paid__isnull=True, date_billed__isnull=False).exists() \
+            or self.multibillings.filter(date_paid__isnull=True, date_billed__isnull=False).exists()
 
     @property
     def paid(self):
-        return self.billings.filter(date_paid__isnull=False).exists()
+        return self.billings.filter(date_paid__isnull=False).exists() \
+            or self.multibillings.filter(date_paid__isnull=False).exists()
 
     @property
     def over(self):
@@ -815,18 +852,18 @@ class Event(models.Model):
 
     @property
     def last_billed(self):
-        if self.billings:
+        if self.billings.exists():
             return self.billings.order_by('-date_billed').first().date_billed
+        elif self.multibillings.exists():
+            return self.multibillings.order_by('-date_billed').first().date_billed
 
     @property
     def last_bill(self):
-        if self.billings:
-            return self.billings.order_by('-date_billed').first()
+        return self.billings.order_by('-date_billed').first()
 
     @property
     def times_billed(self):
-        if self.billings:
-            return self.billings.count()
+        return self.billings.count() + self.multibillings.count()
 
     @property
     def last_paid(self):

@@ -109,7 +109,7 @@ def make_idt_single(event, user=None):
 def make_idt_bulk(events, user=None, org_for=None, fund_for=None):
     total = float(sum([e.cost_total for e in events]))
     proj_total = sum([e.cost_projection_total for e in events]) / 2
-    total -= proj_total
+    total -= float(proj_total)
 
     event_names = [str(e) for e in events]
     description = "LNL Services for %s" % ", ".join(event_names)

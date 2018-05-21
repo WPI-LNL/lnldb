@@ -599,7 +599,7 @@
                     {% else %}
                         <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Quote</a>
                     {% endif %}
-                    {% if event.billings %}
+                    {% if event.billings or event.multibillings %}
                         <table class="table">
                             <thead>
                             <tr>
@@ -643,6 +643,27 @@
                                                     </div>
                                                 </form>
                                             {% endif %}
+                                        </td>
+                                    {% endpermission %}
+                                </tr>
+                            {% endfor %}
+                            {% for multibilling in event.multibillings.all %}
+                                <tr>
+                                    <td>{{ multibilling.date_billed }}</td>
+                                    <td>{{ multibilling.date_paid }}</td>
+                                    <td><a href="{% url 'events:multibillings:pdf' multibilling.id %}">See invoice</a></td>
+                                    {% permission request.user has 'events.bill_event' of event %}
+                                        <td>
+                                            {% for email in multibilling.multibillingemail_set.all %}
+                                                {% if email.sent_at %}
+                                                    {{ email.sent_at }}<br>
+                                                {% else %}
+                                                    <span class="glyphicon glyphicon-exclamation-sign" title="This shouldn't happen!"></span> Never<br>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            MultiBill
                                         </td>
                                     {% endpermission %}
                                 </tr>

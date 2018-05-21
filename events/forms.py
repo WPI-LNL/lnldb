@@ -12,6 +12,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import (HTML, Div, Field, Fieldset, Hidden, Layout,
                                  Reset, Submit)
 from django import forms
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db.models import Q
@@ -23,9 +24,9 @@ from pagedown.widgets import PagedownWidget
 
 from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
 from events.fields import GroupedModelChoiceField
-from events.models import (Billing, BillingEmail, CCReport, Event, EventAttachment,
-                           EventCCInstance, Extra, ExtraInstance, Fund, Hours,
-                           Lighting, Location, Organization,
+from events.models import (Billing, MultiBilling, BillingEmail, MultiBillingEmail,
+                           CCReport, Event, EventAttachment, EventCCInstance, Extra,
+                           ExtraInstance, Fund, Hours, Lighting, Location, Organization,
                            OrganizationTransfer, OrgBillingVerificationEvent,
                            Projection, Service, Sound)
 from events.widgets import ValueSelectField
@@ -764,14 +765,79 @@ class BillingUpdateForm(forms.ModelForm):
         fields = ('date_paid', 'amount')
 
 
+class MultiBillingForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+            'events',
+            PrependedText('date_billed', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
+            PrependedText('amount', '<strong>$</strong>'),
+            FormActions(
+                Submit('save-and-return', 'Save and Return'),
+                Submit('save-and-make-email', 'Save and Make Email'),
+                Reset('reset', 'Reset Form'),
+            )
+        )
+        super(MultiBillingForm, self).__init__(*args, **kwargs)
+        self.fields['date_billed'].initial = datetime.date.today()
+
+    def clean(self):
+        cleaned_data = super(MultiBillingForm, self).clean()
+        events = cleaned_data.get('events', [])
+        if events:
+            org = events[0].org_to_be_billed
+            for event in events[1:]:
+                if event.org_to_be_billed != org:
+                    raise ValidationError('All events you select must have the same \'Client to bill\'.')
+        return cleaned_data
+
+    class Meta:
+        model = MultiBilling
+        fields = ('events', 'date_billed', 'amount')
+
+    events = forms.ModelMultipleChoiceField(
+        queryset=Event.objects.filter(closed=False, reviewed=True, billings__isnull=True, billed_by_semester=True),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
+        help_text="Only unbilled, reviewed events that are marked for semester billing are listed above."
+    )
+
+
+class MultiBillingUpdateForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(MultiBillingUpdateForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        events_str = ', '.join(map(lambda event : event.event_name, self.instance.events.all()))
+        self.helper.layout = Layout(
+            HTML('<p>Events: ' + events_str + '</p>'),
+            PrependedText('date_paid', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
+            PrependedText('amount', '<strong>$</strong>'),
+            FormActions(
+                Submit('save', 'Save Changes'),
+                Reset('reset', 'Reset Form'),
+            )
+        )
+        self.fields['date_paid'].initial = datetime.date.today()
+
+    class Meta:
+        model = MultiBilling
+        fields = ('date_paid', 'amount')
+
+
 class BillingEmailForm(forms.ModelForm):
     def __init__(self, billing, *args, **kwargs):
         super(BillingEmailForm, self).__init__(*args, **kwargs)
         self.billing = billing
-        contacts = billing.event.org.all()
-        self.fields["email_to_orgs"].queryset = contacts
-        self.fields["email_to_orgs"].initial = contacts
-        self.fields["email_to_users"].initial = [billing.event.contact.pk]
+        orgs = billing.event.org.all()
+        self.fields["email_to_orgs"].queryset = orgs
+        self.fields["email_to_orgs"].initial = orgs
+        if billing.event.contact:
+            self.fields["email_to_users"].initial = [billing.event.contact.pk]
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
@@ -793,6 +859,12 @@ class BillingEmailForm(forms.ModelForm):
         cleaned_data = super(BillingEmailForm, self).clean()
         if not cleaned_data.get('email_to_users', None) and not cleaned_data.get('email_to_orgs', None):
             raise ValidationError('No recipients')
+        for user in map(lambda id : get_user_model().objects.get(id=id), cleaned_data.get('email_to_users', [])):
+            if not user.email:
+                raise ValidationError('User %s has no email address on file' % user.get_full_name())
+        for org in cleaned_data.get('email_to_orgs', []):
+            if not org.exec_email:
+                raise ValidationError('Organization %s has no email address on file' % org.name)
         return cleaned_data
 
     def save(self, commit=True):
@@ -805,6 +877,70 @@ class BillingEmailForm(forms.ModelForm):
 
     class Meta:
         model = BillingEmail
+        fields = ('subject', 'message', 'email_to_users', 'email_to_orgs')
+        widgets = {
+            'message': PagedownWidget(),
+        }
+
+    email_to_users = AutoCompleteSelectMultipleField('Users', required=False, label="User Recipients")
+    email_to_orgs = forms.ModelMultipleChoiceField(
+        queryset=Organization.objects.all(),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
+        required=False, label="Client Recipients",
+        help_text="The email will be addressed to the client's exec email alias on file."
+    )
+
+
+class MultiBillingEmailForm(forms.ModelForm):
+    def __init__(self, multibilling, *args, **kwargs):
+        super(MultiBillingEmailForm, self).__init__(*args, **kwargs)
+        self.multibilling = multibilling
+        orgsets = map(lambda event : event.org.all(), multibilling.events.all())
+        orgs = next(orgsets)
+        for orgset in orgsets:
+            orgs |= orgset
+        orgs = orgs.distinct()
+        contacts = map(lambda event : event.contact.pk, multibilling.events.filter(contact__isnull=False))
+        self.fields["email_to_orgs"].queryset = orgs
+        self.fields["email_to_orgs"].initial = multibilling.events.first().org_to_be_billed
+        self.fields["email_to_users"].initial = contacts
+        self.helper = FormHelper()
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-2'
+        self.helper.field_class = 'col-lg-10'
+        self.helper.layout = Layout(
+            HTML('<p class="text-muted">The bill PDF will be attached to the email.</p>'),
+            'subject',
+            'message',
+            'email_to_users',
+            'email_to_orgs',
+            FormActions(
+                Submit('save', 'Send Email'),
+            )
+        )
+
+    def clean(self):
+        cleaned_data = super(MultiBillingEmailForm, self).clean()
+        if not cleaned_data.get('email_to_users', None) and not cleaned_data.get('email_to_orgs', None):
+            raise ValidationError('No recipients')
+        for user in map(lambda id : get_user_model().objects.get(id=id), cleaned_data.get('email_to_users', [])):
+            if not user.email:
+                raise ValidationError('User %s has no email address on file' % user.get_full_name())
+        for org in cleaned_data.get('email_to_orgs', []):
+            if not org.exec_email:
+                raise ValidationError('Organization %s has no email address on file' % org.name)
+        return cleaned_data
+
+    def save(self, commit=True):
+        self.instance = super(MultiBillingEmailForm, self).save(commit=False)
+        self.instance.multibilling = self.multibilling
+        if commit:
+            self.instance.save()
+            self.save_m2m()
+        return self.instance
+
+    class Meta:
+        model = MultiBillingEmail
         fields = ('subject', 'message', 'email_to_users', 'email_to_orgs')
         widgets = {
             'message': PagedownWidget(),
