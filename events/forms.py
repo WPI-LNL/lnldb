@@ -21,6 +21,7 @@ from django.forms.extras.widgets import SelectDateWidget
 from django.utils import timezone
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
+import six
 
 from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
 from events.fields import GroupedModelChoiceField
@@ -88,6 +89,11 @@ def get_qs_from_event(event):
 
     return Service.objects.filter(Q(id__in=[lighting_id]) | Q(id__in=[sound_id]) | Q(id__in=[proj_id]) | Q(
         id__in=[i.id for i in event.otherservices.all()]))
+
+
+class CustomEventModelMultipleChoiceField(forms.ModelMultipleChoiceField):
+    def label_from_instance(self, event):
+        return six.u('%s\u2014%s') % (event.event_name, ', '.join(map(lambda org : org.name, event.org.all())))
 
 
 # LNAdmin Forms
@@ -798,7 +804,7 @@ class MultiBillingForm(forms.ModelForm):
         model = MultiBilling
         fields = ('events', 'date_billed', 'amount')
 
-    events = forms.ModelMultipleChoiceField(
+    events = CustomEventModelMultipleChoiceField(
         queryset=Event.objects.filter(closed=False, reviewed=True, billings__isnull=True, billed_by_semester=True),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
         help_text="Only unbilled, reviewed events that are marked for semester billing are listed above."
