@@ -5,9 +5,9 @@
 <div class="pull-right">
     <a class="btn btn-warning btn-lg" href="{% url "projection:list" %}"><i class="glyphicon glyphicon-th-large icon-white"></i>&nbsp;Standard List</a>
     {% permission request.user has 'projection.edit_pits' %}
-        <a class="btn btn-info btn-lg" href="{% url "projection:bulk-edit" %}"><i class="glyphicon glyphicon-fast-forward icon-white"></i>Bulk Update Projectionists</a>
+        <a class="btn btn-info btn-lg" href="{% url "projection:bulk-edit" %}"><i class="glyphicon glyphicon-fast-forward icon-white"></i>&nbsp;Bulk Update Projectionists</a>
     {% endpermission %}
-    <a class="btn btn-info btn-lg" href="{% url "projection:pdf" %}"><i class="glyphicon glyphicon-print icon-white"></i>PDF</a>
+    <a class="btn btn-info btn-lg" href="{% url "projection:pdf" %}"><i class="glyphicon glyphicon-print icon-white"></i>&nbsp;PDF</a>
 </div>
 <h2> {{ h2 }} </h2>
 <h3> Projectionists In Training </h3>

@@ -36,12 +36,13 @@
                     </tr>
                 {% endfor %}
                 </table>
+                    <p class="text-muted">Pressing 'Delete This User' below will delete all of the information you see on this page and
+                    the user will no longer be listed in the projectionist list.</p>
                     <div class="form-actions">
                         <input name="submit" value="Save changes" class="btn btn-primary" id="submit-id-save" type="submit"> 
                         {% if pk %}<a class="btn btn-danger" href="{% url "projection:remove" pk %}">Delete This User</a> {% endif %}
                     </div>
                 </form>
-                
         </div>
     </div>
 {% endblock %}
