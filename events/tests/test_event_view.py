@@ -15,8 +15,7 @@ class EventBasicViewTest(TestCase):
 
     def test_pay(self):
         b = self.e.billings.create(date_billed=datetime.date(2000, 1, 1),
-                                   amount=3.14,
-                                   opt_out_initial_email=True)
+                                   amount=3.14)
 
         # random clicks wont work
         response = self.client.get(reverse('events:bills:pay', args=[self.e.pk, b.pk]))
