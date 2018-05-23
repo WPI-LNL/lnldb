@@ -493,6 +493,10 @@ def extras(request, id):
     if event.closed:
         messages.add_message(request, messages.ERROR, 'Event is closed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    if any(event.extrainstance_set.values_list('extra__disappear', flat=True)):
+        messages.add_message(request, messages.ERROR, 'One or more of the existing extras of this \
+        event has since been removed as an available extra. You cannot make any changes to the extras \
+        of this event without deleting those rows. If you believe this is in error, contact the webmaster.')
     context['event'] = event
 
     mk_extra_formset = inlineformset_factory(Event, ExtraInstance, extra=1, exclude=[])

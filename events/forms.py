@@ -1128,7 +1128,7 @@ class ExtraForm(forms.ModelForm):
         fields = ('extra', 'quant')
 
     extra = GroupedModelChoiceField(
-        queryset=Extra.objects.all(),
+        queryset=Extra.objects.filter(disappear=False),
         group_by_field="category",
         group_label=lambda group: group.name,
     )
