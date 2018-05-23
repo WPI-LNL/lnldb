@@ -6,7 +6,9 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.core.urlresolvers import reverse
 from django.db.models import Count, F, Q, Sum, Case, When, IntegerField
+from django.http.response import HttpResponseRedirect
 from django.shortcuts import render
+from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 
 from events.models import Event, MultiBilling
@@ -140,6 +142,9 @@ def get_farback_date_range_plus_next_week(delta=180):
 
     return start, end
 
+def build_redirect(request, **kwargs):
+    return HttpResponseRedirect(request.path + '?' + urlencode(kwargs))
+
 
 # ## EVENT VIEWS
 @login_required()
@@ -186,6 +191,13 @@ def upcoming(request, start=None, end=None):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(projection__isnull=False)
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -197,6 +209,7 @@ def upcoming(request, start=None, end=None):
     context['baseurl'] = reverse("events:upcoming")
     context['pdfurl'] = reverse('events:pdf-multi')
     context['calurl'] = reverse('cal:list')
+    context['takes_param_projection'] = True
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -204,7 +217,10 @@ def upcoming(request, start=None, end=None):
                        FakeExtendedField('datetime_start', verbose_name="Starts At"),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render(request, 'events.html', context)
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required
@@ -226,6 +242,13 @@ def incoming(request, start=None, end=None):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices')
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(projection__isnull=False)
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -237,6 +260,7 @@ def incoming(request, start=None, end=None):
     context['baseurl'] = reverse("events:incoming")
     context['pdfurl'] = reverse('events:pdf-multi')
     context['calurl'] = reverse('events:incoming-cal')
+    context['takes_param_projection'] = True
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -245,7 +269,10 @@ def incoming(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False)]
 
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render(request, 'events.html', context)
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required()
@@ -278,6 +305,13 @@ def openworkorders(request, start=None, end=None):
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings') \
         .prefetch_related('crew_chief')
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(projection__isnull=False)
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -289,6 +323,7 @@ def openworkorders(request, start=None, end=None):
     context['baseurl'] = reverse("events:open")
     context['pdfurl'] = reverse('events:pdf-multi')
     context['calurl'] = reverse('events:open-cal')
+    context['takes_param_projection'] = True
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -297,7 +332,10 @@ def openworkorders(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False),
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render(request, 'events.html', context)
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required()
@@ -336,8 +374,13 @@ def findchief(request, start=None, end=None):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
-    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(projection__isnull=False)
 
     events, context = datefilter(events, context, start, end)
 
@@ -346,7 +389,7 @@ def findchief(request, start=None, end=None):
     events = paginate_helper(events, page, sort)
 
     context['h2'] = "Needs a Crew Chief"
-    context['proj_hideable'] = True
+    context['takes_param_projection'] = True
     context['events'] = events
     context['baseurl'] = reverse("events:findchief")
     context['pdfurl'] = reverse('events:pdf-multi')
@@ -360,7 +403,10 @@ def findchief(request, start=None, end=None):
                        FakeField('eventcount', verbose_name="# Services"),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render(request, 'events.html', context)
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required()
@@ -398,8 +444,13 @@ def unreviewed(request, start=None, end=None):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
-    if not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(projection__isnull=False)
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -411,7 +462,7 @@ def unreviewed(request, start=None, end=None):
     context['baseurl'] = reverse("events:unreviewed")
     context['pdfurl'] = reverse('events:pdf-multi')
     context['calurl'] = reverse('events:unreviewed-cal')
-    context['proj_hideable'] = True
+    context['takes_param_projection'] = True
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -421,7 +472,10 @@ def unreviewed(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False),
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render(request, 'events.html', context)
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required()
@@ -460,8 +514,13 @@ def unbilled(request, start=None, end=None):
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
-    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(projection__isnull=False)
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -471,7 +530,7 @@ def unbilled(request, start=None, end=None):
     context['h2'] = "Events to be Billed"
     context['events'] = events
     context['baseurl'] = reverse("events:unbilled")
-    context['proj_hideable'] = True
+    context['takes_param_projection'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['calurl'] = reverse('events:unbilled-cal')
     context['cols'] = ['event_name',
@@ -481,7 +540,10 @@ def unbilled(request, start=None, end=None):
                        FakeField('num_crew_needing_reports', sortable=True, verbose_name="Missing Reports"),
                        FakeField('short_services', verbose_name="Services", sortable=False), ]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render(request, 'events.html', context)
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required()
@@ -519,6 +581,13 @@ def unbilled_semester(request, start=None, end=None):
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(projection__isnull=False)
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -530,6 +599,7 @@ def unbilled_semester(request, start=None, end=None):
     context['baseurl'] = reverse("events:unbilled-semester")
     context['pdfurl'] = reverse('events:pdf-multi')
     context['calurl'] = reverse('events:unbilled-semester-cal')
+    context['takes_param_projection'] = True
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -537,7 +607,10 @@ def unbilled_semester(request, start=None, end=None):
                        'crew_chief',
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render(request, 'events.html', context)
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required()
@@ -569,8 +642,13 @@ def paid(request, start=None, end=None):
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
-    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(projection__isnull=False)
     events, context = datefilter(events, context, start, end)
 
     # if events:
@@ -585,7 +663,7 @@ def paid(request, start=None, end=None):
     context['baseurl'] = reverse("events:paid")
     context['pdfurl'] = reverse('events:pdf-multi')
     context['calurl'] = reverse('events:paid-cal')
-    context['proj_hideable'] = True
+    context['takes_param_projection'] = True
     context['cols'] = ['event_name',
                        'org',
                        FakeExtendedField('datetime_start', verbose_name="Event Time"),
@@ -593,8 +671,10 @@ def paid(request, start=None, end=None):
                        FakeField('last_paid', verbose_name="Paid On", sortable=True),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-
-    return render(request, 'events.html', context)
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required()
@@ -631,8 +711,13 @@ def unpaid(request, start=None, end=None):
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings')
-    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(projection__isnull=False)
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -642,7 +727,7 @@ def unpaid(request, start=None, end=None):
     context['h2'] = "Pending Payments"
     context['events'] = events
     context['baseurl'] = reverse("events:unpaid")
-    context['proj_hideable'] = True
+    context['takes_param_projection'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['calurl'] = reverse('events:unpaid-cal')
     context['cols'] = ['event_name',
@@ -653,7 +738,10 @@ def unpaid(request, start=None, end=None):
                        FakeField('short_services', verbose_name="Services", sortable=False),
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render(request, 'events.html', context)
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required()
@@ -682,8 +770,13 @@ def closed(request, start=None, end=None):
     events = events.select_related('location__building').prefetch_related('org') \
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('crew_chief')
-    if request.GET.get('hidedp') and not request.GET.get('hidedp') == '0':
-        events = events.exclude(Q(projection__shortname='DP') & Q(lighting__isnull=True) & Q(sound__isnull=True))
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(projection__isnull=False)
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -693,7 +786,7 @@ def closed(request, start=None, end=None):
     context['h2'] = "Closed Events"
     context['events'] = events
     context['baseurl'] = reverse("events:closed")
-    context['proj_hideable'] = True
+    context['takes_param_projection'] = True
     context['pdfurl'] = reverse('events:pdf-multi')
     context['calurl'] = reverse('events:closed-cal')
     context['cols'] = ['event_name',
@@ -703,8 +796,10 @@ def closed(request, start=None, end=None):
                        'crew_chief',
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    # print context['cols']
-    return render(request, 'events.html', context)
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required()
@@ -739,6 +834,13 @@ def all(request, start=None, end=None):
         .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('billings') \
         .prefetch_related('crew_chief')
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(projection__isnull=False)
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -750,6 +852,7 @@ def all(request, start=None, end=None):
     context['baseurl'] = reverse("events:all")
     context['pdfurl'] = reverse('events:pdf-multi')
     context['calurl'] = reverse('events:all-cal')
+    context['takes_param_projection'] = True
     context['cols'] = ['event_name',
                        'org',
                        'location',
@@ -761,7 +864,10 @@ def all(request, start=None, end=None):
     if request.user.has_perm('events.approve_event'):
         context['cols'].append(FakeField('approval'))
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render(request, 'events.html', context)
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required()

@@ -61,13 +61,13 @@
                             <li><a href="{% url "events:all" start end %}{% append_to_get page=1 %}">All</a></li>
                         </ul>
                         {% endif %}
-                        {% if proj_hideable %}
+                        {% if takes_param_projection %}
                         <hr>
-                            <ul class="nav nav-pills">
-                                <li class="disabled"><a href="#">Projection Events</a></li>
-                                <li><a href="{% append_to_get page=1 hidedp=0 %}">Show</a></li>
-                                <li><a href="{% append_to_get page=1 hidedp=1 %}">Hide</a></li>
-                            </ul>
+                            <div class="btn-group" role="group" aria-label="Projection filter">
+                                <a class="btn btn-default{% if request.GET.projection == 'hide' %} active{% endif %}" href="{% append_to_get page=1 projection='hide' %}">Hide Projection</a>
+                                <a class="btn btn-default{% if not request.GET.projection or request.GET.projection == 'show' %} active{% endif %}" href="{% append_to_get page=1 projection='show' %}">Show Projection</a>
+                                <a class="btn btn-default{% if request.GET.projection == 'only' %} active{% endif %}" href="{% append_to_get page=1 projection='only' %}">Show Only Projection</a>
+                            </div>
                         {% endif %}
                         <hr>
                     </div>
