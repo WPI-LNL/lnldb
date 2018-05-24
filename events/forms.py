@@ -622,6 +622,7 @@ class ExternalOrgUpdateForm(forms.ModelForm):
         self.helper.form_method = 'post'
         self.helper.form_action = ''
         self.helper.layout = Layout(
+            'exec_email',
             'address',
             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
             'associated_users',
@@ -635,7 +636,7 @@ class ExternalOrgUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Organization
-        fields = ('address', 'phone', 'associated_users')
+        fields = ('exec_email', 'address', 'phone', 'associated_users')
 
 
 class OrgXFerForm(forms.ModelForm):

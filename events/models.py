@@ -985,7 +985,7 @@ class Organization(models.Model):  # AKA Client
     name = models.CharField(max_length=128, unique=True)
     shortname = models.CharField(max_length=8, null=True, blank=True)
     email = models.EmailField(null=True, blank=True, verbose_name="normal_email_unused")
-    exec_email = models.EmailField(null=True, blank=True, verbose_name="Email")
+    exec_email = models.EmailField(null=True, verbose_name="Email")
 
     email_exec = models.BooleanField(default=True)
     email_normal = models.BooleanField(default=False)

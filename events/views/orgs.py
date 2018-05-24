@@ -45,22 +45,21 @@ def vieworgs(request):
 
 @login_required
 def addeditorgs(request, org_id=None):
-    """form for adding an org """
+    """
+    internal form for adding/editing an org
+    Clients should not have access to this page. The accounts field autocomplete exposes ALL funds,
+    and this form also allows the owner of the org to be changed without the email verification done
+    by the org transfer form. Clients should use the much less confusing 'orgedit' view.
+    """
+    if not request.user.has_perms('events.view_org'):
+            raise PermissionDenied
     context = {}
     if org_id:
-        # edit perms are checked on a per-field basis in IOrgForm
-        edit_perms = ('events.view_org',)
         instance = get_object_or_404(Organization, pk=org_id)
         msg = "Edit Client"
-        if not (request.user.has_perms(edit_perms) or
-                request.user.has_perms(edit_perms, instance)):
-            raise PermissionDenied
     else:
-        edit_perms = ('events.add_org',)
         instance = None
         msg = "New Client"
-        if not request.user.has_perms(edit_perms):
-            raise PermissionDenied
 
     if request.method == 'POST':
         form = IOrgForm(request.user, request.POST, instance=instance)

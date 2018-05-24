@@ -12,13 +12,20 @@
     <div class="row" xmlns="http://www.w3.org/1999/html">
         <div class="col-md-12">
             <div class="jumbotron">
-                 <h1>{{org }}</h1>
-                 {% if org.shortname %}
-                 ({{ org.shortname }})
-                 {% endif %}
-                {% permission user has 'events.edit_org' of org %}
-                 <a class="btn btn-lg btn-primary" href="{% url "orgs:edit" org.id %}">Edit</a>
-                {% endpermission %}
+                <h1>{{org }}</h1>
+                {% if org.shortname %}
+                    ({{ org.shortname }})
+                {% endif %}
+                <div class="btn-group">
+                    {% permission user has 'events.edit_org' %}
+                        <a class="btn btn-lg btn-warning" href="{% url "orgs:edit" org.id %}">Edit</a>
+                    {% elpermission user has 'events.edit_org' of org %}
+                        <a class="btn btn-lg btn-primary" href="{% url "my:org-edit" org.id %}">Edit</a>
+                    {% endpermission %}
+                    {% if user == org.user_in_charge %}
+                        <a class="btn btn-lg btn-success" href="{% url "my:org-transfer" org.id %}">Transfer</a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -54,14 +61,14 @@
             <table>
                 {% for f in org.accounts.all %}
                     {% permission user has 'events.edit_fund' of f %}
-                <tr><td>
-                    <b><a href="{% url 'orgs:fundedit' f.id %}">{{ f }}</a></b>
-                    {% if f.notes %}{{ f.notes }}{% endif %}
-                </td></tr>
-                        {% elpermission user has 'events.view_fund' of f %}
+                        <tr><td>
+                            <b><a href="{% url 'orgs:fundedit' f.id %}">{{ f }}</a></b>
+                            {% if f.notes %}{{ f.notes }}{% endif %}
+                        </td></tr>
+                    {% else %}
                         <tr>
                             <td>
-                                <b><a href="{% url 'orgs:fundedit' f.id %}">{{ f }}</a></b>
+                                <b>{{ f }}</b>
                                 {% if f.notes %}{{ f.notes }}{% endif %}
                             </td>
                         </tr>

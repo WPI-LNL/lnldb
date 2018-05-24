@@ -111,7 +111,7 @@ def generate_event_start_end_emails():
 def generate_selfservice_notice_email(context):
     subject = "Self Service Form Submission"
     from_email = settings.DEFAULT_FROM_ADDR
-    to_email = settings.EMAIL_TARGET_VP
+    to_email = [settings.EMAIL_TARGET_W, settings.EMAIL_TARGET_VP]
 
     cont_html = render_to_string('emails/email_selfservice.html', context)
     cont_text = render_to_string('emails/email_selfservice.txt', context)
