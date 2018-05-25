@@ -16,8 +16,8 @@ from django.utils import timezone
 from django.views.generic import CreateView
 
 from emails.generators import generate_transfer_email
-from events.forms import (ExternalOrgUpdateForm, FopalForm, IOrgForm,
-                          IOrgVerificationForm, OrgXFerForm)
+from events.forms import (ExternalOrgUpdateForm, FopalForm, ExternalFundEditForm,
+                          IOrgForm, IOrgVerificationForm, OrgXFerForm)
 from events.models import (Event, Fund, Organization, OrganizationTransfer,
                            OrgBillingVerificationEvent)
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
@@ -51,7 +51,7 @@ def addeditorgs(request, org_id=None):
     and this form also allows the owner of the org to be changed without the email verification done
     by the org transfer form. Clients should use the much less confusing 'orgedit' view.
     """
-    if not request.user.has_perms('events.view_org'):
+    if not request.user.has_perm('events.view_org'):
             raise PermissionDenied
     context = {}
     if org_id:
@@ -126,6 +126,33 @@ def fund_edit(request, fund_id=None, org=None):
 
 
 @login_required
+def fund_edit_external(request, fund_id=None, org=None):
+    context = {}
+    instance = get_object_or_404(Fund, pk=fund_id)
+    msg = "Edit Fund %s" % instance.fopal
+    for org in instance.orgfunds.all():
+        if not request.user.has_perm('events.edit_org_billing', org):
+            raise PermissionDenied
+
+    if request.method == 'POST':
+        form = ExternalFundEditForm(request.POST, instance=instance)
+        if form.is_valid():
+            instance = form.save()
+            messages.add_message(request, messages.SUCCESS, 'Changes saved.')
+            return HttpResponseRedirect(reverse('orgs:list'))
+        else:
+            context['form'] = form
+            messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
+    else:
+        form = ExternalFundEditForm(instance=instance)
+        context['form'] = form
+
+    context['msg'] = msg
+
+    return render(request, 'form_crispy.html', context)
+
+
+@login_required
 def orgdetail(request, org_id):
     context = {}
     perms = ('events.view_org',)
@@ -155,7 +182,10 @@ def orglist(request):
 @login_required
 def orgedit(request, id):
     context = {}
-    orgs = Organization.objects.filter(user_in_charge=request.user)
+    if request.user.is_superuser:
+        orgs = Organization.objects.all()
+    else:
+        orgs = Organization.objects.filter(user_in_charge=request.user)
 
     org = get_object_or_404(orgs, pk=id)
     msg = "> Modify Organization"
@@ -165,7 +195,6 @@ def orgedit(request, id):
         formset = ExternalOrgUpdateForm(request.POST, instance=org)
         if formset.is_valid():
             formset.save()
-            # return HttpResponseRedirect(reverse("home", kwargs={'msg':SUCCESS_MSG_ORG}))
             return HttpResponseRedirect(reverse('orgs:list'))
 
         else:
@@ -183,43 +212,39 @@ def orgedit(request, id):
 @login_required
 def org_mkxfer(request, id):
     context = {}
-
-    orgs = Organization.objects.filter(user_in_charge=request.user)
-    org = get_object_or_404(orgs, pk=id)
-
+    org = get_object_or_404(Organization, pk=id)
+    if not request.user.has_perm('transfer_org_ownership', org):
+        raise PermissionDenied
     context['msg'] = 'Orgs: <a href="%s">%s</a> &middot; Transfer Ownership' % (
         reverse("orgs:detail", args=(org.id,)), org.name)
-
     user = request.user
-
     now = timezone.now()
     wfn = now + datetime.timedelta(days=7)
-    #
-    # OrganizationTransfer.objects.filter(old_user_in_charge=
 
     if request.method == "POST":
-        formset = OrgXFerForm(org, user, request.POST)
-        if formset.is_valid():
-            f = formset.save(commit=False)
-            f.old_user_in_charge = user
-            f.org = org
-            f.created = now
+        form = OrgXFerForm(org, user, request.POST)
+        if form.is_valid():
+            f = form.save(commit=False)
             f.expiry = wfn
             f.save()
             if settings.SEND_EMAIL_ORG_TRANSFER:
-                generate_transfer_email(f)
+                email = generate_transfer_email(f)
+                email.send()
+            if email:
+                messages.add_message(request, messages.SUCCESS, 'Created transfer request. To complete \
+                the transfer, you must use the link that was just emailed to ' + ', '.join(email.to))
             else:
-                pass
-            return HttpResponse('k')
+                messages.add_message(request, messages.SUCCESS, 'Created transfer request. To complete \
+                the transfer, you must use the link that was just emailed.')
+            return HttpResponseRedirect(reverse("orgs:detail", args=(org.id,)))
 
     else:
-        formset = OrgXFerForm(org, user)
-        context['formset'] = formset
+        form = OrgXFerForm(org, user)
+        context['formset'] = form
 
     return render(request, 'mycrispy.html', context)
 
 
-@login_required
 def org_acceptxfer(request, idstr):
     context = {}
     transfer = get_object_or_404(OrganizationTransfer, uuid=idstr)
@@ -229,11 +254,11 @@ def org_acceptxfer(request, idstr):
         context['status'] = 'Already Completed'
         context['msgclass'] = "alert-info"
 
-    if transfer.is_expired:
+    elif transfer.is_expired:
         context['msg'] = 'This transfer has expired, please make a new one (you had a week :-\)'
         context['status'] = 'Expired'
 
-    if request.user == transfer.old_user_in_charge:
+    else:
         transfer.org.user_in_charge = transfer.new_user_in_charge
         transfer.org.save()
         transfer.completed_on = datetime.datetime.now(pytz.utc)
@@ -242,10 +267,6 @@ def org_acceptxfer(request, idstr):
         context['msg'] = 'Transfer Complete: %s is the new user in charge!' % transfer.new_user_in_charge
         context['status'] = 'Success'
         context['msgclass'] = 'alert-success'
-    else:
-        context['msg'] = "This isn\'t your transfer"
-        context['status'] = 'Not Yours.'
-        context['msgclass'] = "alert-error"
 
     return render(request, 'mytransfer.html', context)
 

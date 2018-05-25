@@ -19,12 +19,15 @@
                 <div class="btn-group">
                     {% permission user has 'events.edit_org' %}
                         <a class="btn btn-lg btn-warning" href="{% url "orgs:edit" org.id %}">Edit</a>
+                        {% if user.is_superuser %}
+                            <a class="btn btn-lg btn-primary" href="{% url "my:org-edit" org.id %}">Edit (External)</a>
+                        {% endif %}
                     {% elpermission user has 'events.edit_org' of org %}
                         <a class="btn btn-lg btn-primary" href="{% url "my:org-edit" org.id %}">Edit</a>
                     {% endpermission %}
-                    {% if user == org.user_in_charge %}
+                    {% permission user has 'events.transfer_org_ownership' of org %}
                         <a class="btn btn-lg btn-success" href="{% url "my:org-transfer" org.id %}">Transfer</a>
-                    {% endif %}
+                    {% endpermission %}
                 </div>
             </div>
         </div>
@@ -32,7 +35,7 @@
     <div class="row">
         <div class="col-md-3">
             <h3>Contact</h3>
-            <table>
+            <table class="table">
                 <tr>
                     <th>Address</th>
                     <td>{{org.address}}</td>
@@ -42,12 +45,8 @@
                     <td>{{ org.phone }}</td>
                 </tr>
                 <tr>
-                    <th>Exec Email </th>
+                    <th>Email </th>
                     <td><a href="mailto:{{ org.exec_email }}">{{ org.exec_email }}</a></td>
-                </tr>
-                <tr>
-                    <th>Club Email </th>
-                    <td><a href="mailto:{{ org.email }}"> {{ org.email }}</a> </td>
                 </tr>
                 <tr>
                     <th>User in charge </th>
@@ -60,23 +59,22 @@
             <h3>Money</h3>
             <table>
                 {% for f in org.accounts.all %}
-                    {% permission user has 'events.edit_fund' of f %}
-                        <tr><td>
+                    <tr><td>
+                        {% permission user has 'events.change_fund' of f %}
                             <b><a href="{% url 'orgs:fundedit' f.id %}">{{ f }}</a></b>
-                            {% if f.notes %}{{ f.notes }}{% endif %}
-                        </td></tr>
-                    {% else %}
-                        <tr>
-                            <td>
-                                <b>{{ f }}</b>
-                                {% if f.notes %}{{ f.notes }}{% endif %}
-                            </td>
-                        </tr>
-                    {% endpermission %}
+                        {% elpermission user has 'events.edit_org_billing' of org %}
+                            <b><a href="{% url 'orgs:fundedit_external' f.id %}">{{ f }}</a></b>
+                        {% else %}
+                            <b>{{ f }}</b>
+                        {% endpermission %}
+                        {% if f.notes %}{{ f.notes }}{% endif %}
+                    </td></tr>
                 {% endfor %}
-                <tr><td>
-                    <b><a href="{% url 'orgs:fundadd' org.id %}">[Add New]</a></b>
-                </td></tr>
+                {% permission user has 'events.add_fund' %}
+                    <tr><td>
+                        <b><a href="{% url 'orgs:fundadd' org.id %}">[Add New]</a></b>
+                    </td></tr>
+                {% endpermission %}
                 {% permission user has 'events.view_verifications' of org %}
                 <tr>
                     <td colspan="2">

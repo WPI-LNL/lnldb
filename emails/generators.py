@@ -48,14 +48,16 @@ def generate_notice_cc_email(notice):
 def generate_transfer_email(orgtransfer):
     subject = "LNL Organization Control Transfer for %s" % orgtransfer.org.name
     from_email = settings.DEFAULT_FROM_ADDR
-    to_email = "%s@wpi.edu" % orgtransfer.old_user_in_charge.username
+    to_emails = [orgtransfer.old_user_in_charge.email, orgtransfer.org.exec_email]
+    to_emails = [e for e in to_emails if e is not None]
+    bcc = [settings.EMAIL_TARGET_W]
 
     context = {'object': orgtransfer}
 
     cont_html = render_to_string('emails/email_transfer.html', context)
     cont_text = render_to_string('emails/email_transfer.txt', context)
 
-    email = EmailMultiAlternatives(subject, cont_text, from_email, [to_email])
+    email = EmailMultiAlternatives(subject, cont_text, from_email, to_emails, bcc=bcc)
     email.attach_alternative(cont_html, "text/html")
 
     return email

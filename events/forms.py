@@ -1,5 +1,6 @@
 import datetime
 import decimal
+import uuid
 
 import pytz
 from ajax_select import make_ajax_field
@@ -660,12 +661,15 @@ class OrgXFerForm(forms.ModelForm):
         )
         super(OrgXFerForm, self).__init__(*args, **kwargs)
 
-        self.fields['new_user_in_charge'].queryset = org.associated_users.all().exclude(id=user.id)
+        self.fields['new_user_in_charge'].queryset = org.associated_users.exclude(id=org.user_in_charge_id)
 
     def save(self, commit=True):
         obj = super(OrgXFerForm, self).save(commit=False)
-        obj.old_user_in_charge = self.user
+        obj.initiator = self.user
+        obj.old_user_in_charge = self.org.user_in_charge
         obj.org = self.org
+        if not obj.uuid:
+            obj.uuid = uuid.uuid4()
         if commit:
             obj.save()
         return obj
@@ -1047,6 +1051,26 @@ class FopalForm(forms.ModelForm):
     class Meta:
         model = Fund
         fields = ('name', 'notes', 'fund', 'organization', 'account')
+
+
+class ExternalFundEditForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+            Field('name'),
+            Field('notes'),
+            FormActions(
+                Submit('save', 'Save Changes'),
+            )
+        )
+        super(ExternalFundEditForm, self).__init__(*args, **kwargs)
+
+    class Meta:
+        model = Fund
+        fields = ('name', 'notes')
 
 
 class CCIForm(forms.ModelForm):

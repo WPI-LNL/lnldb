@@ -100,14 +100,13 @@ class WorkedAtEventPermLogic(AssocUsersCustomPermissionLogic):
 class OrgMemberPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'associated_users'
     perms = ('events.view_org', 'events.list_org_events', 'events.list_org_members', 'events.create_org_event',
-             'events.show_org_billing')
+             'events.show_org_billing', 'events.transfer_org_ownership')
 
 
 class OrgOwnerPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'user_in_charge'
     perms = OrgMemberPermLogic.perms + ('events.edit_org', 'events.edit_org_billing', 'events.edit_org_members',
-                                        'events.transfer_org_ownership', 'events.deprecate_org',
-                                        'events.list_org_hidden_events')
+                                        'events.deprecate_org', 'events.list_org_hidden_events')
 
 
 class ReportAuthorPermLogic(AssocUsersCustomPermissionLogic):

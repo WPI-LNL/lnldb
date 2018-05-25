@@ -12,6 +12,7 @@ urlpatterns = [
         url(r'^verify/$', views.orgs.OrgVerificationCreate.as_view(), name="verify"),
     ])),
     url(r'^funds/edit/(?P<fund_id>[0-9]+)/$', views.orgs.fund_edit, name="fundedit"),
+    url(r'^funds/textedit/(?P<fund_id>[0-9]+)/$', views.orgs.fund_edit_external, name="fundedit_external"),
     url(r'^funds/add/$', views.orgs.fund_edit, name="fundaddraw"),
     url(r'^funds/add/(?P<org>[0-9]+)/$', views.orgs.fund_edit, name="fundadd"),
 

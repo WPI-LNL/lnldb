@@ -1,4 +1,5 @@
 {% extends "emails/email_base.html" %}
+{% load lnldb_tags %}
 {% block perma %}
 {% endblock %}
 
@@ -12,9 +13,10 @@
             <td class="w960" width="960">
                 <p align="left" class="article-title">Organization Transfer Email</p>
                 <div align="left" class="article-content">
-                    
-                    <p>Please Follow the link below in order to complete your organizational transfer.</p>
-                    <a href="{% url "my:org-accept" object.uuid.hex %}">{% url "my:org-accept" object.uuid.hex %}</a>
+                    <p>{{ object.initiator.get_full_name }} has requested to transfer control of {{ object.org.name }} from {{ object.old_user_in_charge }} to {{ object.new_user_in_charge }}.
+                    Please follow the link below in order to complete the transfer.</p>
+                    <a href="{% get_base_url %}{% url "my:org-accept" object.uuid.hex %}">{% get_base_url %}{% url "my:org-accept" object.uuid.hex %}</a>
+                    <p>If this transfer is not authorized, contact our webmaster at <a href="mailto:lnl-w@wpi.edu">lnl-w@wpi.edu</a>.</p>
                 </div>
             </td>
         </tr>

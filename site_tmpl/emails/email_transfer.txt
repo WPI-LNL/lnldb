@@ -1,5 +1,9 @@
+{% load lnldb_tags %}
 Organization Transfer Email
 
-Please Follow the link below in order to complete your organizational transfer.
+{{ object.initiator.get_full_name }} has requested to transfer control of {{ object.org.name }} from {{ object.old_user_in_charge }} to {{ object.new_user_in_charge }}.
+Please follow the link below in order to complete the transfer.
 
-{% url "my:org-accept" object.uuid.hex %}
+{% get_base_url %}{% url "my:org-accept" object.uuid.hex %}
+
+If this transfer is not authorized, contact our webmaster at lnl-w@wpi.edu.

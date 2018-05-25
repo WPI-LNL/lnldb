@@ -383,7 +383,7 @@ EMAIL_TARGET_TD = "lnl-td@wpi.edu"
 EMAIL_TARGET_W = "lnl-w@wpi.edu"
 EMAIL_TARGET_HP = "lnl-hp@wpi.edu"
 
-SEND_EMAIL_ORG_TRANSFER = False
+SEND_EMAIL_ORG_TRANSFER = True
 SEND_START_END_EMAILS = False
 
 EMAIL_TARGET_START_END = "gmp@h4xmb.org"

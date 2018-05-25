@@ -1045,6 +1045,7 @@ class Organization(models.Model):  # AKA Client
 
 
 class OrganizationTransfer(models.Model):
+    initiator = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_initiated")
     new_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_new")
     old_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_old")
     org = models.ForeignKey(Organization)
