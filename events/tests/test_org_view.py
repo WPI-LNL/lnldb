@@ -30,7 +30,8 @@ class OrgViewTest(TestCase):
 
         sample_data = {'name': "SAMPLE",
                        "user_in_charge": self.user.pk,
-                       "phone": "(800) 123 4567"}
+                       "phone": "(800) 123 4567",
+                       'exec_email': 'lnl-w@wpi.edu'}
         response = self.client.post(reverse("orgs:add"), sample_data)
         self.assertEqual(response.status_code, 302)
         # ie. it is valid and redirects to the detail page
@@ -49,7 +50,8 @@ class OrgViewTest(TestCase):
 
         sample_data = {'name': "SAMPLE",
                        "user_in_charge": self.user.pk,
-                       "phone": "(800) 123 4567"}
+                       "phone": "(800) 123 4567",
+                       'exec_email': 'lnl-w@wpi.edu'}
         response = self.client.post(reverse("orgs:edit", args=(self.o1.pk,)),
                                     sample_data)
         self.assertEqual(response.status_code, 302)
