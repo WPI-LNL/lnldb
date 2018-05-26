@@ -314,6 +314,11 @@ LOGGING = {
             '()': 'django.utils.log.RequireDebugFalse'
         }
     },
+    'formatters': {
+        'console': {
+            'format': '%(asctime)s %(name)s [%(levelname)s] %(message)s'
+        }
+    },
     'handlers': {
         'mail_admins': {
             'level': 'ERROR',
@@ -321,11 +326,12 @@ LOGGING = {
             'class': 'django.utils.log.AdminEmailHandler'
         },
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'formatter': 'console',
             'class': 'logging.StreamHandler',
         },
         'sentry': {
-            'level': 'ERROR', 
+            'level': 'ERROR',
             'filters': ['require_debug_false'],
             'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
         },
@@ -334,6 +340,10 @@ LOGGING = {
         'django': {
             'handlers': ['console', 'sentry'],
         },
+        'events.perms': {
+            #'level': 'DEBUG',
+            'handlers': ['console']
+        }
     }
 }
 

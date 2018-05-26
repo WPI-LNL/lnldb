@@ -1,9 +1,11 @@
-from logging import debug
+import logging
+from six import string_types
 
 from django.core.exceptions import PermissionDenied
 from permission.logics import PermissionLogic
 from permission.utils.field_lookup import field_lookup
 
+logger = logging.getLogger(__name__)
 
 class AssocUsersCustomPermissionLogic(PermissionLogic):
     field_name = 'authorized_users'
@@ -13,19 +15,20 @@ class AssocUsersCustomPermissionLogic(PermissionLogic):
     def has_perm(self, user_obj, perm, obj=None):
         # User must be logged in
         if not user_obj.is_authenticated():
-            debug("%s not signed in" % user_obj)
+            logger.debug("%s not signed in" % user_obj)
             return False
         # See if we can handle that perm
         if perm not in self.perms and perm not in self.denied:
-            debug("permission %s not recognized" % perm)
+            logger.debug("%s - permission not recognized" % perm)
             return False
         # if there isn't an object, that means we're looking for a module permission.
         # We don't do that.
         if obj is None:
+            logger.debug("%s - has_perm called without model instance; denying permission" % perm)
             return False
         # If your account has been disabled, too bad.
         if not user_obj.is_active:
-            debug("%s is not an active user" % user_obj)
+            logger.debug("%s is not an active user" % user_obj)
             return False
         # get all authorized_users in the object
         if isinstance(self.field_name, string_types):
@@ -43,8 +46,9 @@ class AssocUsersCustomPermissionLogic(PermissionLogic):
                     authorized_users.remove(user)
             if (user_obj in authorized_users):
                 if perm in self.denied:
-                    debug("%s denied for %s in lookup '%s'" % (perm, user_obj, lookup))
+                    logger.debug("%s - DENIED for %s in lookup '%s'" % (perm, user_obj, lookup))
                     raise PermissionDenied()
+                logger.debug("%s - GRANTED for %s in lookup '%s'" % (perm, user_obj, lookup))
                 return True
 
 
