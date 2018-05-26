@@ -112,9 +112,8 @@ class OrgAdmin(VersionAdmin):
 
 class OTAdmin(admin.ModelAdmin):
     list_display = (
-        'org', 'old_user_in_charge', 'new_user_in_charge', 'created', 'expiry', 'completed_on', 'completed',
-        'is_expired',
-        'uuid')
+        'org', 'initiator', 'old_user_in_charge', 'new_user_in_charge', 'created', 'expiry',
+        'completed_on', 'completed', 'is_expired', 'uuid')
 
 
 class LocAdmin(admin.ModelAdmin):
