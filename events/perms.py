@@ -28,12 +28,12 @@ class AssocUsersCustomPermissionLogic(PermissionLogic):
             debug("%s is not an active user" % user_obj)
             return False
         # get all authorized_users in the object
-        if not hasattr(self.field_name, '__iter__'):
+        if isinstance(self.field_name, string_types):
             self.field_name = [self.field_name]
         for lookup in self.field_name:
             authorized_users = field_lookup(obj, lookup)
             # break out of a generator expression
-            if hasattr(authorized_users, 'next'):
+            if hasattr(authorized_users, '__iter__'):
                 authorized_users = list(authorized_users)
             else:
                 authorized_users = [authorized_users]

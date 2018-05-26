@@ -1,4 +1,5 @@
 {% extends 'base_admin.html' %}
+{% load permissionif %}
 {% block content %}
     <div class="row">
         <div class="col-md-12">
@@ -9,7 +10,13 @@
                     {% if request.user.is_superuser %}
                         <a class="btn btn-danger btn-lg" href="{% url "login_with_id" u.id %}">Impersonate</a>
                     {% endif %}
-                    <a class="btn btn-info btn-lg" href="{% url "accounts:update" u.id %}">Modify</a>
+                    {% permission request.user has 'accounts.change_user' of u %}
+                        <a class="btn btn-info btn-lg" href="{% url "accounts:update" u.id %}">Modify</a>
+                    <!-- TODO make a perm logic so that users have accounts.change_user permission on themselves,
+                         and then remove the below -->
+                    {% elpermission request.user == u %}
+                        <a class="btn btn-info btn-lg" href="{% url "accounts:update" u.id %}">Modify</a>
+                    {% endpermission %}
                 </div>
             </div>
         </div>

@@ -72,8 +72,13 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
 
     def user_passes_test(self, request, *args, **kwargs):
         # members looking at other members is fine, and you should always be able to look at yourself.
-        return (request.user.is_lnl and request.user.has_perm('accounts.view_member')) or \
-            request.user.pk == self.get_object().pk
+        object = self.get_object()
+        if request.user == object:
+            return True
+        if object.is_lnl:
+            return request.user.has_perm('accounts.view_member')
+        else:
+            return request.user.has_perm('accounts.view_user', object)
 
     def get_context_data(self, **kwargs):
         context = super(UserDetailView, self).get_context_data(**kwargs)

@@ -213,7 +213,7 @@ def orgedit(request, id):
 def org_mkxfer(request, id):
     context = {}
     org = get_object_or_404(Organization, pk=id)
-    if not request.user.has_perm('transfer_org_ownership', org):
+    if not request.user.has_perm('events.transfer_org_ownership', org):
         raise PermissionDenied
     context['msg'] = 'Orgs: <a href="%s">%s</a> &middot; Transfer Ownership' % (
         reverse("orgs:detail", args=(org.id,)), org.name)
