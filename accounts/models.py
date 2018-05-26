@@ -23,6 +23,7 @@ class User(AbstractUser):
     mdc = CharField(max_length=32, null=True, blank=True, verbose_name="MDC")
     nickname = CharField(max_length=32, null=True, blank=True, verbose_name="Nickname")
     student_id = PositiveIntegerField(null=True, blank=True, verbose_name="Student ID")
+    class_year = PositiveIntegerField(null=True, blank=True)
     locked = BooleanField(default=False)
 
     def __str__(self):
@@ -52,16 +53,13 @@ class User(AbstractUser):
 
     @property
     def is_lnl(self):
-        if self.groups.filter(Q(name="Alumni") | Q(name="Active") | Q(name="Officer") | Q(name="Associate") | Q(
-                name="Away") | Q(name="Inactive")).exists():
-            return True
-        else:
-            return False
+        return self.groups.filter(Q(name="Alumni") | Q(name="Active") | Q(name="Officer") | Q(name="Associate") | Q(
+                name="Away") | Q(name="Inactive")).exists()
 
     @property
     def is_complete(self):
-        # We can make it more strict later on, but these are the essentials. And
-        return self.first_name and self.last_name
+        # if this returns false, the user will be constantly reminded to update their profile
+        return self.first_name and self.last_name and self.email
 
     @property
     def group_str(self):

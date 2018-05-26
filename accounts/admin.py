@@ -12,7 +12,7 @@ class MemberAdmin(UserAdmin):
         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser',
                                        'groups', 'user_permissions')}),
         (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
-        ("Other", {"fields": ["addr", "mdc", "wpibox", "phone", "student_id", "locked"]})
+        ('Other', {'fields': ['addr', 'mdc', 'wpibox', 'phone', 'class_year', 'student_id', 'locked']})
     )
 
 

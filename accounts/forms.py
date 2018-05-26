@@ -17,11 +17,13 @@ class LoginForm(AuthenticationForm):
 
 class UserEditForm(FieldAccessForm):
     def __init__(self, *args, **kwargs):
+        request_user = kwargs['request_user']
+        instance_user = kwargs['instance']
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
-        self.helper.layout = Layout(
+        layout = [
             Fieldset("User Info",
                      'first_name', 'last_name', 'username', 'email', 'nickname',
                      HTML("""
@@ -31,17 +33,28 @@ class UserEditForm(FieldAccessForm):
                  """)),
             Fieldset("Contact Info",
                      'phone', Field('addr', rows=3)),
-            Fieldset("Internal Info",
-                     'mdc', 'wpibox', 'groups'),
+        ]
+        if request_user.is_lnl:
+            layout.extend([
+                Fieldset("Student Info",
+                         'wpibox', 'class_year', 'student_id'),
+                Fieldset("Internal Info",
+                         'mdc', 'groups'),
+            ])
+        layout.append(
             FormActions(
                 Submit('save', 'Update Member and Return'),
             )
         )
+        self.helper.layout = Layout(*layout)
         super(UserEditForm, self).__init__(*args, **kwargs)
+        if request_user.is_lnl and instance_user.is_lnl:
+            self.fields['class_year'].required = True
 
     class Meta:
         model = get_user_model()
-        fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'groups', 'addr', 'wpibox', 'mdc', 'phone', ]
+        fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'groups', 'addr',
+                  'wpibox', 'mdc', 'phone', 'class_year', 'student_id']
 
     class FieldAccess:
         def __init__(self):
@@ -49,11 +62,11 @@ class UserEditForm(FieldAccessForm):
 
         thisisme = FieldAccessLevel(
             lambda user, instance: (user == instance) and not user.locked,
-            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'nickname')
+            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id', 'nickname')
         )
         hasperm = FieldAccessLevel(
             lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
-            enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone',)
+            enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id')
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.change_group', instance),
@@ -62,6 +75,10 @@ class UserEditForm(FieldAccessForm):
         edit_mdc = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.edit_mdc', instance),
             enable=('mdc',)
+        )
+        unaffiliated = FieldAccessLevel(
+            lambda user, instance: not user.is_lnl,
+            exclude=('wpibox', 'class_year', 'student_id', 'mdc', 'groups',)
         )
 
 
