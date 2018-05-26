@@ -1,3 +1,4 @@
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.utils.decorators import method_decorator
@@ -11,6 +12,8 @@ from helpers.challenges import is_officer
 class LoginRequiredMixin(object):
     @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_active:
+            logout(request)
         return super(LoginRequiredMixin, self).dispatch(request,
                                                         *args, **kwargs)
 
@@ -31,6 +34,8 @@ class HasPermMixin(object):
     def dispatch(self, request, *args, **kwargs):
         from django.utils import six
 
+        if not request.user.is_active:
+            logout(request)
         if isinstance(self.perms, six.string_types):
             if not request.user.has_perm(self.perms):
                 raise PermissionDenied
@@ -51,6 +56,8 @@ class HasPermOrTestMixin(object):
     def dispatch(self, request, *args, **kwargs):
         from django.utils import six
 
+        if not request.user.is_active:
+            logout(request)
         if self.user_passes_test(request, *args, **kwargs):
             pass  # don't check for perms; we're good.
         elif isinstance(self.perms, six.string_types):
