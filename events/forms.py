@@ -19,10 +19,9 @@ from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.forms import ModelForm
 from django.forms.extras.widgets import SelectDateWidget
-from django.utils import timezone
+from django.utils import timezone, six
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
-import six
 
 from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
 from events.fields import GroupedModelChoiceField

@@ -111,8 +111,10 @@ def make_idt_bulk(events, user=None, org_for=None, fund_for=None):
     proj_total = sum([e.cost_projection_total for e in events]) / 2
     total -= float(proj_total)
 
-    event_names = [str(e) for e in events]
-    description = "LNL Services for %s" % ", ".join(event_names)
+    events = events.order_by('datetime_start')
+    start = events.first().datetime_start.strftime('%Y-%m-%d')
+    end = events.last().datetime_end.strftime('%Y-%m-%d')
+    description = "LNL Services for %d events from %s to %s" % (len(events), start, end)
 
     # try to find a single org to bill, if one is provided
     if org_for is None:
