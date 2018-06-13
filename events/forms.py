@@ -887,12 +887,12 @@ class BillingEmailForm(forms.ModelForm):
         return cleaned_data
 
     def save(self, commit=True):
-        self.instance = super(BillingEmailForm, self).save(commit=False)
-        self.instance.billing = self.billing
+        instance = super(BillingEmailForm, self).save(commit=False)
+        instance.billing = self.billing
         if commit:
-            self.instance.save()
+            instance.save()
             self.save_m2m()
-        return self.instance
+        return instance
 
     class Meta:
         model = BillingEmail
@@ -951,12 +951,12 @@ class MultiBillingEmailForm(forms.ModelForm):
         return cleaned_data
 
     def save(self, commit=True):
-        self.instance = super(MultiBillingEmailForm, self).save(commit=False)
-        self.instance.multibilling = self.multibilling
+        instance = super(MultiBillingEmailForm, self).save(commit=False)
+        instance.multibilling = self.multibilling
         if commit:
-            self.instance.save()
+            instance.save()
             self.save_m2m()
-        return self.instance
+        return instance
 
     class Meta:
         model = MultiBillingEmail
