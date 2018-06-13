@@ -107,11 +107,12 @@ def make_idt_single(event, user=None):
 
 
 def make_idt_bulk(events, user=None, org_for=None, fund_for=None):
+    # events must be in chronological order
+
     total = float(sum([e.cost_total for e in events]))
     proj_total = sum([e.cost_projection_total for e in events]) / 2
     total -= float(proj_total)
 
-    events = events.order_by('datetime_start')
     start = events.first().datetime_start.strftime('%Y-%m-%d')
     end = events.last().datetime_end.strftime('%Y-%m-%d')
     description = "LNL Services for %d events from %s to %s" % (len(events), start, end)
