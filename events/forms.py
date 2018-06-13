@@ -805,6 +805,14 @@ class MultiBillingForm(forms.ModelForm):
                     raise ValidationError('All events you select must have the same \'Client to bill\'.')
         return cleaned_data
 
+    def save(self, commit=True):
+        instance = super(MultiBillingForm, self).save(commit=False)
+        instance.org = self.cleaned_data['events'].first().org_to_be_billed
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
+
     class Meta:
         model = MultiBilling
         fields = ('events', 'date_billed', 'amount')
@@ -913,7 +921,7 @@ class MultiBillingEmailForm(forms.ModelForm):
         orgs = orgs.distinct()
         contacts = map(lambda event : event.contact.pk, multibilling.events.filter(contact__isnull=False))
         self.fields["email_to_orgs"].queryset = orgs
-        self.fields["email_to_orgs"].initial = multibilling.events.first().org_to_be_billed
+        self.fields["email_to_orgs"].initial = multibilling.org
         self.fields["email_to_users"].initial = contacts
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'

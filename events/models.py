@@ -340,6 +340,7 @@ class MultiBilling(models.Model):
     """
     date_billed = models.DateField()
     date_paid = models.DateField(null=True, blank=True)
+    org = models.ForeignKey('Organization', null=True, related_name='multibillings')
     events = models.ManyToManyField('Event', related_name='multibillings')
     amount = models.DecimalField(max_digits=8, decimal_places=2)
 

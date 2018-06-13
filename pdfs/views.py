@@ -185,7 +185,7 @@ def generate_multibill_pdf(request, multibilling):
         orgs |= orgset
     orgs = orgs.distinct()
     data['orgs'] = orgs
-    billing_org = multibilling.events.first().org_to_be_billed
+    billing_org = multibilling.org
     data['billing_org'] = billing_org
     events = multibilling.events.order_by('datetime_start')
     data['events'] = events
@@ -223,7 +223,7 @@ def generate_multibill_pdf_standalone(multibilling, idt_originator):
         orgs |= orgset
     orgs = orgs.distinct()
     data['orgs'] = orgs
-    billing_org = multibilling.events.first().org_to_be_billed
+    billing_org = multibilling.org
     data['billing_org'] = billing_org
     events = multibilling.events.order_by('datetime_start')
     data['events'] = events
