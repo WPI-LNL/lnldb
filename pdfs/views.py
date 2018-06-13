@@ -180,7 +180,7 @@ def generate_multibill_pdf(request, multibilling):
     multibilling = get_object_or_404(MultiBilling.objects.annotate(num_events=Count('events')), pk=multibilling)
     data['multibilling'] = multibilling
     orgsets = map(lambda event : event.org.all(), multibilling.events.all())
-    orgs = next(orgsets)
+    orgs = next(iter(orgsets))
     for orgset in orgsets:
         orgs |= orgset
     orgs = orgs.distinct()
@@ -218,7 +218,7 @@ def generate_multibill_pdf_standalone(multibilling, idt_originator):
     multibilling = MultiBilling.objects.annotate(num_events=Count('events')).get(id=multibilling.id)
     data['multibilling'] = multibilling
     orgsets = map(lambda event : event.org.all(), multibilling.events.all())
-    orgs = next(orgsets)
+    orgs = next(iter(orgsets))
     for orgset in orgsets:
         orgs |= orgset
     orgs = orgs.distinct()

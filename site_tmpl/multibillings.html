@@ -52,7 +52,11 @@
                             </td>
                         {% elif field.name == 'org' %}
                             <td class="org">
-                                <a href="{% url 'orgs:detail' multibilling.events.first.org_to_be_billed.id %}">{{ multibilling.events.first.org_to_be_billed }}</a>
+                                {% if multibilling.events.first.org_to_be_billed %}
+                                    <a href="{% url 'orgs:detail' multibilling.events.first.org_to_be_billed.id %}">{{ multibilling.events.first.org_to_be_billed }}</a>
+                                {% else %}
+                                    Not specified
+                                {% endif %}
                             </td>
                         {% elif field.name == 'email_sent' %}
                             <td class="email_sent">

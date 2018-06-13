@@ -907,7 +907,7 @@ class MultiBillingEmailForm(forms.ModelForm):
         super(MultiBillingEmailForm, self).__init__(*args, **kwargs)
         self.multibilling = multibilling
         orgsets = map(lambda event : event.org.all(), multibilling.events.all())
-        orgs = next(orgsets)
+        orgs = next(iter(orgsets))
         for orgset in orgsets:
             orgs |= orgset
         orgs = orgs.distinct()
