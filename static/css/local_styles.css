@@ -184,6 +184,10 @@ footer {
     font-size: smaller;
 }
 
+.jumbotron-delinquent-org {
+	background-color: #eeb4b4;
+}
+
 input[type="file"] {
     height: auto;
 }

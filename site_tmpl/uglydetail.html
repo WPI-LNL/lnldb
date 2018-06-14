@@ -59,8 +59,17 @@
         </div>
         <div class="jumbo-event-info">
             <h3>Client{% if event.org.count > 1 %}s{% endif %}:
-                {% for org in event.org.all %}<a href="{% url "orgs:detail" org.id %}">{{ org.retname }}</a>
-                    &nbsp;{% empty %}[None listed]{% endfor %}</h3>
+                {% for org in event.org.all %}
+                    {% if org.delinquent %}
+                        <a href="{% url "orgs:detail" org.id %}">
+                            <span style='color:red'>{{ org.retname }}
+                                <span class="glyphicon glyphicon-exclamation-sign" title="Delinquent client"></span>
+                            </span>
+                        </a>&nbsp;
+                    {% else %}
+                        <a href="{% url "orgs:detail" org.id %}">{{ org.retname }}</a>&nbsp;
+                    {% endif %}
+                {% empty %}[None listed]{% endfor %}</h3>
         </div>
     </div>
     {% permission request.user has 'events.close_event' of event %}

@@ -82,6 +82,10 @@ def approval(request, id):
         unbilled_events = map(str, unbilled_events)
         if event.org.exists() and unbilled_events:
             messages.add_message(request, messages.WARNING, "Organization has unbilled events: %s" % ", ".join(unbilled_events))
+        for org in event.org.filter(delinquent=True):
+            messages.add_message(request, messages.WARNING, "The client '%s' has been marked as delinquent. \
+                    This means that the client has one or more long-outstanding bills which they should be required to \
+                    pay before you approve this event." % org)
         form = EventApprovalForm(instance=event)
         context['form'] = form
     return render(request, 'form_crispy.html', context)

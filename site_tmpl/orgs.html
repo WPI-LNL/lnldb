@@ -13,7 +13,12 @@
     </thead>
     {% for org in orgs %}
         <tr>
-            <td><a href="{% url "orgs:detail" org.id %}">{{org}}</a></td>
+            <td>
+                <a href="{% url "orgs:detail" org.id %}">{{org}}</a>
+                {% if org.delinquent %}
+                    <span class="glyphicon glyphicon-exclamation-sign" title="Delinquent client"></span>
+                {% endif %}
+            </td>
             <td>{{ org.exec_email }}</td>
             <td>{{ org.user_in_charge }}</td>
             <td>{{ org.fund_count }}</td>

@@ -1002,6 +1002,7 @@ class Organization(models.Model):  # AKA Client
 
     notes = models.TextField(null=True, blank=True)
     personal = models.BooleanField(default=False)
+    delinquent = models.BooleanField(default=False)
 
     last_updated = models.DateTimeField(auto_now=True)
     archived = models.BooleanField(default=False)

@@ -11,7 +11,11 @@
 {% block content %}
     <div class="row" xmlns="http://www.w3.org/1999/html">
         <div class="col-md-12">
-            <div class="jumbotron">
+            <div class="jumbotron{% if org.delinquent %} jumbotron-delinquent-org{% endif %}">
+                {% if org.delinquent %}
+                    <strong>This organization is delinquent on one or more bills.</strong>
+                    <hr>
+                {% endif %}
                 <h1>{{org }}</h1>
                 {% if org.shortname %}
                     ({{ org.shortname }})

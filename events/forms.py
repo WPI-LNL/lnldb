@@ -146,6 +146,7 @@ class IOrgForm(FieldAccessForm):
                 Tab(
                     'Notes',
                     'notes',
+                    'delinquent'
                 )
             )
         tabs.extend([
@@ -182,7 +183,7 @@ class IOrgForm(FieldAccessForm):
     class Meta:
         model = Organization
         fields = ('name', 'exec_email', 'address', 'phone', 'associated_orgs', 'personal',
-                  'accounts', 'user_in_charge', 'associated_users', 'notes')
+                  'accounts', 'user_in_charge', 'associated_users', 'notes', 'delinquent')
     # associated_orgs = make_ajax_field(Organization,'associated_orgs','Orgs',plugin_options = {'minLength':2})
     # associated_users = make_ajax_field(Organization,'associated_users','Users',plugin_options = {'minLength':3})
     user_in_charge = AutoCompleteSelectField('Users')
@@ -197,12 +198,12 @@ class IOrgForm(FieldAccessForm):
 
         internal_notes_view = FieldAccessLevel(
             lambda user, instance: not user.has_perm("events.view_org_notes", instance),
-            exclude=('notes',)
+            exclude=('notes', 'delinquent')
         )
 
         internal_notes_edit = FieldAccessLevel(
             lambda user, instance: user.has_perm("events.view_org_notes", instance),
-            enable=('notes',)
+            enable=('notes', 'delinquent')
         )
 
         billing_view = FieldAccessLevel(
