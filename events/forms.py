@@ -500,7 +500,7 @@ class InternalEventForm(FieldAccessForm):
 
     class Meta:
         model = Event
-        fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_fund',
+        fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_fund', 'billing_org',
                   'billed_by_semester', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'lighting', 'lighting_reqs', 'sound', 'sound_reqs', 'projection', 'proj_reqs',
                   'otherservices', 'otherservice_reqs', 'sensitive', 'test_event')
