@@ -868,8 +868,12 @@ class Event(models.Model):
 
     @property
     def last_paid(self):
-        if self.billings:
-            return self.billings.order_by('-date_paid').first().date_billed
+        paid_bills = self.billings.filter(date_paid__isnull=False)
+        if paid_bills.exists():
+            return paid_bills.order_by('-date_paid').first().date_paid
+        paid_multibills = self.multibillings.filter(date_paid__isnull=False)
+        if paid_multibills.exists():
+            return paid_multibills.order_by('-date_paid').first().date_paid
 
     @property
     def short_services(self):
