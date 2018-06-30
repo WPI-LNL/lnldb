@@ -865,8 +865,9 @@ class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Crea
         pdf_handle = generate_event_bill_pdf_standalone(event, self.request.user)
         filename = "%s-bill.pdf" % slugify(event.event_name)
         attachments = [{"file_handle": pdf_handle, "name": filename}]
-        email = EventEmailGenerator(event=event, subject=i.subject, body=i.message,
-                                    to_emails=to, bcc=[settings.EMAIL_TARGET_T], attachments=attachments)
+        email = EventEmailGenerator(event=event, subject=i.subject, body=i.message, to_emails=to,
+                                    reply_to=[settings.EMAIL_TARGET_T], bcc=[settings.EMAIL_TARGET_T],
+                                    attachments=attachments)
         email.send()
         i.sent_at = timezone.now()
         i.save()
@@ -903,8 +904,8 @@ class MultiBillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin,
         pdf_handle = generate_multibill_pdf_standalone(self.multibilling, self.request.user)
         filename = "bill.pdf"
         attachments = [{"file_handle": pdf_handle, "name": filename}]
-        email = DLEG(subject=i.subject, body=i.message, to_emails=to, bcc=[settings.EMAIL_TARGET_T],
-                     attachments=attachments)
+        email = DLEG(subject=i.subject, body=i.message, to_emails=to, reply_to=[settings.EMAIL_TARGET_T],
+                     bcc=[settings.EMAIL_TARGET_T], attachments=attachments)
         email.send()
         i.sent_at = timezone.now()
         i.save()

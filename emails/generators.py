@@ -143,13 +143,14 @@ class DefaultLNLEmailGenerator(object):  # yay classes
     def __init__(self,
                  subject="LNL Notice",
                  to_emails=settings.DEFAULT_TO_ADDR,
+                 cc=None,
+                 bcc=None,
                  from_email=settings.DEFAULT_FROM_ADDR,
+                 reply_to=None,
                  context=None,
                  template_basename="emails/email_generic",
                  build_html=True,
                  body=None,
-                 bcc=None,
-                 cc=None,
                  attachments=None):
         if isinstance(to_emails, str):
             to_emails = [to_emails]
@@ -163,7 +164,7 @@ class DefaultLNLEmailGenerator(object):  # yay classes
 
         template_txt = "%s.txt" % template_basename
         content_txt = render_to_string(template_txt, context)
-        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=cc)
+        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=cc, reply_to=reply_to)
         for a in attachments:
             self.email.attach(a['name'], a['file_handle'], "application/pdf")
 
@@ -181,13 +182,14 @@ class EventEmailGenerator(DefaultLNLEmailGenerator):
             event=None,
             subject="LNL Event",
             to_emails=settings.DEFAULT_TO_ADDR,
+            cc=None,
+            bcc=None,
             from_email=settings.DEFAULT_FROM_ADDR,
+            reply_to=None,
             context=None,
             template_basename="emails/email_event",
             build_html=True,
             body=None,
-            bcc=None,
-            cc=None,
             attachments=None):
         if context is None:
             context = {}
@@ -195,13 +197,14 @@ class EventEmailGenerator(DefaultLNLEmailGenerator):
         super(EventEmailGenerator, self).__init__(
                 subject=subject,
                 to_emails=to_emails,
+                cc=cc,
+                bcc=bcc,
                 from_email=from_email,
+                reply_to=reply_to,
                 context=context,
                 template_basename=template_basename,
                 build_html=build_html,
                 body=body,
-                bcc=bcc,
-                cc=cc,
                 attachments=attachments)
 
 
@@ -210,12 +213,13 @@ class CcAddEmailGenerator(DefaultLNLEmailGenerator):
             ccinstance=None,
             subject="Crew Chief Add Notification",
             to_emails=None,
+            cc=None,
+            bcc=None,
             from_email=settings.DEFAULT_FROM_ADDR,
+            reply_to=None,
             context=None,
             template_basename="emails/email_ccadd",
             build_html=True,
-            bcc=None,
-            cc=None,
             attachments=None):
         if to_emails is None:
             to_emails = [ccinstance.crew_chief.email]
@@ -225,13 +229,14 @@ class CcAddEmailGenerator(DefaultLNLEmailGenerator):
         super(CcAddEmailGenerator, self).__init__(
                 subject=subject,
                 to_emails=to_emails,
+                cc=cc,
+                bcc=bcc,
                 from_email=from_email,
+                reply_to=reply_to,
                 context=context,
                 template_basename=template_basename,
                 build_html=build_html,
                 body=None,
-                bcc=bcc,
-                cc=cc,
                 attachments=attachments)
 
 
@@ -240,12 +245,13 @@ class ReportReminderEmailGenerator(DefaultLNLEmailGenerator):
             reminder=None,
             subject="LNL Crew Chief Report Reminder Email",
             to_emails=None,
+            cc=None,
+            bcc=None,
             from_email=settings.DEFAULT_FROM_ADDR,
+            reply_to=None,
             context=None,
             template_basename="emails/email_reportreminder",
             build_html=True,
-            bcc=None,
-            cc=None,
             attachments=None):
         if to_emails is None:
             to_emails = [reminder.crew_chief.email]
@@ -255,11 +261,12 @@ class ReportReminderEmailGenerator(DefaultLNLEmailGenerator):
         super(ReportReminderEmailGenerator, self).__init__(
                 subject=subject,
                 to_emails=to_emails,
+                cc=cc,
+                bcc=bcc,
                 from_email=from_email,
+                reply_to=reply_to,
                 context=context,
                 template_basename=template_basename,
                 build_html=build_html,
                 body=None,
-                bcc=bcc,
-                cc=cc,
                 attachments=attachments)
