@@ -818,7 +818,8 @@ class MultiBillingForm(forms.ModelForm):
         fields = ('events', 'date_billed', 'amount')
 
     events = CustomEventModelMultipleChoiceField(
-        queryset=Event.objects.filter(closed=False, reviewed=True, billings__isnull=True, billed_by_semester=True),
+        queryset=Event.objects.filter(closed=False, reviewed=True, billings__isnull=True, billed_by_semester=True) \
+                .exclude(multibillings__isnull=False, multibillings__date_paid__isnull=False),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
         help_text="Only unbilled, reviewed events that are marked for semester billing are listed above."
     )
