@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.humanize.templatetags.humanize import intcomma
 from django.contrib.staticfiles import finders
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
