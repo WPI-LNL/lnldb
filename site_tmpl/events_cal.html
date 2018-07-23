@@ -2,7 +2,7 @@
 {% load bootstrap_calendar %}
 
 {% block extras %}
-{% bootstrap_calendar_js events_url=bootcal_endpoint %}
+{% bootstrap_calendar_js events_url=bootcal_endpoint time_start='06:00' time_end='24:00' %}
 {% bootstrap_calendar_css %}
 {% endblock %}
 

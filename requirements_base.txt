@@ -8,7 +8,8 @@ django-compat==1.0.13
 # I trust django not to have any breaking issues in their security patches.
 django-ajax-selects==1.5.0
 django-appconf==1.0.1
--e git+https://github.com/jmerdich/django-bootstrap-calendar.git@fbe22d9dd0b2c99e8a6d3a3ad8d41063e791432c#egg=django_bootstrap_calendar-master
+# -e git+https://github.com/jmerdich/django-bootstrap-calendar.git@fbe22d9dd0b2c99e8a6d3a3ad8d41063e791432c#egg=django_bootstrap_calendar-master
+-e git+https://github.com/rrlapointe/django-bootstrap-calendar.git@7bc68b6e14e17246530db4fcf9c25c91fe2f2d1d#egg=django_bootstrap_calendar-master
 django-bootstrap-toolkit==2.15.0
 #-e git+https://github.com/WPI-lnl/django-cas2.git@6220bc8ba6eb4643e3ef58b4830616f37f1a1a8f#egg=django_cas-origin_HEAD
 django-compressor==1.3
