@@ -316,7 +316,9 @@
                     {% if event.lighting %}
                         <h2>Lighting Services ({{ event.lighting }})</h2>
                         <h3>Requirements:</h3>
-                            <pre>{{ event.lighting_reqs }}</pre>
+                        <div class="well">
+                            {{ event.lighting_reqs | markdown }}
+                        </div>
                         {% if event.extras_lighting %}
                         <h3>Extras:</h3>
                             <ul>
@@ -330,7 +332,9 @@
                     {% if event.sound %}
                         <h2> Sound Services ({{ event.sound }})</h2>
                         <h3>Requirements:</h3>
-                            <pre>{{ event.sound_reqs }}</pre>
+                        <div class="well">
+                            {{ event.sound_reqs | markdown }}
+                        </div>
                         {% if event.extras_sound %}
                         <h3>Extras:</h3>
                             <ul>
@@ -344,7 +348,9 @@
                     {% if event.projection %}
                         <h2> Projection Services ({{ event.projection }})</h2>
                         <h3>Requirements:</h3>
-                            <pre>{{ event.proj_reqs }}</pre>
+                        <div class="well">
+                            {{ event.proj_reqs | markdown }}
+                        </div>
                         {% if event.extras_projection %}
                         <h3>Extras:</h3>
                             <ul>
@@ -362,6 +368,10 @@
                                 <li>{{ s }}</li>
                             {% endfor %}
                         </ul>
+                        <h3>Requirements:</h3>
+                        <div class="well">
+                            {{ event.otherservice_reqs | markdown }}
+                        </div>
                     {% endif %}
                     {% if event.extras_other %}
                         <h3>Additional Extras:</h3>
