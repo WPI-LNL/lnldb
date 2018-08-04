@@ -94,8 +94,9 @@ class BaseCalJsonView(HasPermMixin, View):
     http_method_names = ['get']
 
 
-class PublicFacingCalJsonView(BaseCalJsonView):
-    perms = [] # No permissions required for public-facing calendar
+class PublicFacingCalJsonView(View):
+    # Does not inherit BaseCalJsonView because it should not require login
+    http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
         queryset = Event.objects.filter(approved=True).exclude(Q(closed=True) | Q(cancelled=True) |
