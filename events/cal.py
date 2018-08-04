@@ -1,5 +1,6 @@
 import datetime
 import json
+import pytz
 from time import mktime
 
 from django.conf import settings
@@ -99,8 +100,8 @@ class PublicFacingCalJsonView(View):
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.filter(approved=True).exclude(Q(closed=True) | Q(cancelled=True) |
-                                                               Q(test_event=True) | Q(sensitive=True))
+        queryset = Event.objects.filter(approved=True, closed=False, cancelled=False, test_event=False,
+                                        sensitive=False).filter(datetime_end__gte=datetime.datetime.now(pytz.utc))
 
         from_date = request.GET.get('from', False)
         to_date = request.GET.get('to', False)
@@ -291,10 +292,8 @@ def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):
         objects_body = []
         for event in queryset:
             field = {
-                "id": event.cal_guid(),
                 "title": conditional_escape(event.cal_name()),
                 "url": "#" + str(event.id),
-                "class": '',
                 "start": datetime_to_timestamp(event.cal_start() + datetime.timedelta(hours=-5)),
                 "end": datetime_to_timestamp(event.cal_end() + datetime.timedelta(hours=-5))
             }
