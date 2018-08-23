@@ -132,15 +132,25 @@ def paginate_helper(queryset, page, sort=None, count=DEFAULT_ENTRY_COUNT):
     return pag_qs
 
 
-# helper function to return start and end for open/closed/unpaid (goes back 180 days by default)
+# currently this function is dead code
 def get_farback_date_range_plus_next_week(delta=180):
     today = datetime.date.today()
     end = today + datetime.timedelta(days=7)
     end = end.strftime('%Y-%m-%d')
     start = today - datetime.timedelta(days=delta)
     start = start.strftime('%Y-%m-%d')
-
     return start, end
+
+
+# helper function to return start and end that go very far into past and future
+def get_very_large_date_range():
+    today = datetime.date.today()
+    start = today - datetime.timedelta(days=3652.5)
+    start = start.strftime('%Y-%m-%d')
+    end = today + datetime.timedelta(days=3652.5)
+    end = end.strftime('%Y-%m-%d')
+    return start, end
+
 
 def build_redirect(request, **kwargs):
     return HttpResponseRedirect(request.path + '?' + urlencode(kwargs))
@@ -289,11 +299,7 @@ def incoming_cal(request, start=None, end=None):
 @permission_required('events.view_event', raise_exception=True)
 def openworkorders(request, start=None, end=None):
     if not start and not end:
-        today = datetime.date.today()
-        start = today - datetime.timedelta(days=3652.5)
-        start = start.strftime('%Y-%m-%d')
-        end = today + datetime.timedelta(days=3652.5)
-        end = end.strftime('%Y-%m-%d')
+        start, end = get_very_large_date_range()
     context = {}
 
     events = Event.objects.filter(approved=True, closed=False, cancelled=False).distinct()
@@ -495,11 +501,7 @@ def unbilled(request, start=None, end=None):
 
     # events = Event.objects.filter(approved=True).filter(paid=True)
     if not start and not end:
-        today = datetime.date.today()
-        start = today - datetime.timedelta(days=3652.5)
-        start = start.strftime('%Y-%m-%d')
-        end = today + datetime.timedelta(days=3652.5)
-        end = end.strftime('%Y-%m-%d')
+        start, end = get_very_large_date_range()
 
     events = Event.objects.filter(closed=False) \
         .filter(reviewed=True) \
@@ -563,11 +565,7 @@ def unbilled_semester(request, start=None, end=None):
 
     # events = Event.objects.filter(approved=True).filter(paid=True)
     if not start and not end:
-        today = datetime.date.today()
-        start = today - datetime.timedelta(days=3652.5)
-        start = start.strftime('%Y-%m-%d')
-        end = today + datetime.timedelta(days=3652.5)
-        end = end.strftime('%Y-%m-%d')
+        start, end = get_very_large_date_range()
     events = Event.objects.filter(closed=False) \
         .filter(reviewed=True) \
         .filter(billings__isnull=True, multibillings__isnull=True) \
@@ -629,7 +627,7 @@ def paid(request, start=None, end=None):
     context = {}
 
     if not start and not end:
-        start, end = get_farback_date_range_plus_next_week()
+        start, end = get_very_large_date_range()
 
     # events = Event.objects.filter(approved=True).filter(paid=True)
     events = Event.objects.filter(closed=False) \
@@ -693,7 +691,7 @@ def unpaid(request, start=None, end=None):
     context = {}
 
     if not start and not end:
-        start, end = get_farback_date_range_plus_next_week()
+        start, end = get_very_large_date_range()
 
     # events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now())
     # .filter(date_setup_start__lte=today)
@@ -760,7 +758,7 @@ def closed(request, start=None, end=None):
     context = {}
 
     if not start and not end:
-        start, end = get_farback_date_range_plus_next_week()
+        start, end = get_very_large_date_range()
 
     events = Event.objects.filter(closed=True)
     if not request.user.has_perm('events.event_view_sensitive'):
@@ -816,11 +814,7 @@ def closed_cal(request, start=None, end=None):
 @permission_required('events.view_event', raise_exception=True)
 def all(request, start=None, end=None):
     if not start and not end:
-        today = datetime.date.today()
-        start = today - datetime.timedelta(days=3652.5)
-        start = start.strftime('%Y-%m-%d')
-        end = today + datetime.timedelta(days=3652.5)
-        end = end.strftime('%Y-%m-%d')
+        start, end = get_very_large_date_range()
     context = {}
 
     events = Event.objects.distinct()
