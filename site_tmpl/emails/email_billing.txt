@@ -1,0 +1,12 @@
+Dear {{ billing.event.org_to_be_billed }},
+
+Lens and Lights recently had the opportunity to provide services for {{ billing.event.event_name }}. Attached are an invoice and prefilled Inter-Departmental Transfer form (IDT). Please complete, sign and return the attached IDT to the Lens and Lights mailbox as soon as possible.
+
+IMPORTANT INFO ABOUT TRANSITION TO WORKDAY: As of October 1, WPI’s finances will change to Workday. However, please complete this IDT as you would have previously and return it anyways.
+
+If you have any questions, please just reply to this email.
+
+Thanks,
+
+{{ request.user.get_full_name }}
+WPI Lens & Lights Treasurer

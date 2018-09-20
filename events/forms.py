@@ -898,9 +898,6 @@ class BillingEmailForm(forms.ModelForm):
     class Meta:
         model = BillingEmail
         fields = ('subject', 'message', 'email_to_users', 'email_to_orgs')
-        widgets = {
-            'message': PagedownWidget(),
-        }
 
     email_to_users = AutoCompleteSelectMultipleField('Users', required=False, label="User Recipients")
     email_to_orgs = forms.ModelMultipleChoiceField(
@@ -962,9 +959,6 @@ class MultiBillingEmailForm(forms.ModelForm):
     class Meta:
         model = MultiBillingEmail
         fields = ('subject', 'message', 'email_to_users', 'email_to_orgs')
-        widgets = {
-            'message': PagedownWidget(),
-        }
 
     email_to_users = AutoCompleteSelectMultipleField('Users', required=False, label="User Recipients")
     email_to_orgs = forms.ModelMultipleChoiceField(

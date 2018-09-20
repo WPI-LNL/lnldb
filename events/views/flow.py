@@ -8,6 +8,7 @@ from django.core.urlresolvers import reverse
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.generic import CreateView, DeleteView, UpdateView
@@ -852,6 +853,8 @@ class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Crea
         # pass "user" keyword argument with the current user to your form
         kwargs = super(BillingEmailCreate, self).get_form_kwargs()
         kwargs['billing'] = self.billing
+        kwargs['initial'] = {'message': render_to_string('emails/email_billing.txt', {'billing': self.billing},
+                                                         request=self.request)}
         return kwargs
 
     def form_valid(self, form):
