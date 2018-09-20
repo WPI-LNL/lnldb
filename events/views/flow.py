@@ -853,7 +853,9 @@ class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Crea
         # pass "user" keyword argument with the current user to your form
         kwargs = super(BillingEmailCreate, self).get_form_kwargs()
         kwargs['billing'] = self.billing
-        kwargs['initial'] = {'message': render_to_string('emails/email_billing.txt', {'billing': self.billing},
+        kwargs['initial'] = {'subject': render_to_string('emails/email_billing_subject.txt', {'billing': self.billing},
+                                                         request=self.request),
+                             'message': render_to_string('emails/email_billing_message.txt', {'billing': self.billing},
                                                          request=self.request)}
         return kwargs
 
