@@ -2,7 +2,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ImproperlyConfigured
-from django.http import HttpResponseGone, HttpResponsePermanentRedirect
+from django.http import HttpResponseGone, HttpResponseRedirect
 
 from .models import ResizedRedirect
 
@@ -10,7 +10,7 @@ from .models import ResizedRedirect
 class SwappableRedirectMiddleware(object):
     # Defined as class-level attributes to be subclassing-friendly.
     response_gone_class = HttpResponseGone
-    response_redirect_class = HttpResponsePermanentRedirect
+    response_redirect_class = HttpResponseRedirect
     redirect_model = ResizedRedirect
 
     def __init__(self, get_response=None):
