@@ -35,7 +35,7 @@ icalendar==3.9.1
 jsmin==2.1.4
 line-profiler==1.0
 Markdown==2.6.2
-markdown2==2.3.3
+markdown2==2.3.6
 mechanize==0.2.5
 Paste==2.0.2
 Pillow==4.2.1
