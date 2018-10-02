@@ -136,10 +136,11 @@ def generate_event_bill_pdf(request, event):
     pdf_file = BytesIO()
     pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
-    # if it's actually an invoice, attach an idt, eh?
-    if event.reviewed and "invoiceonly" not in request.GET:
-        idt = make_idt_single(event, request.user)
-        pdf_file = concat_pdf(pdf_file, idt)
+# Commented out to remove IDT from invoices due to Workday transition
+#    # if it's actually an invoice, attach an idt, eh?
+#    if event.reviewed and "invoiceonly" not in request.GET:
+#        idt = make_idt_single(event, request.user)
+#        pdf_file = concat_pdf(pdf_file, idt)
 
     # Return PDF document through a Django HTTP response
     resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
@@ -164,10 +165,11 @@ def generate_event_bill_pdf_standalone(event, idt_originator):
     pdf_file = BytesIO()
     pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
-    # if it's actually an invoice, attach an idt, eh?
-    if event.reviewed:
-        idt = make_idt_single(event, idt_originator)
-        pdf_file = concat_pdf(pdf_file, idt)
+# Commented out to remove IDT from invoices due to Workday transition
+#    # if it's actually an invoice, attach an idt, eh?
+#    if event.reviewed:
+#        idt = make_idt_single(event, idt_originator)
+#        pdf_file = concat_pdf(pdf_file, idt)
 
     return pdf_file.getvalue()
 
@@ -203,9 +205,10 @@ def generate_multibill_pdf(request, multibilling):
     pdf_file = BytesIO()
     pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
-    if "invoiceonly" not in request.GET:
-        idt = make_idt_bulk(events, request.user, billing_org)
-        pdf_file = concat_pdf(pdf_file, idt)
+# Commented out to remove IDT from invoices due to Workday transition
+#    if "invoiceonly" not in request.GET:
+#        idt = make_idt_bulk(events, request.user, billing_org)
+#        pdf_file = concat_pdf(pdf_file, idt)
 
     # Return PDF document through a Django HTTP response
     resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
@@ -236,8 +239,9 @@ def generate_multibill_pdf_standalone(multibilling, idt_originator):
     pdf_file = BytesIO()
     pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
-    idt = make_idt_bulk(events, idt_originator, billing_org)
-    pdf_file = concat_pdf(pdf_file, idt)
+# Commented out to remove IDT from invoices due to Workday transition
+#    idt = make_idt_bulk(events, idt_originator, billing_org)
+#    pdf_file = concat_pdf(pdf_file, idt)
 
     return pdf_file.getvalue()
 

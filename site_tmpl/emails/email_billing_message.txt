@@ -1,12 +1,12 @@
 Dear {{ billing.event.org_to_be_billed }},
 
-Lens and Lights recently had the opportunity to provide services for {{ billing.event.event_name }}. Attached are an invoice and prefilled Inter-Departmental Transfer form (IDT). Please complete, sign and return the attached IDT to the Lens and Lights mailbox as soon as possible.
+Lens and Lights recently provided services for {{ billing.event.event_name }}. Attached is an invoice for this event. Please visit lnl.wpi.edu/paybill to submit a payment.
 
-IMPORTANT INFO ABOUT TRANSITION TO WORKDAY: As of October 1, WPI’s finances will change to Workday. However, please complete this IDT as you would have previously and return it anyways.
+NEW BILL PAYMENT SYSTEM: With the new Workday finance system, Lens and Lights is no longer processing IDTs. To pay your bill, please visit lnl.wpi.edu/paybill and complete the simple and quick process. Your new Worktag number is required. Please talk to SAO or your relevant accounting contact if you need help finding this.
 
 If you have any questions, please just reply to this email.
 
-Thanks,
+Thank you for the opportunity to support your event! We look forward to working with you again in the near future.
 
 {{ request.user.get_full_name }}
 WPI Lens & Lights Treasurer
