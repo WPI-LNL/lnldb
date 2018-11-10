@@ -142,10 +142,6 @@ class Migration(migrations.Migration):
             name='event',
             options={'verbose_name': '2012 Event'},
         ),
-        migrations.AlterModelOptions(
-            name='fund',
-            options={'permissions': ()},
-        ),
         CopyFieldsBetweenTables(
             model_from_name='event',
             model_to_name='baseevent',

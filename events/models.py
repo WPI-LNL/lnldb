@@ -1041,7 +1041,7 @@ class Fund(models.Model):
 
     class Meta:
         permissions = (
-            # ('view_fund', 'View a fund'), <-- IMPLICIT
+            ('view_fund', 'View a fund'),
         )
 
 
