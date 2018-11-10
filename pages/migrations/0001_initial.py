@@ -36,6 +36,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='carouselimg',
             name='href',
-            field=models.ForeignKey(blank=True, to='pages.Page', null=True),
+            field=models.ForeignKey(blank=True, to='pages.Page', null=True, on_delete=models.CASCADE),
         ),
     ]

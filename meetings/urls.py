@@ -2,6 +2,8 @@ from django.conf.urls import include, url
 
 from . import views
 
+app_name = 'meetings'
+
 urlpatterns = [
     url(r'^new/$', views.newattendance, name="new"),
     url(r'^$', views.listattendance, name="list"),

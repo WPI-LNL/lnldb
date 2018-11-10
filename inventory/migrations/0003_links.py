@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='equipmentclass',
             name='category',
-            field=mptt.fields.TreeForeignKey(to='inventory.EquipmentCategory'),
+            field=mptt.fields.TreeForeignKey(to='inventory.EquipmentCategory', on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='equipmentclass',

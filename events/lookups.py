@@ -9,7 +9,7 @@ class OrgLookup(LookupChannel):
     model = Organization
 
     def check_auth(self, request):
-        return request.user.is_authenticated()
+        return request.user.is_authenticated
 
     def get_query(self, q, request):
         return Organization.objects.filter(Q(name__icontains=q) | Q(shortname__icontains=q)).filter(archived=False)\
@@ -29,7 +29,7 @@ class FundLookup(LookupChannel):
     model = Fund
 
     def check_auth(self, request):
-        return request.user.is_authenticated()
+        return request.user.is_authenticated
 
     def get_query(self, q, request):
         return Fund.objects.filter(Q(name__icontains=q) |
@@ -51,7 +51,7 @@ class FundLookupLimited(LookupChannel):
     model = Fund
 
     def check_auth(self, request):
-        return request.user.is_authenticated()
+        return request.user.is_authenticated
 
     def get_query(self, q, request):
         user = request.user

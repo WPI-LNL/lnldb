@@ -11,6 +11,7 @@ def generate_date_patterns(func, name):
         url(r'^(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', func, name=name),
     ])
 
+app_name = 'lnldb'
 
 # prefix: /db/events
 urlpatterns = [
@@ -72,7 +73,7 @@ urlpatterns = [
 
     # The nice url structure. TODO: fit the rest in here (with deprecation, of course)
     url(r'^view/(?P<event>[0-9]+)/', include([
-        url(r'^billing/', view=include([
+        url(r'^billing/', view=include(([
             url(r'^mk/$', flow_views.BillingCreate.as_view(), name="new"),
             url(r'^update/(?P<pk>[0-9]+)/$', flow_views.BillingUpdate.as_view(),
                 name="edit"),
@@ -83,20 +84,20 @@ urlpatterns = [
             url(r'^rm/(?P<pk>[0-9]+)/$', flow_views.BillingDelete.as_view(),
                 name="remove"),
             url(r'^pdf/$', pdf_views.generate_event_bill_pdf, name="pdf"),
-        ], namespace="bills")),
-        url(r'^report/', view=include([
+        ], 'lnldb'), namespace="bills")),
+        url(r'^report/', view=include(([
             url(r'^mk/$', flow_views.CCRCreate.as_view(), name="new"),
             url(r'^update/(?P<pk>[0-9]+)/$', flow_views.CCRUpdate.as_view(),
                 name="edit"),
             url(r'^rm/(?P<pk>[0-9]+)/$', flow_views.CCRDelete.as_view(), name="remove")
-        ], namespace="reports")),
+        ], 'lnldb'), namespace="reports")),
     ])),
-    url(r'^multibills/', include([
+    url(r'^multibills/', include(([
         url(r'^$', list_views.multibillings, name="list"),
         url(r'^mk/$', flow_views.MultiBillingCreate.as_view(), name="new"),
         url(r'^update/(?P<pk>[0-9]+)/$', flow_views.MultiBillingUpdate.as_view(), name="edit"),
         url(r'^rm/(?P<pk>[0-9]+)/$', flow_views.MultiBillingDelete.as_view(), name="remove"),
         url(r'^email/(?P<multibilling>[0-9]+)/$', flow_views.MultiBillingEmailCreate.as_view(), name="email"),
         url(r'^pdf/(?P<multibilling>[0-9]+)/$', pdf_views.generate_multibill_pdf, name="pdf"),
-    ], namespace="multibillings")),
+    ], 'lnldb'), namespace="multibillings")),
 ]

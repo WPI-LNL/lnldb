@@ -119,7 +119,7 @@
                     <th>Location</th>
                     <th>Status</th>
                 </tr>
-                {% for event in org.event_set.all %}
+                {% for event in org.events.all %}
                     <tr>
                         <td><a href="{% url 'events:detail' event.pk %}">{{ event.event_name }}</a></td>
                         <td title="{{ event.datetime_end }}">

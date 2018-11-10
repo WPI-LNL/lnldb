@@ -4,8 +4,12 @@
 {% block content %}
     <div class="jumbotron">
         <div class="clearfix">
-            <h1><span class="glyphicon glyphicon-{{ event.glyphicon }} jumboglyph"
-                      aria-hidden="true"></span>{{ event }}</h1>
+            <h1>
+                {% if event.glyphicon %}
+                    <span class="glyphicon glyphicon-{{ event.glyphicon }} jumboglyph" aria-hidden="true"></span>
+                {% endif %}
+                {{ event }}
+            </h1>
         </div>
         <div class="actions pull-right">
             <h3>Status: <b>{{ event.status }}</b></h3>
@@ -105,7 +109,7 @@
                     <h3 id="cancelModalLabel">Confirm Cancel Event</h3>
                 </div>
                 <div class="modal-body">
-                    <p>Cancelling an event locks the event for edits, and cannot be easily undone. This should
+                    <p>Cancelling an event cannot be easily undone. This should
                         only be used if an event does not actually occur, and this information was given before any
                         setups/rentals were done.</p>
                 </div>
@@ -382,6 +386,37 @@
                             </ul>
                     {% endif %}
                     
+                    {% if event.serviceinstance_set.exists %}
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Requirements</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for service_instance in event.serviceinstance_set.all %}
+                                    <tr>
+                                        <td>{{ service_instance.service }}</td>
+                                        <td>
+                                            {% if service_instance.detail %}
+                                                {{ service_instance.detail | markdown }}
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% if event.extrainstance_set.exists %}
+                            <h3>Extras</h3>
+                            <ul>
+                            {% for extra_instance in event.extrainstance_set.all %}
+                                <li>{{ extra_instance.extra }} x{{ extra_instance.quant }}</li>
+                            {% endfor %}
+                            </ul>
+                        {% endif %}
+                    {% endif %}
+                    
                 </div>
                 <div id="crew" class="tab-pane">
                     {% if not event.closed %}
@@ -395,7 +430,7 @@
                             <th>Name</th>
                             <th>Setup Location</th>
                             <th>Setup Time</th>
-                            <th>Service</th>
+                            <th>Category</th>
                         </tr>
                         {% for cc in event.ccinstances.all %}
                         <tr>
@@ -409,7 +444,7 @@
                                 {{ cc.setup_start }}
                             </td>
                             <td>
-                                {{ cc.service }}
+                                {{ cc.category }}
                             </td>
                         {% endfor %}
                     </table>
@@ -482,7 +517,7 @@
                         <tr>
                             <th>Member</th>
                             <th>Hours</th>
-                            <th>Service</th>
+                            <th>Category</th>
                         </tr>
                         </thead>
                         {% for hour in event.hours.all %}
@@ -490,7 +525,7 @@
                                 <td><a href="{% url "accounts:detail" hour.user.id %}">{{ hour.user.get_full_name }}</a>
                                 </td>
                                 <td>{{ hour.hours }}</td>
-                                <td>{{ hour.service }}</td>
+                                <td>{{ hour.category }}</td>
                             </tr>
                         {% endfor %}
                     </table>
@@ -590,15 +625,30 @@
                         </tr>
                         {% endfor %}
                         
+                        {% if event.serviceinstance_set.exists %}
+                            {% for service_instance in event.serviceinstance_set.all %}
+                                <tr>
+                                    <td>{{ service_instance.service }}</td>
+                                    <td class="tdra">${{ service_instance.service.base_cost }}</td>
+                                </tr>
+                            {% endfor %}
+                            {% for extra_instance in event.extrainstance_set.all %}
+                                <tr>
+                                    <td>{{ extra_instance.extra }} <strong>x{{ extra_instance.quant }}</strong></td>
+                                    <td class="tdra">${{ extra_instance.totalcost }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                        
                         {% if event.discount_applied %}
                         <tr class="warning">
                             <td> Pre Discount Total </td>
                             <td class="tdra">${{ event.cost_total_pre_discount }} </td>
                         </tr>
                         <tr class="warning">
-                                    <td>Lighting/Sound Combo Discount Applied</td>
-                                    <td style="color:red;" class="tdra">-${{ event.discount_value|floatformat:2}}</td>
-                                </tr>
+                            <td>Lighting/Sound Combo Discount Applied</td>
+                            <td style="color:red;" class="tdra">-${{ event.discount_value|floatformat:2}}</td>
+                        </tr>
                         {% endif %}
                         
                         {% for oo in event.oneoffs %}

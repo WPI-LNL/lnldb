@@ -2,6 +2,8 @@ from django.conf.urls import include, url
 
 from .. import views
 
+app_name = 'lnldb'
+
 # prefix: /my/
 urlpatterns = [
     url(r'^workorders/$', views.my.mywo, name="workorders"),

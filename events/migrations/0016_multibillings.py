@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
                 ('sent_at', models.DateTimeField(null=True)),
                 ('email_to_orgs', models.ManyToManyField(to='events.Organization')),
                 ('email_to_users', models.ManyToManyField(to=settings.AUTH_USER_MODEL)),
-                ('multibilling', models.ForeignKey(to='events.MultiBilling')),
+                ('multibilling', models.ForeignKey(to='events.MultiBilling', on_delete=models.CASCADE)),
             ],
         ),
         migrations.AddField(

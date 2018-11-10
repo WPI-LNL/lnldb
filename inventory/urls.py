@@ -2,6 +2,8 @@ from django.conf.urls import include, url
 
 from . import views
 
+app_name = 'inventory'
+
 # Inventory Url Patterns
 # Use include() liberally. A bit harder to read,
 #   but encourages consistency and you never

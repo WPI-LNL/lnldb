@@ -136,6 +136,21 @@
                     <td class="tdra">${{ e.totalcost }}</td>
                 </tr>
                 {% endfor %}
+
+                {% if event.serviceinstance_set.exists %}
+                    {% for service_instance in event.serviceinstance_set.all %}
+                        <tr>
+                            <td>{{ service_instance.service }}</td>
+                            <td class="tdra">${{ service_instance.service.base_cost }}</td>
+                        </tr>
+                    {% endfor %}
+                    {% for extra_instance in event.extrainstance_set.all %}
+                        <tr>
+                            <td>{{ extra_instance.extra }} <strong>x{{ extra_instance.quant }}</strong></td>
+                            <td class="tdra">${{ extra_instance.totalcost }}</td>
+                        </tr>
+                    {% endfor %}
+                {% endif %}
                 
                 {% if event.discount_applied %}
                 <tr class="warning">
@@ -160,7 +175,7 @@
                 
                 <tr class="info">
                     <td>Total</td>
-                    <td>${{ event.cost_total|floatformat:2 }}</td>
+                    <td class="tdra">${{ event.cost_total|floatformat:2 }}</td>
                 </tr>
             </table>
     </div>

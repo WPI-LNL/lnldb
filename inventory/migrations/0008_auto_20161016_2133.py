@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='equipmentitem',
             name='home',
-            field=models.ForeignKey(blank=True, to='events.Location', help_text='Place where this item typically resides.', null=True),
+            field=models.ForeignKey(blank=True, to='events.Location', help_text='Place where this item typically resides.', null=True, on_delete=models.CASCADE),
         ),
     ]

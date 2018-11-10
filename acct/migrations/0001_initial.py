@@ -55,12 +55,12 @@ class Migration(migrations.Migration):
                 ('addr', models.TextField(null=True, verbose_name='Address / Office Location', blank=True)),
                 ('mdc', models.CharField(max_length=32, null=True, verbose_name='MDC', blank=True)),
                 ('locked', models.BooleanField(default=False)),
-                ('user', models.OneToOneField(to=settings.AUTH_USER_MODEL)),
+                ('user', models.OneToOneField(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
             ],
         ),
         migrations.AddField(
             model_name='orgsync_org',
             name='category',
-            field=models.ForeignKey(blank=True, to='acct.Orgsync_OrgCat', null=True),
+            field=models.ForeignKey(blank=True, to='acct.Orgsync_OrgCat', null=True, on_delete=models.CASCADE),
         ),
     ]

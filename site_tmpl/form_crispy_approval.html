@@ -1,0 +1,86 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            <h2> {{ msg }} </h2>
+            <form method="post">
+                <ul class="nav nav-tabs">
+                    <li class="tab-pane active"><a href="#standard-fields" data-toggle="tab">Standard Fields</a></li>
+                    <li class="tab-pane"><a href="#services" data-toggle="tab">Services</a></li>
+                </ul>
+                <div class="tab-content panel-body">
+                    {% crispy form %}
+                    {% if is_event2019 %}
+                        <div id="services" class="tab-pane">
+                            {{ services_formset.management_form }}
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th class="col-xs-3">Service</th>
+                                        <th class="col-xs-8">Detail </th>
+                                        <th class="col-xs-1">Delete</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for form in services_formset %}
+                                        {% if form.errors %}
+                                            <tr class="warning">
+                                                <td>{% for e in form.service.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                                                <td>{% for e in form.detail.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                                                <td></td>
+                                            </tr>
+                                        {% endif %}
+                                        <tr>
+                                            <td>{{ form.id }}{{ form.service }} </td>
+                                            <td>{{ form.detail }} </td>
+                                            <td>{{ form.DELETE }} </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <input name="save" value="Approve Event" class="btn btn-primary" type="submit">
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extras %}
+    {{ form.media }}
+    {{ services_formset.media }}
+    {% include "js_datetimepick.tmpl" %}
+    {% include "js_phonelimit.tmpl" %}
+    <script>
+        $(document).ready(function () {
+            $("#samedate1").click(function(){
+                var date = $("#id_datetime_setup_complete_0").val();
+                $("#id_datetime_start_0").data("datepicker").setDate(date);
+                var time = $("#id_datetime_setup_complete_1").val();
+                $("#id_datetime_start_1").data("timepicker").setTime(time);
+            });
+            $("#samedate2").click(function(){
+                var date = $("#id_datetime_start_0").val();
+                $("#id_datetime_end_0").data("datepicker").setDate(date);
+                var time = $("#id_datetime_start_1").val();
+                $("#id_datetime_end_1").data("timepicker").setTime(time);
+            });
+        });
+    </script>
+    <style>
+        .padleft {
+            margin-left:65px;
+        }
+        .pushdown {
+            margin-top:5px;
+        }
+        td .wmd-input {
+            height:100px;
+        }
+    </style>
+{% endblock %}

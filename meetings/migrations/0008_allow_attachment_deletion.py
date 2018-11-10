@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='mtgattachment',
             name='meeting',
-            field=models.ForeignKey(related_name='attachments', to='meetings.Meeting', null=True),
+            field=models.ForeignKey(related_name='attachments', to='meetings.Meeting', null=True, on_delete=models.CASCADE),
         ),
     ]

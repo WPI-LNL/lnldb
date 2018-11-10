@@ -4,10 +4,10 @@ import pytz
 from time import mktime
 
 from django.conf import settings
-from django.core.urlresolvers import reverse
 from django.db.models import Count, F, Q
 from django.http import HttpResponse
 from django.template.defaultfilters import slugify
+from django.urls.base import reverse
 from django.utils.decorators import method_decorator
 from django.utils.html import conditional_escape
 from django.views.generic.base import View

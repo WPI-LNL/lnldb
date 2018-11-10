@@ -25,12 +25,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='organizationtransfer',
             name='initiator',
-            field=models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_initiated", null=True),
+            field=models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_initiated", null=True, on_delete=models.CASCADE),
         ),
         migrations.RunPython(populate_initiator, reverse_code=migrations.RunPython.noop),
         migrations.AlterField(
             model_name='organizationtransfer',
             name='initiator',
-            field=models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_initiated"),
+            field=models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_initiated", on_delete=models.CASCADE),
         )
     ]

@@ -1,5 +1,6 @@
 import datetime
 import decimal
+from functools import wraps, partial
 import uuid
 
 import pytz
@@ -15,21 +16,21 @@ from crispy_forms.layout import (HTML, Div, Field, Fieldset, Hidden, Layout,
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.core.urlresolvers import reverse
 from django.db.models import Q
-from django.forms import ModelForm
-from django.forms.extras.widgets import SelectDateWidget
+from django.forms import ModelChoiceField, ModelForm, SelectDateWidget
+from django.forms.models import inlineformset_factory
+from django.urls.base import reverse
 from django.utils import timezone, six
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
 
 from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
 from events.fields import GroupedModelChoiceField
-from events.models import (Billing, MultiBilling, BillingEmail, MultiBillingEmail,
-                           CCReport, Event, EventAttachment, EventCCInstance, Extra,
+from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail,
+                           Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
                            ExtraInstance, Fund, Hours, Lighting, Location, Organization,
                            OrganizationTransfer, OrgBillingVerificationEvent,
-                           Projection, Service, Sound)
+                           Projection, Service, ServiceInstance, Sound)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 
@@ -44,6 +45,9 @@ SOUND_EXTRAS_NAMES = SOUND_EXTRAS.values('name')
 PROJ_EXTRAS = Extra.objects.exclude(disappear=True).filter(category__name="Projection")
 PROJ_EXTRAS_ID_NAME = PROJ_EXTRAS.values_list('id', 'name')
 PROJ_EXTRAS_NAMES = PROJ_EXTRAS.values('name')
+
+def curry_class(cls, *args, **kwargs):
+    return wraps(cls)(partial(cls, *args, **kwargs))
 
 JOBTYPES = (
     (0, 'Lighting'),
@@ -74,21 +78,24 @@ PROJ_CHOICES = (
 
 # gets a set of services from a given event
 def get_qs_from_event(event):
-    if event.lighting:
-        lighting_id = event.lighting.id
-    else:
-        lighting_id = None
-    if event.sound:
-        sound_id = event.sound.id
-    else:
-        sound_id = None
-    if event.projection:
-        proj_id = event.projection.id
-    else:
-        proj_id = None
-
-    return Service.objects.filter(Q(id__in=[lighting_id]) | Q(id__in=[sound_id]) | Q(id__in=[proj_id]) | Q(
-        id__in=[i.id for i in event.otherservices.all()]))
+    if isinstance(event, Event):
+        if event.lighting:
+            lighting_id = event.lighting.id
+        else:
+            lighting_id = None
+        if event.sound:
+            sound_id = event.sound.id
+        else:
+            sound_id = None
+        if event.projection:
+            proj_id = event.projection.id
+        else:
+            proj_id = None
+    
+        return Service.objects.filter(Q(id__in=[lighting_id]) | Q(id__in=[sound_id]) | Q(id__in=[proj_id]) | Q(
+            id__in=[i.id for i in event.otherservices.all()]))
+    elif isinstance(event, Event2019):
+        return Service.objects.filter(pk__in=event.serviceinstance_set.values_list('service', flat=True))
 
 
 class CustomEventModelMultipleChoiceField(forms.ModelMultipleChoiceField):
@@ -269,26 +276,26 @@ class IOrgVerificationForm(forms.ModelForm):
 # Flow Forms
 class EventApprovalForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-        self.helper = FormHelper()
-        self.helper.form_class = "form-horizontal"
-        self.helper.layout = Layout(
-            TabHolder(
-                Tab(
-                    "Standard Fields",
-                    Field('description', label="Description (optional)", css_class="col-md-6"),
-                    HTML('<p class="muted offset2">This will describe the event to your CCs</p>'),
-                    Field('internal_notes', label="Internal Notes", css_class="col-md-6"),
-                    markdown_at_msgs,
-                    Field('datetime_setup_complete', label="Setup Finish", css_class="dtp"),
-                    Field('datetime_start', label="Event Start", css_class="dtp"),
-                    Field('datetime_end', label="Event End", css_class="dtp"),
-                    Field('org'),
-                    Field('billing_org'),
-                    Field('billing_fund'),
-                    Field('billed_by_semester', label="Billed by semester (for films)"),
-                    # Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
-
-                ),
+        super(EventApprovalForm, self).__init__(*args, **kwargs)
+        tabs = (
+             Tab(
+                "Standard Fields",
+                Field('description', label="Description (optional)", css_class="col-md-6"),
+                Field('internal_notes', label="Internal Notes", css_class="col-md-6"),
+                markdown_at_msgs,
+                Field('datetime_setup_complete', label="Setup Finish", css_class="dtp"),
+                Field('datetime_start', label="Event Start", css_class="dtp"),
+                Field('datetime_end', label="Event End", css_class="dtp"),
+                Field('org'),
+                Field('billing_org'),
+                Field('billing_fund'),
+                Field('billed_by_semester', label="Billed by semester (for films)"),
+                # Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
+                active=True
+            ),
+        )
+        if isinstance(self.instance, Event):
+            tabs += (
                 Tab(
                     "Services",
                     Field('lighting'),
@@ -300,12 +307,12 @@ class EventApprovalForm(forms.ModelForm):
                     Field('otherservices'),
                     Field('otherservice_reqs', css_class="col-md-8")
                 ),
-            ),
-            FormActions(
-                Submit('save', 'Approve Event'),
-            ),
-        )
-        super(EventApprovalForm, self).__init__(*args, **kwargs)
+            )
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.include_media = False
+        self.helper.form_class = "form-horizontal"
+        self.helper.layout = Layout(*tabs)
 
     class Meta:
         model = Event
@@ -343,7 +350,7 @@ class EventDenialForm(forms.ModelForm):
         super(EventDenialForm, self).__init__(*args, **kwargs)
 
     class Meta:
-        model = Event
+        model = BaseEvent
         fields = ('cancelled_reason',)
         widgets = {
             'cancelled_reason': PagedownWidget()
@@ -376,51 +383,53 @@ class EventMeetingForm(forms.ModelForm):
 
 
 class InternalEventForm(FieldAccessForm):
-    def __init__(self, *args, **kwargs):
-        super(InternalEventForm, self).__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.layout = Layout(
-            TabHolder(
-                Tab(
-                    'Name And Location',
-                    'event_name',
-                    'location',
-                    Field('description'),
-                    DynamicFieldContainer('internal_notes'),
-                    DynamicFieldContainer('billed_by_semester'),
-                    'sensitive',
-                    'test_event',
+    def __init__(self, request_user, *args, **kwargs):
+        super(InternalEventForm, self).__init__(request_user, *args, **kwargs)
+        tabs = (
+            Tab(
+                'Name And Location',
+                'event_name',
+                'location',
+                Field('description'),
+                DynamicFieldContainer('internal_notes'),
+                DynamicFieldContainer('billed_by_semester'),
+                'sensitive',
+                'test_event',
+                active=True
+            ),
+            Tab(
+                'Contact',
+                'contact',
+                'org',
+                DynamicFieldContainer('billing_org'),
+                DynamicFieldContainer('billing_fund'),
+            ),
+            Tab(
+                'Scheduling',
+                Div(
+                    Div(Field('datetime_setup_complete', css_class='dtp', title="Setup Completed By"),
+                        css_class="padleft"),
                 ),
-                Tab(
-                    'Contact',
-                    'contact',
-                    'org',
-                    DynamicFieldContainer('billing_org'),
-                    DynamicFieldContainer('billing_fund'),
+                Div(
+                    HTML(
+                        '<div class="pull-left pushdown"><br />'
+                        '<a class="btn btn-primary" href="#" id="samedate1" title="Cascade Dates">'
+                        '<i class="glyphicon glyphicon-resize-small icon-white"></i>&nbsp;'
+                        '<i class="glyphicon glyphicon-calendar icon-white"></i></a></div>'),
+                    Div(Field('datetime_start', css_class='dtp'), css_class="padleft"),
                 ),
-                Tab(
-                    'Scheduling',
-                    Div(
-                        Div(Field('datetime_setup_complete', css_class='dtp', title="Setup Completed By"),
-                            css_class="padleft"),
-                    ),
-                    Div(
-                        HTML(
-                            '<div class="pull-left pushdown"><br />'
-                            '<a class="btn btn-primary" href="#" id="samedate1" title="Cascade Dates">'
-                            '<i class="glyphicon glyphicon-resize-small icon-white"></i>&nbsp;'
-                            '<i class="glyphicon glyphicon-calendar icon-white"></i></a></div>'),
-                        Div(Field('datetime_start', css_class='dtp'), css_class="padleft"),
-                    ),
-                    Div(
-                        HTML(
-                            '<div class="pull-left pushdown"><br />'
-                            '<a class="btn btn-primary" href="#" id="samedate2" title="Cascade Dates">'
-                            '<i class="glyphicon glyphicon-resize-small icon-white"></i>&nbsp;'
-                            '<i class="glyphicon glyphicon-calendar icon-white"></i></a></div>'),
-                        Div(Field('datetime_end', css_class='dtp'), css_class="padleft"),
-                    ),
+                Div(
+                    HTML(
+                        '<div class="pull-left pushdown"><br />'
+                        '<a class="btn btn-primary" href="#" id="samedate2" title="Cascade Dates">'
+                        '<i class="glyphicon glyphicon-resize-small icon-white"></i>&nbsp;'
+                        '<i class="glyphicon glyphicon-calendar icon-white"></i></a></div>'),
+                    Div(Field('datetime_end', css_class='dtp'), css_class="padleft"),
                 ),
+            ),
+        )
+        if isinstance(self.instance, Event):
+            tabs += (
                 Tab(
                     'Lighting',
                     'lighting',
@@ -441,12 +450,11 @@ class InternalEventForm(FieldAccessForm):
                     'otherservices',
                     'otherservice_reqs'
                 ),
-            ),
-            FormActions(
-                Submit('save', 'Save Changes'),
             )
-        )
-        super(InternalEventForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.include_media = False
+        self.helper.layout = Layout(*tabs)
 
     class FieldAccess:
         def __init__(self):
@@ -988,19 +996,31 @@ class MKHoursForm(forms.ModelForm):
         )
         super(MKHoursForm, self).__init__(*args, **kwargs)
         self.fields['service'].queryset = get_qs_from_event(event)
+        if isinstance(event, Event2019):
+            self.fields['category'].queryset = Category.objects.filter(pk__in=event.serviceinstance_set.values_list('service__category', flat=True))
+        
 
     def clean(self):
         super(MKHoursForm, self).clean()
+        category = self.cleaned_data.get('category')
         service = self.cleaned_data.get('service')
         user = self.cleaned_data.get('user')
-        if service is None or user is None:
-            # required fields are missing; checked elsewhere
+        if user is None:
+            # this problem will raise an error elsewhere
             return
-        if self.event.hours.filter(user=user, service=service).exists() and not self.instance.pk:
-            raise ValidationError("User already has hours for this service. Edit those instead")
+        if self.event.hours.filter(user=user, category=category, service=service).exists() and not self.instance.pk:
+            raise ValidationError("User already has hours for this category/service. Edit those instead")
 
     def save(self, commit=True):
         obj = super(MKHoursForm, self).save(commit=False)
+        try:
+            obj.category
+        except Category.DoesNotExist:
+            try:
+                obj.service
+                obj.category = obj.service.category
+            except Service.DoesNotExist:
+                pass
         obj.event = self.event
         if commit:
             obj.save()
@@ -1008,10 +1028,12 @@ class MKHoursForm(forms.ModelForm):
 
     class Meta:
         model = Hours
-        fields = ('user', 'hours', 'service')
+        fields = ('user', 'hours', 'category', 'service')
 
     user = AutoCompleteSelectField('Users', required=True)
     hours = forms.DecimalField(min_value=decimal.Decimal("0.00"))
+    category = ModelChoiceField(queryset=Category.objects.all(), required=False)
+    service = ModelChoiceField(queryset=Service.objects.all(), required=False) # queryset gets changed in constructor
 
 
 class EditHoursForm(forms.ModelForm):
@@ -1085,7 +1107,7 @@ class CCIForm(forms.ModelForm):
         self.helper.form_tag = False
         self.helper.layout = Layout(
             Field('crew_chief', placeholder="Crew Chief", title=""),
-            Field('service'),
+            Field('service' if isinstance(event, Event) else 'category'),
             Field('setup_location'),
             Field('setup_start', css_class="dtp"),
             HTML('<hr>'),
@@ -1094,12 +1116,29 @@ class CCIForm(forms.ModelForm):
 
         # x = self.instance.event.lighting
         self.fields['service'].queryset = get_qs_from_event(event)
+        if isinstance(event, Event2019):
+            self.fields['category'].queryset = Category.objects.filter(pk__in=event.serviceinstance_set.values_list('service__category', flat=True))
         self.fields['setup_start'].initial = self.fields['setup_start'].prepare_value(
             self.event.datetime_setup_complete.replace(second=0, microsecond=0)
         )
 
+    def clean(self):
+        cleaned_data = super(CCIForm, self).clean()
+        if cleaned_data.get('category') is None and cleaned_data.get('service') is None:
+            self.add_error('category', 'category/service is a required field')
+            self.add_error('service', 'category/service is a required field')
+        return cleaned_data
+
     def save(self, commit=True):
         obj = super(CCIForm, self).save(commit=False)
+        try:
+            obj.category
+        except Category.DoesNotExist:
+            try:
+                obj.service
+                obj.category = obj.service.category
+            except Service.DoesNotExist:
+                pass
         obj.event = self.event
         if commit:
             obj.save()
@@ -1107,7 +1146,7 @@ class CCIForm(forms.ModelForm):
 
     class Meta:
         model = EventCCInstance
-        fields = ('crew_chief', 'service', 'setup_location', 'setup_start')
+        fields = ('category', 'crew_chief', 'service', 'setup_location', 'setup_start')
 
     crew_chief = AutoCompleteSelectField('Members', required=True)
     setup_start = forms.SplitDateTimeField(initial=timezone.now)
@@ -1116,6 +1155,8 @@ class CCIForm(forms.ModelForm):
         group_by_field="building",
         group_label=lambda group: group.name,
     )
+    category = ModelChoiceField(queryset=Category.objects.all(), required=False)
+    service = ModelChoiceField(queryset=Service.objects.all(), required=False) # queryset gets changed in constructor
 
 
 # Forms for Inline Formsets
@@ -1160,6 +1201,26 @@ class ExtraForm(forms.ModelForm):
         group_by_field="category",
         group_label=lambda group: group.name,
     )
+
+
+class ServiceInstanceForm(forms.ModelForm):
+    def __init__(self, event, *args, **kwargs):
+        self.event = event
+        super(ServiceInstanceForm, self).__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        obj = super(ServiceInstanceForm, self).save(commit=False)
+        obj.event = self.event
+        if commit:
+            obj.save()
+        return obj
+
+    class Meta:
+        model = ServiceInstance
+        fields = ('service', 'detail')
+        widgets = {
+            'detail': PagedownWidget(show_preview=False),
+        }
 
 
 # CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3,form=CCIForm, exclude=[])
@@ -1393,7 +1454,7 @@ class SelectForm(forms.Form):
         required=True
     )
 
-    # location = forms.ModelChoiceField(
+    # location = forms.Field(
     # queryset = Location.objects.filter(show_in_wo_form=True)
     # )
 

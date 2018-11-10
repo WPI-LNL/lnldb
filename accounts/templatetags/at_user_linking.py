@@ -4,8 +4,8 @@ import re
 
 from django import template
 from django.contrib.auth import get_user_model
-from django.core.urlresolvers import reverse
 from django.template.defaultfilters import stringfilter
+from django.urls.base import reverse
 
 register = template.Library()
 

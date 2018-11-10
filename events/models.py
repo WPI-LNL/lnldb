@@ -7,13 +7,14 @@ from django import forms
 # noinspection PyUnresolvedReferences
 from django.conf import settings
 # Create your models here.
-from django.core.urlresolvers import reverse
 from django.core.validators import MinLengthValidator
 from django.db import models
-from django.db.models import Manager
+from django.db.models import Sum
+from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.encoding import python_2_unicode_compatible
+from polymorphic.models import PolymorphicManager, PolymorphicModel
 
 # if settings unset, have sane defaults
 if settings.CCR_DAY_DELTA:
@@ -201,189 +202,7 @@ class EventManager(models.Manager):
 
 
 # MODELS
-@python_2_unicode_compatible
-class Building(models.Model):
-    """ Used to group locations together in forms """
-
-    name = models.CharField(max_length=128)
-    shortname = models.CharField(max_length=4)
-
-    def __str__(self):
-        # return "<Building (%s,%s)>" % (self.name, self.shortname)
-        return self.name
-
-    class Meta:
-        ordering = ['name']
-
-
-@python_2_unicode_compatible
-class Location(models.Model):
-    """ A place where an event, event setup or meeting can happen"""
-    name = models.CharField(max_length=64)
-    # booleans
-    setup_only = models.BooleanField(default=False)
-    show_in_wo_form = models.BooleanField(default=True, verbose_name="Event Location")
-    available_for_meetings = models.BooleanField(default=False)
-    holds_equipment = models.BooleanField(default=False)
-
-    #
-    building = models.ForeignKey(Building)
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        ordering = ['building', 'name']
-
-
-class ExtraInstance(models.Model):
-    """ An instance of a given extra attached to an event """
-    event = models.ForeignKey('Event')
-    extra = models.ForeignKey('Extra')
-    quant = models.PositiveIntegerField()
-
-    @property
-    def totalcost(self):
-        return self.quant * self.extra.cost
-
-    @property
-    def cost(self):
-        return self.extra.cost
-
-
-@python_2_unicode_compatible
-class Extra(models.Model):
-    """ An additional charge to be added to an event. """
-    name = models.CharField(max_length=64)
-    cost = models.DecimalField(max_digits=8, decimal_places=2)
-    desc = models.TextField()
-    services = models.ManyToManyField('Service')
-    category = models.ForeignKey('Category')
-    disappear = models.BooleanField(default=False, help_text="Disappear this extra instead of disable")
-    checkbox = models.BooleanField(default=False, help_text="Use a checkbox instead of an integer entry")
-
-    def __str__(self):
-        return "%s ($%s)" % (self.name, self.cost)
-
-    @property
-    def formfield(self):
-        if self.checkbox:
-            return forms.BooleanField(),
-        else:
-            return forms.IntegerField(min_value=0, ),
-
-
-@python_2_unicode_compatible
-class Category(models.Model):
-    """ A category """
-    name = models.CharField(max_length=16)
-
-    def __str__(self):
-        return self.name
-
-
-@python_2_unicode_compatible
-class Service(models.Model):
-    """
-        Some chargable service that is added to an event,
-        lighting, sound, projection are examples
-    """
-    shortname = models.CharField(max_length=2)
-    longname = models.CharField(max_length=64)
-    base_cost = models.DecimalField(max_digits=8, decimal_places=2)
-    addtl_cost = models.DecimalField(max_digits=8, decimal_places=2)
-    category = models.ForeignKey('Category')
-
-    # for the workorder form. Nice And Pretty Descriptions
-    help_desc = models.TextField(null=True, blank=True)
-
-    def __str__(self):
-        return self.longname
-
-
-class Lighting(Service):
-    pass
-
-
-class Sound(Service):
-    pass
-
-
-class Projection(Service):
-    pass
-
-
-@python_2_unicode_compatible
-class Billing(models.Model):
-    """
-        A billing instance that is sent to a client
-    """
-    date_billed = models.DateField()
-    date_paid = models.DateField(null=True, blank=True)
-    event = models.ForeignKey('Event', related_name="billings")
-    amount = models.DecimalField(max_digits=8, decimal_places=2)
-
-    def __str__(self):
-        out = "Bill for %s" % self.event.event_name
-        if self.date_paid:
-            out += " (PAID)"
-        return out
-
-    class Meta:
-        ordering = ("-date_billed", "date_paid")
-
-
-@python_2_unicode_compatible
-class MultiBilling(models.Model):
-    """
-        A billing instance for multiple events that is sent to a client
-    """
-    date_billed = models.DateField()
-    date_paid = models.DateField(null=True, blank=True)
-    org = models.ForeignKey('Organization', null=True, related_name='multibillings')
-    events = models.ManyToManyField('Event', related_name='multibillings')
-    amount = models.DecimalField(max_digits=8, decimal_places=2)
-
-    def __str__(self):
-        out = 'MultiBill for ' + ', '.join(map(lambda event : event.event_name, self.events.all()))
-        if self.date_paid:
-            out += ' (PAID)'
-        return out
-
-    class Meta:
-        ordering = ('-date_billed', 'date_paid')
-
-
-@python_2_unicode_compatible
-class BillingEmail(models.Model):
-    billing = models.ForeignKey('Billing')
-    subject = models.CharField(max_length=128)
-    message = models.TextField()
-    email_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL)
-    email_to_orgs = models.ManyToManyField('Organization')
-    sent_at = models.DateTimeField(null=True)
-
-    def __str__(self):
-        return 'Billing email sent %s for %s' % (self.sent_at if self.sent_at is not None else 'never',
-                                                 self.billing.event.event_name)
-
-
-@python_2_unicode_compatible
-class MultiBillingEmail(models.Model):
-    multibilling = models.ForeignKey('MultiBilling')
-    subject = models.CharField(max_length=128)
-    message = models.TextField()
-    email_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL)
-    email_to_orgs = models.ManyToManyField('Organization')
-    sent_at = models.DateTimeField(null=True)
-
-    def __str__(self):
-        return 'MultiBilling email sent %s for %s' % (
-            self.sent_at if self.sent_at is not None else 'never',
-            ', '.join(map(lambda event : event.event_name, self.multibilling.events.all())))
-
-
-class OptimizedEventManager(Manager):
+class OptimizedEventManager(PolymorphicManager):
     def get_queryset(self):
         return super(OptimizedEventManager, self).get_queryset()\
                                                  .select_related('lighting')\
@@ -392,24 +211,236 @@ class OptimizedEventManager(Manager):
 
 
 @python_2_unicode_compatible
-class Event(models.Model):
+class BaseEvent(PolymorphicModel):
+    """
+        This parent class is inherited by both Event and Event2019.
+        It contains the parts of the old Event model that were kept in Event2019.
+        The parts of the old Event model that were _not_ kept in Event2019 remain in the Event model.
+    """
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='submitter')
+    submitted_ip = models.GenericIPAddressField(max_length=16)
+    submitted_on = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    event_name = models.CharField(max_length=128, db_index=True)
+    description = models.TextField(null=True, blank=True)
+    location = models.ForeignKey('Location', on_delete=models.PROTECT)
+    contact = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Contact")
+    org = models.ManyToManyField('Organization', blank=True, verbose_name="Client", related_name='events')
+    billing_org = models.ForeignKey('Organization', on_delete=models.PROTECT, null=True, blank=True, related_name="billedevents")
+
+    datetime_setup_complete = models.DateTimeField()
+    datetime_start = models.DateTimeField(db_index=True)
+    datetime_end = models.DateTimeField()
+
+    internal_notes = models.TextField(null=True, blank=True, help_text="Notes that the client and general body should never see.")
+    billed_by_semester = models.BooleanField(default=False, db_index=True, help_text="Check if event will be billed in bulk")
+    sensitive = models.BooleanField(default=False, help_text="Nobody besides those directly involved should know about this event")
+    test_event = models.BooleanField(default=False, help_text="Check to lower the VP's blood pressure after they see the short-notice S4/L4")
+    
+    # Status Indicators
+    approved = models.BooleanField(default=False)
+    approved_on = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="eventapprovals", null=True, blank=True)
+
+    reviewed = models.BooleanField(default=False)
+    reviewed_on = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="eventbillingreview", null=True, blank=True)
+
+    closed = models.BooleanField(default=False)
+    closed_on = models.DateTimeField(null=True, blank=True)
+    closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="eventclosings", null=True, blank=True)
+
+    cancelled = models.BooleanField(default=False)
+    cancelled_on = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="eventcancellations", null=True, blank=True)
+    cancelled_reason = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return self.event_name
+
+    def cal_name(self):
+        return self.event_name
+    
+    def cal_desc(self):
+        desc = ""
+        desc += "Requested by "
+        orgs = self.org.all()
+        for org in orgs:
+            desc += org.name + ", "
+        desc = desc[:-2] + ".\n"  # removes trailing comma
+        ccs = self.ccinstances.all()
+        if len(ccs) > 0:
+            desc += "Crew Chiefs: "
+            for cc in ccs:
+                desc += cc.crew_chief.get_full_name() + " [" + cc.service.shortname + "], "
+            desc = desc[:-2] + ".\n"  # removes trailing comma
+        if self.description:
+            desc += self.description + "\n"
+        return desc
+
+    def cal_location(self):
+        return self.location.name
+
+    def cal_start(self):
+        return self.datetime_start
+
+    def cal_end(self):
+        return self.datetime_end
+
+    def cal_link(self):
+        return get_host() + reverse('events:detail', args=[self.id])
+
+    def cal_guid(self):
+        return "event" + str(self.id) + "@lnldb"
+
+    @property
+    def crew_needing_reports(self):
+        reports = self.ccreport_set.all().values_list('crew_chief', flat=True)
+        return self.ccinstances.exclude(crew_chief__in=reports)
+
+    @property
+    def num_crew_needing_reports(self):
+        return len(self.crew_needing_reports)
+
+    @property
+    def reports_editable(self):
+        end_plus_time = self.datetime_end + datetime.timedelta(days=CCR_DELTA)
+        now = datetime.datetime.now(timezone.get_current_timezone())
+        return now < end_plus_time
+    
+    @cached_property
+    def status(self):
+        if self.cancelled:
+            return "Cancelled"
+        elif self.closed:
+            return "Closed"
+        elif self.approved and self.datetime_setup_complete > datetime.datetime.now(pytz.utc) and not self.reviewed:
+            return "Approved"
+        elif not self.approved:
+            return "Awaiting Approval"
+        elif not self.reviewed:
+            return "Awaiting Review"
+        else:
+            if self.paid:
+                return "Paid"
+            elif self.unpaid:
+                return "Awaiting Payment"
+            else:
+                return "To Be Billed"  # used to be "Open" git #245
+
+    @property
+    def unpaid(self):
+        return self.billings.filter(date_paid__isnull=True, date_billed__isnull=False).exists() \
+            or self.multibillings.filter(date_paid__isnull=True, date_billed__isnull=False).exists()
+
+    @property
+    def paid(self):
+        return self.billings.filter(date_paid__isnull=False).exists() \
+            or self.multibillings.filter(date_paid__isnull=False).exists()
+
+    @property
+    def over(self):
+        return self.datetime_end < datetime.datetime.now(pytz.utc)
+
+    @property
+    def late(self):
+        return self.datetime_setup_complete - self.submitted_on < datetime.timedelta(weeks=2)
+    
+    @property
+    def oneoffs(self):
+        return self.arbitraryfees.all()
+
+    @property
+    def oneoff_total(self):
+        return sum([x.totalcost for x in self.oneoffs])
+    
+    @property
+    def org_to_be_billed(self):
+        if not self.billing_org:
+            return self.org.all()[0] if self.org.exists() else None
+        else:
+            return self.billing_org
+
+    @property
+    def last_billed(self):
+        if self.billings.exists():
+            return self.billings.order_by('-date_billed').first().date_billed
+        elif self.multibillings.exists():
+            return self.multibillings.order_by('-date_billed').first().date_billed
+
+    @property
+    def last_bill(self):
+        return self.billings.order_by('-date_billed').first()
+
+    @property
+    def times_billed(self):
+        return self.billings.count() + self.multibillings.count()
+
+    @property
+    def last_paid(self):
+        paid_bills = self.billings.filter(date_paid__isnull=False)
+        if paid_bills.exists():
+            return paid_bills.order_by('-date_paid').first().date_paid
+        paid_multibills = self.multibillings.filter(date_paid__isnull=False)
+        if paid_multibills.exists():
+            return paid_multibills.order_by('-date_paid').first().date_paid
+
+    @property
+    def datetime_nice(self):
+        out_str = ""
+        out_str += self.datetime_start.strftime("%a %m/%d/%Y %I:%M %p - ")
+        if self.datetime_start.date() == self.datetime_end.date():
+            out_str += self.datetime_end.strftime("%I:%M %p")
+        else:
+            out_str += self.datetime_end.strftime("%a %m/%d/%Y %I:%M %p")
+        return out_str
+    
+    class Meta:
+        verbose_name = 'Event'
+        permissions = (
+            ("view_event", "Show an event that isn't hidden"),
+            ("add_raw_event", "Use the editor to create an event"),
+            ("event_images", "Upload images to an event"),
+            ("view_hidden_event", "Show hidden events"),
+            ("cancel_event", "Declare an event to be cancelled"),
+            ("event_attachments", "Upload attachments to an event"),
+            ("edit_event_times", "Modify the dates for an event"),
+            ("add_event_report", "Add reports about the event"),
+            ("edit_event_fund", "Change where money for an event comes from"),
+            ("view_event_billing", "See financial info for event"),
+            ("view_event_reports", "See reports for event"),
+            ("edit_event_text", "Update any event descriptions"),
+            ("adjust_event_owner", "Change the event contact and organization"),
+            ("edit_event_hours", "Modify the time sheets"),
+            ('edit_event_flags', 'Add flags to an event'),
+            ("event_view_sensitive", "Show internal notes and other metadata marked as not public"),
+            ("approve_event", "Accept an event"),
+            ("decline_event", "Decline an event"),
+            ("can_chief_event", "Can crew chief an event"),
+            ("review_event", "Review an event for billing"),
+            ("adjust_event_charges", "Add charges and change event type"),
+            ("bill_event", "Send bills and mark event paid"),
+            ("close_event", "Lock an event after everything is done."),
+            ("view_test_event", "Show events for testing"),
+            ("event_view_granular", "See debug data like ip addresses"),
+            ("event_view_debug", "See debug events"),
+            ("reopen_event", "Reopen a closed, declined, or cancelled event"),
+        )
+        ordering = ['-datetime_start']
+
+
+@python_2_unicode_compatible
+class Event(BaseEvent):
     """
         An Event, What everything ends up pointing to
+
+        This model is full of old garbage that was not kept in Event2019. Let it rest in peace.
     """
     glyphicon = 'bullhorn'
     objects = OptimizedEventManager()
     event_mg = EventManager()
 
-    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='submitter')
-    submitted_ip = models.GenericIPAddressField(max_length=16)
-    submitted_on = models.DateTimeField(auto_now_add=True, db_index=True)
-
-    event_name = models.CharField(max_length=128, db_index=True)
-    # Person
     person_name = models.CharField(max_length=128, null=True, blank=True, verbose_name="Contact_name")  # DEPRECATED
-    contact = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, verbose_name="Contact")
-    org = models.ManyToManyField('Organization', blank=True, verbose_name="Client")
-    billing_org = models.ForeignKey('Organization', null=True, blank=True, related_name="billedevents")
     billing_fund = models.ForeignKey('Fund', null=True, blank=True, on_delete=models.SET_NULL,
                                      related_name="event_accounts")
     contact_email = models.CharField(max_length=180, null=True, blank=True)  # DEPRECATED
@@ -418,49 +449,22 @@ class Event(models.Model):
 
     # Dates & Times
     datetime_setup_start = models.DateTimeField(null=True, blank=True, db_index=True)  # DEPRECATED
-    datetime_setup_complete = models.DateTimeField()
-
-    datetime_start = models.DateTimeField(db_index=True)
-    datetime_end = models.DateTimeField()
-
-    # Location
-    location = models.ForeignKey('Location')
-
+    
     # service levels
-    lighting = models.ForeignKey('Lighting', null=True, blank=True, related_name='lighting')
-    sound = models.ForeignKey('Sound', null=True, blank=True, related_name='sound')
-    projection = models.ForeignKey('Projection', null=True, blank=True, related_name='projection')
+    lighting = models.ForeignKey('Lighting', on_delete=models.PROTECT, null=True, blank=True, related_name='lighting')
+    sound = models.ForeignKey('Sound', on_delete=models.PROTECT, null=True, blank=True, related_name='sound')
+    projection = models.ForeignKey('Projection', on_delete=models.PROTECT, null=True, blank=True, related_name='projection')
 
     lighting_reqs = models.TextField(null=True, blank=True)
     sound_reqs = models.TextField(null=True, blank=True)
     proj_reqs = models.TextField(null=True, blank=True)
 
-    description = models.TextField(null=True, blank=True)
-
     # NOT SHOWN
-    otherservices = models.ManyToManyField(Service, blank=True)
+    otherservices = models.ManyToManyField('Service', blank=True)
     otherservice_reqs = models.TextField(null=True, blank=True)
-    setup_location = models.ForeignKey('Location', related_name="setuplocation", null=True, blank=True)  # DEPRECATED
-    # Status Indicators
-    approved = models.BooleanField(default=False)
-    approved_on = models.DateTimeField(null=True, blank=True)
-    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventapprovals", null=True, blank=True)
-
-    reviewed = models.BooleanField(default=False)
-    reviewed_on = models.DateTimeField(null=True, blank=True)
-    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventbillingreview", null=True, blank=True)
-
-    closed = models.BooleanField(default=False)
-    closed_on = models.DateTimeField(null=True, blank=True)
-    closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventclosings", null=True, blank=True)
-
-    cancelled = models.BooleanField(default=False)
-    cancelled_on = models.DateTimeField(null=True, blank=True)
-    cancelled_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="eventcancellations", null=True, blank=True)
-    cancelled_reason = models.TextField(null=True, blank=True)
+    setup_location = models.ForeignKey('Location', on_delete=models.PROTECT, related_name="setuplocation", null=True, blank=True)  # DEPRECATED
 
     payment_amount = models.IntegerField(blank=True, null=True, default=None)
-    paid = models.BooleanField(default=False, db_index=True)
 
     # reports
     crew_chief = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='crewchiefx')
@@ -468,11 +472,6 @@ class Event(models.Model):
     ccs_needed = models.PositiveIntegerField(default=0, db_index=True)
     # ^^^ used as a cache to get around the awkward event type fields and allow for sql filtering
 
-    # other fields
-    internal_notes = models.TextField(null=True, blank=True, help_text="Notes that the client and general body should never see.")
-    billed_by_semester = models.BooleanField(default=False, db_index=True, help_text="Check if event will be billed in bulk")
-    sensitive = models.BooleanField(default=False, help_text="Nobody besides those directly involved should know about this event")
-    test_event = models.BooleanField(default=False, help_text="Check to lower the VP's blood pressure after they see the short-notice S4/L4")
     # nice breakout for workorder
 
     @property
@@ -515,41 +514,6 @@ class Event(models.Model):
             update_fields.append('ccs_needed')
         super(Event, self).save(force_insert, force_update, using, update_fields)
 
-    def cal_name(self):
-        return self.event_name
-
-    def cal_desc(self):
-        desc = ""
-        desc += "Requested by "
-        orgs = self.org.all()
-        for org in orgs:
-            desc += org.name + ", "
-        desc = desc[:-2] + ".\n"  # removes trailing comma
-        ccs = self.ccinstances.all()
-        if len(ccs) > 0:
-            desc += "Crew Chiefs: "
-            for cc in ccs:
-                desc += cc.crew_chief.get_full_name() + " [" + cc.service.shortname + "], "
-            desc = desc[:-2] + ".\n"  # removes trailing comma
-        if self.description:
-            desc += self.description + "\n"
-        return desc
-
-    def cal_location(self):
-        return self.location.name
-
-    def cal_start(self):
-        return self.datetime_start
-
-    def cal_end(self):
-        return self.datetime_end
-
-    def cal_link(self):
-        return get_host() + reverse('events:detail', args=[self.id])
-
-    def cal_guid(self):
-        return "event" + str(self.id) + "@lnldb"
-
     def firstorg(self):
         return self.org.first()
 
@@ -585,37 +549,6 @@ class Event(models.Model):
 
         return out
 
-    def __str__(self):
-        return self.event_name
-
-    # Report Properties
-    @property
-    def crew_needing_reports(self):
-        reports = self.ccreport_set.all().values_list('crew_chief', flat=True)
-        return self.ccinstances.exclude(crew_chief__in=reports)
-
-    @property
-    def num_crew_needing_reports(self):
-        return len(self.crew_needing_reports)
-
-    @property
-    def reports_editable(self):
-
-        # tz = timezone.get_current_timezone()
-
-        end = self.datetime_start
-
-        # end_min = datetime.datetime.combine(end.date(), datetime.time.min)
-        # end_min = tz.localize(end_min)
-
-        end_plus_time = end + datetime.timedelta(days=CCR_DELTA)
-        now = datetime.datetime.now(timezone.get_current_timezone())
-
-        if now < end_plus_time:
-            return True
-        else:
-            return False
-
     # Service information for templates
     @property
     def allservices(self):
@@ -649,45 +582,6 @@ class Event(models.Model):
         except ValueError:
             pass
         return foo
-
-    # Event Statuses
-    @cached_property
-    def status(self):
-        if self.cancelled:
-            return "Cancelled"
-        elif self.closed:
-            return "Closed"
-        elif self.approved and self.datetime_setup_complete > datetime.datetime.now(pytz.utc) and not self.reviewed:
-            return "Approved"
-        elif not self.approved:
-            return "Awaiting Approval"
-        elif not self.reviewed:
-            return "Awaiting Review"
-        else:
-            if self.paid:
-                return "Paid"
-            elif self.unpaid:
-                return "Awaiting Payment"
-            else:
-                return "To Be Billed"  # used to be "Open" git #245
-
-    @property
-    def unpaid(self):
-        return self.billings.filter(date_paid__isnull=True, date_billed__isnull=False).exists() \
-            or self.multibillings.filter(date_paid__isnull=True, date_billed__isnull=False).exists()
-
-    @property
-    def paid(self):
-        return self.billings.filter(date_paid__isnull=False).exists() \
-            or self.multibillings.filter(date_paid__isnull=False).exists()
-
-    @property
-    def over(self):
-        return self.datetime_end < datetime.datetime.now(pytz.utc)
-
-    @property
-    def late(self):
-        return self.datetime_setup_complete - self.submitted_on < datetime.timedelta(weeks=2)
 
     # Extras And Billing Calculations
     @property
@@ -770,14 +664,6 @@ class Event(models.Model):
         return extrascost + servicecost
 
     @property
-    def oneoffs(self):
-        return self.arbitraryfees.all()
-
-    @property
-    def oneoff_total(self):
-        return sum([x.totalcost for x in self.oneoffs])
-
-    @property
     def discount_applied(self):
         services = (self.sound, self.lighting)
         service_count = sum([1 for s in services if s])
@@ -815,17 +701,6 @@ class Event(models.Model):
         return self.cost_projection_total + self.cost_lighting_total \
             - self.discount_value + self.cost_sound_total + self.extras_total + self.oneoff_total
 
-    # org to be billed
-    @property
-    def org_to_be_billed(self):
-        if not self.billing_org:
-            if self.org.count() != 0:
-                return self.org.all()[0]
-            else:
-                return None
-        else:
-            return self.billing_org
-
     # figuring out where to show ATTACHMENT AVAILABLE
     @property
     def attachment_for_lighting(self):
@@ -852,81 +727,267 @@ class Event(models.Model):
         return False
 
     @property
-    def last_billed(self):
-        if self.billings.exists():
-            return self.billings.order_by('-date_billed').first().date_billed
-        elif self.multibillings.exists():
-            return self.multibillings.order_by('-date_billed').first().date_billed
-
-    @property
-    def last_bill(self):
-        return self.billings.order_by('-date_billed').first()
-
-    @property
-    def times_billed(self):
-        return self.billings.count() + self.multibillings.count()
-
-    @property
-    def last_paid(self):
-        paid_bills = self.billings.filter(date_paid__isnull=False)
-        if paid_bills.exists():
-            return paid_bills.order_by('-date_paid').first().date_paid
-        paid_multibills = self.multibillings.filter(date_paid__isnull=False)
-        if paid_multibills.exists():
-            return paid_multibills.order_by('-date_paid').first().date_paid
-
-    @property
     def short_services(self):
         return ", ".join(map(lambda m: m.shortname, self.eventservices))
 
+    class Meta:
+        verbose_name = '2012 Event'
+
+
+@python_2_unicode_compatible
+class Event2019(BaseEvent):
+    """
+        New events under the 2019 pricelist
+    """
+    
     @property
-    def datetime_nice(self):
-        out_str = ""
-        out_str += self.datetime_start.strftime("%a %m/%d/%Y %I:%M %p - ")
-        if self.datetime_start.date() == self.datetime_end.date():
-            out_str += self.datetime_end.strftime("%I:%M %p")
+    def services_total(self):
+        services_cost = self.serviceinstance_set.aggregate(Sum('service__base_cost'))['service__base_cost__sum']
+        return services_cost if services_cost is not None else 0
+    
+    @property
+    def extras_total(self):
+        total = 0
+        for extra_instance in self.extrainstance_set.all():
+            total += extra_instance.totalcost
+        return total
+    
+    @property
+    def cost_total_pre_discount(self):
+        return self.services_total + self.extras_total + self.oneoff_total
+    
+    @property
+    def discount_applied(self):
+        categories = ['Lighting', 'Sound']
+        categories = [Category.objects.get(name=name) for name in categories]
+        for category in categories:
+            if not self.serviceinstance_set.filter(service__category=category).exists():
+                return False
+        return True
+
+    @property
+    def discount_value(self):
+        if self.discount_applied:
+            categories = ['Lighting', 'Sound']
+            categories = [Category.objects.get(name=name) for name in categories]
+            discountable_total = decimal.Decimal(self.serviceinstance_set.filter(service__category__in=categories).aggregate(Sum('service__base_cost'))['service__base_cost__sum'])
+            return discountable_total * decimal.Decimal(".15")
         else:
-            out_str += self.datetime_end.strftime("%a %m/%d/%Y %I:%M %p")
-        return out_str
+            return decimal.Decimal("0.0")
+
+    @property
+    def cost_total(self):
+        return self.cost_total_pre_discount - self.discount_value
 
     class Meta:
-        permissions = (
-            ("view_event", "Show an event that isn't hidden"),
-            ("add_raw_event", "Use the editor to create an event"),
-            ("event_images", "Upload images to an event"),
-            ("view_hidden_event", "Show hidden events"),
-            ("cancel_event", "Declare an event to be cancelled"),
-            ("event_attachments", "Upload attachments to an event"),
-            ("edit_event_times", "Modify the dates for an event"),
-            ("add_event_report", "Add reports about the event"),
-            ("edit_event_fund", "Change where money for an event comes from"),
-            ("view_event_billing", "See financial info for event"),
-            ("view_event_reports", "See reports for event"),
-            ("edit_event_text", "Update any event descriptions"),
-            ("adjust_event_owner", "Change the event contact and organization"),
-            ("edit_event_hours", "Modify the time sheets"),
-            ('edit_event_flags', 'Add flags to an event'),
-            ("event_view_sensitive", "Show internal notes and other metadata marked as not public"),
-            ("approve_event", "Accept an event"),
-            ("decline_event", "Decline an event"),
-            ("can_chief_event", "Can crew chief an event"),
-            ("review_event", "Review an event for billing"),
-            ("adjust_event_charges", "Add charges and change event type"),
-            ("bill_event", "Send bills and mark event paid"),
-            ("close_event", "Lock an event after everything is done."),
-            ("view_test_event", "Show events for testing"),
-            ("event_view_granular", "See debug data like ip addresses"),
-            ("event_view_debug", "See debug events"),
-            ("reopen_event", "Reopen a closed, declined, or cancelled event"),
-        )
-        ordering = ['-datetime_start']
+        verbose_name = '2019 Event'
+
+    
+@python_2_unicode_compatible
+class Building(models.Model):
+    """ Used to group locations together in forms """
+
+    name = models.CharField(max_length=128)
+    shortname = models.CharField(max_length=4)
+
+    def __str__(self):
+        # return "<Building (%s,%s)>" % (self.name, self.shortname)
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+
+
+@python_2_unicode_compatible
+class Location(models.Model):
+    """ A place where an event, event setup or meeting can happen"""
+    name = models.CharField(max_length=64)
+    # booleans
+    setup_only = models.BooleanField(default=False)
+    show_in_wo_form = models.BooleanField(default=True, verbose_name="Event Location")
+    available_for_meetings = models.BooleanField(default=False)
+    holds_equipment = models.BooleanField(default=False)
+
+    #
+    building = models.ForeignKey(Building, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['building', 'name']
+
+
+class ExtraInstance(models.Model):
+    """ An instance of a given extra attached to an event """
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE)
+    extra = models.ForeignKey('Extra', on_delete=models.PROTECT)
+    quant = models.PositiveIntegerField()
+
+    @property
+    def totalcost(self):
+        return self.quant * self.extra.cost
+
+    @property
+    def cost(self):
+        return self.extra.cost
+
+
+@python_2_unicode_compatible
+class Extra(models.Model):
+    """ An additional charge to be added to an event. """
+    name = models.CharField(max_length=64)
+    cost = models.DecimalField(max_digits=8, decimal_places=2)
+    desc = models.TextField()
+    services = models.ManyToManyField('Service')
+    category = models.ForeignKey('Category', on_delete=models.PROTECT)
+    disappear = models.BooleanField(default=False, help_text="Disappear this extra instead of disable")
+    checkbox = models.BooleanField(default=False, help_text="Use a checkbox instead of an integer entry")
+
+    def __str__(self):
+        return "%s ($%s)" % (self.name, self.cost)
+
+    @property
+    def formfield(self):
+        if self.checkbox:
+            return forms.BooleanField(),
+        else:
+            return forms.IntegerField(min_value=0, ),
+
+
+@python_2_unicode_compatible
+class Category(models.Model):
+    """ A category """
+    name = models.CharField(max_length=16)
+
+    def __str__(self):
+        return self.name
+
+
+@python_2_unicode_compatible
+class Service(models.Model):
+    """
+        Some chargable service that is added to an event,
+        lighting, sound, projection are examples
+    """
+    shortname = models.CharField(max_length=2)
+    longname = models.CharField(max_length=64)
+    base_cost = models.DecimalField(max_digits=8, decimal_places=2)
+    addtl_cost = models.DecimalField(max_digits=8, decimal_places=2)
+    category = models.ForeignKey('Category', models.PROTECT)
+
+    # for the workorder form. Nice And Pretty Descriptions
+    help_desc = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return self.longname
+
+
+# No longer used in Event2019
+class Lighting(Service):
+    pass
+
+
+# No longer used in Event2019
+class Sound(Service):
+    pass
+
+
+# No longer used in Event2019
+class Projection(Service):
+    pass
+
+
+@python_2_unicode_compatible
+class ServiceInstance(models.Model):
+    """
+        An instance of a service associated with a specific event.
+        Created with Event2019
+    """
+    service = models.ForeignKey('Service', on_delete=models.PROTECT)
+    event = models.ForeignKey('BaseEvent', on_delete=models.CASCADE)
+    detail = models.TextField(blank=True)
+
+    def __str__(self):
+        return '{} for {}'.format(str(self.service), str(self.event))
+    
+
+
+@python_2_unicode_compatible
+class Billing(models.Model):
+    """
+        A billing instance that is sent to a client
+    """
+    date_billed = models.DateField()
+    date_paid = models.DateField(null=True, blank=True)
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="billings")
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+
+    def __str__(self):
+        out = "Bill for %s" % self.event.event_name
+        if self.date_paid:
+            out += " (PAID)"
+        return out
+
+    class Meta:
+        ordering = ("-date_billed", "date_paid")
+
+
+@python_2_unicode_compatible
+class MultiBilling(models.Model):
+    """
+        A billing instance for multiple events that is sent to a client
+    """
+    date_billed = models.DateField()
+    date_paid = models.DateField(null=True, blank=True)
+    org = models.ForeignKey('Organization', on_delete=models.PROTECT, null=True, related_name='multibillings')
+    events = models.ManyToManyField(BaseEvent, related_name='multibillings')
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+
+    def __str__(self):
+        out = 'MultiBill for ' + ', '.join(map(lambda event : event.event_name, self.events.all()))
+        if self.date_paid:
+            out += ' (PAID)'
+        return out
+
+    class Meta:
+        ordering = ('-date_billed', 'date_paid')
+
+
+@python_2_unicode_compatible
+class BillingEmail(models.Model):
+    billing = models.ForeignKey('Billing', on_delete=models.CASCADE)
+    subject = models.CharField(max_length=128)
+    message = models.TextField()
+    email_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL)
+    email_to_orgs = models.ManyToManyField('Organization')
+    sent_at = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return 'Billing email sent %s for %s' % (self.sent_at if self.sent_at is not None else 'never',
+                                                 self.billing.event.event_name)
+
+
+@python_2_unicode_compatible
+class MultiBillingEmail(models.Model):
+    multibilling = models.ForeignKey('MultiBilling', on_delete=models.CASCADE)
+    subject = models.CharField(max_length=128)
+    message = models.TextField()
+    email_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL)
+    email_to_orgs = models.ManyToManyField('Organization')
+    sent_at = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return 'MultiBilling email sent %s for %s' % (
+            self.sent_at if self.sent_at is not None else 'never',
+            ', '.join(map(lambda event : event.event_name, self.multibilling.events.all())))
 
 
 @python_2_unicode_compatible
 class CCReport(models.Model):
     glyphicon = 'comment'
-    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL)
-    event = models.ForeignKey(Event)
+    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE)
     report = models.TextField(validators=[MinLengthValidator(20)])
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
@@ -980,7 +1041,7 @@ class Fund(models.Model):
 
     class Meta:
         permissions = (
-            ('view_fund', 'View a fund'),
+            # ('view_fund', 'View a fund'), <-- IMPLICIT
         )
 
 
@@ -999,7 +1060,7 @@ class Organization(models.Model):  # AKA Client
 
     accounts = models.ManyToManyField(Fund, related_name='orgfunds')
 
-    user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='orgowner')
+    user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='orgowner')
     associated_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='orgusers')
 
     associated_orgs = models.ManyToManyField("self", blank=True, verbose_name="Associated Clients")
@@ -1020,7 +1081,7 @@ class Organization(models.Model):  # AKA Client
 
     @property
     def eventcount(self):
-        return self.event_set.count()
+        return self.events.count()
 
     @property
     def retname(self):
@@ -1051,10 +1112,10 @@ class Organization(models.Model):  # AKA Client
 
 
 class OrganizationTransfer(models.Model):
-    initiator = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_initiated")
-    new_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_new")
-    old_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="xfer_old")
-    org = models.ForeignKey(Organization)
+    initiator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="xfer_initiated")
+    new_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="xfer_new")
+    old_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="xfer_old")
+    org = models.ForeignKey(Organization, on_delete=models.CASCADE)
     uuid = models.UUIDField()  # for the link
     created = models.DateTimeField(auto_now=True)
     completed_on = models.DateTimeField(null=True, blank=True)
@@ -1071,9 +1132,9 @@ class OrganizationTransfer(models.Model):
 
 
 class OrgBillingVerificationEvent(models.Model):
-    org = models.ForeignKey(Organization, related_name="verifications")
+    org = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="verifications")
     date = models.DateField()
-    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="verification_events")
+    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="verification_events")
     note = models.TextField(null=True, blank=True)
 
     class Meta:
@@ -1084,9 +1145,10 @@ class OrgBillingVerificationEvent(models.Model):
 # stats and the like
 @python_2_unicode_compatible
 class Hours(models.Model):
-    event = models.ForeignKey('Event', related_name="hours")
-    service = models.ForeignKey('Service', related_name="hours", null=True, blank=True)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="hours")
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="hours")
+    category = models.ForeignKey(Category, on_delete=models.PROTECT, null=True, blank=True, related_name='hours')
+    service = models.ForeignKey('Service', on_delete=models.PROTECT, related_name="hours", null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="hours")
     hours = models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)
 
     def __str__(self):
@@ -1099,27 +1161,27 @@ class Hours(models.Model):
 # this is the crewchief instance for a particular event
 class EventCCInstance(models.Model):
     # the pair
-    event = models.ForeignKey('Event', related_name="ccinstances")
-    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="ccinstances")
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name='ccinstances')
+    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ccinstances')
 
-    # the service
-    service = models.ForeignKey(Service, related_name="ccinstances")
-    setup_location = models.ForeignKey(Location, related_name="ccinstances")
+    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='ccinstances')
+    service = models.ForeignKey(Service, on_delete=models.PROTECT, null=True, related_name='ccinstances')
+    setup_location = models.ForeignKey(Location, on_delete=models.PROTECT, related_name='ccinstances')
     setup_start = models.DateTimeField(null=True, blank=True)
 
     def cal_name(self):
-        return self.event.event_name + " " + self.service.shortname + " Setup"
+        return self.event.event_name + ' ' + self.service.shortname + ' Setup'
 
     def cal_desc(self):
-        desc = ""
-        desc += "Requested by "
+        desc = ''
+        desc += 'Requested by '
         orgs = self.event.org.all()
         for org in orgs:
-            desc += org.name + ", "
-        desc = desc[:-2] + ".\n"  # removes trailing comma
-        desc += "Crew Chief: " + self.crew_chief.get_full_name() + "\n"
+            desc += org.name + ', '
+        desc = desc[:-2] + '.\n'  # removes trailing comma
+        desc += 'Crew Chief: ' + self.crew_chief.get_full_name() + '\n'
         if self.event.description:
-            desc += self.event.description + "\n"
+            desc += self.event.description + '\n'
         return desc
 
     def cal_location(self):
@@ -1138,16 +1200,16 @@ class EventCCInstance(models.Model):
         return get_host() + reverse('events:detail', args=[self.event.id])
 
     def cal_guid(self):
-        return "setup" + str(self.id) + "@lnldb"
+        return 'setup' + str(self.id) + '@lnldb'
 
     class Meta:
-        ordering = ("-event__datetime_start",)
+        ordering = ('-event__datetime_start',)
 
 
 # A log of CC Report Reminders Sent
 class ReportReminder(models.Model):
-    event = models.ForeignKey('Event', related_name="ccreportreminders")
-    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="ccreportreminders")
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="ccreportreminders")
+    crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="ccreportreminders")
     sent = models.DateTimeField(auto_now_add=True)
 
 
@@ -1157,7 +1219,7 @@ def attachment_file_name(instance, filename):
 
 
 class EventAttachment(models.Model):
-    event = models.ForeignKey('Event', related_name="attachments")
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="attachments")
     for_service = models.ManyToManyField(Service, blank=True, related_name="attachments")
     attachment = models.FileField(upload_to=attachment_file_name)
     note = models.TextField(null=True, blank=True, default="")
@@ -1165,7 +1227,7 @@ class EventAttachment(models.Model):
 
 
 class EventArbitrary(models.Model):
-    event = models.ForeignKey('Event', related_name="arbitraryfees")
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="arbitraryfees")
     key_name = models.CharField(max_length=64)
     key_value = models.DecimalField(max_digits=8, decimal_places=2)
     key_quantity = models.PositiveSmallIntegerField(default=1)

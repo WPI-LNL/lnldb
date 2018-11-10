@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
         ('meetings', '0008_allow_attachment_deletion'),
         ('members', '0001_initial'),
         ('projection', '0002_Permissions'),
-        ('reversion', '0002_auto_20141216_1509'),
+        ('reversion', '0001_squashed_0004_auto_20160611_1202'),
     ]
 
     operations = [

@@ -6,6 +6,8 @@ import django_cas_ng.views
 
 from . import views, forms
 
+app_name='accounts'
+
 each_member_pattern = [
     url(r'^edit/$', views.UserUpdateView.as_view(), name="update"),
     url(r'^detail/$', views.UserDetailView.as_view(), name="detail"),
@@ -19,7 +21,7 @@ each_member_pattern = [
 if settings.CAS_SERVER_URL:
     best_logout_url = url(r'^logout/$', django_cas_ng.views.logout, name="logout")
 else:
-    best_logout_url = url(r'^logout/$', auth_views.logout, {'template_name': 'registration/logout.html'},
+    best_logout_url = url(r'^logout/$', auth_views.LogoutView.as_view(), {'template_name': 'registration/logout.html'},
             name="logout")
 
 urlpatterns = [
@@ -41,7 +43,7 @@ urlpatterns = [
     url(r'^db/members/(?P<pk>[0-9]+)/set_password/$', views.PasswordSetView.as_view(), name="password"),
 
     url(r'^db/members/(?P<pk>[0-9]+)/', include(each_member_pattern)),
-    url(r'^db/members/(?P<username>[A-Za-z][A-Za-z0-9]*)/', include(each_member_pattern, namespace='by-name')),
+    url(r'^db/members/(?P<username>[A-Za-z][A-Za-z0-9]*)/', include((each_member_pattern, 'accounts'), namespace='by-name')),
 
     # AUTH
     # use the nice redirector for login
@@ -49,39 +51,39 @@ urlpatterns = [
     best_logout_url,
 
     # now for logical separation of the two auth portals
-    url(r'^cas/', include([
+    url(r'^cas/', include(([
         url(r'^login/$', django_cas_ng.views.login, name="login"),
         url(r'^logout/$', django_cas_ng.views.logout, name="logout"),
-    ], namespace="cas")),
+    ], 'accounts'), namespace="cas")),
 
-    url(r'^local/', include([
-        url(r'^login/$', auth_views.login,
+    url(r'^local/', include(([
+        url(r'^login/$', auth_views.LoginView.as_view(),
             {'template_name': 'registration/login.html',
              'authentication_form': forms.LoginForm},
             name="login"),
 
-        url(r'^logout/$', auth_views.logout,
+        url(r'^logout/$', auth_views.LogoutView.as_view(),
             {'template_name': 'registration/logout.html'},
             name="logout"),
-    ], namespace="local")),
+    ], 'accounts'), namespace="local")),
 
     # and keep password resets separate from either (though technically local)
-    url(r'^local/reset/', include([
-        url(r'^$', auth_views.password_reset,
+    url(r'^local/reset/', include(([
+        url(r'^$', auth_views.PasswordResetView.as_view(),
             {'template_name': 'registration/reset_password.html',
              'post_reset_redirect': 'accounts:reset:sent',
              'from_email': settings.DEFAULT_FROM_ADDR},
             name='start'),
         url(r'^confirm/(?P<uidb64>[0-9A-Za-z]+)-(?P<token>.+)/$',
-            auth_views.password_reset_confirm,
+            auth_views.PasswordResetConfirmView.as_view(),
             {'template_name': 'registration/reset_password_form.html'},
             name='confirm'),
-        url(r'^sent/$', auth_views.password_reset_done,
+        url(r'^sent/$', auth_views.PasswordResetDoneView.as_view(),
             {'template_name': 'registration/reset_password_sent.html'},
             name='sent'),
-        url(r'^done/$', auth_views.password_reset_complete,
+        url(r'^done/$', auth_views.PasswordResetCompleteView.as_view(),
             {'template_name': 'registration/reset_password_finished.html'},
             name='done'),
-    ], namespace="reset")),
+    ], 'accounts'), namespace="reset")),
 
 ]

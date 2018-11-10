@@ -45,7 +45,7 @@ class Migration(migrations.Migration):
                 ('date', models.DateField(auto_now_add=True)),
                 ('desc', models.CharField(max_length=32)),
                 ('entry', models.TextField()),
-                ('equipment', models.ForeignKey(to='inventory.Equipment')),
+                ('equipment', models.ForeignKey(to='inventory.Equipment', on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ['-ts'],
@@ -65,22 +65,22 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('name', models.CharField(max_length=64)),
-                ('category', models.ForeignKey(to='inventory.Category')),
+                ('category', models.ForeignKey(to='inventory.Category', on_delete=models.CASCADE)),
             ],
         ),
         migrations.AddField(
             model_name='equipmentmaintentry',
             name='status',
-            field=models.ForeignKey(to='inventory.Status'),
+            field=models.ForeignKey(to='inventory.Status', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='equipmentmaintentry',
             name='user',
-            field=models.ForeignKey(to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='equipment',
             name='subcategory',
-            field=models.ForeignKey(to='inventory.SubCategory'),
+            field=models.ForeignKey(to='inventory.SubCategory', on_delete=models.CASCADE),
         ),
     ]

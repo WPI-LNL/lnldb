@@ -4,11 +4,11 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.core.urlresolvers import reverse
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
+from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.generic import CreateView, DeleteView, UpdateView
@@ -20,10 +20,10 @@ from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator
 from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm,
-                          InternalReportForm, MKHoursForm, BillingEmailForm, MultiBillingEmailForm)
-from events.models import (Billing, MultiBilling, BillingEmail, MultiBillingEmail, CCReport, Event,
-                           EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
-                           ReportReminder)
+                          InternalReportForm, MKHoursForm, BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm)
+from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, CCReport, Event,
+                           Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
+                           ReportReminder, ServiceInstance)
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
 from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standalone,
@@ -39,7 +39,7 @@ def curry_class(cls, *args, **kwargs):
 def approval(request, id):
     context = {}
     context['msg'] = "Approve Event"
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.approve_event', event):
         raise PermissionDenied
     if event.closed:
@@ -48,15 +48,24 @@ def approval(request, id):
     if event.approved:
         messages.add_message(request, messages.INFO, 'Event has already been approved!')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    is_event2019 = isinstance(event, Event2019)
+    context['is_event2019'] = is_event2019
+    if is_event2019:
+        mk_serviceinstance_formset = inlineformset_factory(BaseEvent, ServiceInstance, extra=3, exclude=[])
+        mk_serviceinstance_formset.form = curry_class(ServiceInstanceForm, event=event)
 
     if request.method == 'POST':
         form = EventApprovalForm(request.POST, instance=event)
-        if form.is_valid():
+        if is_event2019:
+            services_formset = mk_serviceinstance_formset(request.POST, request.FILES, instance=event)
+        if form.is_valid() and (not is_event2019 or services_formset.is_valid()):
             e = form.save(commit=False)
             e.approved = True
             e.approved_on = timezone.now()
             e.approved_by = request.user
             e.save()
+            if is_event2019:
+                services_formset.save()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Approved Event')
             if e.contact and e.contact.email:
@@ -71,6 +80,8 @@ def approval(request, id):
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
         else:
             context['form'] = form
+            if is_event2019:
+                context['services_formset'] = services_formset
     else:
         # has a bill, but no paid bills, and is not otherwise closed
         unbilled_events = Event.objects.filter(org__in=event.org.all())\
@@ -87,16 +98,17 @@ def approval(request, id):
             messages.add_message(request, messages.WARNING, "The client '%s' has been marked as delinquent. \
                     This means that the client has one or more long-outstanding bills which they should be required to \
                     pay before you approve this event." % org)
-        form = EventApprovalForm(instance=event)
-        context['form'] = form
-    return render(request, 'form_crispy.html', context)
+        context['form'] = EventApprovalForm(instance=event)
+        if is_event2019:
+            context['services_formset'] = mk_serviceinstance_formset(instance=event)
+    return render(request, 'form_crispy_approval.html', context)
 
 
 @login_required
 def denial(request, id):
     context = {}
     context['msg'] = "Deny Event"
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.decline_event', event):
         raise PermissionDenied
     if event.closed:
@@ -141,7 +153,7 @@ def denial(request, id):
 def review(request, id):
     context = {}
     context['h2'] = "Review Event for Billing"
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.review_event', event):
         raise PermissionDenied
     if event.closed:
@@ -242,7 +254,7 @@ def remindall(request, id):
 def close(request, id):
     context = {}
     context['msg'] = "Closing Event"
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.close_event', event):
         raise PermissionDenied
     event.closed = True
@@ -258,7 +270,7 @@ def close(request, id):
 def cancel(request, id):
     context = {}
     context['msg'] = "Event Cancelled"
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.cancel_event', event):
         raise PermissionDenied
     if event.closed:
@@ -287,7 +299,7 @@ def cancel(request, id):
 def reopen(request, id):
     context = {}
     context['msg'] = "Event Reopened"
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.reopen_event', event):
         raise PermissionDenied
     event.closed = False
@@ -347,7 +359,7 @@ def hours_bulk_admin(request, id):
     context = {}
 
     context['msg'] = "Bulk Hours Entry"
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event) and event.reports_editable):
         raise PermissionDenied
@@ -355,8 +367,9 @@ def hours_bulk_admin(request, id):
         messages.add_message(request, messages.ERROR, 'Event is closed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     context['event'] = event
+    context['oldevent'] = isinstance(event, Event)
 
-    mk_hours_formset = inlineformset_factory(Event, Hours, extra=15, exclude=[])
+    mk_hours_formset = inlineformset_factory(BaseEvent, Hours, extra=15, exclude=[])
     mk_hours_formset.form = curry_class(MKHoursForm, event=event)
 
     if request.method == 'POST':
@@ -388,7 +401,7 @@ def rmcc(request, id, user):
 def assigncc(request, id):
     context = {}
 
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
 
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event)):
@@ -397,6 +410,7 @@ def assigncc(request, id):
         messages.add_message(request, messages.ERROR, 'Event is closed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     context['event'] = event
+    context['oldevent'] = isinstance(event, Event)
 
     cc_formset = inlineformset_factory(Event, EventCCInstance, extra=5, exclude=[])
     cc_formset.form = curry_class(CCIForm, event=event)
@@ -421,7 +435,7 @@ def assigncc(request, id):
 def assignattach(request, id):
     context = {}
 
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if not (request.user.has_perm('events.event_attachments') or
             request.user.has_perm('events.event_attachments', event)):
         raise PermissionDenied
@@ -430,7 +444,7 @@ def assignattach(request, id):
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     context['event'] = event
 
-    att_formset = inlineformset_factory(Event, EventAttachment, extra=2, exclude=[])
+    att_formset = inlineformset_factory(BaseEvent, EventAttachment, extra=2, exclude=[])
     att_formset.form = curry_class(AttachmentForm, event=event)
 
     if request.method == 'POST':
@@ -502,7 +516,7 @@ def extras(request, id):
     context = {}
     context['msg'] = "Extras"
 
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
 
     if not (request.user.has_perm('events.adjust_event_charges') or
             request.user.has_perm('events.adjust_event_charges', event)):
@@ -510,13 +524,9 @@ def extras(request, id):
     if event.closed:
         messages.add_message(request, messages.ERROR, 'Event is closed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-    if any(event.extrainstance_set.values_list('extra__disappear', flat=True)):
-        messages.add_message(request, messages.ERROR, 'One or more of the existing extras of this \
-        event has since been removed as an available extra. You cannot make any changes to the extras \
-        of this event without deleting those rows. If you believe this is in error, contact the webmaster.')
     context['event'] = event
 
-    mk_extra_formset = inlineformset_factory(Event, ExtraInstance, extra=1, exclude=[])
+    mk_extra_formset = inlineformset_factory(BaseEvent, ExtraInstance, extra=1, exclude=[])
     mk_extra_formset.form = ExtraForm
 
     if request.method == 'POST':
@@ -532,6 +542,10 @@ def extras(request, id):
 
         context['formset'] = formset
 
+    if any(event.extrainstance_set.values_list('extra__disappear', flat=True)):
+        messages.add_message(request, messages.ERROR, 'One or more of the existing extras of this \
+        event has since been removed as an available extra. You cannot make any changes to the extras \
+        of this event without deleting those rows. If you believe this is in error, contact the webmaster.')
     return render(request, 'formset_crispy_extras.html', context)
 
 
@@ -541,7 +555,7 @@ def oneoff(request, id):
     context = {}
     context['msg'] = "One-Off Charges"
 
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     context['event'] = event
 
     if not (request.user.has_perm('events.adjust_event_charges') or
@@ -551,7 +565,7 @@ def oneoff(request, id):
         messages.add_message(request, messages.ERROR, 'Event is closed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
-    mk_oneoff_formset = inlineformset_factory(Event, EventArbitrary, extra=3, exclude=[])
+    mk_oneoff_formset = inlineformset_factory(BaseEvent, EventArbitrary, extra=3, exclude=[])
 
     if request.method == 'POST':
         formset = mk_oneoff_formset(request.POST, request.FILES, instance=event)
@@ -572,7 +586,7 @@ def oneoff(request, id):
 @login_required
 def viewevent(request, id):
     context = {}
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if not (request.user.has_perm('events.view_event') or request.user.has_perm('events.view_event', event)):
         raise PermissionDenied
 
@@ -589,7 +603,7 @@ class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, Login
     perms = 'events.add_event_report'
 
     def dispatch(self, request, *args, **kwargs):
-        self.event = get_object_or_404(Event, pk=kwargs['event'])
+        self.event = get_object_or_404(BaseEvent, pk=kwargs['event'])
         return super(CCRCreate, self).dispatch(request, *args, **kwargs)
 
     def user_passes_test(self, request, *args, **kwargs):
@@ -617,7 +631,7 @@ class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermMixin, LoginRequir
 
     def get_form_kwargs(self):
         kwargs = super(CCRUpdate, self).get_form_kwargs()
-        event = get_object_or_404(Event, pk=self.kwargs['event'])
+        event = get_object_or_404(BaseEvent, pk=self.kwargs['event'])
         kwargs['event'] = event
         return kwargs
 

@@ -14,7 +14,7 @@ class AssocUsersCustomPermissionLogic(PermissionLogic):
 
     def has_perm(self, user_obj, perm, obj=None):
         # User must be logged in
-        if not user_obj.is_authenticated():
+        if not user_obj.is_authenticated:
             logger.debug("%s not signed in" % user_obj)
             return False
         # See if we can handle that perm

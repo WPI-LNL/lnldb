@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
             name='parent',
             field=mptt.fields.TreeForeignKey(related_name='children', blank=True, to='inventory.EquipmentCategory',
                                              help_text=b"If this is a subcategory, the parent is what this is a subcategory of. Choose '---' if not.",
-                                             null=True),
+                                             null=True, on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='equipmentitem',

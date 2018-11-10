@@ -221,7 +221,7 @@ DEBUG_TOOLBAR_CONFIG = {
 
 USE_WHITENOISE = env.bool("USE_WHITENOISE", default=False)
 WN_MIDDLEWARE = ('whitenoise.middleware.WhiteNoiseMiddleware',) if USE_WHITENOISE else tuple()
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
 ) + WN_MIDDLEWARE + (
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -283,6 +283,7 @@ INSTALLED_APPS = (
     'hijack',
     'pagedown',
     'compat',
+    'polymorphic',
 )
 if TESTING:
     # bypass migrations for unit tests. **MUCH** faster
@@ -341,9 +342,9 @@ LOGGING = {
             'handlers': ['console', 'sentry'],
         },
         'events.perms': {
-            #'level': 'DEBUG',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'handlers': ['console']
-        }
+        },
     }
 }
 

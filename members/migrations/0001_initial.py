@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('date', models.DateTimeField(auto_now_add=True)),
                 ('groups', models.ManyToManyField(related_name='statuschange', to='auth.Group')),
-                ('member', models.ForeignKey(related_name='statuschange', to=settings.AUTH_USER_MODEL)),
+                ('member', models.ForeignKey(related_name='statuschange', to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ['-date'],

@@ -4,12 +4,10 @@ from django.db import models
 from django.contrib.sites.models import Site
 from django.utils.translation import gettext_lazy as _
 
-# Create your models here.
-
 
 class StupidCat(models.Model):
     """ For logging when a user goes somewhere they shouldn't be going """
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, blank=True, null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True)
     user_ip = models.GenericIPAddressField(max_length=16)
     requested_uri = models.CharField(max_length=512)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -27,7 +25,7 @@ class GlobalPerms(models.Model):
 
 
 class ResizedRedirect(models.Model):
-    site = models.ForeignKey(Site, verbose_name=_('site'))
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, verbose_name=_('site'))
     old_path = models.CharField(
         _('redirect from'),
         max_length=190,

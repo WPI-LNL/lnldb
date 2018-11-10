@@ -1,5 +1,5 @@
 from django.contrib import admin
-# actions
+from polymorphic.admin import PolymorphicChildModelAdmin, PolymorphicParentModelAdmin
 from reversion.admin import VersionAdmin
 
 from . import models
@@ -63,13 +63,23 @@ class EventAttachmentInline(admin.TabularInline):
 class EventHoursInline(admin.TabularInline):
     model = models.Hours
 
+class ServiceInstanceInline(admin.TabularInline):
+    model = models.ServiceInstance
 
-class EventAdmin(VersionAdmin):
+class EventAdmin(PolymorphicChildModelAdmin, VersionAdmin):
     inlines = [EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline]
     filter_horizontal = ('crew', 'crew_chief', 'org')
     search_fields = ['event_name']
     readonly_fields = ['submitted_on']
 
+class Event2019Admin(PolymorphicChildModelAdmin, VersionAdmin):
+    inlines = [ServiceInstanceInline, EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline]
+    filter_horizontal = ('org',)
+    search_fields = ['event_name']
+    readonly_fields = ['submitted_on']
+
+class BaseEventAdmin(PolymorphicParentModelAdmin):
+    child_models = models.Event, models.Event2019
 
 fieldsets = (
     ("Submitter Information", {
@@ -136,6 +146,8 @@ admin.site.register(models.Hours)
 admin.site.register(models.Building)
 admin.site.register(models.Location, LocAdmin)
 admin.site.register(models.Event, EventAdmin)
+admin.site.register(models.Event2019, Event2019Admin)
+admin.site.register(models.BaseEvent, BaseEventAdmin)
 admin.site.register(models.CCReport)
 admin.site.register(models.Organization, OrgAdmin)
 admin.site.register(models.OrganizationTransfer, OTAdmin)

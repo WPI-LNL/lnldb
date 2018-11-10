@@ -4,10 +4,10 @@ import re
 import pytz
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-from django.core.urlresolvers import reverse
 from django.db.models import Count, F, Q, Sum, Case, When, IntegerField
 from django.http.response import HttpResponseRedirect
 from django.shortcuts import render
+from django.urls.base import reverse
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 

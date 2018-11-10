@@ -3,12 +3,12 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
-from django.contrib.auth.views import login as local_login
+from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
-from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
+from django.urls.base import reverse
 from django.views import generic
 from django_cas_ng.views import login as cas_login
 
@@ -163,13 +163,12 @@ def smart_login(request):
     use_cas = request.GET.get("force_cas", None)
 
     next_url = request.GET.get("next", reverse('home'))
-    if request.user.is_authenticated():
+    if request.user.is_authenticated:
         return HttpResponseRedirect(next_url)
     if pref_cas == "true" or use_cas == "true" or "ticket" in request.GET:
         return cas_login(request, next_url)
     else:
-        return local_login(request, template_name='registration/login.html',
-                           authentication_form=forms.LoginForm)
+        return LoginView.as_view(template_name='registration/login.html', authentication_form=forms.LoginForm)(request)
 
 
 @login_required

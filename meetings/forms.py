@@ -5,9 +5,9 @@ from crispy_forms.bootstrap import FormActions, Tab, TabHolder
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Button, Field, Layout, Submit
 from django import forms
-from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.forms.fields import SplitDateTimeField
+from django.urls.base import reverse
 from multiupload.fields import MultiFileField
 from natural_duration import NaturalDurationField
 from pagedown.widgets import PagedownWidget

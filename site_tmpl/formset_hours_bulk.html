@@ -12,7 +12,11 @@
                     <tr>
                         <th>User </th>
                         <th>Hours </th>
-                        <th>Service</th>
+                        {% if oldevent %}
+                            <th>Service</th>
+                        {% else %}
+                            <th>Category</th>
+                        {% endif %}
                         <th>Delete?</th>
                     </tr>
                 {% for form in formset %}
@@ -23,14 +27,22 @@
                         {% endfor %}
                         {% for e in form.user.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                         <td>{% for e in form.hours.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.service.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        {% if oldevent %}
+                            <td>{% for e in form.service.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        {% else %}
+                            <td>{% for e in form.category.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        {% endif %}
                         <td>{% for e in form.DELETE.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                     </tr>
                     {% endif %}
                     <tr>
                         <td>{{ form.id }}{{ form.user }}</td>
                         <td>{{ form.hours }} </td>
-                        <td>{{ form.service }}</td>
+                        {% if oldevent %}
+                            <td>{{ form.service }}</td>
+                        {% else %}
+                            <td>{{ form.category }}</td>
+                        {% endif %}
                         <td>{{ form.DELETE }} </td>
                     </tr>
                 {% endfor %}

@@ -10,8 +10,8 @@ from data.forms import FieldAccessForm, FieldAccessLevel
 
 class LoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
-        self.helper = FormHelper()
         super(LoginForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
         self.helper.add_input(Submit('submit', 'Log In Locally', css_class="btn btn-lg btn-block btn-info"))
 
 

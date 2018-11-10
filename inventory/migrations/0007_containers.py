@@ -44,6 +44,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='equipmentitem',
             name='case',
-            field=mptt.fields.TreeForeignKey(related_name='contents', blank=True, to='inventory.EquipmentItem', help_text='Case or item that contains this item', null=True),
+            field=mptt.fields.TreeForeignKey(related_name='contents', blank=True, to='inventory.EquipmentItem', help_text='Case or item that contains this item', null=True, on_delete=models.CASCADE),
         ),
     ]

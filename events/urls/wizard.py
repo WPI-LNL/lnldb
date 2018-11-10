@@ -4,6 +4,8 @@ from django.conf.urls import url
 from ..views import wizard
 from .. import forms
 
+app_name = 'lnldb'
+
 event_wizard = wizard.EventWizard.as_view(
     forms.named_event_forms,
     url_name='wizard:step',

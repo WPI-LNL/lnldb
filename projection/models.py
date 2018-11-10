@@ -21,7 +21,7 @@ PIT_CHOICES = (
 
 @python_2_unicode_compatible
 class Projectionist(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     # pit_level = models.CharField(choices=PIT_CHOICES,max_length=2,null=True,blank=True)
 
     license_number = models.CharField(max_length=10, null=True, blank=True)
@@ -85,8 +85,8 @@ class PITLevel(models.Model):
 
 
 class PitInstance(models.Model):
-    projectionist = models.ForeignKey(Projectionist, related_name="pitinstances")
-    pit_level = models.ForeignKey(PITLevel, related_name="pitinstances")
+    projectionist = models.ForeignKey(Projectionist, on_delete=models.CASCADE, related_name="pitinstances")
+    pit_level = models.ForeignKey(PITLevel, on_delete=models.PROTECT, related_name="pitinstances")
     created_on = models.DateTimeField()
     valid = models.BooleanField(default=True)
 

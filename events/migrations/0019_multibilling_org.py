@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='multibilling',
             name='org',
-            field=models.ForeignKey(to='events.Organization', related_name='multibillings', null=True),
+            field=models.ForeignKey(to='events.Organization', related_name='multibillings', null=True, on_delete=models.CASCADE),
         ),
     ]

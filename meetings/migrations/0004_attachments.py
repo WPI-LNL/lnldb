@@ -26,8 +26,8 @@ class Migration(migrations.Migration):
                                                                                    editable=False, blank=True)),
                 ('name', models.CharField(max_length=64)),
                 ('file', models.FileField(upload_to='')),
-                ('author', models.ForeignKey(editable=False, to=settings.AUTH_USER_MODEL)),
-                ('meeting', models.ForeignKey(related_name='attachments', to='meetings.Meeting')),
+                ('author', models.ForeignKey(editable=False, to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
+                ('meeting', models.ForeignKey(related_name='attachments', to='meetings.Meeting', on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ('-modified', '-created'),

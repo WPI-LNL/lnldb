@@ -18,6 +18,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='equipmentitem',
             name='item_type',
-            field=models.ForeignKey(related_name='items', to='inventory.EquipmentClass'),
+            field=models.ForeignKey(related_name='items', to='inventory.EquipmentClass', on_delete=models.CASCADE),
         ),
     ]

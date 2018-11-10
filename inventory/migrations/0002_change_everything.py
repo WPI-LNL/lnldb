@@ -23,10 +23,10 @@ class Migration(migrations.Migration):
                 ('level', models.PositiveIntegerField(editable=False, db_index=True)),
                 ('parent',
                  mptt.fields.TreeForeignKey(related_name='children', blank=True, to='inventory.EquipmentCategory',
-                                            null=True)),
+                                            null=True, on_delete=models.CASCADE)),
                 ('usual_place', models.ForeignKey(blank=True, to='events.Location',
                                                   help_text='Default place for items of this category. Inherits from parent categories.',
-                                                  null=True)),
+                                                  null=True, on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,
@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
                 ('height', models.DecimalField(help_text='Height in inches', max_digits=6, decimal_places=2)),
                 ('weight', models.DecimalField(help_text='Weight in lbs.', max_digits=6, decimal_places=2)),
                 ('wiki_text', models.TextField(help_text='How to use this item')),
-                ('category', models.ForeignKey(to='inventory.EquipmentCategory')),
+                ('category', models.ForeignKey(to='inventory.EquipmentCategory', on_delete=models.CASCADE)),
             ],
             options={
                 'permissions': (('edit_equipment_wiki', 'Edit the wiki of an equipment'),
@@ -64,9 +64,9 @@ class Migration(migrations.Migration):
                 ('purchase_date', models.DateField(auto_now_add=True)),
                 ('features', models.CharField(max_length=128, null=True, blank=True)),
                 ('case',
-                 models.ForeignKey(related_name='contents', blank=True, to='inventory.EquipmentItem', null=True)),
-                ('home', models.ForeignKey(blank=True, to='events.Location', null=True)),
-                ('item_type', models.ForeignKey(to='inventory.EquipmentClass')),
+                 models.ForeignKey(related_name='contents', blank=True, to='inventory.EquipmentItem', null=True, on_delete=models.CASCADE)),
+                ('home', models.ForeignKey(blank=True, to='events.Location', null=True, on_delete=models.CASCADE)),
+                ('item_type', models.ForeignKey(to='inventory.EquipmentClass', on_delete=models.CASCADE)),
             ],
         ),
         migrations.RenameModel(
@@ -112,7 +112,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='equipmentmaintentry',
             name='equipment',
-            field=models.ForeignKey(related_name='maintenance', to='inventory.EquipmentItem'),
+            field=models.ForeignKey(related_name='maintenance', to='inventory.EquipmentItem', on_delete=models.CASCADE),
         ),
         migrations.DeleteModel(
             name='Category',

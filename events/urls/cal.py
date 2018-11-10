@@ -3,6 +3,8 @@ from django.conf.urls import url
 from .. import cal
 from ..views import list as list_views
 
+app_name = 'lnldb'
+
 urlpatterns = [
     url(r'^$', list_views.public_facing, name="list"),
     url(r'^feed.ics$', cal.EventFeed(), name='feed'),

@@ -4,11 +4,11 @@ from itertools import chain
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.urlresolvers import reverse
 from django.db.models.aggregates import Sum
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
+from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.functional import curry
 
@@ -132,7 +132,7 @@ def myevents(request):
     """ List Events That Have been CC'd / involved """
     context = {'user': request.user, 'now': datetime.datetime.now(timezone.get_current_timezone()),
                'ccinstances': request.user.ccinstances.select_related('event__location').all(),
-               'orgs': request.user.all_orgs.prefetch_related('event_set__location'),
+               'orgs': request.user.all_orgs.prefetch_related('events__location'),
                'submitted_events': request.user.submitter.select_related('location').all(),
                'hours': request.user.hours.select_related('event__location').all()}
 

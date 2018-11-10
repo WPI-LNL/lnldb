@@ -61,7 +61,7 @@
       [
         "add_event_report",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "change_ccreport",
@@ -74,144 +74,134 @@
         "ccreport"
       ],
       [
-        "add_event",
-        "events",
-        "event"
-      ],
-      [
         "add_raw_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "adjust_event_charges",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "adjust_event_owner",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "approve_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "bill_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "can_chief_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "cancel_event",
         "events",
-        "event"
-      ],
-      [
-        "change_event",
-        "events",
-        "event"
+        "baseevent"
       ],
       [
         "close_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "decline_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "edit_event_flags",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "edit_event_fund",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "edit_event_hours",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "edit_event_text",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "edit_event_times",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "event_attachments",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "event_images",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "event_view_debug",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "event_view_granular",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "event_view_sensitive",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "reopen_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "review_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "view_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "view_event_billing",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "view_event_reports",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "view_hidden_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "view_test_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "add_extra",
@@ -559,7 +549,7 @@
       [
         "view_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "list_org_events",
@@ -612,22 +602,22 @@
       [
         "can_chief_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "event_images",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "view_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "view_event_reports",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "list_org_events",
@@ -715,17 +705,17 @@
       [
         "can_chief_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "view_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "view_event_reports",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "list_org_events",
@@ -788,17 +778,17 @@
       [
         "event_images",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "view_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "view_event_reports",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "list_org_events",
@@ -846,7 +836,7 @@
       [
         "view_event",
         "events",
-        "event"
+        "baseevent"
       ],
       [
         "list_org_events",

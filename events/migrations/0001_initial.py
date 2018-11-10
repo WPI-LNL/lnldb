@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
                 ('report', models.TextField()),
                 ('created_on', models.DateTimeField(auto_now_add=True)),
                 ('updated_on', models.DateTimeField(auto_now=True)),
-                ('crew_chief', models.ForeignKey(to=settings.AUTH_USER_MODEL)),
+                ('crew_chief', models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
             ],
         ),
         migrations.CreateModel(
@@ -88,7 +88,7 @@ class Migration(migrations.Migration):
                 ('sensitive', models.BooleanField(default=False)),
                 ('test_event', models.BooleanField(default=False)),
                 ('approved_by',
-                 models.ForeignKey(related_name='eventapprovals', blank=True, to=settings.AUTH_USER_MODEL, null=True)),
+                 models.ForeignKey(related_name='eventapprovals', blank=True, to=settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE)),
             ],
             options={
                 'permissions': (('view_event', "Show an event that isn't hidden or all events"),
@@ -121,7 +121,7 @@ class Migration(migrations.Migration):
                 ('key_name', models.CharField(max_length=64)),
                 ('key_value', models.DecimalField(max_digits=8, decimal_places=2)),
                 ('key_quantity', models.PositiveSmallIntegerField(default=1)),
-                ('event', models.ForeignKey(related_name='arbitraryfees', to='events.Event')),
+                ('event', models.ForeignKey(related_name='arbitraryfees', to='events.Event', on_delete=models.CASCADE)),
             ],
         ),
         migrations.CreateModel(
@@ -131,7 +131,7 @@ class Migration(migrations.Migration):
                 ('attachment', models.FileField(upload_to=events.models.attachment_file_name)),
                 ('note', models.TextField(default='', null=True, blank=True)),
                 ('externally_uploaded', models.BooleanField(default=False)),
-                ('event', models.ForeignKey(related_name='attachments', to='events.Event')),
+                ('event', models.ForeignKey(related_name='attachments', to='events.Event', on_delete=models.CASCADE)),
             ],
         ),
         migrations.CreateModel(
@@ -139,8 +139,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('setup_start', models.DateTimeField(null=True, blank=True)),
-                ('crew_chief', models.ForeignKey(related_name='ccinstances', to=settings.AUTH_USER_MODEL)),
-                ('event', models.ForeignKey(related_name='ccinstances', to='events.Event')),
+                ('crew_chief', models.ForeignKey(related_name='ccinstances', to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
+                ('event', models.ForeignKey(related_name='ccinstances', to='events.Event', on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ('-event__datetime_start',),
@@ -156,7 +156,7 @@ class Migration(migrations.Migration):
                 ('disappear', models.BooleanField(default=False, help_text='Disappear this extra instead of disable')),
                 ('checkbox',
                  models.BooleanField(default=False, help_text='Use a checkbox instead of an integer entry')),
-                ('category', models.ForeignKey(to='events.Category')),
+                ('category', models.ForeignKey(to='events.Category', on_delete=models.CASCADE)),
             ],
         ),
         migrations.CreateModel(
@@ -164,8 +164,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('quant', models.PositiveIntegerField()),
-                ('event', models.ForeignKey(to='events.Event')),
-                ('extra', models.ForeignKey(to='events.Extra')),
+                ('event', models.ForeignKey(to='events.Event', on_delete=models.CASCADE)),
+                ('extra', models.ForeignKey(to='events.Extra', on_delete=models.CASCADE)),
             ],
         ),
         migrations.CreateModel(
@@ -186,7 +186,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('hours', models.DecimalField(null=True, max_digits=7, decimal_places=2, blank=True)),
-                ('event', models.ForeignKey(related_name='hours', to='events.Event')),
+                ('event', models.ForeignKey(related_name='hours', to='events.Event', on_delete=models.CASCADE)),
             ],
         ),
         migrations.CreateModel(
@@ -197,7 +197,7 @@ class Migration(migrations.Migration):
                 ('setup_only', models.BooleanField(default=False)),
                 ('show_in_wo_form', models.BooleanField(default=True, verbose_name='Event Location')),
                 ('available_for_meetings', models.BooleanField(default=False)),
-                ('building', models.ForeignKey(to='events.Building')),
+                ('building', models.ForeignKey(to='events.Building', on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ['building', 'name'],
@@ -225,7 +225,7 @@ class Migration(migrations.Migration):
                  models.ManyToManyField(related_name='associated_orgs_rel_+', verbose_name='Associated Clients',
                                         to='events.Organization', blank=True)),
                 ('associated_users', models.ManyToManyField(related_name='orgusers', to=settings.AUTH_USER_MODEL)),
-                ('user_in_charge', models.ForeignKey(related_name='orgowner', to=settings.AUTH_USER_MODEL)),
+                ('user_in_charge', models.ForeignKey(related_name='orgowner', to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ['name'],
@@ -242,9 +242,9 @@ class Migration(migrations.Migration):
                 ('completed_on', models.DateTimeField(null=True, blank=True)),
                 ('expiry', models.DateTimeField(null=True, blank=True)),
                 ('completed', models.BooleanField(default=False)),
-                ('new_user_in_charge', models.ForeignKey(related_name='xfer_new', to=settings.AUTH_USER_MODEL)),
-                ('old_user_in_charge', models.ForeignKey(related_name='xfer_old', to=settings.AUTH_USER_MODEL)),
-                ('org', models.ForeignKey(to='events.Organization')),
+                ('new_user_in_charge', models.ForeignKey(related_name='xfer_new', to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
+                ('old_user_in_charge', models.ForeignKey(related_name='xfer_old', to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
+                ('org', models.ForeignKey(to='events.Organization', on_delete=models.CASCADE)),
             ],
         ),
         migrations.CreateModel(
@@ -253,8 +253,8 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('date', models.DateField()),
                 ('note', models.TextField(null=True, blank=True)),
-                ('org', models.ForeignKey(related_name='verifications', to='events.Organization')),
-                ('verified_by', models.ForeignKey(related_name='verification_events', to=settings.AUTH_USER_MODEL)),
+                ('org', models.ForeignKey(related_name='verifications', to='events.Organization', on_delete=models.CASCADE)),
+                ('verified_by', models.ForeignKey(related_name='verification_events', to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ['-date', '-id'],
@@ -266,8 +266,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('sent', models.DateTimeField(auto_now_add=True)),
-                ('crew_chief', models.ForeignKey(related_name='ccreportreminders', to=settings.AUTH_USER_MODEL)),
-                ('event', models.ForeignKey(related_name='ccreportreminders', to='events.Event')),
+                ('crew_chief', models.ForeignKey(related_name='ccreportreminders', to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
+                ('event', models.ForeignKey(related_name='ccreportreminders', to='events.Event', on_delete=models.CASCADE)),
             ],
         ),
         migrations.CreateModel(
@@ -286,7 +286,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('service_ptr',
                  models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False,
-                                      to='events.Service')),
+                                      to='events.Service', on_delete=models.CASCADE)),
             ],
             bases=('events.service',),
         ),
@@ -295,7 +295,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('service_ptr',
                  models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False,
-                                      to='events.Service')),
+                                      to='events.Service', on_delete=models.CASCADE)),
             ],
             bases=('events.service',),
         ),
@@ -304,24 +304,24 @@ class Migration(migrations.Migration):
             fields=[
                 ('service_ptr',
                  models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False,
-                                      to='events.Service')),
+                                      to='events.Service', on_delete=models.CASCADE)),
             ],
             bases=('events.service',),
         ),
         migrations.AddField(
             model_name='service',
             name='category',
-            field=models.ForeignKey(to='events.Category'),
+            field=models.ForeignKey(to='events.Category', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='hours',
             name='service',
-            field=models.ForeignKey(related_name='hours', blank=True, to='events.Service', null=True),
+            field=models.ForeignKey(related_name='hours', blank=True, to='events.Service', null=True, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='hours',
             name='user',
-            field=models.ForeignKey(related_name='hours', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(related_name='hours', to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='extra',
@@ -331,12 +331,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='eventccinstance',
             name='service',
-            field=models.ForeignKey(related_name='ccinstances', to='events.Service'),
+            field=models.ForeignKey(related_name='ccinstances', to='events.Service', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='eventccinstance',
             name='setup_location',
-            field=models.ForeignKey(related_name='ccinstances', to='events.Location'),
+            field=models.ForeignKey(related_name='ccinstances', to='events.Location', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='eventattachment',
@@ -352,23 +352,23 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='billing_org',
-            field=models.ForeignKey(related_name='billedevents', blank=True, to='events.Organization', null=True),
+            field=models.ForeignKey(related_name='billedevents', blank=True, to='events.Organization', null=True, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='event',
             name='cancelled_by',
             field=models.ForeignKey(related_name='eventcancellations', blank=True, to=settings.AUTH_USER_MODEL,
-                                    null=True),
+                                    null=True, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='event',
             name='closed_by',
-            field=models.ForeignKey(related_name='eventclosings', blank=True, to=settings.AUTH_USER_MODEL, null=True),
+            field=models.ForeignKey(related_name='eventclosings', blank=True, to=settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='event',
             name='contact',
-            field=models.ForeignKey(verbose_name='Contact', blank=True, to=settings.AUTH_USER_MODEL, null=True),
+            field=models.ForeignKey(verbose_name='Contact', blank=True, to=settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='event',
@@ -383,7 +383,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='location',
-            field=models.ForeignKey(to='events.Location'),
+            field=models.ForeignKey(to='events.Location', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='event',
@@ -399,22 +399,22 @@ class Migration(migrations.Migration):
             model_name='event',
             name='reviewed_by',
             field=models.ForeignKey(related_name='eventbillingreview', blank=True, to=settings.AUTH_USER_MODEL,
-                                    null=True),
+                                    null=True, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='event',
             name='setup_location',
-            field=models.ForeignKey(related_name='setuplocation', blank=True, to='events.Location', null=True),
+            field=models.ForeignKey(related_name='setuplocation', blank=True, to='events.Location', null=True, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='event',
             name='submitted_by',
-            field=models.ForeignKey(related_name='submitter', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(related_name='submitter', to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='ccreport',
             name='event',
-            field=models.ForeignKey(to='events.Event'),
+            field=models.ForeignKey(to='events.Event', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='ccreport',
@@ -424,7 +424,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='billing',
             name='event',
-            field=models.ForeignKey(related_name='billings', to='events.Event'),
+            field=models.ForeignKey(related_name='billings', to='events.Event', on_delete=models.CASCADE),
         ),
         migrations.AlterUniqueTogether(
             name='hours',
@@ -433,16 +433,16 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='lighting',
-            field=models.ForeignKey(related_name='lighting', blank=True, to='events.Lighting', null=True),
+            field=models.ForeignKey(related_name='lighting', blank=True, to='events.Lighting', null=True, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='event',
             name='projection',
-            field=models.ForeignKey(related_name='projection', blank=True, to='events.Projection', null=True),
+            field=models.ForeignKey(related_name='projection', blank=True, to='events.Projection', null=True, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='event',
             name='sound',
-            field=models.ForeignKey(related_name='sound', blank=True, to='events.Sound', null=True),
+            field=models.ForeignKey(related_name='sound', blank=True, to='events.Sound', null=True, on_delete=models.CASCADE),
         ),
     ]

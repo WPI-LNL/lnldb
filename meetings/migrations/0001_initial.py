@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('datetime', models.DateTimeField()),
                 ('attendance', models.ManyToManyField(to=settings.AUTH_USER_MODEL, blank=True)),
-                ('location', models.ForeignKey(blank=True, to='events.Location', null=True)),
+                ('location', models.ForeignKey(blank=True, to='events.Location', null=True, on_delete=models.CASCADE)),
             ],
             options={
                 'ordering': ('-datetime',),
@@ -72,7 +72,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='meetingannounce',
             name='email_to',
-            field=models.ForeignKey(to='meetings.TargetEmailList'),
+            field=models.ForeignKey(to='meetings.TargetEmailList', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='meetingannounce',
@@ -82,17 +82,17 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='meetingannounce',
             name='meeting',
-            field=models.ForeignKey(to='meetings.Meeting'),
+            field=models.ForeignKey(to='meetings.Meeting', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='meeting',
             name='meeting_type',
-            field=models.ForeignKey(default=1, to='meetings.MeetingType'),
+            field=models.ForeignKey(default=1, to='meetings.MeetingType', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='ccnoticesend',
             name='email_to',
-            field=models.ForeignKey(default=meetings.models.get_default_email, to='meetings.TargetEmailList'),
+            field=models.ForeignKey(default=meetings.models.get_default_email, to='meetings.TargetEmailList', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='ccnoticesend',
@@ -102,11 +102,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='ccnoticesend',
             name='meeting',
-            field=models.ForeignKey(related_name='meetingccnotices', to='meetings.Meeting'),
+            field=models.ForeignKey(related_name='meetingccnotices', to='meetings.Meeting', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='announcesend',
             name='announce',
-            field=models.ForeignKey(to='meetings.MeetingAnnounce'),
+            field=models.ForeignKey(to='meetings.MeetingAnnounce', on_delete=models.CASCADE),
         ),
     ]

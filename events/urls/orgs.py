@@ -3,6 +3,8 @@ from django.views.generic import RedirectView
 
 from .. import views
 
+app_name = 'lnldb'
+
 urlpatterns = [
     url(r'^$', views.orgs.vieworgs, name="list"),
     url(r'^add/$', views.orgs.addeditorgs, name="add"),

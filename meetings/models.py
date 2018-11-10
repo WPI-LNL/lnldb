@@ -2,13 +2,13 @@ import uuid
 from datetime import timedelta
 
 from django.conf import settings
-from django.core.urlresolvers import reverse
 from django.db import models
+from django.urls.base import reverse
 from django.utils.encoding import python_2_unicode_compatible
 
 from django_extensions.db.models import TimeStampedModel
 
-from events.models import Event
+from events.models import BaseEvent
 
 
 def get_default_email():
@@ -40,8 +40,8 @@ class Meeting(models.Model):
     datetime = models.DateTimeField(verbose_name="Start Time")
     duration = models.DurationField(default=timedelta(hours=1), null=False, blank=False)
     attendance = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True)
-    meeting_type = models.ForeignKey('MeetingType', default=1)
-    location = models.ForeignKey('events.Location', null=True, blank=True)
+    meeting_type = models.ForeignKey('MeetingType', on_delete=models.PROTECT, default=1)
+    location = models.ForeignKey('events.Location', on_delete=models.PROTECT, null=True, blank=True)
     agenda = models.TextField(null=True, blank=True)
     minutes = models.TextField(null=True, blank=True)
     minutes_private = models.TextField(verbose_name="Closed Minutes", null=True, blank=True)
@@ -103,17 +103,17 @@ class MtgAttachment(TimeStampedModel):
     glyphicon = 'paperclip'
     name = models.CharField(max_length=64, null=False, blank=False)
     file = models.FileField(upload_to=mtg_attachment_file_name, blank=False, null=False)
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, editable=False, null=False)
-    meeting = models.ForeignKey(Meeting, related_name='attachments', null=True)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, editable=False, null=False)
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name='attachments', null=True)
     private = models.BooleanField(default=False)
 
 
 class MeetingAnnounce(models.Model):
-    meeting = models.ForeignKey(Meeting)
-    events = models.ManyToManyField(Event, related_name="meetingannouncements", blank=True)
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE)
+    events = models.ManyToManyField(BaseEvent, related_name="meetingannouncements", blank=True)
     subject = models.CharField(max_length=128)
     message = models.TextField()
-    email_to = models.ForeignKey('TargetEmailList')
+    email_to = models.ForeignKey('TargetEmailList', on_delete=models.PROTECT)
 
     added = models.DateTimeField(auto_now_add=True)
     uuid = models.UUIDField(editable=False, default=uuid.uuid4, blank=True)
@@ -133,7 +133,7 @@ class TargetEmailList(models.Model):
 
 
 class AnnounceSend(models.Model):
-    announce = models.ForeignKey(MeetingAnnounce)
+    announce = models.ForeignKey(MeetingAnnounce, on_delete=models.CASCADE)
     sent_at = models.DateTimeField(auto_now_add=True)
     sent_success = models.BooleanField(default=False)
 
@@ -147,13 +147,13 @@ class MeetingType(models.Model):
 
 
 class CCNoticeSend(models.Model):
-    meeting = models.ForeignKey(Meeting, related_name="meetingccnotices")
-    events = models.ManyToManyField(Event, related_name="meetingccnoticeevents", blank=True)
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name="meetingccnotices")
+    events = models.ManyToManyField(BaseEvent, related_name="meetingccnoticeevents", blank=True)
     sent_at = models.DateTimeField(auto_now_add=True)
     sent_success = models.BooleanField(default=False)
     uuid = models.UUIDField(editable=False, default=uuid.uuid4, blank=True)
 
-    email_to = models.ForeignKey('TargetEmailList', default=get_default_email)
+    email_to = models.ForeignKey('TargetEmailList', on_delete=models.PROTECT, default=get_default_email)
 
     addtl_message = models.TextField(null=True, blank=True, verbose_name="Additional Message")
 

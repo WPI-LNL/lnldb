@@ -1,5 +1,5 @@
-from django.core.urlresolvers import reverse
 from django.template.defaultfilters import register
+from django.urls.base import reverse
 from django.utils.html import conditional_escape, format_html
 from django.utils.safestring import mark_safe
 

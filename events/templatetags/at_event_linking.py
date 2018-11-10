@@ -3,8 +3,8 @@
 import re
 
 from django import template
-from django.core.urlresolvers import reverse
 from django.template.defaultfilters import stringfilter
+from django.urls.base import reverse
 
 from events.models import Event
 

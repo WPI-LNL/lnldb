@@ -34,17 +34,17 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('license_number', models.CharField(max_length=10, null=True, blank=True)),
                 ('license_expiry', models.DateField(null=True, blank=True)),
-                ('user', models.OneToOneField(to=settings.AUTH_USER_MODEL)),
+                ('user', models.OneToOneField(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
             ],
         ),
         migrations.AddField(
             model_name='pitinstance',
             name='pit_level',
-            field=models.ForeignKey(related_name='pitinstances', to='projection.PITLevel'),
+            field=models.ForeignKey(related_name='pitinstances', to='projection.PITLevel', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='pitinstance',
             name='projectionist',
-            field=models.ForeignKey(related_name='pitinstances', to='projection.Projectionist'),
+            field=models.ForeignKey(related_name='pitinstances', to='projection.Projectionist', on_delete=models.CASCADE),
         ),
     ]

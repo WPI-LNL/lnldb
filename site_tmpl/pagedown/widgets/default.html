@@ -1,6 +1,6 @@
 <div class="wmd-wrapper container-fluid" id="{{ id }}-wmd-wrapper">
     <div class="row">
-        <div class="col-md-6">
+        <div class="{% if show_preview %}col-md-6{% else %}col-md-12{% endif %}">
             <div id="{{ id|safe }}_wmd_button_bar"></div>
             <textarea{{ attrs|safe }}>{{ body }}</textarea>
         </div>
@@ -13,76 +13,78 @@
         {% endif %}
     </div>
 </div>
-<!-- mdModal -->
-<div id="mdModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="mdModalLabel"
-     aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                <h3 id="mdModalLabel">Markdown Help</h3>
-            </div>
-            <div class="modal-body">
-                <p>LNL uses <a href="http://daringfireball.net/projects/markdown/basics">Markdown</a> for rich text.
-                    This lets you write content that
-                    looks good regardess of formatting, and is used by Reddit, Github, StackOverflow,
-                    and many others.</p>
-                <h4>But how?</h4>
-                <table border="1">
-                    <tbody>
-                    <tr style="background-color: #ffff99; text-align: center">
-                        <td><em>you type:</em></td>
-                        <td><em>you see:</em></td>
-                    </tr>
-                    <tr>
-                        <td># Heading<br>## Subheading</td>
-                        <td><h1>Heading</h1>
+{% if show_preview %}
+    <!-- mdModal -->
+    <div id="mdModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="mdModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h3 id="mdModalLabel">Markdown Help</h3>
+                </div>
+                <div class="modal-body">
+                    <p>LNL uses <a href="http://daringfireball.net/projects/markdown/basics">Markdown</a> for rich text.
+                        This lets you write content that
+                        looks good regardess of formatting, and is used by Reddit, Github, StackOverflow,
+                        and many others.</p>
+                    <h4>But how?</h4>
+                    <table border="1">
+                        <tbody>
+                        <tr style="background-color: #ffff99; text-align: center">
+                            <td><em>you type:</em></td>
+                            <td><em>you see:</em></td>
+                        </tr>
+                        <tr>
+                            <td># Heading<br>## Subheading</td>
+                            <td><h1>Heading</h1>
 
-                            <h2>Subheading</h2>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>First line<br><br>Second line</td>
-                        <td>First line<br>Second line</td>
-                    </tr>
-                    <tr>
-                        <td>*italics*</td>
-                        <td><em>italics</em></td>
-                    </tr>
-                    <tr>
-                        <td>**bold**</td>
-                        <td><b>bold</b></td>
-                    </tr>
-                    <tr>
-                        <td>[This guide came from here!](http://reddit.com)</td>
-                        <td><a href="http://reddit.com">This guide came from here!</a></td>
-                    </tr>
-                    <tr>
-                        <td>* item 1<br>* item 2</td>
-                        <td>
-                            <ul>
-                                <li>item 1</li>
-                                <li>item 2</li>
-                            </ul>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>&gt; quoted text</td>
-                        <td>
-                            <blockquote>quoted text</blockquote>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>~~strikethrough~~</td>
-                        <td><strike>strikethrough</strike></td>
-                    </tr>
-                    <tr>
-                        <td>super^script</td>
-                        <td>super<sup>script</sup></td>
-                    </tr>
-                    </tbody>
-                </table>
+                                <h2>Subheading</h2>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>First line<br><br>Second line</td>
+                            <td>First line<br>Second line</td>
+                        </tr>
+                        <tr>
+                            <td>*italics*</td>
+                            <td><em>italics</em></td>
+                        </tr>
+                        <tr>
+                            <td>**bold**</td>
+                            <td><b>bold</b></td>
+                        </tr>
+                        <tr>
+                            <td>[This guide came from here!](http://reddit.com)</td>
+                            <td><a href="http://reddit.com">This guide came from here!</a></td>
+                        </tr>
+                        <tr>
+                            <td>* item 1<br>* item 2</td>
+                            <td>
+                                <ul>
+                                    <li>item 1</li>
+                                    <li>item 2</li>
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>&gt; quoted text</td>
+                            <td>
+                                <blockquote>quoted text</blockquote>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>~~strikethrough~~</td>
+                            <td><strike>strikethrough</strike></td>
+                        </tr>
+                        <tr>
+                            <td>super^script</td>
+                            <td>super<sup>script</sup></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-</div>
+{% endif %}

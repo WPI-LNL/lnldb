@@ -12,7 +12,11 @@
                     <tr>
                         <th>Setup Location </th>
                         <th>Setup Time </th>
-                        <th>Service</th>
+                        {% if oldevent %}
+                            <th>Service</th>
+                        {% else %}
+                            <th>Category</th>
+                        {% endif %}
                         <th>Crew Chief</th>
                         <th>Delete?</th>
                     </tr>
@@ -21,7 +25,11 @@
                     <tr class="warning">
                         <td>{% for e in form.setup_location.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                         <td>{% for e in form.setup_start.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.service.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        {% if oldevent %}
+                            <td>{% for e in form.service.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        {% else %}
+                            <td>{% for e in form.category.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        {% endif %}
                         <td>{% for e in form.crew_chief.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                         <td>{% for e in form.DELETE.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                     </tr>
@@ -29,7 +37,11 @@
                     <tr>
                         <td>{{ form.id }}{{ form.setup_location }} </td>
                         <td class="dtptable">{{ form.setup_start }} </td>
-                        <td>{{ form.service }}</td>
+                        {% if oldevent %}
+                            <td>{{ form.service }}</td>
+                        {% else %}
+                            <td>{{ form.category }}</td>
+                        {% endif %}
                         <td>{{ form.crew_chief }} </td>
                         <td>{{ form.DELETE }} </td>
                     </tr>
