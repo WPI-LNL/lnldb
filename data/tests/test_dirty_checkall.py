@@ -41,7 +41,7 @@ class UrlsTest(test.TestCase):
             self.user.user_permissions.add(perm)
 
     @override_settings(TEMPLATE_STRING_IF_INVALID='TEMPLATE_WARNING [%s]')
-    def test_responses(self, allowed_http_codes=[200, 302, 403],
+    def test_responses(self, allowed_http_codes=[200, 302, 403, 405],
                        credentials=None, logout_url="", default_kwargs={}, quiet=True):
         """
         Test all pattern in root urlconf and included ones.

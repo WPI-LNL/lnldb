@@ -429,7 +429,6 @@ class BaseEvent(PolymorphicModel):
         ordering = ['-datetime_start']
 
 
-@python_2_unicode_compatible
 class Event(BaseEvent):
     """
         An Event, What everything ends up pointing to
@@ -734,7 +733,6 @@ class Event(BaseEvent):
         verbose_name = '2012 Event'
 
 
-@python_2_unicode_compatible
 class Event2019(BaseEvent):
     """
         New events under the 2019 pricelist

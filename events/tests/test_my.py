@@ -9,8 +9,7 @@ from .generators import EventFactory, OrgFactory, UserFactory
 
 class MyViewTest(TestCase):
     def setUp(self):
-        # self.e = EventFactory.create(event_name="Test Event")
-        self.e = mommy.make(Event, event_name="foobar", _fill_optional=True)
+        self.e = EventFactory.create(event_name="Test Event")
         self.e2 = EventFactory.create(event_name="Other Test Event")
         self.user = UserFactory.create(password='123')
         self.org = OrgFactory.create(user_in_charge=self.user)
