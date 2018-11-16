@@ -19,6 +19,10 @@ from watson import search as watson
 from events import models as events_models
 
 
+def maintenance(request):
+    return render(request, 'maintenance.html')
+
+
 @login_required
 # TODO: adjust for perm test
 def search(request):
