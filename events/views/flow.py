@@ -867,7 +867,7 @@ class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Crea
         event = self.billing.event
         to = list(i.email_to_users.values_list('email', flat=True))
         to.extend(list(i.email_to_orgs.values_list('exec_email', flat=True)))
-        pdf_handle = generate_event_bill_pdf_standalone(event, self.request.user)
+        pdf_handle = generate_event_bill_pdf_standalone(event, self.request.user, request=self.request)
         filename = "%s-bill.pdf" % slugify(event.event_name)
         attachments = [{"file_handle": pdf_handle, "name": filename}]
         email = EventEmailGenerator(event=event, subject=i.subject, body=i.message, to_emails=to,
@@ -906,7 +906,7 @@ class MultiBillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin,
         i = form.instance
         to = list(i.email_to_users.values_list('email', flat=True))
         to.extend(list(i.email_to_orgs.values_list('exec_email', flat=True)))
-        pdf_handle = generate_multibill_pdf_standalone(self.multibilling, self.request.user)
+        pdf_handle = generate_multibill_pdf_standalone(self.multibilling, self.request.user, request=self.request)
         filename = "bill.pdf"
         attachments = [{"file_handle": pdf_handle, "name": filename}]
         email = DLEG(subject=i.subject, body=i.message, to_emails=to, reply_to=[settings.EMAIL_TARGET_T],
