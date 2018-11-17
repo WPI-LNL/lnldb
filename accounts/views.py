@@ -241,7 +241,7 @@ def shame(request):
         .annotate(did_ccreport_count=Count(Case(When(ccinstances__event__ccreport__crew_chief=F('pk'), then=F('ccinstances'))), distinct=True)) \
         .annotate(failed_to_do_ccreport_count=(F('ccinstances__count') - F('did_ccreport_count'))) \
         .annotate(failed_to_do_ccreport_percent=(F('failed_to_do_ccreport_count') * 100 / F('ccinstances__count'))) \
-        .order_by('-failed_to_do_ccreport_count', '-failed_to_do_ccreport_percent')[:5]
+        .order_by('-failed_to_do_ccreport_count', '-failed_to_do_ccreport_percent')[:10]
 
     context['worst_cc_report_forgetters'] = worst_cc_report_forgetters
 
