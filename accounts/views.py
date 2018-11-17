@@ -215,8 +215,8 @@ def secretary_dashboard(request):
 
     context = {}
     num_active = get_user_model().objects.filter(groups__name='Active').count()
-    simple_majority = math.ceil(num_active / 2.0)
-    two_thirds_majority = math.ceil(num_active * 2 / 3.0)
+    simple_majority = int(math.ceil(num_active / 2.0))
+    two_thirds_majority = int(math.ceil(num_active * 2 / 3.0))
     members_to_activate = get_user_model().objects.filter(groups__name='Associate') \
         .annotate(hours_count=Count(Case(When(hours__event__datetime_start__gte=semester_ago, then=F('hours'))), distinct=True)).filter(hours_count__gte=5) \
         .annotate(meeting_count=Count(Case(When(meeting__datetime__gte=semester_ago, then=F('meeting'))), distinct=True)).filter(meeting_count__gte=3)
@@ -241,7 +241,7 @@ def shame(request):
         .annotate(did_ccreport_count=Count(Case(When(ccinstances__event__ccreport__crew_chief=F('pk'), then=F('ccinstances'))), distinct=True)) \
         .annotate(failed_to_do_ccreport_count=(F('ccinstances__count') - F('did_ccreport_count'))) \
         .annotate(failed_to_do_ccreport_percent=(F('failed_to_do_ccreport_count') * 100 / F('ccinstances__count'))) \
-        .order_by('-failed_to_do_ccreport_count', '-failed_to_do_ccreport_percent')[:5]
+        .order_by('-failed_to_do_ccreport_count', '-failed_to_do_ccreport_percent')[:10]
 
     context['worst_cc_report_forgetters'] = worst_cc_report_forgetters
 
