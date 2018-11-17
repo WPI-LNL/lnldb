@@ -1,19 +1,41 @@
 {% extends 'base_admin.html' %}
+{% load permissionif %}
 {% block content %}
-<h2> {{ h2 }} </h2>
-    <p>Motorola XTS/APX users can <a href="{% url "accounts:mdc_raw" %}">import the list directly</a></p>
-<table class="table table-striped table-bordered" style="width:30%;">
-    <tr> 
-        <th> Full Name </th>
-        <th> Ugly Name </th>
-        <th> MDC </th>
-    </tr>
-    {% for user in users %}
+<div class="row">
+    <div class="col-sm-6 col-md-4">
+        <h2> {{ h2 }} </h2>
+            <p>Motorola XTS/APX users can <a href="{% url "accounts:mdc_raw" %}">import the list directly</a></p>
+        <table class="table table-striped table-bordered">
             <tr>
-                <td><a href="{% url 'accounts:detail' user.pk %}">{{ user }}</a></td>
-                <td>{{ user.mdc_name }}</td>
-                <td>{{ user.mdc }}</td>
+                <th> Full Name </th>
+                <th> Ugly Name </th>
+                <th> MDC </th>
             </tr>
-    {% endfor %}
-</table>
+            {% for user in users %}
+                    <tr>
+                        <td><a href="{% url 'accounts:detail' user.pk %}">{{ user }}</a></td>
+                        <td>{{ user.mdc_name }}</td>
+                        <td>{{ user.mdc }}</td>
+                    </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% permission request.user has 'accounts.edit_mdc' %}
+        <div class="col-sm-6 col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Members missing MDCs</h3>
+                    <p>Only people with permission to edit MDCs can see this.</p>
+                </div>
+                <div class="panel-body">
+                    <ul>
+                        {% for user in members_without_mdc %}
+                            <li><a href="{% url 'accounts:detail' user.pk %}">{{ user }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    {% endpermission %}
+</div>
 {% endblock %}

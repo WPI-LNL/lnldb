@@ -176,10 +176,13 @@ def smart_login(request):
 @permission_required('accounts.view_member', raise_exception=True)
 def mdc(request):
     context = {}
-    users = get_user_model().objects.exclude(mdc__isnull=True) \
-        .exclude(mdc='').order_by('last_name')
+    users_with_mdc = get_user_model().objects.exclude(mdc__isnull=True) \
+        .exclude(mdc='').order_by('last_name', 'first_name', 'mdc')
+    members_without_mdc = get_user_model().objects.exclude(mdc__isnull=False) \
+        .filter(groups__name__in=['Officer', 'Active', 'Away'])
 
-    context['users'] = users
+    context['users'] = users_with_mdc
+    context['members_without_mdc'] = members_without_mdc
     context['h2'] = "Member MDC List"
 
     return render(request, 'users_mdc.html', context)
