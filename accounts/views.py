@@ -215,8 +215,8 @@ def secretary_dashboard(request):
 
     context = {}
     num_active = get_user_model().objects.filter(groups__name='Active').count()
-    simple_majority = math.ceil(num_active / 2.0)
-    two_thirds_majority = math.ceil(num_active * 2 / 3.0)
+    simple_majority = int(math.ceil(num_active / 2.0))
+    two_thirds_majority = int(math.ceil(num_active * 2 / 3.0))
     members_to_activate = get_user_model().objects.filter(groups__name='Associate') \
         .annotate(hours_count=Count(Case(When(hours__event__datetime_start__gte=semester_ago, then=F('hours'))), distinct=True)).filter(hours_count__gte=5) \
         .annotate(meeting_count=Count(Case(When(meeting__datetime__gte=semester_ago, then=F('meeting'))), distinct=True)).filter(meeting_count__gte=3)
