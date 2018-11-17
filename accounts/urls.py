@@ -38,6 +38,8 @@ urlpatterns = [
 
     url(r'^db/members/mdc/raw/$', views.mdc_raw, name='mdc_raw'),
     url(r'^db/members/mdc/$', views.mdc, name='mdc'),
+    url(r'^db/members/secretary/$', views.secretary_dashboard, name='secretary_dashboard'),
+    url(r'^db/members/shame/$', views.shame, name='shame'),
     url(r'^db/members/(?P<pk>[0-9]+)/set_password/$', views.PasswordSetView.as_view(), name="password"),
 
     url(r'^db/members/(?P<pk>[0-9]+)/', include(each_member_pattern)),
