@@ -115,6 +115,7 @@ class User(AbstractUser):
         return outstr
 
     class Meta:
+        ordering = 'last_name', 'first_name', 'class_year'
         permissions = (
             ('change_group', 'Change the group membership of a user'),
             ('edit_mdc', 'Change the MDC of a user'),
