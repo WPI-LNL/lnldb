@@ -1,3 +1,6 @@
+from datetime import timedelta
+import math
+
 from crispy_forms.helper import FormHelper
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -6,9 +9,10 @@ from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
 from django.contrib.auth.views import login as local_login
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
-from django.db.models import Q
+from django.db.models import F, Q, Count, Case, When
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
 from django.views import generic
 from django_cas_ng.views import login as cas_login
 
@@ -201,6 +205,32 @@ def mdc_raw(request):
     response['Content-Disposition'] = 'attachment; filename="lnl_mdc.csv"'
     response['Content-Type'] = 'text/csv'
     return response
+
+
+@login_required
+@permission_required('accounts.change_group', raise_exception=True)
+def secretary_dashboard(request):
+    semester_ago = timezone.now() - timedelta(weeks=17)
+    term_ago = timezone.now() - timedelta(weeks=7)
+
+    context = {}
+    num_active = get_user_model().objects.filter(groups__name='Active').count()
+    simple_majority = math.ceil(num_active / 2.0)
+    two_thirds_majority = math.ceil(num_active * 2 / 3.0)
+    members_to_activate = get_user_model().objects.filter(groups__name='Associate') \
+        .annotate(hours_count=Count(Case(When(hours__event__datetime_start__gte=semester_ago, then=F('hours'))), distinct=True)).filter(hours_count__gte=5) \
+        .annotate(meeting_count=Count(Case(When(meeting__datetime__gte=semester_ago, then=F('meeting'))), distinct=True)).filter(meeting_count__gte=3)
+    members_to_deactivate = get_user_model().objects.filter(groups__name='Active').exclude(groups__name='Away') \
+        .annotate(hours_count=Count(Case(When(hours__event__datetime_start__gte=term_ago, then=F('hours'))), distinct=True)).filter(hours_count__lt=4) \
+        .annotate(meeting_count=Count(Case(When(meeting__datetime__gte=term_ago, meeting__meeting_type__name='General', then=F('meeting'))), distinct=True)).filter(meeting_count__lt=4)
+
+    context['num_active'] = num_active
+    context['simple_majority'] = simple_majority
+    context['two_thirds_majority'] = two_thirds_majority
+    context['members_to_activate'] = members_to_activate
+    context['members_to_deactivate'] = members_to_deactivate
+
+    return render(request, 'users_secretary_dashboard.html', context)
 
 
 class PasswordSetView(generic.FormView):
