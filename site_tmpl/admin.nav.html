@@ -109,6 +109,9 @@
                             <li><a href="{% url "accounts:add" %}">Add User</a></li>
                         {% endpermission %}
                         <li><a href="{% url "accounts:mdc" %}">MDC List</a></li>
+                        {% permission request.user has 'accounts.change_group' %}
+                            <li><a href="{% url "accounts:secretary_dashboard" %}">Secretary</a></li>
+                        {% endpermission %}
                     </ul>
                 </li>
                 {% endpermission %}
