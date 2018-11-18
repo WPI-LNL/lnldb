@@ -211,7 +211,7 @@ def mdc_raw(request):
 @permission_required('accounts.change_group', raise_exception=True)
 def secretary_dashboard(request):
     semester_ago = timezone.now() - timedelta(weeks=17)
-    term_ago = timezone.now() - timedelta(weeks=7)
+    term_ago = timezone.now() - timedelta(weeks=8)
 
     context = {}
     num_active = get_user_model().objects.filter(groups__name='Active').count()
