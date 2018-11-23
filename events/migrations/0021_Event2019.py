@@ -6,6 +6,7 @@ from django.contrib.auth.management import create_permissions
 from django.db import migrations, models
 from django.db.migrations.operations.models import Operation
 import django.db.models.deletion
+from six.moves import zip
 
 class CopyFieldsBetweenTables(Operation):
 
@@ -48,8 +49,11 @@ def fix_permissions(apps, schema_editor):
     Permission = apps.get_model('auth', 'Permission')
     BaseEvent = apps.get_model('events', 'BaseEvent')
     baseevent_ctype = ContentType.objects.get_for_model(BaseEvent)
-    for perm_name in zip(*BaseEvent._meta.permissions)[0]:
-        perm = Permission.objects.get(content_type__app_label='events', content_type__model='event', codename=perm_name)
+    for perm_name in next(zip(*BaseEvent._meta.permissions)):
+        try:
+            perm = Permission.objects.get(content_type__app_label='events', content_type__model='event', codename=perm_name)
+        except Permission.DoesNotExist:
+            continue
         perm.content_type = baseevent_ctype
         perm.save()
 
