@@ -2,6 +2,7 @@
 # 2018-10-22
 
 from django.conf import settings
+from django.contrib.auth.management import create_permissions
 from django.db import migrations, models
 from django.db.migrations.operations.models import Operation
 import django.db.models.deletion
@@ -41,6 +42,16 @@ def add_polymorphic_ctype_to_events(apps, schema_editor):
 
     new_ct = ContentType.objects.get_for_model(Event)
     BaseEvent.objects.filter(polymorphic_ctype__isnull=True).update(polymorphic_ctype=new_ct)
+
+def fix_permissions(apps, schema_editor):
+    ContentType = apps.get_model("contenttypes", "ContentType")
+    Permission = apps.get_model('auth', 'Permission')
+    BaseEvent = apps.get_model('events', 'BaseEvent')
+    baseevent_ctype = ContentType.objects.get_for_model(BaseEvent)
+    for perm_name in zip(*BaseEvent._meta.permissions)[0]:
+        perm = Permission.objects.get(content_type__app_label='events', content_type__model='event', codename=perm_name)
+        perm.content_type = baseevent_ctype
+        perm.save()
 
 class Migration(migrations.Migration):
     
@@ -540,4 +551,5 @@ class Migration(migrations.Migration):
             state_operations=state_operations
         ),
         migrations.RunPython(add_polymorphic_ctype_to_events, migrations.RunPython.noop),
+        migrations.RunPython(fix_permissions),
     ]

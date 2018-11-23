@@ -119,12 +119,12 @@ class ReportAuthorPermLogic(AssocUsersCustomPermissionLogic):
 
 
 PERMISSION_LOGICS = (
-    ('events.Event', CrewChiefPermLogic()),
-    ('events.Event', EventContactPermLogic()),
-    ('events.Event', EventCreatorPermLogic()),
-    ('events.Event', WorkedAtEventPermLogic()),
-    ('events.Event', EventOrgMemberPermLogic()),
-    ('events.Event', EventOrgOwnerPermLogic()),
+    ('events.BaseEvent', CrewChiefPermLogic()),
+    ('events.BaseEvent', EventContactPermLogic()),
+    ('events.BaseEvent', EventCreatorPermLogic()),
+    ('events.BaseEvent', WorkedAtEventPermLogic()),
+    ('events.BaseEvent', EventOrgMemberPermLogic()),
+    ('events.BaseEvent', EventOrgOwnerPermLogic()),
     ('events.Organization', OrgMemberPermLogic()),
     ('events.Organization', OrgOwnerPermLogic()),
     ('events.CCReport', ReportAuthorPermLogic()),
