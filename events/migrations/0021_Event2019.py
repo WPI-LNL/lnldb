@@ -21,15 +21,10 @@ class CopyFieldsBetweenTables(Operation):
         pass
 
     def database_forwards(self, app_label, schema_editor, from_state, to_state):
-        columns_to = ", ".join(self.columns_to)
-        columns_from = ", ".join(self.columns_from)
-        base_query = """
-            INSERT INTO %s_%s
-            (%s)
-            SELECT %s
-            FROM %s_%s;
-        """ % tuple(
-            [app_label, self.model_to_name, columns_to, columns_from, app_label, self.model_from_name]
+        columns_to = ", ".join(('`%s`' % col for col in self.columns_to))
+        columns_from = ", ".join(('`%s`' % col for col in self.columns_from))
+        base_query = 'INSERT INTO %s_%s (%s) SELECT %s FROM %s_%s;' % (
+            app_label, self.model_to_name, columns_to, columns_from, app_label, self.model_from_name
         )
         schema_editor.execute(base_query)
 
