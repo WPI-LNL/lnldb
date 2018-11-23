@@ -80,7 +80,7 @@
             <h3>Events CC'd</h3>
             <ul class="list-unstyled">
                 {% for event in ccs %}
-                    <li><a href="{% url "events:detail" event.event.id %}">{{ event.event }}</a> ({{ event.event.datetime_start }})</li>
+                    <li><a href="{% url "events:detail" event.event.id %}">{{ event.event }}</a> ({{ event.event.datetime_start|date:'N d, Y' }})</li>
                 {% endfor %}
                 {% for event in u.crewchiefx.all %}
                     <li><a href="{% url "events:detail" event.id %}">{{ event }}</a> ({{ event.datetime_start }})</li>
@@ -93,7 +93,17 @@
             <h3>Events Participated</h3>
             <ul class="list-unstyled">
                 {% for h in hours %}
-                    <li><a href="{% url "events:detail" h.event.id %}">{{ h.event }} {% if h.service %} ({{h.service.shortname  }}) {% else %} (N/A) {% endif %}:</a> {{ h.hours }}h</li>
+                    <li><a href="{% url "events:detail" h.event.id %}">{{ h.event }} {% if h.service %} ({{ h.service.shortname }}){% else %} (N/A){% endif %}</a> : {{ h.hours }}h ({{ h.event.datetime_start|date:'N d, Y' }})</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if u.meeting_set.exists %}
+        <div class="col-md-4">
+            <h3>Meetings Attended</h3>
+            <ul class="list-unstyled">
+                {% for m in u.meeting_set.all %}
+                    <li><a href="{% url "meetings:detail" m.pk %}">{{ m }}</a> ({{ m.meeting_type }})</li>
                 {% endfor %}
             </ul>
         </div>

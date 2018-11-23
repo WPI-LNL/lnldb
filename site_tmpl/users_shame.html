@@ -1,0 +1,29 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<h2>Hall of Shame</h2>
+<div class="row">
+    <div class="col-sm-6">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">Worst at doing CC reports</h3>
+            </div>
+            <table class="table">
+                <tr>
+                    <th>Name</th>
+                    <th>Events CCd</th>
+                    <th>Failed to do CC report</th>
+                    <th>Fail rate</th>
+                </tr>
+                {% for member in worst_cc_report_forgetters %}
+                    <tr>
+                        <td>{{ member }}</td>
+                        <td>{{ member.ccinstances__count }}</td>
+                        <td>{{ member.failed_to_do_ccreport_count }}</td>
+                        <td>{{ member.failed_to_do_ccreport_percent }}%</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

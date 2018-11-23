@@ -148,7 +148,7 @@ def generate_event_bill_pdf(request, event):
     return resp
 
 
-def generate_event_bill_pdf_standalone(event, idt_originator):
+def generate_event_bill_pdf_standalone(event, idt_originator, request=None):
     data = {}
     data['event'] = event
     cats = Category.objects.all()
@@ -159,7 +159,7 @@ def generate_event_bill_pdf_standalone(event, idt_originator):
             extras[cat] = e_for_cat
     data['extras'] = extras
     # Render html content through html template with context
-    html = render_to_string('pdf_templates/bill-itemized.html', context=data)
+    html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
 
     # Write PDF to file
     pdf_file = BytesIO()
@@ -216,7 +216,7 @@ def generate_multibill_pdf(request, multibilling):
     return resp
 
 
-def generate_multibill_pdf_standalone(multibilling, idt_originator):
+def generate_multibill_pdf_standalone(multibilling, idt_originator, request=None):
     # Prepare context
     data = {}
     multibilling = MultiBilling.objects.annotate(num_events=Count('events')).get(id=multibilling.id)
@@ -233,7 +233,7 @@ def generate_multibill_pdf_standalone(multibilling, idt_originator):
     data['events'] = events
     data['total_cost'] = sum(map(lambda event : event.cost_total, multibilling.events.all()))
     # Render html content through html template with context
-    html = render_to_string('pdf_templates/bill-multi.html', context=data)
+    html = render_to_string('pdf_templates/bill-multi.html', context=data, request=request)
 
     # Write PDF to file
     pdf_file = BytesIO()
