@@ -2,7 +2,6 @@
 # 2018-10-22
 
 from django.conf import settings
-from django.contrib.auth.management import create_permissions
 from django.db import migrations, models
 from django.db.migrations.operations.models import Operation
 import django.db.models.deletion
@@ -52,14 +51,21 @@ def fix_permissions(apps, schema_editor):
         perm.content_type = baseevent_ctype
         perm.save()
 
+def populate_eventccinstance_category(apps, schema_editor):
+    EventCCIntance = apps.get_model("events", "EventCCInstance")
+    for cci in EventCCIntance.objects.filter(category__isnull=True, service__isnull=False):
+        cci.category = cci.service.category
+        cci.save()
+
 class Migration(migrations.Migration):
-    
+
     atomic = False
 
     dependencies = [
         ('contenttypes', '0002_remove_content_type_name'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('events', '0020_organization_delinquent'),
+        ('meetings', '0012_Event2019_1'),
     ]
 
     state_operations = [
@@ -171,11 +177,6 @@ class Migration(migrations.Migration):
             model_from_name='event_org',
             model_to_name='baseevent_org',
             columns=[('event_id', 'baseevent_id'), ('organization_id', 'organization_id')],
-        ),
-        migrations.RenameField(
-            model_name='event',
-            old_name='id',
-            new_name='baseevent_ptr',
         ),
         migrations.RemoveField(
             model_name='event',
@@ -364,12 +365,6 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='events.Category'),
         ),
         migrations.AlterField(
-            model_name='event',
-            name='baseevent_ptr',
-            field=models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='events.BaseEvent'),
-            preserve_default=False,
-        ),
-        migrations.AlterField(
             model_name='multibilling',
             name='events',
             field=models.ManyToManyField(to='events.BaseEvent', related_name='multibillings'),
@@ -422,8 +417,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='eventccinstance',
             name='category',
-            field=models.ForeignKey(default=99999, on_delete=django.db.models.deletion.PROTECT, related_name='ccinstances', to='events.Category'),
-            preserve_default=False,
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='ccinstances', to='events.Category'),
+        ),
+        migrations.RunPython(populate_eventccinstance_category),
+        migrations.AlterField(
+            model_name='eventccinstance',
+            name='category',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='ccinstances', to='events.Category'),
         ),
         migrations.AddField(
             model_name='hours',
@@ -456,8 +456,22 @@ class Migration(migrations.Migration):
         ),
     ]
     
+    more_operations = [
+        migrations.RenameField(
+            model_name='event',
+            old_name='id',
+            new_name='baseevent_ptr',
+        ),
+        migrations.AlterField(
+            model_name='event',
+            name='baseevent_ptr',
+            field=models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='events.BaseEvent'),
+            preserve_default=False,
+        ),
+    ]
+    
     database_operations = state_operations + [
-        # Fix ManyToMany fields
+        # Start fixing ManyToMany fields
         # ---------------------
         migrations.CreateModel(
             name='event_otherservices_temp',
@@ -475,17 +489,6 @@ class Migration(migrations.Migration):
             model_name='event',
             name='otherservices',
         ),
-        migrations.AddField(
-            model_name='event',
-            name='otherservices',
-            field=models.ManyToManyField(to='events.Service', blank=True),
-        ),
-        CopyFieldsBetweenTables(
-            model_from_name='event_otherservices_temp',
-            model_to_name='event_otherservices',
-            columns=[('event_id', 'event_id'), ('service_id', 'service_id')],
-        ),
-        migrations.DeleteModel('event_otherservices_temp'),
         # ---------------------
         migrations.CreateModel(
             name='event_crew_chief_temp',
@@ -503,17 +506,6 @@ class Migration(migrations.Migration):
             model_name='event',
             name='crew_chief',
         ),
-        migrations.AddField(
-            model_name='event',
-            name='crew_chief',
-            field=models.ManyToManyField(to=settings.AUTH_USER_MODEL, blank=True, related_name='crewchiefx'),
-        ),
-        CopyFieldsBetweenTables(
-            model_from_name='event_crew_chief_temp',
-            model_to_name='event_crew_chief',
-            columns=[('event_id', 'event_id'), ('user_id', 'user_id')],
-        ),
-        migrations.DeleteModel('event_crew_chief_temp'),
         # ---------------------
         migrations.CreateModel(
             name='event_crew_temp',
@@ -531,6 +523,33 @@ class Migration(migrations.Migration):
             model_name='event',
             name='crew',
         ),
+    ] + more_operations + [
+        # Finish fixing ManyToMany fields
+        # ---------------------
+        migrations.AddField(
+            model_name='event',
+            name='otherservices',
+            field=models.ManyToManyField(to='events.Service', blank=True),
+        ),
+        CopyFieldsBetweenTables(
+            model_from_name='event_otherservices_temp',
+            model_to_name='event_otherservices',
+            columns=[('event_id', 'event_id'), ('service_id', 'service_id')],
+        ),
+        migrations.DeleteModel('event_otherservices_temp'),
+        # ---------------------
+        migrations.AddField(
+            model_name='event',
+            name='crew_chief',
+            field=models.ManyToManyField(to=settings.AUTH_USER_MODEL, blank=True, related_name='crewchiefx'),
+        ),
+        CopyFieldsBetweenTables(
+            model_from_name='event_crew_chief_temp',
+            model_to_name='event_crew_chief',
+            columns=[('event_id', 'event_id'), ('user_id', 'user_id')],
+        ),
+        migrations.DeleteModel('event_crew_chief_temp'),
+        # ---------------------
         migrations.AddField(
             model_name='event',
             name='crew',
@@ -543,6 +562,8 @@ class Migration(migrations.Migration):
         ),
         migrations.DeleteModel('event_crew_temp'),
     ]
+    
+    state_operations += more_operations
     
     operations = [
         migrations.SeparateDatabaseAndState(
