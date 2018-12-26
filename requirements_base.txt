@@ -54,3 +54,4 @@ django-cas-ng==3.5.10
 ldap3==1.4.0
 django-environ==0.4.3
 django-polymorphic==2.0.3
+fuzzywuzzy==0.17.0

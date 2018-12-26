@@ -1,3 +1,4 @@
+import datetime
 import json
 import mimetypes
 import os
@@ -14,6 +15,7 @@ from django.utils.http import http_date, urlquote_plus
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.views.static import was_modified_since
+from fuzzywuzzy import fuzz, process
 from watson import search as watson
 
 from events import models as events_models
@@ -99,7 +101,7 @@ def workorderwizard_submit(request):
     # instead of returning a 302 redirect to the login page, which wouldn't work because this view is called via AJAX
     if not request.user.is_authenticated:
         return HttpResponse('Unauthorized', status=401)
-    
+
     # load JSON
     data = json.loads(request.body.decode('utf-8'))
 
@@ -165,6 +167,63 @@ def workorderwizard_submit(request):
 
     # return response with the URL to the event detail page
     return HttpResponse(json.dumps({'event_url': reverse('events:detail', args=[event.pk])}))
+
+@require_POST
+@csrf_exempt
+def workorderwizard_findprevious(request):
+    # Manually checking if user is authenticated rather than using @login_required
+    # in order to return a 401 status that the workorder wizard understands so it can display a specific error message
+    # instead of returning a 302 redirect to the login page, which wouldn't work because this view is called via AJAX
+    if not request.user.is_authenticated:
+        return HttpResponse('Unauthorized', status=401)
+
+    # load JSON
+    data = json.loads(request.body.decode('utf-8'))
+
+    # check that all required fields are present
+    mandatory_fields = ('org', 'event_name', 'location', 'start', 'end', 'setup_complete')
+    if not all(key in data for key in mandatory_fields):
+        return HttpResponse('Unprocessable Entity', status=422)
+
+    # Search events that took place in the past 18 months for a match
+    try:
+        org = events_models.Organization.objects.get(pk=data['org'])
+    except events_models.Organization.DoesNotExist:
+        return HttpResponse('Unprocessable Entity', status=422)
+    events_past_18_months = events_models.Event2019.objects.filter(
+        org=org,
+        test_event=False,
+        datetime_start__gte=(datetime.datetime.now() - datetime.timedelta(days=548))
+    )
+    if not request.user.has_perm('events.list_org_events', org):
+        events_past_18_months = events_past_18_months.exclude(approved=False)
+    if not request.user.has_perm('events.list_org_hidden_events', org):
+        events_past_18_months = events_past_18_months.exclude(sensitive=True)
+    event_names = events_past_18_months.values_list('event_name', flat=True).distinct()
+    name_closest_match = process.extractOne(data['event_name'], event_names, scorer=fuzz.ratio)
+    if not name_closest_match or name_closest_match[1] < 80:
+        # no match
+        return HttpResponse(status=204)
+    # match found
+    closest_match = events_past_18_months.filter(event_name=name_closest_match[0]).order_by('-datetime_start').first()
+    if (not closest_match.approved and not request.user.has_perm('events.view_event', closest_match)
+            or closest_match.sensitive and not request.user.has_perm('events.view_hidden_event', closest_match)):
+        # match blocked by lack of user permission
+        return HttpResponse(status=204)
+
+    # Prepare response
+    services_data = []
+    for service_instance in closest_match.serviceinstance_set.all():
+        services_data.append({
+            'id': service_instance.service.shortname,
+            'detail': service_instance.detail
+        })
+    return HttpResponse(json.dumps({
+        'event_name': closest_match.event_name,
+        'location': closest_match.location.pk,
+        'start': str(closest_match.datetime_start),
+        'services': services_data
+    }))
 
 
 def err403(request, *args, **kwargs):
