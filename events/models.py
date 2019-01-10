@@ -15,6 +15,7 @@ from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.encoding import python_2_unicode_compatible
 from polymorphic.models import PolymorphicManager, PolymorphicModel
+import reversion
 
 # if settings unset, have sane defaults
 if settings.CCR_DAY_DELTA:
@@ -211,6 +212,7 @@ class OptimizedEventManager(PolymorphicManager):
 
 
 @python_2_unicode_compatible
+@reversion.register(follow=['extrainstance_set', 'arbitraryfees'])
 class BaseEvent(PolymorphicModel):
     """
         This parent class is inherited by both Event and Event2019.
@@ -428,7 +430,8 @@ class BaseEvent(PolymorphicModel):
         )
         ordering = ['-datetime_start']
 
-
+# do not use ignore_duplicates=True because it does not follow relations
+@reversion.register(follow=['baseevent_ptr'])
 class Event(BaseEvent):
     """
         An Event, What everything ends up pointing to
@@ -732,7 +735,8 @@ class Event(BaseEvent):
     class Meta:
         verbose_name = '2012 Event'
 
-
+# do not use ignore_duplicates=True because it does not follow relations (and is slow)
+@reversion.register(follow=['baseevent_ptr'])
 class Event2019(BaseEvent):
     """
         New events under the 2019 pricelist
@@ -816,6 +820,7 @@ class Location(models.Model):
         ordering = ['building', 'name']
 
 
+@reversion.register()
 class ExtraInstance(models.Model):
     """ An instance of a given extra attached to an event """
     event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE)
@@ -1227,7 +1232,7 @@ class EventAttachment(models.Model):
     note = models.TextField(null=True, blank=True, default="")
     externally_uploaded = models.BooleanField(default=False)
 
-
+@reversion.register()
 class EventArbitrary(models.Model):
     event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="arbitraryfees")
     key_name = models.CharField(max_length=64)

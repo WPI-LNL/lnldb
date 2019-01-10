@@ -26,6 +26,7 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
                            ReportReminder, ServiceInstance)
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
+from helpers.revision import set_revision_comment
 from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standalone,
                         generate_multibill_pdf_standalone)
 
@@ -59,6 +60,7 @@ def approval(request, id):
         if is_event2019:
             services_formset = mk_serviceinstance_formset(request.POST, request.FILES, instance=event)
         if form.is_valid() and (not is_event2019 or services_formset.is_valid()):
+            set_revision_comment("Approved", form)
             e = form.save(commit=False)
             e.approved = True
             e.approved_on = timezone.now()
@@ -121,6 +123,7 @@ def denial(request, id):
     if request.method == 'POST':
         form = EventDenialForm(request.POST, instance=event)
         if form.is_valid():
+            set_revision_comment("Denied", form)
             e = form.save(commit=False)
             e.cancelled = True
             e.cancelled_by = request.user
@@ -168,6 +171,7 @@ def review(request, id):
     if request.method == 'POST':
         form = EventReviewForm(request.POST, instance=event, event=event)
         if form.is_valid():
+            set_revision_comment("Reviewed for billing", form)
             e = form.save(commit=False)
             e.reviewed = True
             e.reviewed_on = timezone.now()
@@ -251,7 +255,9 @@ def remindall(request, id):
 
 
 @login_required
+@require_POST
 def close(request, id):
+    set_revision_comment("Closed", None)
     context = {}
     context['msg'] = "Closing Event"
     event = get_object_or_404(BaseEvent, pk=id)
@@ -267,7 +273,9 @@ def close(request, id):
 
 
 @login_required
+@require_POST
 def cancel(request, id):
+    set_revision_comment("Cancelled", None)
     context = {}
     context['msg'] = "Event Cancelled"
     event = get_object_or_404(BaseEvent, pk=id)
@@ -296,7 +304,9 @@ def cancel(request, id):
 
 
 @login_required
+@require_POST
 def reopen(request, id):
+    set_revision_comment("Reopened", None)
     context = {}
     context['msg'] = "Event Reopened"
     event = get_object_or_404(BaseEvent, pk=id)
@@ -448,9 +458,11 @@ def assignattach(request, id):
     att_formset.form = curry_class(AttachmentForm, event=event)
 
     if request.method == 'POST':
+        set_revision_comment("Edited attachments", None)
         formset = att_formset(request.POST, request.FILES, instance=event)
         if formset.is_valid():
             formset.save()
+            event.save() # for revision to be created
             should_send_email = not event.test_event
             if should_send_email:
                 to=[settings.EMAIL_TARGET_VP]
@@ -491,6 +503,7 @@ def assignattach_external(request, id):
     mk_att_formset.form = curry_class(AttachmentForm, event=event, externally_uploaded=True)
 
     if request.method == 'POST':
+        set_revision_comment("Edited attachments", None)
         formset = mk_att_formset(request.POST, request.FILES, instance=event,
                                  queryset=EventAttachment.objects.filter(externally_uploaded=True))
         if formset.is_valid():
@@ -498,6 +511,7 @@ def assignattach_external(request, id):
             for i in f:
                 i.externally_uploaded = True
                 i.save()
+            event.save() # for revision to be created
             return HttpResponseRedirect(reverse('my:workorders', ))
         else:
             context['formset'] = formset
@@ -530,9 +544,11 @@ def extras(request, id):
     mk_extra_formset.form = ExtraForm
 
     if request.method == 'POST':
+        set_revision_comment("Edited extras", None)
         formset = mk_extra_formset(request.POST, request.FILES, instance=event)
         if formset.is_valid():
             formset.save()
+            event.save() # for revision to be created
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#billing")
         else:
             context['formset'] = formset
@@ -568,9 +584,11 @@ def oneoff(request, id):
     mk_oneoff_formset = inlineformset_factory(BaseEvent, EventArbitrary, extra=3, exclude=[])
 
     if request.method == 'POST':
+        set_revision_comment("Edited billing charges", None)
         formset = mk_oneoff_formset(request.POST, request.FILES, instance=event)
         if formset.is_valid():
             formset.save()
+            event.save() # for revision to be created
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#billing")
         else:
             context['formset'] = formset
@@ -591,7 +609,8 @@ def viewevent(request, id):
         raise PermissionDenied
 
     context['event'] = event
-    context['history'] = Version.objects.get_for_object(event).get_unique()
+    # do not use .get_unique() because it does not follow relations
+    context['history'] = Version.objects.get_for_object(event)
     return render(request, 'uglydetail.html', context)
 
 

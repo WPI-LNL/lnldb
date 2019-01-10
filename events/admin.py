@@ -78,7 +78,7 @@ class Event2019Admin(PolymorphicChildModelAdmin, VersionAdmin):
     search_fields = ['event_name']
     readonly_fields = ['submitted_on']
 
-class BaseEventAdmin(PolymorphicParentModelAdmin):
+class BaseEventAdmin(VersionAdmin, PolymorphicParentModelAdmin):
     child_models = models.Event, models.Event2019
 
 fieldsets = (

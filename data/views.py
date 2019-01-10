@@ -110,6 +110,8 @@ def workorderwizard_submit(request):
     if not all(key in data for key in mandatory_fields):
         return HttpResponse('Unprocessable Entity', status=422)
 
+    reversion.set_comment('Event submitted using work order wizard')
+
     # create event object and populate fields
     event = events_models.Event2019()
     event.submitted_by = request.user

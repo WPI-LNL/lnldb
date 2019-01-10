@@ -91,7 +91,10 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
-                    <a class="btn btn-primary" href="{% url "events:close" event.id %}">Close Event</a>
+                    <form class="form-inline" action="{% url 'events:close' event.id %}" method="post">
+                        {% csrf_token %}
+                        <button class="btn btn-primary" type="submit">Close Event</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -115,7 +118,10 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
-                    <a class="btn btn-primary" href="{% url "events:cancel" event.id %}">Cancel Event</a>
+                    <form class="form-inline" action="{% url 'events:cancel' event.id %}" method="post">
+                        {% csrf_token %}
+                        <button class="btn btn-primary" type="submit">Cancel Event</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -138,7 +144,10 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
-                    <a class="btn btn-primary" href="{% url "events:reopen" event.id %}">Reopen Event</a>
+                    <form class="form-inline" action="{% url 'events:reopen' event.id %}" method="post">
+                        {% csrf_token %}
+                        <button class="btn btn-primary" type="submit">Reopen Event</button>
+                    </form>
                 </div>
             </div>
         </div>

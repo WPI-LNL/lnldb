@@ -16,7 +16,7 @@ from crispy_forms.layout import (HTML, Div, Field, Fieldset, Hidden, Layout,
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Model, Q
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget
 from django.forms.models import inlineformset_factory
 from django.urls.base import reverse
@@ -96,6 +96,12 @@ def get_qs_from_event(event):
             id__in=[i.id for i in event.otherservices.all()]))
     elif isinstance(event, Event2019):
         return Service.objects.filter(pk__in=event.serviceinstance_set.values_list('service', flat=True))
+
+
+class CustomAutoCompleteSelectMultipleField(AutoCompleteSelectMultipleField):
+    def has_changed(self, initial_value, data_value):
+        initial_value = [v.pk if isinstance(v, Model) else v for v in (initial_value or [])]
+        return AutoCompleteSelectMultipleField.has_changed(self, initial_value, data_value)
 
 
 class CustomEventModelMultipleChoiceField(forms.ModelMultipleChoiceField):
@@ -527,7 +533,7 @@ class InternalEventForm(FieldAccessForm):
         group_label=lambda group: group.name,
     )
     contact = AutoCompleteSelectField('Users', required=False)
-    org = AutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
+    org = CustomAutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
     billing_fund = AutoCompleteSelectField('Funds', required=False)
 

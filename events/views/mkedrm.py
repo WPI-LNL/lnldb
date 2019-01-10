@@ -6,10 +6,13 @@ from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
+import reversion
+from reversion.views import create_revision
 
 from emails.generators import EventEmailGenerator
 from events.forms import InternalEventForm, ServiceInstanceForm
 from events.models import BaseEvent, Event, Event2019, ServiceInstance
+from helpers.revision import set_revision_comment
 
 
 def curry_class(cls, *args, **kwargs):
@@ -56,6 +59,7 @@ def eventnew(request, id=None):
 
         if form.is_valid() and (not is_event2019 or services_formset.is_valid()):
             if instance:
+                set_revision_comment('Edited', form)
                 res = form.save()
                 if is_event2019:
                     services_formset.save()
@@ -89,6 +93,7 @@ def eventnew(request, id=None):
                     email = EventEmailGenerator(event=res, subject=subject, to_emails=to_emails, body=email_body, bcc=bcc)
                     email.send()
             else:
+                set_revision_comment('Created event', form)
                 res = form.save(commit=False)
                 res.submitted_by = request.user
                 res.submitted_ip = request.META.get('REMOTE_ADDR')
