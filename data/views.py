@@ -4,6 +4,7 @@ import mimetypes
 import os
 import stat
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import FileResponse, HttpResponse, HttpResponseNotModified
@@ -16,9 +17,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.views.static import was_modified_since
 from fuzzywuzzy import fuzz, process
+import reversion
 from watson import search as watson
 
 from events import models as events_models
+from emails.generators import EventEmailGenerator
 
 
 def maintenance(request):
@@ -166,6 +169,22 @@ def workorderwizard_submit(request):
         extra_instance.event = event
         extra_instance.quant = extra_data['quantity']
         extra_instance.save()
+
+    # send confirmation email
+    email_body = 'You have successfully submitted the following event.'
+    email = EventEmailGenerator(event=event, subject='New Event Submitted', to_emails=[request.user.email],
+                                body=email_body, bcc=[settings.EMAIL_TARGET_VP])
+    email.send()
+
+    # If the user does not have permission to submit events on behalf of the selected organization,
+    # send an email to the organization to alert them that the event was submitted
+    if not request.user.has_perm('events.create_org_event', org):
+        email_body = ('The following event was submitted. You are receiving this email because the user who submitted '
+                      'this event is not expressly authorized to submit events on behalf of {}. The organization owner '
+                      'can update authorized users through the website.'.format(org.name))
+        email = EventEmailGenerator(event=event, subject='Event Submitted on behalf of {}'.format(org.name),
+                                    to_emails=[org.exec_email], body=email_body, bcc=[settings.EMAIL_TARGET_W])
+        email.send()
 
     # return response with the URL to the event detail page
     return HttpResponse(json.dumps({'event_url': reverse('events:detail', args=[event.pk])}))
