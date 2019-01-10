@@ -536,11 +536,10 @@ class InternalEventForm(FieldAccessForm):
     org = CustomAutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
     billing_fund = AutoCompleteSelectField('Funds', required=False)
-
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
     datetime_start = forms.SplitDateTimeField(initial=timezone.now, label="Event Start")
     datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
-    otherservices = ModelMultipleChoiceField(queryset=Service.objects.filter(enabled_event2012=True))
+    otherservices = ModelMultipleChoiceField(queryset=Service.objects.filter(enabled_event2012=True), required=False)
 
 
 class EventReviewForm(forms.ModelForm):
