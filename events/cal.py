@@ -14,7 +14,7 @@ from django.views.generic.base import View
 from django.views.decorators.cache import cache_page
 from django_ical.views import ICalFeed
 
-from events.models import Event, EventCCInstance
+from events.models import BaseEvent, EventCCInstance
 from meetings.models import Meeting
 from helpers.mixins import HasPermMixin
 
@@ -60,7 +60,7 @@ class BaseFeed(ICalFeed):
 
 class EventFeed(BaseFeed):
     def items(self):
-        return list(Event.objects.filter(approved=True).exclude(Q(closed=True) |
+        return list(BaseEvent.objects.filter(approved=True).exclude(Q(closed=True) |
                                                                 Q(cancelled=True) |
                                                                 Q(test_event=True) |
                                                                 Q(sensitive=True)).order_by('datetime_start').all()) + \
@@ -72,7 +72,7 @@ class EventFeed(BaseFeed):
 
 class FullEventFeed(BaseFeed):
     def items(self):
-        return list(Event.objects.exclude(Q(closed=True) |
+        return list(BaseEvent.objects.exclude(Q(closed=True) |
                                           Q(cancelled=True) |
                                           Q(test_event=True) |
                                           Q(sensitive=True)).order_by('datetime_start').all()) + \
@@ -83,7 +83,7 @@ class FullEventFeed(BaseFeed):
 
 class LightEventFeed(BaseFeed):
     def items(self):
-        return list(Event.objects.filter(approved=True).exclude(Q(closed=True) |
+        return list(BaseEvent.objects.filter(approved=True).exclude(Q(closed=True) |
                                                                 Q(cancelled=True) |
                                                                 Q(test_event=True) |
                                                                 Q(sensitive=True)).order_by('datetime_start').all()) + \
@@ -100,7 +100,7 @@ class PublicFacingCalJsonView(View):
     http_method_names = ['get']
 
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.filter(approved=True, closed=False, cancelled=False, test_event=False,
+        queryset = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False,
                                         sensitive=False).filter(datetime_end__gte=datetime.datetime.now(pytz.utc))
 
         from_date = request.GET.get('from', False)
@@ -110,8 +110,10 @@ class PublicFacingCalJsonView(View):
 
 class FindChiefCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)) \
-            .annotate(num_ccs=Count('ccinstances')).filter(num_ccs__lt=(F('ccs_needed'))).distinct()
+        queryset = BaseEvent.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)) \
+            .annotate(num_ccs=Count('ccinstances')) \
+            .filter(Q(Event___ccs_needed__gt=F('num_ccs')) | Q(num_ccs__lt=Count('serviceinstance__service__category', distinct=True))) \
+            .distinct()
         if not request.user.has_perm('events.event_view_sensitive'):
             queryset = queryset.exclude(sensitive=True)
         if not request.user.has_perm('events.view_test_event'):
@@ -126,7 +128,7 @@ class IncomingCalJsonView(BaseCalJsonView):
     perms = ['events.approve_event']
 
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
+        queryset = BaseEvent.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
         if not request.user.has_perm('events.event_view_sensitive'):
             queryset = queryset.exclude(sensitive=True)
         if not request.user.has_perm('events.view_test_event'):
@@ -139,7 +141,7 @@ class IncomingCalJsonView(BaseCalJsonView):
 
 class OpenCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.filter(approved=True, closed=False, cancelled=False).distinct()
+        queryset = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).distinct()
         if not request.user.has_perm('events.event_view_sensitive'):
             queryset = queryset.exclude(sensitive=True)
         if not request.user.has_perm('events.view_test_event'):
@@ -154,7 +156,7 @@ class UnreviewedCalJsonView(BaseCalJsonView):
     perms = ['events.review_event']
 
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.filter(approved=True, closed=False, cancelled=False) \
+        queryset = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False) \
             .filter(reviewed=False) \
             .filter(datetime_end__lte=now) \
             .distinct()
@@ -172,7 +174,7 @@ class UnbilledCalJsonView(BaseCalJsonView):
     perms = ['events.bill_event']
 
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.filter(closed=False) \
+        queryset = BaseEvent.objects.filter(closed=False) \
             .filter(reviewed=True) \
             .filter(billings__isnull=True, multibillings__isnull=True) \
             .filter(billed_by_semester=False) \
@@ -191,7 +193,7 @@ class UnbilledSemesterCalJsonView(BaseCalJsonView):
     perms = ['events.bill_event']
 
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.filter(closed=False) \
+        queryset = BaseEvent.objects.filter(closed=False) \
             .filter(reviewed=True) \
             .filter(billings__isnull=True, multibillings__isnull=True) \
             .filter(billed_by_semester=True) \
@@ -211,7 +213,7 @@ class PaidCalJsonView(BaseCalJsonView):
     perms = ['events.close_event']
 
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.filter(closed=False) \
+        queryset = BaseEvent.objects.filter(closed=False) \
             .filter(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)) \
             .distinct()
         if not request.user.has_perm('events.event_view_sensitive'):
@@ -228,7 +230,7 @@ class UnpaidCalJsonView(BaseCalJsonView):
     perms = ['events.bill_event']
 
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.annotate(
+        queryset = BaseEvent.objects.annotate(
             numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
             .filter(closed=False) \
             .filter(Q(billings__date_billed__isnull=False) | Q(multibillings__date_billed__isnull=False)) \
@@ -247,7 +249,7 @@ class UnpaidCalJsonView(BaseCalJsonView):
 
 class ClosedCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.filter(closed=True)
+        queryset = BaseEvent.objects.filter(closed=True)
         if not request.user.has_perm('events.event_view_sensitive'):
             queryset = queryset.exclude(sensitive=True)
         if not request.user.has_perm('events.view_test_event'):
@@ -260,7 +262,7 @@ class ClosedCalJsonView(BaseCalJsonView):
 
 class AllCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
-        queryset = Event.objects.distinct()
+        queryset = BaseEvent.objects.distinct()
         if not request.user.has_perm('events.event_view_sensitive'):
             queryset = queryset.exclude(sensitive=True)
         if not request.user.has_perm('events.view_test_event'):

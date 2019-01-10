@@ -10,11 +10,8 @@ register = template.Library()
 def getattribute(value, arg):
     """Gets an attribute of an object dynamically from a string name"""
 
-    if hasattr(value, str(arg)):
-        return getattr(value, str(arg))
-    else:
-        print("Invalid %s in %s" % (arg, value))
-        return settings.TEMPLATE_STRING_IF_INVALID
+    assert hasattr(value, str(arg)), "Invalid %s in %s" % (arg, value)
+    return getattr(value, str(arg))
 
 
 register.filter('getattribute', getattribute)

@@ -11,7 +11,7 @@ from django.urls.base import reverse
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 
-from events.models import Event, MultiBilling
+from events.models import BaseEvent, Event, Category, MultiBilling
 
 DEFAULT_ENTRY_COUNT = 40
 
@@ -194,20 +194,23 @@ def upcoming(request, start=None, end=None):
 
     # events = Event.objects.filter(approved=True).filter(closed=False).filter(paid=False)
     # .filter(datetime_start__gte=today)
-    events = Event.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)).distinct()  # .filter(paid=False)
+    events = BaseEvent.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)).distinct()  # .filter(paid=False)
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+        .prefetch_related('ccinstances__crew_chief')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
         and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
-        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(projection__isnull=False)
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -244,21 +247,23 @@ def incoming(request, start=None, end=None):
         end = today + datetime.timedelta(days=365.25)
         end = end.strftime('%Y-%m-%d')
 
-    events = Event.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)) \
+    events = BaseEvent.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)) \
         .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices')
+    events = events.select_related('location__building').prefetch_related('org')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
         and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
-        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(projection__isnull=False)
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -302,22 +307,23 @@ def openworkorders(request, start=None, end=None):
         start, end = get_very_large_date_range()
     context = {}
 
-    events = Event.objects.filter(approved=True, closed=False, cancelled=False).distinct()
+    events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
-        .prefetch_related('billings') \
-        .prefetch_related('crew_chief')
+        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
         and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
-        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(projection__isnull=False)
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -365,28 +371,27 @@ def findchief(request, start=None, end=None):
         end = end.strftime('%Y-%m-%d')
     context = {}
 
-    events = Event.objects \
+    events = BaseEvent.objects \
         .filter(approved=True).filter(closed=False).filter(cancelled=False) \
         .annotate(num_ccs=Count('ccinstances')) \
-        .annotate(services_count=Count('otherservices')) \
-        .annotate(lighting_count=Count('lighting')) \
-        .annotate(sound_count=Count('sound')) \
-        .annotate(projection_count=Count('projection')).all() \
-        .filter(num_ccs__lt=(F('ccs_needed'))).distinct()
+        .filter(Q(Event___ccs_needed__gt=F('num_ccs')) | Q(num_ccs__lt=Count('serviceinstance__service__category', distinct=True))).distinct()
 
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+        .prefetch_related('ccinstances__crew_chief')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
         and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
-        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(projection__isnull=False)
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
 
     events, context = datefilter(events, context, start, end)
 
@@ -438,7 +443,7 @@ def unreviewed(request, start=None, end=None):
         end = end.strftime('%Y-%m-%d')
 
     now = datetime.datetime.now(pytz.utc)
-    events = Event.objects.filter(approved=True, closed=False, cancelled=False) \
+    events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False) \
         .filter(reviewed=False) \
         .filter(datetime_end__lte=now) \
         .order_by('datetime_start') \
@@ -449,14 +454,17 @@ def unreviewed(request, start=None, end=None):
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+        .prefetch_related('ccinstances__crew_chief')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
         and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
-        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(projection__isnull=False)
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -503,7 +511,7 @@ def unbilled(request, start=None, end=None):
     if not start and not end:
         start, end = get_very_large_date_range()
 
-    events = Event.objects.filter(closed=False) \
+    events = BaseEvent.objects.filter(closed=False) \
         .filter(reviewed=True) \
         .filter(billings__isnull=True, multibillings__isnull=True) \
         .filter(billed_by_semester=False) \
@@ -514,15 +522,17 @@ def unbilled(request, start=None, end=None):
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
-        .prefetch_related('billings')
+        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
         and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
-        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(projection__isnull=False)
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -566,7 +576,7 @@ def unbilled_semester(request, start=None, end=None):
     # events = Event.objects.filter(approved=True).filter(paid=True)
     if not start and not end:
         start, end = get_very_large_date_range()
-    events = Event.objects.filter(closed=False) \
+    events = BaseEvent.objects.filter(closed=False) \
         .filter(reviewed=True) \
         .filter(billings__isnull=True, multibillings__isnull=True) \
         .filter(billed_by_semester=True) \
@@ -577,15 +587,17 @@ def unbilled_semester(request, start=None, end=None):
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
-        .prefetch_related('billings')
+        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
         and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
-        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(projection__isnull=False)
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -630,7 +642,7 @@ def paid(request, start=None, end=None):
         start, end = get_very_large_date_range()
 
     # events = Event.objects.filter(approved=True).filter(paid=True)
-    events = Event.objects.filter(closed=False) \
+    events = BaseEvent.objects.filter(closed=False) \
         .filter(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)) \
         .distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
@@ -638,15 +650,17 @@ def paid(request, start=None, end=None):
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
-        .prefetch_related('billings')
+        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
         and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
-        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(projection__isnull=False)
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
     events, context = datefilter(events, context, start, end)
 
     # if events:
@@ -695,7 +709,7 @@ def unpaid(request, start=None, end=None):
 
     # events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now())
     # .filter(date_setup_start__lte=today)
-    events = Event.objects.annotate(
+    events = BaseEvent.objects.annotate(
         numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
         .filter(Q(billings__date_billed__isnull=False) | Q(multibillings__date_billed__isnull=False)) \
         .exclude(closed=True) \
@@ -707,15 +721,17 @@ def unpaid(request, start=None, end=None):
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
-        .prefetch_related('billings')
+        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
         and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
-        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(projection__isnull=False)
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -760,21 +776,23 @@ def closed(request, start=None, end=None):
     if not start and not end:
         start, end = get_very_large_date_range()
 
-    events = Event.objects.filter(closed=True)
+    events = BaseEvent.objects.filter(closed=True)
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
-        .prefetch_related('crew_chief')
+        .prefetch_related('ccinstances__crew_chief')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
         and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
-        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(projection__isnull=False)
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
@@ -817,7 +835,7 @@ def all(request, start=None, end=None):
         start, end = get_very_large_date_range()
     context = {}
 
-    events = Event.objects.distinct()
+    events = BaseEvent.objects.distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
@@ -825,16 +843,17 @@ def all(request, start=None, end=None):
     if not request.user.has_perm('events.approve_event'):
         events = events.exclude(approved=False)
     events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief') \
-        .prefetch_related('billings') \
-        .prefetch_related('crew_chief')
+        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
         and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
-        events = events.exclude(projection__isnull=False, lighting__isnull=True, sound__isnull=True)
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(projection__isnull=False)
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')

@@ -9,7 +9,7 @@ from django.conf import settings
 # Create your models here.
 from django.core.validators import MinLengthValidator
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Count, Sum
 from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.functional import cached_property
@@ -401,6 +401,14 @@ class BaseEvent(PolymorphicModel):
     def has_projection(self):
         assert False, 'You did not implement has_projection in your subclass!'
 
+    @property
+    def short_services(self):
+        assert False, 'You did not implement short_services in your subclass!'
+
+    @property
+    def eventcount(self):
+        assert False, 'You did not implement eventcount in your subclass!'
+
     class Meta:
         verbose_name = 'Event'
         permissions = (
@@ -753,6 +761,14 @@ class Event2019(BaseEvent):
     @property
     def has_projection(self):
         return self.serviceinstance_set.filter(service__category__name='Projection').exists()
+
+    @property
+    def short_services(self):
+        return ", ".join(self.serviceinstance_set.values_list('service__shortname', flat=True))
+
+    @property
+    def eventcount(self):
+        return self.serviceinstance_set.aggregate(Count('service__category', distinct=True))['service__category__count']
 
     @property
     def services_total(self):

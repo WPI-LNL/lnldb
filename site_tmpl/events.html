@@ -129,12 +129,12 @@
 
                         {% elif field.name == 'crew_chief' %}
                             <td class="event-cc">
-                                {% if event.crew_chief.count %}
+                                {% if event.crew_chief %}
                                     {% for cc in event.crew_chief.all %}
                                         <a href="{% url "accounts:detail" cc.id %}">
                                             {{ cc }}</a>{% if not forloop.last %},{% endif %} 
                                     {% endfor %}
-                                {% elif event.ccinstances.count %}
+                                {% elif event.ccinstances %}
                                     {% for cc in event.ccinstances.all %}
                                         <a href="{% url "accounts:detail" cc.crew_chief.id %}">
                                             {{ cc.crew_chief }}{% if not forloop.last %},{% endif %} </a>

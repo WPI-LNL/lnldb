@@ -15,7 +15,7 @@ from django.utils.functional import curry
 from emails.generators import generate_selfservice_notice_email
 from events.forms import (EditHoursForm, InternalReportForm, MKHoursForm,
                           SelfServiceOrgRequestForm, WorkorderRepeatForm)
-from events.models import CCReport, Event, Hours
+from events.models import CCReport, BaseEvent, Event, Hours
 
 
 @login_required
@@ -41,8 +41,8 @@ def mywo(request):
     # events = Event.objects.filter(org__in=values)
     l = {}
     for org in chain(orgs, ic_orgs):
-        l[org.name] = Event.objects.filter(org=org)
-    l["Submitted by Me"] = Event.objects.filter(submitted_by=user)
+        l[org.name] = BaseEvent.objects.filter(org=org)
+    l["Submitted by Me"] = BaseEvent.objects.filter(submitted_by=user)
 
     # context['events'] = events
     context['events'] = l
@@ -178,7 +178,7 @@ def ccreport(request, eventid):
     if not uevent:
         return HttpResponse("This Event Must not Have been yours, or is closed")
 
-    event = Event.objects.get(pk=eventid)
+    event = BaseEvent.objects.get(pk=eventid)
     if not event.reports_editable:
         return HttpResponse("The deadline for report submission and hours has past.")
 
@@ -240,7 +240,7 @@ def hours_mk(request, eventid):
     if not uevent:
         return HttpResponse("This Event Must not Have been yours, or is closed")
 
-    event = Event.objects.get(pk=eventid)
+    event = BaseEvent.objects.get(pk=eventid)
     if not event.reports_editable:
         return HttpResponse("The deadline for report submission and hours has past.")
 
@@ -272,7 +272,7 @@ def hours_edit(request, eventid, userid):
     if not uevent:
         return HttpResponse("You must not have cc'd this event, or it's closed")
 
-    event = Event.objects.get(pk=eventid)
+    event = BaseEvent.objects.get(pk=eventid)
     if not event.reports_editable:
         return HttpResponse("The deadline for report submission and hours has past.")
     event = uevent[0].event
@@ -306,7 +306,7 @@ def hours_bulk(request, eventid):
     if not uevent:
         return HttpResponse("You must not have cc'd this event, or it's closed")
 
-    event = Event.objects.get(pk=eventid)
+    event = BaseEvent.objects.get(pk=eventid)
     if not event.reports_editable:
         return HttpResponse("The deadline for report submission and hours has past.")
     event = uevent[0].event

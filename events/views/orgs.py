@@ -18,7 +18,7 @@ from django.views.generic import CreateView
 from emails.generators import generate_transfer_email
 from events.forms import (ExternalOrgUpdateForm, FopalForm, ExternalFundEditForm,
                           IOrgForm, IOrgVerificationForm, OrgXFerForm)
-from events.models import (Event, Fund, Organization, OrganizationTransfer,
+from events.models import (BaseEvent, Fund, Organization, OrganizationTransfer,
                            OrgBillingVerificationEvent)
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 
@@ -160,7 +160,7 @@ def orgdetail(request, org_id):
         org = Organization.objects.prefetch_related('accounts', 'associated_users').get(pk=org_id)
     except (Organization.DoesNotExist, Organization.MultipleObjectsReturned):
         raise Http404('No Organization matches the given query.')
-    context['events'] = Event.objects.filter(org=org).prefetch_related('hours__user', 'ccinstances__crew_chief',
+    context['events'] = BaseEvent.objects.filter(org=org).prefetch_related('hours__user', 'ccinstances__crew_chief',
                                                                        'location', 'org')
     if not (request.user.has_perms(perms) or
             request.user.has_perms(perms, org)):
