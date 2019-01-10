@@ -50,7 +50,7 @@ def eventnew(request, id=None):
             should_send_email = not instance.test_event
             if should_send_email:
                 bcc=[settings.EMAIL_TARGET_VP]
-                if instance.projection:
+                if instance.has_projection:
                     bcc.append(settings.EMAIL_TARGET_HP)
 
         form = InternalEventForm(data=request.POST, request_user=request.user, instance=instance)
@@ -85,7 +85,7 @@ def eventnew(request, id=None):
                             email_body += field_name + ", "
                         email_body = email_body[:-2]
                     # add HP to the email if projection was just added to the event
-                    if res.projection and not settings.EMAIL_TARGET_HP in bcc:
+                    if res.has_projection and not settings.EMAIL_TARGET_HP in bcc:
                         bcc.append(settings.EMAIL_TARGET_HP)
                     to_emails=[]
                     if request.user.email:

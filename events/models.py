@@ -396,7 +396,11 @@ class BaseEvent(PolymorphicModel):
         else:
             out_str += self.datetime_end.strftime("%a %m/%d/%Y %I:%M %p")
         return out_str
-    
+
+    @property
+    def has_projection(self):
+        assert False, 'You did not implement has_projection in your subclass!'
+
     class Meta:
         verbose_name = 'Event'
         permissions = (
@@ -732,6 +736,10 @@ class Event(BaseEvent):
     def short_services(self):
         return ", ".join(map(lambda m: m.shortname, self.eventservices))
 
+    @property
+    def has_projection(self):
+        return self.projection is not None
+
     class Meta:
         verbose_name = '2012 Event'
 
@@ -741,23 +749,27 @@ class Event2019(BaseEvent):
     """
         New events under the 2019 pricelist
     """
-    
+
+    @property
+    def has_projection(self):
+        return self.serviceinstance_set.filter(service__category__name='Projection').exists()
+
     @property
     def services_total(self):
         services_cost = self.serviceinstance_set.aggregate(Sum('service__base_cost'))['service__base_cost__sum']
         return services_cost if services_cost is not None else 0
-    
+
     @property
     def extras_total(self):
         total = 0
         for extra_instance in self.extrainstance_set.all():
             total += extra_instance.totalcost
         return total
-    
+
     @property
     def cost_total_pre_discount(self):
         return self.services_total + self.extras_total + self.oneoff_total
-    
+
     @property
     def discount_applied(self):
         categories = ['Lighting', 'Sound']
