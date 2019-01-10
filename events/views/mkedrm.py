@@ -93,7 +93,7 @@ def eventnew(request, id=None):
                     email = EventEmailGenerator(event=res, subject=subject, to_emails=to_emails, body=email_body, bcc=bcc)
                     email.send()
             else:
-                set_revision_comment('Created event', form)
+                set_revision_comment('Created event', None)
                 res = form.save(commit=False)
                 res.submitted_by = request.user
                 res.submitted_ip = request.META.get('REMOTE_ADDR')
