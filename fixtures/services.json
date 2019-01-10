@@ -1,543 +1,5 @@
 [
 {
-  "fields": {},
-  "model": "events.projection",
-  "pk": 7
-},
-{
-  "fields": {},
-  "model": "events.projection",
-  "pk": 8
-},
-{
-  "fields": {},
-  "model": "events.projection",
-  "pk": 9
-},
-{
-  "fields": {},
-  "model": "events.projection",
-  "pk": 15
-},
-{
-  "fields": {},
-  "model": "events.sound",
-  "pk": 4
-},
-{
-  "fields": {},
-  "model": "events.sound",
-  "pk": 5
-},
-{
-  "fields": {},
-  "model": "events.sound",
-  "pk": 6
-},
-{
-  "fields": {},
-  "model": "events.sound",
-  "pk": 11
-},
-{
-  "fields": {},
-  "model": "events.lighting",
-  "pk": 1
-},
-{
-  "fields": {},
-  "model": "events.lighting",
-  "pk": 2
-},
-{
-  "fields": {},
-  "model": "events.lighting",
-  "pk": 3
-},
-{
-  "fields": {},
-  "model": "events.lighting",
-  "pk": 10
-},
-{
-  "fields": {
-    "category": 1,
-    "help_desc": "We'll design, hang, and run a lighting setup to make you look great, but we'll only use a few fixtures (12 tops) and will just keep them lit for the entire show. This is definitely not enough light for the Alden main stage.",
-    "addtl_cost": "0.00",
-    "longname": "L1: Static Lighting",
-    "shortname": "L1",
-    "base_cost": "50.00"
-  },
-  "model": "events.service",
-  "pk": 1
-},
-{
-  "fields": {
-    "category": 1,
-    "help_desc": "We'll design, hang, and run a lighting setup to make you look great, and we'll use enough fixtures to fulfill most campus events. We'll also dim and adjust these how you like during the show, which includes using the colored or moving lights. This is still not enough light for the Alden main stage.",
-    "addtl_cost": "0.00",
-    "longname": "L2: Basic Dynamic Lighting",
-    "shortname": "L2",
-    "base_cost": "100.00"
-  },
-  "model": "events.service",
-  "pk": 2
-},
-{
-  "fields": {
-    "category": 1,
-    "help_desc": "We'll design, hang, and run a lighting setup to make you look great, and we'll use plenty of fixtures to fulfill all but the biggest of campus events. We'll dim and adjust these how you like during the show, including cues for any colored or moving lights, dramatic effects for concerts, etc.",
-    "addtl_cost": "0.00",
-    "longname": "L3: Standard Dynamic Lighting",
-    "shortname": "L3",
-    "base_cost": "200.00"
-  },
-  "model": "events.service",
-  "pk": 3
-},
-{
-  "fields": {
-    "category": 2,
-    "help_desc": "We come in, set up microphones, and mix your show over an existing speakers. Note that this can only be used in places with a house sound system (for example, Alden or the Odeum) and typically fits small events with multiple people talking. ",
-    "addtl_cost": "0.00",
-    "longname": "S1: House Sound System",
-    "shortname": "S1",
-    "base_cost": "30.00"
-  },
-  "model": "events.service",
-  "pk": 4
-},
-{
-  "fields": {
-    "category": 2,
-    "help_desc": "We bring in microphones, mixers, and a pair of our smaller speakers (they're still big and plenty loud, though!). We'll mix and tweak the show. This can be done anywhere, though if the event is on the entire Quad or you're doing a high-profile show in Alden, you might want something a bit bigger.",
-    "addtl_cost": "0.00",
-    "longname": "S2: Basic Sound Event",
-    "shortname": "S2",
-    "base_cost": "150.00"
-  },
-  "model": "events.service",
-  "pk": 5
-},
-{
-  "fields": {
-    "category": 2,
-    "help_desc": "We bring in microphones, mixers, and a pair of our big speakers with matching subwoofers. We'll mix and tweak the show, going the extra mile to make it sound as good as possible. This can be done anywhere, and will fill just about any venue with the glorious sound of your voice. We can also add additional communication (ie. cues backstage) for shows in Alden.",
-    "addtl_cost": "0.00",
-    "longname": "S3: Large Sound Event",
-    "shortname": "S3",
-    "base_cost": "250.00"
-  },
-  "model": "events.service",
-  "pk": 6
-},
-{
-  "fields": {
-    "category": 3,
-    "help_desc": "16mm Projection:\r\n$20 plus $12 for every 40-minute reel. This includes benching and de-benching 40-minute reels, CD/house sound before and after movie (if provided).",
-    "addtl_cost": "0.00",
-    "longname": "16mm",
-    "shortname": "16",
-    "base_cost": "20.00"
-  },
-  "model": "events.service",
-  "pk": 7
-},
-{
-  "fields": {
-    "category": 3,
-    "help_desc": "35mm Projection:\r\n$30 plus $10 for every 20-minute reel. This includes benching and de-benching 20-minute reels, CD/house sound before and after movie (if provided), projection of 16mm cartoon before (if provided) and projection of previews (if provided).",
-    "addtl_cost": "0.00",
-    "longname": "35mm",
-    "shortname": "35",
-    "base_cost": "30.00"
-  },
-  "model": "events.service",
-  "pk": 8
-},
-{
-  "fields": {
-    "category": 3,
-    "help_desc": "70mm Projection:\r\n$55 plus $15 for every 20-minute reel. This includes benching and de-benching 20-minute reels, CD/house sound before and after movie (if provided), projection of 16mm cartoon before (if provided) and projection of previews (if provided).",
-    "addtl_cost": "0.00",
-    "longname": "70mm",
-    "shortname": "70",
-    "base_cost": "55.00"
-  },
-  "model": "events.service",
-  "pk": 9
-},
-{
-  "fields": {
-    "category": 1,
-    "help_desc": "We'll design, hang, and run a lighting setup to make you glow, and we'll use as many fixtures as needed to make your large event shine. We'll dim and adjust these how you like during the show, including cues for any colored or moving lights, dramatic effects for concerts, etc.",
-    "addtl_cost": "0.00",
-    "longname": "L4: Advanced Dynamic Lighting",
-    "shortname": "L4",
-    "base_cost": "300.00"
-  },
-  "model": "events.service",
-  "pk": 10
-},
-{
-  "fields": {
-    "category": 2,
-    "help_desc": "What's better than two big speakers? Four big speakers, with four matching subwoofers. For the largest of events, this will blow the roof or let you hear the faintest timbres of a piano. We'll mic, mix, tweak thoroughly, and make sure it fits your needs. *For small venues, this is definitely overkill*.",
-    "addtl_cost": "0.00",
-    "longname": "S4: Advanced Sound Event",
-    "shortname": "S4",
-    "base_cost": "300.00"
-  },
-  "model": "events.service",
-  "pk": 11
-},
-{
-  "fields": {
-    "category": 4,
-    "help_desc": null,
-    "addtl_cost": "0.00",
-    "longname": "P1: 6 X 20A Circuits",
-    "shortname": "P1",
-    "base_cost": "30.00"
-  },
-  "model": "events.service",
-  "pk": 12
-},
-{
-  "fields": {
-    "category": 4,
-    "help_desc": null,
-    "addtl_cost": "0.00",
-    "longname": "P2: 12 X 20A Circuits",
-    "shortname": "P2",
-    "base_cost": "40.00"
-  },
-  "model": "events.service",
-  "pk": 13
-},
-{
-  "fields": {
-    "category": 4,
-    "help_desc": null,
-    "addtl_cost": "0.00",
-    "longname": "P3: 18 X 20A Circuits",
-    "shortname": "P3",
-    "base_cost": "50.00"
-  },
-  "model": "events.service",
-  "pk": 14
-},
-{
-  "fields": {
-    "category": 3,
-    "help_desc": "Digital Projection:\r\n$20 for the first 20 minutes of use, $7 for each additional 20 minutes of use.",
-    "addtl_cost": "0.00",
-    "longname": "Digital Projection",
-    "shortname": "DP",
-    "base_cost": "20.00"
-  },
-  "model": "events.service",
-  "pk": 15
-},
-{
-  "fields": {
-    "category": 5,
-    "help_desc": "",
-    "addtl_cost": "0.00",
-    "longname": "Rental",
-    "shortname": "PS",
-    "base_cost": "0.00"
-  },
-  "model": "events.service",
-  "pk": 16
-},
-{
-  "fields": {
-    "category": 5,
-    "help_desc": "",
-    "addtl_cost": "0.00",
-    "longname": "Tickets, Sales, Security",
-    "shortname": "TS",
-    "base_cost": "0.00"
-  },
-  "model": "events.service",
-  "pk": 17
-},
-{
-  "fields": {
-    "category": 1,
-    "checkbox": false,
-    "name": "Moving Head Fixtures",
-    "cost": "30.00",
-    "services": [
-      1,
-      2,
-      3,
-      10
-    ],
-    "disappear": false,
-    "desc": "Add moving head lighting to your lighting event."
-  },
-  "model": "events.extra",
-  "pk": 4
-},
-{
-  "fields": {
-    "category": 1,
-    "checkbox": true,
-    "name": "Outdoor Event",
-    "cost": "30.00",
-    "services": [
-      1,
-      2
-    ],
-    "disappear": false,
-    "desc": "This surcharge is assessed for an event which is held outdoors."
-  },
-  "model": "events.extra",
-  "pk": 5
-},
-{
-  "fields": {
-    "category": 1,
-    "checkbox": false,
-    "name": "Strobe Light",
-    "cost": "10.00",
-    "services": [
-      1,
-      2,
-      3,
-      10
-    ],
-    "disappear": false,
-    "desc": "A surcharge for a specialty strobe light. This line item is per strobe light, not per pair however we suggest requesting them in pairs."
-  },
-  "model": "events.extra",
-  "pk": 6
-},
-{
-  "fields": {
-    "category": 1,
-    "checkbox": false,
-    "name": "Blacklight",
-    "cost": "10.00",
-    "services": [
-      1,
-      2,
-      3,
-      10
-    ],
-    "disappear": false,
-    "desc": "This surcharge is for 1 custom high output blacklight blaster. Blacklights are a great add on for any dance or party type event. "
-  },
-  "model": "events.extra",
-  "pk": 7
-},
-{
-  "fields": {
-    "category": 1,
-    "checkbox": false,
-    "name": "Followspot",
-    "cost": "30.00",
-    "services": [
-      1,
-      2,
-      3,
-      10
-    ],
-    "disappear": false,
-    "desc": "Highlight an important person or object. NOTE: There is an additional per-hour surcharge for this item. Contact lnl-vp@wpi.edu for further details."
-  },
-  "model": "events.extra",
-  "pk": 8
-},
-{
-  "fields": {
-    "category": 1,
-    "checkbox": false,
-    "name": "Outdoor Light",
-    "cost": "15.00",
-    "services": [
-      1,
-      2,
-      3,
-      10
-    ],
-    "disappear": false,
-    "desc": "Shine a light on the outside of your favorite campus building! We have a variety of fixtures to chose from that can generate all different types of effects and/or looks."
-  },
-  "model": "events.extra",
-  "pk": 9
-},
-{
-  "fields": {
-    "category": 2,
-    "checkbox": false,
-    "name": "Wireless Microphone",
-    "cost": "10.00",
-    "services": [
-      4,
-      5,
-      6,
-      11
-    ],
-    "disappear": false,
-    "desc": "Get rid of that pesky cord! Make sure your audience can hear you wherever you are. We have a variety of different types of transmitters that allow a performer hold, clip, or wear their microphone. Contact lnl-vp@wpi.edu for further information. "
-  },
-  "model": "events.extra",
-  "pk": 10
-},
-{
-  "fields": {
-    "category": 2,
-    "checkbox": true,
-    "name": "Live Performer Package",
-    "cost": "50.00",
-    "services": [
-      4,
-      5,
-      6,
-      11
-    ],
-    "disappear": false,
-    "desc": "This package allows for the use of compressors and delays. This package also includes two (2) monitor mixes. "
-  },
-  "model": "events.extra",
-  "pk": 11
-},
-{
-  "fields": {
-    "category": 2,
-    "checkbox": true,
-    "name": "Concert Package",
-    "cost": "150.00",
-    "services": [
-      4,
-      5,
-      6,
-      11
-    ],
-    "disappear": false,
-    "desc": "This package induces the use of up to 40 channels as well as the use of compressors and delays. This package also includes four (4) monitor mixes. "
-  },
-  "model": "events.extra",
-  "pk": 12
-},
-{
-  "fields": {
-    "category": 2,
-    "checkbox": false,
-    "name": "Monitor Mix",
-    "cost": "25.00",
-    "services": [
-      4,
-      5,
-      6,
-      11
-    ],
-    "disappear": false,
-    "desc": "Allow your performers to hear each-other and themselves. This item induces up to two (2) speakers per mix."
-  },
-  "model": "events.extra",
-  "pk": 13
-},
-{
-  "fields": {
-    "category": 2,
-    "checkbox": false,
-    "name": "CD Player",
-    "cost": "10.00",
-    "services": [
-      4,
-      5,
-      6,
-      11
-    ],
-    "disappear": false,
-    "desc": "A magical devices that plays the magical shinny round disks. This is a must have for those who do not trust the cloud."
-  },
-  "model": "events.extra",
-  "pk": 14
-},
-{
-  "fields": {
-    "category": 2,
-    "checkbox": true,
-    "name": "Additional 16 Inputs",
-    "cost": "50.00",
-    "services": [
-      4,
-      5,
-      6,
-      11
-    ],
-    "disappear": false,
-    "desc": "This upgrade allow your event to use an additional sixteen (16) inputs on top of the number of inputs already allowed for your event type. "
-  },
-  "model": "events.extra",
-  "pk": 15
-},
-{
-  "fields": {
-    "category": 3,
-    "checkbox": false,
-    "name": "16mm Film Reel ",
-    "cost": "12.00",
-    "services": [
-      7
-    ],
-    "disappear": false,
-    "desc": "Its round and spins!"
-  },
-  "model": "events.extra",
-  "pk": 16
-},
-{
-  "fields": {
-    "category": 3,
-    "checkbox": false,
-    "name": "35mm Film Reel",
-    "cost": "10.00",
-    "services": [
-      8
-    ],
-    "disappear": false,
-    "desc": "Its round and spins!"
-  },
-  "model": "events.extra",
-  "pk": 17
-},
-{
-  "fields": {
-    "category": 3,
-    "checkbox": false,
-    "name": "70mm Film Reel",
-    "cost": "15.00",
-    "services": [
-      9
-    ],
-    "disappear": false,
-    "desc": "Its round and spins!"
-  },
-  "model": "events.extra",
-  "pk": 18
-},
-{
-  "fields": {
-    "category": 3,
-    "checkbox": false,
-    "name": "Additional 20 Minutes Digital Projection",
-    "cost": "7.00",
-    "services": [
-      15
-    ],
-    "disappear": false,
-    "desc": "Each Additional 20 Minutes of Digital Projection"
-  },
-  "model": "events.extra",
-  "pk": 19
-},
-{
   "fields": {
     "name": "Lighting"
   },
@@ -571,5 +33,569 @@
   },
   "model": "events.category",
   "pk": 5
+},
+{
+  "model": "events.service",
+  "pk": 1,
+  "fields": {
+    "shortname": "L1",
+    "longname": "L1: Static Lighting",
+    "base_cost": "50.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "We'll design, hang, and run a lighting setup to make you look great, but we'll only use a few fixtures (12 tops) and will just keep them lit for the entire show. This is definitely not enough light for the Alden main stage.",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.lighting",
+  "pk": 1,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 2,
+  "fields": {
+    "shortname": "L2",
+    "longname": "L2: Basic Dynamic Lighting",
+    "base_cost": "100.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "We'll design, hang, and run a lighting setup to make you look great, and we'll use enough fixtures to fulfill most campus events. We'll also dim and adjust these how you like during the show, which includes using the colored or moving lights. This is still not enough light for the Alden main stage.",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.lighting",
+  "pk": 2,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 3,
+  "fields": {
+    "shortname": "L3",
+    "longname": "L3: Standard Dynamic Lighting",
+    "base_cost": "200.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "We'll design, hang, and run a lighting setup to make you look great, and we'll use plenty of fixtures to fulfill all but the biggest of campus events. We'll dim and adjust these how you like during the show, including cues for any colored or moving lights, dramatic effects for concerts, etc.",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.lighting",
+  "pk": 3,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 4,
+  "fields": {
+    "shortname": "S1",
+    "longname": "S1: House Sound System",
+    "base_cost": "30.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "We come in, set up microphones, and mix your show over an existing speakers. Note that this can only be used in places with a house sound system (for example, Alden or the Odeum) and typically fits small events with multiple people talking. ",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.sound",
+  "pk": 4,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 5,
+  "fields": {
+    "shortname": "S2",
+    "longname": "S2: Basic Sound Event",
+    "base_cost": "150.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "We bring in microphones, mixers, and a pair of our smaller speakers (they're still big and plenty loud, though!). We'll mix and tweak the show. This can be done anywhere, though if the event is on the entire Quad or you're doing a high-profile show in Alden, you might want something a bit bigger.",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.sound",
+  "pk": 5,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 6,
+  "fields": {
+    "shortname": "S3",
+    "longname": "S3: Large Sound Event",
+    "base_cost": "250.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "We bring in microphones, mixers, and a pair of our big speakers with matching subwoofers. We'll mix and tweak the show, going the extra mile to make it sound as good as possible. This can be done anywhere, and will fill just about any venue with the glorious sound of your voice. We can also add additional communication (ie. cues backstage) for shows in Alden.",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.sound",
+  "pk": 6,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 7,
+  "fields": {
+    "shortname": "16",
+    "longname": "16mm",
+    "base_cost": "20.00",
+    "addtl_cost": "0.00",
+    "category": 3,
+    "help_desc": "16mm Projection:\r\n$20 plus $12 for every 40-minute reel. This includes benching and de-benching 40-minute reels, CD/house sound before and after movie (if provided).",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.projection",
+  "pk": 7,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 8,
+  "fields": {
+    "shortname": "35",
+    "longname": "35mm",
+    "base_cost": "30.00",
+    "addtl_cost": "0.00",
+    "category": 3,
+    "help_desc": "35mm Projection:\r\n$30 plus $10 for every 20-minute reel. This includes benching and de-benching 20-minute reels, CD/house sound before and after movie (if provided), projection of 16mm cartoon before (if provided) and projection of previews (if provided).",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.projection",
+  "pk": 8,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 9,
+  "fields": {
+    "shortname": "70",
+    "longname": "70mm",
+    "base_cost": "55.00",
+    "addtl_cost": "0.00",
+    "category": 3,
+    "help_desc": "70mm Projection:\r\n$55 plus $15 for every 20-minute reel. This includes benching and de-benching 20-minute reels, CD/house sound before and after movie (if provided), projection of 16mm cartoon before (if provided) and projection of previews (if provided).",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.projection",
+  "pk": 9,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 10,
+  "fields": {
+    "shortname": "L4",
+    "longname": "L4: Advanced Dynamic Lighting",
+    "base_cost": "300.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "We'll design, hang, and run a lighting setup to make you glow, and we'll use as many fixtures as needed to make your large event shine. We'll dim and adjust these how you like during the show, including cues for any colored or moving lights, dramatic effects for concerts, etc.",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.lighting",
+  "pk": 10,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 11,
+  "fields": {
+    "shortname": "S4",
+    "longname": "S4: Advanced Sound Event",
+    "base_cost": "300.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "What's better than two big speakers? Four big speakers, with four matching subwoofers. For the largest of events, this will blow the roof or let you hear the faintest timbres of a piano. We'll mic, mix, tweak thoroughly, and make sure it fits your needs. *For small venues, this is definitely overkill*.",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.sound",
+  "pk": 11,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 12,
+  "fields": {
+    "shortname": "P1",
+    "longname": "P1: 6 X 20A Circuits",
+    "base_cost": "30.00",
+    "addtl_cost": "0.00",
+    "category": 4,
+    "help_desc": null,
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.service",
+  "pk": 13,
+  "fields": {
+    "shortname": "P2",
+    "longname": "P2: 12 X 20A Circuits",
+    "base_cost": "40.00",
+    "addtl_cost": "0.00",
+    "category": 4,
+    "help_desc": null,
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.service",
+  "pk": 14,
+  "fields": {
+    "shortname": "P3",
+    "longname": "P3: 18 X 20A Circuits",
+    "base_cost": "50.00",
+    "addtl_cost": "0.00",
+    "category": 4,
+    "help_desc": null,
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.service",
+  "pk": 15,
+  "fields": {
+    "shortname": "DP",
+    "longname": "Digital Projection",
+    "base_cost": "20.00",
+    "addtl_cost": "0.00",
+    "category": 3,
+    "help_desc": "Digital Projection:\r\n$20 for the first 20 minutes of use, $7 for each additional 20 minutes of use.",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.projection",
+  "pk": 15,
+  "fields": {}
+},
+{
+  "model": "events.service",
+  "pk": 16,
+  "fields": {
+    "shortname": "PS",
+    "longname": "Rental",
+    "base_cost": "0.00",
+    "addtl_cost": "0.00",
+    "category": 5,
+    "help_desc": "",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.service",
+  "pk": 17,
+  "fields": {
+    "shortname": "TS",
+    "longname": "Tickets, Sales, Security",
+    "base_cost": "0.00",
+    "addtl_cost": "0.00",
+    "category": 5,
+    "help_desc": "",
+    "enabled_event2012": true,
+    "enabled_event2019": false
+  }
+},
+{
+  "model": "events.service",
+  "pk": 18,
+  "fields": {
+    "shortname": "I2",
+    "longname": "Medium Inputs",
+    "base_cost": "75.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 19,
+  "fields": {
+    "shortname": "I1",
+    "longname": "Small Inputs",
+    "base_cost": "50.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 20,
+  "fields": {
+    "shortname": "I3",
+    "longname": "Large Inputs",
+    "base_cost": "150.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 21,
+  "fields": {
+    "shortname": "O1",
+    "longname": "House System",
+    "base_cost": "0.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 22,
+  "fields": {
+    "shortname": "O2",
+    "longname": "Small Speakers",
+    "base_cost": "80.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 23,
+  "fields": {
+    "shortname": "O3",
+    "longname": "Large Speakers",
+    "base_cost": "120.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 24,
+  "fields": {
+    "shortname": "SB",
+    "longname": "Subwoofers",
+    "base_cost": "50.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 25,
+  "fields": {
+    "shortname": "SM",
+    "longname": "Stage Monitors",
+    "base_cost": "30.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 26,
+  "fields": {
+    "shortname": "AF",
+    "longname": "Area Fills",
+    "base_cost": "20.00",
+    "addtl_cost": "0.00",
+    "category": 2,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 27,
+  "fields": {
+    "shortname": "A1",
+    "longname": "Basic Area Lighting",
+    "base_cost": "50.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 28,
+  "fields": {
+    "shortname": "A2",
+    "longname": "Advanced Area Lighting",
+    "base_cost": "75.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 29,
+  "fields": {
+    "shortname": "UP",
+    "longname": "Uplighting",
+    "base_cost": "50.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 30,
+  "fields": {
+    "shortname": "HZ",
+    "longname": "Haze",
+    "base_cost": "20.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 31,
+  "fields": {
+    "shortname": "R1",
+    "longname": "Basic Rigging",
+    "base_cost": "60.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 32,
+  "fields": {
+    "shortname": "R2",
+    "longname": "Advanced Rigging",
+    "base_cost": "120.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 33,
+  "fields": {
+    "shortname": "RP",
+    "longname": "Flown Projector",
+    "base_cost": "20.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 34,
+  "fields": {
+    "shortname": "PD",
+    "longname": "Power Distribution",
+    "base_cost": "40.00",
+    "addtl_cost": "0.00",
+    "category": 4,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 35,
+  "fields": {
+    "shortname": "W1",
+    "longname": "Basic Stage Lighting",
+    "base_cost": "50.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
+},
+{
+  "model": "events.service",
+  "pk": 36,
+  "fields": {
+    "shortname": "W2",
+    "longname": "Advanced Stage Lighting",
+    "base_cost": "75.00",
+    "addtl_cost": "0.00",
+    "category": 1,
+    "help_desc": "",
+    "enabled_event2012": false,
+    "enabled_event2019": true
+  }
 }
 ]

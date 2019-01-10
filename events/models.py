@@ -877,6 +877,10 @@ class Service(models.Model):
     # for the workorder form. Nice And Pretty Descriptions
     help_desc = models.TextField(null=True, blank=True)
 
+    # Enable/disable for different types of events
+    enabled_event2012 = models.BooleanField(default=False, verbose_name='Enabled for 2012 Events')
+    enabled_event2019 = models.BooleanField(default=True, verbose_name='Enabled for 2019 Events')
+
     def __str__(self):
         return self.longname
 

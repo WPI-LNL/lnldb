@@ -17,7 +17,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import Q
-from django.forms import ModelChoiceField, ModelForm, SelectDateWidget
+from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget
 from django.forms.models import inlineformset_factory
 from django.urls.base import reverse
 from django.utils import timezone, six
@@ -534,6 +534,7 @@ class InternalEventForm(FieldAccessForm):
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
     datetime_start = forms.SplitDateTimeField(initial=timezone.now, label="Event Start")
     datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
+    otherservices = ModelMultipleChoiceField(queryset=Service.objects.filter(enabled_event2012=True))
 
 
 class EventReviewForm(forms.ModelForm):
@@ -1222,6 +1223,8 @@ class ServiceInstanceForm(forms.ModelForm):
             'detail': PagedownWidget(show_preview=False),
         }
 
+    service = ModelChoiceField(queryset=Service.objects.filter(enabled_event2019=True))
+
 
 # CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3,form=CCIForm, exclude=[])
 
@@ -1510,7 +1513,7 @@ class LightingForm(forms.Form):
 
     lighting = forms.ModelChoiceField(
         empty_label=None,
-        queryset=Lighting.objects.all(),
+        queryset=Lighting.objects.filter(enabled_event2012=True),
         widget=forms.RadioSelect(attrs={'class': 'radio itt'}),
     )
 
@@ -1553,7 +1556,7 @@ class SoundForm(forms.Form):
 
     sound = forms.ModelChoiceField(
         empty_label=None,
-        queryset=Sound.objects.all(),
+        queryset=Sound.objects.filter(enabled_event2012=True),
         widget=forms.RadioSelect(attrs={'class': 'radio itt'}),
     )
     requirements = forms.CharField(
@@ -1592,7 +1595,7 @@ class ProjectionForm(forms.Form):
 
     projection = forms.ModelChoiceField(
         empty_label=None,
-        queryset=Projection.objects.all(),
+        queryset=Projection.objects.filter(enabled_event2012=True),
         widget=forms.RadioSelect(attrs={'class': 'radio'}),
     )
     requirements = forms.CharField(
@@ -1621,7 +1624,7 @@ class ServiceForm(forms.Form):
         super(ServiceForm, self).__init__(*args, **kwargs)
 
     services = forms.ModelMultipleChoiceField(
-        queryset=Service.objects.filter(category__name__in=["Misc", "Power"]),
+        queryset=Service.objects.filter(category__name__in=["Misc", "Power"], enabled_event2012=True),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
     )
     otherservice_reqs = forms.CharField(

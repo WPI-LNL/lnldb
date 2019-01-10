@@ -141,7 +141,7 @@ def workorderwizard_submit(request):
         if 'id' not in service_data:
             return HttpResponse('Unprocessable Entity', status=422)
         try:
-            service = events_models.Service.objects.get(shortname=service_data['id']) # TODO use active flag
+            service = events_models.Service.objects.filter(enabled_event2019=True).get(shortname=service_data['id'])
         except events_models.Service.DoesNotExist:
             return HttpResponse('Unprocessable Entity', status=422)
         service_instance = events_models.ServiceInstance()
