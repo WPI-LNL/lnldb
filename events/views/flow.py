@@ -688,7 +688,7 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
     perms = 'events.bill_event'
 
     def dispatch(self, request, *args, **kwargs):
-        self.event = get_object_or_404(Event, pk=self.kwargs['event'])
+        self.event = get_object_or_404(BaseEvent, pk=self.kwargs['event'])
         if self.event.closed:
             messages.add_message(request, messages.ERROR, 'Event is closed.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))
@@ -729,7 +729,7 @@ class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateVie
     perms = 'events.bill_event'
 
     def dispatch(self, request, *args, **kwargs):
-        self.event = get_object_or_404(Event, pk=self.kwargs['event'])
+        self.event = get_object_or_404(BaseEvent, pk=self.kwargs['event'])
         if self.event.closed:
             messages.add_message(request, messages.ERROR, 'Event is closed.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))
@@ -763,7 +763,7 @@ class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
     perms = 'events.bill_event'
 
     def dispatch(self, request, *args, **kwargs):
-        self.event = get_object_or_404(Event, pk=self.kwargs['event'])
+        self.event = get_object_or_404(BaseEvent, pk=self.kwargs['event'])
         if self.event.closed:
             messages.add_message(request, messages.ERROR, 'Event is closed.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))

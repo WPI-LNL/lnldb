@@ -402,6 +402,10 @@ class BaseEvent(PolymorphicModel):
         assert False, 'You did not implement has_projection in your subclass!'
 
     @property
+    def eventservices(self):
+        assert False, 'You did not implement eventservices in your subclass!'
+
+    @property
     def short_services(self):
         assert False, 'You did not implement short_services in your subclass!'
 
@@ -763,8 +767,12 @@ class Event2019(BaseEvent):
         return self.serviceinstance_set.filter(service__category__name='Projection').exists()
 
     @property
+    def eventservices(self):
+        return Service.objects.filter(serviceinstance__in=self.serviceinstance_set.all())
+
+    @property
     def short_services(self):
-        return ", ".join(self.serviceinstance_set.values_list('service__shortname', flat=True))
+        return ", ".join(self.eventservices.values_list('shortname', flat=True))
 
     @property
     def eventcount(self):

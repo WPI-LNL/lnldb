@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from xhtml2pdf import pisa
 
-from events.models import Category, Event, ExtraInstance, MultiBilling
+from events.models import Category, BaseEvent, Event, ExtraInstance, MultiBilling
 from projection.models import PITLevel, Projectionist
 
 from .overlay import make_idt_single, make_idt_bulk
@@ -112,7 +112,7 @@ def currency(dollars):
 @login_required
 def generate_event_bill_pdf(request, event):
     # Prepare context
-    event = get_object_or_404(Event, pk=event)
+    event = get_object_or_404(BaseEvent, pk=event)
     if not request.user.has_perm('events.view_event_billing', event):
         raise PermissionDenied
     data = {}
