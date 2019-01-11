@@ -2,17 +2,26 @@
 
 {% block body %}
 <div>
-    {% for event in events %}
-
-        {% for service in event.eventservices %}
-            {% include 'pdf_templates/event-body.html' with event=event service=service %}
-            
-            {% if not forloop.last %}
-            <div><pdf:nextpage /></div>
-            {% endif %}
-        {% empty %}
-            {% include 'pdf_templates/event-body.html' with event=event %}
-        {% endfor %}
+    {% for event_data in events_data %}
+        {% if event_data.is_event2019 %}
+            {% for category_data in event_data.categories_data %}
+                {% include 'pdf_templates/event-body.html' with event=event_data.event category_data=category_data %}
+                {% if not forloop.last %}
+                <div><pdf:nextpage /></div>
+                {% endif %}
+            {% empty %}
+                {% include 'pdf_templates/event-body.html' with event=event_data.event %}
+            {% endfor %}
+        {% else %}
+            {{% for service in event_data.event.eventservices %}
+                {% include 'pdf_templates/event-body.html' with event=event_data.event service=service %}
+                {% if not forloop.last %}
+                <div><pdf:nextpage /></div>
+                {% endif %}
+            {% empty %}
+                {% include 'pdf_templates/event-body.html' with event=event_data.event %}
+            {% endfor %}
+        {% endif %}
         <div><pdf:nextpage /></div>
     {% endfor %}
 </div>

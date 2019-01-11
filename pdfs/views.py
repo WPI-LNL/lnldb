@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from xhtml2pdf import pisa
 
-from events.models import Category, BaseEvent, Event, ExtraInstance, MultiBilling
+from events.models import Category, BaseEvent, Event2019, ExtraInstance, MultiBilling
 from projection.models import PITLevel, Projectionist
 
 from .overlay import make_idt_single, make_idt_bulk
@@ -83,8 +83,26 @@ def generate_event_pdf(request, id):
         raise PermissionDenied
     # Prepare context
     data = {}
-    event = get_object_or_404(Event, pk=id)
-    data['events'] = [event]
+    event = get_object_or_404(BaseEvent, pk=id)
+    is_event2019 = isinstance(event, Event2019)
+    event_data = {
+        'event': event,
+        'is_event2019': is_event2019
+    }
+    if is_event2019:
+        categories_data = []
+        for category in Category.objects.filter(service__serviceinstance__event=event).distinct():
+            o = {}
+            o['category'] = category
+            o['serviceinstances_data'] = []
+            for serviceinstance in event.serviceinstance_set.filter(service__category=category):
+                o['serviceinstances_data'].append({
+                    'serviceinstance': serviceinstance,
+                    'attachment': event.attachments.filter(for_service=serviceinstance.service).exists()
+                })
+            categories_data.append(o)
+        event_data['categories_data'] = categories_data
+    data['events_data'] = [event_data]
 
     # Render html content through html template with context
     html = render_to_string('pdf_templates/events.html',
@@ -253,8 +271,28 @@ def generate_pdfs_standalone(ids=None):
     timezone.activate(timezone.get_current_timezone())
 
     data = {}
-    events = Event.objects.filter(pk__in=ids)
-    data['events'] = events
+    events = BaseEvent.objects.filter(pk__in=ids)
+    data['events_data'] = []
+    for event in events:
+        is_event2019 = isinstance(event, Event2019)
+        event_data = {
+            'event': event,
+            'is_event2019': is_event2019
+        }
+        if is_event2019:
+            categories_data = []
+            for category in Category.objects.filter(service__serviceinstance__event=event).distinct():
+                o = {}
+                o['category'] = category
+                o['serviceinstances_data'] = []
+                for serviceinstance in event.serviceinstance_set.filter(service__category=category):
+                    o['serviceinstances_data'].append({
+                        'serviceinstance': serviceinstance,
+                        'attachment': event.attachments.filter(for_service=serviceinstance.service).exists()
+                    })
+                categories_data.append(o)
+            event_data['categories_data'] = categories_data
+        data['events_data'].append(event_data)
 
     html = render_to_string('pdf_templates/events.html',
                             context=data)
@@ -272,13 +310,33 @@ def generate_event_pdf_multi(request, ids=None):
     timezone.activate(timezone.get_current_timezone())
 
     if not ids:
-        return HttpResponse("Should probably give some ids to return pdfs for..")
+        return HttpResponse("Should probably give some ids to return pdfs for.")
     # Prepare IDs
     idlist = ids.split(',')
     # Prepare context
     data = {}
-    events = Event.objects.filter(pk__in=idlist)
-    data['events'] = events
+    events = BaseEvent.objects.filter(pk__in=idlist)
+    data['events_data'] = []
+    for event in events:
+        is_event2019 = isinstance(event, Event2019)
+        event_data = {
+            'event': event,
+            'is_event2019': is_event2019
+        }
+        if is_event2019:
+            categories_data = []
+            for category in Category.objects.filter(service__serviceinstance__event=event).distinct():
+                o = {}
+                o['category'] = category
+                o['serviceinstances_data'] = []
+                for serviceinstance in event.serviceinstance_set.filter(service__category=category):
+                    o['serviceinstances_data'].append({
+                        'serviceinstance': serviceinstance,
+                        'attachment': event.attachments.filter(for_service=serviceinstance.service).exists()
+                    })
+                categories_data.append(o)
+            event_data['categories_data'] = categories_data
+        data['events_data'].append(event_data)
 
     # Render html content through html template with context
     html = render_to_string('pdf_templates/events.html',
