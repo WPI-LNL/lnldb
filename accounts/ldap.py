@@ -31,7 +31,7 @@ def search_users(q):
     conn_args = get_ldap_settings()
 
     with ldap3.Connection(server_pool, **conn_args) as conn:
-        conn.search(search_base='ou=People,dc=wpi,dc=edu', search_filter=ldap_q, search_scope=ldap3.LEVEL, attributes=('givenName', 'sn', 'mail', 'uid'), paged_size=15)
+        conn.search(search_base='ou=People,dc=wpi,dc=edu', search_filter=ldap_q, search_scope=ldap3.LEVEL, attributes=('givenName', 'sn', 'mail', 'uid', 'wpieduPersonClass'), paged_size=15)
         resp = conn.response
     return resp
 
@@ -43,12 +43,18 @@ def search_or_create_users(q):
         ldap_u = ldap_u['attributes']
         if 'uid' not in ldap_u:
             continue
+        class_year = ldap_u.get('wpieduPersonClass', [None])[0]
+        try:
+            class_year = int(class_year)
+        except (ValueError, TypeError):
+            class_year = None
         u, created = get_user_model().objects.get_or_create(
             username=ldap_u['uid'][0],
             defaults={
                 'email': ldap_u.get('mail', [False])[0] or ldap_u['uid'][0] + "@wpi.edu",
                 'first_name': ldap_u.get('givenName', [''])[0][0:NAME_LENGTH - 1],
-                'last_name': ldap_u.get('sn', [''])[0][0:NAME_LENGTH - 1]
+                'last_name': ldap_u.get('sn', [''])[0][0:NAME_LENGTH - 1],
+                'class_year': class_year,
             }
         )
         objs.append(u)
@@ -61,7 +67,7 @@ def fill_in_user(user):
     conn_args = get_ldap_settings()
 
     with ldap3.Connection(server_pool, **conn_args) as conn:
-        conn.search(search_base='ou=People,dc=wpi,dc=edu', search_filter=("(uid=%s)" % user.username), search_scope=ldap3.LEVEL, attributes=('givenName', 'sn'), paged_size=1)
+        conn.search(search_base='ou=People,dc=wpi,dc=edu', search_filter=("(uid=%s)" % user.username), search_scope=ldap3.LEVEL, attributes=('givenName', 'sn', 'mail', 'wpieduPersonClass'), paged_size=1)
         resp = conn.response
     if len(resp):
         resp = resp[0]['attributes']
@@ -70,7 +76,15 @@ def fill_in_user(user):
         if not user.last_name:
             user.last_name = resp.get('sn', [''])[0][0:NAME_LENGTH - 1]
         if not user.email:
-            user.email = resp.get('mail', [False])[0][0] or user.username + "@wpi.edu",
+            user.email = resp.get('mail', [False])[0][0] or user.username + "@wpi.edu"
+        if not user.class_year:
+            class_year = resp.get('wpieduPersonClass', [None])[0]
+            try:
+                class_year = int(class_year)
+            except (ValueError, TypeError):
+                class_year = None
+            if class_year:
+                user.class_year = class_year
     return user
 
 
