@@ -4,15 +4,17 @@
 <h2> {{ h2 }} </h2>
 <table class="table table-striped table-bordered">
     <tr> 
-        <th> Full Name </th>
-        <th> User Name </th>
-        <th> E-Mail </th>
+        <th>Full Name</th>
+        <th>User Name</th>
+        <th>E-Mail</th>
+        <th>Class Year</th>
     </tr>
     {% for user in users %}
             <tr>
                 <td>{{ user.last_name }}, {{ user.first_name }}</td>
                 <td><a href="{% url "accounts:detail" user.id %}">{{ user }}</a></td>
                 <td>{{ user.email }}</td>
+                <td>{% if user.class_year %}{{ user.class_year }}{% endif %}</td>
             </tr>
     {% endfor %}
 </table>

@@ -66,6 +66,12 @@
                     <th>Address</th>
                     <td>{{ u.addr }}</td>
                 </tr>
+                {% if u.is_lnl or u.class_year %}
+                    <tr>
+                        <th>Class Year</th>
+                        <td>{{ u.class_year }}</td>
+                    </tr>
+                {% endif %}
                 {% if u.is_lnl or u.mdc %}
                     <tr>
                         <th>MDC</th>
