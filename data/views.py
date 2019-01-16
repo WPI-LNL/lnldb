@@ -172,8 +172,9 @@ def workorderwizard_submit(request):
 
     # send confirmation email
     email_body = 'You have successfully submitted the following event.'
+    bcc = [settings.EMAIL_TARGET_VP, settings.EMAIL_TARGET_HP] if event.has_projection else [settings.EMAIL_TARGET_VP]
     email = EventEmailGenerator(event=event, subject='New Event Submitted', to_emails=[request.user.email],
-                                body=email_body, bcc=[settings.EMAIL_TARGET_VP])
+                                body=email_body, bcc=bcc)
     email.send()
 
     # If the user does not have permission to submit events on behalf of the selected organization,
