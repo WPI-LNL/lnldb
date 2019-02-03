@@ -59,7 +59,7 @@ class User(AbstractUser):
     @property
     def is_complete(self):
         # if this returns false, the user will be constantly reminded to update their profile
-        return self.first_name and self.last_name and self.email
+        return self.first_name and self.last_name and self.email and (not self.is_lnl or self.class_year)
 
     @property
     def group_str(self):
