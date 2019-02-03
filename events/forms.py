@@ -1019,14 +1019,8 @@ class MKHoursForm(forms.ModelForm):
 
     def save(self, commit=True):
         obj = super(MKHoursForm, self).save(commit=False)
-        try:
-            obj.category
-        except Category.DoesNotExist:
-            try:
-                obj.service
-                obj.category = obj.service.category
-            except Service.DoesNotExist:
-                pass
+        if obj.category is None and obj.service is not None:
+            obj.category = obj.service.category
         obj.event = self.event
         if commit:
             obj.save()
