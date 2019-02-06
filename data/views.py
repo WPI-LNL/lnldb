@@ -162,7 +162,7 @@ def workorderwizard_submit(request):
         try:
             extra = events_models.Extra.objects \
                 .filter(disappear=False, services__in=event.serviceinstance_set.values_list('service', flat=True)) \
-                .get(name=extra_data['id'])
+                .distinct().get(name=extra_data['id'])
         except events_models.Extra.DoesNotExist:
             return HttpResponse('Unprocessable Entity', status=422)
         extra_instance = events_models.ExtraInstance()
