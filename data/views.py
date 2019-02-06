@@ -160,7 +160,9 @@ def workorderwizard_submit(request):
         if not all(key in extra_data for key in ('id', 'quantity')):
             return HttpResponse('Unprocessable Entity', status=422)
         try:
-            extra = events_models.Extra.objects.filter(disappear=False).get(name=extra_data['id'])
+            extra = events_models.Extra.objects \
+                .filter(disappear=False, services__in=event.serviceinstance_set.values_list('service', flat=True)) \
+                .get(name=extra_data['id'])
         except events_models.Extra.DoesNotExist:
             return HttpResponse('Unprocessable Entity', status=422)
         extra_instance = events_models.ExtraInstance()
