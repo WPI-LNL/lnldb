@@ -79,11 +79,11 @@ def generate_projection_pdf(request):
 
 @login_required
 def generate_event_pdf(request, id):
-    if not request.user.has_perm('events.view_event'):
+    event = get_object_or_404(BaseEvent, pk=id)
+    if not request.user.has_perm('events.view_event_reports', event):
         raise PermissionDenied
     # Prepare context
     data = {}
-    event = get_object_or_404(BaseEvent, pk=id)
     is_event2019 = isinstance(event, Event2019)
     event_data = {
         'event': event,
