@@ -135,7 +135,6 @@ def workorderwizard_submit(request):
     except events_models.Organization.DoesNotExist:
         return HttpResponse('Unprocessable Entity', status=422)
     event.billing_org = org
-    event.test_event = True # TODO remove this line when the new work order wizard is publicly released 
 
     # populate many-to-many fields
     event.save()
