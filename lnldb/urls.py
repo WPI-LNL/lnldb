@@ -54,7 +54,7 @@ urlpatterns = [
     url(r'^db/workorderwizard-load$', data.views.workorderwizard_load, name="wizard-load"),
     url(r'^db/workorderwizard-submit$', data.views.workorderwizard_submit, name="wizard-submit"),
     url(r'^db/workorderwizard-autopopulate$', data.views.workorderwizard_findprevious, name="wizard-findprevious"),
-    url(r'^workorder$', RedirectView.as_view(url='/workorder/', permanent=False)),
+    url(r'^workorder/', RedirectView.as_view(url='/workorder/', permanent=False)),
 
     # keep old urls
     url(r'^lnadmin/$', RedirectView.as_view(url="/db/", permanent=True)),
