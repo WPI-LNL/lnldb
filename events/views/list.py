@@ -78,25 +78,13 @@ def datefilter(eventqs, context, start=None, end=None):
 
     if start:
         context['start'] = start
-        try:
-            startdate = make_aware(datetime.datetime.strptime(start, '%Y-%m-%d'))
-            eventqs = eventqs.filter(datetime_start__gte=startdate)
-
-        except:
-            raise
-    else:
-        eventqs = eventqs.filter(datetime_start__gte=today)
+        startdate = make_aware(datetime.datetime.strptime(start, '%Y-%m-%d'))
+        eventqs = eventqs.filter(datetime_start__gte=startdate)
 
     if end:
         context['end'] = end
-        try:
-            enddate = make_aware(datetime.datetime.strptime(end, '%Y-%m-%d'))
-            eventqs = eventqs.filter(datetime_end__lte=enddate)
-
-        except:
-            raise
-    else:
-        eventqs = eventqs.filter(datetime_end__lte=weekfromnow)
+        enddate = make_aware(datetime.datetime.strptime(end, '%Y-%m-%d'))
+        eventqs = eventqs.filter(datetime_end__lte=enddate)
 
     return eventqs, context
 
@@ -704,11 +692,6 @@ def paid_cal(request, start=None, end=None):
 def unpaid(request, start=None, end=None):
     context = {}
 
-    if not start and not end:
-        start, end = get_very_large_date_range()
-
-    # events = Event.objects.filter(approved=True).filter(time_setup_start__lte=datetime.datetime.now())
-    # .filter(date_setup_start__lte=today)
     events = BaseEvent.objects.annotate(
         numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
         .filter(Q(billings__date_billed__isnull=False) | Q(multibillings__date_billed__isnull=False)) \
