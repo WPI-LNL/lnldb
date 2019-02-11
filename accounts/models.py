@@ -63,7 +63,7 @@ class User(AbstractUser):
 
     @property
     def group_str(self):
-        groups = map(lambda l: l.name, self.groups.all())
+        groups = [g.name for g in self.groups.all()]
         out_str = ""
         if "Alumni" in groups:
             out_str += 'Alum '
