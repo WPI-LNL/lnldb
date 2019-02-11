@@ -641,12 +641,16 @@ class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, Login
         return reverse("events:detail", args=(self.kwargs['event'],))
 
 
-class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
+class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
     model = CCReport
     form_class = InternalReportForm
     template_name = "form_crispy_cbv.html"
     msg = "Update Crew Chief Report"
     perms = 'events.change_ccreport'
+
+    def user_passes_test(self, request, *args, **kwargs):
+        obj = self.get_object()
+        return obj.event.reports_editable and request.user.has_perm(self.perms, obj)
 
     def get_form_kwargs(self):
         kwargs = super(CCRUpdate, self).get_form_kwargs()
@@ -662,11 +666,15 @@ class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermMixin, LoginRequir
         return reverse("events:detail", args=(self.kwargs['event'],))
 
 
-class CCRDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
+class CCRDelete(SetFormMsgMixin, HasPermOrTestMixin, LoginRequiredMixin, DeleteView):
     model = CCReport
     template_name = "form_delete_cbv.html"
     msg = "Deleted Crew Chief Report"
     perms = 'events.delete_ccreport'
+
+    def user_passes_test(self, request, *args, **kwargs):
+        obj = self.get_object()
+        return obj.event.reports_editable and request.user.has_perm(self.perms, obj)
 
     def get_object(self, queryset=None):
         """ Hook to ensure object isn't closed """
