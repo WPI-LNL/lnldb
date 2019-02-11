@@ -129,7 +129,7 @@
 
                         {% elif field.name == 'crew_chief' %}
                             <td class="event-cc">
-                                {% if event.crew_chief %}
+                                {% if event.crew_chief.exists %}
                                     {% for cc in event.crew_chief.all %}
                                         <a href="{% url "accounts:detail" cc.id %}">
                                             {{ cc }}</a>{% if not forloop.last %},{% endif %} 
