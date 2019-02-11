@@ -732,7 +732,7 @@ def unpaid(request, start=None, end=None):
                        FakeExtendedField('datetime_start', verbose_name="Event Time"),
                        FakeField('last_billed', sortable=True),
                        FakeField('times_billed', sortable=True),
-                       FakeField('short_services', verbose_name="Services", sortable=False),
+                       FakeField('cost_total', verbose_name='Price', sortable=True),
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     response = render(request, 'events.html', context)
