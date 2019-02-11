@@ -1,4 +1,5 @@
 from django import test
+from django.contrib.auth.models import Group
 from django.core import management
 from six import StringIO
 
@@ -8,8 +9,9 @@ from . import ldap, models
 class LdapTestCase(test.TestCase):
 
     def setUp(self):
-        self.some_user = models.User.objects.create(username="lnl")
         # some user who is guaranteed to be on the ldap server. Like our club account.
+        self.some_user = models.User.objects.create(username="lnl")
+        Group.objects.create(name='Active').user_set.add(self.some_user)
 
     def test_search(self):
         # test that we get *some* results
