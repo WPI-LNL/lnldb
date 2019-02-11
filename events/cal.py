@@ -14,7 +14,7 @@ from django.views.generic.base import View
 from django.views.decorators.cache import cache_page
 from django_ical.views import ICalFeed
 
-from events.models import BaseEvent, EventCCInstance
+from events.models import BaseEvent, Category, EventCCInstance
 from meetings.models import Meeting
 from helpers.mixins import HasPermMixin
 
@@ -94,6 +94,30 @@ class BaseCalJsonView(HasPermMixin, View):
     perms = ['events.view_event']
     http_method_names = ['get']
 
+    def get(self, request, queryset, *args, **kwargs):
+        if not request.user.has_perm('events.event_view_sensitive'):
+            queryset = queryset.exclude(sensitive=True)
+        if not request.user.has_perm('events.view_test_event'):
+            queryset = queryset.exclude(test_event=True)
+        projection = 'show'
+        if request.GET.get('projection'):
+            projection = request.GET.get('projection')
+        elif request.COOKIES.get('projection'):
+            projection = request.COOKIES.get('projection')
+        if projection == 'hide':
+            queryset = queryset.exclude(
+                (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+                | Q(serviceinstance__service__category__name='Projection')) \
+                & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
+        elif projection == 'only':
+            queryset = queryset.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
+        from_date = request.GET.get('from', False)
+        to_date = request.GET.get('to', False)
+        response = HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+            response.set_cookie('projection', request.GET['projection'])
+        return response
+
 
 class PublicFacingCalJsonView(View):
     # Does not inherit BaseCalJsonView because it should not require login
@@ -114,14 +138,7 @@ class FindChiefCalJsonView(BaseCalJsonView):
             .annotate(num_ccs=Count('ccinstances')) \
             .filter(Q(Event___ccs_needed__gt=F('num_ccs')) | Q(num_ccs__lt=Count('serviceinstance__service__category', distinct=True))) \
             .distinct()
-        if not request.user.has_perm('events.event_view_sensitive'):
-            queryset = queryset.exclude(sensitive=True)
-        if not request.user.has_perm('events.view_test_event'):
-            queryset = queryset.exclude(test_event=True)
-
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        return super(FindChiefCalJsonView, self).get(request, queryset)
 
 
 class IncomingCalJsonView(BaseCalJsonView):
@@ -129,27 +146,13 @@ class IncomingCalJsonView(BaseCalJsonView):
 
     def get(self, request, *args, **kwargs):
         queryset = BaseEvent.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
-        if not request.user.has_perm('events.event_view_sensitive'):
-            queryset = queryset.exclude(sensitive=True)
-        if not request.user.has_perm('events.view_test_event'):
-            queryset = queryset.exclude(test_event=True)
-
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        return super(IncomingCalJsonView, self).get(request, queryset)
 
 
 class OpenCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
         queryset = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).distinct()
-        if not request.user.has_perm('events.event_view_sensitive'):
-            queryset = queryset.exclude(sensitive=True)
-        if not request.user.has_perm('events.view_test_event'):
-            queryset = queryset.exclude(test_event=True)
-
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        return super(OpenCalJsonView, self).get(request, queryset)
 
 
 class UnreviewedCalJsonView(BaseCalJsonView):
@@ -160,14 +163,7 @@ class UnreviewedCalJsonView(BaseCalJsonView):
             .filter(reviewed=False) \
             .filter(datetime_end__lte=now) \
             .distinct()
-        if not request.user.has_perm('events.event_view_sensitive'):
-            queryset = queryset.exclude(sensitive=True)
-        if not request.user.has_perm('events.view_test_event'):
-            queryset = queryset.exclude(test_event=True)
-
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        return super(UnreviewedCalJsonView, self).get(request, queryset)
 
 
 class UnbilledCalJsonView(BaseCalJsonView):
@@ -179,14 +175,7 @@ class UnbilledCalJsonView(BaseCalJsonView):
             .filter(billings__isnull=True, multibillings__isnull=True) \
             .filter(billed_by_semester=False) \
             .distinct()
-        if not request.user.has_perm('events.event_view_sensitive'):
-            queryset = queryset.exclude(sensitive=True)
-        if not request.user.has_perm('events.view_test_event'):
-            queryset = queryset.exclude(test_event=True)
-
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        return super(UnbilledCalJsonView, self).get(request, queryset)
 
 
 class UnbilledSemesterCalJsonView(BaseCalJsonView):
@@ -199,14 +188,7 @@ class UnbilledSemesterCalJsonView(BaseCalJsonView):
             .filter(billed_by_semester=True) \
             .order_by('datetime_start') \
             .distinct()
-        if not request.user.has_perm('events.event_view_sensitive'):
-            queryset = queryset.exclude(sensitive=True)
-        if not request.user.has_perm('events.view_test_event'):
-            queryset = queryset.exclude(test_event=True)
-
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        return super(UnbilledSemesterCalJsonView, self).get(request, queryset)
 
 
 class PaidCalJsonView(BaseCalJsonView):
@@ -216,14 +198,7 @@ class PaidCalJsonView(BaseCalJsonView):
         queryset = BaseEvent.objects.filter(closed=False) \
             .filter(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)) \
             .distinct()
-        if not request.user.has_perm('events.event_view_sensitive'):
-            queryset = queryset.exclude(sensitive=True)
-        if not request.user.has_perm('events.view_test_event'):
-            queryset = queryset.exclude(test_event=True)
-
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        return super(PaidCalJsonView, self).get(request, queryset)
 
 
 class UnpaidCalJsonView(BaseCalJsonView):
@@ -237,42 +212,21 @@ class UnpaidCalJsonView(BaseCalJsonView):
             .exclude(numpaid__gt=0) \
             .filter(reviewed=True) \
             .distinct()
-        if not request.user.has_perm('events.event_view_sensitive'):
-            queryset = queryset.exclude(sensitive=True)
-        if not request.user.has_perm('events.view_test_event'):
-            queryset = queryset.exclude(test_event=True)
-
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        return super(UnpaidCalJsonView, self).get(request, queryset)
 
 
 class ClosedCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
         queryset = BaseEvent.objects.filter(closed=True)
-        if not request.user.has_perm('events.event_view_sensitive'):
-            queryset = queryset.exclude(sensitive=True)
-        if not request.user.has_perm('events.view_test_event'):
-            queryset = queryset.exclude(test_event=True)
-
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        return super(ClosedCalJsonView, self).get(request, queryset)
 
 
 class AllCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
         queryset = BaseEvent.objects.distinct()
-        if not request.user.has_perm('events.event_view_sensitive'):
-            queryset = queryset.exclude(sensitive=True)
-        if not request.user.has_perm('events.view_test_event'):
-            queryset = queryset.exclude(test_event=True)
         if not request.user.has_perm('events.approve_event'):
             queryset = queryset.exclude(approved=False)
-
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
-        return HttpResponse(generate_cal_json(queryset, from_date, to_date))
+        return super(AllCalJsonView, self).get(request, queryset)
 
 
 def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):
