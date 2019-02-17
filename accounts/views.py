@@ -259,8 +259,9 @@ class PasswordSetView(generic.FormView):
     def get_success_url(self):
         return reverse('accounts:detail', args=[self.user.pk])
 
-    def get_context_data(self, form, **kwargs):
+    def get_context_data(self, **kwargs):
         context = super(PasswordSetView, self).get_context_data(**kwargs)
+        form = self.get_form()
         context['form'] = form
         form.helper = FormHelper(form)
         form.helper.layout.fields.append(form_footer("Set Password"))
