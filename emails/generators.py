@@ -118,7 +118,7 @@ def generate_selfservice_notice_email(context):
     cont_html = render_to_string('emails/email_selfservice.html', context)
     cont_text = render_to_string('emails/email_selfservice.txt', context)
 
-    email = EmailMultiAlternatives(subject, cont_text, from_email, [to_email])
+    email = EmailMultiAlternatives(subject, cont_text, from_email, to_email)
     email.attach_alternative(cont_html, "text/html")
 
     return email
