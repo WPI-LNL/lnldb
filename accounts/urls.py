@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib.auth import views as auth_views
+from django.urls.base import reverse_lazy
 
 import django_cas_ng.views
 
@@ -71,13 +72,16 @@ urlpatterns = [
 
     # and keep password resets separate from either (though technically local)
     url(r'^local/reset/', include(([
-        url(r'^$', auth_views.PasswordResetView.as_view(),
-            {'template_name': 'registration/reset_password.html',
-             'post_reset_redirect': 'accounts:reset:sent',
-             'from_email': settings.DEFAULT_FROM_ADDR},
-            name='start'),
+        url(r'^$', auth_views.PasswordResetView.as_view(
+                success_url=reverse_lazy('accounts:reset:sent'),
+                from_email=settings.DEFAULT_FROM_ADDR,
+                email_template_name='registration/password_reset_email.txt'
+            ),
+            {'template_name': 'registration/reset_password.html'},
+            name='start'
+        ),
         url(r'^confirm/(?P<uidb64>[0-9A-Za-z]+)-(?P<token>.+)/$',
-            auth_views.PasswordResetConfirmView.as_view(),
+            auth_views.PasswordResetConfirmView.as_view(success_url=reverse_lazy('accounts:reset:done')),
             {'template_name': 'registration/reset_password_form.html'},
             name='confirm'),
         url(r'^sent/$', auth_views.PasswordResetDoneView.as_view(),
