@@ -109,6 +109,11 @@ class CustomEventModelMultipleChoiceField(forms.ModelMultipleChoiceField):
         return six.u('%s\u2014%s') % (event.event_name, ', '.join(map(lambda org : org.name, event.org.all())))
 
 
+class CustomOrganizationEmailModelMultipleChoiceField(forms.ModelMultipleChoiceField):
+    def label_from_instance(self, org):
+        return six.u('%s (%s)') % (org.name, org.exec_email)
+
+
 # LNAdmin Forms
 class WorkorderSubmit(ModelForm):
     class Meta:
@@ -914,11 +919,11 @@ class BillingEmailForm(forms.ModelForm):
         fields = ('subject', 'message', 'email_to_users', 'email_to_orgs')
 
     email_to_users = AutoCompleteSelectMultipleField('Users', required=False, label="User Recipients")
-    email_to_orgs = forms.ModelMultipleChoiceField(
+    email_to_orgs = CustomOrganizationEmailModelMultipleChoiceField(
         queryset=Organization.objects.all(),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
         required=False, label="Client Recipients",
-        help_text="The email will be addressed to the client's exec email alias on file."
+        help_text="The email address listed is the client's exec email alias on file."
     )
 
 
@@ -975,11 +980,11 @@ class MultiBillingEmailForm(forms.ModelForm):
         fields = ('subject', 'message', 'email_to_users', 'email_to_orgs')
 
     email_to_users = AutoCompleteSelectMultipleField('Users', required=False, label="User Recipients")
-    email_to_orgs = forms.ModelMultipleChoiceField(
+    email_to_orgs = CustomOrganizationEmailModelMultipleChoiceField(
         queryset=Organization.objects.all(),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
         required=False, label="Client Recipients",
-        help_text="The email will be addressed to the client's exec email alias on file."
+        help_text="The email address listed is the client's exec email alias on file."
     )
 
 
