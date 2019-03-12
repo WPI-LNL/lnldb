@@ -60,33 +60,49 @@ class BaseFeed(ICalFeed):
 
 class EventFeed(BaseFeed):
     def items(self):
-        return list(BaseEvent.objects.filter(approved=True).exclude(Q(closed=True) |
-                                                                Q(cancelled=True) |
-                                                                Q(test_event=True) |
-                                                                Q(sensitive=True)).order_by('datetime_start').all()) + \
-            list(EventCCInstance.objects.filter(event__approved=True).exclude(Q(event__closed=True) |
-                                                                              Q(event__cancelled=True))
-                                .order_by('setup_start').all()) + \
+        return list(BaseEvent.objects.filter(approved=True)\
+            .exclude(
+                Q(closed=True) |
+                Q(cancelled=True) |
+                Q(test_event=True) |
+                Q(sensitive=True)
+            ).order_by('datetime_start').all()) + \
+            list(EventCCInstance.objects.filter(event__approved=True)\
+            .exclude(
+                Q(event__closed=True) |
+                Q(event__cancelled=True) |
+                Q(event__test_event=True) |
+                Q(event__sensitive=True)
+            ).order_by('setup_start').all()) + \
             list(Meeting.objects.order_by('datetime').all())
 
 
 class FullEventFeed(BaseFeed):
     def items(self):
-        return list(BaseEvent.objects.exclude(Q(closed=True) |
-                                          Q(cancelled=True) |
-                                          Q(test_event=True) |
-                                          Q(sensitive=True)).order_by('datetime_start').all()) + \
-            list(EventCCInstance.objects.exclude(Q(event__closed=True) | Q(event__cancelled=True))
-                                .order_by('setup_start').all()) + \
+        return list(BaseEvent.objects.exclude(
+                Q(closed=True) |
+                Q(cancelled=True) |
+                Q(test_event=True) |
+                Q(sensitive=True)
+            ).order_by('datetime_start').all()) + \
+            list(EventCCInstance.objects.exclude(
+                Q(event__closed=True) |
+                Q(event__cancelled=True) |
+                Q(event__test_event=True) |
+                Q(event__sensitive=True)
+            ).order_by('setup_start').all()) + \
             list(Meeting.objects.order_by('datetime').all())
 
 
 class LightEventFeed(BaseFeed):
     def items(self):
-        return list(BaseEvent.objects.filter(approved=True).exclude(Q(closed=True) |
-                                                                Q(cancelled=True) |
-                                                                Q(test_event=True) |
-                                                                Q(sensitive=True)).order_by('datetime_start').all()) + \
+        return list(BaseEvent.objects.filter(approved=True)\
+            .exclude(
+                Q(closed=True) |
+                Q(cancelled=True) |
+                Q(test_event=True) |
+                Q(sensitive=True)
+            ).order_by('datetime_start').all()) + \
             list(Meeting.objects.order_by('datetime').all())
 
 
