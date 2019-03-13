@@ -1,4 +1,3 @@
-from functools import wraps, partial
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -13,10 +12,8 @@ from emails.generators import EventEmailGenerator
 from events.forms import InternalEventForm, ServiceInstanceForm
 from events.models import BaseEvent, Event, Event2019, ServiceInstance
 from helpers.revision import set_revision_comment
+from helpers.util import curry_class
 
-
-def curry_class(cls, *args, **kwargs):
-    return wraps(cls)(partial(cls, *args, **kwargs))
 
 @login_required
 def eventnew(request, id=None):

@@ -1,5 +1,4 @@
 import datetime
-from functools import wraps, partial
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
@@ -27,12 +26,9 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
 from helpers.revision import set_revision_comment
+from helpers.util import curry_class
 from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standalone,
                         generate_multibill_pdf_standalone)
-
-
-def curry_class(cls, *args, **kwargs):
-    return wraps(cls)(partial(cls, *args, **kwargs))
 
 
 @login_required

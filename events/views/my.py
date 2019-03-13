@@ -16,6 +16,7 @@ from emails.generators import generate_selfservice_notice_email
 from events.forms import (EditHoursForm, InternalReportForm, MKHoursForm,
                           SelfServiceOrgRequestForm, WorkorderRepeatForm)
 from events.models import CCReport, BaseEvent, Event, Hours
+from helpers.util import curry_class
 
 
 @login_required
@@ -316,7 +317,7 @@ def hours_bulk(request, eventid):
     context['event'] = event
 
     mk_event_formset = inlineformset_factory(Event, Hours, extra=15, exclude=[])
-    mk_event_formset.form = staticmethod(curry(MKHoursForm, event=event))
+    mk_event_formset.form = curry_class(MKHoursForm, event=event)
 
     if request.method == 'POST':
         formset = mk_event_formset(request.POST, instance=event)
