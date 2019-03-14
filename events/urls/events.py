@@ -46,6 +46,8 @@ urlpatterns = [
     url(r'^view/(?P<id>[0-9a-f]+)/$', flow_views.viewevent, name="detail"),
     url(r'^pdf/(?P<ids>\d+(,\d+)*)?/?$', pdf_views.generate_event_pdf_multi,
         name="pdf-multi"),
+    url(r'^bills-pdf/(?P<ids>\d+(,\d+)*)?/?$', pdf_views.generate_event_bill_pdf_multi,
+        name="bill-pdf-multi"),
     url(r'^view/(?P<id>[0-9a-f]+)/pdf/$', pdf_views.generate_event_pdf, name="pdf"),
     # url(r'^db/events/mk/$', 'events.views.mkedrm.eventnew', name="event-new"),
     url(r'^mk/$', mkedrm_views.eventnew, name="new"),

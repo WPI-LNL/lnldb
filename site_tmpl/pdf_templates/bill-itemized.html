@@ -2,6 +2,7 @@
 {% load static %}
 {% load tz %}
 {% block body %}
+{% for event_data in events_data %}
 <!-- have mercy on the soul of the following html.
 
     XHTML2PDF/Pisa supports a subset of HTML0 and CSS0. Everything is finicky, and anything past a single-
@@ -29,8 +30,8 @@
 
                 </td>
                 <td class="head">
-                    <h1 class="megatext">{% if event.reviewed %}INVOICE{% else %}QUOTE{% endif %}</h1>
-                    <h2 class="subtext">{{ event }}</h2>
+                    <h1 class="megatext">{% if event_data.event.reviewed %}INVOICE{% else %}QUOTE{% endif %}</h1>
+                    <h2 class="subtext">{{ event_data.event }}</h2>
                     <h2 class="subtext"><b>Generated Date:</b> {% now "M. j, Y" %}</h2>
                 </td>
                 </tr>
@@ -38,18 +39,18 @@
             <table class="info">
                 <tr>
                     <td width="200"><b>Sponsoring Organizations:</b></td>
-                    <td>{{ event.org.all|join:", " }}</td>
+                    <td>{{ event_data.event.org.all|join:", " }}</td>
                     <td width="100"><b>Event Start:</b></td>
-                    <td>{{ event.datetime_start|localtime|date }}</td>
+                    <td>{{ event_data.event.datetime_start|localtime|date }}</td>
                 </tr>
                 <tr>
                     <td><b>Billed Account:</b></td>
-                    <td>{{ event.billing_fund }}</td>
+                    <td>{{ event_data.event.billing_fund }}</td>
                     <td><b>Event End:</b></td>
-                    <td>{{ event.datetime_end|localtime|date }}</td>
+                    <td>{{ event_data.event.datetime_end|localtime|date }}</td>
                 </tr>
             </table>
-            <b class="info">Description:</b> {{ event.description }}
+            <b class="info">Description:</b> {{ event_data.event.description }}
             <hr>
             <table class="line-items">
                 <tr>
@@ -58,14 +59,14 @@
                 </tr>
                 </table><hr>
             <table class="line-items">
-                {% for service in event.eventservices %}
+                {% for service in event_data.event.eventservices %}
                 <tr>
                     <td>{{service}}</td>
                     <td class="align-right" width="50">$ {{ service.base_cost|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
 
-                {% for cat, cat_e in extras.items %}
+                {% for cat, cat_e in event_data.extras.items %}
                 <tr>
                     <td>{{ cat }} Extras</td>
                     <td></td>
@@ -77,12 +78,12 @@
                 </tr>
                 {% endfor %}
                 {% endfor %}
-                {% if event.oneoffs %}
+                {% if event_data.event.oneoffs %}
                 <tr>
                     <td>Additional Fees</td>
                     <td></td>
                 </tr>
-                {% for fee in event.oneoffs %}
+                {% for fee in event_data.event.oneoffs %}
                 <tr>
 
                     <td>&nbsp;&nbsp;&nbsp;&nbsp;{{ fee.key_name }} [{{ fee.key_value|floatformat:2}}x{{ fee.key_quantity }}]</td>
@@ -91,27 +92,27 @@
                 {% endfor %}
                 {% endif %}
                 </table><hr>
-                {% if event.discount_applied %}
+                {% if event_data.event.discount_applied %}
         <table class="line-items">
                 <tr>
                     <td>Subtotal</td>
-                    <td width="50" class="align-right">$ {{ event.cost_total_pre_discount|floatformat:2 }}</td>
+                    <td width="50" class="align-right">$ {{ event_data.event.cost_total_pre_discount|floatformat:2 }}</td>
                 </tr>
                 <tr>
                     <td>Combo Event Discount</td>
-                    <td class="align-right">$ -{{ event.discount_value|floatformat:2 }}</td>
+                    <td class="align-right">$ -{{ event_data.event.discount_value|floatformat:2 }}</td>
                 </tr>
         </table><hr>
         {% endif %}
         <table class="line-items">
                  <tr>
                     <td><b>***EVENT TOTAL***</b></td>
-                    <td class="align-right" width="50"><b>$ {{ event.cost_total|floatformat:2 }}</b></td>
+                    <td class="align-right" width="50"><b>$ {{ event_data.event.cost_total|floatformat:2 }}</b></td>
                 </tr>
             </table>
         <hr>
 <table class="center">
-{% if event.reviewed %}
+{% if event_data.event.reviewed %}
     <tr><td style="font-size:11pt;font-weight:bold;">New Bill Payment System! Visit <a class="unstyled" href="{{ request.scheme }}://{{ request.get_host }}/paybill">{{ request.get_host }}/paybill</a> to pay this Invoice.</td></tr>
     <tr><td><p>If you have any questions concerning this invoice, contact our treasurer at <a class="unstyled" href="mailto:lnl-t@wpi.edu">lnl-t@wpi.edu</a>.</td></tr>
 {% else %}
@@ -124,5 +125,7 @@
         </td>
     </tr>
 </table>
-    </div>
+</div>
+<div><pdf:nextpage /></div>
+{% endfor %}
 {% endblock %}

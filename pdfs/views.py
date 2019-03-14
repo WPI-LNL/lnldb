@@ -134,14 +134,15 @@ def generate_event_bill_pdf(request, event):
     if not request.user.has_perm('events.view_event_billing', event):
         raise PermissionDenied
     data = {}
-    data['event'] = event
-    cats = Category.objects.all()
-    extras = {}
-    for cat in cats:
+    event_data = {
+        'event': event,
+        'extras': {}
+    }
+    for cat in Category.objects.all():
         e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
         if len(e_for_cat) > 0:
-            extras[cat] = e_for_cat
-    data['extras'] = extras
+            event_data['extras'][cat] = e_for_cat
+    data['events_data'] = [event_data]
     # Render html content through html template with context
     html = render_to_string('pdf_templates/bill-itemized.html',
                             context=data,
@@ -168,14 +169,15 @@ def generate_event_bill_pdf(request, event):
 
 def generate_event_bill_pdf_standalone(event, idt_originator, request=None):
     data = {}
-    data['event'] = event
-    cats = Category.objects.all()
-    extras = {}
-    for cat in cats:
+    event_data = {
+        'event': event,
+        'extras': {}
+    }
+    for cat in Category.objects.all():
         e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
         if len(e_for_cat) > 0:
-            extras[cat] = e_for_cat
-    data['extras'] = extras
+            event_data['extras'][cat] = e_for_cat
+    data['events_data'] = [event_data]
     # Render html content through html template with context
     html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
 
@@ -353,4 +355,41 @@ def generate_event_pdf_multi(request, ids=None):
     # Return PDF document through a Django HTTP response
     resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
     resp['Content-Disposition'] = 'inline; filename="events.pdf"'
+    return resp
+
+@login_required
+def generate_event_bill_pdf_multi(request, ids=None):
+    if not request.user.has_perm('events.view_event_billing'):
+        raise PermissionDenied
+    if not ids:
+        return HttpResponse("Should probably give some ids to return pdfs for.")
+    # Prepare IDs
+    idlist = ids.split(',')
+    # Prepare context
+    data = {}
+    data['events_data'] = []
+    events = BaseEvent.objects.filter(pk__in=idlist)
+    for event in events:
+        event_data = {
+            'event': event,
+            'extras': {}
+        }
+        for cat in Category.objects.all():
+            e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
+            if len(e_for_cat) > 0:
+                event_data['extras'][cat] = e_for_cat
+        data['events_data'].append(event_data)
+    # Render html content through html template with context
+    html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
+
+    if 'raw' in request.GET and bool(request.GET['raw']):
+        return HttpResponse(html)
+
+    # Write PDF to file
+    pdf_file = BytesIO()
+    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+
+    # Return PDF document through a Django HTTP response
+    resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
     return resp

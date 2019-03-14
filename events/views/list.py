@@ -208,7 +208,8 @@ def upcoming(request, start=None, end=None):
     context['h2'] = "Upcoming Events"
     context['events'] = events
     context['baseurl'] = reverse("events:upcoming")
-    context['pdfurl'] = reverse('events:pdf-multi')
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('cal:list')
     context['takes_param_projection'] = True
     context['cols'] = ['event_name',
@@ -261,7 +262,8 @@ def incoming(request, start=None, end=None):
     context['h2'] = "Incoming Events"
     context['events'] = events
     context['baseurl'] = reverse("events:incoming")
-    context['pdfurl'] = reverse('events:pdf-multi')
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:incoming-cal')
     context['takes_param_projection'] = True
     context['cols'] = ['event_name',
@@ -321,7 +323,8 @@ def openworkorders(request, start=None, end=None):
     context['h2'] = "Open Events"
     context['events'] = events
     context['baseurl'] = reverse("events:open")
-    context['pdfurl'] = reverse('events:pdf-multi')
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:open-cal')
     context['takes_param_projection'] = True
     context['cols'] = ['event_name',
@@ -391,7 +394,8 @@ def findchief(request, start=None, end=None):
     context['takes_param_projection'] = True
     context['events'] = events
     context['baseurl'] = reverse("events:findchief")
-    context['pdfurl'] = reverse('events:pdf-multi')
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:findchief-cal')
     context['cols'] = ['event_name',
                        'org',
@@ -462,7 +466,8 @@ def unreviewed(request, start=None, end=None):
     context['h2'] = "Events Pending Billing Review"
     context['events'] = events
     context['baseurl'] = reverse("events:unreviewed")
-    context['pdfurl'] = reverse('events:pdf-multi')
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:unreviewed-cal')
     context['takes_param_projection'] = True
     context['cols'] = ['event_name',
@@ -531,7 +536,8 @@ def unbilled(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:unbilled")
     context['takes_param_projection'] = True
-    context['pdfurl'] = reverse('events:pdf-multi')
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:unbilled-cal')
     context['cols'] = ['event_name',
                        'org',
@@ -595,7 +601,8 @@ def unbilled_semester(request, start=None, end=None):
     context['h2'] = "Events to be Billed (Films)"
     context['events'] = events
     context['baseurl'] = reverse("events:unbilled-semester")
-    context['pdfurl'] = reverse('events:pdf-multi')
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:unbilled-semester-cal')
     context['takes_param_projection'] = True
     context['cols'] = ['event_name',
@@ -661,7 +668,8 @@ def paid(request, start=None, end=None):
     context['h2'] = "Paid Events"
     context['events'] = events
     context['baseurl'] = reverse("events:paid")
-    context['pdfurl'] = reverse('events:pdf-multi')
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:paid-cal')
     context['takes_param_projection'] = True
     context['cols'] = ['event_name',
@@ -725,7 +733,8 @@ def unpaid(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:unpaid")
     context['takes_param_projection'] = True
-    context['pdfurl'] = reverse('events:pdf-multi')
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:unpaid-cal')
     context['cols'] = ['event_name',
                        'org',
@@ -786,7 +795,8 @@ def closed(request, start=None, end=None):
     context['events'] = events
     context['baseurl'] = reverse("events:closed")
     context['takes_param_projection'] = True
-    context['pdfurl'] = reverse('events:pdf-multi')
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:closed-cal')
     context['cols'] = ['event_name',
                        'org',
@@ -846,7 +856,8 @@ def all(request, start=None, end=None):
     context['h2'] = "All Events"
     context['events'] = events
     context['baseurl'] = reverse("events:all")
-    context['pdfurl'] = reverse('events:pdf-multi')
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:all-cal')
     context['takes_param_projection'] = True
     context['cols'] = ['event_name',

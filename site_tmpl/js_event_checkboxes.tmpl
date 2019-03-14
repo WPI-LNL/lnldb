@@ -1,13 +1,19 @@
 <script type="text/javascript">
     $(document).ready(function () {
         $("#showselect").click(function(){
-            $(".tasks .crewtask").empty();
             $(".eventselect").toggleClass("hide");
         });
-        $("#submitselect").click(function(){
+        $("#submitselect-workorders").click(function(){
             var selectedids = $("input.eventselect[type='checkbox']:checked").map(
                 function () {return this.value;}).get().join(",");
-            var baseurl = "{{pdfurl}}";
+            var baseurl = "{{pdfurl_workorders}}";
+            var target = baseurl + selectedids + "/"
+            window.location.href = target
+        });
+        $("#submitselect-bills").click(function(){
+            var selectedids = $("input.eventselect[type='checkbox']:checked").map(
+                function () {return this.value;}).get().join(",");
+            var baseurl = "{{pdfurl_bills}}";
             var target = baseurl + selectedids + "/"
             window.location.href = target
         });
