@@ -1,0 +1,39 @@
+{% extends 'base_admin.html' %}
+{% load permissionif %}
+{% block content %}
+<div class="pull-right">
+    {% permission request.user has 'members.add_training' %}
+        <a class="btn btn-lg btn-primary" href="{% url 'members:training:entry' %}">Enter Training</a>
+    {% endpermission %}
+</div>
+<h2> Training </h2>
+<table class="table table-striped table-bordered table-condensed">
+    <tr> 
+        <th> User Name </th>
+        {% for training_type in training_types %}
+            <th> {{ training_type }} </th>
+        {% endfor %}
+    </tr>
+    {% for data in training_data %}
+        <tr>
+            <td>
+                <a href="{% url 'accounts:detail' data.0.pk %}">{{ data.0 }}</a>
+            </td>
+            {% for t in data.1 %}
+                <td>
+                    {% if t.revoked %}
+                        <span class="label label-danger">Revoked</span>
+                    {% endif %}
+                    {% if t.training.is_expired %}
+                        <span class="label label-warning">Expired</span>
+                    {% endif %}
+                    {% if t.is_valid %}
+                        <span class="label label-success">Valid</span>
+                    {% endif %}
+                </td>
+            {% endfor %}
+        </tr>
+    {% endfor %}
+    
+</table>
+{% endblock %}

@@ -137,6 +137,52 @@
                 </ul>
             {% endif %}
         </div>
+        {% permission request.user has 'members.view_training' %}
+            {% if u.trainings.exists %}
+            <div class="col-md-4">
+                <h3>Trainings</h3>
+                {% for t in u.trainings.all %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            {{ t.training }}
+                            {% if t.revoked %}
+                                <span class="label label-danger">Revoked</span>
+                            {% endif %}
+                            {% if t.training.is_expired %}
+                                <span class="label label-warning">Expired</span>
+                            {% endif %}
+                            {% if t.is_valid %}
+                                <span class="label label-success">Valid</span>
+                            {% endif %}
+                        </div>
+                        <div class="panel-body">
+                            Trainer: {{ t.training.trainer }}<br>
+                            Expiration date: {{ t.training.expiration_date }}<br>
+                            {% if t.revoked %}
+                                Revoked by: {{ t.revoked_by }}<br>
+                                Revoked on: {{ t.revoked_on }}<br>
+                            {% endif %}
+                            {% if t.training.notes %}Training notes: {{ t.training.notes }}<br>{% endif %}
+                            {% if t.notes %}Notes: {{ t.notes }}<br>{% endif %}
+                            {% if t.is_valid %}
+                                {% permission request.user has 'members.revoke_training' %}
+                                    <form class="form-inline" action="{% url 'members:training:revoke' t.pk %}" method="post" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button class="btn btn-danger" type="submit">Revoke</button>
+                                    </form>
+                                {% endpermission %}
+                            {% endif %}
+                            {% if not t.training.is_expired %}
+                                {% permission request.user has 'members.edit_trainee_notes' %}
+                                    <a class="btn btn-primary" href="{% url 'members:training:traineenotes' t.pk %}">Edit notes</a>
+                                {% endpermission %}
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endpermission %}
     </div>
      
     <div id="statusmodal" class="modal hide fade">

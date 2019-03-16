@@ -537,6 +537,26 @@
         "view_pits",
         "projection",
         "projectionist"
+      ],
+      [
+        "view_training",
+        "members",
+        "training"
+      ],
+      [
+        "add_training",
+        "members",
+        "training"
+      ],
+      [
+        "edit_trainee_notes",
+        "members",
+        "trainee"
+      ],
+      [
+        "revoke_training",
+        "members",
+        "trainee"
       ]
     ]
   },
@@ -693,6 +713,11 @@
         "view_pits",
         "projection",
         "projectionist"
+      ],
+      [
+        "view_training",
+        "members",
+        "training"
       ]
     ]
   },
@@ -761,6 +786,11 @@
         "view_pits",
         "projection",
         "projectionist"
+      ],
+      [
+        "view_training",
+        "members",
+        "training"
       ]
     ]
   },
@@ -824,6 +854,11 @@
         "view_pits",
         "projection",
         "projectionist"
+      ],
+      [
+        "view_training",
+        "members",
+        "training"
       ]
     ]
   },

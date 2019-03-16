@@ -45,6 +45,7 @@ urlpatterns = [
     url(r'^list/', include('events.urls.cal', namespace='cal')),
     url(r'^email/', include('emails.urls', namespace='emails')),
     url(r'', include('accounts.urls', namespace='accounts')),
+    url(r'', include('members.urls', namespace='members')),
 
     # special urls
     url(r'^db/$', db_home, name="home"),
