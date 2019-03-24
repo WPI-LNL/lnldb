@@ -51,7 +51,7 @@ sqlparse==0.2.3
 tolerance==0.1.2
 xhtml2pdf==0.2b1
 django-cas-ng==3.5.10
-ldap3==1.4.0
+ldap3==2.6
 django-environ==0.4.3
 django-polymorphic==2.0.3
 fuzzywuzzy==0.17.0
