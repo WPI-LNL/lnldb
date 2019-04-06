@@ -18,13 +18,14 @@ class EventsConfig(AppConfig):
         Fund = self.get_model('Fund')
         Organization = self.get_model('Organization')
 
-        search.register(Event, store=('id',
-                                      'datetime_nice',
-                                      'description',
-                                      'location__name',
-                                      'org',
-                                      'status',
-                                      'short_services'))
+        search.register(Event.objects.filter(sensitive=False),
+            store=('id',
+                   'datetime_nice',
+                   'description',
+                   'location__name',
+                   'org',
+                   'status',
+                   'short_services'))
         search.register(Organization)
         search.register(CCReport)
         search.register(Fund)

@@ -72,6 +72,8 @@ def event_search(request):
             context['msg'] = "Search Query Too Short, please try something longer"
         else:
             e = Event.objects.filter(Q(event_name__icontains=q) | Q(description__icontains=q))
+            if not request.user.has_perm('events.view_hidden_event'):
+                e = e.exclude(sensitive=True)
             context['events'] = e
         return render(request, 'events_search_results.html', context)
     return render(request, 'events_search_results.html', context)

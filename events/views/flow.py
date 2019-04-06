@@ -603,6 +603,8 @@ def viewevent(request, id):
     event = get_object_or_404(BaseEvent, pk=id)
     if not (request.user.has_perm('events.view_event') or request.user.has_perm('events.view_event', event)):
         raise PermissionDenied
+    if event.sensitive and not request.user.has_perm('events.view_hidden_event', event):
+        raise PermissionDenied
 
     context['event'] = event
     # do not use .get_unique() because it does not follow relations
