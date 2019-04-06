@@ -222,12 +222,14 @@ def secretary_dashboard(request):
     members_to_deactivate = get_user_model().objects.filter(groups__name='Active').exclude(groups__name='Away') \
         .annotate(hours_count=Count(Case(When(hours__event__datetime_start__gte=term_ago, then=F('hours'))), distinct=True)).filter(hours_count__lt=4) \
         .annotate(meeting_count=Count(Case(When(meeting__datetime__gte=term_ago, meeting__meeting_type__name='General', then=F('meeting'))), distinct=True)).filter(meeting_count__lt=4)
+    members_to_associate = get_user_model().objects.filter(groups=None).filter(Q(meeting__datetime__gte=term_ago) | Q(hours__event__datetime_start__gte=term_ago)).distinct()
 
     context['num_active'] = num_active
     context['simple_majority'] = simple_majority
     context['two_thirds_majority'] = two_thirds_majority
     context['members_to_activate'] = members_to_activate
     context['members_to_deactivate'] = members_to_deactivate
+    context['members_to_associate'] = members_to_associate
 
     return render(request, 'users_secretary_dashboard.html', context)
 
