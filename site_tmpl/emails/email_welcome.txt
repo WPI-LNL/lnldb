@@ -1,0 +1,28 @@
+Hi {{ new_member }},
+
+I hope you had a good time at your first LNL meeting or event! I want to let you know about a few resources available to you.
+
+http://lnl.wpi.edu/list is the link to the calendar where all of our upcoming events are posted. It has the setup times and locations for every event. You can add the calendar to your favorite calendar system such as Outlook or Google Calendar by pressing the Subscribe button on that page.
+
+Our mailing list and our Slack workspace are our primary means of communication. You should be added to the mailing list around the time you are receiving this email. Before each event you will usually get an email from the person in charge of setup (the crew chief) with more detail about the when, where, and what of setup for that event.
+
+Feel free to show up to any event to help. There is no sign-up for helping at an event.
+
+Most things in LNL don’t require training, but there are a certain tasks that you must be trained to perform. If you ever have any questions about whether or not you need training to do something, don’t be afraid to ask!
+
+http://lnl.wpi.edu/db is our database. This also has when events are, and it keeps track of when you go to meetings and events. It takes 3 meetings and 5 events to become an active member, and once that happens you can crew chief events if you want. Minutes are also found here if you miss a meeting and want to check them out.
+
+Our general body meetings are Wednesdays at 5pm in AK233. At these meetings, we make announcements, we have presentations on various technical topics, and active members volunteer to crew chief upcoming events. Attending a general body meeting counts toward the activation requirements.
+
+Our Executive Board meetings are Mondays at 5pm in the Morgan room of the Campus Center. At these meetings, officers give reports on the status of day-to-day operations. The first half of each Executive Board meeting is open to the public, and attending an Executive Board meeting counts towards the activation requirements.
+
+We often refer to the following locations in work announcements:
+- Alden Sub(basement): Take the elevator in Alden down to the "SB" floor. We keep all our lighting equipment down there.
+- CC Office: On the third floor of the CC, if you walk all the way towards the elevator it is on your right. Our sound equipment is in there.
+- The Projection Booth: in Fuller Labs near the Upper Perrault Hall door
+
+If you have any other questions about anything, please email the Secretary at lnl-s@wpi.edu!
+
+We hope to see you soon!
+
+Secretary

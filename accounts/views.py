@@ -2,10 +2,12 @@ from datetime import timedelta
 import math
 
 from crispy_forms.helper import FormHelper
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
+from django.contrib.auth.models import Group
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.db.models import F, Q, Count, Case, When
@@ -17,6 +19,7 @@ from django.views import generic
 from django_cas_ng.views import login as cas_login
 
 from data.forms import form_footer
+from emails.generators import DefaultLNLEmailGenerator
 from events.models import Event
 from helpers import mixins
 
@@ -50,17 +53,23 @@ class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, gen
         return context
 
     def form_valid(self, form):
-        # if the groups have changed, make a new status change log entry.
-        # if 'groups' in form.changed_data and 'groups' in form.cleaned_data:
-        #     newgroups = form.cleaned_data['groups']
-        #     # create tracking instance
-        #     s = StatusChange.objects.create(member=user)
-        #     s.groups.add(*newgroups)
-        #     s.save()
-        # x= dir(newgroups)
+        # if the person was just changed from unaffiliated to an associate member, send them an email.
+        if 'groups' in form.changed_data and 'groups' in form.cleaned_data:
+            oldgroups = form.initial['groups']
+            newgroups = form.cleaned_data['groups']
+            if not oldgroups and Group.objects.get(name='Associate') in newgroups:
+                email = DefaultLNLEmailGenerator(
+                    subject="Welcome to LNL!",
+                    to_emails=[self.object.email],
+                    bcc=[settings.EMAIL_TARGET_S],
+                    reply_to=[settings.EMAIL_TARGET_S],
+                    context={'new_member': self.object},
+                    template_basename='emails/email_welcome'
+                )
+                email.send()
+                messages.success(self.request, "Welcome email sent")
 
-        messages.success(self.request, "Account Info Saved!",
-                         extra_tags='success')
+        messages.success(self.request, "Account Info Saved!", extra_tags='success')
         return super(UserUpdateView, self).form_valid(form)
 
     def get_success_url(self):
