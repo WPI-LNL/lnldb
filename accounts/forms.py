@@ -100,6 +100,13 @@ class UserAddForm(UserCreationForm):
         self.helper.form_class = "form-horizontal"
 
         self.helper.layout = Layout(
+            HTML('<div class="alert alert-warning">\
+                This form should not be used under normal circumstances. \
+                When everything is working properly, an account will be created \
+                automatically when someone logs into the DB with CAS for the first time \
+                or when crew hours or attendance are entered for the person. \
+                This form should only be used when the automatic \
+                account creation is broken (which has happened before).</div>'),
             Row(Div('first_name', css_class='col-md-6'),
                 Div('last_name', css_class='col-md-6')),
             'username',
