@@ -2,7 +2,7 @@ Hi {{ new_member }},
 
 I hope you had a good time at your first LNL meeting or event! I want to let you know about a few resources available to you.
 
-http://lnl.wpi.edu/list is the link to the calendar where all of our upcoming events are posted. It has the setup times and locations for every event. You can add the calendar to your favorite calendar system such as Outlook or Google Calendar by pressing the Subscribe button on that page.
+http://when2lnl.com is the link to the calendar where all of our upcoming events are posted. It has the setup times and locations for every event. You can add the calendar to your favorite calendar system such as Outlook or Google Calendar by pressing the Subscribe button on that page.
 
 Our mailing list and our Slack workspace are our primary means of communication. You should be added to the mailing list around the time you are receiving this email. Before each event you will usually get an email from the person in charge of setup (the crew chief) with more detail about the when, where, and what of setup for that event.
 
@@ -12,9 +12,7 @@ Most things in LNL don’t require training, but there are a certain tasks that 
 
 http://lnl.wpi.edu/db is our database. This also has when events are, and it keeps track of when you go to meetings and events. It takes 3 meetings and 5 events to become an active member, and once that happens you can crew chief events if you want. Minutes are also found here if you miss a meeting and want to check them out.
 
-Our general body meetings are Wednesdays at 5pm in AK233. At these meetings, we make announcements, we have presentations on various technical topics, and active members volunteer to crew chief upcoming events. Attending a general body meeting counts toward the activation requirements.
-
-Our Executive Board meetings are Mondays at 5pm in the Morgan room of the Campus Center. At these meetings, officers give reports on the status of day-to-day operations. The first half of each Executive Board meeting is open to the public, and attending an Executive Board meeting counts towards the activation requirements.
+Our general body meetings are Wednesdays at 5pm in AK233 and our Executive Board meetings are Mondays at 5pm in the Morgan room of the Campus Center. Attending either counts towards the activation requirements.
 
 We often refer to the following locations in work announcements:
 - Alden Sub(basement): Take the elevator in Alden down to the "SB" floor. We keep all our lighting equipment down there.
