@@ -7,23 +7,51 @@
 <h1>{{ h2 }}</h1>
 
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-6">
         <h2><em>"{{ event.event_name }}"</em></h2>
-    </div>
-    <div class="col-md-4">
-        <h2>
-            Contact: {% if event.contact %}
-            <a href="{% url "accounts:detail" event.contact.id %}">{{ event.contact.get_full_name }}</a>{% else %}No
-            Contact Set {% endif %}
-            <br/>
-            Client(s) {% for org in event.org.all %}<span class="text-muted"><a href="{% url "orgs:detail" org.id %}">{{ org.retname }} </a>Last Verified: {% if org.verifications.exists %} {{ org.verifications.latest.date }} {% else %} Never {% endif %}</span>{% endfor %}
-        </h2>
-    </div>
-    <div class="col-md-4">
         <h3>
-            Started: {{ event.datetime_start }} <br />
+            {{ event.location }}<br />
+            Started: {{ event.datetime_start }}<br />
             Ended: {{ event.datetime_end }}
         </h3>
+        <h2>
+            Contact: {% if event.contact %}
+            <a href="{% url "accounts:detail" event.contact.id %}">{{ event.contact.get_full_name }}</a>
+            {% else %}No Contact Set {% endif %}
+        </h2>
+    </div>
+    <div class="col-md-6">
+        <h2>
+            <div class="panel panel-default">
+                <div class="panel-heading">Client(s)</div>
+                <ul class="list-group">
+                    {% for org in event.org.all %}
+                        <li class="list-group-item">
+                            {% if org.delinquent %}
+                                <a href="{% url "orgs:detail" org.id %}">
+                                    <span style='color:red'>{{ org.retname }}
+                                        <span class="glyphicon glyphicon-exclamation-sign" title="Delinquent client"></span>
+                                    </span>
+                                </a><br />
+                            {% else %}
+                                <a href="{% url "orgs:detail" org.id %}">{{ org.retname }}</a><br />
+                            {% endif %}
+                            <span class="text-muted small">
+                            {% for fund in org.accounts.all %}
+                                {{ fund }}<br />
+                            {% endfor %}
+                            Last Verified: {% if org.verifications.exists %} {{ org.verifications.latest.date }} {% else %} Never {% endif %}<br />
+                            {% if org.notes %}
+                                Notes: {{ org.notes }}
+                            {% endif %}
+                            </span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item list-group-item-secondary">None set</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </h2>
     </div>
 </div>
 <hr>
@@ -70,7 +98,7 @@
                         {% if hour.hours is None %}
                             Pending
                             <span class="glyphicon glyphicon-question-sign"
-                                title="A number of hours has not yet been entered by the crew chief. If you review the event for billing now, this record will be deleted."></span>
+                                title="A number of hours has not yet been entered by the crew chief. If you review the event for billing now, this record will be deleted and the person will likely never get hours for this event."></span>
                         {% else %}
                             {{ hour.hours }}
                         {% endif %}
