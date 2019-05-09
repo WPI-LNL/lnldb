@@ -13,7 +13,7 @@
                 {% include 'pdf_templates/event-body.html' with event=event_data.event %}
             {% endfor %}
         {% else %}
-            {{% for service in event_data.event.eventservices %}
+            {% for service in event_data.event.eventservices %}
                 {% include 'pdf_templates/event-body.html' with event=event_data.event service=service %}
                 {% if not forloop.last %}
                 <div><pdf:nextpage /></div>
