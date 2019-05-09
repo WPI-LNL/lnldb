@@ -51,7 +51,7 @@
         <tr>
             <td>{{ crew.crew_chief.get_full_name }}</td>
             <td><a class="btn btn-warning btn-default btn-xs"
-                   href={% url "events:remind" id=event.id uid=crew.crew_chief.id %}>Remind</a></td>
+                   href="{% url 'events:remind' id=event.id uid=crew.crew_chief.id %}">Remind</a></td>
         </tr>
         {% endfor %}
         </table>
@@ -66,7 +66,15 @@
             {% for hour in event.hours.all %}
                 <tr>
                     <td><a href="{% url "accounts:detail" hour.user.id %}">{{ hour.user.get_full_name }}</a></td>
-                    <td>{{ hour.hours }}</td>
+                    <td>
+                        {% if hour.hours is None %}
+                            Pending
+                            <span class="glyphicon glyphicon-question-sign"
+                                title="A number of hours has not yet been entered by the crew chief. If you review the event for billing now, this record will be deleted."></span>
+                        {% else %}
+                            {{ hour.hours }}
+                        {% endif %}
+                    </td>
                 </tr>
             {% endfor %}
         </table>

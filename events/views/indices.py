@@ -35,10 +35,10 @@ def admin(request, msg=None):
         delta = 48
 
     # fuzzy delta
-    today = timezone.now()
-    today_min = timezone.make_aware(datetime.datetime.combine(today.date(), datetime.time.min))
+    now = timezone.now()
+    today_min = timezone.make_aware(datetime.datetime.combine(now.date(), datetime.time.min))
 
-    end = today + datetime.timedelta(hours=delta)
+    end = now + datetime.timedelta(hours=delta)
     end_max = timezone.make_aware(datetime.datetime.combine(end.date(), datetime.time.max))
 
     # get upcoming and ongoing events
@@ -47,7 +47,12 @@ def admin(request, msg=None):
         'datetime_start').filter(approved=True).exclude(Q(closed=True) | Q(cancelled=True))
     context['events'] = events
 
-    context['tznow'] = today
+    context['tznow'] = now
+
+    # get ongoing events for self-crew feature
+    selfcrew_events = Event.objects.filter(ccinstances__setup_start__lte=now,
+        datetime_end__gte=(now - datetime.timedelta(hours=3))).exclude(hours__user=request.user).distinct()
+    context['selfcrew_events'] = selfcrew_events
 
     return render(request, 'admin.html', context)
 

@@ -1,4 +1,4 @@
-import datetime
+from datetime import timedelta
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
@@ -11,7 +11,7 @@ from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.generic import CreateView, DeleteView, UpdateView
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from reversion.models import Version
 
 from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator,
@@ -173,6 +173,8 @@ def review(request, id):
             e.reviewed_on = timezone.now()
             e.reviewed_by = request.user
             e.save()
+            # Remove prefilled hours that were never finished
+            Hours.objects.filter(event=e, hours__isnull=True).delete()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Event has been reviewed and is ready for billing!')
 
@@ -388,6 +390,26 @@ def hours_bulk_admin(request, id):
 
     context['formset'] = formset
     return render(request, 'formset_hours_bulk.html', context)
+
+
+@login_required
+@require_GET
+def hours_prefill_self(request, id):
+    event = get_object_or_404(BaseEvent, pk=id)
+    if not event.ccinstances.exists():
+        raise PermissionDenied
+    if event.hours.filter(user=request.user).exists():
+        messages.add_message(request, messages.ERROR, 'You already have hours for this event.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    if timezone.now() < min(event.ccinstances.values_list('setup_start', flat=True)):
+        messages.add_message(request, messages.ERROR, 'You cannot use this feature until the event setup has started.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    if timezone.now() > event.datetime_end + timedelta(hours=3):
+        messages.add_message(request, messages.ERROR, 'This feature is disabled 3 hours after the event end time.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    Hours.objects.create(event=event, user=request.user)
+    messages.add_message(request, messages.SUCCESS, 'You have been added as crew for this event.')
+    return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
 
 @login_required

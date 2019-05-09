@@ -521,7 +521,7 @@
                     {% if not event.closed %}
                         {% permission request.user has 'events.edit_event_hours' of event %}
                             <div class="pull-right">
-                                <a class="btn btn-primary btn-lg" href="{% url "events:add-bulk-crew" event.id %}">Edit</a>
+                                <a class="btn btn-primary btn-lg" href="{% url 'events:add-bulk-crew' event.id %}">Edit</a>
                             </div>
                         {% endpermission %}
                     {% endif %}
@@ -538,7 +538,13 @@
                             <tr>
                                 <td><a href="{% url "accounts:detail" hour.user.id %}">{{ hour.user.get_full_name }}</a>
                                 </td>
-                                <td>{{ hour.hours }}</td>
+                                <td>
+                                        {% if hour.hours is None %}
+                                            Pending
+                                        {% else %}
+                                            {{ hour.hours }}
+                                        {% endif %}
+                                </td>
                                 <td>{{ hour.category }}</td>
                             </tr>
                         {% endfor %}

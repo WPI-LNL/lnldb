@@ -96,7 +96,7 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super(UserDetailView, self).get_context_data(**kwargs)
         context['u'] = u = self.object
-        context['hours'] = u.hours.select_related('event', 'service').all()
+        context['hours'] = u.hours.filter(hours__isnull=False).select_related('event', 'service')
         context['ccs'] = u.ccinstances.select_related('event').all()
 
         moviesccd = Event.objects.filter(Q(crew_chief=self.get_object()) | Q(ccinstances__crew_chief=self.get_object()),
