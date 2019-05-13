@@ -1,0 +1,27 @@
+{% extends 'base_admin.html' %}
+{% load permissionif %}
+
+{% block content %}
+    <h1>Laptops</h1>
+    <div class="row">
+        {% for laptop in laptops %}
+        <div class="col-sm-3">
+            <div class="panel panel-default">
+                <div class="panel-heading">{{ laptop }}</div>
+                <div class="panel-body">
+                    <p>{{ laptop.description|linebreaks }}</p>
+                    {% permission request.user has 'laptops:retrieve_user_password' of laptop %}
+                        <a class="btn btn-default btn-block" href="{% url 'laptops:user-password' laptop.pk %}">View Password</a>
+                    {% endpermission %}
+                    {% permission request.user has 'laptops:retrieve_admin_password' of laptop %}
+                        <a class="btn btn-default btn-block" href="{% url 'laptops:admin-password' laptop.pk %}">View Admin Password</a>
+                    {% endpermission %}
+                    {% permission request.user has 'laptops:view_laptop_history' of laptop %}
+                        <a class="btn btn-default btn-block" href="{% url 'laptops:history' laptop.pk %}">View History</a>
+                    {% endpermission %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% endblock %}

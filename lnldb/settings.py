@@ -269,6 +269,7 @@ INSTALLED_APPS = (
     'emails',
     'members',
     'mptt',
+    'laptops',
 
     'bootstrap_toolkit',
     'crispy_forms',

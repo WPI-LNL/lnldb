@@ -1,0 +1,21 @@
+{% extends 'base_admin.html' %}
+
+{% block content %}
+    <h1>Laptop History: {{ laptop }}</h1>
+    <ul class="list-group">
+        {% for type, event in events %}
+            <li class="list-group-item">
+                <span style="color:grey">{{ event.timestamp }}</span>
+                {% if type == 'retrieval' %}
+                    {% if event.admin %}
+                        Administrator password retrieved by {{ event.user }}
+                    {% else %}
+                        User password retrieved by {{ event.user }}
+                    {% endif %}
+                {% elif type == 'rotation' %}
+                    Passwords rotated
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

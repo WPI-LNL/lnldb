@@ -557,6 +557,26 @@
         "revoke_training",
         "members",
         "trainee"
+      ],
+      [
+        "view_laptop",
+        "laptops",
+        "laptop"
+      ],
+      [
+        "view_laptop_history",
+        "laptops",
+        "laptop"
+      ],
+      [
+        "retrieve_user_password",
+        "laptops",
+        "laptop"
+      ],
+      [
+        "retrieve_admin_password",
+        "laptops",
+        "laptop"
       ]
     ]
   },
@@ -718,6 +738,21 @@
         "view_training",
         "members",
         "training"
+      ],
+      [
+        "view_laptop",
+        "laptops",
+        "laptop"
+      ],
+      [
+        "retrieve_user_password",
+        "laptops",
+        "laptop"
+      ],
+      [
+        "retrieve_admin_password",
+        "laptops",
+        "laptop"
       ]
     ]
   },
@@ -791,6 +826,21 @@
         "view_training",
         "members",
         "training"
+      ],
+      [
+        "view_laptop",
+        "laptops",
+        "laptop"
+      ],
+      [
+        "retrieve_user_password",
+        "laptops",
+        "laptop"
+      ],
+      [
+        "retrieve_admin_password",
+        "laptops",
+        "laptop"
       ]
     ]
   },
@@ -859,6 +909,11 @@
         "view_training",
         "members",
         "training"
+      ],
+      [
+        "view_laptop",
+        "laptops",
+        "laptop"
       ]
     ]
   },
@@ -982,6 +1037,26 @@
         "change_equipmentstatus",
         "inventory",
         "equipmentstatus"
+      ],
+      [
+        "view_laptop",
+        "laptops",
+        "laptop"
+      ],
+      [
+        "view_laptop_history",
+        "laptops",
+        "laptop"
+      ],
+      [
+        "retrieve_user_password",
+        "laptops",
+        "laptop"
+      ],
+      [
+        "retrieve_admin_password",
+        "laptops",
+        "laptop"
       ]
     ]
   },
