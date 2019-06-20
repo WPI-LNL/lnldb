@@ -26,19 +26,17 @@ def eventnew(request, id=None):
         if not (request.user.has_perms(perms) or
                 request.user.has_perms(perms, instance)):
             raise PermissionDenied
-        if isinstance(instance, Event2019):
-            mk_serviceinstance_formset = inlineformset_factory(BaseEvent, ServiceInstance, extra=3, exclude=[])
-            mk_serviceinstance_formset.form = curry_class(ServiceInstanceForm, event=instance)
-            is_event2019 = True
-        else:
-            is_event2019 = False
+        is_event2019 = isinstance(instance, Event2019)
     else:
         instance = None
         context['new'] = True
-        is_event2019 = False
+        is_event2019 = True
         perms = ['events.add_raw_event']
         if not request.user.has_perms(perms):
             raise PermissionDenied
+    if is_event2019:
+        mk_serviceinstance_formset = inlineformset_factory(BaseEvent, ServiceInstance, extra=3, exclude=[])
+        mk_serviceinstance_formset.form = curry_class(ServiceInstanceForm, event=instance)
     context['is_event2019'] = is_event2019
 
     if request.method == 'POST':
@@ -50,7 +48,10 @@ def eventnew(request, id=None):
                 if instance.has_projection:
                     bcc.append(settings.EMAIL_TARGET_HP)
 
-        form = InternalEventForm(data=request.POST, request_user=request.user, instance=instance)
+        if is_event2019 and not instance:
+            form = InternalEventForm(data=request.POST, request_user=request.user, instance=Event2019())
+        else:
+            form = InternalEventForm(data=request.POST, request_user=request.user, instance=instance)
         if is_event2019:
             services_formset = mk_serviceinstance_formset(request.POST, request.FILES, instance=instance)
 
@@ -91,14 +92,15 @@ def eventnew(request, id=None):
                     email.send()
             else:
                 set_revision_comment('Created event', None)
-                res = form.save(commit=False)
-                res.submitted_by = request.user
-                res.submitted_ip = request.META.get('REMOTE_ADDR')
-                res.save()
+                obj = form.save(commit=False)
+                obj.submitted_by = request.user
+                obj.submitted_ip = request.META.get('REMOTE_ADDR')
+                obj.save()
                 form.save_m2m()
                 if is_event2019:
+                    services_formset.instance = obj
                     services_formset.save()
-            return HttpResponseRedirect(reverse('events:detail', args=(res.id,)))
+            return HttpResponseRedirect(reverse('events:detail', args=(obj.id,)))
         else:
             context['e'] = form.errors
             context['form'] = form
