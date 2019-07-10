@@ -58,19 +58,19 @@ def eventnew(request, id=None):
         if form.is_valid() and (not is_event2019 or services_formset.is_valid()):
             if instance:
                 set_revision_comment('Edited', form)
-                res = form.save()
+                obj = form.save()
                 if is_event2019:
                     services_formset.save()
                 if should_send_email:
                     # BCC the crew chiefs
-                    for ccinstance in res.ccinstances.all():
+                    for ccinstance in obj.ccinstances.all():
                         if ccinstance.crew_chief.email:
                             bcc.append(ccinstance.crew_chief.email)
-                    if res.reviewed:
+                    if obj.reviewed:
                         subject = "Reviewed Event Edited"
                         email_body = "The following event was edited by %s after the event was reviewed for billing." % request.user.get_full_name()
                         bcc.append(settings.EMAIL_TARGET_T)
-                    elif res.approved:
+                    elif obj.approved:
                         subject = "Approved Event Edited"
                         email_body = "The following event was edited by %s after the event was approved." % request.user.get_full_name()
                     else:
@@ -83,12 +83,12 @@ def eventnew(request, id=None):
                             email_body += field_name + ", "
                         email_body = email_body[:-2]
                     # add HP to the email if projection was just added to the event
-                    if res.has_projection and not settings.EMAIL_TARGET_HP in bcc:
+                    if obj.has_projection and not settings.EMAIL_TARGET_HP in bcc:
                         bcc.append(settings.EMAIL_TARGET_HP)
                     to_emails=[]
                     if request.user.email:
                         to_emails.append(request.user.email)
-                    email = EventEmailGenerator(event=res, subject=subject, to_emails=to_emails, body=email_body, bcc=bcc)
+                    email = EventEmailGenerator(event=obj, subject=subject, to_emails=to_emails, body=email_body, bcc=bcc)
                     email.send()
             else:
                 set_revision_comment('Created event', None)
