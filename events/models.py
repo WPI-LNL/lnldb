@@ -274,7 +274,7 @@ class BaseEvent(PolymorphicModel):
         if len(ccs) > 0:
             desc += "Crew Chiefs: "
             for cc in ccs:
-                desc += cc.crew_chief.get_full_name() + " [" + cc.service.shortname + "], "
+                desc += cc.crew_chief.get_full_name() + " [" + (cc.service.shortname if cc.service else cc.category.name) + "], "
             desc = desc[:-2] + ".\n"  # removes trailing comma
         if self.description:
             desc += self.description + "\n"
@@ -1213,7 +1213,7 @@ class EventCCInstance(models.Model):
     setup_start = models.DateTimeField(null=True, blank=True)
 
     def cal_name(self):
-        return self.event.event_name + ' ' + self.service.shortname + ' Setup'
+        return self.event.event_name + ' ' + (self.service.shortname if self.service else self.category.name) + ' Setup'
 
     def cal_desc(self):
         desc = ''
