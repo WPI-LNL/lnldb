@@ -20,7 +20,7 @@ from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiB
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm,
                           InternalReportForm, MKHoursForm, BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm)
-from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, CCReport, Event,
+from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
                            ReportReminder, ServiceInstance)
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
@@ -631,6 +631,17 @@ def viewevent(request, id):
     context['event'] = event
     # do not use .get_unique() because it does not follow relations
     context['history'] = Version.objects.get_for_object(event)
+    if event.serviceinstance_set.exists():
+        context['categorized_services_and_extras'] = {}
+        for category in Category.objects.all():
+            # tuple (serviceinstances, extrainstances)
+            services_and_extras = (
+                list(event.serviceinstance_set.filter(service__category=category)),
+                list(event.extrainstance_set.filter(extra__category=category))
+            )
+            # do not add category if it is empty
+            if services_and_extras[0] or services_and_extras[1]:
+                context['categorized_services_and_extras'][category.name] = services_and_extras
     return render(request, 'uglydetail.html', context)
 
 

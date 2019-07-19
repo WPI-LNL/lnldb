@@ -400,35 +400,38 @@
                             </ul>
                     {% endif %}
                     
-                    {% if event.serviceinstance_set.exists %}
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Service</th>
-                                    <th>Requirements</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for service_instance in event.serviceinstance_set.all %}
+                    {% if categorized_services_and_extras %}
+                        {% for category_name, services_and_extras in categorized_services_and_extras.items %}
+                            <h3>{{ category_name }}</h3>
+                            <table class="table table-striped">
+                                <thead>
                                     <tr>
-                                        <td>{{ service_instance.service }}</td>
-                                        <td>
-                                            {% if service_instance.detail %}
-                                                {{ service_instance.detail | markdown }}
-                                            {% endif %}
-                                        </td>
+                                        <th>Service</th>
+                                        <th>Requirements</th>
                                     </tr>
+                                </thead>
+                                <tbody>
+                                    {% for service_instance in services_and_extras.0 %}
+                                        <tr>
+                                            <td>{{ service_instance.service }}</td>
+                                            <td>
+                                                {% if service_instance.detail %}
+                                                    {{ service_instance.detail | markdown }}
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% if services_and_extras.1 %}
+                                <h4>Extras</h4>
+                                <ul>
+                                {% for extra_instance in services_and_extras.1 %}
+                                    <li>{{ extra_instance.extra }} x{{ extra_instance.quant }}</li>
                                 {% endfor %}
-                            </tbody>
-                        </table>
-                        {% if event.extrainstance_set.exists %}
-                            <h3>Extras</h3>
-                            <ul>
-                            {% for extra_instance in event.extrainstance_set.all %}
-                                <li>{{ extra_instance.extra }} x{{ extra_instance.quant }}</li>
-                            {% endfor %}
-                            </ul>
-                        {% endif %}
+                                </ul>
+                            {% endif %}
+                        {% endfor %}
                     {% endif %}
                     
                 </div>
