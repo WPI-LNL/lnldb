@@ -484,7 +484,8 @@ def assignattach(request, id):
             should_send_email = not event.test_event
             if should_send_email:
                 to=[settings.EMAIL_TARGET_VP]
-                if event.projection:
+                if hasattr(event, 'projection') and event.projection \
+                        or event.serviceinstance_set.filter(service__category__name='Projection').exists():
                     to.append(settings.EMAIL_TARGET_HP)
                 for ccinstance in event.ccinstances.all():
                     if ccinstance.crew_chief.email:
