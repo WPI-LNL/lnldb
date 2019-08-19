@@ -139,8 +139,8 @@
                     <ul class="dropdown-menu">
                         {% permission request.user has 'laptops.view_laptop' %}
                             <li><a href="{% url 'laptops:list' %}">Laptops</a></li>
+                            <li class="divider"></li>
                         {% endpermission %}
-                        <li class="divider"></li>
                         <li><a href="{% url "inventory:view_all" %}">View Inventory</a></li>
                         {% permission request.user has 'inventory.add_equipmentclass' %}
                             <li><a href="{% url "inventory:type_mk" %}">Add Item Type</a></li>
