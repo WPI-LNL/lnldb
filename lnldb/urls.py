@@ -13,7 +13,7 @@ from events.forms import named_event_forms
 from events.views.flow import CCRCreate, CCRDelete, CCRUpdate
 from events.views.indices import admin as db_home
 from events.views.indices import event_search
-from pages.views import page as view_page
+from pages.views import page as view_page, recruitment_page
 
 admin.autodiscover()
 permission.autodiscover()
@@ -57,6 +57,7 @@ urlpatterns = [
     url(r'^db/workorderwizard-submit$', data.views.workorderwizard_submit, name="wizard-submit"),
     url(r'^db/workorderwizard-autopopulate$', data.views.workorderwizard_findprevious, name="wizard-findprevious"),
     url(r'^workorder/', RedirectView.as_view(url='/workorder/', permanent=False)),
+    url(r'^join/$', recruitment_page, name='recruitment-page'),
 
     # keep old urls
     url(r'^lnadmin/$', RedirectView.as_view(url="/db/", permanent=True)),
