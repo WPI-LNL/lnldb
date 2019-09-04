@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 
-from events.models import Event
+from events.models import BaseEvent
 from helpers.challenges import is_officer
 
 
@@ -42,7 +42,7 @@ def admin(request, msg=None):
     end_max = timezone.make_aware(datetime.datetime.combine(end.date(), datetime.time.max))
 
     # get upcoming and ongoing events
-    events = Event.objects.filter(
+    events = BaseEvent.objects.filter(
         Q(datetime_start__range=(today_min, end_max)) | Q(datetime_end__range=(today_min, end_max))).order_by(
         'datetime_start').filter(approved=True).exclude(Q(closed=True) | Q(cancelled=True))
     context['events'] = events
@@ -50,7 +50,7 @@ def admin(request, msg=None):
     context['tznow'] = now
 
     # get ongoing events for self-crew feature
-    selfcrew_events = Event.objects.filter(ccinstances__setup_start__lte=now,
+    selfcrew_events = BaseEvent.objects.filter(ccinstances__setup_start__lte=now,
         datetime_end__gte=(now - datetime.timedelta(hours=3))).exclude(hours__user=request.user).distinct()
     context['selfcrew_events'] = selfcrew_events
 
@@ -76,7 +76,7 @@ def event_search(request):
         if len(q) < 3:
             context['msg'] = "Search Query Too Short, please try something longer"
         else:
-            e = Event.objects.filter(Q(event_name__icontains=q) | Q(description__icontains=q))
+            e = BaseEvent.objects.filter(Q(event_name__icontains=q) | Q(description__icontains=q))
             if not request.user.has_perm('events.view_hidden_event'):
                 e = e.exclude(sensitive=True)
             context['events'] = e

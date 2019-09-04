@@ -11,7 +11,7 @@ from django.urls.base import reverse
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 
-from events.models import BaseEvent, Event, Category, MultiBilling
+from events.models import BaseEvent, Category, MultiBilling
 
 DEFAULT_ENTRY_COUNT = 40
 
@@ -40,7 +40,7 @@ class FakeExtendedField(object):
     def __getattr__(self, item):
         return getattr(self.fieldref, item)
 
-    def __init__(self, name, model=Event, favicon=None, verbose_name=None, sortable=True):
+    def __init__(self, name, model=BaseEvent, favicon=None, verbose_name=None, sortable=True):
         self.fieldref = model._meta.get_field(name)
         self.name = name
         if verbose_name:
@@ -53,7 +53,7 @@ def map_fields(cols):
     """ Puts field names into actual fields (even if they don't exist) """
 
     out_cols = []
-    all_names = map(lambda f: f.name, Event._meta.get_fields())
+    all_names = map(lambda f: f.name, BaseEvent._meta.get_fields())
 
     for col in cols:
         if isinstance(col, FakeField):
@@ -889,7 +889,7 @@ def all_cal(request, start=None, end=None):
 def public_facing(request):
     context = {}
     now = datetime.datetime.now(pytz.utc)
-    events = Event.objects.filter(approved=True, closed=False, cancelled=False, test_event=False, sensitive=False) \
+    events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False, sensitive=False) \
         .filter(datetime_end__gte=now)
     events = events.order_by('datetime_start')
     events = events.select_related('location__building').prefetch_related('org') \
