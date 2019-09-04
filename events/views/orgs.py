@@ -195,7 +195,7 @@ def orgedit(request, id):
         formset = ExternalOrgUpdateForm(request.POST, instance=org)
         if formset.is_valid():
             formset.save()
-            return HttpResponseRedirect(reverse('orgs:list'))
+            return HttpResponseRedirect(reverse('orgs:detail', args=(org.pk,)))
 
         else:
             context['formset'] = formset
