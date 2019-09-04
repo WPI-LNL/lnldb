@@ -893,7 +893,7 @@ def public_facing(request):
         .filter(datetime_end__gte=now)
     events = events.order_by('datetime_start')
     events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('otherservices').prefetch_related('ccinstances__crew_chief')
+        .prefetch_related('ccinstances__crew_chief')
     context['h2'] = "Active Events"
     context['events'] = events
 
