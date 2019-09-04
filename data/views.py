@@ -183,7 +183,8 @@ def workorderwizard_submit(request):
     if not request.user.has_perm('events.create_org_event', org):
         email_body = ('The following event was submitted. You are receiving this email because the user who submitted '
                       'this event is not expressly authorized to submit events on behalf of {}. The organization owner '
-                      'can update authorized users through the website.'.format(org.name))
+                      'can update authorized users at {}.'.format(org.name,
+                      request.scheme + '://' + request.get_host() + reverse('my:org-edit', args=(org.pk,))))
         email = EventEmailGenerator(event=event, subject='Event Submitted on behalf of {}'.format(org.name),
                                     to_emails=[org.exec_email], body=email_body, bcc=[settings.EMAIL_TARGET_W])
         email.send()
