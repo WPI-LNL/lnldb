@@ -189,7 +189,7 @@ def review(request, id):
 
 @login_required
 def reviewremind(request, id, uid):
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if not (request.user.has_perm('events.review_event') or
             request.user.has_perm('events.review_event', event)):
         raise PermissionDenied
@@ -221,7 +221,7 @@ def reviewremind(request, id, uid):
 @require_POST
 @login_required
 def remindall(request, id):
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if not (request.user.has_perm('events.review_event') or
             request.user.has_perm('events.review_event', event)):
         raise PermissionDenied
@@ -510,7 +510,7 @@ def assignattach(request, id):
 def assignattach_external(request, id):
     context = {}
 
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
     if event.closed:
         messages.add_message(request, messages.ERROR, 'Event is closed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
