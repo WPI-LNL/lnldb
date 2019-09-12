@@ -29,7 +29,10 @@ def training_list(request):
                     training_of_reference = training
                 else:
                     if training.is_valid():
-                        if not training_of_reference.is_valid() or training.expiration_date > training_of_reference.expiration_date:
+                        if not training_of_reference.is_valid() or \
+                                training.training.expiration_date is None or \
+                                (training_of_reference.training.expiration_date is not None and \
+                                training.training.expiration_date >= training_of_reference.training.expiration_date):
                             training_of_reference = training
                     else:
                         if not training_of_reference.is_valid():
