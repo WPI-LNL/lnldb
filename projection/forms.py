@@ -12,8 +12,8 @@ from django.contrib.auth import get_user_model
 from django.forms.models import inlineformset_factory
 from django.utils import timezone
 
-from events.models import Projection as ProjService, Extra, ExtraInstance
-from events.models import Building, Category, Event, Location
+from events.models import Service, Extra, ExtraInstance
+from events.models import Building, Category, Event2019, Location
 from projection.models import PitInstance, PITLevel, Projectionist
 
 
@@ -161,7 +161,6 @@ class DateEntryFormSetBase(forms.Form):
 
     date = forms.DateField()
     name = forms.CharField(required=False)
-    mins = forms.IntegerField(required=False, label="Duration (mins)")
 
     friday = forms.BooleanField(required=False)
     matinee = forms.BooleanField(required=False)
@@ -185,11 +184,8 @@ class DateEntryFormSetBase(forms.Form):
             'submitted_by': user,
             'submitted_ip': ip,
             'location': Location.objects.get_or_create(name="Perreault Hall Upper", defaults={'building': building})[0],
-            'projection': ProjService.objects.get_or_create(
-                longname="Digital Projection", shortname='DP',
-                defaults={'base_cost': 40, 'addtl_cost': 10, 'category': cat}
-            )[0],
             'billed_by_semester': True,
+            'billing_org': org,
         }
         # if it's possible to approve the event, do so (since there is no bulk approve)
         if user.has_perm('events.approve_event'):
@@ -198,16 +194,6 @@ class DateEntryFormSetBase(forms.Form):
             kwargs['approved'] = True
 
         date = self.cleaned_data['date']
-
-        reels = 0
-        if self.cleaned_data['mins'] is not None:
-            reels = ceil(self.cleaned_data['mins'] / 20) - 1
-        addon = Extra.objects.get_or_create(name="Additional 20 Minutes Digital Projection",
-                                            defaults={
-                                                'cost': 7,
-                                                'desc': 'Each Additional 20 Minutes of Digital Projection',
-                                                'category': cat
-                                            })[0]
 
         # prepare base date/times for the usual 8PM Sat start.
         dt_setupcomplete = datetime.datetime.combine(date, datetime.time(19, 30))
@@ -225,9 +211,11 @@ class DateEntryFormSetBase(forms.Form):
             kwargs['datetime_start'] = tz.localize(dt_start + offset)
             kwargs['datetime_end'] = tz.localize(dt_end + offset)
 
-            e = Event.objects.create(**kwargs)
+            e = Event2019.objects.create(**kwargs)
             e.org.add(org)
-            if reels > 0:
-                ExtraInstance.objects.create(event=e, extra=addon, quant=reels)
+            e.serviceinstance_set.create(service=Service.objects.get_or_create(
+                longname="Digital Projection", shortname='DP',
+                defaults={'base_cost': 50, 'addtl_cost': 0, 'category': cat}
+            )[0],)
             out.append(e)
         return out
