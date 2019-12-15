@@ -58,47 +58,6 @@
                 </tr>
             </table>
         </div>
-        {% permission user has 'events.show_org_billing' of org %}
-        <div class="col-md-3">
-            <h3>Money</h3>
-            <table>
-                {% for f in org.accounts.all %}
-                    <tr><td>
-                        {% permission user has 'events.change_fund' of f %}
-                            <b><a href="{% url 'orgs:fundedit' f.id %}">{{ f }}</a></b>
-                        {% elpermission user has 'events.edit_org_billing' of org %}
-                            <b><a href="{% url 'orgs:fundedit_external' f.id %}">{{ f }}</a></b>
-                        {% else %}
-                            <b>{{ f }}</b>
-                        {% endpermission %}
-                        {% if f.notes %}{{ f.notes }}{% endif %}
-                    </td></tr>
-                {% endfor %}
-                {% permission user has 'events.add_fund' %}
-                    <tr><td>
-                        <b><a href="{% url 'orgs:fundadd' org.id %}">[Add New]</a></b>
-                    </td></tr>
-                {% endpermission %}
-                {% permission user has 'events.view_verifications' of org %}
-                <tr>
-                    <td colspan="2">
-                        {% if org.verifications.exists %}
-                        <p class="muted text-muted">
-                        Last verified by: {{ org.verifications.latest.verified_by }} on {{ org.verifications.latest.date }}
-                        </p>
-
-                        {% else %}
-                        <p class="muted text-muted">No verification created</p>
-                        {% endif %}
-                        {% permission user has 'events.add_verification' of org %}
-                        <a href="{% url "orgs:verify" org.id %}">Create Verification</a>
-                        {% endpermission %}
-                    </td>
-                </tr>
-                {% endpermission %}
-            </table>
-        </div>
-        {% endpermission %}
         <div class="col-md-3">
             <h3>Associated Users</h3>
             <ul class="list-unstyled">

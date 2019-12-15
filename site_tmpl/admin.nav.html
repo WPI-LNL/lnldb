@@ -62,8 +62,9 @@
 
                         <li><a href="{% url "events:unreviewed" %}">Events Pending Review</a></li>
                         <li><a href="{% url "events:unbilled" %}">Events to be Billed</a></li>
-                        <li><a href="{% url "events:unbilled-semester" %}">Events to be Billed - Semester (Films)</a></li>
-                        <li><a href="{% url "events:unpaid" %}">Events Billed, Pending Payment</a></li>
+                        <li><a href="{% url "events:unbilled-semester" %}">Events to be Billed in Bulk</a></li>
+                        <li><a href="{% url "events:unpaid" %}">Events Billed, Waiting on Client</a></li>
+                        <li><a href="{% url "events:awaitingworkday" %}">Events Awaiting Workday Entry</a></li>
                         <li><a href="{% url "events:paid" %}">Events Paid</a></li>
                         <li><a href="{% url "events:multibillings:list" %}">MultiBills</a></li>
                         {% endpermission %}

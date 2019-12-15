@@ -270,3 +270,33 @@ class ReportReminderEmailGenerator(DefaultLNLEmailGenerator):
                 build_html=build_html,
                 body=None,
                 attachments=attachments)
+
+class BillingEmailGenerator(DefaultLNLEmailGenerator):
+    def __init__(self,
+            event=None,
+            subject="Invoice for LNL Services",
+            to_emails=settings.DEFAULT_TO_ADDR,
+            cc=None,
+            bcc=[settings.EMAIL_TARGET_T],
+            from_email=settings.DEFAULT_FROM_ADDR,
+            reply_to=[settings.EMAIL_TARGET_T],
+            context=None,
+            template_basename="emails/email_billing",
+            build_html=True,
+            body=None,
+            attachments=None):
+        if context is None:
+            context = {}
+        context['event'] = event
+        super(BillingEmailGenerator, self).__init__(
+                subject=subject,
+                to_emails=to_emails,
+                cc=cc,
+                bcc=bcc,
+                from_email=from_email,
+                reply_to=reply_to,
+                context=context,
+                template_basename=template_basename,
+                build_html=build_html,
+                body=body,
+                attachments=attachments)

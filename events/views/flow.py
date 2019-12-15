@@ -14,12 +14,12 @@ from django.views.generic import CreateView, DeleteView, UpdateView
 from django.views.decorators.http import require_GET, require_POST
 from reversion.models import Version
 
-from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator,
+from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator, BillingEmailGenerator,
                                DefaultLNLEmailGenerator as DLEG)
 from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
-                          EventDenialForm, EventReviewForm, ExtraForm,
-                          InternalReportForm, MKHoursForm, BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm)
+                          EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
+                          BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm)
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
                            ReportReminder, ServiceInstance)
@@ -895,7 +895,7 @@ def pay_bill(request, event, pk):
         raise PermissionDenied
     if bill.event.closed:
         messages.add_message(request, messages.ERROR, 'Event is closed.')
-        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+        return HttpResponseRedirect(reverse('events:detail', args=(bill.event_id,)))
     if bill.date_paid:
         messages.info(request, "Bill has already been paid", extra_tags="info")
     else:
@@ -943,9 +943,7 @@ class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Crea
         pdf_handle = generate_event_bill_pdf_standalone(event, self.request.user, request=self.request)
         filename = "%s-bill.pdf" % slugify(event.event_name)
         attachments = [{"file_handle": pdf_handle, "name": filename}]
-        email = EventEmailGenerator(event=event, subject=i.subject, body=i.message, to_emails=to,
-                                    reply_to=[settings.EMAIL_TARGET_T], bcc=[settings.EMAIL_TARGET_T],
-                                    attachments=attachments)
+        email = BillingEmailGenerator(event=event, subject=i.subject, body=i.message, to_emails=to, attachments=attachments)
         email.send()
         i.sent_at = timezone.now()
         i.save()
@@ -991,3 +989,62 @@ class MultiBillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin,
 
     def get_success_url(self):
         return reverse("events:multibillings:list")
+
+
+class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
+    model = Event2019
+    form_class = WorkdayForm
+    template_name = "form_crispy_workday.html"
+    perms = 'events.edit_org_billing'
+
+    def user_passes_test(self, request, *args, **kwargs):
+        obj = self.get_object()
+        return request.user.has_perm(self.perms, obj.org_to_be_billed) or request.GET.get('verification') == obj.workday_form_hash
+
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if self.object.closed:
+            messages.add_message(request, messages.ERROR, 'Event is closed.')
+            return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
+        if not self.object.reviewed:
+            messages.add_message(request, messages.ERROR, 'Event has not been reviewed for billing.')
+            return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
+        if not self.object.billings.exists():
+            messages.add_message(request, messages.ERROR, 'Event has not yet been billed.')
+            return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
+        if self.object.entered_into_workday:
+            messages.add_message(request, messages.ERROR, 'An Internal Service Delivery has already been created in Workday for this event. The worktag to charge can no longer be edited through this webiste.')
+            return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
+        return super(WorkdayEntry, self).dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        messages.success(self.request, "Billing info received. Please approve the Internal Service Delivery in Workday when you receive it.", extra_tags='success')
+        # Automatically add the user who submitted the workday form to the client
+        org = self.object.org_to_be_billed
+        if self.request.user not in org.associated_users.all():
+            org.associated_users.add(self.request.user)
+        return super(WorkdayEntry, self).form_valid(form)
+
+    def get_success_url(self):
+        return reverse("events:detail", args=(self.object.pk,))
+
+
+@require_POST
+@login_required
+def mark_entered_into_workday(request, id):
+    """
+    Marks an event as entered into Workday. POST only
+    """
+    event = get_object_or_404(Event2019, id=id)
+    if not request.user.has_perm('events.bill_event', event):
+        raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    if event.entered_into_workday:
+        messages.info(request, "Event has already been marked entered into Workday.", extra_tags="info")
+    else:
+        event.entered_into_workday = True
+        event.save()
+        messages.success(request, "Marked %s as entered into Workday." % event.event_name, extra_tags="success")
+    return HttpResponseRedirect(reverse('events:awaitingworkday'))

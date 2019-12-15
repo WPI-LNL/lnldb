@@ -1,0 +1,140 @@
+{% extends 'base_admin.html' %}
+{% load markdown_deux_tags %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <row>
+        <col-md-12>
+            <h1>Bill payment form for <em>{{ object.event_name }}</em>. ${{ object.cost_total|floatformat:2 }} to be charged to {{ object.org_to_be_billed }}.</h1>
+        </col-md-12>
+    </row>
+    <div class="row">
+        <div class="col-md-6">
+            <p>
+                After you submit this form, Lens and Lights will create an Internal Service Delivery in Workday.
+                You will need to approve the Internal Service Delivery in Workday for your account to be charged.
+                If any of the information on this page is incorrect, STOP and contact the Lens and Lights Treasurer
+                at <a href="mailto:lnl-t@wpi.edu">lnl-t@wpi.edu</a>. Do not submit this form until all of the
+                information displayed is correct.
+            </p>
+            <h2>Enter payment</h2>
+            {% crispy form %}
+            <p>I, {{ request.user }}, represent {{ object.org_to_be_billed }} and agree for ${{ object.cost_total|floatformat:2 }} to be charged to the worktag I have entered. I have reviewed the amount to be charged and agree it is correct. I will approve the Internal Service Delivery when I receive it through Workday.</p>
+        </div>
+        <div class="col-md-6">
+            <row>
+                <col-md-12>
+                    <h2>Event details</h2>
+                    <table class="table">
+                        <tr>
+                            <th>Event Name</th>
+                            <td>{{ object.event_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Posted Description</th>
+                            <td>{{ object.description|markdown }}</td>
+                        </tr>
+                        <tr>
+                            <th>Event Contact Name</th>
+                            <td>{% if object.contact %}
+                                <a href="{% url 'accounts:detail' object.contact.id %}">{{ object.contact.get_full_name }}</a>
+                                {% else %}{{ object.contact }} {% endif %}</td>
+                        </tr>
+                        <tr>
+                            <th>Event Contact Phone</th>
+                            <td>{{ object.contact.phone }}</td>
+                        </tr>
+                        <tr>
+                            <th>Event Contact Email</th>
+                            <td>{{ object.contact.email }}</td>
+                        </tr>
+                        <tr>
+                            <th>Location</th>
+                            <td>{{object.location}} <em>({{ object.location.building }})</em></td>
+                        </tr>
+                        <tr>
+                            <th>Setup Completion</th>
+                            <td>{{object.datetime_setup_complete}}</td>
+                        </tr>
+                        <tr>
+                            <th>Start</th>
+                            <td>{{object.datetime_start }}</td>
+                        </tr>
+                        <tr>
+                            <th>End</th>
+                            <td>{{object.datetime_end}}</td>
+                        </tr>
+                        <tr>
+                            <th>Submitted by</th>
+                            <td>
+                                <a href="{% url 'accounts:detail' object.submitted_by.id %}">{{ object.submitted_by.get_full_name }}</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Submitted on</th>
+                            <td>{{ object.submitted_on }} </td>
+                        </tr>
+                    </table>
+                </col-md-12>
+            </row>
+            <div class="row">
+                <div class="col-md-12">
+                    <h2>Price Breakdown</h2>
+                    <style> .tdra { text-align: right; }</style>
+                    <table class="table table-condensed">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Cost</th>
+                            </tr>
+                        </thead>
+                        {% if object.serviceinstance_set.exists %}
+                            {% for service_instance in object.serviceinstance_set.all %}
+                                <tr>
+                                    <td>{{ service_instance.service }}</td>
+                                    <td class="tdra">${{ service_instance.service.base_cost }}</td>
+                                </tr>
+                            {% endfor %}
+                            {% for extra_instance in object.extrainstance_set.all %}
+                                <tr>
+                                    <td>{{ extra_instance.extra }} <strong>x{{ extra_instance.quant }}</strong></td>
+                                    <td class="tdra">${{ extra_instance.totalcost }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+
+                        {% if object.discount_applied %}
+                        <tr class="warning">
+                            <td> Pre Discount Total </td>
+                            <td class="tdra">${{ object.cost_total_pre_discount }} </td>
+                        </tr>
+                        <tr class="warning">
+                                    <td>15% Discount Applied</td>
+                                    <td style="color:red;" class="tdra">-${{ object.discount_value|floatformat:2}}</td>
+                                </tr>
+                        {% endif %}
+
+                        {% for oo in object.oneoffs %}
+                        <tr>
+                            <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
+                            <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
+                                {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        <tr class="info">
+                            <td>Total</td>
+                            <td class="tdra">${{ object.cost_total|floatformat:2 }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extras %}
+{{ form.media }}
+{{ formset.media }}
+{% endblock %}

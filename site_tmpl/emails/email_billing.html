@@ -1,0 +1,34 @@
+{% extends "emails/email_base.html" %}
+{% load tz %}
+{% load lnldb_tags %}
+{% block perma %}
+{% endblock %}
+
+{% block unsub %}
+{% endblock %}
+
+{% block content %}
+<table class="w960" width="960" cellpadding="10" cellspacing="0" border="0">
+    <tbody>
+        <tr>
+            <td class="w960" width="960">
+                <p align="left" class="article-title">{{ subject }}</p>
+                <div align="left" class="article-content">
+                    <p> {{ body|safe|linebreaksbr|urlize }} </p>
+                    <a id="paynow-button" href="{% get_base_url %}{% url 'events:worktag-form' event.pk %}?verification={{ event.workday_form_hash }}">PAY NOW</a>
+                    <p><b>{{ event.event_name }}</b><br>
+                    <i>{{ event.location }}</i><br>
+                    Start: {{ event.datetime_start }}<br>
+                    End: {{ event.datetime_end }}<br>
+                    Services: {{ event.short_services }}<br>
+                    Organization to be billed: {{ event.org_to_be_billed }}</p>
+                    <p>See full details of this event <a href="{% get_base_url %}{% url 'events:detail' event.id %}">here</a>.</p>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="w960" width="960" height="10"></td>
+        </tr>
+        </tbody>
+</table>
+{% endblock %}

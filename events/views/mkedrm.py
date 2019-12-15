@@ -9,7 +9,7 @@ import reversion
 from reversion.views import create_revision
 
 from emails.generators import EventEmailGenerator
-from events.forms import InternalEventForm, ServiceInstanceForm
+from events.forms import InternalEventForm, InternalEventForm2019, ServiceInstanceForm
 from events.models import BaseEvent, Event, Event2019, ServiceInstance
 from helpers.revision import set_revision_comment
 from helpers.util import curry_class
@@ -48,8 +48,11 @@ def eventnew(request, id=None):
                 if instance.has_projection:
                     bcc.append(settings.EMAIL_TARGET_HP)
 
-        if is_event2019 and not instance:
-            form = InternalEventForm(data=request.POST, request_user=request.user, instance=Event2019())
+        if is_event2019:
+            if instance:
+                form = InternalEventForm2019(data=request.POST, request_user=request.user, instance=instance)
+            else:
+                form = InternalEventForm2019(data=request.POST, request_user=request.user, instance=Event2019())
         else:
             form = InternalEventForm(data=request.POST, request_user=request.user, instance=instance)
         if is_event2019:
@@ -107,9 +110,11 @@ def eventnew(request, id=None):
             if is_event2019:
                 context['services_formset'] = services_formset
     else:
-        context['form'] = InternalEventForm(request_user=request.user, instance=instance)
         if is_event2019:
+            context['form'] = InternalEventForm2019(request_user=request.user, instance=instance)
             context['services_formset'] = mk_serviceinstance_formset(instance=instance)
+        else:
+            context['form'] = InternalEventForm(request_user=request.user, instance=instance)
         if instance:
             context['msg'] = "Edit Event"
         else:

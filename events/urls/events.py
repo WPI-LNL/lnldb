@@ -25,6 +25,7 @@ urlpatterns = [
     url(r'^unbilledsemester/', generate_date_patterns(list_views.unbilled_semester, name="unbilled-semester")),
     url(r'^paid/', generate_date_patterns(list_views.paid, name="paid")),
     url(r'^unpaid/', generate_date_patterns(list_views.unpaid, name="unpaid")),
+    url(r'^workday/', generate_date_patterns(list_views.awaitingworkday, name="awaitingworkday")),
     url(r'^closed/', generate_date_patterns(list_views.closed, name="closed")),
     url(r'^all/', generate_date_patterns(list_views.all, name="all")),
 
@@ -73,6 +74,8 @@ urlpatterns = [
         name="files"),
     url(r'^extras/(?P<id>[0-9a-f]+)/$', flow_views.extras, name="extras"),
     url(r'^oneoff/(?P<id>[0-9a-f]+)/$', flow_views.oneoff, name="oneoffs"),
+    url(r'^enter-worktag/(?P<pk>[0-9a-f]+)/$', flow_views.WorkdayEntry.as_view(), name="worktag-form"),
+    url(r'^workday-entered/(?P<id>[0-9a-f]+)/$', flow_views.mark_entered_into_workday, name="workday-entered"),
 
     # The nice url structure. TODO: fit the rest in here (with deprecation, of course)
     url(r'^view/(?P<event>[0-9]+)/', include([

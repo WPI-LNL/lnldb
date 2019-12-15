@@ -1,5 +1,6 @@
 import datetime
 import decimal
+import re
 import uuid
 
 import pytz
@@ -296,7 +297,6 @@ class EventApprovalForm(forms.ModelForm):
                 Field('datetime_end', label="Event End", css_class="dtp"),
                 Field('org'),
                 Field('billing_org'),
-                Field('billing_fund'),
                 Field('billed_by_semester', label="Billed by semester (for films)"),
                 # Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
                 active=True
@@ -325,7 +325,7 @@ class EventApprovalForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ['description', 'internal_notes', 'datetime_start', 'datetime_end', 'org', 'billing_org',
-                  'billing_fund', 'billed_by_semester', 'datetime_setup_complete', 'lighting', 'lighting_reqs',
+                  'billed_by_semester', 'datetime_setup_complete', 'lighting', 'lighting_reqs',
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs']
         widgets = {
             'description': PagedownWidget(),
@@ -338,7 +338,6 @@ class EventApprovalForm(forms.ModelForm):
 
     org = AutoCompleteSelectMultipleField('Orgs', required=False, label='Client(s)')
     billing_org = AutoCompleteSelectField('Orgs', required=False, label='Client to bill')
-    billing_fund = AutoCompleteSelectField('Funds', required=False)
     datetime_start = forms.SplitDateTimeField(initial=timezone.now, label="Event Start")
     datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
     # datetime_setup_start =  forms.SplitDateTimeField(initial=timezone.now)
@@ -435,30 +434,27 @@ class InternalEventForm(FieldAccessForm):
                     Div(Field('datetime_end', css_class='dtp'), css_class="padleft"),
                 ),
             ),
+            Tab(
+                'Lighting',
+                'lighting',
+                'lighting_reqs'
+            ),
+            Tab(
+                'Sound',
+                'sound',
+                'sound_reqs'
+            ),
+            Tab(
+                'Projection',
+                'projection',
+                'proj_reqs'
+            ),
+            Tab(
+                'Other Services',
+                'otherservices',
+                'otherservice_reqs'
+            ),
         )
-        if isinstance(self.instance, Event):
-            tabs += (
-                Tab(
-                    'Lighting',
-                    'lighting',
-                    'lighting_reqs'
-                ),
-                Tab(
-                    'Sound',
-                    'sound',
-                    'sound_reqs'
-                ),
-                Tab(
-                    'Projection',
-                    'projection',
-                    'proj_reqs'
-                ),
-                Tab(
-                    'Other Services',
-                    'otherservices',
-                    'otherservice_reqs'
-                ),
-            )
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.include_media = False
@@ -544,13 +540,137 @@ class InternalEventForm(FieldAccessForm):
     otherservices = ModelMultipleChoiceField(queryset=Service.objects.filter(enabled_event2012=True), required=False)
 
 
+class InternalEventForm2019(FieldAccessForm):
+    def __init__(self, request_user, *args, **kwargs):
+        super(InternalEventForm2019, self).__init__(request_user, *args, **kwargs)
+        tabs = (
+            Tab(
+                'Name And Location',
+                'event_name',
+                'location',
+                Field('description'),
+                DynamicFieldContainer('internal_notes'),
+                DynamicFieldContainer('billed_by_semester'),
+                'sensitive',
+                'test_event',
+                'entered_into_workday',
+                active=True
+            ),
+            Tab(
+                'Contact',
+                'contact',
+                'org',
+                DynamicFieldContainer('billing_org'),
+                DynamicFieldContainer('billing_fund'),
+            ),
+            Tab(
+                'Scheduling',
+                Div(
+                    Div(Field('datetime_setup_complete', css_class='dtp', title="Setup Completed By"),
+                        css_class="padleft"),
+                ),
+                Div(
+                    HTML(
+                        '<div class="pull-left pushdown"><br />'
+                        '<a class="btn btn-primary" href="#" id="samedate1" title="Cascade Dates">'
+                        '<i class="glyphicon glyphicon-resize-small icon-white"></i>&nbsp;'
+                        '<i class="glyphicon glyphicon-calendar icon-white"></i></a></div>'),
+                    Div(Field('datetime_start', css_class='dtp'), css_class="padleft"),
+                ),
+                Div(
+                    HTML(
+                        '<div class="pull-left pushdown"><br />'
+                        '<a class="btn btn-primary" href="#" id="samedate2" title="Cascade Dates">'
+                        '<i class="glyphicon glyphicon-resize-small icon-white"></i>&nbsp;'
+                        '<i class="glyphicon glyphicon-calendar icon-white"></i></a></div>'),
+                    Div(Field('datetime_end', css_class='dtp'), css_class="padleft"),
+                ),
+            ),
+        )
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.include_media = False
+        self.helper.layout = Layout(*tabs)
+
+    class FieldAccess:
+        def __init__(self):
+            pass
+
+        internal_notes_write = FieldAccessLevel(
+            lambda user, instance: user.has_perm("events.event_view_sensitive", instance),
+            enable=('internal_notes',)
+        )
+
+        hide_internal_notes = FieldAccessLevel(
+            lambda user, instance: not user.has_perm("events.event_view_sensitive", instance),
+            exclude=('internal_notes',)
+        )
+
+        event_times = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_times', instance),
+            enable=('datetime_start', 'datetime_setup_complete', 'datetime_end')
+        )
+
+        edit_descriptions = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_text', instance),
+            enable=('event_name', 'location', 'description',
+                    'lighting_reqs', 'sound_reqs', 'proj_reqs', 'otherservice_reqs')
+        )
+
+        change_owner = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.adjust_event_owner', instance),
+            enable=('contact', 'org')
+        )
+
+        change_type = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.adjust_event_charges', instance),
+            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_by_semester')
+        )
+
+        billing_edit = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_fund', instance),
+            enable=('billing_org', 'billing_fund', 'billed_by_semester')
+        )
+
+        billing_view = FieldAccessLevel(
+            lambda user, instance: not user.has_perm('events.view_event_billing', instance),
+            exclude=('billing_org', 'billing_fund', 'billed_by_semester')
+        )
+
+        change_flags = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_flags', instance),
+            enable=('sensitive', 'test_event')
+        )
+
+    class Meta:
+        model = Event2019
+        fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org',
+                  'billed_by_semester', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
+                  'datetime_end', 'sensitive', 'test_event', 'entered_into_workday')
+        widgets = {
+            'description': PagedownWidget(),
+            'internal_notes': PagedownWidget,
+        }
+
+    location = GroupedModelChoiceField(
+        queryset=Location.objects.filter(show_in_wo_form=True),
+        group_by_field="building",
+        group_label=lambda group: group.name,
+    )
+    contact = AutoCompleteSelectField('Users', required=False)
+    org = CustomAutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
+    billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
+    datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
+    datetime_start = forms.SplitDateTimeField(initial=timezone.now, label="Event Start")
+    datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
+
+
 class EventReviewForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         event = kwargs.pop('event')
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Field('billing_org'),
-            Field('billing_fund'),
             Field('internal_notes', css_class="col-md-6", size="15"),
             FormActions(
                 HTML('<h4> Does this look good to you?</h4>'),
@@ -564,13 +684,12 @@ class EventReviewForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ('billing_org', 'billing_fund', 'internal_notes')
+        fields = ('billing_org', 'internal_notes')
         widgets = {
             'internal_notes': PagedownWidget()
         }
 
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
-    billing_fund = AutoCompleteSelectField('Funds', required=False)
 
 
 class InternalReportForm(FieldAccessForm):
@@ -722,6 +841,35 @@ class SelfServiceOrgRequestForm(forms.Form):
     address = forms.CharField(widget=forms.Textarea, help_text="EX: Campus Center 339")
     phone = forms.CharField(max_length=15, help_text="EX: (508) - 867 - 5309")
     fund_info = forms.CharField(help_text="EX: 12345-6789-8765")
+
+
+class WorkdayForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            'workday_fund',
+            Field('worktag', placeholder='e.g. 1234-CC'),
+            'workday_form_comments',
+            FormActions(
+                Submit('submit', 'Pay'),
+            )
+        )
+        super(WorkdayForm, self).__init__(*args, **kwargs)
+        self.fields['workday_fund'].label = 'Funding source'
+        self.fields['workday_fund'].required = True
+        self.fields['workday_form_comments'].label = 'Comments'
+
+    def clean_worktag(self):
+        pattern = re.compile('[0-9]+-[A-Z][A-Z]')
+        if pattern.match(self.cleaned_data['worktag']) is None:
+            raise ValidationError('What you entered is not a valid worktag. Here are some examples of what a worktag looks like: 1234-CC, 123-AG')
+        return self.cleaned_data['worktag']
+
+    class Meta:
+        model = Event2019
+        fields = 'workday_fund', 'worktag', 'workday_form_comments'
+
+    worktag = forms.CharField(required=True, help_text='Ends in -AG, -CC, -GF, -GR, or -DE')
 
 
 # Internal Billing forms
@@ -880,8 +1028,8 @@ class BillingEmailForm(forms.ModelForm):
         self.helper.field_class = 'col-lg-10'
         self.helper.layout = Layout(
             HTML('<p class="text-muted">The bill PDF for this event will be attached to the email.'
-                 'The message you type below is not the entire contents of the email; identifying '
-                 'information about the event being billed will be added to the email below your message.</p>'),
+                 'The message you type below is not the entire contents of the email; a large "PAY NOW" button'
+                 ' and identifying information about the event being billed will be added to the email below your message.</p>'),
             'subject',
             'message',
             'email_to_users',

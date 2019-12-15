@@ -273,6 +273,12 @@
                                 <th>Client to be billed</th>
                                 <td> {{ event.org_to_be_billed }} </td>
                             </tr>
+                            {% if event.worktag %}
+                                <tr>
+                                    <th>Worktag to be billed</th>
+                                    <td>{{ event.worktag }} ({{ event.workday_fund }}-FD)</td>
+                                </tr>
+                            {% endif %}
                             <tr>
                                 <th>Billed by semester</th>
                                 <td> {{ event.billed_by_semester }} </td>
@@ -567,7 +573,9 @@
                     {% endif %}
                     <h2>Price Breakdown</h2>
                     <h3>Charge from 
-                        {% if event.billing_fund %}
+                        {% if event.worktag %}
+                            {{ event.worktag }}
+                        {% elif event.billing_fund %}
                             <a href="{% url 'orgs:fundedit' event.billing_fund.id %}">{{ event.billing_fund }}.</a>
                         {% else %}
                             (no account given).

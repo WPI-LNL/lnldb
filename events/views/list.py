@@ -11,7 +11,7 @@ from django.urls.base import reverse
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 
-from events.models import BaseEvent, Category, MultiBilling
+from events.models import BaseEvent, Event2019, Category, MultiBilling
 
 DEFAULT_ENTRY_COUNT = 40
 
@@ -597,7 +597,7 @@ def unbilled_semester(request, start=None, end=None):
     sort = request.GET.get('sort')
     events = paginate_helper(events, page, sort)
 
-    context['h2'] = "Events to be Billed (Films)"
+    context['h2'] = "Events to be Billed in Bulk"
     context['events'] = events
     context['baseurl'] = reverse("events:unbilled-semester")
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
@@ -621,7 +621,7 @@ def unbilled_semester(request, start=None, end=None):
 @permission_required('events.bill_event', raise_exception=True)
 def unbilled_semester_cal(request, start=None, end=None):
     context = {}
-    context['h2'] = "Events to be Billed (Films)"
+    context['h2'] = "Events to be Billed in Bulk"
     context['listurl'] = reverse('events:unbilled-semester')
     context['bootcal_endpoint'] = reverse('cal:api-unbilled-semester')
     return render(request, 'events_cal.html', context)
@@ -676,7 +676,8 @@ def paid(request, start=None, end=None):
                        FakeExtendedField('datetime_start', verbose_name="Event Time"),
                        FakeField('last_billed', sortable=True),
                        FakeField('last_paid', verbose_name="Paid On", sortable=True),
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
+                       FakeField('short_services', verbose_name="Services", sortable=False),
+                       FakeField('workday')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
@@ -701,10 +702,11 @@ def unpaid(request, start=None, end=None):
 
     events = BaseEvent.objects.annotate(
         numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
-        .filter(Q(billings__date_billed__isnull=False) | Q(multibillings__date_billed__isnull=False)) \
+        .filter(Q(billings__isnull=False) | Q(multibillings__isnull=False)) \
         .exclude(closed=True) \
         .exclude(numpaid__gt=0) \
         .filter(reviewed=True) \
+        .exclude(billings__isnull=False, Event2019___workday_fund__isnull=False, Event2019___worktag__isnull=False, Event2019___entered_into_workday=False) \
         .order_by('datetime_start').distinct()
     if not request.user.has_perm('events.event_view_sensitive'):
         events = events.exclude(sensitive=True)
@@ -741,6 +743,7 @@ def unpaid(request, start=None, end=None):
                        FakeField('last_billed', sortable=True),
                        FakeField('times_billed', sortable=True),
                        FakeField('cost_total', verbose_name='Price', sortable=True),
+                       FakeField('workday'),
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     response = render(request, 'events.html', context)
@@ -757,6 +760,60 @@ def unpaid_cal(request, start=None, end=None):
     context['listurl'] = reverse('events:unpaid')
     context['bootcal_endpoint'] = reverse('cal:api-unpaid')
     return render(request, 'events_cal.html', context)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def awaitingworkday(request, start=None, end=None):
+    context = {}
+
+    if not start and not end:
+        start, end = get_very_large_date_range()
+
+    events = Event2019.objects.filter(closed=False) \
+        .filter(reviewed=True, billings__isnull=False, workday_fund__isnull=False, worktag__isnull=False, entered_into_workday=False) \
+        .distinct()
+    if not request.user.has_perm('events.event_view_sensitive'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.view_test_event'):
+        events = events.exclude(test_event=True)
+    events = events.select_related('location__building').prefetch_related('org') \
+        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(
+            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
+            | Q(serviceinstance__service__category__name='Projection')) \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
+    events, context = datefilter(events, context, start, end)
+
+    page = request.GET.get('page')
+    sort = request.GET.get('sort')
+    events = paginate_helper(events, page, sort)
+
+    context['h2'] = "Events to Enter Into Workday"
+    context['events'] = events
+    context['baseurl'] = reverse("events:awaitingworkday")
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
+    context['takes_param_projection'] = True
+    context['cols'] = ['event_name',
+                       'org',
+                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       'workday_fund',
+                       'worktag',
+                       'workday_form_comments',
+                       FakeField('bill'),
+                       FakeField('tasks')]
+    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 
 @login_required

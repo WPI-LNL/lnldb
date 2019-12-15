@@ -1,8 +1,6 @@
-Dear {{ billing.event.org_to_be_billed }},
+{% load lnldb_tags %}Dear {{ billing.event.org_to_be_billed }},
 
-Lens and Lights recently provided services for {{ billing.event.event_name }}. Attached is an invoice for this event. Please visit lnl.wpi.edu/paybill to submit a payment.
-
-NEW BILL PAYMENT SYSTEM: With the new Workday finance system, Lens and Lights is no longer processing IDTs. To pay your bill, please visit lnl.wpi.edu/paybill and complete the simple and quick process. Your new Worktag number is required. Please talk to SAO or your relevant accounting contact if you need help finding this.
+Lens and Lights recently provided services for {{ billing.event.event_name }}. Attached is an invoice for this event. Please click the button below or visit {% get_base_url %}{% url 'events:worktag-form' billing.event.pk %} to submit a payment.
 
 If you have any questions, please just reply to this email.
 

@@ -186,6 +186,14 @@
                                         </form>
                                     {% endpermission %}
                                 {% endif %}
+                                {% if event.reviewed and event.last_bill and event.workday_fund and event.worktag and not event.entered_into_workday %}
+                                    {% permission request.user has 'events.bill_event' of event %}
+                                        <form class="form-inline" action="{% url 'events:workday-entered' event.id %}" method="post">
+                                            {% csrf_token %}
+                                            <span class="workdayenteredtask"><button class="btn btn-link" type="submit">Mark Entered Into Workday</button></span>
+                                        </form>
+                                    {% endpermission %}
+                                {% endif %}
                             </td>
                         {% elif field.name == 'approval' %}
                             <td class="approval">
@@ -196,6 +204,24 @@
                                 {% else %}
                                     <span class="glyphicon glyphicon-minus"></span>
                                 {% endif %}
+                            </td>
+                        {% elif field.name == 'workday' %}
+                            <td class="workday">
+                                {% if event.entered_into_workday %}
+                                    <span class="glyphicon glyphicon-ok"></span>
+                                {% elif event.workday_fund and event.worktag %}
+                                    <span class="glyphicon glyphicon-refresh"></span>
+                                {% else %}
+                                    <span class="glyphicon glyphicon-remove"></span>
+                                {% endif %}
+                            </td>
+                        {% elif field.name == 'workday_fund' %}
+                            <td class="workday_fund">
+                                {{ event.workday_fund }}-FD
+                            </td>
+                        {% elif field.name == 'bill' %}
+                            <td class="bill">
+                                <a target="_blank" href="{% url 'events:bills:pdf' event.id %}">Bill PDF</a>
                             </td>
                         {% else %}
                             <td class="{{ field.name }}">{{ event|getattribute:field.name }}</td>

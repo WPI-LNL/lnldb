@@ -1,5 +1,6 @@
 import datetime
 import decimal
+import hashlib
 
 import pytz
 from django import forms
@@ -761,6 +762,18 @@ class Event2019(BaseEvent):
     """
         New events under the 2019 pricelist
     """
+    workday_fund = models.IntegerField(null=True, blank=True, choices=(
+        (810, 'Student Organization (810-FD)'),
+        (110, 'Operating (110-FD)'),
+        (220, 'Gift (220-FD)'),
+        (500, 'Gift (500-FD)'),
+        (210, 'Grant (210-FD)'),
+        (900, 'Project (900-FD)'),
+        (120, 'Designated (120-FD)'),
+    ))
+    worktag = models.CharField(max_length=7, null=True, blank=True)
+    workday_form_comments = models.TextField(null=True, blank=True)
+    entered_into_workday = models.BooleanField(default=False, help_text='Checked when the Treasurer has created an Internal Service Delivery in Workday for this event')
 
     @property
     def has_projection(self):
@@ -816,6 +829,18 @@ class Event2019(BaseEvent):
     @property
     def cost_total(self):
         return self.cost_total_pre_discount - self.discount_value
+
+    @property
+    def workday_form_hash(self):
+        return hashlib.sha1((
+            settings.SECRET_KEY +
+            type(self).__name__ +
+            'workday_form' +
+            str(self.pk) +
+            str(self.org_to_be_billed.pk) +
+            str(self.workday_fund) +
+            str(self.worktag)
+            ).encode('utf-8')).hexdigest()
 
     class Meta:
         verbose_name = '2019 Event'

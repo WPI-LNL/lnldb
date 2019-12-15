@@ -45,7 +45,7 @@
                 </tr>
                 <tr>
                     <td><b>Billed Account:</b></td>
-                    <td>{{ event_data.event.billing_fund }}</td>
+                    <td>{% if event_data.event.worktag %}{{ event_data.event.worktag }}{% else %}{{ event_data.event.billing_fund }}{% endif %}</td>
                     <td><b>Event End:</b></td>
                     <td>{{ event_data.event.datetime_end|localtime|date }}</td>
                 </tr>
@@ -113,7 +113,7 @@
         <hr>
 <table class="center">
 {% if event_data.event.reviewed %}
-    <tr><td style="font-size:11pt;font-weight:bold;">New Bill Payment System! Visit <a class="unstyled" href="{{ request.scheme }}://{{ request.get_host }}/paybill">{{ request.get_host }}/paybill</a> to pay this Invoice.</td></tr>
+    <tr><td>Visit <a class="unstyled" href="{{ request.scheme }}://{{ request.get_host }}{% url 'events:worktag-form' event_data.event.pk %}">{{ request.get_host }}{% url 'events:worktag-form' event_data.event.pk %}</a> to pay this Invoice.</td></tr>
     <tr><td><p>If you have any questions concerning this invoice, contact our treasurer at <a class="unstyled" href="mailto:lnl-t@wpi.edu">lnl-t@wpi.edu</a>.</td></tr>
 {% else %}
     <tr><td>This is a quote of the expected charges, and may change based on a variety of factors, including additional equipment requests at the event. We will do our best to inform the listed contact of any charges in advance, but this is not guaranteed.</td></tr>

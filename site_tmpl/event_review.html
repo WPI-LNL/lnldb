@@ -37,10 +37,6 @@
                                 <a href="{% url "orgs:detail" org.id %}">{{ org.retname }}</a><br />
                             {% endif %}
                             <span class="text-muted small">
-                            {% for fund in org.accounts.all %}
-                                {{ fund }}<br />
-                            {% endfor %}
-                            Last Verified: {% if org.verifications.exists %} {{ org.verifications.latest.date }} {% else %} Never {% endif %}<br />
                             {% if org.notes %}
                                 Notes: {{ org.notes }}
                             {% endif %}
