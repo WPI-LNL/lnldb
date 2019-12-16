@@ -1046,6 +1046,7 @@ def mark_entered_into_workday(request, id):
         messages.info(request, "Event has already been marked entered into Workday.", extra_tags="info")
     else:
         event.entered_into_workday = True
+        set_revision_comment("Marked entered into Workday", None)
         event.save()
         messages.success(request, "Marked %s as entered into Workday." % event.event_name, extra_tags="success")
     return HttpResponseRedirect(reverse('events:awaitingworkday'))
