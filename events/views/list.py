@@ -784,8 +784,7 @@ def awaitingworkday(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     if request.GET.get('projection') == 'hide':
         events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
+            Q(serviceinstance__service__category__name='Projection') \
             & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
         events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
