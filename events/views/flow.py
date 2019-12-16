@@ -1012,6 +1012,9 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
         if not self.object.billings.exists():
             messages.add_message(request, messages.ERROR, 'Event has not yet been billed.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
+        if self.object.paid:
+            messages.add_message(request, messages.ERROR, 'Event has already been paid.')
+            return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
         if self.object.entered_into_workday:
             messages.add_message(request, messages.ERROR, 'An Internal Service Delivery has already been created in Workday for this event. The worktag to charge can no longer be edited through this webiste.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
