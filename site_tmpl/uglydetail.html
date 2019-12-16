@@ -700,8 +700,12 @@
                     <h2> Bills </h2>
                     {% if event.reviewed %}
                         <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Invoice</a>
-                    {% else %}
+                    {% elif event.approved %}
                         <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Quote</a>
+                    {% else %}
+                        {% permission request.user has 'events.bill_event' of event %}
+                            <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Quote</a>
+                        {% endpermission %}
                     {% endif %}
                     {% if event.billings or event.multibillings %}
                         <table class="table">

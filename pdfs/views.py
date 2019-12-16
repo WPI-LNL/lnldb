@@ -133,6 +133,8 @@ def generate_event_bill_pdf(request, event):
     event = get_object_or_404(BaseEvent, pk=event)
     if not request.user.has_perm('events.view_event_billing', event):
         raise PermissionDenied
+    if not event.approved and not request.user.has_perm('events.bill_event', event):
+        raise PermissionDenied
     data = {}
     event_data = {
         'event': event,
