@@ -19,7 +19,7 @@
             </p>
             <h2>Enter payment</h2>
             {% crispy form %}
-            <p>I, {{ request.user }}, represent {{ object.org_to_be_billed }} and agree for ${{ object.cost_total|floatformat:2 }} to be charged to the worktag I have entered. I have reviewed the amount to be charged and agree it is correct. I will approve the Internal Service Delivery when I receive it through Workday.</p>
+            <p>I, {{ request.user }}, represent {{ object.org_to_be_billed }} and agree for ${{ object.cost_total|floatformat:2 }} to be charged to the worktag I have entered. I will approve the Internal Service Delivery when I receive it through Workday.</p>
         </div>
         <div class="col-md-6">
             <row>
