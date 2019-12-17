@@ -311,7 +311,7 @@
                     <table class="table">
                         {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
                         <tr>
-                            <th>Setup For {{ cc.service }}</th>
+                            <th>Setup For {% if cc.service %}{{ cc.service }}{% else %}{{ cc.category }}{% endif %}</th>
                             <td>{{cc.setup_start}}</td>
                         </tr>
                         {% endfor %}
