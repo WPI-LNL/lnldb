@@ -15,7 +15,7 @@ from django.utils.functional import curry
 from emails.generators import generate_selfservice_notice_email
 from events.forms import (EditHoursForm, InternalReportForm, MKHoursForm,
                           SelfServiceOrgRequestForm, WorkorderRepeatForm)
-from events.models import CCReport, BaseEvent, Event, Hours
+from events.models import CCReport, BaseEvent, Event, Hours, CCR_DELTA
 from helpers.util import curry_class
 
 
@@ -179,14 +179,13 @@ def ccreport(request, eventid):
     if not uevent:
         return HttpResponse("This Event Must not Have been yours, or is closed")
 
-    event = BaseEvent.objects.get(pk=eventid)
+    event = uevent[0].event
     if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past.")
+        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
 
     # get event
-    event = uevent[0].event
     x = event.ccinstances.filter(crew_chief=user)
-    context['msg'] = "Crew Chief Report for '<em>%s</em>' (%s)" % (event, ",".join([str(i.service) for i in x]))
+    context['msg'] = "Crew Chief Report for '<em>%s</em>' (%s)" % (event, ",".join([str(i.category) for i in x]))
 
     # create report
     try:
@@ -241,11 +240,10 @@ def hours_mk(request, eventid):
     if not uevent:
         return HttpResponse("This Event Must not Have been yours, or is closed")
 
-    event = BaseEvent.objects.get(pk=eventid)
-    if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past.")
-
     event = uevent[0].event
+    if not event.reports_editable:
+        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
+
     context['msg'] = "Hours for '%s'" % event.event_name
     if request.method == 'POST':
         formset = MKHoursForm(event, request.POST)
@@ -273,10 +271,9 @@ def hours_edit(request, eventid, userid):
     if not uevent:
         return HttpResponse("You must not have cc'd this event, or it's closed")
 
-    event = BaseEvent.objects.get(pk=eventid)
-    if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past.")
     event = uevent[0].event
+    if not event.reports_editable:
+        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
 
     hours = get_object_or_404(Hours, event=event, user_id=userid)
     u = get_object_or_404(get_user_model(), pk=userid)
@@ -307,10 +304,9 @@ def hours_bulk(request, eventid):
     if not uevent:
         return HttpResponse("You must not have cc'd this event, or it's closed")
 
-    event = BaseEvent.objects.get(pk=eventid)
-    if not event.reports_editable:
-        return HttpResponse("The deadline for report submission and hours has past.")
     event = uevent[0].event
+    if not event.reports_editable:
+        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
 
     context['msg'] = "Bulk Hours Entry"
 

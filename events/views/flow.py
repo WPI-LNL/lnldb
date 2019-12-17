@@ -22,7 +22,7 @@ from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiB
                           BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm)
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
-                           ReportReminder, ServiceInstance)
+                           ReportReminder, ServiceInstance, CCR_DELTA)
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
 from helpers.revision import set_revision_comment
@@ -368,6 +368,8 @@ def hours_bulk_admin(request, id):
 
     context['msg'] = "Bulk Hours Entry"
     event = get_object_or_404(BaseEvent, pk=id)
+    if not event.reports_editable and request.user.has_perm('events.edit_event_hours', event):
+        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event) and event.reports_editable):
         raise PermissionDenied
@@ -655,6 +657,8 @@ class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, Login
 
     def dispatch(self, request, *args, **kwargs):
         self.event = get_object_or_404(BaseEvent, pk=kwargs['event'])
+        if not self.event.reports_editable and not request.user.has_perm(self.perms) and request.user.has_perm(self.perms, self.event):
+            return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': self.event})
         return super(CCRCreate, self).dispatch(request, *args, **kwargs)
 
     def user_passes_test(self, request, *args, **kwargs):
