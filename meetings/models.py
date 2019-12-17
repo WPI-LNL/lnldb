@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.db import models
 from django.urls.base import reverse
+from django.utils import timezone
 from django.utils.encoding import python_2_unicode_compatible
 
 from django_extensions.db.models import TimeStampedModel
@@ -82,7 +83,7 @@ class Meeting(models.Model):
         return reverse('meetings:detail', args=[self.id])
 
     def __str__(self):
-        return "Meeting For %s" % self.datetime.date()
+        return "Meeting For %s" % self.datetime.astimezone(timezone.get_current_timezone()).date()
 
     class Meta:
         ordering = ('-datetime',)
