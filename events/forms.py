@@ -942,11 +942,21 @@ class BillingUpdateForm(forms.ModelForm):
 
 class MultiBillingForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
+        show_nonbulk_events = kwargs.pop('show_nonbulk_events')
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
         self.helper.form_action = ""
-        self.helper.layout = Layout(
+        layout = []
+        if show_nonbulk_events:
+            layout += [
+                HTML('<a href="?show_nonbulk_events=false">Switch back to showing only events marked for semester billing</a>')
+            ]
+        else:
+            layout += [
+                HTML('<a href="?show_nonbulk_events=true">Show events not marked for semester billing</a>')
+            ]
+        layout += [
             'events',
             PrependedText('date_billed', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
             PrependedText('amount', '<strong>$</strong>'),
@@ -955,8 +965,13 @@ class MultiBillingForm(forms.ModelForm):
                 Submit('save-and-make-email', 'Save and Make Email'),
                 Reset('reset', 'Reset Form'),
             )
-        )
+        ]
+        self.helper.layout = Layout(*layout)
         super(MultiBillingForm, self).__init__(*args, **kwargs)
+        if show_nonbulk_events is True:
+            self.fields['events'].queryset=BaseEvent.objects.filter(closed=False, reviewed=True, billings__isnull=True) \
+                    .exclude(multibillings__isnull=False, multibillings__date_paid__isnull=False)
+            self.fields['events'].help_text = 'Only unbilled, reviewed events are listed above.'
         self.fields['date_billed'].initial = datetime.date.today()
 
     def clean(self):

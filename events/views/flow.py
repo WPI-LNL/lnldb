@@ -834,6 +834,11 @@ class MultiBillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Crea
     msg = "New MultiBill"
     perms = 'events.bill_event'
 
+    def get_form_kwargs(self):
+        kwargs = super(MultiBillingCreate, self).get_form_kwargs()
+        kwargs['show_nonbulk_events'] = self.request.GET.get('show_nonbulk_events') == 'true'
+        return kwargs
+
     def form_valid(self, form):
         messages.success(self.request, "MultiBill Created!", extra_tags='success')
         return super(MultiBillingCreate, self).form_valid(form)
