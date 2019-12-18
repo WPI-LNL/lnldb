@@ -131,14 +131,18 @@
                         {% elif field.name == 'crew_chief' %}
                             <td class="event-cc">
                                 {% if event.crew_chief.exists %}
-                                    {% for cc in event.crew_chief.all %}
-                                        <a href="{% url "accounts:detail" cc.id %}">
-                                            {{ cc }}</a>{% if not forloop.last %},{% endif %} 
-                                    {% endfor %}
+                                {% for cc in event.crew_chief.all %}
+                                    {% permission request.user has 'accounts.view_member' %}
+                                        <a href="{% url 'accounts:detail' cc.id %}">
+                                    {% endpermission %}
+                                    {{ cc }}{% permission request.user has 'accounts.view_member' %}</a>{% endpermission %}{% if not forloop.last %},{% endif %}
+                                {% endfor %}
                                 {% elif event.ccinstances %}
                                     {% for cc in event.ccinstances.all %}
-                                        <a href="{% url "accounts:detail" cc.crew_chief.id %}">
-                                            {{ cc.crew_chief }}{% if not forloop.last %},{% endif %} </a>
+                                        {% permission request.user has 'accounts.view_member' %}
+                                            <a href="{% url 'accounts:detail' cc.crew_chief.id %}">
+                                        {% endpermission %}
+                                        {{ cc.crew_chief }}{% permission request.user has 'accounts.view_member' %}</a>{% endpermission %}{% if not forloop.last %},{% endif %}
                                     {% endfor %}
                                 {% else %}
                                     None Assigned

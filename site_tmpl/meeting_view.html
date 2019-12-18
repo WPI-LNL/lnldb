@@ -32,7 +32,15 @@
                     <h3>Attendance:</h3>
                     <ul>
                     {% for a in m.attendance.all %}
-                        <li><a href="{% url "accounts:detail" a.id %}">{{ a.first_name }} {{ a.last_name }}</a></li>
+                        <li>
+                            {% permission request.user has 'accounts.view_member' %}
+                                <a href="{% url "accounts:detail" a.id %}">
+                            {% endpermission %}
+                            {{ a.first_name }} {{ a.last_name }}
+                            {% permission request.user has 'accounts.view_member' %}
+                                </a>
+                            {% endpermission %}
+                        </li>
                     {% empty %}
                         <small>Nobody is here I guess.</small>
                     {% endfor %}
