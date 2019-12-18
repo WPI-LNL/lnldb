@@ -284,11 +284,13 @@
                                 <td> {{ event.billed_by_semester }} </td>
                             </tr>
                         {% endpermission %}
-                        {% permission request.user has 'events.event_view_hidden' of event %}
-                            <tr>
-                                <th>Sensitive and Hidden</th>
-                                <td> {{ event.sensitive }} </td>
-                            </tr>
+                        {% permission request.user has 'events.view_hidden_event' of event %}
+                            {% if event.sensitive %}
+                                <tr>
+                                    <th>Sensitive and Hidden</th>
+                                    <td> {{ event.sensitive }} </td>
+                                </tr>
+                            {% endif %}
                         {% endpermission %}
                         {% if event.test_event %}
                             <tr>

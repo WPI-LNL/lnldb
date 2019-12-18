@@ -183,7 +183,7 @@ def upcoming(request, start=None, end=None):
     # events = Event.objects.filter(approved=True).filter(closed=False).filter(paid=False)
     # .filter(datetime_start__gte=today)
     events = BaseEvent.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)).distinct()  # .filter(paid=False)
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
@@ -238,7 +238,7 @@ def incoming(request, start=None, end=None):
 
     events = BaseEvent.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)) \
         .distinct()
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
@@ -298,7 +298,7 @@ def openworkorders(request, start=None, end=None):
     context = {}
 
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).distinct()
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
@@ -367,7 +367,7 @@ def findchief(request, start=None, end=None):
         .annotate(num_ccs=Count('ccinstances')) \
         .filter(Q(Event___ccs_needed__gt=F('num_ccs')) | Q(num_ccs__lt=Count('serviceinstance__service__category', distinct=True))).distinct()
 
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
@@ -440,7 +440,7 @@ def unreviewed(request, start=None, end=None):
         .filter(datetime_end__lte=now) \
         .order_by('datetime_start') \
         .distinct()
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
@@ -509,7 +509,7 @@ def unbilled(request, start=None, end=None):
         .filter(billed_by_semester=False) \
         .order_by('datetime_start') \
         .distinct()
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
@@ -575,7 +575,7 @@ def unbilled_semester(request, start=None, end=None):
         .filter(billed_by_semester=True) \
         .order_by('datetime_start') \
         .distinct()
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
@@ -639,7 +639,7 @@ def paid(request, start=None, end=None):
     events = BaseEvent.objects.filter(closed=False) \
         .filter(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)) \
         .distinct()
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
@@ -708,7 +708,7 @@ def unpaid(request, start=None, end=None):
         .filter(reviewed=True) \
         .exclude(billings__isnull=False, Event2019___workday_fund__isnull=False, Event2019___worktag__isnull=False, Event2019___entered_into_workday=False) \
         .order_by('datetime_start').distinct()
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
@@ -773,7 +773,7 @@ def awaitingworkday(request, start=None, end=None):
     events = Event2019.objects.filter(closed=False) \
         .filter(reviewed=True, billings__isnull=False, workday_fund__isnull=False, worktag__isnull=False, entered_into_workday=False) \
         .distinct()
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
@@ -824,7 +824,7 @@ def closed(request, start=None, end=None):
         start, end = get_very_large_date_range()
 
     events = BaseEvent.objects.filter(closed=True)
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
@@ -884,7 +884,7 @@ def all(request, start=None, end=None):
     context = {}
 
     events = BaseEvent.objects.distinct()
-    if not request.user.has_perm('events.event_view_sensitive'):
+    if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
