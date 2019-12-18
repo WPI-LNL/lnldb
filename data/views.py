@@ -180,14 +180,14 @@ def workorderwizard_submit(request):
 
     # If the user does not have permission to submit events on behalf of the selected organization,
     # send an email to the organization to alert them that the event was submitted
-    if not request.user.has_perm('events.create_org_event', org):
-        email_body = ('The following event was submitted. You are receiving this email because the user who submitted '
-                      'this event is not expressly authorized to submit events on behalf of {}. The organization owner '
-                      'can update authorized users at {}.'.format(org.name,
-                      request.scheme + '://' + request.get_host() + reverse('my:org-edit', args=(org.pk,))))
-        email = EventEmailGenerator(event=event, subject='Event Submitted on behalf of {}'.format(org.name),
-                                    to_emails=[org.exec_email], body=email_body, bcc=[settings.EMAIL_TARGET_W])
-        email.send()
+    # if not request.user.has_perm('events.create_org_event', org):
+    #     email_body = ('The following event was submitted. You are receiving this email because the user who submitted '
+    #                   'this event is not expressly authorized to submit events on behalf of {}. The organization owner '
+    #                   'can update authorized users at {}.'.format(org.name,
+    #                   request.scheme + '://' + request.get_host() + reverse('my:org-edit', args=(org.pk,))))
+    #     email = EventEmailGenerator(event=event, subject='Event Submitted on behalf of {}'.format(org.name),
+    #                                 to_emails=[org.exec_email], body=email_body, bcc=[settings.EMAIL_TARGET_W])
+    #     email.send()
 
     # return response with the URL to the event detail page
     return HttpResponse(json.dumps({'event_url': reverse('events:detail', args=[event.pk])}))
