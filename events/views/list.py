@@ -506,7 +506,7 @@ def unbilled(request, start=None, end=None):
     events = BaseEvent.objects.filter(closed=False) \
         .filter(reviewed=True) \
         .filter(billings__isnull=True, multibillings__isnull=True) \
-        .filter(billed_by_semester=False) \
+        .filter(billed_in_bulk=False) \
         .order_by('datetime_start') \
         .distinct()
     if not request.user.has_perm('events.view_hidden_event'):
@@ -572,7 +572,7 @@ def unbilled_semester(request, start=None, end=None):
     events = BaseEvent.objects.filter(closed=False) \
         .filter(reviewed=True) \
         .filter(billings__isnull=True, multibillings__isnull=True) \
-        .filter(billed_by_semester=True) \
+        .filter(billed_in_bulk=True) \
         .order_by('datetime_start') \
         .distinct()
     if not request.user.has_perm('events.view_hidden_event'):

@@ -280,8 +280,8 @@
                                 </tr>
                             {% endif %}
                             <tr>
-                                <th>Billed by semester</th>
-                                <td> {{ event.billed_by_semester }} </td>
+                                <th>Billed in bulk</th>
+                                <td> {{ event.billed_in_bulk }} </td>
                             </tr>
                         {% endpermission %}
                         {% permission request.user has 'events.view_hidden_event' of event %}

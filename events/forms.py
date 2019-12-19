@@ -295,9 +295,9 @@ class EventApprovalForm(forms.ModelForm):
                 Field('datetime_setup_complete', label="Setup Finish", css_class="dtp"),
                 Field('datetime_start', label="Event Start", css_class="dtp"),
                 Field('datetime_end', label="Event End", css_class="dtp"),
-                Field('org'),
-                Field('billing_org'),
-                Field('billed_by_semester', label="Billed by semester (for films)"),
+                'org',
+                'billing_org',
+                'billed_in_bulk',
                 # Field('datetime_setup_start',label="Setup Start",css_class="dtp"),
                 active=True
             ),
@@ -325,7 +325,7 @@ class EventApprovalForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ['description', 'internal_notes', 'datetime_start', 'datetime_end', 'org', 'billing_org',
-                  'billed_by_semester', 'datetime_setup_complete', 'lighting', 'lighting_reqs',
+                  'billed_in_bulk', 'datetime_setup_complete', 'lighting', 'lighting_reqs',
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs']
         widgets = {
             'description': PagedownWidget(),
@@ -399,7 +399,7 @@ class InternalEventForm(FieldAccessForm):
                 'location',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
-                DynamicFieldContainer('billed_by_semester'),
+                'billed_in_bulk',
                 'sensitive',
                 'test_event',
                 active=True
@@ -492,17 +492,17 @@ class InternalEventForm(FieldAccessForm):
 
         change_type = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.adjust_event_charges', instance),
-            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_by_semester')
+            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_in_bulk')
         )
 
         billing_edit = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_fund', instance),
-            enable=('billing_org', 'billing_fund', 'billed_by_semester')
+            enable=('billing_org', 'billing_fund', 'billed_in_bulk')
         )
 
         billing_view = FieldAccessLevel(
             lambda user, instance: not user.has_perm('events.view_event_billing', instance),
-            exclude=('billing_org', 'billing_fund', 'billed_by_semester')
+            exclude=('billing_org', 'billing_fund', 'billed_in_bulk')
         )
 
         change_flags = FieldAccessLevel(
@@ -513,7 +513,7 @@ class InternalEventForm(FieldAccessForm):
     class Meta:
         model = Event
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_fund', 'billing_org',
-                  'billed_by_semester', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
+                  'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'lighting', 'lighting_reqs', 'sound', 'sound_reqs', 'projection', 'proj_reqs',
                   'otherservices', 'otherservice_reqs', 'sensitive', 'test_event')
         widgets = {
@@ -550,7 +550,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'location',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
-                DynamicFieldContainer('billed_by_semester'),
+                'billed_in_bulk',
                 'sensitive',
                 'test_event',
                 'entered_into_workday',
@@ -624,17 +624,17 @@ class InternalEventForm2019(FieldAccessForm):
 
         change_type = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.adjust_event_charges', instance),
-            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_by_semester')
+            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_in_bulk')
         )
 
         billing_edit = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_fund', instance),
-            enable=('billing_org', 'billing_fund', 'billed_by_semester')
+            enable=('billing_org', 'billed_in_bulk')
         )
 
         billing_view = FieldAccessLevel(
             lambda user, instance: not user.has_perm('events.view_event_billing', instance),
-            exclude=('billing_org', 'billing_fund', 'billed_by_semester', 'entered_into_workday')
+            exclude=('billing_org', 'billed_in_bulk', 'entered_into_workday')
         )
 
         change_flags = FieldAccessLevel(
@@ -650,7 +650,7 @@ class InternalEventForm2019(FieldAccessForm):
     class Meta:
         model = Event2019
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org',
-                  'billed_by_semester', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
+                  'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'sensitive', 'test_event', 'entered_into_workday')
         widgets = {
             'description': PagedownWidget(),
@@ -1004,7 +1004,7 @@ class MultiBillingForm(forms.ModelForm):
         fields = ('events', 'date_billed', 'amount')
 
     events = CustomEventModelMultipleChoiceField(
-        queryset=BaseEvent.objects.filter(closed=False, reviewed=True, billings__isnull=True, billed_by_semester=True) \
+        queryset=BaseEvent.objects.filter(closed=False, reviewed=True, billings__isnull=True, billed_in_bulk=True) \
                 .exclude(multibillings__isnull=False, multibillings__date_paid__isnull=False),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
         help_text="Only unbilled, reviewed events that are marked for semester billing are listed above."

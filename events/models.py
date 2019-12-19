@@ -236,7 +236,7 @@ class BaseEvent(PolymorphicModel):
     datetime_end = models.DateTimeField()
 
     internal_notes = models.TextField(null=True, blank=True, help_text="Notes that the client and general body should never see.")
-    billed_by_semester = models.BooleanField(default=False, db_index=True, help_text="Check if event will be billed in bulk")
+    billed_in_bulk = models.BooleanField(default=False, db_index=True, help_text="Check if billing of this event will be deferred so that it can be combined with other events in a single invoice")
     sensitive = models.BooleanField(default=False, help_text="Nobody besides those directly involved should know about this event")
     test_event = models.BooleanField(default=False, help_text="Check to lower the VP's blood pressure after they see the short-notice S4/L4")
     

@@ -184,7 +184,7 @@ class DateEntryFormSetBase(forms.Form):
             'submitted_by': user,
             'submitted_ip': ip,
             'location': Location.objects.get_or_create(name="Perreault Hall Upper", defaults={'building': building})[0],
-            'billed_by_semester': True,
+            'billed_in_bulk': True,
             'billing_org': org,
         }
         # if it's possible to approve the event, do so (since there is no bulk approve)

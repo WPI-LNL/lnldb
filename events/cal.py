@@ -189,7 +189,7 @@ class UnbilledCalJsonView(BaseCalJsonView):
         queryset = BaseEvent.objects.filter(closed=False) \
             .filter(reviewed=True) \
             .filter(billings__isnull=True, multibillings__isnull=True) \
-            .filter(billed_by_semester=False) \
+            .filter(billed_in_bulk=False) \
             .distinct()
         return super(UnbilledCalJsonView, self).get(request, queryset)
 
@@ -201,7 +201,7 @@ class UnbilledSemesterCalJsonView(BaseCalJsonView):
         queryset = BaseEvent.objects.filter(closed=False) \
             .filter(reviewed=True) \
             .filter(billings__isnull=True, multibillings__isnull=True) \
-            .filter(billed_by_semester=True) \
+            .filter(billed_in_bulk=True) \
             .order_by('datetime_start') \
             .distinct()
         return super(UnbilledSemesterCalJsonView, self).get(request, queryset)

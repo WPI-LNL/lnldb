@@ -96,7 +96,7 @@ fieldsets = (
                    'otherservice_reqs')
     }),
     ('Status Flags', {
-        'fields': ('billed_by_semester',
+        'fields': ('billed_in_bulk',
                    ('approved', 'approved_on', 'approved_by'),
                    ('reviewed', 'reviewed_on', 'reviewed_by'),
                    ('closed', 'closed_on', 'closed_by'),
