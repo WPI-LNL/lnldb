@@ -837,7 +837,7 @@ class Event2019(BaseEvent):
             type(self).__name__ +
             'workday_form' +
             str(self.pk) +
-            str(self.org_to_be_billed.pk) +
+            str(self.org_to_be_billed.pk if self.org_to_be_billed is not None else None) +
             str(self.workday_fund) +
             str(self.worktag)
             ).encode('utf-8')).hexdigest()
