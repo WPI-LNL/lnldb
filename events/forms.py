@@ -675,7 +675,8 @@ class EventReviewForm(forms.ModelForm):
         event = kwargs.pop('event')
         self.helper = FormHelper()
         self.helper.layout = Layout(
-            Field('billing_org'),
+            'org',
+            'billing_org',
             Field('internal_notes', css_class="col-md-6", size="15"),
             FormActions(
                 HTML('<h4> Does this look good to you?</h4>'),
@@ -689,11 +690,12 @@ class EventReviewForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ('billing_org', 'internal_notes')
+        fields = ('org', 'billing_org', 'internal_notes')
         widgets = {
             'internal_notes': PagedownWidget()
         }
 
+    org = AutoCompleteSelectMultipleField('Orgs', required=True, label="Client(s)")
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
 
 
