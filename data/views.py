@@ -80,7 +80,7 @@ def workorderwizard_load(request):
                         'address': request.user.addr}
     for loc in events_models.Location.objects.filter(show_in_wo_form=True):
         response['locations'].append({'id': loc.pk, 'name': loc.name, 'building': loc.building.name})
-    for org in events_models.Organization.objects.all():
+    for org in events_models.Organization.objects.filter(archived=False):
         data = {'id': org.pk,
                 'name': org.name,
                 'shortname': org.shortname,
