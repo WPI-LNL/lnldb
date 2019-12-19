@@ -15,7 +15,7 @@
                 <p align="left" class="article-title">{{ subject }}</p>
                 <div align="left" class="article-content">
                     <p> {{ body|safe|linebreaksbr|urlize }} </p>
-                    <a id="paynow-button" href="{% get_base_url %}{% url 'events:worktag-form' event.pk %}?verification={{ event.workday_form_hash }}">PAY NOW</a>
+                    <a id="paynow-button" href="{% get_base_url %}{% url 'events:worktag-form' event.pk %}?verification={{ event.workday_form_hash }}">Pay now with Workday</a>
                     <p><b>{{ event.event_name }}</b><br>
                     <i>{{ event.location }}</i><br>
                     Start: {{ event.datetime_start }}<br>
