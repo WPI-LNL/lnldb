@@ -634,12 +634,17 @@ class InternalEventForm2019(FieldAccessForm):
 
         billing_view = FieldAccessLevel(
             lambda user, instance: not user.has_perm('events.view_event_billing', instance),
-            exclude=('billing_org', 'billing_fund', 'billed_by_semester')
+            exclude=('billing_org', 'billing_fund', 'billed_by_semester', 'entered_into_workday')
         )
 
         change_flags = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_flags', instance),
             enable=('sensitive', 'test_event')
+        )
+
+        change_entered_into_workday = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.bill_event', instance),
+            enable=('entered_into_workday',)
         )
 
     class Meta:
