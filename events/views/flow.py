@@ -56,7 +56,6 @@ def approval(request, id):
         if is_event2019:
             services_formset = mk_serviceinstance_formset(request.POST, request.FILES, instance=event)
         if form.is_valid() and (not is_event2019 or services_formset.is_valid()):
-            set_revision_comment("Approved", form)
             e = form.save(commit=False)
             e.approved = True
             e.approved_on = timezone.now()
@@ -64,6 +63,12 @@ def approval(request, id):
             e.save()
             if is_event2019:
                 services_formset.save()
+            # Automatically add the event contact to the client (if the event has only one client)
+            if e.contact is not None and e.org.count() == 1 and e.contact not in e.org.get().associated_users.all():
+                set_revision_comment("Approved {}. Event contact {} automatically added to {}.".format(e.event_name, e.contact, e.org.get()), form)
+                e.org.get().associated_users.add(e.contact)
+            else:
+                set_revision_comment("Approved", form)
             # confirm with user
             messages.add_message(request, messages.INFO, 'Approved Event')
             if e.contact and e.contact.email:
