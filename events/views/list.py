@@ -14,6 +14,7 @@ from django.utils.timezone import make_aware
 from events.models import BaseEvent, Event2019, Category, MultiBilling
 
 DEFAULT_ENTRY_COUNT = 40
+DATEFILTER_COOKIE_MAX_AGE = 600
 
 
 class FakeField(object):
@@ -153,6 +154,15 @@ def upcoming(request, start=None, end=None):
     if limit = False, then it'll show all upcoming events that are more than a week away.
     """
     context = {}
+
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:upcoming', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:upcoming', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:upcoming', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
     if not start and not end:
         today = datetime.date.today()
         start = today - datetime.timedelta(days=1)
@@ -160,28 +170,6 @@ def upcoming(request, start=None, end=None):
         end = today + datetime.timedelta(days=15)
         end = end.strftime('%Y-%m-%d')
 
-        # KEEPING THIS JUST IN CASE
-        # today = datetime.date.today()
-        # start = today.strftime('%Y-%m-%d')
-
-        # wd = today.weekday()
-        # if wd == 2: # if today is weds
-        # end = today + datetime.timedelta(days=7)
-        # end = end.strftime('%Y-%m-%d')
-        # elif wd < 2:
-        # delta = 2 - wd + 1
-        # end = today + datetime.timedelta(days=delta)
-        # end = end.strftime('%Y-%m-%d')
-        # else:
-        # # fex
-        # # thurs == 3
-        # # 7 - 3 + 2 = 6 days = weds
-        # delta = 7 - wd + 2
-        # end = today + datetime.timedelta(days=delta)
-        # end = end.strftime('%Y-%m-%d')
-
-    # events = Event.objects.filter(approved=True).filter(closed=False).filter(paid=False)
-    # .filter(datetime_start__gte=today)
     events = BaseEvent.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)).distinct()  # .filter(paid=False)
     if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
@@ -222,6 +210,9 @@ def upcoming(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
@@ -229,6 +220,15 @@ def upcoming(request, start=None, end=None):
 @permission_required('events.approve_event', raise_exception=True)
 def incoming(request, start=None, end=None):
     context = {}
+
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:incoming', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:incoming', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:incoming', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
     if not start and not end:
         today = datetime.date.today()
         start = today - datetime.timedelta(days=365.25)
@@ -277,6 +277,9 @@ def incoming(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
@@ -293,9 +296,18 @@ def incoming_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.view_event', raise_exception=True)
 def openworkorders(request, start=None, end=None):
+    context = {}
+
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:open', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:open', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:open', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
     if not start and not end:
         start, end = get_very_large_date_range()
-    context = {}
 
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).distinct()
     if not request.user.has_perm('events.view_hidden_event'):
@@ -338,6 +350,9 @@ def openworkorders(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
@@ -354,13 +369,22 @@ def openworkorders_cal(request, start=None, end=None):
 @login_required()
 @permission_required('events.view_event', raise_exception=True)
 def findchief(request, start=None, end=None):
+    context = {}
+
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:findchief', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:findchief', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:findchief', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
     if not start and not end:
         today = datetime.date.today()
         start = today
         start = start.strftime('%Y-%m-%d')
         end = today + datetime.timedelta(days=30.5)
         end = end.strftime('%Y-%m-%d')
-    context = {}
 
     events = BaseEvent.objects \
         .filter(approved=True).filter(closed=False).filter(cancelled=False) \
@@ -409,6 +433,9 @@ def findchief(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
@@ -427,6 +454,14 @@ def findchief_cal(request, start=None, end=None):
 def unreviewed(request, start=None, end=None):
     context = {}
 
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:unreviewed', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:unreviewed', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:unreviewed', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
     if not start and not end:
         today = datetime.date.today()
         start = today - datetime.timedelta(days=180)
@@ -481,6 +516,9 @@ def unreviewed(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
@@ -499,7 +537,14 @@ def unreviewed_cal(request, start=None, end=None):
 def unbilled(request, start=None, end=None):
     context = {}
 
-    # events = Event.objects.filter(approved=True).filter(paid=True)
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:unbilled', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:unbilled', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:unbilled', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
     if not start and not end:
         start, end = get_very_large_date_range()
 
@@ -548,6 +593,9 @@ def unbilled(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
@@ -566,9 +614,17 @@ def unbilled_cal(request, start=None, end=None):
 def unbilled_semester(request, start=None, end=None):
     context = {}
 
-    # events = Event.objects.filter(approved=True).filter(paid=True)
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:unbilled-semester', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:unbilled-semester', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:unbilled-semester', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
     if not start and not end:
         start, end = get_very_large_date_range()
+
     events = BaseEvent.objects.filter(closed=False) \
         .filter(reviewed=True) \
         .filter(billings__isnull=True, multibillings__isnull=True) \
@@ -614,6 +670,9 @@ def unbilled_semester(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
@@ -632,6 +691,14 @@ def unbilled_semester_cal(request, start=None, end=None):
 def paid(request, start=None, end=None):
     context = {}
 
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:paid', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:paid', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:paid', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
     if not start and not end:
         start, end = get_very_large_date_range()
 
@@ -682,6 +749,9 @@ def paid(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
@@ -699,6 +769,15 @@ def paid_cal(request, start=None, end=None):
 @permission_required('events.bill_event', raise_exception=True)
 def unpaid(request, start=None, end=None):
     context = {}
+
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:unpaid', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:unpaid', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:unpaid', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
 
     events = BaseEvent.objects.annotate(
         numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
@@ -749,6 +828,9 @@ def unpaid(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
@@ -767,6 +849,14 @@ def unpaid_cal(request, start=None, end=None):
 def awaitingworkday(request, start=None, end=None):
     context = {}
 
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:awaitingworkday', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:awaitingworkday', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:awaitingworkday', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
     if not start and not end:
         start, end = get_very_large_date_range()
 
@@ -812,6 +902,9 @@ def awaitingworkday(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
@@ -820,6 +913,14 @@ def awaitingworkday(request, start=None, end=None):
 def closed(request, start=None, end=None):
     context = {}
 
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:closed', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:closed', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:closed', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
     if not start and not end:
         start, end = get_very_large_date_range()
 
@@ -863,6 +964,9 @@ def closed(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
@@ -879,9 +983,18 @@ def closed_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.view_event', raise_exception=True)
 def all(request, start=None, end=None):
+    context = {}
+
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:all', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:all', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:all', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
     if not start and not end:
         start, end = get_very_large_date_range()
-    context = {}
 
     events = BaseEvent.objects.distinct()
     if not request.user.has_perm('events.view_hidden_event'):
@@ -929,6 +1042,9 @@ def all(request, start=None, end=None):
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
 
