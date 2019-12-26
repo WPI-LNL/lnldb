@@ -6,7 +6,6 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 import reversion
-from reversion.views import create_revision
 
 from emails.generators import EventEmailGenerator
 from events.forms import InternalEventForm, InternalEventForm2019, ServiceInstanceForm

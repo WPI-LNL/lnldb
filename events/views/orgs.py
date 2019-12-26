@@ -14,6 +14,8 @@ from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 from django.utils import timezone
 from django.views.generic import CreateView
+from reversion.models import Version
+import reversion
 
 from emails.generators import generate_transfer_email
 from events.forms import (ExternalOrgUpdateForm, FopalForm, ExternalFundEditForm,
@@ -21,6 +23,7 @@ from events.forms import (ExternalOrgUpdateForm, FopalForm, ExternalFundEditForm
 from events.models import (BaseEvent, Fund, Organization, OrganizationTransfer,
                            OrgBillingVerificationEvent)
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
+from helpers.revision import set_revision_comment
 
 
 # ORGANIZATION VIEWS
@@ -64,6 +67,10 @@ def addeditorgs(request, org_id=None):
     if request.method == 'POST':
         form = IOrgForm(request.user, request.POST, instance=instance)
         if form.is_valid():
+            if instance:
+                set_revision_comment('Edited', form)
+            else:
+                set_revision_comment('Created client', None)
             org = form.save()
             messages.add_message(request, messages.SUCCESS, 'Changes saved.')
             # return HttpResponseRedirect(reverse("home", kwargs={'msg':SUCCESS_MSG_ORG}))
@@ -160,12 +167,13 @@ def orgdetail(request, org_id):
         org = Organization.objects.prefetch_related('accounts', 'associated_users').get(pk=org_id)
     except (Organization.DoesNotExist, Organization.MultipleObjectsReturned):
         raise Http404('No Organization matches the given query.')
-    context['events'] = BaseEvent.objects.filter(org=org).prefetch_related('hours__user', 'ccinstances__crew_chief',
-                                                                       'location', 'org')
     if not (request.user.has_perms(perms) or
             request.user.has_perms(perms, org)):
         raise PermissionDenied
     context['org'] = org
+    context['history'] = Version.objects.get_for_object(org)
+    context['events'] = BaseEvent.objects.filter(org=org).prefetch_related('hours__user', 'ccinstances__crew_chief',
+                                                                       'location', 'org')
     return render(request, 'org_detail.html', context)
 
 
@@ -194,6 +202,7 @@ def orgedit(request, id):
     if request.method == 'POST':
         formset = ExternalOrgUpdateForm(request.POST, instance=org)
         if formset.is_valid():
+            set_revision_comment('Edited', formset)
             formset.save()
             return HttpResponseRedirect(reverse('orgs:detail', args=(org.pk,)))
 
@@ -259,8 +268,12 @@ def org_acceptxfer(request, idstr):
         context['status'] = 'Expired'
 
     else:
-        transfer.org.user_in_charge = transfer.new_user_in_charge
-        transfer.org.save()
+        with reversion.create_revision():
+            reversion.set_user(transfer.initiator)
+            set_revision_comment('Transferred owner from {} to {}'.format(
+                transfer.org.user_in_charge, transfer.new_user_in_charge), None)
+            transfer.org.user_in_charge = transfer.new_user_in_charge
+            transfer.org.save()
         transfer.completed_on = datetime.datetime.now(pytz.utc)
         transfer.completed = True
         transfer.save()

@@ -107,52 +107,79 @@
     {% permission user has 'events.list_org_events' of org %}
         <div class="row">
             <div class="col-md-12">
-            <h3>Events</h3>
-            <table class="table table-compact">
-                <thead>
-                <tr>
-                    <th>
-                        Event Name
-                    </th>
-                    <th>
-                        Date Ended
-                    </th>
-                    <th>
-                        Location
-                    </th>
-                    <th>
-                        Services
-                    </th>
-                    <th>
-                        Status
-                    </th>
-                </tr>
-                </thead>
-                {% for e in events %}
-                    {% permission user has 'events.view_event' of e %}
-                <tr>
-                    <td>
-                        <a href="{% url "events:detail" e.id %}">{{ e }}</a>
-                    </td>
-                    <td>
-                        {{ e.datetime_end }}
-                    </td>
-                    <td>
-                        {{ e.location }}
-                    </td>
-                    <td>
-                        {% for s in e.allservices %}
-                        <i class="{{ s.i }}" title="{{s.title}}"></i>
-                        {% endfor %}
-                    </td>
-                    <td>
-                        {{ e.status }}
-                    </td>
-                </tr>
-                    {% endpermission %}
-                {% endfor %}
-            </table>
+                <h3>Events</h3>
+                <table class="table table-compact">
+                    <thead>
+                    <tr>
+                        <th>
+                            Event Name
+                        </th>
+                        <th>
+                            Date Ended
+                        </th>
+                        <th>
+                            Location
+                        </th>
+                        <th>
+                            Services
+                        </th>
+                        <th>
+                            Status
+                        </th>
+                    </tr>
+                    </thead>
+                    {% for e in events %}
+                        {% permission user has 'events.view_event' of e %}
+                    <tr>
+                        <td>
+                            <a href="{% url "events:detail" e.id %}">{{ e }}</a>
+                        </td>
+                        <td>
+                            {{ e.datetime_end }}
+                        </td>
+                        <td>
+                            {{ e.location }}
+                        </td>
+                        <td>
+                            {% for s in e.allservices %}
+                            <i class="{{ s.i }}" title="{{s.title}}"></i>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {{ e.status }}
+                        </td>
+                    </tr>
+                        {% endpermission %}
+                    {% endfor %}
+                </table>
             </div>
         </div>
     {% endpermission %}
+    <div class="row">
+        <div class="col-md-12">
+            <h3>Audit Log</h3>
+            <table class="table">
+                <tr>
+                    <th>Date</th>
+                    <th>User</th>
+                    <th>Comment</th>
+                </tr>
+                {% for version in history %}
+                    <tr>
+                        <td>
+                            {{ version.revision.date_created }}
+                        </td>
+                        <td>
+                            {% if version.revision.user %}
+                                {{ version.revision.user }}
+                            {% else %}
+                                [None]
+                            {% endif %}
+                        </td>
+                        <td>{{ version.revision.comment }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
 {% endblock %}

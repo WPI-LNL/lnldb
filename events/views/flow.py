@@ -1031,11 +1031,13 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         messages.success(self.request, "Billing info received. Please approve the Internal Service Delivery in Workday when you receive it.", extra_tags='success')
-        set_revision_comment("Entered Workday billing info", form)
         # Automatically add the user who submitted the workday form to the client
         org = self.object.org_to_be_billed
         if self.request.user not in org.associated_users.all():
+            set_revision_comment("Entered Workday billing info for {}. User automatically added to client.".format(self.object.event_name), form)
             org.associated_users.add(self.request.user)
+        else:
+            set_revision_comment("Entered Workday billing info", form)
         return super(WorkdayEntry, self).form_valid(form)
 
     def get_success_url(self):
