@@ -49,12 +49,16 @@
                     <td>{{ org.phone }}</td>
                 </tr>
                 <tr>
-                    <th>Email </th>
+                    <th>Email</th>
                     <td><a href="mailto:{{ org.exec_email }}">{{ org.exec_email }}</a></td>
                 </tr>
                 <tr>
-                    <th>User in charge </th>
+                    <th>User in charge</th>
                     <td> {{ org.user_in_charge }} </td>
+                </tr>
+                <tr>
+                    <th>Info last updated</th>
+                    <td>{{ history.first.revision.date_created }}</td>
                 </tr>
             </table>
         </div>
