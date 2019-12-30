@@ -61,6 +61,7 @@ def approval(request, id):
             e.approved_on = timezone.now()
             e.approved_by = request.user
             e.save()
+            form.save_m2m()
             if is_event2019:
                 services_formset.save()
             # Automatically add the event contact to the client (if the event has only one client)
@@ -178,6 +179,7 @@ def review(request, id):
             e.reviewed_on = timezone.now()
             e.reviewed_by = request.user
             e.save()
+            form.save_m2m()
             # Remove prefilled hours that were never finished
             Hours.objects.filter(event=e, hours__isnull=True).delete()
             # confirm with user
