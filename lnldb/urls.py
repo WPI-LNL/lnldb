@@ -50,7 +50,6 @@ urlpatterns = [
 
     # special urls
     url(r'^db/$', db_home, name="home"),
-    url(r'^(?P<slug>[-\w]+)/$', view_page, name="page"),
     url(r'^db/oldsearch$', event_search, name="events-search"),
     url(r'^db/search$', data.views.search, name="search"),
     url(r'^db/workorderwizard-load$', data.views.workorderwizard_load, name="wizard-load"),
@@ -62,4 +61,7 @@ urlpatterns = [
     # keep old urls
     url(r'^lnadmin/$', RedirectView.as_view(url="/db/", permanent=True)),
     url(r'^lnadmin/(?P<newpath>.+)$', RedirectView.as_view(url="/db/%(newpath)s", permanent=True)),
+
+    # This has to be at the end so that it doesn't mask other urls
+    url(r'^(?P<slug>[-\w]+)/$', view_page, name="page"),
 ]
