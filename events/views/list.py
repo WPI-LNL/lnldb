@@ -877,7 +877,7 @@ def awaitingworkday(request, start=None, end=None):
             Q(serviceinstance__service__category__name='Projection') \
             & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
     elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
+        events = events.filter(serviceinstance__service__category__name='Projection')
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
