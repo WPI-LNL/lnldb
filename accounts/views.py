@@ -116,6 +116,7 @@ class BaseUserList(mixins.HasPermMixin, generic.ListView):
     def get_context_data(self, **kwargs):
         context = super(BaseUserList, self).get_context_data(**kwargs)
         context['h2'] = self.name
+        context['accounts_disabled_column'] = self.accounts_disabled_column
         return context
 
 
@@ -123,47 +124,55 @@ class OfficerList(BaseUserList):
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Officer")
     name = "Officer List"
+    accounts_disabled_column = False
 
 
 class ActiveList(BaseUserList):
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Active")
     name = "Active List"
+    accounts_disabled_column = False
 
 
 class AwayList(BaseUserList):
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Away")
     name = "Away List"
+    accounts_disabled_column = False
 
 
 class AssociateList(BaseUserList):
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Associate")
     name = "Associate List"
+    accounts_disabled_column = True
 
 
 class AlumniList(BaseUserList):
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Alumni")
     name = "Alumni List"
+    accounts_disabled_column = True
 
 
 class InactiveList(BaseUserList):
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Inactive")
     name = "Inactive List"
+    accounts_disabled_column = True
 
 
 class AllMembersList(BaseUserList):
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__isnull=False).distinct()
     name = "All Members List"
+    accounts_disabled_column = False
 
 
 class LimboList(BaseUserList):
     queryset = get_user_model().objects.filter(groups__isnull=True)
     name = "Users without Association"
+    accounts_disabled_column = True
 
 
 class MeDirectView(generic.RedirectView):

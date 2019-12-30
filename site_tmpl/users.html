@@ -10,7 +10,9 @@
         <th>E-Mail</th>
         <th>Class Year</th>
         {% permission request.user has 'accounts.view_user' %}
-            <th>Account Disabled</th>
+            {% if accounts_disabled_column %}
+                <th>Account Disabled</th>
+            {% endif %}
         {% endpermission %}
     </tr>
     {% for user in users %}
@@ -20,11 +22,13 @@
                 <td>{{ user.email }}</td>
                 <td>{% if user.class_year %}{{ user.class_year }}{% endif %}</td>
                 {% permission request.user has 'accounts.view_user' %}
-                    <td>
-                        {% if not user.is_active %}
-                            <span class="glyphicon glyphicon-remove"></span>
-                        {% endif %}
-                    </td>
+                    {% if accounts_disabled_column %}
+                        <td>
+                            {% if not user.is_active %}
+                                <span class="glyphicon glyphicon-remove"></span>
+                            {% endif %}
+                        </td>
+                    {% endif %}
                 {% endpermission %}
             </tr>
     {% endfor %}
