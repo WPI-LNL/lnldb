@@ -1,5 +1,6 @@
 
 {% extends 'base_admin.html' %}
+{% load permissionif %}
 {% block content %}
 <h2> {{ h2 }} </h2>
 <table class="table table-striped table-bordered">
@@ -8,6 +9,9 @@
         <th>User Name</th>
         <th>E-Mail</th>
         <th>Class Year</th>
+        {% permission request.user has 'accounts.view_user' %}
+            <th>Account Disabled</th>
+        {% endpermission %}
     </tr>
     {% for user in users %}
             <tr>
@@ -15,6 +19,13 @@
                 <td><a href="{% url "accounts:detail" user.id %}">{{ user }}</a></td>
                 <td>{{ user.email }}</td>
                 <td>{% if user.class_year %}{{ user.class_year }}{% endif %}</td>
+                {% permission request.user has 'accounts.view_user' %}
+                    <td>
+                        {% if not user.is_active %}
+                            <span class="glyphicon glyphicon-remove"></span>
+                        {% endif %}
+                    </td>
+                {% endpermission %}
             </tr>
     {% endfor %}
 </table>
