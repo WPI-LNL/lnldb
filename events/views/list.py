@@ -785,7 +785,8 @@ def unpaid(request, start=None, end=None):
         .exclude(closed=True) \
         .exclude(numpaid__gt=0) \
         .filter(reviewed=True) \
-        .exclude(billings__isnull=False, Event2019___workday_fund__isnull=False, Event2019___worktag__isnull=False, Event2019___entered_into_workday=False) \
+        .exclude(billings__isnull=False, Event2019___workday_fund__isnull=False, Event2019___worktag__isnull=False) \
+        .exclude(billings__isnull=False, Event2019___entered_into_workday=True) \
         .order_by('datetime_start').distinct()
     if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
@@ -822,7 +823,6 @@ def unpaid(request, start=None, end=None):
                        FakeField('last_billed', sortable=True),
                        FakeField('times_billed', sortable=True),
                        FakeField('cost_total', verbose_name='Price', sortable=True),
-                       FakeField('workday'),
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     response = render(request, 'events.html', context)
@@ -857,11 +857,10 @@ def awaitingworkday(request, start=None, end=None):
     elif not end and request.COOKIES.get('end'):
         return HttpResponseRedirect(reverse('events:awaitingworkday', args=(start, request.COOKIES.get('end'))))
     time_range_unspecified = not start and not end
-    if not start and not end:
-        start, end = get_very_large_date_range()
 
     events = Event2019.objects.filter(closed=False) \
         .filter(reviewed=True, billings__isnull=False, workday_fund__isnull=False, worktag__isnull=False, entered_into_workday=False) \
+        .exclude(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)) \
         .distinct()
     if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
@@ -897,6 +896,68 @@ def awaitingworkday(request, start=None, end=None):
                        'worktag',
                        'workday_form_comments',
                        FakeField('bill'),
+                       FakeField('tasks')]
+    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    response = render(request, 'events.html', context)
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+    return response
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def unpaid_workday(request, start=None, end=None):
+    context = {}
+
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:unpaid', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:unpaid', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:unpaid', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
+
+    events = Event2019.objects \
+        .annotate(numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
+        .filter(closed=False, reviewed=True, entered_into_workday=True) \
+        .exclude(numpaid__gt=0) \
+        .order_by('datetime_start').distinct()
+    if not request.user.has_perm('events.view_hidden_event'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.view_test_event'):
+        events = events.exclude(test_event=True)
+    events = events.prefetch_related('org')
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+        and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+    if request.GET.get('projection') == 'hide':
+        events = events.exclude(
+            Q(serviceinstance__service__category__name='Projection') \
+            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
+    elif request.GET.get('projection') == 'only':
+        events = events.filter(serviceinstance__service__category__name='Projection')
+    events, context = datefilter(events, context, start, end)
+
+    page = request.GET.get('page')
+    sort = request.GET.get('sort')
+    events = paginate_helper(events, page, sort)
+
+    context['h2'] = "Pending Workday ISDs"
+    context['events'] = events
+    context['baseurl'] = reverse("events:unpaid-workday")
+    context['takes_param_projection'] = True
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
+    context['cols'] = ['event_name',
+                       'org',
+                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       'workday_fund',
+                       'worktag',
+                       'workday_form_comments',
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     response = render(request, 'events.html', context)

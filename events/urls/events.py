@@ -26,6 +26,7 @@ urlpatterns = [
     url(r'^paid/', generate_date_patterns(list_views.paid, name="paid")),
     url(r'^unpaid/', generate_date_patterns(list_views.unpaid, name="unpaid")),
     url(r'^workday/', generate_date_patterns(list_views.awaitingworkday, name="awaitingworkday")),
+    url(r'^unpaidworkday/', generate_date_patterns(list_views.unpaid_workday, name="unpaid-workday")),
     url(r'^closed/', generate_date_patterns(list_views.closed, name="closed")),
     url(r'^all/', generate_date_patterns(list_views.all, name="all")),
 

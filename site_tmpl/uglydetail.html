@@ -279,6 +279,12 @@
                                     <td>{{ event.worktag }} ({{ event.workday_fund }}-FD)</td>
                                 </tr>
                             {% endif %}
+                            {% if event.workday_entered_by %}
+                                <tr>
+                                    <th>Worktag entered by</th>
+                                    <td><a href="{% url 'accounts:detail' event.workday_entered_by.id %}">{{ event.workday_entered_by.get_full_name }}</a></td>
+                                </tr>
+                            {% endif %}
                             <tr>
                                 <th>Billed in bulk</th>
                                 <td> {{ event.billed_in_bulk }} </td>

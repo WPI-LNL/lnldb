@@ -1017,6 +1017,7 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
+        self.is_update = self.object.workday_fund is not None or self.object.worktag is not None
         if self.object.closed:
             messages.add_message(request, messages.ERROR, 'Event is closed.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
@@ -1032,6 +1033,8 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
         if self.object.entered_into_workday:
             messages.add_message(request, messages.ERROR, 'An Internal Service Delivery has already been created in Workday for this event. The worktag to charge can no longer be edited through this webiste.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
+        if self.is_update:
+            messages.add_message(request, messages.INFO, 'This bill payment form has already been filled out by {}. You are editing it.'.format(self.object.workday_entered_by))
         return super(WorkdayEntry, self).dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
@@ -1042,6 +1045,22 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
             org.associated_users.add(self.request.user)
         else:
             set_revision_comment("Entered Workday billing info", form)
+        # If the workday info is being updated as opposed to entered for the first time, send an email to the Treasurer
+        if self.is_update:
+            email_body="The workday billing info for the following event was updated by {}. The previous version had been entered by {}.".format(self.request.user, self.object.workday_entered_by)
+            if len(form.changed_data) > 0:
+                email_body += "\nFields changed: "
+                for field_name in form.changed_data:
+                    email_body += field_name + ", "
+                email_body = email_body[:-2]
+            email = EventEmailGenerator(
+                event=self.object,
+                subject='Event Workday Info Updated',
+                to_emails=settings.EMAIL_TARGET_T,
+                body=email_body
+            )
+            email.send()
+        self.object.workday_entered_by = self.request.user
         messages.success(self.request, "Billing info received. Please approve the Internal Service Delivery in Workday when you receive it.", extra_tags='success')
         return super(WorkdayEntry, self).form_valid(form)
 
@@ -1063,6 +1082,12 @@ def mark_entered_into_workday(request, id):
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     if event.entered_into_workday:
         messages.info(request, "Event has already been marked entered into Workday.", extra_tags="info")
+    if not event.reviewed:
+        messages.add_message(request, messages.ERROR, 'Event has not been reviewed for billing.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    if not event.last_bill:
+        messages.add_message(request, messages.ERROR, 'Event has not been billed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     else:
         event.entered_into_workday = True
         set_revision_comment("Marked entered into Workday", None)

@@ -773,6 +773,7 @@ class Event2019(BaseEvent):
     ))
     worktag = models.CharField(max_length=7, null=True, blank=True)
     workday_form_comments = models.TextField(null=True, blank=True)
+    workday_entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="workdayentries", null=True, blank=True)
     entered_into_workday = models.BooleanField(default=False, help_text='Checked when the Treasurer has created an Internal Service Delivery in Workday for this event')
 
     @property
