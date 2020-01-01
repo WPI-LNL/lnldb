@@ -580,15 +580,11 @@
                         {% endpermission %}
                     {% endif %}
                     <h2>Price Breakdown</h2>
-                    <h3>Charge from 
-                        {% if event.worktag %}
-                            {{ event.worktag }}
-                        {% elif event.billing_fund %}
-                            <a href="{% url 'orgs:fundedit' event.billing_fund.id %}">{{ event.billing_fund }}.</a>
-                        {% else %}
-                            (no account given).
-                        {% endif %}
-                    </h3>
+                    {% if event.worktag %}
+                        <h3>Charge from {{ event.worktag }}</h3>
+                    {% elif event.billing_fund %}
+                        <h3>Charge from <a href="{% url 'orgs:fundedit' event.billing_fund.id %}">{{ event.billing_fund }}.</a></h3>
+                    {% endif %}
                     {% if event.late %}
                         <div class="alert alert-warning" role="alert">
                             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
@@ -596,6 +592,12 @@
                             This event was booked {{ event.submitted_on|timesince:event.datetime_setup_complete }}
                             before it began.
                         </div>
+                    {% endif %}
+                    {% if not event.approved %}
+                        <p style="color:red;">
+                            This is NOT a quote. Until you have received an email saying that the event is approved (which you haven't),
+                            the information on this page reflects the information entered into the website by the client and has not been reviewed by Lens and Lights for accuracy.
+                        </p>
                     {% endif %}
                     <table class="table">
                         <thead>
@@ -705,6 +707,12 @@
                             <td>${{ event.cost_total|floatformat:2 }}</td>
                         </tr>
                     </table>
+                    {% if not event.approved %}
+                        <p style="color:red;">
+                            This is NOT a quote. Until you have received an email saying that the event is approved (which you haven't),
+                            the information on this page reflects the information entered into the website by the client and has not been reviewed by Lens and Lights for accuracy.
+                        </p>
+                    {% endif %}
                     <h2> Bills </h2>
                     {% if event.reviewed %}
                         <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Invoice</a>
