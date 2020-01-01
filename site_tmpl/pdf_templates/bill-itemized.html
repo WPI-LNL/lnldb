@@ -116,7 +116,11 @@
     <tr><td>Visit <a class="unstyled" href="{{ request.scheme }}://{{ request.get_host }}{% url 'events:worktag-form' event_data.event.pk %}">{{ request.get_host }}{% url 'events:worktag-form' event_data.event.pk %}</a> to pay this Invoice.</td></tr>
     <tr><td><p>If you have any questions concerning this invoice, contact our treasurer at <a class="unstyled" href="mailto:lnl-t@wpi.edu">lnl-t@wpi.edu</a>.</td></tr>
 {% else %}
-    <tr><td>This is a quote of the expected charges, and may change based on a variety of factors, including additional equipment requests at the event. We will do our best to inform the listed contact of any charges in advance, but this is not guaranteed.</td></tr>
+    <tr><td>
+        This is a quote of the expected charges based on the current information from the client.
+        Charges may change based on a variety of factors, including additional requests or information from the client, even those received day-of at the event.
+        We will do our best to inform the listed contact of any charges in advance, but this is not guaranteed.
+    </td></tr>
     <tr><td><p>If you have any questions concerning this quote, contact our vice-president at <a class="unstyled" href="mailto:lnl-vp@wpi.edu">lnl-vp@wpi.edu</a>.</td></tr>
 {% endif %}
     <tr>
