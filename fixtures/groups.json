@@ -841,6 +841,11 @@
         "retrieve_admin_password",
         "laptops",
         "laptop"
+      ],
+      [
+        "search",
+        "data",
+        "globalperms"
       ]
     ]
   },
