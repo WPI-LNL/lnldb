@@ -223,6 +223,10 @@
                             <td class="workday_fund">
                                 {{ event.workday_fund }}-FD
                             </td>
+                        {% elif field.name == 'workday_memo' %}
+                            <td class="workday_memo">
+                                Lens and Lights services for {{ event.event_name }}
+                            </td>
                         {% elif field.name == 'bill' %}
                             <td class="bill">
                                 <a target="_blank" href="{% url 'events:bills:pdf' event.id %}">Bill PDF</a>
