@@ -1,10 +1,15 @@
+import json
+import re
+import requests
+
+from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Count
 from django.forms.models import inlineformset_factory
-from django.http import (HttpResponseBadRequest, HttpResponseNotFound,
+from django.http import (HttpResponse, HttpResponseBadRequest, HttpResponseNotFound,
                          HttpResponseRedirect)
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
@@ -415,3 +420,79 @@ def item_rm(request, item_id):
 #         context['form'] = form
 #
 #     return render(request, 'form_crispy.html', context)
+
+
+@login_required
+@permission_required('inventory.view_equipment', raise_exception=True)
+def snipe_checkout(request):
+    if not settings.SNIPE_URL:
+        return HttpResponse('This page is unavailable because SNIPE_URL is not set.', status=501)
+    if not settings.SNIPE_API_KEY:
+        return HttpResponse('This page is unavailable because SNIPE_API_KEY is not set.', status=501)
+    # Get the list of locations from Snipe
+    error_message = 'Error communicating with Snipe. Did not check out anything.'
+    checkout_to_choices = []
+    response = requests.request('GET', '{}api/v1/locations'.format(settings.SNIPE_URL), headers={
+        'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+    })
+    if response.status_code == 200:
+        try:
+            data = json.loads(response.text)
+            if data.get('status') == 'error':
+                return HttpResponse(error_message, status=502)
+            for location in data['rows']:
+                checkout_to_choices.append((location['id'], location['name']))
+        except ValueError:
+            return HttpResponse(error_message, status=502)
+    else:
+        return HttpResponse(error_message, status=502)
+
+    # Handle the form
+    error_message = 'Error communicating with Snipe. Some assets may have been checked out while some were not. Please go check Snipe.'
+    if request.method == 'POST':
+        form = forms.SnipeCheckoutForm(checkout_to_choices, request.POST, request.FILES)
+        if form.is_valid():
+            success_count = 0
+            for tag in [tag for tag in re.split('[^a-zA-Z0-9]', form.cleaned_data['asset_tags']) if tag]:
+                response = requests.request('GET', '{}api/v1/hardware/bytag/{}'.format(settings.SNIPE_URL, tag), headers={
+                    'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                })
+                if response.status_code == 200:
+                    try:
+                        data = json.loads(response.text)
+                        if data.get('status') == 'error':
+                            # The asset tag does not exist in Snipe
+                            messages.add_message(request, messages.ERROR, 'No such asset tag {}'.format(tag))
+                            continue
+                        asset_name = data['name']
+                        response = requests.request('POST', '{}api/v1/hardware/{}/checkout'.format(settings.SNIPE_URL, data['id']), data=json.dumps({
+                            'checkout_to_type': 'location',
+                            'assigned_location': form.cleaned_data['checkout_to'],
+                        }), headers={
+                            'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                            'accept': 'application/json',
+                            'content-type': 'application/json',
+                        })
+                        if response.status_code == 200:
+                            data = json.loads(response.text)
+                            if data.get('status') == 'error':
+                                # Snipe refused to check out the asset (maybe it is already checked out)
+                                messages.add_message(request, messages.ERROR, 'Unable to check out asset {} - {}. Snipe says: {}'.format(tag, asset_name, data['messages']))
+                                continue
+                            # The asset was successfully checked out
+                            success_count += 1
+                        else:
+                            return HttpResponse(error_message, status=502)
+                    except ValueError:
+                        return HttpResponse(error_message, status=502)
+                else:
+                    return HttpResponse(error_message, status=502)
+            if success_count > 0:
+                messages.add_message(request, messages.SUCCESS, 'Successfully checked out {} assets'.format(success_count))
+        form = forms.SnipeCheckoutForm(checkout_to_choices, initial={'checkout_to': form.cleaned_data['checkout_to']})
+    else:
+        form = forms.SnipeCheckoutForm(checkout_to_choices)
+    return render(request, "form_crispy.html", {
+        'msg': 'Inventory checkout',
+        'form': form,
+    })

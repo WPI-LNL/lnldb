@@ -43,4 +43,5 @@ urlpatterns = [
     #     ]))
     # ]))
 
+    url(r'^checkout/$', views.snipe_checkout, name="snipe_checkout"),
 ]

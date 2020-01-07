@@ -216,3 +216,24 @@ class FastAdd(Form):
 #         model = EquipmentMaintEntry
 #         fields = ('desc', 'entry', 'status', 'user', 'equipment')
 #         widgets = {'user': forms.HiddenInput(), 'equipment': forms.HiddenInput()}
+
+
+class SnipeCheckoutForm(forms.Form):
+    def __init__(self, checkout_to_choices, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.help_text_inline = True
+        self.helper.layout = Layout(
+            HTML('<p>This form should be used for rental checkouts. It will check out the specified assets to the selected location in Snipe.</p>'),
+            'checkout_to',
+            'asset_tags',
+            HTML('<p>Do not press "Check out" more than once. Be patient. It WILL take a while for the DB to check out a large number of assets.</p>'),
+            FormActions(
+                Submit('save', 'Check out'),
+            )
+        )
+        super(SnipeCheckoutForm, self).__init__(*args, **kwargs)
+        self.fields['checkout_to'] = forms.IntegerField(widget=forms.Select(choices=checkout_to_choices), help_text='This dropdown is populated from Snipe.')
+
+    asset_tags = forms.CharField(widget=forms.Textarea(), help_text='Enter asset tags separated by any non-alphanumeric character, white space, or new lines.')

@@ -85,6 +85,9 @@ DATABASES = {
 CCC_PASS = env.str("CCC_PASS", "")
 SECRET_KEY = env.str("SECRET_KEY", "I am insecure.")
 
+SNIPE_URL = env.str('SNIPE_URL', '')
+SNIPE_API_KEY = env.str('SNIPE_API_KEY', '')
+
 # options we don't want in our env variables...
 for key in DATABASES:
     db = DATABASES[key]
