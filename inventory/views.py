@@ -496,3 +496,55 @@ def snipe_checkout(request):
         'msg': 'Inventory checkout',
         'form': form,
     })
+
+
+@login_required
+@permission_required('inventory.view_equipment', raise_exception=True)
+def snipe_checkin(request):
+    if not settings.SNIPE_URL:
+        return HttpResponse('This page is unavailable because SNIPE_URL is not set.', status=501)
+    if not settings.SNIPE_API_KEY:
+        return HttpResponse('This page is unavailable because SNIPE_API_KEY is not set.', status=501)
+    error_message = 'Error communicating with Snipe. Some assets may have been checked in while some were not. Please go check Snipe.'
+    if request.method == 'POST':
+        form = forms.SnipeCheckinForm(request.POST, request.FILES)
+        if form.is_valid():
+            success_count = 0
+            for tag in [tag for tag in re.split('[^a-zA-Z0-9]', form.cleaned_data['asset_tags']) if tag]:
+                response = requests.request('GET', '{}api/v1/hardware/bytag/{}'.format(settings.SNIPE_URL, tag), headers={
+                    'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                })
+                if response.status_code == 200:
+                    try:
+                        data = json.loads(response.text)
+                        if data.get('status') == 'error':
+                            # The asset tag does not exist in Snipe
+                            messages.add_message(request, messages.ERROR, 'No such asset tag {}'.format(tag))
+                            continue
+                        asset_name = data['name']
+                        response = requests.request('POST', '{}api/v1/hardware/{}/checkin'.format(settings.SNIPE_URL, data['id']), headers={
+                            'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                            'accept': 'application/json',
+                            'content-type': 'application/json',
+                        })
+                        if response.status_code == 200:
+                            data = json.loads(response.text)
+                            if data.get('status') == 'error':
+                                # Snipe refused to check in the asset
+                                messages.add_message(request, messages.ERROR, 'Unable to check in asset {} - {}. Snipe says: {}'.format(tag, asset_name, data['messages']))
+                                continue
+                            # The asset was successfully checked in
+                            success_count += 1
+                        else:
+                            return HttpResponse(error_message, status=502)
+                    except ValueError:
+                        return HttpResponse(error_message, status=502)
+                else:
+                    return HttpResponse(error_message, status=502)
+            if success_count > 0:
+                messages.add_message(request, messages.SUCCESS, 'Successfully checked in {} assets'.format(success_count))
+    form = forms.SnipeCheckinForm()
+    return render(request, "form_crispy.html", {
+        'msg': 'Inventory checkin',
+        'form': form,
+    })

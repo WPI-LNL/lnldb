@@ -237,3 +237,21 @@ class SnipeCheckoutForm(forms.Form):
         self.fields['checkout_to'] = forms.IntegerField(widget=forms.Select(choices=checkout_to_choices), help_text='This dropdown is populated from Snipe.')
 
     asset_tags = forms.CharField(widget=forms.Textarea(), help_text='Enter asset tags separated by any non-alphanumeric character, white space, or new lines.')
+
+class SnipeCheckinForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.help_text_inline = True
+        self.helper.layout = Layout(
+            HTML('<p>This form should be used for rental checkins. It will check in the specified assets.</p>'),
+            'asset_tags',
+            HTML('<p>Do not press "Check in" more than once. Be patient. It WILL take a while for the DB to check in a large number of assets.</p>'),
+            FormActions(
+                Submit('save', 'Check in'),
+            )
+        )
+        super(SnipeCheckinForm, self).__init__(*args, **kwargs)
+
+    asset_tags = forms.CharField(widget=forms.Textarea(), help_text='Enter asset tags separated by any non-alphanumeric character, white space, or new lines.')
