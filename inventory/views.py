@@ -432,7 +432,7 @@ def snipe_checkout(request):
     # Get the list of locations from Snipe
     error_message = 'Error communicating with Snipe. Did not check out anything.'
     checkout_to_choices = []
-    response = requests.request('GET', '{}api/v1/locations'.format(settings.SNIPE_URL), headers={
+    response = requests.request('GET', '{}api/v1/users'.format(settings.SNIPE_URL), headers={
         'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
     })
     if response.status_code == 200:
@@ -440,55 +440,82 @@ def snipe_checkout(request):
             data = json.loads(response.text)
             if data.get('status') == 'error':
                 return HttpResponse(error_message, status=502)
-            for location in data['rows']:
-                checkout_to_choices.append((location['id'], location['name']))
+            for user in data['rows']:
+                checkout_to_choices.append((user['id'], user['name']))
         except ValueError:
             return HttpResponse(error_message, status=502)
     else:
         return HttpResponse(error_message, status=502)
 
     # Handle the form
-    error_message = 'Error communicating with Snipe. Some assets may have been checked out while some were not. Please go check Snipe.'
+    error_message = 'Error communicating with Snipe. Some things may have been checked out while some were not. Please go check Snipe.'
     if request.method == 'POST':
         form = forms.SnipeCheckoutForm(checkout_to_choices, request.POST, request.FILES)
         if form.is_valid():
-            success_count = 0
+            success_count_assets = 0
+            success_count_accessories = 0
             for tag in [tag for tag in re.split('[^a-zA-Z0-9]', form.cleaned_data['asset_tags']) if tag]:
-                response = requests.request('GET', '{}api/v1/hardware/bytag/{}'.format(settings.SNIPE_URL, tag), headers={
-                    'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
-                })
-                if response.status_code == 200:
-                    try:
-                        data = json.loads(response.text)
-                        if data.get('status') == 'error':
-                            # The asset tag does not exist in Snipe
-                            messages.add_message(request, messages.ERROR, 'No such asset tag {}'.format(tag))
-                            continue
-                        asset_name = data['name']
-                        response = requests.request('POST', '{}api/v1/hardware/{}/checkout'.format(settings.SNIPE_URL, data['id']), data=json.dumps({
-                            'checkout_to_type': 'location',
-                            'assigned_location': form.cleaned_data['checkout_to'],
-                        }), headers={
-                            'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
-                            'accept': 'application/json',
-                            'content-type': 'application/json',
-                        })
-                        if response.status_code == 200:
+                match = re.match('LNLACC([0-9]+)', tag)
+                if match:
+                    tag = match.group(1)
+                    # This tag represents an accessory
+                    response = requests.request('POST', '{}api/v1/accessories/{}/checkout'.format(settings.SNIPE_URL, tag), data=json.dumps({
+                        'assigned_to': form.cleaned_data['checkout_to'],
+                    }), headers={
+                        'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                        'accept': 'application/json',
+                        'content-type': 'application/json',
+                    })
+                    if response.status_code == 200:
+                        try:
                             data = json.loads(response.text)
                             if data.get('status') == 'error':
-                                # Snipe refused to check out the asset (maybe it is already checked out)
-                                messages.add_message(request, messages.ERROR, 'Unable to check out asset {} - {}. Snipe says: {}'.format(tag, asset_name, data['messages']))
+                                # Snipe refused to check out the accessory (maybe they are all checked out)
+                                messages.add_message(request, messages.ERROR, 'Unable to check out accessory {}. Snipe says: {}'.format(tag, data['messages']))
                                 continue
-                            # The asset was successfully checked out
-                            success_count += 1
-                        else:
+                            # The accessory was successfully checked out
+                            success_count_accessories += 1
+                        except ValueError:
                             return HttpResponse(error_message, status=502)
-                    except ValueError:
+                    else:
                         return HttpResponse(error_message, status=502)
                 else:
-                    return HttpResponse(error_message, status=502)
-            if success_count > 0:
-                messages.add_message(request, messages.SUCCESS, 'Successfully checked out {} assets'.format(success_count))
+                    # This tag represents an asset
+                    response = requests.request('GET', '{}api/v1/hardware/bytag/{}'.format(settings.SNIPE_URL, tag), headers={
+                        'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                    })
+                    if response.status_code == 200:
+                        try:
+                            data = json.loads(response.text)
+                            if data.get('status') == 'error':
+                                # The asset tag does not exist in Snipe
+                                messages.add_message(request, messages.ERROR, 'No such asset tag {}'.format(tag))
+                                continue
+                            asset_name = data['name']
+                            response = requests.request('POST', '{}api/v1/hardware/{}/checkout'.format(settings.SNIPE_URL, data['id']), data=json.dumps({
+                                'checkout_to_type': 'user',
+                                'assigned_user': form.cleaned_data['checkout_to'],
+                            }), headers={
+                                'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                                'accept': 'application/json',
+                                'content-type': 'application/json',
+                            })
+                            if response.status_code == 200:
+                                data = json.loads(response.text)
+                                if data.get('status') == 'error':
+                                    # Snipe refused to check out the asset (maybe it is already checked out)
+                                    messages.add_message(request, messages.ERROR, 'Unable to check out asset {} - {}. Snipe says: {}'.format(tag, asset_name, data['messages']))
+                                    continue
+                                # The asset was successfully checked out
+                                success_count_assets += 1
+                            else:
+                                return HttpResponse(error_message, status=502)
+                        except ValueError:
+                            return HttpResponse(error_message, status=502)
+                    else:
+                        return HttpResponse(error_message, status=502)
+            if success_count_assets > 0 or success_count_accessories > 0:
+                messages.add_message(request, messages.SUCCESS, 'Successfully checked out {} assets and {} accessories'.format(success_count_assets, success_count_accessories))
         form = forms.SnipeCheckoutForm(checkout_to_choices, initial={'checkout_to': form.cleaned_data['checkout_to']})
     else:
         form = forms.SnipeCheckoutForm(checkout_to_choices)
