@@ -889,16 +889,18 @@ def awaitingworkday(request, start=None, end=None):
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['takes_param_projection'] = True
-    context['cols'] = [FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       FakeField('workday_memo'),
-                       'org',
-                       'workday_fund',
-                       'worktag',
-                       'workday_form_comments',
-                       'contact',
-                       FakeField('cost_total', verbose_name='Price', sortable=True),
-                       FakeField('bill'),
-                       FakeField('tasks')]
+    context['cols'] = [
+        FakeField('cost_total', verbose_name='Extended Amount'),
+        FakeField('contact', verbose_name='Requester'),
+        FakeExtendedField('datetime_start', verbose_name="Event Time"),
+        FakeField('workday_memo', verbose_name='Memo'),
+        'org',
+        'workday_fund',
+        'worktag',
+        'workday_form_comments',
+        FakeField('bill'),
+        FakeField('tasks')
+    ]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     response = render(request, 'events.html', context)
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
