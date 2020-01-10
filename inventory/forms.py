@@ -234,7 +234,7 @@ class SnipeCheckoutForm(forms.Form):
             )
         )
         super(SnipeCheckoutForm, self).__init__(*args, **kwargs)
-        self.fields['checkout_to'] = forms.IntegerField(widget=forms.Select(choices=checkout_to_choices), help_text='This dropdown is populated from Snipe.')
+        self.fields['checkout_to'] = forms.IntegerField(widget=forms.Select(choices=checkout_to_choices), help_text='This dropdown contains all Snipe users in the "rental" group.')
 
     asset_tags = forms.CharField(widget=forms.Textarea(), help_text='Enter asset tags and accessory barcodes separated by any non-alphanumeric character, white space, or new lines. For accessories, scan the accessory barcode multiple times for the number of that accessory you are checking out.')
 

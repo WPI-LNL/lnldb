@@ -440,8 +440,7 @@ def snipe_checkout(request):
             data = json.loads(response.text)
             if data.get('status') == 'error':
                 return HttpResponse(error_message, status=502)
-            for user in data['rows']:
-                checkout_to_choices.append((user['id'], user['name']))
+            checkout_to_choices = [(user['id'], user['name']) for user in data['rows'] if 'rental' in ((group['name'] for group in user['groups']['rows']) if user['groups'] is not None else ())]
         except ValueError:
             return HttpResponse(error_message, status=502)
     else:
