@@ -6,6 +6,7 @@ from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
 from django.views.generic.base import RedirectView
+import django_saml2_auth.views
 
 import data.views
 from emails.views import MeetingAnnounceCCView, MeetingAnnounceView
@@ -24,7 +25,14 @@ handler403 = 'data.views.err403'
 handler404 = 'data.views.err404'
 handler500 = 'data.views.err500'
 
-urlpatterns = [
+urlpatterns = []
+
+if settings.SAML2_ENABLED:
+	urlpatterns += [
+		url(r'^saml2_auth/', include('django_saml2_auth.urls')),
+	]
+
+urlpatterns += [
     # Examples:
     # url(r'^$', some_function, name='home'),
     # url(r'^lnldb/', include('lnldb.foo.urls', [namespace='foo'])),

@@ -50,6 +50,8 @@ TESTING = sys.argv[1:2] == ['test']
 
 DEBUG = env.bool("DEBUG", default=True)
 
+SAML2_ENABLED = env.bool('SAML2_ENABLED', default=False)
+
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
     ('LNL Webmaster', 'lnl-w@wpi.edu'),
@@ -87,6 +89,27 @@ SECRET_KEY = env.str("SECRET_KEY", "I am insecure.")
 
 SNIPE_URL = env.str('SNIPE_URL', '')
 SNIPE_API_KEY = env.str('SNIPE_API_KEY', '')
+
+SAML2_AUTH = {
+	'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://samltest.id/saml/idp'),
+	'DEFAULT_NEXT_URL': '/db/',
+	'CREATE_USER': True,
+	'NEW_USER_PROFILE': {
+		'USER_GROUPS': [],
+		'ACTIVE_STATUS': True,
+		'STAFF_STATUS': False,
+		'SUPERUSER_STATUS': False,
+	},
+	'ATTRIBUTES_MAP': {
+		'email': 'Email',
+		'username': 'UserName',
+		'first_name': 'FirstName',
+		'last_name': 'LastName',
+	},
+	'ENTITY_ID': 'https://{}/saml2_auth/acs/'.format(ALLOWED_HOSTS[0]),
+	'NAME_ID_FORMAT': 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
+	'USE_JWT': False,
+}
 
 # options we don't want in our env variables...
 for key in DATABASES:
@@ -289,6 +312,8 @@ INSTALLED_APPS = (
     'compat',
     'polymorphic',
 )
+if SAML2_ENABLED:
+	INSTALLED_APPS += ('django_saml2_auth',)
 if TESTING:
     # bypass migrations for unit tests. **MUCH** faster
     try:
