@@ -3,7 +3,7 @@
 {{ subject }}
 
 You've been added as a crew chief to the event {{ ccinstance.event }}.
-You have signed up to be crew chief for {{ ccinstance.service }}, with your setup starting on {{ ccinstance.setup_start }} in the {{ ccinstance.setup_location }}.
+You have signed up to be crew chief for {{ ccinstance.category }}, with your setup starting on {{ ccinstance.setup_start }} in the {{ ccinstance.setup_location }}.
 
 Please note that the attached Workorder PDF contains all services relating to the event, not just your assigned service.
 
