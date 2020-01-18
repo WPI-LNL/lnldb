@@ -375,7 +375,7 @@ def hours_bulk_admin(request, id):
 
     context['msg'] = "Bulk Hours Entry"
     event = get_object_or_404(BaseEvent, pk=id)
-    if not event.reports_editable and request.user.has_perm('events.edit_event_hours', event):
+    if not event.reports_editable and not request.user.has_perm('events.edit_event_hours') and request.user.has_perm('events.edit_event_hours', event):
         return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event) and event.reports_editable):
