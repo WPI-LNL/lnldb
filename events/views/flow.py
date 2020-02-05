@@ -1,8 +1,10 @@
 from datetime import timedelta
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db.models import Avg, Count
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
@@ -15,14 +17,14 @@ from django.views.decorators.http import require_GET, require_POST
 from reversion.models import Version
 
 from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator, BillingEmailGenerator,
-                               DefaultLNLEmailGenerator as DLEG)
+                               DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
 from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
                           BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm)
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
-                           ReportReminder, ServiceInstance, CCR_DELTA)
+                           ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA)
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
 from helpers.revision import set_revision_comment
@@ -638,6 +640,8 @@ def viewevent(request, id):
     if event.sensitive and not request.user.has_perm('events.view_hidden_event', event):
         raise PermissionDenied
 
+    send_survey_if_necessary(event)
+
     context['event'] = event
     # do not use .get_unique() because it does not follow relations
     context['history'] = Version.objects.get_for_object(event)
@@ -652,6 +656,108 @@ def viewevent(request, id):
             # do not add category if it is empty
             if services_and_extras[0] or services_and_extras[1]:
                 context['categorized_services_and_extras'][category.name] = services_and_extras
+    if event.surveys.exists() and request.user.has_perm('events.view_posteventsurvey'):
+        context['survey_takers'] = get_user_model().objects.filter(pk__in=event.surveys.values_list('person', flat=True))
+        work_order_method_choices = dict(PostEventSurvey._meta.get_field('work_order_method').choices)
+        context['survey_workorder_methods'] = [work_order_method_choices[choice] for choice in event.surveys.values_list('work_order_method', flat=True)]
+        context['survey_comments'] = [c for c in event.surveys.values_list('comments', flat=True) if c != '']
+        context['survey_results'] = {}
+        context['survey_results'].update(event.surveys.filter(services_quality__gte=0).aggregate(
+            Avg('services_quality'),
+            Count('services_quality'),
+        ))
+        context['survey_results']['services_quality__verbose_name'] = PostEventSurvey._meta.get_field('services_quality').verbose_name
+        context['survey_results'].update(event.surveys.filter(lighting_quality__gte=0).aggregate(
+            Avg('lighting_quality'),
+            Count('lighting_quality'),
+        ))
+        context['survey_results']['lighting_quality__verbose_name'] = PostEventSurvey._meta.get_field('lighting_quality').verbose_name
+        context['survey_results'].update(event.surveys.filter(sound_quality__gte=0).aggregate(
+            Avg('sound_quality'),
+            Count('sound_quality'),
+        ))
+        context['survey_results']['sound_quality__verbose_name'] = PostEventSurvey._meta.get_field('sound_quality').verbose_name
+        context['survey_results'].update(event.surveys.filter(work_order_experience__gte=0).aggregate(
+            Avg('work_order_experience'),
+            Count('work_order_experience'),
+        ))
+        context['survey_results']['work_order_experience__verbose_name'] = PostEventSurvey._meta.get_field('work_order_experience').verbose_name
+        context['survey_results'].update(event.surveys.filter(communication_responsiveness__gte=0).aggregate(
+            Avg('communication_responsiveness'),
+            Count('communication_responsiveness'),
+        ))
+        context['survey_results']['communication_responsiveness__verbose_name'] = PostEventSurvey._meta.get_field('communication_responsiveness').verbose_name
+        context['survey_results'].update(event.surveys.filter(pricelist_ux__gte=0).aggregate(
+            Avg('pricelist_ux'),
+            Count('pricelist_ux'),
+        ))
+        context['survey_results']['pricelist_ux__verbose_name'] = PostEventSurvey._meta.get_field('pricelist_ux').verbose_name
+        context['survey_results'].update(event.surveys.filter(setup_on_time__gte=0).aggregate(
+            Avg('setup_on_time'),
+            Count('setup_on_time'),
+        ))
+        context['survey_results']['setup_on_time__verbose_name'] = PostEventSurvey._meta.get_field('setup_on_time').verbose_name
+        context['survey_results'].update(event.surveys.filter(crew_respectfulness__gte=0).aggregate(
+            Avg('crew_respectfulness'),
+            Count('crew_respectfulness'),
+        ))
+        context['survey_results']['crew_respectfulness__verbose_name'] = PostEventSurvey._meta.get_field('crew_respectfulness').verbose_name
+        context['survey_results'].update(event.surveys.filter(crew_preparedness__gte=0).aggregate(
+            Avg('crew_preparedness'),
+            Count('crew_preparedness'),
+        ))
+        context['survey_results']['crew_preparedness__verbose_name'] = PostEventSurvey._meta.get_field('crew_preparedness').verbose_name
+        context['survey_results'].update(event.surveys.filter(crew_knowledgeability__gte=0).aggregate(
+            Avg('crew_knowledgeability'),
+            Count('crew_knowledgeability'),
+        ))
+        context['survey_results']['crew_knowledgeability__verbose_name'] = PostEventSurvey._meta.get_field('crew_knowledgeability').verbose_name
+        context['survey_results'].update(event.surveys.filter(quote_as_expected__gte=0).aggregate(
+            Avg('quote_as_expected'),
+            Count('quote_as_expected'),
+        ))
+        context['survey_results']['quote_as_expected__verbose_name'] = PostEventSurvey._meta.get_field('quote_as_expected').verbose_name
+        context['survey_results'].update(event.surveys.filter(price_appropriate__gte=0).aggregate(
+            Avg('price_appropriate'),
+            Count('price_appropriate'),
+        ))
+        context['survey_results']['price_appropriate__verbose_name'] = PostEventSurvey._meta.get_field('price_appropriate').verbose_name
+        context['survey_results'].update(event.surveys.filter(customer_would_return__gte=0).aggregate(
+            Avg('customer_would_return'),
+            Count('customer_would_return'),
+        ))
+        context['survey_results']['customer_would_return__verbose_name'] = PostEventSurvey._meta.get_field('customer_would_return').verbose_name
+        context['survey_composites'] = {}
+        try:
+            context['survey_composites']['vp'] = context['survey_results']['communication_responsiveness__avg']
+        except TypeError:
+            context['survey_composites']['vp'] = None
+        try:
+            context['survey_composites']['crew'] = max(min(((
+                context['survey_results']['setup_on_time__avg'] +
+                context['survey_results']['crew_respectfulness__avg'] +
+                context['survey_results']['crew_preparedness__avg'] +
+                context['survey_results']['crew_knowledgeability__avg'] +
+                context['survey_results']['lighting_quality__avg'] +
+                context['survey_results']['sound_quality__avg']
+            ) - 9) / 3, 4), 0)
+        except TypeError:
+            context['survey_composites']['crew'] = None
+        try:
+            context['survey_composites']['pricelist'] = max(min(((
+                context['survey_results']['pricelist_ux__avg'] +
+                context['survey_results']['quote_as_expected__avg'] +
+                context['survey_results']['price_appropriate__avg']
+            ) - 4.5 ) / 1.5, 4), 0)
+        except TypeError:
+            context['survey_composites']['pricelist'] = None
+        try:
+            context['survey_composites']['overall'] = max(min((
+                context['survey_results']['services_quality__avg'] +
+                context['survey_results']['customer_would_return__avg']
+            ) - 3, 4), 0)
+        except TypeError:
+            context['survey_composites']['overall'] = None
     return render(request, 'uglydetail.html', context)
 
 

@@ -153,11 +153,8 @@ admin.site.register(models.Organization, OrgAdmin)
 admin.site.register(models.OrganizationTransfer, OTAdmin)
 admin.site.register(models.Extra, ExtraAdmin)
 admin.site.register(models.ExtraInstance)
-
 admin.site.register(models.Lighting)
 admin.site.register(models.Sound)
 admin.site.register(models.Projection)
-
 admin.site.register(models.Category)
-
 admin.site.register(models.Service)

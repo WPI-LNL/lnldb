@@ -1,0 +1,73 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+{% load gpa_scale_emoji %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6">
+            <h1>Survey dashboard</h1>
+            <h2>Response rate</h2>
+            <p>Of the {{ num_eligible_events }} events in the past year, {{ num_events }} ({{ response_rate|floatformat }}%) have at least one survey response.</p>
+            {% if num_events > 0 %}
+                <h2>VP</h2>
+                {{ chart_vp.as_html }}
+                <h2>Crew</h2>
+                {{ chart_crew.as_html }}
+                <h2>Pricelist</h2>
+                {{ chart_pricelist.as_html }}
+                <h2>LnL</h2>
+                {{ chart_lnl.as_html }}
+            {% endif %}
+        </div>
+        {% if num_events > 0 %}
+            <div class="col-md-6">
+                <h2>Legend</h2>
+                <p style="font-size:1.5em">&#x1f600;=good &#x1f610;=fair &#x1f641;=poor &#x1f621;=very poor &#x2620;=totally fucked &#x2753;=unknown</p>
+                <h2>At a glance</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>VP</th>
+                            <th>Crew</th>
+                            <th>Pricelist</th>
+                            <th>LnL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="font-size:3em">{{ wma.vp|gpa_scale_emoji }}</td>
+                            <td style="font-size:3em">{{ wma.crew|gpa_scale_emoji }}</td>
+                            <td style="font-size:3em">{{ wma.pricelist|gpa_scale_emoji }}</td>
+                            <td style="font-size:3em">{{ wma.overall|gpa_scale_emoji }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2>Events in the past year</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Start Date</th>
+                            <th>VP</th>
+                            <th>Crew</th>
+                            <th>Pricelist</th>
+                            <th>LnL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event, composites in survey_composites %}
+                            <tr>
+                                <th><a href="{% url 'events:detail' event.id %}#survey">{{ event.event_name }}</a></th>
+                                <td>{{ event.datetime_start|date:'N d, Y' }}</td>
+                                <td style="font-size:3em">{{ composites.vp|gpa_scale_emoji }}</td>
+                                <td style="font-size:3em">{{ composites.crew|gpa_scale_emoji }}</td>
+                                <td style="font-size:3em">{{ composites.pricelist|gpa_scale_emoji }}</td>
+                                <td style="font-size:3em">{{ composites.overall|gpa_scale_emoji }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

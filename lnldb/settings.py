@@ -241,6 +241,8 @@ TEMPLATES = [{
     },
 }]
 
+FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
+
 DEBUG_TOOLBAR_CONFIG = {
     'SHOW_TOOLBAR_CALLBACK': lambda x: DEBUG and x.META['SERVER_NAME'] != "testserver"
 }
@@ -280,6 +282,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     'django.contrib.admindocs',
+    'django.forms',
     'markdown_deux',
     'django_cas_ng',
     'django_extensions',
@@ -311,6 +314,7 @@ INSTALLED_APPS = (
     'pagedown',
     'compat',
     'polymorphic',
+    'jchart',
 )
 if SAML2_ENABLED:
 	INSTALLED_APPS += ('django_saml2_auth',)
@@ -434,7 +438,7 @@ LOGIN_REDIRECT_URL = "/db/"
 
 CAS_FORCE_POST_LOGIN = False
 
-AIRPLANE_MODE = False
+AIRPLANE_MODE = True
 
 # crispy_forms
 CRISPY_TEMPLATE_PACK = 'bootstrap3'

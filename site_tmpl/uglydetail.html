@@ -1,6 +1,7 @@
 {% extends 'base_admin.html' %}
 {% load markdown_deux_tags %}
 {% load permissionif %}
+{% load gpa_scale_emoji %}
 {% block content %}
     <div class="jumbotron">
         <div class="clearfix">
@@ -174,6 +175,9 @@
                     <li><a href="#billing" data-toggle="tab">Billing</a></li>
                 {% endpermission %}
                 <li><a href="#files" data-toggle="tab">Files</a></li>
+                {% permission request.user has 'events.view_posteventsurvey' %}
+                    <li><a href="#survey" data-toggle="tab">Survey</a></li>
+                {% endpermission %}
                 <li><a href="#history" data-toggle="tab">History</a></li>
             </ul>
 
@@ -288,6 +292,20 @@
                             <tr>
                                 <th>Billed in bulk</th>
                                 <td> {{ event.billed_in_bulk }} </td>
+                            </tr>
+                        {% endpermission %}
+                        {% permission request.user has 'events.view_posteventsurvey' %}
+                            <tr>
+                                <th>Survey</th>
+                                <td>
+                                    {% if event.survey_sent %}
+                                        was sent
+                                    {% elif event.send_survey %}
+                                        will be sent
+                                    {% else %}
+                                        will not be sent
+                                    {% endif %}
+                                </td>
                             </tr>
                         {% endpermission %}
                         {% permission request.user has 'events.view_hidden_event' of event %}
@@ -841,6 +859,117 @@
                         {% endfor %}
                     </table>
                 </div>
+                {% permission request.user has 'events.view_posteventsurvey' %}
+                <div id="survey" class="tab-pane">
+                    <h2>Survey results</h2>
+                    {% if survey_results %}
+                        <h4>Composite results</h4>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>VP</th>
+                                    <th>Crew</th>
+                                    <th>Pricelist</th>
+                                    <th>LnL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="font-size:3em">
+                                    <td>{{ survey_composites.vp|gpa_scale_emoji }}</td>
+                                    <td>{{ survey_composites.crew|gpa_scale_emoji }}</td>
+                                    <td>{{ survey_composites.pricelist|gpa_scale_emoji }}</td>
+                                    <td>{{ survey_composites.overall|gpa_scale_emoji }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <h4>People who have taken the survey</h4>
+                        <p>{% for person in survey_takers %}<a href="{% url 'accounts:detail' person.id %}">{{ person }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                        <h4>How did you submit the work order?</h4>
+                        <p>{% for method in survey_workorder_methods %}{{ method }}{% if not forloop.last %}, {% endif %}{% empty %}Nobody answered this question.{% endfor %}</p>
+                        <h4>Rating questions</h4>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Question</th>
+                                    <th>Average (4.0 scale)</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ survey_results.services_quality__verbose_name }}</td>
+                                    <td>{{ survey_results.services_quality__avg }}</td>
+                                    <td>{{ survey_results.services_quality__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.lighting_quality__verbose_name }}</td>
+                                    <td>{{ survey_results.lighting_quality__avg }}</td>
+                                    <td>{{ survey_results.lighting_quality__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.sound_quality__verbose_name }}</td>
+                                    <td>{{ survey_results.sound_quality__avg }}</td>
+                                    <td>{{ survey_results.sound_quality__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.work_order_experience__verbose_name }}</td>
+                                    <td>{{ survey_results.work_order_experience__avg }}</td>
+                                    <td>{{ survey_results.work_order_experience__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.communication_responsiveness__verbose_name }}</td>
+                                    <td>{{ survey_results.communication_responsiveness__avg }}</td>
+                                    <td>{{ survey_results.communication_responsiveness__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.pricelist_ux__verbose_name }}</td>
+                                    <td>{{ survey_results.pricelist_ux__avg }}</td>
+                                    <td>{{ survey_results.pricelist_ux__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.setup_on_time__verbose_name }}</td>
+                                    <td>{{ survey_results.setup_on_time__avg }}</td>
+                                    <td>{{ survey_results.setup_on_time__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.crew_respectfulness__verbose_name }}</td>
+                                    <td>{{ survey_results.crew_respectfulness__avg }}</td>
+                                    <td>{{ survey_results.crew_respectfulness__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.crew_preparedness__verbose_name }}</td>
+                                    <td>{{ survey_results.crew_preparedness__avg }}</td>
+                                    <td>{{ survey_results.crew_preparedness__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.crew_knowledgeability__verbose_name }}</td>
+                                    <td>{{ survey_results.crew_knowledgeability__avg }}</td>
+                                    <td>{{ survey_results.crew_knowledgeability__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.quote_as_expected__verbose_name }}</td>
+                                    <td>{{ survey_results.quote_as_expected__avg }}</td>
+                                    <td>{{ survey_results.quote_as_expected__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.price_appropriate__verbose_name }}</td>
+                                    <td>{{ survey_results.price_appropriate__avg }}</td>
+                                    <td>{{ survey_results.price_appropriate__count }}</td>
+                                </tr>
+                                <tr>
+                                    <td>{{ survey_results.customer_would_return__verbose_name }}</td>
+                                    <td>{{ survey_results.customer_would_return__avg }}</td>
+                                    <td>{{ survey_results.customer_would_return__count }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <h4>Please use this area to explain low ratings above or to provide any other feedback you have. We value your feedback and will use it to improve our services.</h4>
+                        {% for c in survey_comments %}<p>{{ c }}</p>{% empty %}Nobody answered this question.{% endfor %}
+                    {% else %}
+                        Nobody has taken the survey.
+                    {% endif %}
+                </div>
+                {% endpermission %}
                 <div id="history" class="tab-pane">
                     <h2> History </h2>
                     <table class="table">

@@ -1,0 +1,17 @@
+{% load tz %}
+{% load lnldb_tags %}
+{{ subject }}
+
+Lens and Lights recently provided services for {{ event.event_name }}. We would appreciate you taking a short survey on how we did. Your input will help us to improve our services.
+
+Take the survey using this link:
+{% get_base_url %}{% url 'my:post-event-survey' event.pk %}
+
+{{ event.event_name }}
+Location: {{ event.location }}
+Start: {{ event.datetime_start }}
+End: {{ event.datetime_end }}
+Services: {{ event.short_services }}
+Organization to be billed: {{ event.org_to_be_billed }}
+
+See full details of this event at {% get_base_url %}{% url 'events:detail' event.id %}.

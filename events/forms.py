@@ -30,7 +30,7 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
                            ExtraInstance, Fund, Hours, Lighting, Location, Organization,
                            OrganizationTransfer, OrgBillingVerificationEvent,
-                           Projection, Service, ServiceInstance, Sound)
+                           Projection, Service, ServiceInstance, Sound, PostEventSurvey)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 from helpers.util import curry_class
@@ -110,6 +110,12 @@ class CustomEventModelMultipleChoiceField(forms.ModelMultipleChoiceField):
 class CustomOrganizationEmailModelMultipleChoiceField(forms.ModelMultipleChoiceField):
     def label_from_instance(self, org):
         return six.u('%s (%s)') % (org.name, org.exec_email)
+
+
+class SurveyCustomRadioSelect(forms.widgets.ChoiceWidget):
+    input_type = 'radio'
+    template_name = 'survey_custom_radio_select.html'
+    option_template_name = 'survey_custom_radio_select.html'
 
 
 # LNAdmin Forms
@@ -554,6 +560,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'sensitive',
                 'test_event',
                 'entered_into_workday',
+                'send_survey',
                 active=True
             ),
             Tab(
@@ -647,11 +654,21 @@ class InternalEventForm2019(FieldAccessForm):
             enable=('entered_into_workday',)
         )
 
+        survey_edit = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.view_posteventsurvey') and not instance.survey_sent,
+            enable=('send_survey',)
+        )
+
+        survey_view = FieldAccessLevel(
+            lambda user, instance: not user.has_perm('events.view_posteventsurvey'),
+            exclude=('send_survey',)
+        )
+
     class Meta:
         model = Event2019
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org',
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
-                  'datetime_end', 'sensitive', 'test_event', 'entered_into_workday')
+                  'datetime_end', 'sensitive', 'test_event', 'entered_into_workday', 'send_survey')
         widgets = {
             'description': PagedownWidget(),
             'internal_notes': PagedownWidget,
@@ -1516,6 +1533,150 @@ class WorkorderRepeatForm(forms.ModelForm):
 
         return cleaned_data
 
+class PostEventSurveyForm(forms.ModelForm):
+
+    def __init__(self, event, *args, **kwargs):
+        self.event = event
+        self.helper = FormHelper()
+        self.helper.form_class = "custom-survey-form"
+        self.helper.layout = Layout(
+            Div(
+                Div(
+                    'services_quality',
+                    'lighting_quality',
+                    'sound_quality',
+                    'work_order_method',
+                    'work_order_experience',
+                    css_class='col'
+                ),
+                css_class='row'
+            ),
+            Div(
+                Div(
+                    HTML('<h2>Please rate your level of agreement with the following statements.</h2>'),
+                    'communication_responsiveness',
+                    'pricelist_ux',
+                    'setup_on_time',
+                    'crew_respectfulness',
+                    'crew_preparedness',
+                    'crew_knowledgeability',
+                    'quote_as_expected',
+                    'price_appropriate',
+                    'customer_would_return',
+                    css_class='col'
+                ),
+                css_class='row'
+            ),
+            Div(
+                Div(
+                    HTML('<h2>Optional questions</h2>'),
+                    'comments',
+                    css_class='col'
+                ),
+                css_class='row'
+            ),
+            FormActions(
+                Submit('save', 'Submit'),
+            ),
+        )
+        super(PostEventSurveyForm, self).__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        obj = super(PostEventSurveyForm, self).save(commit=False)
+        obj.event = self.event
+        if commit:
+            obj.save()
+        return obj
+
+    class Meta:
+        model = PostEventSurvey
+        fields = ('services_quality', 'lighting_quality', 'sound_quality', 'work_order_method', 'work_order_experience',
+        'communication_responsiveness', 'pricelist_ux', 'setup_on_time', 'crew_respectfulness', 'crew_preparedness',
+        'crew_knowledgeability', 'quote_as_expected', 'price_appropriate', 'customer_would_return', 'comments')
+
+    services_quality = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('services_quality').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('services_quality').choices,
+    )
+
+    lighting_quality = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('lighting_quality').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('lighting_quality').choices,
+    )
+
+    sound_quality = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('sound_quality').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('sound_quality').choices,
+    )
+
+    work_order_method = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('work_order_method').verbose_name,
+        widget=forms.RadioSelect,
+        choices=PostEventSurvey._meta.get_field('work_order_method').choices,
+    )
+
+    work_order_experience = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('work_order_experience').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('work_order_experience').choices,
+    )
+
+    communication_responsiveness = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('communication_responsiveness').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('communication_responsiveness').choices,
+    )
+
+    pricelist_ux = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('pricelist_ux').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('pricelist_ux').choices,
+    )
+
+    setup_on_time = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('setup_on_time').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('setup_on_time').choices,
+    )
+
+    crew_respectfulness = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('crew_respectfulness').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('crew_respectfulness').choices,
+    )
+
+    crew_preparedness = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('crew_preparedness').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('crew_preparedness').choices,
+    )
+
+    crew_knowledgeability = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('crew_knowledgeability').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('crew_knowledgeability').choices,
+    )
+
+    quote_as_expected = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('quote_as_expected').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('quote_as_expected').choices,
+    )
+
+    price_appropriate = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('price_appropriate').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('price_appropriate').choices,
+    )
+
+    customer_would_return = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('customer_would_return').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('customer_would_return').choices,
+    )
 
 # __        __         _                 _
 # \ \      / /__  _ __| | _____  _ __ __| | ___ _ __

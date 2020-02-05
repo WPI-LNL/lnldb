@@ -13,7 +13,7 @@ from emails.views import MeetingAnnounceCCView, MeetingAnnounceView
 from events.forms import named_event_forms
 from events.views.flow import CCRCreate, CCRDelete, CCRUpdate
 from events.views.indices import admin as db_home
-from events.views.indices import event_search
+from events.views.indices import event_search, survey_dashboard
 from pages.views import page as view_page, recruitment_page
 
 admin.autodiscover()
@@ -60,6 +60,7 @@ urlpatterns += [
     url(r'^db/$', db_home, name="home"),
     url(r'^db/oldsearch$', event_search, name="events-search"),
     url(r'^db/search$', data.views.search, name="search"),
+    url(r'^db/survey-dashboard/$', survey_dashboard, name="survey-dashboard"),
     url(r'^db/workorderwizard-load$', data.views.workorderwizard_load, name="wizard-load"),
     url(r'^db/workorderwizard-submit$', data.views.workorderwizard_submit, name="wizard-submit"),
     url(r'^db/workorderwizard-autopopulate$', data.views.workorderwizard_findprevious, name="wizard-findprevious"),

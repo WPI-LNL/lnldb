@@ -1,15 +1,30 @@
 import datetime
 
 import pytz
+from six import string_types
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.utils import timezone
 
 from events.models import Event
+from helpers.revision import set_revision_comment
 
 EMAIL_KEY_START_END = settings.EMAIL_KEY_START_END
 EMAIL_TARGET_START_END = settings.EMAIL_TARGET_START_END
 DEFAULT_TO_ADDR = settings.DEFAULT_TO_ADDR
+
+
+def send_survey_if_necessary(event):
+    now = timezone.now()
+    if now < event.datetime_end or event.datetime_end < (now - datetime.timedelta(days=30)) \
+            or not event.approved or event.survey_sent or not event.send_survey or event.contact is None:
+        return
+    email = SurveyEmailGenerator(event=event, subject='Post-event survey for {}'.format(event.event_name), to_emails=event.contact.email)
+    email.send()
+    # set_revision_comment('Post-event survey sent.')
+    event.survey_sent = True
+    event.save()
 
 
 def generate_notice_email(notice):
@@ -152,7 +167,7 @@ class DefaultLNLEmailGenerator(object):  # yay classes
                  build_html=True,
                  body=None,
                  attachments=None):
-        if isinstance(to_emails, str):
+        if isinstance(to_emails, string_types):
             to_emails = [to_emails]
         if context is None:
             context = {}
@@ -299,4 +314,33 @@ class BillingEmailGenerator(DefaultLNLEmailGenerator):
                 template_basename=template_basename,
                 build_html=build_html,
                 body=body,
+                attachments=attachments)
+
+class SurveyEmailGenerator(DefaultLNLEmailGenerator):
+    def __init__(self,
+            event=None,
+            subject="Post-event survey for your recent event",
+            to_emails=settings.DEFAULT_TO_ADDR,
+            cc=None,
+            bcc=[settings.EMAIL_TARGET_VP],
+            from_email=settings.DEFAULT_FROM_ADDR,
+            reply_to=None,
+            context=None,
+            template_basename="emails/email_survey",
+            build_html=True,
+            attachments=None):
+        if context is None:
+            context = {}
+        context['event'] = event
+        super(SurveyEmailGenerator, self).__init__(
+                subject=subject,
+                to_emails=to_emails,
+                cc=cc,
+                bcc=bcc,
+                from_email=from_email,
+                reply_to=reply_to,
+                context=context,
+                template_basename=template_basename,
+                build_html=build_html,
+                body=None,
                 attachments=attachments)

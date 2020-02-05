@@ -4,6 +4,7 @@ from itertools import chain
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.db.models.aggregates import Sum
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
@@ -11,11 +12,15 @@ from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.functional import curry
+from django.views.generic import CreateView
 
 from emails.generators import generate_selfservice_notice_email
 from events.forms import (EditHoursForm, InternalReportForm, MKHoursForm,
-                          SelfServiceOrgRequestForm, WorkorderRepeatForm)
-from events.models import CCReport, BaseEvent, Event, Hours, CCR_DELTA
+                          SelfServiceOrgRequestForm, WorkorderRepeatForm,
+                          PostEventSurveyForm)
+from events.models import CCReport, BaseEvent, Event, Hours, PostEventSurvey, CCR_DELTA
+from helpers.mixins import LoginRequiredMixin
+from helpers.revision import set_revision_comment
 from helpers.util import curry_class
 
 
@@ -329,3 +334,45 @@ def hours_bulk(request, eventid):
         context['formset'] = formset
 
     return render(request, 'formset_hours_bulk.html', context)
+
+
+class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
+    model = PostEventSurvey
+    form_class = PostEventSurveyForm
+    template_name = 'form_crispy_survey.html'
+
+    def get_form_kwargs(self):
+        kwargs = super(PostEventSurveyCreate, self).get_form_kwargs()
+        now = timezone.now()
+        kwargs['event'] = get_object_or_404(
+            BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now, datetime_end__gt=(now - datetime.timedelta(days=30))),
+            pk=self.kwargs['eventid']
+        )
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super(PostEventSurveyCreate, self).get_context_data(**kwargs)
+        now = timezone.now()
+        context['event'] = get_object_or_404(
+            BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now, datetime_end__gt=(now - datetime.timedelta(days=30))),
+            pk=self.kwargs['eventid']
+        )
+        return context
+
+    def dispatch(self, request, *args, **kwargs):
+        if PostEventSurvey.objects.filter(event__id=kwargs['eventid'], person=request.user).exists():
+            return HttpResponse('You have already taken this survey.', status=403)
+        return super(PostEventSurveyCreate, self).dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.person = self.request.user
+        result = super(PostEventSurveyCreate, self).form_valid(form)
+        # Automatically add the survey-taker to the client (if the event has only one client)
+        if obj.event.org.count() == 1 and obj.person not in obj.event.org.get().associated_users.all():
+            set_revision_comment('Took post-event survey for {}. User automatically added to client.'.format(self.object.event.event_name), None)
+            obj.event.org.get().associated_users.add(obj.person)
+        return result
+
+    def get_success_url(self):
+        return reverse("events:detail", args=(self.kwargs['eventid'],))

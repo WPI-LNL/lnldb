@@ -3,11 +3,12 @@ import os
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
-from django.db.models import Q
+from django.db.models import Avg, Count, Q
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 
+from events.charts import SurveyVpChart, SurveyCrewChart, SurveyPricelistChart, SurveyLnlChart
 from events.models import BaseEvent
 from helpers.challenges import is_officer
 
@@ -82,3 +83,142 @@ def event_search(request):
             context['events'] = e
         return render(request, 'events_search_results.html', context)
     return render(request, 'events_search_results.html', context)
+
+
+@login_required
+@permission_required('events.view_posteventsurvey', raise_exception=True)
+def survey_dashboard(request):
+    now = timezone.now()
+    year_ago = now - datetime.timedelta(days=365)
+
+    context = {'chart_vp': SurveyVpChart(), 'chart_crew': SurveyCrewChart(), 'chart_pricelist': SurveyPricelistChart(), 'chart_lnl': SurveyLnlChart()}
+    context['survey_composites'] = []
+    context['wma'] = {
+        'vp': 0,
+        'crew': 0,
+        'pricelist': 0,
+        'overall': 0,
+    }
+    context['num_eligible_events'] = BaseEvent.objects \
+        .filter(approved=True, datetime_start__gte=year_ago, datetime_end__lt=now) \
+        .distinct().count()
+    events = BaseEvent.objects \
+        .filter(approved=True, datetime_start__gte=year_ago, datetime_end__lt=now) \
+        .filter(surveys__isnull=False) \
+        .distinct()
+    context['num_events'] = events.count()
+    context['response_rate'] = 0 if context['num_eligible_events'] == 0 else context['num_events'] / float(context['num_eligible_events']) * 100
+    if context['num_events'] > 0:
+        vp_denominator = 0
+        crew_denominator = 0
+        pricelist_denominator = 0
+        overall_denominator = 0
+        i = context['num_events']
+        for event in events:
+            survey_results = {}
+            survey_results.update(event.surveys.filter(services_quality__gte=0).aggregate(
+                Avg('services_quality'),
+                Count('services_quality'),
+            ))
+            survey_results.update(event.surveys.filter(lighting_quality__gte=0).aggregate(
+                Avg('lighting_quality'),
+                Count('lighting_quality'),
+            ))
+            survey_results.update(event.surveys.filter(sound_quality__gte=0).aggregate(
+                Avg('sound_quality'),
+                Count('sound_quality'),
+            ))
+            survey_results.update(event.surveys.filter(work_order_experience__gte=0).aggregate(
+                Avg('work_order_experience'),
+                Count('work_order_experience'),
+            ))
+            survey_results.update(event.surveys.filter(communication_responsiveness__gte=0).aggregate(
+                Avg('communication_responsiveness'),
+                Count('communication_responsiveness'),
+            ))
+            survey_results.update(event.surveys.filter(pricelist_ux__gte=0).aggregate(
+                Avg('pricelist_ux'),
+                Count('pricelist_ux'),
+            ))
+            survey_results.update(event.surveys.filter(setup_on_time__gte=0).aggregate(
+                Avg('setup_on_time'),
+                Count('setup_on_time'),
+            ))
+            survey_results.update(event.surveys.filter(crew_respectfulness__gte=0).aggregate(
+                Avg('crew_respectfulness'),
+                Count('crew_respectfulness'),
+            ))
+            survey_results.update(event.surveys.filter(crew_preparedness__gte=0).aggregate(
+                Avg('crew_preparedness'),
+                Count('crew_preparedness'),
+            ))
+            survey_results.update(event.surveys.filter(crew_knowledgeability__gte=0).aggregate(
+                Avg('crew_knowledgeability'),
+                Count('crew_knowledgeability'),
+            ))
+            survey_results.update(event.surveys.filter(quote_as_expected__gte=0).aggregate(
+                Avg('quote_as_expected'),
+                Count('quote_as_expected'),
+            ))
+            survey_results.update(event.surveys.filter(price_appropriate__gte=0).aggregate(
+                Avg('price_appropriate'),
+                Count('price_appropriate'),
+            ))
+            survey_results.update(event.surveys.filter(customer_would_return__gte=0).aggregate(
+                Avg('customer_would_return'),
+                Count('customer_would_return'),
+            ))
+            try:
+                vp = survey_results['communication_responsiveness__avg']
+            except TypeError:
+                vp = None
+            try:
+                crew = max(min(((
+                    survey_results['setup_on_time__avg'] +
+                    survey_results['crew_respectfulness__avg'] +
+                    survey_results['crew_preparedness__avg'] +
+                    survey_results['crew_knowledgeability__avg'] +
+                    survey_results['lighting_quality__avg'] +
+                    survey_results['sound_quality__avg']
+                ) - 9) / 3, 4), 0)
+            except TypeError:
+                crew = None
+            try:
+                pricelist = max(min(((
+                    survey_results['pricelist_ux__avg'] +
+                    survey_results['quote_as_expected__avg'] +
+                    survey_results['price_appropriate__avg']
+                ) - 4.5 ) / 1.5, 4), 0)
+            except TypeError:
+                pricelist = None
+            try:
+                overall = max(min((
+                    survey_results['services_quality__avg'] +
+                    survey_results['customer_would_return__avg']
+                ) - 3, 4), 0)
+            except TypeError:
+                overall = None
+            context['survey_composites'].append((event, {
+                'vp': vp,
+                'crew': crew,
+                'pricelist': pricelist,
+                'overall': overall,
+            }))
+            if vp is not None:
+                context['wma']['vp'] += i * min((vp - 1.5) * 2, 4)
+                vp_denominator += i
+            if crew is not None:
+                context['wma']['crew'] += i * min((crew - 1.5) * 2, 4)
+                crew_denominator += i
+            if pricelist is not None:
+                context['wma']['pricelist'] += i * min((pricelist - 1.5) * 2, 4)
+                pricelist_denominator += i
+            if overall is not None:
+                context['wma']['overall'] += i * min((overall - 1.5) * 2, 4)
+                overall_denominator += i
+            i -= 1
+        context['wma']['vp'] /= vp_denominator
+        context['wma']['crew'] /= crew_denominator
+        context['wma']['pricelist'] /= pricelist_denominator
+        context['wma']['overall'] /= overall_denominator
+    return render(request, 'survey_dashboard.html', context)

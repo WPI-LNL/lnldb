@@ -30,6 +30,24 @@ PROJECTIONS = (
     ('70', '70mm'),
 )
 
+AGREEMENT_CHOICES = (
+    (0, 'Strongly disagree'),
+    (1, 'Disagree'),
+    (2, 'Neither agree nor disagree'),
+    (3, 'Agree'),
+    (4, 'Strongly agree'),
+    (-1, 'No basis to judge')
+)
+
+EXCELLENCE_CHOICES = (
+    (0, 'Poor'),
+    (1, 'Fair'),
+    (2, 'Good'),
+    (3, 'Very good'),
+    (4, 'Excellent'),
+    (-1, 'No basis to judge')
+)
+
 
 def get_host():
     out = ''
@@ -762,6 +780,8 @@ class Event2019(BaseEvent):
     """
         New events under the 2019 pricelist
     """
+
+    # Workday billing
     workday_fund = models.IntegerField(null=True, blank=True, choices=(
         (810, 'Student Organization (810-FD)'),
         (110, 'Operating (110-FD)'),
@@ -776,6 +796,10 @@ class Event2019(BaseEvent):
     workday_form_comments = models.TextField(null=True, blank=True)
     workday_entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="workdayentries", null=True, blank=True)
     entered_into_workday = models.BooleanField(default=False, help_text='Checked when the Treasurer has created an Internal Service Delivery in Workday for this event')
+
+    # Post-event survey
+    send_survey = models.BooleanField(default=False, help_text='Check if the event contact should be emailed the post-event survey after the event')
+    survey_sent = models.BooleanField(default=False, help_text='The post-event survey has been sent to the client')
 
     @property
     def has_projection(self):
@@ -1315,3 +1339,47 @@ class EventArbitrary(models.Model):
     @property
     def abs_cost(self):
         return abs(self.totalcost)
+
+@python_2_unicode_compatible
+class PostEventSurvey(models.Model):
+    # metadata
+    event = models.ForeignKey(BaseEvent, on_delete=models.PROTECT, related_name="surveys")
+    person = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='surveys')
+
+    # survey questions
+    services_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='Please rate the overall quality of the services Lens and Lights provided.')
+    lighting_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How did the lighting look? If we did not provide lighting, choose "No basis to judge".')
+    sound_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How did the sound system sound? If we did not provide sound, choose "No basis to judge".')
+    work_order_method = models.IntegerField(choices=(
+        (1, 'Via the website at lnl.wpi.edu/workorder'),
+        (2, 'Emailed lnl@wpi.edu'),
+        (3, 'Emailed an LNL representative directly'),
+        (4, 'By phone'),
+        (5, 'In person'),
+        (0, 'Other'),
+        (-1, 'I don\'t know')
+    ), verbose_name='How did you submit the work order?')
+    work_order_experience = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How was your experience submitting the work order?')
+
+    # survey agreement questions
+    communication_responsiveness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='Lens and Lights was responsive to my communications.')
+    pricelist_ux = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='It was easy to determine which services to request.')
+    setup_on_time = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='My event was set up on time.')
+    crew_respectfulness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The crew was respectful of my property and of other people.')
+    crew_preparedness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The crew was prepared.')
+    crew_knowledgeability = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The crew was knowledgeable.')
+    quote_as_expected = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The price quoted for the event matched my expectations.')
+    price_appropriate = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The price is appropriate for the services provided.')
+    customer_would_return = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='I would use Lens and Lights in the future.')
+
+    # textarea questions
+    comments = models.TextField(blank=True, verbose_name='Please use this area to explain low ratings above or to provide any other feedback you have. We value your feedback and will use it to improve our services.')
+
+    def __str__(self):
+        return 'Post-event survey for {} by {}'.format(self.event, self.person)
+
+    class Meta:
+        permissions = (
+            ("view_posteventsurvey", "View post-event survey results"),
+        )
+        ordering = ['event', 'person']
