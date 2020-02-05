@@ -56,3 +56,4 @@ django-environ==0.4.3
 django-polymorphic==2.0.3
 fuzzywuzzy==0.17.0
 -e git+https://github.com/WPI-LNL/django-saml2-auth.git@f611362de065b312860197d46ff63401922c2255#egg=django_saml2_auth-master
+django-jchart==0.4.2

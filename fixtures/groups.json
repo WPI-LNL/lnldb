@@ -577,6 +577,11 @@
         "retrieve_admin_password",
         "laptops",
         "laptop"
+      ],
+      [
+        "view_posteventsurvey",
+        "events",
+        "posteventsurvey"
       ]
     ]
   },
