@@ -429,7 +429,7 @@ def snipe_checkout(request):
         return HttpResponse('This page is unavailable because SNIPE_URL is not set.', status=501)
     if not settings.SNIPE_API_KEY:
         return HttpResponse('This page is unavailable because SNIPE_API_KEY is not set.', status=501)
-    # Get the list of locations from Snipe
+    # Get the list of users in the rental group from Snipe
     error_message = 'Error communicating with Snipe. Did not check out anything.'
     checkout_to_choices = []
     response = requests.request('GET', '{}api/v1/users'.format(settings.SNIPE_URL), headers={
@@ -449,6 +449,7 @@ def snipe_checkout(request):
     # Handle the form
     error_message = 'Error communicating with Snipe. Some things may have been checked out while some were not. Please go check Snipe.'
     if request.method == 'POST':
+        receipt_info = {}
         form = forms.SnipeCheckoutForm(checkout_to_choices, request.POST, request.FILES)
         if form.is_valid():
             success_count_assets = 0
@@ -458,22 +459,44 @@ def snipe_checkout(request):
                 if match:
                     tag = match.group(1)
                     # This tag represents an accessory
-                    response = requests.request('POST', '{}api/v1/accessories/{}/checkout'.format(settings.SNIPE_URL, tag), data=json.dumps({
-                        'assigned_to': form.cleaned_data['checkout_to'],
-                    }), headers={
+                    response = requests.request('GET', '{}api/v1/accessories/{}'.format(settings.SNIPE_URL, tag), headers={
                         'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
                         'accept': 'application/json',
-                        'content-type': 'application/json',
                     })
                     if response.status_code == 200:
                         try:
                             data = json.loads(response.text)
                             if data.get('status') == 'error':
-                                # Snipe refused to check out the accessory (maybe they are all checked out)
-                                messages.add_message(request, messages.ERROR, 'Unable to check out accessory {}. Snipe says: {}'.format(tag, data['messages']))
+                                # No accessory with that ID exists in Snipe
+                                messages.add_message(request, messages.ERROR, 'No such accessory with ID {}'.format(tag))
                                 continue
-                            # The accessory was successfully checked out
-                            success_count_accessories += 1
+                            accessory_name = data['name']
+                            rental_price = float(data['order_number'])
+                            # Check out the accessory
+                            response = requests.request('POST', '{}api/v1/accessories/{}/checkout'.format(settings.SNIPE_URL, tag), data=json.dumps({
+                                'assigned_to': form.cleaned_data['checkout_to'],
+                            }), headers={
+                                'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                                'accept': 'application/json',
+                                'content-type': 'application/json',
+                            })
+                            if response.status_code == 200:
+                                data = json.loads(response.text)
+                                if data.get('status') == 'error':
+                                    # Snipe refused to check out the accessory (maybe they are all checked out)
+                                    messages.add_message(request, messages.ERROR, 'Unable to check out accessory {}. Snipe says: {}'.format(tag, data['messages']))
+                                    continue
+                                # The accessory was successfully checked out
+                                success_count_accessories += 1
+                                if tag in receipt_info:
+                                    if receipt_info[tag]['name'] != accessory_name \
+                                            or receipt_info[tag]['rental_price'] != rental_price:
+                                        return HttpResponse(error_message, status=502)
+                                    receipt_info[tag]['quantity'] += 1
+                                else:
+                                    receipt_info[tag] = {'name': accessory_name, 'rental_price': rental_price, 'quantity': 1}
+                            else:
+                                return HttpResponse(error_message, status=502)
                         except ValueError:
                             return HttpResponse(error_message, status=502)
                     else:
@@ -482,6 +505,7 @@ def snipe_checkout(request):
                     # This tag represents an asset
                     response = requests.request('GET', '{}api/v1/hardware/bytag/{}'.format(settings.SNIPE_URL, tag), headers={
                         'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                        'accept': 'application/json',
                     })
                     if response.status_code == 200:
                         try:
@@ -491,6 +515,11 @@ def snipe_checkout(request):
                                 messages.add_message(request, messages.ERROR, 'No such asset tag {}'.format(tag))
                                 continue
                             asset_name = data['name']
+                            if 'custom_fields' in data and 'Rental Price' in data['custom_fields'] and 'value' in data['custom_fields']['Rental Price']:
+                                rental_price = float(data['custom_fields']['Rental Price']['value'])
+                            else:
+                                rental_price = None
+                            # Check out the asset
                             response = requests.request('POST', '{}api/v1/hardware/{}/checkout'.format(settings.SNIPE_URL, data['id']), data=json.dumps({
                                 'checkout_to_type': 'user',
                                 'assigned_user': form.cleaned_data['checkout_to'],
@@ -507,6 +536,9 @@ def snipe_checkout(request):
                                     continue
                                 # The asset was successfully checked out
                                 success_count_assets += 1
+                                if tag in receipt_info:
+                                    return HttpResponse(error_message, status=502)
+                                receipt_info[tag] = {'name': asset_name, 'rental_price': rental_price, 'quantity': 1}
                             else:
                                 return HttpResponse(error_message, status=502)
                         except ValueError:
@@ -515,9 +547,21 @@ def snipe_checkout(request):
                         return HttpResponse(error_message, status=502)
             if success_count_assets > 0 or success_count_accessories > 0:
                 messages.add_message(request, messages.SUCCESS, 'Successfully checked out {} assets and {} accessories'.format(success_count_assets, success_count_accessories))
-        form = forms.SnipeCheckoutForm(checkout_to_choices, initial={'checkout_to': form.cleaned_data['checkout_to']})
+            rental_prices = [(None if asset_info['rental_price'] is None else asset_info['rental_price'] * asset_info['quantity']) for asset_info in receipt_info.values()]
+            return render(request, 'inventory/checkout_receipt.html', {
+                'receipt_info': receipt_info,
+                'num_assets': success_count_assets,
+                'num_accessories': success_count_accessories,
+                'total_rental_price': None if None in rental_prices else sum(rental_prices),
+                'checkout_to': form.cleaned_data['checkout_to'],
+            })
+        else:
+            form = forms.SnipeCheckoutForm(checkout_to_choices, initial={'checkout_to': form.cleaned_data['checkout_to']})
     else:
-        form = forms.SnipeCheckoutForm(checkout_to_choices)
+        if 'checkout_to' in request.GET:
+            form = forms.SnipeCheckoutForm(checkout_to_choices, initial={'checkout_to': request.GET['checkout_to']})
+        else:
+            form = forms.SnipeCheckoutForm(checkout_to_choices)
     return render(request, "form_crispy.html", {
         'msg': 'Inventory checkout',
         'form': form,

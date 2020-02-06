@@ -1,0 +1,37 @@
+{% extends 'base_admin.html' %}
+
+{% block content %}
+    <a href="{% url 'inventory:snipe_checkout' %}?checkout_to={{ checkout_to }}">Check out more items</a>
+    <h1>Checkout Receipt</h1>
+    <p>
+        {% now 'jS F Y H:i' %}<br>
+        {{ num_assets }} assets checked out<br>
+        {{ num_accessories }} accessories checked out<br>
+        {% if total_rental_price %}
+            Total rental price: ${{ total_rental_price }}
+        {% endif %}
+    </p>
+    <h2>Items checked out</h2>
+    <p>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Asset Tag</th>
+                    <th>Asset Name</th>
+                    <th>Rental Price</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset_tag, asset_info in receipt_info.items %}
+                    <tr>
+                        <td>{{ asset_tag }}</td>
+                        <td>{{ asset_info.name|safe }}</td>
+                        <td>{% if asset_info.rental_price %}${{ asset_info.rental_price }}{% endif %}</td>
+                        <td>{{ asset_info.quantity }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </p>
+{% endblock %}
