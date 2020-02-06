@@ -34,6 +34,9 @@
                         <a class="btn btn-success" href="https://wpi0.sharepoint.com/sites/gr-lnl/">Sharepoint</a>
                         {% if request.user.group_str == 'Officer' %}
                             <a class="btn btn-success" href="https://wpi0.sharepoint.com/sites/gr-lnl-exec/">Exec Sharepoint</a>
+                        {% endif %}
+                        <a class="btn btn-primary" href="https://wpilnl.slack.com/">Slack</a>
+                        {% if request.user.group_str == 'Officer' %}
                             <a class="btn btn-primary" href="https://lnl-rt.wpi.edu/rt/">RT</a>
                             <a class="btn btn-primary" href="https://lnl-rt.wpi.edu/snipe/">Snipe</a>
                         {% endif %}
