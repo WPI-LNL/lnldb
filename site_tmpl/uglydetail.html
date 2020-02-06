@@ -698,6 +698,15 @@
                                 </tr>
                             {% endfor %}
                         {% endif %}
+
+                        {% for oo in event.oneoffs %}
+                        <tr>
+                            <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
+                            <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
+                                {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
+                            </td>
+                        </tr>
+                        {% endfor %}
                         
                         {% if event.discount_applied %}
                         <tr class="warning">
@@ -709,16 +718,6 @@
                             <td style="color:red;" class="tdra">-${{ event.discount_value|floatformat:2}}</td>
                         </tr>
                         {% endif %}
-                        
-                        {% for oo in event.oneoffs %}
-                        <tr>
-                            <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
-                            <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
-                                {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        
                         
                         <tr class="info">
                             <td>Total</td>

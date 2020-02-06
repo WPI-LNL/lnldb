@@ -103,6 +103,15 @@
                             {% endfor %}
                         {% endif %}
 
+                        {% for oo in object.oneoffs %}
+                        <tr>
+                            <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
+                            <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
+                                {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+
                         {% if object.discount_applied %}
                         <tr class="warning">
                             <td> Pre Discount Total </td>
@@ -113,15 +122,6 @@
                                     <td style="color:red;" class="tdra">-${{ object.discount_value|floatformat:2}}</td>
                                 </tr>
                         {% endif %}
-
-                        {% for oo in object.oneoffs %}
-                        <tr>
-                            <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
-                            <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
-                                {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
-                            </td>
-                        </tr>
-                        {% endfor %}
 
                         <tr class="info">
                             <td>Total</td>
