@@ -655,7 +655,8 @@ class InternalEventForm2019(FieldAccessForm):
         )
 
         survey_edit = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.view_posteventsurvey') and not instance.survey_sent,
+            lambda user, instance: user.has_perm('events.view_posteventsurvey') and \
+                (instance is None or not instance.survey_sent),
             enable=('send_survey',)
         )
 
