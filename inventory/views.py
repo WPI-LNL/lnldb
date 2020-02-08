@@ -1,3 +1,4 @@
+from io import BytesIO
 import json
 import re
 import requests
@@ -12,9 +13,14 @@ from django.forms.models import inlineformset_factory
 from django.http import (HttpResponse, HttpResponseBadRequest, HttpResponseNotFound,
                          HttpResponseRedirect)
 from django.shortcuts import get_object_or_404, render
+from django.template.loader import render_to_string
 from django.urls.base import reverse
+from django.utils import timezone
+from xhtml2pdf import pisa
 
 from . import forms, models
+from emails.generators import DefaultLNLEmailGenerator
+from pdfs.views import link_callback
 
 NUM_IN_PAGE = 25
 
@@ -549,11 +555,31 @@ def snipe_checkout(request):
             if success_count_assets > 0 or success_count_accessories > 0:
                 messages.add_message(request, messages.SUCCESS, 'Successfully checked out {} assets and {} accessories'.format(success_count_assets, success_count_accessories))
             rental_prices = [(None if asset_info['rental_price'] is None else asset_info['rental_price'] * asset_info['quantity']) for asset_info in receipt_info.values()]
+            total_rental_price = None if None in rental_prices else sum(rental_prices)
+            checkout_to_name = next((item[1] for item in checkout_to_choices if item[0] == form.cleaned_data['checkout_to']))
+            # Before returning the response, email a PDF receipt
+            html = render_to_string('pdf_templates/inventory-receipt.html', request=request, context={
+                'title': 'Checkout Receipt',
+                'receipt_info': receipt_info,
+                'num_assets': success_count_assets,
+                'num_accessories': success_count_accessories,
+                'total_rental_price': total_rental_price,
+                'checkout_to': checkout_to_name,
+            })
+            pdf_file = BytesIO()
+            pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+            pdf_handle = pdf_file.getvalue()
+            filename = 'LNL-checkout-receipt-{}.pdf'.format(timezone.now().isoformat())
+            attachments = [{'file_handle': pdf_handle, 'name': filename}]
+            email = DefaultLNLEmailGenerator(subject='LNL Inventory Checkout Receipt', to_emails=(request.user.email, settings.DEFAULT_TO_ADDR), attachments=attachments,
+                body='A receipt for the rental checkout by {} to {} is attached.'.format(request.user, checkout_to_name))
+            email.send()
+            # Return the response
             return render(request, 'inventory/checkout_receipt.html', {
                 'receipt_info': receipt_info,
                 'num_assets': success_count_assets,
                 'num_accessories': success_count_accessories,
-                'total_rental_price': None if None in rental_prices else sum(rental_prices),
+                'total_rental_price': total_rental_price,
                 'checkout_to': form.cleaned_data['checkout_to'],
             })
         else:

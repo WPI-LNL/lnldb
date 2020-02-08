@@ -1,14 +1,15 @@
 {% extends 'base_admin.html' %}
 
 {% block content %}
-    <a href="{% url 'inventory:snipe_checkout' %}?checkout_to={{ checkout_to }}">Check out more items</a>
+    <p><a href="{% url 'inventory:snipe_checkout' %}?checkout_to={{ checkout_to }}">Check out more items</a></p>
+    <p>The information below has been emailed to you.</p>
     <h1>Checkout Receipt</h1>
     <p>
         {% now 'jS F Y H:i' %}<br>
         {{ num_assets }} assets checked out<br>
         {{ num_accessories }} accessories checked out<br>
         {% if total_rental_price %}
-            Total rental price: ${{ total_rental_price }}
+            Total rental price: ${{ total_rental_price }}/week
         {% else %}
             Total rental price cannot be calculated because some items are missing rental prices.
         {% endif %}
@@ -20,7 +21,7 @@
                 <tr>
                     <th>Asset Tag</th>
                     <th>Asset Name</th>
-                    <th>Rental Price</th>
+                    <th>Rental Price (per week)</th>
                     <th>Quantity</th>
                 </tr>
             </thead>

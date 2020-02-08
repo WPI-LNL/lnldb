@@ -1,0 +1,44 @@
+{% extends "pdf_templates/pdf_base.html" %}
+
+{% block body %}
+<div class="heading">
+    <center>WPI Lens and Lights</center>
+</div>
+<div class="subheading">
+    <center>Student Activities Office - WPI - 100 Institute Road - Worcester, MA - 01609-2280 <br />
+        508-831-5595 - Fax: 508-831-6045 - lnl@wpi.edu{% if request %} - {{ request.scheme }}://{{ request.get_host }}/{% endif %}</center>
+</div>
+<div>
+    {{ title }}<br>
+    {% now 'jS F Y H:i' %}<br>
+    {{ num_assets }} assets checked out<br>
+    {{ num_accessories }} accessories checked out<br>
+    Checked out to {{ checkout_to }}<br>
+    {% if total_rental_price %}
+        Total rental price: ${{ total_rental_price }}/week
+    {% else %}
+        Total rental price cannot be calculated because some items are missing rental prices.
+    {% endif %}
+</div>
+<hr>
+<table>
+    <thead>
+        <tr>
+            <th>Asset Tag</th>
+            <th>Asset Name</th>
+            <th>Rental Price (per week)</th>
+            <th>Quantity</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for asset_tag, asset_info in receipt_info.items %}
+            <tr>
+                <td>{{ asset_tag }}</td>
+                <td>{{ asset_info.name|safe }}</td>
+                <td>{% if asset_info.rental_price %}${{ asset_info.rental_price }}{% endif %}</td>
+                <td>{{ asset_info.quantity }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
