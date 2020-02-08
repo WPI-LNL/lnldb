@@ -9,6 +9,8 @@
         {{ num_accessories }} accessories checked out<br>
         {% if total_rental_price %}
             Total rental price: ${{ total_rental_price }}
+        {% else %}
+            Total rental price cannot be calculated because some items are missing rental prices.
         {% endif %}
     </p>
     <h2>Items checked out</h2>

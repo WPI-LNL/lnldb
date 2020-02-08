@@ -471,7 +471,7 @@ def snipe_checkout(request):
                                 messages.add_message(request, messages.ERROR, 'No such accessory with ID {}'.format(tag))
                                 continue
                             accessory_name = data['name']
-                            rental_price = float(data['order_number'])
+                            rental_price = float(data['order_number']) if data['order_number'] is not None else None
                             # Check out the accessory
                             response = requests.request('POST', '{}api/v1/accessories/{}/checkout'.format(settings.SNIPE_URL, tag), data=json.dumps({
                                 'assigned_to': form.cleaned_data['checkout_to'],
@@ -515,7 +515,8 @@ def snipe_checkout(request):
                                 messages.add_message(request, messages.ERROR, 'No such asset tag {}'.format(tag))
                                 continue
                             asset_name = data['name']
-                            if 'custom_fields' in data and 'Rental Price' in data['custom_fields'] and 'value' in data['custom_fields']['Rental Price']:
+                            if 'custom_fields' in data and 'Rental Price' in data['custom_fields'] and \
+                                    'value' in data['custom_fields']['Rental Price'] and data['custom_fields']['Rental Price']['value'] is not None:
                                 rental_price = float(data['custom_fields']['Rental Price']['value'])
                             else:
                                 rental_price = None
