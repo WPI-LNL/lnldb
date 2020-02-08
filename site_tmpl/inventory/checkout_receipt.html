@@ -8,6 +8,7 @@
         {% now 'jS F Y H:i' %}<br>
         {{ num_assets }} assets checked out<br>
         {{ num_accessories }} accessories checked out<br>
+        Checked out to {{ checkout_to_name }}<br>
         {% if total_rental_price %}
             Total rental price: ${{ total_rental_price }}/week
         {% else %}

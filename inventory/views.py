@@ -581,6 +581,7 @@ def snipe_checkout(request):
                 'num_accessories': success_count_accessories,
                 'total_rental_price': total_rental_price,
                 'checkout_to': form.cleaned_data['checkout_to'],
+                'checkout_to_name': checkout_to_name,
             })
         else:
             form = forms.SnipeCheckoutForm(checkout_to_choices, initial={'checkout_to': form.cleaned_data['checkout_to']})
