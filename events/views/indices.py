@@ -220,20 +220,20 @@ def survey_dashboard(request):
         if vp_denominator != 0:
         	context['wma']['vp'] /= vp_denominator
         else:
-        	context['wma']['vp'] = 0
+        	context['wma']['vp'] = None
         
         if crew_denominator != 0:
         	context['wma']['crew'] /= crew_denominator
         else:
-        	context['wma']['crew'] = 0
+        	context['wma']['crew'] = None
         
         if pricelist_denominator != 0:
         	context['wma']['pricelist'] /= pricelist_denominator
         else:
-        	context['wma']['pricelist'] = 0
+        	context['wma']['pricelist'] = None
         
         if overall_denominator != 0:
         	context['wma']['overall'] /= overall_denominator
         else:
-        	context['wma']['overall'] = 0
+        	context['wma']['overall'] = None
     return render(request, 'survey_dashboard.html', context)

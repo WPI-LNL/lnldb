@@ -13,6 +13,7 @@ from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.functional import curry
 from django.views.generic import CreateView
+from django.template import loader
 
 from emails.generators import generate_selfservice_notice_email
 from events.forms import (EditHoursForm, InternalReportForm, MKHoursForm,
@@ -361,7 +362,14 @@ class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
 
     def dispatch(self, request, *args, **kwargs):
         if PostEventSurvey.objects.filter(event__id=kwargs['eventid'], person=request.user).exists():
-            return HttpResponse('You have already taken this survey.', status=403)
+            #return HttpResponse('You have already taken this survey.', status=403)
+            template = loader.get_template('default.html')
+            return HttpResponse(template.render({
+            	'title': "You have already taken this survey",
+            	'message': "If you believe that you are receiving this message in error, please ",
+            	'link': "mailto:lnl-vp@wpi.edu",
+            	'link_desc': "contact us"
+            }, request))
         return super(PostEventSurveyCreate, self).dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
