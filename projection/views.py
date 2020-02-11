@@ -83,25 +83,27 @@ class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super(ProjectionCreate, self).get_context_data(**kwargs)
-        if self.request.POST:
-            context['formset'] = PITFormset(self.request.POST)
-        else:
-            context['formset'] = PITFormset()
-            f = context['form']
-            f.helper.layout.pop(-1)
-            f.helper.form_tag = False
-            context['form'] = f
+        context['type'] = "hide"
+        # No longer using the PIT form in this view
+#         if self.request.POST:
+#             context['formset'] = PITFormset(self.request.POST)
+#         else:
+#             context['formset'] = PITFormset()
+#             f = context['form']
+#             f.helper.layout.pop(-1)
+#             f.helper.form_tag = False
+#             context['form'] = f
 
         return context
 
     def form_valid(self, form):
         context = self.get_context_data()
-        pitform = context['formset']
+        #pitform = context['formset']
 
-        if form.is_valid() and pitform.is_valid():
+        if form.is_valid():# and pitform.is_valid():
             self.object = form.save()
-            pitform.instance = self.object
-            pitform.save()
+            #pitform.instance = self.object
+            #pitform.save()
             return HttpResponseRedirect(self.success_url)
         else:
             return self.render_to_response(self.get_context_data(form=form))

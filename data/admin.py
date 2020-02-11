@@ -4,5 +4,7 @@ from .models import ResizedRedirect
 
 class RedirectAdmin(admin.ModelAdmin):
     pass
+    
+admin.site.index_template = "admin/index.html"
 admin.site.unregister(BaseRedirect)
 admin.site.register(ResizedRedirect, RedirectAdmin)

@@ -426,6 +426,7 @@ EMAIL_TARGET_T = "lnl-t@wpi.edu"
 EMAIL_TARGET_TD = "lnl-td@wpi.edu"
 EMAIL_TARGET_W = "lnl-w@wpi.edu"
 EMAIL_TARGET_HP = "lnl-hp@wpi.edu"
+EMAIL_TARGET_NEWS = "lnl-news@wpi.edu"
 
 SEND_EMAIL_ORG_TRANSFER = True
 SEND_START_END_EMAILS = False

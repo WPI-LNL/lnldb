@@ -217,8 +217,23 @@ def survey_dashboard(request):
                 context['wma']['overall'] += i * min((overall - 1.5) * 2, 4)
                 overall_denominator += i
             i -= 1
-        context['wma']['vp'] /= vp_denominator
-        context['wma']['crew'] /= crew_denominator
-        context['wma']['pricelist'] /= pricelist_denominator
-        context['wma']['overall'] /= overall_denominator
+        if vp_denominator != 0:
+        	context['wma']['vp'] /= vp_denominator
+        else:
+        	context['wma']['vp'] = 0
+        
+        if crew_denominator != 0:
+        	context['wma']['crew'] /= crew_denominator
+        else:
+        	context['wma']['crew'] = 0
+        
+        if pricelist_denominator != 0:
+        	context['wma']['pricelist'] /= pricelist_denominator
+        else:
+        	context['wma']['pricelist'] = 0
+        
+        if overall_denominator != 0:
+        	context['wma']['overall'] /= overall_denominator
+        else:
+        	context['wma']['overall'] = 0
     return render(request, 'survey_dashboard.html', context)

@@ -172,6 +172,9 @@
                             {% permission request.user has 'projection.view_pits' %}
                                 <li><a href="{% url "projection:grid" %}">View Projectionists</a></li>
                             {% endpermission %}
+                            {% permission request.user has 'projection.view_pits' %}
+                            	<li><a style="cursor: pointer" onclick="alert('Coming soon!\nThis feature is not yet available.');">Request Training</a></li>
+                            {% endpermission %}
                             {% permission request.user has 'projection.edit_pits' %}
                                 <li><a href="{% url "projection:bulk-edit" %}">Bulk Update Projectionists</a></li>
                             {% endpermission %}

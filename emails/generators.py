@@ -26,6 +26,16 @@ def send_survey_if_necessary(event):
     event.survey_sent = True
     event.save()
 
+def generate_web_service_email(details):
+	subject = details["subject"]
+	body = details["message"]
+	from_email = settings.DEFAULT_FROM_ADDR
+	reply_to_email = [settings.EMAIL_TARGET_W]
+	to_email = settings.DEFAULT_TO_ADDR
+	
+	email = WebServiceEmailGenerator(subject=subject, to_emails=to_email, from_email=from_email, reply_to=reply_to_email, body=body)
+	
+	return email
 
 def generate_notice_email(notice):
     subject = notice.subject
@@ -344,3 +354,31 @@ class SurveyEmailGenerator(DefaultLNLEmailGenerator):
                 build_html=build_html,
                 body=None,
                 attachments=attachments)
+
+class WebServiceEmailGenerator(DefaultLNLEmailGenerator):
+	def __init__(self, 
+			subject="Upcoming Maintenance", 
+			to_emails=settings.DEFAULT_TO_ADDR,
+			cc=None,
+			bcc=[settings.EMAIL_TARGET_W, settings.EMAIL_TARGET_NEWS],
+			from_email=settings.DEFAULT_FROM_ADDR,
+			reply_to=[settings.EMAIL_TARGET_W],
+			context=None,
+			template_basename="emails/email_generic",
+			build_html=True,
+			body=None,
+			attachments=None):
+		if context is None:
+			context = {}
+		super(WebServiceEmailGenerator, self).__init__(
+				subject=subject,
+				to_emails=to_emails,
+				cc=cc,
+				bcc=bcc,
+				from_email=from_email,
+				reply_to=reply_to,
+				context=context,
+				template_basename=template_basename,
+				build_html=build_html,
+				body=body,
+				attachments=attachments)

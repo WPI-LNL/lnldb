@@ -10,39 +10,45 @@
                 <form method="post" action="" class="form-horizontal">
                 {% crispy form %}
                 <hr>
-                {{ formset.management_form }}
-                <table class="table table-striped" valign="top">
-                    <tr>
-                        <th>PIT Level</th>
-                        <th>Created On </th>
-                        <th>Valid</th>
-                        <th>Delete?</th>
-                    </tr>
-                {% for form in formset %}
-                    {% if form.errors %}
-                    <tr class="warning">
-                        <td>{% for e in form.pit_level.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.created_on.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.valid.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
-                        <td>{% for e in form.DELETE.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
-                        <td></td>
-                    </tr>
-                    {% endif %}
-                    <tr>
-                        <td>{{ form.id }}{{ form.pit_level }} </td>
-                        <td class="dtptable">{{ form.created_on }} </td>
-                        <td>{{ form.valid }} </td>
-                        <td>{{ form.DELETE }} </td>
-                    </tr>
-                {% endfor %}
-                </table>
-                    <p class="text-muted">Pressing 'Delete This User' below will delete all of the information you see on this page and
-                    the user will no longer be listed in the projectionist list.</p>
-                    <div class="form-actions">
-                        <input name="submit" value="Save changes" class="btn btn-primary" id="submit-id-save" type="submit"> 
-                        {% if pk %}<a class="btn btn-danger" href="{% url "projection:remove" pk %}">Delete This User</a> {% endif %}
-                    </div>
-                </form>
+                {% if type == "hide" %}
+                <div style="display: none">
+                {% else %}
+                <div>
+                {% endif %}
+					{{ formset.management_form }}
+					<table class="table table-striped" valign="top">
+						<tr>
+							<th>PIT Level</th>
+							<th>Created On </th>
+							<th>Valid</th>
+							<th>Delete?</th>
+						</tr>
+					{% for form in formset %}
+						{% if form.errors %}
+						<tr class="warning">
+							<td>{% for e in form.pit_level.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+							<td>{% for e in form.created_on.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+							<td>{% for e in form.valid.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+							<td>{% for e in form.DELETE.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+							<td></td>
+						</tr>
+						{% endif %}
+						<tr>
+							<td>{{ form.id }}{{ form.pit_level }} </td>
+							<td class="dtptable">{{ form.created_on }} </td>
+							<td>{{ form.valid }} </td>
+							<td>{{ form.DELETE }} </td>
+						</tr>
+					{% endfor %}
+					</table>
+					<p class="text-muted">Pressing 'Delete This User' below will delete all of the information you see on this page and
+					the user will no longer be listed in the projectionist list.</p>
+					<div class="form-actions">
+						<input name="submit" value="Save changes" class="btn btn-primary" id="submit-id-save" type="submit"> 
+						{% if pk %}<a class="btn btn-danger" href="{% url "projection:remove" pk %}">Delete This User</a> {% endif %}
+					</div>
+				</div>
+            </form>
         </div>
     </div>
 {% endblock %}
