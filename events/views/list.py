@@ -502,7 +502,7 @@ def unreviewed(request, start=None, end=None):
     context['baseurl'] = reverse("events:unreviewed")
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
-    context['calurl'] = reverse('events:unreviewed-cal')
+    #context['calurl'] = reverse('events:unreviewed-cal')
     context['takes_param_projection'] = True
     context['cols'] = ['event_name',
                        'org',

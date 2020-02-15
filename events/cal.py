@@ -177,7 +177,7 @@ class UnreviewedCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
         queryset = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False) \
             .filter(reviewed=False) \
-            .filter(datetime_end__lte=now) \
+            .filter(datetime_end__lte=datetime.datetime.now()) \
             .distinct()
         return super(UnreviewedCalJsonView, self).get(request, queryset)
 

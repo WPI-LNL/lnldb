@@ -139,10 +139,11 @@
                 {% permission request.user has 'inventory.view_equipment' %}
                 <li class="{% ancestor '/db/inventory/' %} dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                        Inventory
+                        Equipment
                         <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
+						<li><a href="{% url 'laptops:list' %}">User Guides &amp; Datasheets</a></li>
                         {% permission request.user has 'laptops.view_laptop' %}
                             <li><a href="{% url 'laptops:list' %}">Laptop passwords</a></li>
                         {% endpermission %}
@@ -150,7 +151,7 @@
                         <li><a href="{% url 'inventory:snipe_checkin' %}">Inventory checkin</a></li>
                         <li><a target="_blank" href="https://lnl-rt.wpi.edu/snipe/">View inventory - Snipe <i class="glyphicon glyphicon-new-window"></i></a></li>
                         <li><a target="_blank" href="https://lnl-rt.wpi.edu/rt/">Repairs ticket system - RT <i class="glyphicon glyphicon-new-window"></i></a></li>
-                        <li class="divider"></li>
+                        <!--<li class="divider"></li>
                         <li class="dropdown-header">Old soon-to-be-removed</li>
                         <li><a href="{% url "inventory:view_all" %}">View Inventory</a></li>
                         {% permission request.user has 'inventory.add_equipmentclass' %}
@@ -158,7 +159,7 @@
                         {% endpermission %}
                         {% permission request.user has 'inventory.add_equipmentitem' %}
                             <li><a href="{% url "inventory:fast_mk" %}">Quick Add Items</a></li>
-                        {% endpermission %}
+                        {% endpermission %}-->
                     </ul>
                 </li>
                 {% endpermission %}
@@ -176,6 +177,7 @@
                             	<li><a style="cursor: pointer" onclick="alert('Coming soon!\nThis feature is not yet available.');">Request Training</a></li>
                             {% endpermission %}
                             {% permission request.user has 'projection.edit_pits' %}
+                            	<li><a href="{% url "projection:bulk-edit" %}">Schedule Training</a></li>
                                 <li><a href="{% url "projection:bulk-edit" %}">Bulk Update Projectionists</a></li>
                             {% endpermission %}
                             {% permission request.user has 'projection.add_bulk_events' %}
