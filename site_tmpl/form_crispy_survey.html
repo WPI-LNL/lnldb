@@ -3,25 +3,27 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-md-12">
+        <div class="container">
             <h1>Post-event survey for {{ event.event_name }}</h1>
             <p>
                 Thank you for choosing Lens and Lights to provide sound, lighting, or projection services for your
                 recent event! In order to improve our services, we would like your honest feedback. This survey is not
                 anonymous. Your answers are not saved until you press the submit button at the bottom of the page.
             </p>
-            <p>
+            <p style="padding-bottom: 4%">
                 You are completing this survey for {{ event.event_name }}, which took place in {{ event.location }} from
                 {{ event.datetime_start }} to {{ event.datetime_end }} See full details of this event
                 <a target="_blank" href="{% url 'events:detail' event.id %}">here</a>.
             </p>
         </div>
     </div>
+    <div class="container"><div class="container">
     {% if helper %}
         {% crispy form helper %}
     {% else %}
         {% crispy form %}
     {% endif %}
+    </div></div>
 {% endblock %}
 
 {% block extras %}

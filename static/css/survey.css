@@ -1,0 +1,21 @@
+.striped .line:nth-child(odd){
+	background-color: #e2e2e2;
+}
+
+.striped .form-group:nth-child(odd){
+	background-color: #e2e2e2;
+	padding-top: 1%;
+}
+
+.form-group {
+	margin: 0;
+	padding-top: 1%;
+}
+
+label {
+	padding-left: 1%;
+}
+
+.line {
+	overflow: scroll;
+}

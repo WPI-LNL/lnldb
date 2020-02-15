@@ -42,6 +42,9 @@
         <link href='{% static 'ajax_select/css/ajax_select.css' %}' rel="stylesheet" type="text/css">
         <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet">
         <link rel="stylesheet" type="text/css" href="{% static 'hijack/hijack-styles.css' %}" />
+        {% if CCSS == 'survey' %}
+        <link rel="stylesheet" type="text/css" href="{% static 'css/survey.css' %}"/>
+        {% endif %}
         <script type="text/javascript">
             $(document).ready(function () {
                 $(".dateinput").datepicker({

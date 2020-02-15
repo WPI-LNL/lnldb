@@ -354,6 +354,7 @@ class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super(PostEventSurveyCreate, self).get_context_data(**kwargs)
         now = timezone.now()
+        context['CCSS'] = 'survey';
         context['event'] = get_object_or_404(
             BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now, datetime_end__gt=(now - datetime.timedelta(days=30))),
             pk=self.kwargs['eventid']

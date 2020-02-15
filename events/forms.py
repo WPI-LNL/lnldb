@@ -1543,27 +1543,44 @@ class PostEventSurveyForm(forms.ModelForm):
         self.helper.layout = Layout(
             Div(
                 Div(
+                	HTML('<div class="striped">'),
                     'services_quality',
+                    HTML('</div>'),
                     'lighting_quality',
+                    HTML('<div class="striped">'),
                     'sound_quality',
+                    HTML('</div>'),
                     'work_order_method',
+                    HTML('<div style="border-bottom: 2px solid gray; padding-bottom: 1%; margin: 0"></div>'),
+                    HTML('<div class="striped">'),
                     'work_order_experience',
+                    HTML('</div>'),
                     css_class='col'
                 ),
                 css_class='row'
             ),
             Div(
                 Div(
-                    HTML('<h2>Please rate your level of agreement with the following statements.</h2>'),
+                    HTML('<br><br><h2>Please rate your level of agreement with the following statements.</h2><br>'),
+                    HTML('<div class="striped">'),
                     'communication_responsiveness',
+                    HTML('</div>'),
                     'pricelist_ux',
+                    HTML('<div class="striped">'),
                     'setup_on_time',
+                    HTML('</div>'),
                     'crew_respectfulness',
+                    HTML('<div class="striped">'),
                     'crew_preparedness',
+                    HTML('</div>'),
                     'crew_knowledgeability',
+                    HTML('<div class="striped">'),
                     'quote_as_expected',
+                    HTML('</div>'),
                     'price_appropriate',
+                    HTML('<div class="striped">'),
                     'customer_would_return',
+                    HTML('</div><br>'),
                     css_class='col'
                 ),
                 css_class='row'
