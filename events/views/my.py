@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.db.models.aggregates import Sum
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.functional import curry
@@ -164,13 +164,13 @@ def myevents(request):
 
 @login_required
 def eventfiles(request, eventid):
-    """ Files for an event"""
-    context = {}
-    event = get_object_or_404(Event, pk=eventid)
-
-    context['event'] = event
-    return render(request, 'myeventfiles.html', context)
-
+#	""" Files for an event"""
+#    context = {}
+#    event = get_object_or_404(Event, pk=eventid)
+#
+#    context['event'] = event
+#    return render(request, 'myeventfiles.html', context)
+	return redirect('/db/events/view/' + eventid + '/#files')
 
 # Views Relating to Crew Chiefs
 @login_required

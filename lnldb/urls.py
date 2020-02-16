@@ -45,7 +45,7 @@ urlpatterns += [
     url(r'^db/lookups/', include(ajax_select_urls)),
     url(r'^db/meetings/', include('meetings.urls', namespace='meetings')),
     url(r'^db/clients/', include('events.urls.orgs', namespace='orgs')),
-    url(r'^db/inventory/', include('inventory.urls', namespace='inventory')),
+    url(r'^db/equipment/', include('inventory.urls', namespace='equipment')),
     url(r'^db/laptops/', include('laptops.urls', namespace='laptops')),
     url(r'^db/projection/', include('projection.urls', namespace='projection')),
     url(r'^db/events/', include('events.urls.events', namespace='events')),

@@ -1,6 +1,7 @@
 import datetime
 # Create your models here.
 import logging
+import os
 
 from django.conf import settings
 from django.db import models
@@ -8,6 +9,7 @@ from django.db.models import Q
 from django.urls.base import reverse
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.functional import cached_property
+from django.core.files.storage import FileSystemStorage
 from mptt.fields import TreeForeignKey
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel
@@ -238,3 +240,36 @@ class EquipmentMaintEntry(models.Model):
     class Meta:
         get_latest_by = "date"
         ordering = ['-date']
+
+
+def guide_file_name(instance, filename):
+    return '/'.join(['guides', filename])
+
+
+class DocStorage(FileSystemStorage):
+	def get_available_name(self, name, max_length=None):
+		if self.exists(name):
+			dir_name, file_name = os.path.split(name)
+			file_root, file_ext = os.path.splitext(file_name)
+			
+			apd = ''
+			
+			name = os.path.join(dir_name, '{}_{}{}'.format(file_root, apd, file_ext))
+			
+		return name
+
+class EquipmentUserGuide(models.Model):
+	file = models.FileField(upload_to=guide_file_name, storage=DocStorage())
+	name = models.CharField(max_length=50)
+	date_modified = models.DateTimeField(auto_now_add=True)
+	tmpl = models.BooleanField(default=False)
+	datasheet = models.BooleanField(default=False)
+	
+	def __str__(self):
+		return str(self.name)
+		
+	class Meta:
+		permissions = (
+			("edit_guides", "Upload or edit User Guides"),
+			("view_guides", "View User Guides")
+		)

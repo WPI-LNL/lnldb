@@ -444,6 +444,16 @@
         "equipmentstatus"
       ],
       [
+      	"view_guides",
+      	"inventory",
+      	"equipmentuserguide"
+      ],
+      [
+      	"edit_guides",
+      	"inventory",
+      	"equipmentuserguide"
+      ],
+      [
         "add_meeting",
         "meetings",
         "meeting"
@@ -602,6 +612,11 @@
         "equipmentclass"
       ],
       [
+      	"view_guides",
+      	"inventory",
+      	"equipmentuserguide"
+      ],
+      [
         "list_mtgs",
         "meetings",
         "meeting"
@@ -715,6 +730,16 @@
         "equipmentmaintentry"
       ],
       [
+      	"view_guides",
+      	"inventory",
+      	"equipmentuserguide"
+      ],
+      [
+      	"edit_guides",
+      	"inventory",
+      	"equipmentuserguide"
+      ],
+      [
         "list_mtgs",
         "meetings",
         "meeting"
@@ -801,6 +826,11 @@
         "view_equipment",
         "inventory",
         "equipmentclass"
+      ],
+      [
+      	"view_guides",
+      	"inventory",
+      	"equipmentuserguide"
       ],
       [
         "list_mtgs",
@@ -1042,6 +1072,16 @@
         "change_equipmentstatus",
         "inventory",
         "equipmentstatus"
+      ],
+      [
+      	"edit_guides",
+      	"inventory",
+      	"equipmentuserguide"
+      ],
+      [
+      	"view_guides",
+      	"inventory",
+      	"equipmentuserguide"
       ],
       [
         "view_laptop",
