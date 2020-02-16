@@ -177,7 +177,7 @@
                             	<li><a style="cursor: pointer" onclick="alert('Coming soon!\nThis feature is not yet available.');">Request Training</a></li>
                             {% endpermission %}
                             {% permission request.user has 'projection.edit_pits' %}
-                            	<li><a href="{% url "projection:bulk-edit" %}">Schedule Training</a></li>
+                            	<li><a style="cursor: pointer" onclick="alert('Coming soon!\nThis feature is not yet available.');">Schedule Training</a></li>
                                 <li><a href="{% url "projection:bulk-edit" %}">Bulk Update Projectionists</a></li>
                             {% endpermission %}
                             {% permission request.user has 'projection.add_bulk_events' %}
