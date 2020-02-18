@@ -143,7 +143,7 @@
                         <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
-						<li><a href="{% url 'inventory:user_guides' %}">User Guides &amp; Datasheets</a></li>
+						<li><a target="_blank" href="https://wpi0.sharepoint.com/:f:/r/sites/gr-lnl/Shared%20Documents/Technical%20Reference?csf=1&e=uEtBtt">User Guides &amp; Datasheets</a></li>
                         {% permission request.user has 'laptops.view_laptop' %}
                             <li><a href="{% url 'laptops:list' %}">Laptop passwords</a></li>
                         {% endpermission %}

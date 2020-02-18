@@ -36,7 +36,7 @@ AGREEMENT_CHOICES = (
     (2, 'Neither agree nor disagree'),
     (3, 'Agree'),
     (4, 'Strongly agree'),
-    (-1, 'No basis to judge')
+    (-1, 'Not applicable')
 )
 
 EXCELLENCE_CHOICES = (
@@ -45,7 +45,7 @@ EXCELLENCE_CHOICES = (
     (2, 'Good'),
     (3, 'Very good'),
     (4, 'Excellent'),
-    (-1, 'No basis to judge')
+    (-1, 'Not applicable')
 )
 
 
@@ -1348,8 +1348,8 @@ class PostEventSurvey(models.Model):
 
     # survey questions
     services_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='Please rate the overall quality of the services Lens and Lights provided.')
-    lighting_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How did the lighting look? If we did not provide lighting, choose "No basis to judge".')
-    sound_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How did the sound system sound? If we did not provide sound, choose "No basis to judge".')
+    lighting_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How did the lighting look? If we did not provide lighting, choose "Not applicable".')
+    sound_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How did the sound system sound? If we did not provide sound, choose "Not applicable".')
     work_order_method = models.IntegerField(choices=(
         (1, 'Via the website at lnl.wpi.edu/workorder'),
         (2, 'Emailed lnl@wpi.edu'),

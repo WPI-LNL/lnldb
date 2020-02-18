@@ -427,20 +427,20 @@ def item_rm(request, item_id):
 #
 #     return render(request, 'form_crispy.html', context)
 
-@login_required
-def user_guides(request):
-	if not request.user.has_perm('inventory.view_equipment'):
-		raise PermissionDenied
-	
-	context = {}
-	tmpls = models.EquipmentUserGuide.objects.filter(tmpl=True).order_by('name')
-	guides = models.EquipmentUserGuide.objects.filter(tmpl=False).filter(datasheet=False).order_by('name')
-	datasheets = models.EquipmentUserGuide.objects.filter(datasheet=True).order_by('name')
-
-	context['tmpls'] = tmpls
-	context['guides'] = guides
-	context['datasheets'] = datasheets
-	return render(request, 'user-docs.html', context)
+# @login_required
+# def user_guides(request):
+# 	if not request.user.has_perm('inventory.view_equipment'):
+# 		raise PermissionDenied
+# 	
+# 	context = {}
+# 	tmpls = models.EquipmentUserGuide.objects.filter(tmpl=True).order_by('name')
+# 	guides = models.EquipmentUserGuide.objects.filter(tmpl=False).filter(datasheet=False).order_by('name')
+# 	datasheets = models.EquipmentUserGuide.objects.filter(datasheet=True).order_by('name')
+# 
+# 	context['tmpls'] = tmpls
+# 	context['guides'] = guides
+# 	context['datasheets'] = datasheets
+# 	return render(request, 'user-docs.html', context)
 
 @login_required
 @permission_required('inventory.view_equipment', raise_exception=True)
