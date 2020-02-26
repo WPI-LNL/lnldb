@@ -4,7 +4,7 @@
         <div class="form-check" style="text-align:center;flex: 1 1 0;">
             <input class="form-check-input" type="radio" name="{{ option.name }}"
                 id="{{ option.attrs.id }}"
-                value={{option.value}} required {% if widget.value.0 == option.value or option.value == widget.initial %} checked="checked"{% endif %} />
+                value={{option.value}} {% if widget.value.0 == option.value or option.value == widget.initial %} checked="checked"{% endif %} />
             <br><label class="form-check-label" for="{{ option.attrs.id }}">{{option.label}}</label>
         </div>
     {% endfor %}

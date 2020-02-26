@@ -1348,9 +1348,10 @@ class PostEventSurvey(models.Model):
 
     # survey questions
     services_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='Please rate the overall quality of the services Lens and Lights provided.')
-    lighting_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How did the lighting look? If we did not provide lighting, choose "Not applicable".')
-    sound_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How did the sound system sound? If we did not provide sound, choose "Not applicable".')
+    lighting_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How satisfied were you with the lighting?')
+    sound_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How satisfied were you with the sound system?')
     work_order_method = models.IntegerField(choices=(
+        (None, 'Please select...'),
         (1, 'Via the website at lnl.wpi.edu/workorder'),
         (2, 'Emailed lnl@wpi.edu'),
         (3, 'Emailed an LNL representative directly'),
@@ -1359,21 +1360,22 @@ class PostEventSurvey(models.Model):
         (0, 'Other'),
         (-1, 'I don\'t know')
     ), verbose_name='How did you submit the work order?')
-    work_order_experience = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How was your experience submitting the work order?')
+    work_order_experience = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How would you rate your overall experience using the work order tool?', null=True, blank=True, default=-1)
+    work_order_ease = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How would you rate the workorder tool\'s clarity and ease of use?', null=True, blank=True, default=-1)
 
     # survey agreement questions
     communication_responsiveness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='Lens and Lights was responsive to my communications.')
     pricelist_ux = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='It was easy to determine which services to request.')
-    setup_on_time = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='My event was set up on time.')
-    crew_respectfulness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The crew was respectful of my property and of other people.')
-    crew_preparedness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The crew was prepared.')
-    crew_knowledgeability = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The crew was knowledgeable.')
-    quote_as_expected = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The price quoted for the event matched my expectations.')
-    price_appropriate = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The price is appropriate for the services provided.')
+    setup_on_time = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='My event was set up and the crew was ready on time.')
+    crew_respectfulness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='When interacting with the crew they were helpful and respectful.')
+    #crew_preparedness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The crew was prepared.')
+    #crew_knowledgeability = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The crew was knowledgeable.')
+    #quote_as_expected = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The price quoted for the event matched my expectations.')
+    price_appropriate = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The price quoted for the event matched my expectations and was appropriate for the services provided.')
     customer_would_return = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='I would use Lens and Lights in the future.')
 
     # textarea questions
-    comments = models.TextField(blank=True, verbose_name='Please use this area to explain low ratings above or to provide any other feedback you have. We value your feedback and will use it to improve our services.')
+    comments = models.TextField(blank=True, verbose_name='Please use this area to provide any other feedback you may have about your event.')
 
     def __str__(self):
         return 'Post-event survey for {} by {}'.format(self.event, self.person)

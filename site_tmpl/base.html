@@ -167,11 +167,15 @@
         </div>
 
       <footer>
+          {% if NO_FOOT %}
+              <!-- No footer -->
+          {% else %}
           <p>&copy; WPI Lens and Lights &middot; <a href="{% url "cal:list" %}">Want to get involved?</a>
         
         </p>
         <p>Generated {% now "N d Y, P e" %}; version {{ GIT_RELEASE }}</p>
         <!-- IP: {{ request.META.REMOTE_ADDR }} -->
+          {% endif %}
       </footer>
 
     </div><!--/.fluid-container-->

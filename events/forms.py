@@ -89,7 +89,7 @@ def get_qs_from_event(event):
             proj_id = event.projection.id
         else:
             proj_id = None
-    
+
         return Service.objects.filter(Q(id__in=[lighting_id]) | Q(id__in=[sound_id]) | Q(id__in=[proj_id]) | Q(
             id__in=[i.id for i in event.otherservices.all()]))
     elif isinstance(event, Event2019):
@@ -104,7 +104,7 @@ class CustomAutoCompleteSelectMultipleField(AutoCompleteSelectMultipleField):
 
 class CustomEventModelMultipleChoiceField(forms.ModelMultipleChoiceField):
     def label_from_instance(self, event):
-        return six.u('%s\u2014%s') % (event.event_name, ', '.join(map(lambda org : org.name, event.org.all())))
+        return six.u('%s\u2014%s') % (event.event_name, ', '.join(map(lambda org: org.name, event.org.all())))
 
 
 class CustomOrganizationEmailModelMultipleChoiceField(forms.ModelMultipleChoiceField):
@@ -158,6 +158,7 @@ class CrewChiefAssign(forms.ModelForm):
         model = Event
         fields = ("crew_chief",)
 
+
 class IOrgForm(FieldAccessForm):
     def __init__(self, request_user, *args, **kwargs):
         self.helper = FormHelper()
@@ -206,6 +207,7 @@ class IOrgForm(FieldAccessForm):
         model = Organization
         fields = ('name', 'exec_email', 'address', 'phone', 'associated_orgs', 'personal',
                   'accounts', 'user_in_charge', 'associated_users', 'notes', 'delinquent')
+
     # associated_orgs = make_ajax_field(Organization,'associated_orgs','Orgs',plugin_options = {'minLength':2})
     # associated_users = make_ajax_field(Organization,'associated_users','Users',plugin_options = {'minLength':3})
     user_in_charge = AutoCompleteSelectField('Users')
@@ -293,7 +295,7 @@ class EventApprovalForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(EventApprovalForm, self).__init__(*args, **kwargs)
         tabs = (
-             Tab(
+            Tab(
                 "Standard Fields",
                 Field('description', label="Description (optional)", css_class="col-md-6"),
                 Field('internal_notes', label="Internal Notes", css_class="col-md-6"),
@@ -656,7 +658,7 @@ class InternalEventForm2019(FieldAccessForm):
 
         survey_edit = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.view_posteventsurvey') and \
-                (instance is None or not instance.survey_sent),
+                                   (instance is None or not instance.survey_sent),
             enable=('send_survey',)
         )
 
@@ -760,6 +762,7 @@ class InternalReportForm(FieldAccessForm):
         widgets = {
             'report': PagedownWidget()
         }
+
     crew_chief = AutoCompleteSelectField('Members', required=False)
 
     class FieldAccess:
@@ -887,7 +890,8 @@ class WorkdayForm(forms.ModelForm):
     def clean_worktag(self):
         pattern = re.compile('[0-9]+-[A-Z][A-Z]')
         if pattern.match(self.cleaned_data['worktag']) is None:
-            raise ValidationError('What you entered is not a valid worktag. Here are some examples of what a worktag looks like: 1234-CC, 123-AG')
+            raise ValidationError(
+                'What you entered is not a valid worktag. Here are some examples of what a worktag looks like: 1234-CC, 123-AG')
         return self.cleaned_data['worktag']
 
     class Meta:
@@ -975,7 +979,8 @@ class MultiBillingForm(forms.ModelForm):
         layout = []
         if show_nonbulk_events:
             layout += [
-                HTML('<a href="?show_nonbulk_events=false">Switch back to showing only events marked for semester billing</a>')
+                HTML(
+                    '<a href="?show_nonbulk_events=false">Switch back to showing only events marked for semester billing</a>')
             ]
         else:
             layout += [
@@ -994,8 +999,9 @@ class MultiBillingForm(forms.ModelForm):
         self.helper.layout = Layout(*layout)
         super(MultiBillingForm, self).__init__(*args, **kwargs)
         if show_nonbulk_events is True:
-            self.fields['events'].queryset=BaseEvent.objects.filter(closed=False, reviewed=True, billings__isnull=True) \
-                    .exclude(multibillings__isnull=False, multibillings__date_paid__isnull=False)
+            self.fields['events'].queryset = BaseEvent.objects.filter(closed=False, reviewed=True,
+                                                                      billings__isnull=True) \
+                .exclude(multibillings__isnull=False, multibillings__date_paid__isnull=False)
             self.fields['events'].help_text = 'Only unbilled, reviewed events are listed above.'
         self.fields['date_billed'].initial = datetime.date.today()
 
@@ -1023,7 +1029,7 @@ class MultiBillingForm(forms.ModelForm):
 
     events = CustomEventModelMultipleChoiceField(
         queryset=BaseEvent.objects.filter(closed=False, reviewed=True, billings__isnull=True, billed_in_bulk=True) \
-                .exclude(multibillings__isnull=False, multibillings__date_paid__isnull=False),
+            .exclude(multibillings__isnull=False, multibillings__date_paid__isnull=False),
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
         help_text="Only unbilled, reviewed events that are marked for semester billing are listed above."
     )
@@ -1036,7 +1042,7 @@ class MultiBillingUpdateForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
         self.helper.form_action = ""
-        events_str = ', '.join(map(lambda event : event.event_name, self.instance.events.all()))
+        events_str = ', '.join(map(lambda event: event.event_name, self.instance.events.all()))
         self.helper.layout = Layout(
             HTML('<p>Events: ' + events_str + '</p>'),
             PrependedText('date_paid', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
@@ -1083,7 +1089,7 @@ class BillingEmailForm(forms.ModelForm):
         cleaned_data = super(BillingEmailForm, self).clean()
         if not cleaned_data.get('email_to_users', None) and not cleaned_data.get('email_to_orgs', None):
             raise ValidationError('No recipients')
-        for user in map(lambda id : get_user_model().objects.get(id=id), cleaned_data.get('email_to_users', [])):
+        for user in map(lambda id: get_user_model().objects.get(id=id), cleaned_data.get('email_to_users', [])):
             if not user.email:
                 raise ValidationError('User %s has no email address on file' % user.get_full_name())
         for org in cleaned_data.get('email_to_orgs', []):
@@ -1116,12 +1122,12 @@ class MultiBillingEmailForm(forms.ModelForm):
     def __init__(self, multibilling, *args, **kwargs):
         super(MultiBillingEmailForm, self).__init__(*args, **kwargs)
         self.multibilling = multibilling
-        orgsets = map(lambda event : event.org.all(), multibilling.events.all())
+        orgsets = map(lambda event: event.org.all(), multibilling.events.all())
         orgs = next(iter(orgsets))
         for orgset in orgsets:
             orgs |= orgset
         orgs = orgs.distinct()
-        contacts = map(lambda event : event.contact.pk, multibilling.events.filter(contact__isnull=False))
+        contacts = map(lambda event: event.contact.pk, multibilling.events.filter(contact__isnull=False))
         self.fields["email_to_orgs"].queryset = orgs
         self.fields["email_to_orgs"].initial = multibilling.org
         self.fields["email_to_users"].initial = contacts
@@ -1144,7 +1150,7 @@ class MultiBillingEmailForm(forms.ModelForm):
         cleaned_data = super(MultiBillingEmailForm, self).clean()
         if not cleaned_data.get('email_to_users', None) and not cleaned_data.get('email_to_orgs', None):
             raise ValidationError('No recipients')
-        for user in map(lambda id : get_user_model().objects.get(id=id), cleaned_data.get('email_to_users', [])):
+        for user in map(lambda id: get_user_model().objects.get(id=id), cleaned_data.get('email_to_users', [])):
             if not user.email:
                 raise ValidationError('User %s has no email address on file' % user.get_full_name())
         for org in cleaned_data.get('email_to_orgs', []):
@@ -1193,8 +1199,8 @@ class MKHoursForm(forms.ModelForm):
         super(MKHoursForm, self).__init__(*args, **kwargs)
         self.fields['service'].queryset = get_qs_from_event(event)
         if isinstance(event, Event2019):
-            self.fields['category'].queryset = Category.objects.filter(pk__in=event.serviceinstance_set.values_list('service__category', flat=True))
-        
+            self.fields['category'].queryset = Category.objects.filter(
+                pk__in=event.serviceinstance_set.values_list('service__category', flat=True))
 
     def clean(self):
         super(MKHoursForm, self).clean()
@@ -1223,7 +1229,7 @@ class MKHoursForm(forms.ModelForm):
     user = AutoCompleteSelectField('Users', required=True)
     hours = forms.DecimalField(min_value=decimal.Decimal("0.00"))
     category = ModelChoiceField(queryset=Category.objects.all(), required=False)
-    service = ModelChoiceField(queryset=Service.objects.all(), required=False) # queryset gets changed in constructor
+    service = ModelChoiceField(queryset=Service.objects.all(), required=False)  # queryset gets changed in constructor
 
 
 class EditHoursForm(forms.ModelForm):
@@ -1307,7 +1313,8 @@ class CCIForm(forms.ModelForm):
         # x = self.instance.event.lighting
         self.fields['service'].queryset = get_qs_from_event(event)
         if isinstance(event, Event2019):
-            self.fields['category'].queryset = Category.objects.filter(pk__in=event.serviceinstance_set.values_list('service__category', flat=True))
+            self.fields['category'].queryset = Category.objects.filter(
+                pk__in=event.serviceinstance_set.values_list('service__category', flat=True))
         self.fields['setup_start'].initial = self.fields['setup_start'].prepare_value(
             self.event.datetime_setup_complete.replace(second=0, microsecond=0)
         )
@@ -1346,7 +1353,7 @@ class CCIForm(forms.ModelForm):
         group_label=lambda group: group.name,
     )
     category = ModelChoiceField(queryset=Category.objects.all(), required=False)
-    service = ModelChoiceField(queryset=Service.objects.all(), required=False) # queryset gets changed in constructor
+    service = ModelChoiceField(queryset=Service.objects.all(), required=False)  # queryset gets changed in constructor
 
 
 # Forms for Inline Formsets
@@ -1534,6 +1541,7 @@ class WorkorderRepeatForm(forms.ModelForm):
 
         return cleaned_data
 
+
 class PostEventSurveyForm(forms.ModelForm):
 
     def __init__(self, event, *args, **kwargs):
@@ -1543,17 +1551,21 @@ class PostEventSurveyForm(forms.ModelForm):
         self.helper.layout = Layout(
             Div(
                 Div(
-                	HTML('<div class="striped">'),
+                    HTML('<div class="striped">'),
                     'services_quality',
                     HTML('</div>'),
                     'lighting_quality',
                     HTML('<div class="striped">'),
                     'sound_quality',
                     HTML('</div>'),
+                    HTML('<div class="row" style="padding-top: 1%; padding-bottom: 1%; padding-left: 1%"><div class="col-md-4"'),
                     'work_order_method',
+                    HTML('</div></div>'),
                     HTML('<div style="border-bottom: 2px solid gray; padding-bottom: 1%; margin: 0"></div>'),
-                    HTML('<div class="striped">'),
+                    HTML('<div id="workorder" style="display: none"><div class="striped">'),
                     'work_order_experience',
+                    HTML('</div>'),
+                    'work_order_ease',
                     HTML('</div>'),
                     css_class='col'
                 ),
@@ -1570,24 +1582,23 @@ class PostEventSurveyForm(forms.ModelForm):
                     'setup_on_time',
                     HTML('</div>'),
                     'crew_respectfulness',
+                    #HTML('<div class="striped">'),
+                    # 'crew_preparedness',
+                    # HTML('</div>'),
+                    #'crew_knowledgeability',
                     HTML('<div class="striped">'),
-                    'crew_preparedness',
-                    HTML('</div>'),
-                    'crew_knowledgeability',
-                    HTML('<div class="striped">'),
-                    'quote_as_expected',
-                    HTML('</div>'),
+                    #'quote_as_expected',
                     'price_appropriate',
-                    HTML('<div class="striped">'),
+                    HTML('</div>'),
                     'customer_would_return',
-                    HTML('</div><br>'),
+                    HTML('<br>'),
                     css_class='col'
                 ),
                 css_class='row'
             ),
             Div(
                 Div(
-                    HTML('<h2>Optional questions</h2>'),
+                    HTML('<h2>Additional Comments</h2>'),
                     'comments',
                     css_class='col'
                 ),
@@ -1609,8 +1620,9 @@ class PostEventSurveyForm(forms.ModelForm):
     class Meta:
         model = PostEventSurvey
         fields = ('services_quality', 'lighting_quality', 'sound_quality', 'work_order_method', 'work_order_experience',
-        'communication_responsiveness', 'pricelist_ux', 'setup_on_time', 'crew_respectfulness', 'crew_preparedness',
-        'crew_knowledgeability', 'quote_as_expected', 'price_appropriate', 'customer_would_return', 'comments')
+                  'work_order_ease', 'communication_responsiveness', 'pricelist_ux', 'setup_on_time', 'crew_respectfulness',
+                  # 'crew_preparedness', 'crew_knowledgeability', 'quote_as_expected',
+                  'price_appropriate', 'customer_would_return', 'comments')
 
     services_quality = forms.ChoiceField(
         label=PostEventSurvey._meta.get_field('services_quality').verbose_name,
@@ -1632,8 +1644,14 @@ class PostEventSurveyForm(forms.ModelForm):
 
     work_order_method = forms.ChoiceField(
         label=PostEventSurvey._meta.get_field('work_order_method').verbose_name,
-        widget=forms.RadioSelect,
+        widget=forms.Select,
         choices=PostEventSurvey._meta.get_field('work_order_method').choices,
+    )
+
+    work_order_ease = forms.ChoiceField(
+        label=PostEventSurvey._meta.get_field('work_order_ease').verbose_name,
+        widget=SurveyCustomRadioSelect,
+        choices=PostEventSurvey._meta.get_field('work_order_ease').choices,
     )
 
     work_order_experience = forms.ChoiceField(
@@ -1666,23 +1684,23 @@ class PostEventSurveyForm(forms.ModelForm):
         choices=PostEventSurvey._meta.get_field('crew_respectfulness').choices,
     )
 
-    crew_preparedness = forms.ChoiceField(
-        label=PostEventSurvey._meta.get_field('crew_preparedness').verbose_name,
-        widget=SurveyCustomRadioSelect,
-        choices=PostEventSurvey._meta.get_field('crew_preparedness').choices,
-    )
+    #    crew_preparedness = forms.ChoiceField(
+    #        label=PostEventSurvey._meta.get_field('crew_preparedness').verbose_name,
+    #        widget=SurveyCustomRadioSelect,
+    #        choices=PostEventSurvey._meta.get_field('crew_preparedness').choices,
+    #    )
 
-    crew_knowledgeability = forms.ChoiceField(
-        label=PostEventSurvey._meta.get_field('crew_knowledgeability').verbose_name,
-        widget=SurveyCustomRadioSelect,
-        choices=PostEventSurvey._meta.get_field('crew_knowledgeability').choices,
-    )
+    # crew_knowledgeability = forms.ChoiceField(
+    #     label=PostEventSurvey._meta.get_field('crew_knowledgeability').verbose_name,
+    #     widget=SurveyCustomRadioSelect,
+    #     choices=PostEventSurvey._meta.get_field('crew_knowledgeability').choices,
+    # )
 
-    quote_as_expected = forms.ChoiceField(
-        label=PostEventSurvey._meta.get_field('quote_as_expected').verbose_name,
-        widget=SurveyCustomRadioSelect,
-        choices=PostEventSurvey._meta.get_field('quote_as_expected').choices,
-    )
+    # quote_as_expected = forms.ChoiceField(
+    #     label=PostEventSurvey._meta.get_field('quote_as_expected').verbose_name,
+    #     widget=SurveyCustomRadioSelect,
+    #     choices=PostEventSurvey._meta.get_field('quote_as_expected').choices,
+    # )
 
     price_appropriate = forms.ChoiceField(
         label=PostEventSurvey._meta.get_field('price_appropriate').verbose_name,
@@ -1695,6 +1713,7 @@ class PostEventSurveyForm(forms.ModelForm):
         widget=SurveyCustomRadioSelect,
         choices=PostEventSurvey._meta.get_field('customer_would_return').choices,
     )
+
 
 # __        __         _                 _
 # \ \      / /__  _ __| | _____  _ __ __| | ___ _ __
@@ -1763,7 +1782,8 @@ class OrgForm(forms.Form):
         # If we ever decide to restrict organization selection to their members, remove the Q(archived=False)
         # the org nl, is a special org that everyone has access to and is not listed.
         self.fields['group'].queryset = Organization.objects.filter(
-            Q(archived=False) | Q(user_in_charge=user) | Q(associated_users__in=[user.id]) | Q(shortname="nl")).distinct()
+            Q(archived=False) | Q(user_in_charge=user) | Q(associated_users__in=[user.id]) | Q(
+                shortname="nl")).distinct()
         self.helper.layout = Layout(
             'group',
             HTML(
@@ -1814,7 +1834,7 @@ class SelectForm(forms.Form):
     # soon to be a
     location = GroupedModelChoiceField(
         queryset=Location.objects.filter(show_in_wo_form=True)
-                         .select_related('building'),
+            .select_related('building'),
         group_by_field="building",
         group_label=lambda group: group.name,
     )
@@ -1935,7 +1955,6 @@ class ProjectionForm(forms.Form):
                 *[DynamicFieldContainer("e_%s" % extra.id) for extra in PROJ_EXTRAS.all()],
                 css_class="extra_fs"
             ),
-
 
         )
         super(ProjectionForm, self).__init__(*args, **kwargs)

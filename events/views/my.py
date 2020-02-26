@@ -164,13 +164,14 @@ def myevents(request):
 
 @login_required
 def eventfiles(request, eventid):
-#	""" Files for an event"""
-#    context = {}
-#    event = get_object_or_404(Event, pk=eventid)
-#
-#    context['event'] = event
-#    return render(request, 'myeventfiles.html', context)
-	return redirect('/db/events/view/' + eventid + '/#files')
+    #	""" Files for an event"""
+    #    context = {}
+    #    event = get_object_or_404(Event, pk=eventid)
+    #
+    #    context['event'] = event
+    #    return render(request, 'myeventfiles.html', context)
+    return redirect('/db/events/view/' + eventid + '/#files')
+
 
 # Views Relating to Crew Chiefs
 @login_required
@@ -346,7 +347,8 @@ class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
         kwargs = super(PostEventSurveyCreate, self).get_form_kwargs()
         now = timezone.now()
         kwargs['event'] = get_object_or_404(
-            BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now, datetime_end__gt=(now - datetime.timedelta(days=30))),
+            BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now,
+                                                          datetime_end__gt=(now - datetime.timedelta(days=30))),
             pk=self.kwargs['eventid']
         )
         return kwargs
@@ -355,21 +357,24 @@ class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
         context = super(PostEventSurveyCreate, self).get_context_data(**kwargs)
         now = timezone.now()
         context['CCSS'] = 'survey';
+        context['NO_FOOT'] = True;
         context['event'] = get_object_or_404(
-            BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now, datetime_end__gt=(now - datetime.timedelta(days=30))),
+            BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now,
+                                                          datetime_end__gt=(now - datetime.timedelta(days=30))),
             pk=self.kwargs['eventid']
         )
         return context
 
     def dispatch(self, request, *args, **kwargs):
         if PostEventSurvey.objects.filter(event__id=kwargs['eventid'], person=request.user).exists():
-            #return HttpResponse('You have already taken this survey.', status=403)
+            # return HttpResponse('You have already taken this survey.', status=403)
             template = loader.get_template('default.html')
             return HttpResponse(template.render({
-            	'title': "You have already taken this survey",
-            	'message': "If you believe that you are receiving this message in error, please ",
-            	'link': "mailto:lnl-vp@wpi.edu",
-            	'link_desc': "contact us"
+                'title': "You have already taken this survey",
+                'message': "If you believe that you are receiving this message in error, please ",
+                'link': "mailto:lnl-vp@wpi.edu",
+                'link_desc': "contact us",
+                'NO_FOOT': True
             }, request))
         return super(PostEventSurveyCreate, self).dispatch(request, *args, **kwargs)
 
@@ -379,9 +384,22 @@ class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
         result = super(PostEventSurveyCreate, self).form_valid(form)
         # Automatically add the survey-taker to the client (if the event has only one client)
         if obj.event.org.count() == 1 and obj.person not in obj.event.org.get().associated_users.all():
-            set_revision_comment('Took post-event survey for {}. User automatically added to client.'.format(self.object.event.event_name), None)
+            set_revision_comment('Took post-event survey for {}. User automatically added to client.'.format(
+                self.object.event.event_name), None)
             obj.event.org.get().associated_users.add(obj.person)
         return result
 
     def get_success_url(self):
-        return reverse("events:detail", args=(self.kwargs['eventid'],))
+        return reverse("my:survey-success")
+
+
+def survey_success(request):
+    template = loader.get_template('default.html')
+    return HttpResponse(template.render({
+        'title': "Thank you!",
+        'message': "Your response has been recorded. If you have any further comments, feel free to shoot us an email at ",
+        'link': "mailto:lnl@wpi.edu",
+        'link_desc': "lnl@wpi.edu",
+        'NO_FOOT': True,
+        'EXIT_BTN': True
+    }, request))

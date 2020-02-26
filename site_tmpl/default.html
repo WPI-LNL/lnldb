@@ -2,9 +2,12 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <h1>{{ title }}</h1>
-            <p>{{ message }} <a href="{{ link }}">{{ link_desc }}</a></p>
+            <p style="padding-top: 1%; padding-bottom: 2%">{{ message }} <a href="{{ link }}">{{ link_desc }}</a></p>
+            {% if EXIT_BTN %}
+            <button class="btn btn-secondary" onclick="window.location.href = '{% url "home" %}'">Exit</button>
+            {% endif %}
         </div>
     </div>
 {% endblock %}
