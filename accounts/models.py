@@ -1,7 +1,7 @@
 # noinspection PyProtectedMember
 from django.contrib.auth.models import AbstractUser, _user_has_perm
 from django.db.models import (BooleanField, CharField, IntegerField,
-                              PositiveIntegerField, Q, TextField)
+                              PositiveIntegerField, Q, TextField, DateField)
 from django.utils.six import python_2_unicode_compatible
 
 from events.models import Organization
@@ -25,6 +25,7 @@ class User(AbstractUser):
     student_id = PositiveIntegerField(null=True, blank=True, verbose_name="Student ID")
     class_year = PositiveIntegerField(null=True, blank=True)
     locked = BooleanField(default=False)
+    away_exp = DateField(verbose_name="Away Status Expiration", null=True, blank=True)
 
     def __str__(self):
         nick = '"%s" ' % self.nickname if self.nickname else ""

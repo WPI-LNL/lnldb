@@ -39,7 +39,7 @@ class UserEditForm(FieldAccessForm):
                 Fieldset("Student Info",
                          'wpibox', 'class_year', 'student_id'),
                 Fieldset("Internal Info",
-                         'mdc', 'groups'),
+                         'mdc', 'groups', 'away_exp'),
             ])
         layout.append(
             FormActions(
@@ -54,7 +54,7 @@ class UserEditForm(FieldAccessForm):
     class Meta:
         model = get_user_model()
         fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'groups', 'addr',
-                  'wpibox', 'mdc', 'phone', 'class_year', 'student_id']
+                  'wpibox', 'mdc', 'phone', 'class_year', 'student_id', 'away_exp']
 
     class FieldAccess:
         def __init__(self):
@@ -66,11 +66,11 @@ class UserEditForm(FieldAccessForm):
         )
         hasperm = FieldAccessLevel(
             lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
-            enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id')
+            enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id',)
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.change_group', instance),
-            enable=('groups',)
+            enable=('groups', 'away_exp')
         )
         edit_mdc = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.edit_mdc', instance),
