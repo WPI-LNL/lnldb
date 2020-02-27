@@ -21,7 +21,7 @@ from django_saml2_auth.views import signin as saml_login
 
 from data.forms import form_footer
 from emails.generators import DefaultLNLEmailGenerator
-from events.models import Event
+from events.models import Event2019
 from helpers import mixins
 
 from . import forms
@@ -100,8 +100,7 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
         context['hours'] = u.hours.filter(hours__isnull=False).select_related('event', 'service')
         context['ccs'] = u.ccinstances.select_related('event').all()
 
-        moviesccd = Event.objects.filter(Q(crew_chief=self.get_object()) | Q(ccinstances__crew_chief=self.get_object()),
-                                         projection__isnull=False).distinct()
+        moviesccd = Event2019.objects.filter(ccinstances__crew_chief=self.get_object(), serviceinstance__service__category__name="Projection").distinct()
 
         context['moviesccd'] = moviesccd.count()
         return context

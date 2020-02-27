@@ -59,23 +59,23 @@ class SurveyCrewChart(Chart):
                 Avg('sound_quality'),
                 Avg('setup_on_time'),
                 Avg('crew_respectfulness'),
-                Avg('crew_preparedness'),
-                Avg('crew_knowledgeability'),
+                # Avg('crew_preparedness'),
+                # Avg('crew_knowledgeability'),
             )
             data_lighting_quality.append({'x': event.datetime_start.isoformat(), 'y': data['lighting_quality__avg']})
             data_sound_quality.append({'x': event.datetime_start.isoformat(), 'y': data['sound_quality__avg']})
             data_setup_on_time.append({'x': event.datetime_start.isoformat(), 'y': data['setup_on_time__avg']})
             data_crew_respectfulness.append({'x': event.datetime_start.isoformat(), 'y': data['crew_respectfulness__avg']})
-            data_crew_preparedness.append({'x': event.datetime_start.isoformat(), 'y': data['crew_preparedness__avg']})
-            data_crew_knowledgeability.append({'x': event.datetime_start.isoformat(), 'y': data['crew_knowledgeability__avg']})
+            # data_crew_preparedness.append({'x': event.datetime_start.isoformat(), 'y': data['crew_preparedness__avg']})
+            # data_crew_knowledgeability.append({'x': event.datetime_start.isoformat(), 'y': data['crew_knowledgeability__avg']})
         options = {'type': 'line', 'fill': False, 'lineTension': 0}
         return [
             DataSet(label='Lighting quality', data=data_lighting_quality, color=(193, 37, 82), **options),
             DataSet(label='Sound quality', data=data_sound_quality, color=(255, 102, 0), **options),
             DataSet(label='Setup on time', data=data_setup_on_time, color=(245, 199, 0), **options),
-            DataSet(label='Crew respectfulness', data=data_crew_respectfulness, color=(106, 150, 31), **options),
-            DataSet(label='Crew preparedness', data=data_crew_preparedness, color=(0, 133, 53), **options),
-            DataSet(label='Crew knowledgeability', data=data_crew_knowledgeability, color=(110, 45, 214), **options),
+            DataSet(label='Crew was helpful', data=data_crew_respectfulness, color=(106, 150, 31), **options),
+            # DataSet(label='Crew preparedness', data=data_crew_preparedness, color=(0, 133, 53), **options),
+            # DataSet(label='Crew knowledgeability', data=data_crew_knowledgeability, color=(110, 45, 214), **options),
         ]
 
 
@@ -99,16 +99,16 @@ class SurveyPricelistChart(Chart):
         for event in events:
             data = event.surveys.aggregate(
                 Avg('pricelist_ux'),
-                Avg('quote_as_expected'),
+                # Avg('quote_as_expected'),
                 Avg('price_appropriate'),
             )
             data_pricelist_ux.append({'x': event.datetime_start.isoformat(), 'y': data['pricelist_ux__avg']})
-            data_quote_as_expected.append({'x': event.datetime_start.isoformat(), 'y': data['quote_as_expected__avg']})
+            # data_quote_as_expected.append({'x': event.datetime_start.isoformat(), 'y': data['quote_as_expected__avg']})
             data_price_appropriate.append({'x': event.datetime_start.isoformat(), 'y': data['price_appropriate__avg']})
         options = {'type': 'line', 'fill': False, 'lineTension': 0}
         return [
             DataSet(label='Pricelist UX', data=data_pricelist_ux, color=(193, 37, 82), **options),
-            DataSet(label='Quote as expected', data=data_quote_as_expected, color=(245, 199, 0), **options),
+            # DataSet(label='Quote as expected', data=data_quote_as_expected, color=(245, 199, 0), **options),
             DataSet(label='Price appropriate', data=data_price_appropriate, color=(0, 133, 53), **options),
         ]
 

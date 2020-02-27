@@ -132,6 +132,10 @@ def survey_dashboard(request):
                 Avg('work_order_experience'),
                 Count('work_order_experience'),
             ))
+            survey_results.update(event.surveys.filter(work_order_ease__gte=0).aggregate(
+                Avg('work_order_ease'),
+                Count('work_order_ease'),
+            ))
             survey_results.update(event.surveys.filter(communication_responsiveness__gte=0).aggregate(
                 Avg('communication_responsiveness'),
                 Count('communication_responsiveness'),
@@ -148,18 +152,18 @@ def survey_dashboard(request):
                 Avg('crew_respectfulness'),
                 Count('crew_respectfulness'),
             ))
-            survey_results.update(event.surveys.filter(crew_preparedness__gte=0).aggregate(
-                Avg('crew_preparedness'),
-                Count('crew_preparedness'),
-            ))
-            survey_results.update(event.surveys.filter(crew_knowledgeability__gte=0).aggregate(
-                Avg('crew_knowledgeability'),
-                Count('crew_knowledgeability'),
-            ))
-            survey_results.update(event.surveys.filter(quote_as_expected__gte=0).aggregate(
-                Avg('quote_as_expected'),
-                Count('quote_as_expected'),
-            ))
+            # survey_results.update(event.surveys.filter(crew_preparedness__gte=0).aggregate(
+            #     Avg('crew_preparedness'),
+            #     Count('crew_preparedness'),
+            # ))
+            # survey_results.update(event.surveys.filter(crew_knowledgeability__gte=0).aggregate(
+            #     Avg('crew_knowledgeability'),
+            #     Count('crew_knowledgeability'),
+            # ))
+            # survey_results.update(event.surveys.filter(quote_as_expected__gte=0).aggregate(
+            #     Avg('quote_as_expected'),
+            #     Count('quote_as_expected'),
+            # ))
             survey_results.update(event.surveys.filter(price_appropriate__gte=0).aggregate(
                 Avg('price_appropriate'),
                 Count('price_appropriate'),
@@ -176,8 +180,8 @@ def survey_dashboard(request):
                 crew = max(min(((
                     survey_results['setup_on_time__avg'] +
                     survey_results['crew_respectfulness__avg'] +
-                    survey_results['crew_preparedness__avg'] +
-                    survey_results['crew_knowledgeability__avg'] +
+                    # survey_results['crew_preparedness__avg'] +
+                    # survey_results['crew_knowledgeability__avg'] +
                     survey_results['lighting_quality__avg'] +
                     survey_results['sound_quality__avg']
                 ) - 9) / 3, 4), 0)
@@ -186,7 +190,7 @@ def survey_dashboard(request):
             try:
                 pricelist = max(min(((
                     survey_results['pricelist_ux__avg'] +
-                    survey_results['quote_as_expected__avg'] +
+                    # survey_results['quote_as_expected__avg'] +
                     survey_results['price_appropriate__avg']
                 ) - 4.5 ) / 1.5, 4), 0)
             except TypeError:
