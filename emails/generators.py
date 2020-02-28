@@ -20,22 +20,26 @@ def send_survey_if_necessary(event):
     if now < event.datetime_end or event.datetime_end < (now - datetime.timedelta(days=30)) \
             or not event.approved or event.survey_sent or not event.send_survey or event.contact is None:
         return
-    email = SurveyEmailGenerator(event=event, subject='Post-event survey for {}'.format(event.event_name), to_emails=event.contact.email)
+    email = SurveyEmailGenerator(event=event, subject='Post-event survey for {}'.format(event.event_name),
+                                 to_emails=event.contact.email)
     email.send()
     # set_revision_comment('Post-event survey sent.')
     event.survey_sent = True
     event.save()
 
+
 def generate_web_service_email(details):
-	subject = details["subject"]
-	body = details["message"]
-	from_email = settings.DEFAULT_FROM_ADDR
-	reply_to_email = [settings.EMAIL_TARGET_W]
-	to_email = settings.DEFAULT_TO_ADDR
-	
-	email = WebServiceEmailGenerator(subject=subject, to_emails=to_email, from_email=from_email, reply_to=reply_to_email, body=body)
-	
-	return email
+    subject = details["subject"]
+    body = details["message"]
+    from_email = settings.DEFAULT_FROM_ADDR
+    reply_to_email = [settings.EMAIL_TARGET_W]
+    to_email = settings.DEFAULT_TO_ADDR
+
+    email = WebServiceEmailGenerator(subject=subject, to_emails=to_email, from_email=from_email,
+                                     reply_to=reply_to_email, body=body)
+
+    return email
+
 
 def generate_notice_email(notice):
     subject = notice.subject
@@ -189,7 +193,8 @@ class DefaultLNLEmailGenerator(object):  # yay classes
 
         template_txt = "%s.txt" % template_basename
         content_txt = render_to_string(template_txt, context)
-        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=cc, reply_to=reply_to)
+        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=cc,
+                                            reply_to=reply_to)
         for a in attachments:
             self.email.attach(a['name'], a['file_handle'], "application/pdf")
 
@@ -204,181 +209,214 @@ class DefaultLNLEmailGenerator(object):  # yay classes
 
 class EventEmailGenerator(DefaultLNLEmailGenerator):
     def __init__(self,
-            event=None,
-            subject="LNL Event",
-            to_emails=settings.DEFAULT_TO_ADDR,
-            cc=None,
-            bcc=None,
-            from_email=settings.DEFAULT_FROM_ADDR,
-            reply_to=None,
-            context=None,
-            template_basename="emails/email_event",
-            build_html=True,
-            body=None,
-            attachments=None):
+                 event=None,
+                 subject="LNL Event",
+                 to_emails=settings.DEFAULT_TO_ADDR,
+                 cc=None,
+                 bcc=None,
+                 from_email=settings.DEFAULT_FROM_ADDR,
+                 reply_to=None,
+                 context=None,
+                 template_basename="emails/email_event",
+                 build_html=True,
+                 body=None,
+                 attachments=None):
         if context is None:
             context = {}
         context['event'] = event
         super(EventEmailGenerator, self).__init__(
-                subject=subject,
-                to_emails=to_emails,
-                cc=cc,
-                bcc=bcc,
-                from_email=from_email,
-                reply_to=reply_to,
-                context=context,
-                template_basename=template_basename,
-                build_html=build_html,
-                body=body,
-                attachments=attachments)
+            subject=subject,
+            to_emails=to_emails,
+            cc=cc,
+            bcc=bcc,
+            from_email=from_email,
+            reply_to=reply_to,
+            context=context,
+            template_basename=template_basename,
+            build_html=build_html,
+            body=body,
+            attachments=attachments)
 
 
 class CcAddEmailGenerator(DefaultLNLEmailGenerator):
     def __init__(self,
-            ccinstance=None,
-            subject="Crew Chief Add Notification",
-            to_emails=None,
-            cc=None,
-            bcc=None,
-            from_email=settings.DEFAULT_FROM_ADDR,
-            reply_to=None,
-            context=None,
-            template_basename="emails/email_ccadd",
-            build_html=True,
-            attachments=None):
+                 ccinstance=None,
+                 subject="Crew Chief Add Notification",
+                 to_emails=None,
+                 cc=None,
+                 bcc=None,
+                 from_email=settings.DEFAULT_FROM_ADDR,
+                 reply_to=None,
+                 context=None,
+                 template_basename="emails/email_ccadd",
+                 build_html=True,
+                 attachments=None):
         if to_emails is None:
             to_emails = [ccinstance.crew_chief.email]
         if context is None:
             context = {}
         context['ccinstance'] = ccinstance
         super(CcAddEmailGenerator, self).__init__(
-                subject=subject,
-                to_emails=to_emails,
-                cc=cc,
-                bcc=bcc,
-                from_email=from_email,
-                reply_to=reply_to,
-                context=context,
-                template_basename=template_basename,
-                build_html=build_html,
-                body=None,
-                attachments=attachments)
+            subject=subject,
+            to_emails=to_emails,
+            cc=cc,
+            bcc=bcc,
+            from_email=from_email,
+            reply_to=reply_to,
+            context=context,
+            template_basename=template_basename,
+            build_html=build_html,
+            body=None,
+            attachments=attachments)
 
 
 class ReportReminderEmailGenerator(DefaultLNLEmailGenerator):
     def __init__(self,
-            reminder=None,
-            subject="LNL Crew Chief Report Reminder Email",
-            to_emails=None,
-            cc=None,
-            bcc=None,
-            from_email=settings.DEFAULT_FROM_ADDR,
-            reply_to=None,
-            context=None,
-            template_basename="emails/email_reportreminder",
-            build_html=True,
-            attachments=None):
+                 reminder=None,
+                 subject="LNL Crew Chief Report Reminder Email",
+                 to_emails=None,
+                 cc=None,
+                 bcc=None,
+                 from_email=settings.DEFAULT_FROM_ADDR,
+                 reply_to=None,
+                 context=None,
+                 template_basename="emails/email_reportreminder",
+                 build_html=True,
+                 attachments=None):
         if to_emails is None:
             to_emails = [reminder.crew_chief.email]
         if context is None:
             context = {}
         context['reminder'] = reminder
         super(ReportReminderEmailGenerator, self).__init__(
-                subject=subject,
-                to_emails=to_emails,
-                cc=cc,
-                bcc=bcc,
-                from_email=from_email,
-                reply_to=reply_to,
-                context=context,
-                template_basename=template_basename,
-                build_html=build_html,
-                body=None,
-                attachments=attachments)
+            subject=subject,
+            to_emails=to_emails,
+            cc=cc,
+            bcc=bcc,
+            from_email=from_email,
+            reply_to=reply_to,
+            context=context,
+            template_basename=template_basename,
+            build_html=build_html,
+            body=None,
+            attachments=attachments)
+
 
 class BillingEmailGenerator(DefaultLNLEmailGenerator):
     def __init__(self,
-            event=None,
-            subject="Invoice for LNL Services",
-            to_emails=settings.DEFAULT_TO_ADDR,
-            cc=None,
-            bcc=[settings.EMAIL_TARGET_T],
-            from_email=settings.DEFAULT_FROM_ADDR,
-            reply_to=[settings.EMAIL_TARGET_T],
-            context=None,
-            template_basename="emails/email_billing",
-            build_html=True,
-            body=None,
-            attachments=None):
+                 event=None,
+                 subject="Invoice for LNL Services",
+                 to_emails=settings.DEFAULT_TO_ADDR,
+                 cc=None,
+                 bcc=[settings.EMAIL_TARGET_T],
+                 from_email=settings.DEFAULT_FROM_ADDR,
+                 reply_to=[settings.EMAIL_TARGET_T],
+                 context=None,
+                 template_basename="emails/email_billing",
+                 build_html=True,
+                 body=None,
+                 attachments=None):
         if context is None:
             context = {}
         context['event'] = event
         super(BillingEmailGenerator, self).__init__(
-                subject=subject,
-                to_emails=to_emails,
-                cc=cc,
-                bcc=bcc,
-                from_email=from_email,
-                reply_to=reply_to,
-                context=context,
-                template_basename=template_basename,
-                build_html=build_html,
-                body=body,
-                attachments=attachments)
+            subject=subject,
+            to_emails=to_emails,
+            cc=cc,
+            bcc=bcc,
+            from_email=from_email,
+            reply_to=reply_to,
+            context=context,
+            template_basename=template_basename,
+            build_html=build_html,
+            body=body,
+            attachments=attachments)
+
 
 class SurveyEmailGenerator(DefaultLNLEmailGenerator):
     def __init__(self,
-            event=None,
-            subject="Post-event survey for your recent event",
-            to_emails=settings.DEFAULT_TO_ADDR,
-            cc=None,
-            bcc=[settings.EMAIL_TARGET_VP],
-            from_email=settings.DEFAULT_FROM_ADDR,
-            reply_to=None,
-            context=None,
-            template_basename="emails/email_survey",
-            build_html=True,
-            attachments=None):
+                 event=None,
+                 subject="Post-event survey for your recent event",
+                 to_emails=settings.DEFAULT_TO_ADDR,
+                 cc=None,
+                 bcc=[settings.EMAIL_TARGET_VP],
+                 from_email=settings.DEFAULT_FROM_ADDR,
+                 reply_to=None,
+                 context=None,
+                 template_basename="emails/email_survey",
+                 build_html=True,
+                 attachments=None):
         if context is None:
             context = {}
         context['event'] = event
         super(SurveyEmailGenerator, self).__init__(
-                subject=subject,
-                to_emails=to_emails,
-                cc=cc,
-                bcc=bcc,
-                from_email=from_email,
-                reply_to=reply_to,
-                context=context,
-                template_basename=template_basename,
-                build_html=build_html,
-                body=None,
-                attachments=attachments)
+            subject=subject,
+            to_emails=to_emails,
+            cc=cc,
+            bcc=bcc,
+            from_email=from_email,
+            reply_to=reply_to,
+            context=context,
+            template_basename=template_basename,
+            build_html=build_html,
+            body=None,
+            attachments=attachments)
+
 
 class WebServiceEmailGenerator(DefaultLNLEmailGenerator):
-	def __init__(self, 
-			subject="Upcoming Maintenance", 
-			to_emails=settings.DEFAULT_TO_ADDR,
-			cc=None,
-			bcc=[settings.EMAIL_TARGET_W, settings.EMAIL_TARGET_NEWS],
-			from_email=settings.DEFAULT_FROM_ADDR,
-			reply_to=[settings.EMAIL_TARGET_W],
-			context=None,
-			template_basename="emails/email_generic",
-			build_html=True,
-			body=None,
-			attachments=None):
-		if context is None:
-			context = {}
-		super(WebServiceEmailGenerator, self).__init__(
-				subject=subject,
-				to_emails=to_emails,
-				cc=cc,
-				bcc=bcc,
-				from_email=from_email,
-				reply_to=reply_to,
-				context=context,
-				template_basename=template_basename,
-				build_html=build_html,
-				body=body,
-				attachments=attachments)
+    def __init__(self,
+                 subject="Upcoming Maintenance",
+                 to_emails=settings.DEFAULT_TO_ADDR,
+                 cc=None,
+                 bcc=[settings.EMAIL_TARGET_W],
+                 from_email=settings.DEFAULT_FROM_ADDR,
+                 reply_to=[settings.EMAIL_TARGET_W],
+                 context=None,
+                 template_basename="emails/email_generic",
+                 build_html=True,
+                 body=None,
+                 attachments=None):
+        if context is None:
+            context = {}
+        super(WebServiceEmailGenerator, self).__init__(
+            subject=subject,
+            to_emails=to_emails,
+            cc=cc,
+            bcc=bcc,
+            from_email=from_email,
+            reply_to=reply_to,
+            context=context,
+            template_basename=template_basename,
+            build_html=build_html,
+            body=body,
+            attachments=attachments)
+
+
+class PITRequestEmailGenerator(DefaultLNLEmailGenerator):
+    def __init__(self,
+                 subject="New PIT Request",
+                 to_emails=settings.EMAIL_TARGET_HP,
+                 cc=None,
+                 bcc=None,
+                 from_email=settings.DEFAULT_FROM_ADDR,
+                 reply_to=None,
+                 context=None,
+                 template_basename="emails/email_generic",
+                 build_html=True,
+                 body=None,
+                 attachments=None):
+        if context is None:
+            context = {}
+        super(PITRequestEmailGenerator, self).__init__(
+            subject=subject,
+            to_emails=to_emails,
+            cc=cc,
+            bcc=bcc,
+            from_email=from_email,
+            reply_to=reply_to,
+            context=context,
+            template_basename=template_basename,
+            build_html=build_html,
+            body=body,
+            attachments=attachments
+        )

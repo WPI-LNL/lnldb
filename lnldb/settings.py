@@ -7,7 +7,6 @@ import re
 import sys
 import environ
 
-
 try:
     from django.urls import reverse, NoReverseMatch
 except ImportError:
@@ -33,6 +32,7 @@ GIT_RELEASE = env.str("SOURCE_VERSION", None)
 if GIT_RELEASE is None:
     try:
         import raven
+
         path = from_root('.')
         GIT_RELEASE = raven.fetch_git_sha(path)
     except Exception as e:
@@ -60,7 +60,8 @@ ADMINS = (
 MANAGERS = ADMINS
 
 # important: first of these are used for absolute links in some places
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + ['lnl.wpi.edu', '127.0.0.1', 'localhost', 'users.wpi.edu', 'userweb.wpi.edu']
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + ['lnl.wpi.edu', '127.0.0.1', 'localhost', 'users.wpi.edu',
+                                                         'userweb.wpi.edu']
 INTERNAL_IPS = ['127.0.0.1']
 
 if env.str('EMAIL_URL', ""):
@@ -91,24 +92,24 @@ SNIPE_URL = env.str('SNIPE_URL', '')
 SNIPE_API_KEY = env.str('SNIPE_API_KEY', '')
 
 SAML2_AUTH = {
-	'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://samltest.id/saml/idp'),
-	'DEFAULT_NEXT_URL': '/db/',
-	'CREATE_USER': True,
-	'NEW_USER_PROFILE': {
-		'USER_GROUPS': [],
-		'ACTIVE_STATUS': True,
-		'STAFF_STATUS': False,
-		'SUPERUSER_STATUS': False,
-	},
-	'ATTRIBUTES_MAP': {
-		'email': 'Email',
-		'username': 'UserName',
-		'first_name': 'FirstName',
-		'last_name': 'LastName',
-	},
-	'ENTITY_ID': 'https://{}/saml2_auth/acs/'.format(ALLOWED_HOSTS[0]),
-	'NAME_ID_FORMAT': 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
-	'USE_JWT': False,
+    'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://samltest.id/saml/idp'),
+    'DEFAULT_NEXT_URL': '/db/',
+    'CREATE_USER': True,
+    'NEW_USER_PROFILE': {
+        'USER_GROUPS': [],
+        'ACTIVE_STATUS': True,
+        'STAFF_STATUS': False,
+        'SUPERUSER_STATUS': False,
+    },
+    'ATTRIBUTES_MAP': {
+        'email': 'Email',
+        'username': 'UserName',
+        'first_name': 'FirstName',
+        'last_name': 'LastName',
+    },
+    'ENTITY_ID': 'https://{}/saml2_auth/acs/'.format(ALLOWED_HOSTS[0]),
+    'NAME_ID_FORMAT': 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
+    'USE_JWT': False,
 }
 
 # options we don't want in our env variables...
@@ -130,7 +131,6 @@ for key in DATABASES:
                             'collation_connection=utf8mb4_unicode_ci,'
                             'SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
         })  # Now we have a mild degree of confidence :-) Oh, MySQL....
-
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
@@ -159,10 +159,8 @@ TIME_INPUT_FORMATS = ['%I:%M %p', '%I:%M:%S.%f %p', '%I:%M %p',
                       '%I:%M%p', '%I:%M:%S.%f%p', '%I:%M%p',
                       '%H:%M:%S', '%H:%M:%S.%f', '%H:%M']
 
-
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = True
-
 
 if env.str("AWS_ACCESS_KEY_ID", ""):
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
@@ -217,7 +215,6 @@ _tmpl_loaders = [
 if not DEBUG:
     _tmpl_loaders = [('django.template.loaders.cached.Loader', _tmpl_loaders)]
 
-
 TEMPLATES = [{
     'BACKEND': 'django.template.backends.django.DjangoTemplates',
     'DIRS': [from_root("site_tmpl"), ],
@@ -250,20 +247,20 @@ DEBUG_TOOLBAR_CONFIG = {
 USE_WHITENOISE = env.bool("USE_WHITENOISE", default=False)
 WN_MIDDLEWARE = ('whitenoise.middleware.WhiteNoiseMiddleware',) if USE_WHITENOISE else tuple()
 MIDDLEWARE = (
-    'django.middleware.common.CommonMiddleware',
-) + WN_MIDDLEWARE + (
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'watson.middleware.SearchContextMiddleware',
-    'reversion.middleware.RevisionMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    # Uncomment the next line for simple clickjacking protection:
-    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'events.middleware.ContactReminderMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
-    'data.middleware.SwappableRedirectMiddleware',
-)
+                 'django.middleware.common.CommonMiddleware',
+             ) + WN_MIDDLEWARE + (
+                 'django.contrib.sessions.middleware.SessionMiddleware',
+                 'django.middleware.csrf.CsrfViewMiddleware',
+                 'watson.middleware.SearchContextMiddleware',
+                 'reversion.middleware.RevisionMiddleware',
+                 'django.contrib.auth.middleware.AuthenticationMiddleware',
+                 'django.contrib.messages.middleware.MessageMiddleware',
+                 # Uncomment the next line for simple clickjacking protection:
+                 # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
+                 # 'events.middleware.ContactReminderMiddleware',
+                 'debug_toolbar.middleware.DebugToolbarMiddleware',
+                 'data.middleware.SwappableRedirectMiddleware',
+             )
 
 ROOT_URLCONF = 'lnldb.urls'
 
@@ -317,11 +314,12 @@ INSTALLED_APPS = (
     'jchart',
 )
 if SAML2_ENABLED:
-	INSTALLED_APPS += ('django_saml2_auth',)
+    INSTALLED_APPS += ('django_saml2_auth',)
 if TESTING:
     # bypass migrations for unit tests. **MUCH** faster
     try:
-        import test_without_migrations # NOQA
+        import test_without_migrations  # NOQA
+
         INSTALLED_APPS += ('test_without_migrations',)
     except:
         pass
@@ -461,14 +459,14 @@ MARKDOWN_DEUX_STYLES = {
     "default": {
         "link_patterns": [
             (re.compile("\B@([A-Za-z][A-Za-z0-9]*)"),
-                lambda m: reverse_noexcept("accounts:by-name:detail",
-                                           kwargs={'username': m.group(1)}
-                                           )
+             lambda m: reverse_noexcept("accounts:by-name:detail",
+                                        kwargs={'username': m.group(1)}
+                                        )
              ),
             (re.compile("\B@([0-9]+)"),
-                lambda m: reverse_noexcept("events:detail",
-                                           args=[m.group(1)]
-                                           )
+             lambda m: reverse_noexcept("events:detail",
+                                        args=[m.group(1)]
+                                        )
              ),
         ],
         "extras": {
@@ -497,7 +495,7 @@ MPTT_ADMIN_LEVEL_INDENT = 20
 
 if env.str("CAS_SERVER_URL", ""):
     CAS_SERVER_URL = env.str("CAS_SERVER_URL")
-    #CAS_LOGOUT_COMPLETELY = True
+    # CAS_LOGOUT_COMPLETELY = True
     CAS_REDIRECT_URL = '/db/'
     AUTHENTICATION_BACKENDS = AUTHENTICATION_BACKENDS + (
         'django_cas_ng.backends.CASBackend',
@@ -510,7 +508,7 @@ else:
 try:
     local_settings_file = open(here('local_settings.py'), 'r')
     local_settings_script = local_settings_file.read()
-    exec(local_settings_script)
+    exec (local_settings_script)
     print("Successfully loaded local settings file", file=sys.stderr)
 except IOError as e:
     pass

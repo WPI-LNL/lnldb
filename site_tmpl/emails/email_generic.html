@@ -13,8 +13,11 @@
             <td class="w960" width="960">
                 <p align="left" class="article-title">{{ subject }}</p>
                 <div align="left" class="article-content">
-                    
+                    {% if CUSTOM_URL %}
+                    <p> {{ body|safe|linebreaksbr }} </p>
+                    {% else %}
                     <p> {{  body|safe|linebreaksbr|urlize }} </p>
+                    {% endif %}
                 </div>
             </td>
         </tr>

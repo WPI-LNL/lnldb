@@ -16,6 +16,7 @@ from projection.forms import (BulkCreateForm, BulkUpdateForm,
                               DateEntryFormSetBase, PITFormset,
                               ProjectionistForm, ProjectionistUpdateForm, PITRequestForm, PITRequestAdminForm)
 from projection.models import PITLevel, Projectionist, PitRequest
+from emails.generators import PITRequestEmailGenerator
 
 
 @login_required
@@ -238,6 +239,17 @@ class PITRequest(LoginRequiredMixin, HasPermMixin, FormView):
             form.instance.projectionist = get_object_or_404(Projectionist, user=self.request.user)
             if form.is_valid():
                 form.save()
+                name = form.instance.projectionist.user.get_full_name()
+                pit = form.instance.level.name_long
+                requested_date = form.instance.scheduled_for
+                if requested_date is None:
+                    requested_date = "None"
+                else:
+                    requested_date = requested_date.strftime('%b %d, %Y, %I:%M %p')
+                message_context = {'CUSTOM_URL': True}
+                message = "<strong>Projectionist:</strong> " + name + "<br><strong>PIT Level:</strong> " + pit + "<br><strong>Requested Date:</strong> " + requested_date + "<br><br><a href='http://lnl.wpi.edu/db/projection/training/schedule/'>Review</a>";
+                email = PITRequestEmailGenerator(body=message, context=message_context)
+                email.send()
                 return self.render_to_response(self.get_context_data(title="Request Submitted", desc="You have successfully requested your next PIT. The HP will reach out to you shortly."))
 
 
@@ -280,6 +292,17 @@ def pit_request_update(request, id):
         form = PITRequestForm(request.POST, instance=pit_request, prefix="main")
         if form.is_valid():
             form.save()
+            name = form.instance.projectionist.user.get_full_name()
+            pit = form.instance.level.name_long
+            requested_date = form.instance.scheduled_for
+            if requested_date is None:
+                requested_date = "None"
+            else:
+                requested_date = requested_date.strftime('%b %d, %Y, %I:%M %p')
+            message_context = {'CUSTOM_URL': True}
+            message = "<strong>Projectionist:</strong> " + name + "<br><strong>PIT Level:</strong> " + pit + "<br><strong>Requested Date:</strong> " + requested_date + "<br><br><a href='http://lnl.wpi.edu/db/projection/training/schedule/'>Review</a>";
+            email = PITRequestEmailGenerator(subject="PIT Request Updated", body=message, context=message_context)
+            email.send()
             if request.user.has_perm('projection.edit_pits', pit_request):
                 return HttpResponseRedirect(reverse("projection:pit-schedule"))
             else:
@@ -305,6 +328,14 @@ def manage_pit_request(request, id):
         form = PITRequestAdminForm(request.POST, instance=pit_request, prefix="main")
         if form.is_valid():
             form.save()
+            user = form.instance.projectionist.user.email
+            pit = form.instance.level.name_long
+            requested_date = form.instance.scheduled_for.strftime('%b %d, %Y at %I:%M %p')
+            message_context = {'CUSTOM_URL': True}
+            message = "Your PIT request has been approved! You're now scheduled to get " + pit + " on <strong>" + requested_date + "</strong>. In the event that you need to reschedule or cancel this appointment, please use the links below.<br><br><a href='http://lnl.wpi.edu/db/projection/training/" + id + "/update/'>Reschedule</a><br><a href='http://lnl.wpi.edu/db/projection/training/" + id + "/cancel/'>Cancel</a>";
+            email = PITRequestEmailGenerator(to_emails=user, subject="PIT Scheduled", body=message, context=message_context, reply_to=["lnl-hp@wpi.edu"])
+            if form.instance.approved is True:
+                email.send()
             return HttpResponseRedirect(reverse("projection:pit-schedule"))
         else:
             context['form'] = form

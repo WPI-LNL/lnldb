@@ -682,6 +682,11 @@ def viewevent(request, id):
             Count('work_order_experience'),
         ))
         context['survey_results']['work_order_experience__verbose_name'] = PostEventSurvey._meta.get_field('work_order_experience').verbose_name
+        context['survey_results'].update(event.surveys.filter(work_order_ease__gte=0).aggregate(
+            Avg('work_order_ease'),
+            Count('work_order_ease'),
+        ))
+        context['survey_results']['work_order_ease__verbose_name'] = PostEventSurvey._meta.get_field('work_order_ease').verbose_name
         context['survey_results'].update(event.surveys.filter(communication_responsiveness__gte=0).aggregate(
             Avg('communication_responsiveness'),
             Count('communication_responsiveness'),
@@ -702,21 +707,21 @@ def viewevent(request, id):
             Count('crew_respectfulness'),
         ))
         context['survey_results']['crew_respectfulness__verbose_name'] = PostEventSurvey._meta.get_field('crew_respectfulness').verbose_name
-        context['survey_results'].update(event.surveys.filter(crew_preparedness__gte=0).aggregate(
-            Avg('crew_preparedness'),
-            Count('crew_preparedness'),
-        ))
-        context['survey_results']['crew_preparedness__verbose_name'] = PostEventSurvey._meta.get_field('crew_preparedness').verbose_name
-        context['survey_results'].update(event.surveys.filter(crew_knowledgeability__gte=0).aggregate(
-            Avg('crew_knowledgeability'),
-            Count('crew_knowledgeability'),
-        ))
-        context['survey_results']['crew_knowledgeability__verbose_name'] = PostEventSurvey._meta.get_field('crew_knowledgeability').verbose_name
-        context['survey_results'].update(event.surveys.filter(quote_as_expected__gte=0).aggregate(
-            Avg('quote_as_expected'),
-            Count('quote_as_expected'),
-        ))
-        context['survey_results']['quote_as_expected__verbose_name'] = PostEventSurvey._meta.get_field('quote_as_expected').verbose_name
+        # context['survey_results'].update(event.surveys.filter(crew_preparedness__gte=0).aggregate(
+        #     Avg('crew_preparedness'),
+        #     Count('crew_preparedness'),
+        # ))
+        # context['survey_results']['crew_preparedness__verbose_name'] = PostEventSurvey._meta.get_field('crew_preparedness').verbose_name
+        # context['survey_results'].update(event.surveys.filter(crew_knowledgeability__gte=0).aggregate(
+        #     Avg('crew_knowledgeability'),
+        #     Count('crew_knowledgeability'),
+        # ))
+        # context['survey_results']['crew_knowledgeability__verbose_name'] = PostEventSurvey._meta.get_field('crew_knowledgeability').verbose_name
+        # context['survey_results'].update(event.surveys.filter(quote_as_expected__gte=0).aggregate(
+        #     Avg('quote_as_expected'),
+        #     Count('quote_as_expected'),
+        # ))
+        # context['survey_results']['quote_as_expected__verbose_name'] = PostEventSurvey._meta.get_field('quote_as_expected').verbose_name
         context['survey_results'].update(event.surveys.filter(price_appropriate__gte=0).aggregate(
             Avg('price_appropriate'),
             Count('price_appropriate'),
@@ -736,8 +741,8 @@ def viewevent(request, id):
             context['survey_composites']['crew'] = max(min(((
                 context['survey_results']['setup_on_time__avg'] +
                 context['survey_results']['crew_respectfulness__avg'] +
-                context['survey_results']['crew_preparedness__avg'] +
-                context['survey_results']['crew_knowledgeability__avg'] +
+                # context['survey_results']['crew_preparedness__avg'] +
+                # context['survey_results']['crew_knowledgeability__avg'] +
                 context['survey_results']['lighting_quality__avg'] +
                 context['survey_results']['sound_quality__avg']
             ) - 9) / 3, 4), 0)
@@ -746,7 +751,7 @@ def viewevent(request, id):
         try:
             context['survey_composites']['pricelist'] = max(min(((
                 context['survey_results']['pricelist_ux__avg'] +
-                context['survey_results']['quote_as_expected__avg'] +
+                # context['survey_results']['quote_as_expected__avg'] +
                 context['survey_results']['price_appropriate__avg']
             ) - 4.5 ) / 1.5, 4), 0)
         except TypeError:
