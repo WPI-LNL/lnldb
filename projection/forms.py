@@ -6,7 +6,7 @@ from ajax_select.fields import (AutoCompleteSelectField,
                                 AutoCompleteSelectMultipleField)
 from crispy_forms.bootstrap import FormActions
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import HTML, Field, Layout, Submit
+from crispy_forms.layout import HTML, Field, Layout, Submit, Hidden
 from django import forms
 from django.contrib.auth import get_user_model
 from django.forms.models import inlineformset_factory
@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from events.models import Service, Extra, ExtraInstance
 from events.models import Building, Category, Event2019, Location
-from projection.models import PitInstance, PITLevel, Projectionist
+from projection.models import PitInstance, PITLevel, Projectionist, PitRequest
 
 
 class ProjectionistUpdateForm(forms.ModelForm):
@@ -216,6 +216,51 @@ class DateEntryFormSetBase(forms.Form):
             e.serviceinstance_set.create(service=Service.objects.get_or_create(
                 longname="Digital Projection", shortname='DP',
                 defaults={'base_cost': 50, 'addtl_cost': 0, 'category': cat}
-            )[0],)
+            )[0], )
             out.append(e)
         return out
+
+
+class PITRequestForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            Field('level'),
+            HTML('<div class="col-3 form-inline" style="display: inline-block">'),
+            Field('scheduled_for', css_class="form-control"),
+            HTML('</div><br><br>'),
+            Hidden('approved', False),
+            FormActions(
+                Submit('save', 'Submit Request'),
+            )
+        )
+        super(PITRequestForm, self).__init__(*args, **kwargs)
+
+    level = forms.ModelChoiceField(queryset=PITLevel.objects.all(), empty_label=None, label="PIT")
+    scheduled_for = forms.SplitDateTimeField(label="Request Date / Time", required=False)
+
+    class Meta:
+        model = PitRequest
+        fields = ('level', 'scheduled_for', 'approved')
+
+
+class PITRequestAdminForm(PITRequestForm):
+    def __init__(self, *args, **kwargs):
+        super(PITRequestAdminForm, self).__init__(*args, **kwargs)
+        self.helper.layout = Layout(
+            Field('level'),
+            HTML('<div class="col-3 form-inline" style="display: inline-block">'),
+            Field('scheduled_for', css_class="form-control"),
+            HTML('</div><br><br>'),
+            Field('approved'),
+            FormActions(
+                Submit('save', 'Update'),
+            )
+        )
+
+    scheduled_for = forms.SplitDateTimeField(label="Date / Time", required=True)
+    approved = forms.BooleanField(label="Approve", required=False, help_text="Select this to approve the request and schedule this PIT")

@@ -95,4 +95,16 @@ def create_projectionist(sender, instance, created, **kwargs):
     if created:
         Projectionist.objects.create(user=instance)
 
+
 # post_save.connect(create_projectionist, sender=User)
+
+class PitRequest(models.Model):
+    def __str__(self):
+        return self.projectionist.user.get_full_name() + " - " + self.level.name_short
+
+    projectionist = models.ForeignKey(Projectionist, on_delete=models.CASCADE, related_name="pitrequest")
+    level = models.ForeignKey(PITLevel, on_delete=models.PROTECT, related_name="pitrequest")
+    requested_on = models.DateTimeField(auto_now_add=True)
+
+    approved = models.BooleanField(default=False)
+    scheduled_for = models.DateTimeField(null=True, blank=True)

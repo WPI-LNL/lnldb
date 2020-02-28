@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from projection.models import PitInstance, PITLevel, Projectionist
+from projection.models import PitInstance, PITLevel, Projectionist, PitRequest
 
 
 class LevelAdmin(admin.ModelAdmin):
@@ -10,3 +10,4 @@ class LevelAdmin(admin.ModelAdmin):
 admin.site.register(Projectionist)
 admin.site.register(PITLevel, LevelAdmin)
 admin.site.register(PitInstance)
+admin.site.register(PitRequest)

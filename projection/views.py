@@ -3,6 +3,7 @@ import datetime
 
 from crispy_forms.layout import Submit
 from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.models import User
 from django.db.models import Q
 from django.forms.formsets import formset_factory
 from django.http import HttpResponseRedirect
@@ -13,8 +14,8 @@ from django.urls.base import reverse
 from helpers.mixins import HasPermMixin, LoginRequiredMixin
 from projection.forms import (BulkCreateForm, BulkUpdateForm,
                               DateEntryFormSetBase, PITFormset,
-                              ProjectionistForm, ProjectionistUpdateForm)
-from projection.models import PITLevel, Projectionist
+                              ProjectionistForm, ProjectionistUpdateForm, PITRequestForm, PITRequestAdminForm)
+from projection.models import PITLevel, Projectionist, PitRequest
 
 
 @login_required
@@ -213,3 +214,103 @@ def bulk_projection(request):
         context['helper'].add_input(Submit('submit', 'Submit'))
 
         return render(request, "form_crispy.html", context)
+
+
+class PITRequest(LoginRequiredMixin, HasPermMixin, FormView):
+    perms = 'projection.view_pits'
+    model = PitRequest
+    template_name = "projection_pit_request.html"
+    form_class = PITRequestForm
+
+    def get_context_data(self, **kwargs):
+        context = super(PITRequest, self).get_context_data(**kwargs)
+        context['title'] = "Request PIT"
+        context['desc'] = "Select the level of training you would like to receive. Then, if you\'d like, you may also request a specific date and time."
+        context['NO_FOOT'] = True
+        if 'title' in kwargs:
+            context['title'] = kwargs['title']
+            context['desc'] = kwargs['desc']
+            context['form'] = ''
+        return context
+
+    def form_valid(self, form):
+        if self.request.POST:
+            form.instance.projectionist = get_object_or_404(Projectionist, user=self.request.user)
+            if form.is_valid():
+                form.save()
+                return self.render_to_response(self.get_context_data(title="Request Submitted", desc="You have successfully requested your next PIT. The HP will reach out to you shortly."))
+
+
+@login_required
+@permission_required('projection.edit_pits', raise_exception=True)
+def PITSchedule(request):
+    context = {}
+
+    approved = PitRequest.objects.filter(approved=True)
+    pending = PitRequest.objects.filter(approved=False)
+
+    context['approved'] = approved
+    context['pending'] = pending
+    context['NO_FOOT'] = True
+
+    return render(request, 'projection_pit_schedule.html', context)
+
+
+class CancelPITRequest(LoginRequiredMixin, HasPermMixin, DeleteView):
+    model = PitRequest
+    template_name = "form_cancel_request.html"
+    msg = "Cancelled PIT Request"
+    perms = 'projection.view_pits'
+
+    def get_success_url(self):
+        if self.request.user.has_perm('projection.edit_pits', self):
+            return reverse("projection:pit-schedule")
+        else:
+            return reverse("projection:grid")
+
+@login_required
+@permission_required('projection.view_pits', raise_exception=True)
+def pit_request_update(request, id):
+    pit_request = get_object_or_404(PitRequest, pk=id)
+
+    context = {}
+    context['title'] = "Update PIT Request"
+
+    if request.method == "POST":
+        form = PITRequestForm(request.POST, instance=pit_request, prefix="main")
+        if form.is_valid():
+            form.save()
+            if request.user.has_perm('projection.edit_pits', pit_request):
+                return HttpResponseRedirect(reverse("projection:pit-schedule"))
+            else:
+                return HttpResponseRedirect(reverse("projection:grid"))
+        else:
+            context['form'] = form
+    else:
+        form = PITRequestForm(instance=pit_request, prefix="main")
+        context['form'] = form
+        context['pk'] = id
+
+    return render(request, 'projection_pit_request.html', context)
+
+@login_required
+@permission_required('projection.edit_pits', raise_exception=True)
+def manage_pit_request(request, id):
+    pit_request = get_object_or_404(PitRequest, pk=id)
+
+    context = {}
+    context['title'] = "Manage PIT Request"
+
+    if request.method == "POST":
+        form = PITRequestAdminForm(request.POST, instance=pit_request, prefix="main")
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse("projection:pit-schedule"))
+        else:
+            context['form'] = form
+    else:
+        form = PITRequestAdminForm(instance=pit_request, prefix="main")
+        context['form'] = form
+        context['pk'] = id
+
+    return render(request, 'projection_pit_request.html', context)
