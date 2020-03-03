@@ -152,18 +152,6 @@ def survey_dashboard(request):
                 Avg('crew_respectfulness'),
                 Count('crew_respectfulness'),
             ))
-            # survey_results.update(event.surveys.filter(crew_preparedness__gte=0).aggregate(
-            #     Avg('crew_preparedness'),
-            #     Count('crew_preparedness'),
-            # ))
-            # survey_results.update(event.surveys.filter(crew_knowledgeability__gte=0).aggregate(
-            #     Avg('crew_knowledgeability'),
-            #     Count('crew_knowledgeability'),
-            # ))
-            # survey_results.update(event.surveys.filter(quote_as_expected__gte=0).aggregate(
-            #     Avg('quote_as_expected'),
-            #     Count('quote_as_expected'),
-            # ))
             survey_results.update(event.surveys.filter(price_appropriate__gte=0).aggregate(
                 Avg('price_appropriate'),
                 Count('price_appropriate'),
@@ -176,32 +164,59 @@ def survey_dashboard(request):
                 vp = survey_results['communication_responsiveness__avg']
             except TypeError:
                 vp = None
+
+            crew_avg = 0
+            crew_count = 4
             try:
-                crew = max(min(((
-                    survey_results['setup_on_time__avg'] +
-                    survey_results['crew_respectfulness__avg'] +
-                    # survey_results['crew_preparedness__avg'] +
-                    # survey_results['crew_knowledgeability__avg'] +
-                    survey_results['lighting_quality__avg'] +
-                    survey_results['sound_quality__avg']
-                ) - 9) / 3, 4), 0)
+                crew_avg += survey_results['setup_on_time__avg']
             except TypeError:
+                crew_count -= 1
+            try:
+                crew_avg += survey_results['crew_respectfulness__avg']
+            except TypeError:
+                crew_count -= 1
+            try:
+                crew_avg += survey_results['lighting_quality__avg']
+            except TypeError:
+                crew_count -= 1
+            try:
+                crew_avg += survey_results['sound_quality__avg']
+            except TypeError:
+                crew_count -= 1
+            if crew_count == 0:
                 crew = None
+            else:
+                crew = crew_avg/crew_count
+
+            price_avg = 0
+            price_count = 2
             try:
-                pricelist = max(min(((
-                    survey_results['pricelist_ux__avg'] +
-                    # survey_results['quote_as_expected__avg'] +
-                    survey_results['price_appropriate__avg']
-                ) - 4.5 ) / 1.5, 4), 0)
+                price_avg += survey_results['pricelist_ux__avg']
             except TypeError:
+                price_count -= 1
+            try:
+                price_avg += survey_results['price_appropriate__avg']
+            except TypeError:
+                price_count -= 1
+            if price_count == 0:
                 pricelist = None
+            else:
+                pricelist = price_avg/price_count
+
+            overall_avg = 0
+            overall_count = 2
             try:
-                overall = max(min((
-                    survey_results['services_quality__avg'] +
-                    survey_results['customer_would_return__avg']
-                ) - 3, 4), 0)
+                overall_avg += survey_results['services_quality__avg']
             except TypeError:
+                overall_count -= 1
+            try:
+                overall_avg += survey_results['customer_would_return__avg']
+            except TypeError:
+                overall_count -= 1
+            if overall_count == 0:
                 overall = None
+            else:
+                overall = overall_avg/overall_count
             context['survey_composites'].append((event, {
                 'vp': vp,
                 'crew': crew,
@@ -209,35 +224,34 @@ def survey_dashboard(request):
                 'overall': overall,
             }))
             if vp is not None:
-                context['wma']['vp'] += i * min((vp - 1.5) * 2, 4)
-                vp_denominator += i
+                context['wma']['vp'] += vp
+                vp_denominator += 1
             if crew is not None:
-                context['wma']['crew'] += i * min((crew - 1.5) * 2, 4)
-                crew_denominator += i
+                context['wma']['crew'] += crew
+                crew_denominator += 1
             if pricelist is not None:
-                context['wma']['pricelist'] += i * min((pricelist - 1.5) * 2, 4)
-                pricelist_denominator += i
+                context['wma']['pricelist'] += pricelist
+                pricelist_denominator += 1
             if overall is not None:
-                context['wma']['overall'] += i * min((overall - 1.5) * 2, 4)
-                overall_denominator += i
-            i -= 1
+                context['wma']['overall'] += overall
+                overall_denominator += 1
         if vp_denominator != 0:
-        	context['wma']['vp'] /= vp_denominator
+            context['wma']['vp'] /= vp_denominator
         else:
-        	context['wma']['vp'] = None
-        
+            context['wma']['vp'] = None
+
         if crew_denominator != 0:
-        	context['wma']['crew'] /= crew_denominator
+            context['wma']['crew'] /= crew_denominator
         else:
-        	context['wma']['crew'] = None
-        
+            context['wma']['crew'] = None
+
         if pricelist_denominator != 0:
-        	context['wma']['pricelist'] /= pricelist_denominator
+            context['wma']['pricelist'] /= pricelist_denominator
         else:
-        	context['wma']['pricelist'] = None
-        
+            context['wma']['pricelist'] = None
+
         if overall_denominator != 0:
-        	context['wma']['overall'] /= overall_denominator
+            context['wma']['overall'] /= overall_denominator
         else:
-        	context['wma']['overall'] = None
+            context['wma']['overall'] = None
     return render(request, 'survey_dashboard.html', context)

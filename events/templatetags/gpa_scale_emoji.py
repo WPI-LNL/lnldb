@@ -20,3 +20,27 @@ def gpa_scale_emoji(value):
         return u'\U0001f600'
     else:
         return 'ERROR'
+
+
+@register.filter
+def gpa_scale_clean(value):
+    if value is None or value < 0:
+        return 'N/A'
+    else:
+        return format(value, '.1f')
+
+
+@register.filter
+def gpa_scale_color(value):
+    if value is None:
+        return 'gray'
+    elif value < 0:
+        return 'gray'
+    elif value <= 1.0 and value >= 0:
+        return 'red'
+    elif value <= 2.0:
+        return 'orange'
+    elif value > 3.0 and value <= 4.0:
+        return 'green'
+    else:
+        return 'ERROR'

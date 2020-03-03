@@ -31,6 +31,10 @@
             var time = $("#id_datetime_start_1").val();
             $("#id_datetime_end_1").data("timepicker").setTime(time);
         });
+        var readOnly = document.getElementsByClassName("r");
+        for (var i = 0; i < readOnly.length; i++){
+            readOnly[i].readOnly = true;
+        }
     });
 </script>
 <style>

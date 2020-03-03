@@ -30,12 +30,14 @@ const dropdown = document.querySelector('select');
 dropdown.addEventListener('change', (event) => {
   if (event.target.value == 1){
       document.getElementById("workorder").style.display = "block";
-      document.getElementById("id_work_order_experience_5").checked = false;
-      document.getElementById("id_work_order_ease_5").checked = false;
+      document.getElementById("id_work_order_experience_0").checked = false;
+      document.getElementById("id_work_order_ease_0").checked = false;
+      document.getElementById("id_work_order_comments").parentElement.parentElement.style.paddingBottom = "1%";
   }else{
       document.getElementById("workorder").style.display = "none";
-      document.getElementById("id_work_order_experience_5").checked = true;
-      document.getElementById("id_work_order_ease_5").checked = true;
+      document.getElementById("id_work_order_experience_0").checked = true;
+      document.getElementById("id_work_order_ease_0").checked = true;
+      document.getElementById("id_work_order_comments").value = "";
   }
 });
 </script>

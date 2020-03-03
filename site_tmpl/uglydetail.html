@@ -868,23 +868,30 @@
                                 <tr>
                                     <th>VP</th>
                                     <th>Crew</th>
-                                    <th>Pricelist</th>
-                                    <th>LnL</th>
+                                    <!--<th>Pricelist</th>-->
+                                    <th>LNL</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr style="font-size:3em">
-                                    <td>{{ survey_composites.vp|gpa_scale_emoji }}</td>
-                                    <td>{{ survey_composites.crew|gpa_scale_emoji }}</td>
-                                    <td>{{ survey_composites.pricelist|gpa_scale_emoji }}</td>
-                                    <td>{{ survey_composites.overall|gpa_scale_emoji }}</td>
+                                <tr style="font-size: 3em">
+                                    <td style="color: {{ survey_composites.vp|gpa_scale_color }}">
+                                        {{ survey_composites.vp|gpa_scale_clean }}</td>
+                                    <td style="color: {{ survey_composites.crew|gpa_scale_color }}">
+                                        {{ survey_composites.crew|gpa_scale_clean }}</td>
+                                    <!--<td style="color: {{ survey_composites.pricelist|gpa_scale_color }}">
+                                        {{ survey_composites.pricelist|gpa_scale_clean }}</td>-->
+                                    <td style="color: {{ survey_composites.overall|gpa_scale_color }}">
+                                        {{ survey_composites.overall|gpa_scale_clean }}</td>
                                 </tr>
                             </tbody>
                         </table>
                         <h4>People who have taken the survey</h4>
                         <p>{% for person in survey_takers %}<a href="{% url 'accounts:detail' person.id %}">{{ person }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
-                        <h4>How did you submit the work order?</h4>
+                        <h4>How did you submit the workorder?</h4>
                         <p>{% for method in survey_workorder_methods %}{{ method }}{% if not forloop.last %}, {% endif %}{% empty %}Nobody answered this question.{% endfor %}</p>
+                        <h4>Workorder Comments</h4>
+                        {% for c in survey_workorder_comments %}<p>{{ c }}</p>{% empty %}Nobody answered this question{% endfor %}
+                        <br><br>
                         <h4>Rating questions</h4>
                         <table class="table">
                             <thead>

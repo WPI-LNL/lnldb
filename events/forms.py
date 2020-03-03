@@ -172,10 +172,14 @@ class IOrgForm(FieldAccessForm):
                     'delinquent'
                 )
             )
+        readOnly = 'rw'
+        instance = kwargs['instance']
+        if instance.locked is True:
+            readOnly = 'r'
         tabs.extend([
             Tab(
                 'Contact',
-                Field('name'),
+                Field('name', css_class=readOnly),
                 'exec_email',
                 'address',
                 Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
@@ -1566,7 +1570,9 @@ class PostEventSurveyForm(forms.ModelForm):
                     'work_order_experience',
                     HTML('</div>'),
                     'work_order_ease',
-                    HTML('</div>'),
+                    HTML('<div class="striped" style="padding-bottom: 1%; margin-bottom: 1%">'),
+                    Field('work_order_comments', style='max-width: 75%; margin: 1%;'),
+                    HTML('</div></div>'),
                     css_class='col'
                 ),
                 css_class='row'
@@ -1582,12 +1588,7 @@ class PostEventSurveyForm(forms.ModelForm):
                     'setup_on_time',
                     HTML('</div>'),
                     'crew_respectfulness',
-                    #HTML('<div class="striped">'),
-                    # 'crew_preparedness',
-                    # HTML('</div>'),
-                    #'crew_knowledgeability',
                     HTML('<div class="striped">'),
-                    #'quote_as_expected',
                     'price_appropriate',
                     HTML('</div>'),
                     'customer_would_return',
@@ -1620,9 +1621,8 @@ class PostEventSurveyForm(forms.ModelForm):
     class Meta:
         model = PostEventSurvey
         fields = ('services_quality', 'lighting_quality', 'sound_quality', 'work_order_method', 'work_order_experience',
-                  'work_order_ease', 'communication_responsiveness', 'pricelist_ux', 'setup_on_time', 'crew_respectfulness',
-                  # 'crew_preparedness', 'crew_knowledgeability', 'quote_as_expected',
-                  'price_appropriate', 'customer_would_return', 'comments')
+                  'work_order_ease', 'work_order_comments', 'communication_responsiveness', 'pricelist_ux',
+                  'setup_on_time', 'crew_respectfulness', 'price_appropriate', 'customer_would_return', 'comments')
 
     services_quality = forms.ChoiceField(
         label=PostEventSurvey._meta.get_field('services_quality').verbose_name,
@@ -1683,24 +1683,6 @@ class PostEventSurveyForm(forms.ModelForm):
         widget=SurveyCustomRadioSelect,
         choices=PostEventSurvey._meta.get_field('crew_respectfulness').choices,
     )
-
-    #    crew_preparedness = forms.ChoiceField(
-    #        label=PostEventSurvey._meta.get_field('crew_preparedness').verbose_name,
-    #        widget=SurveyCustomRadioSelect,
-    #        choices=PostEventSurvey._meta.get_field('crew_preparedness').choices,
-    #    )
-
-    # crew_knowledgeability = forms.ChoiceField(
-    #     label=PostEventSurvey._meta.get_field('crew_knowledgeability').verbose_name,
-    #     widget=SurveyCustomRadioSelect,
-    #     choices=PostEventSurvey._meta.get_field('crew_knowledgeability').choices,
-    # )
-
-    # quote_as_expected = forms.ChoiceField(
-    #     label=PostEventSurvey._meta.get_field('quote_as_expected').verbose_name,
-    #     widget=SurveyCustomRadioSelect,
-    #     choices=PostEventSurvey._meta.get_field('quote_as_expected').choices,
-    # )
 
     price_appropriate = forms.ChoiceField(
         label=PostEventSurvey._meta.get_field('price_appropriate').verbose_name,

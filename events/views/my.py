@@ -348,7 +348,7 @@ class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
         now = timezone.now()
         kwargs['event'] = get_object_or_404(
             BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now,
-                                                          datetime_end__gt=(now - datetime.timedelta(days=30))),
+                                                          datetime_end__gt=(now - datetime.timedelta(days=60))),
             pk=self.kwargs['eventid']
         )
         return kwargs
@@ -360,7 +360,7 @@ class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
         context['NO_FOOT'] = True;
         context['event'] = get_object_or_404(
             BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now,
-                                                          datetime_end__gt=(now - datetime.timedelta(days=30))),
+                                                          datetime_end__gt=(now - datetime.timedelta(days=60))),
             pk=self.kwargs['eventid']
         )
         return context

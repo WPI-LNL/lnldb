@@ -31,21 +31,21 @@ PROJECTIONS = (
 )
 
 AGREEMENT_CHOICES = (
+    (-1, 'Not applicable'),
     (0, 'Strongly disagree'),
     (1, 'Disagree'),
     (2, 'Neither agree nor disagree'),
     (3, 'Agree'),
     (4, 'Strongly agree'),
-    (-1, 'Not applicable')
 )
 
 EXCELLENCE_CHOICES = (
+    (-1, 'Not applicable'),
     (0, 'Poor'),
     (1, 'Fair'),
     (2, 'Good'),
     (3, 'Very good'),
     (4, 'Excellent'),
-    (-1, 'Not applicable')
 )
 
 
@@ -1166,6 +1166,8 @@ class Organization(models.Model):  # AKA Client
     last_updated = models.DateTimeField(auto_now=True)
     archived = models.BooleanField(default=False)
 
+    locked = models.BooleanField(default=False, blank=True)
+
     @property
     def fopals(self):
         return ", ".join([f.fopal for f in self.accounts.all()])
@@ -1359,23 +1361,21 @@ class PostEventSurvey(models.Model):
         (5, 'In person'),
         (0, 'Other'),
         (-1, 'I don\'t know')
-    ), verbose_name='How did you submit the work order?')
-    work_order_experience = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How would you rate your overall experience using the work order tool?', null=True, blank=True, default=-1)
+    ), verbose_name='How did you submit the workorder?')
+    work_order_experience = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How would you rate your overall experience using the workorder tool?', null=True, blank=True, default=-1)
     work_order_ease = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How would you rate the workorder tool\'s clarity and ease of use?', null=True, blank=True, default=-1)
+    work_order_comments = models.TextField(blank=True, verbose_name="Please provide any additional comments you may have regarding your experience with the workorder tool. Is there anything you would like to see us improve?")
 
     # survey agreement questions
     communication_responsiveness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='Lens and Lights was responsive to my communications.')
-    pricelist_ux = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='It was easy to determine which services to request.')
+    pricelist_ux = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='It was easy to determine which services to request and I had no problem finding what I needed.')
     setup_on_time = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='My event was set up and the crew was ready on time.')
-    crew_respectfulness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='When interacting with the crew they were helpful and respectful.')
-    #crew_preparedness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The crew was prepared.')
-    #crew_knowledgeability = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The crew was knowledgeable.')
-    #quote_as_expected = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The price quoted for the event matched my expectations.')
+    crew_respectfulness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='When interacting with the crew, they were helpful and respectful.')
     price_appropriate = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The price quoted for the event matched my expectations and was appropriate for the services provided.')
     customer_would_return = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='I would use Lens and Lights in the future.')
 
     # textarea questions
-    comments = models.TextField(blank=True, verbose_name='Please use this area to provide any other feedback you may have about your event.')
+    comments = models.TextField(blank=True, verbose_name='Please use this area to provide any additional feedback you may have about your event.')
 
     def __str__(self):
         return 'Post-event survey for {} by {}'.format(self.event, self.person)
