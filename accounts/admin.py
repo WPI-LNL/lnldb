@@ -11,8 +11,8 @@ class MemberAdmin(UserAdmin):
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'nickname', 'email')}),
         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser',
                                        'groups', 'user_permissions')}),
-        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
-        ('Other', {'fields': ['addr', 'mdc', 'wpibox', 'phone', 'class_year', 'student_id', 'locked']})
+        (_('Important dates'), {'fields': ('last_login', 'date_joined', 'away_exp')}),
+        ('Other', {'fields': ['addr', 'mdc', 'wpibox', 'phone', 'carrier', 'class_year', 'student_id', 'locked']})
     )
 
 

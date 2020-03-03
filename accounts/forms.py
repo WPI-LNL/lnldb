@@ -32,7 +32,7 @@ class UserEditForm(FieldAccessForm):
                  </div>
                  """)),
             Fieldset("Contact Info",
-                     'phone', Field('addr', rows=3)),
+                     'phone', 'carrier', Field('addr', rows=3)),
         ]
         if request_user.is_lnl:
             layout.extend([
@@ -54,7 +54,7 @@ class UserEditForm(FieldAccessForm):
     class Meta:
         model = get_user_model()
         fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'groups', 'addr',
-                  'wpibox', 'mdc', 'phone', 'class_year', 'student_id', 'away_exp']
+                  'wpibox', 'mdc', 'phone', 'class_year', 'student_id', 'away_exp', 'carrier']
 
     class FieldAccess:
         def __init__(self):
@@ -62,11 +62,11 @@ class UserEditForm(FieldAccessForm):
 
         thisisme = FieldAccessLevel(
             lambda user, instance: (user == instance) and not user.locked,
-            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id', 'nickname')
+            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id', 'nickname', 'carrier')
         )
         hasperm = FieldAccessLevel(
             lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
-            enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id',)
+            enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id', 'carrier')
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.change_group', instance),

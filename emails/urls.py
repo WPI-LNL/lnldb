@@ -9,5 +9,7 @@ urlpatterns = [
         name="pre-meeting"),
     url(r'^announcecc/(?P<slug>[-0-9a-f]+)/$', views.MeetingAnnounceCCView.as_view(),
         name="post-meeting"),
-    url(r'^admin/srv-announce/$', views.mkSrvAnnounce, name="service-announcement"),
+    url(r'^dispatch/srv-announce/$', views.mkSrvAnnounce, name="service-announcement"),
+    url(r'^dispatch/sms/$', views.send_sms, name="sms"),
+    url(r'^dispatch/sms/active/$', views.sendActiveSMS, name="sms-active"),
 ]

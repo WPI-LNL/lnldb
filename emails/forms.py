@@ -1,9 +1,9 @@
 import datetime
 
-from ajax_select.fields import AutoCompleteSelectMultipleField
+from ajax_select.fields import AutoCompleteSelectField
 from crispy_forms.bootstrap import FormActions, Tab, TabHolder
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Button, Field, Layout, Submit
+from crispy_forms.layout import Button, Field, Layout, Submit, Hidden
 from django import forms
 from django.db.models import Q
 from django.forms.fields import SplitDateTimeField
@@ -12,7 +12,7 @@ from multiupload.fields import MultiFileField
 from natural_duration import NaturalDurationField
 from pagedown.widgets import PagedownWidget
 
-from .models import ServiceAnnounce
+from .models import ServiceAnnounce, SMSMessage
 
 class SrvAnnounceSendForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -26,7 +26,7 @@ class SrvAnnounceSendForm(forms.ModelForm):
             'message',
             'email_to',
             FormActions(
-                Submit('save', 'Save Changes'),
+                Submit('save', 'Send'),
             )
         )
 
@@ -43,3 +43,39 @@ class SrvAnnounceSendForm(forms.ModelForm):
         widgets = {
             'message': PagedownWidget(),
         }
+
+
+class SMSForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(SMSForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_class = 'form-horizontal container'
+        self.helper.layout = Layout(
+            Field('message'),
+            FormActions(
+                Submit('save', 'Send')
+            )
+        )
+        super(SMSForm, self).__init__(*args, **kwargs)
+
+    class Meta:
+        model = SMSMessage
+        fields = ('message',)
+
+
+class TargetedSMSForm(SMSForm):
+    def __init__(self, *args, **kwargs):
+        super(TargetedSMSForm, self).__init__(*args, **kwargs)
+        self.helper.layout = Layout(
+            Field('user'),
+            Field('message'),
+            FormActions(
+                Submit('save', 'Send')
+            )
+        )
+
+    class Meta:
+        model = SMSMessage
+        fields = ('message', 'user')
+
+    user = AutoCompleteSelectField('Users', required=True)

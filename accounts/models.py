@@ -9,6 +9,22 @@ from events.models import Organization
 
 # from django_custom_user_migration.models import AbstractUser
 
+carrier_choices = (
+    ('', 'Opt-out'),
+    ('vtext.com', 'Verizon'),
+    ('txt.att.net', 'AT&T'),
+    ('myboostmobile.com', 'Boost Mobile'),
+    ('mms.cricketwireless.net', 'Cricket'),
+    ('msg.fi.google.com', 'Google Fi'),
+    ('mymetropcs.com', 'Metro PCS'),
+    ('mmst5.tracfone.com', 'Simple Mobile'),
+    ('messaging.sprintpcs.com', 'Sprint'),
+    ('tmomail.net', 'T-Mobile'),
+    ('vmobl.com', 'Virgin Mobile'),
+    ('vmobile.ca', 'Virgin Mobile Canada'),
+    ('vtext.com', 'Xfinity Mobile')
+)
+
 @python_2_unicode_compatible
 class User(AbstractUser):
     def save(self, *args, **kwargs):
@@ -19,6 +35,9 @@ class User(AbstractUser):
 
     wpibox = IntegerField(null=True, blank=True, verbose_name="WPI Box Number")
     phone = CharField(max_length=24, null=True, blank=True, verbose_name="Phone Number")
+    carrier = CharField(choices=carrier_choices, max_length=25, verbose_name="Cellular Carrier",
+                        help_text="By selecting your cellular carrier you consent to receiving text messages from LNL",
+                        null=True, blank=True, default='')
     addr = TextField(null=True, blank=True, verbose_name="Address / Office Location")
     mdc = CharField(max_length=32, null=True, blank=True, verbose_name="MDC")
     nickname = CharField(max_length=32, null=True, blank=True, verbose_name="Nickname")

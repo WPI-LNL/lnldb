@@ -15,6 +15,19 @@ EMAIL_TARGET_START_END = settings.EMAIL_TARGET_START_END
 DEFAULT_TO_ADDR = settings.DEFAULT_TO_ADDR
 
 
+def generate_sms_email(data):
+    body = data["message"]
+    user = data["user"]
+
+    if user.carrier is None or user.carrier == "" or user.phone is None:
+        return None
+
+    to_email = ''.join(e for e in user.phone if e.isalnum()) + "@" + user.carrier
+
+    email = BasicEmailGenerator(to_emails=to_email, body=body)
+    return email
+
+
 def send_survey_if_necessary(event):
     now = timezone.now()
     if now < event.datetime_end or event.datetime_end < (now - datetime.timedelta(days=30)) \
@@ -420,3 +433,27 @@ class PITRequestEmailGenerator(DefaultLNLEmailGenerator):
             body=body,
             attachments=attachments
         )
+
+
+class BasicEmailGenerator(object):
+    def __init__(self, to_emails=settings.DEFAULT_TO_ADDR, from_email=settings.EMAIL_FROM_NOREPLY, reply_to=None,
+                 context=None, template_basename="emails/email_basic", build_html=False, body=None):
+        if isinstance(to_emails, string_types):
+            to_emails = [to_emails]
+        if context is None:
+            context = {}
+        if body:
+            context['body'] = body
+
+        template_txt = "%s.txt" % template_basename
+        content_txt = render_to_string(template_txt, context)
+        subject = ""
+        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, reply_to=reply_to)
+
+        if build_html:
+            template_html = "%s.html" % template_basename
+            content_html = render_to_string(template_html, context)
+            self.email.attach_alternative(content_html, "text/html")
+
+    def send(self):
+        self.email.send()

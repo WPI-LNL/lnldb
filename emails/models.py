@@ -1,5 +1,7 @@
 from django.db import models
+from django.conf import settings
 import uuid
+
 
 class MeetingNoticeMail(models.Model):
     ts = models.DateTimeField(auto_now_add=True)
@@ -15,9 +17,20 @@ class MeetingNoticeMail(models.Model):
 
     sent = models.BooleanField(default=False)
 
+
 class ServiceAnnounce(models.Model):
     subject = models.CharField(max_length=128)
     message = models.TextField()
-    email_to = 'lnlnews@wpi.edu'
+    email_to = 'lnl@wpi.edu'
 
     uuid = models.UUIDField(editable=False, default=uuid.uuid4, blank=True)
+
+
+class SMSMessage(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    message = models.TextField()
+
+    class Meta:
+        permissions = (
+            ('send', 'Send SMS Messages'),
+        )
