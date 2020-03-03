@@ -100,6 +100,8 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
         context['hours'] = u.hours.filter(hours__isnull=False).select_related('event', 'service')
         context['ccs'] = u.ccinstances.select_related('event').all()
 
+        context['active'] = self.get_object().is_active
+
         moviesccd = Event2019.objects.filter(ccinstances__crew_chief=self.get_object(), serviceinstance__service__category__name="Projection").distinct()
 
         context['moviesccd'] = moviesccd.count()
@@ -145,14 +147,14 @@ class AssociateList(BaseUserList):
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Associate")
     name = "Associate List"
-    accounts_disabled_column = True
+    accounts_disabled_column = False
 
 
 class AlumniList(BaseUserList):
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Alumni")
     name = "Alumni List"
-    accounts_disabled_column = True
+    accounts_disabled_column = False
 
 
 class InactiveList(BaseUserList):
@@ -172,7 +174,7 @@ class AllMembersList(BaseUserList):
 class LimboList(BaseUserList):
     queryset = get_user_model().objects.filter(groups__isnull=True)
     name = "Users without Association"
-    accounts_disabled_column = True
+    accounts_disabled_column = False
 
 
 class MeDirectView(generic.RedirectView):
