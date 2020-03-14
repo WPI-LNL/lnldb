@@ -174,7 +174,7 @@ class IOrgForm(FieldAccessForm):
             )
         readOnly = 'rw'
         instance = kwargs['instance']
-        if instance.locked is True:
+        if instance is not None and instance.locked is True:
             readOnly = 'r'
         tabs.extend([
             Tab(
@@ -1716,9 +1716,9 @@ class PostEventSurveyForm(forms.ModelForm):
 # |_|  \___/|_|  |_| |_| |_|___/
 
 SERVICE_INFO_HELP_TEXT = """
-Note: Any riders or documentation provided to you from the artist/performer which may help LnL
+Note: Any riders or documentation provided to you from the artist/performer which may help LNL
 determine the technical needs of your event may be attached to this request once it is submitted by
-going to your LnL account and select "Previous WorkOrders".
+going to your LNL account and selecting "Previous Workorders".
 """
 
 

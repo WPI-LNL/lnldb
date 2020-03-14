@@ -847,7 +847,7 @@ class Event2019(BaseEvent):
         if self.discount_applied:
             categories = ['Lighting', 'Sound']
             categories = [Category.objects.get(name=name) for name in categories]
-            discountable_total = decimal.Decimal(self.serviceinstance_set.filter(service__category__in=categories).aggregate(Sum('service__base_cost'))['service__base_cost__sum'])
+            discountable_total = decimal.Decimal(self.serviceinstance_set.filter(service__category__in=categories).aggregate(Sum('service__base_cost'))['service__base_cost__sum']) + self.extras_total
             return discountable_total * decimal.Decimal(".15")
         else:
             return decimal.Decimal("0.0")
