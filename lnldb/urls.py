@@ -13,12 +13,11 @@ from emails.views import MeetingAnnounceCCView, MeetingAnnounceView
 from events.forms import named_event_forms
 from events.views.flow import CCRCreate, CCRDelete, CCRUpdate
 from events.views.indices import admin as db_home
-from events.views.indices import event_search, survey_dashboard
+from events.views.indices import event_search, survey_dashboard, workshops
 from pages.views import page as view_page, recruitment_page
 
 admin.autodiscover()
 permission.autodiscover()
-
 
 # Error pages
 handler403 = 'data.views.err403'
@@ -28,9 +27,9 @@ handler500 = 'data.views.err500'
 urlpatterns = []
 
 if settings.SAML2_ENABLED:
-	urlpatterns += [
-		url(r'^saml2_auth/', include('django_saml2_auth.urls')),
-	]
+    urlpatterns += [
+        url(r'^saml2_auth/', include('django_saml2_auth.urls')),
+    ]
 
 urlpatterns += [
     # Examples:
@@ -66,6 +65,7 @@ urlpatterns += [
     url(r'^db/workorderwizard-autopopulate$', data.views.workorderwizard_findprevious, name="wizard-findprevious"),
     url(r'^workorder/', RedirectView.as_view(url='/workorder/', permanent=False)),
     url(r'^join/$', recruitment_page, name='recruitment-page'),
+    url(r'^workshops/$', workshops, name='workshops'),
 
     # keep old urls
     url(r'^lnadmin/$', RedirectView.as_view(url="/db/", permanent=True)),

@@ -63,8 +63,10 @@ class EventAttachmentInline(admin.TabularInline):
 class EventHoursInline(admin.TabularInline):
     model = models.Hours
 
+
 class ServiceInstanceInline(admin.TabularInline):
     model = models.ServiceInstance
+
 
 class EventAdmin(PolymorphicChildModelAdmin, VersionAdmin):
     inlines = [EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline]
@@ -72,14 +74,17 @@ class EventAdmin(PolymorphicChildModelAdmin, VersionAdmin):
     search_fields = ['event_name']
     readonly_fields = ['submitted_on']
 
+
 class Event2019Admin(PolymorphicChildModelAdmin, VersionAdmin):
     inlines = [ServiceInstanceInline, EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline]
     filter_horizontal = ('org',)
     search_fields = ['event_name']
     readonly_fields = ['submitted_on']
 
+
 class BaseEventAdmin(VersionAdmin, PolymorphicParentModelAdmin):
     child_models = models.Event, models.Event2019
+
 
 fieldsets = (
     ("Submitter Information", {
@@ -140,6 +145,14 @@ class FundAdmin(admin.ModelAdmin):
     search_fields = ['name', 'notes', 'fund', 'account', 'organization']
 
 
+class WorkshopDatesAdmin(admin.TabularInline):
+    model = models.WorkshopDate
+
+
+class WorkshopAdmin(admin.ModelAdmin):
+    inlines = [WorkshopDatesAdmin]
+
+
 admin.site.register(models.Fund, FundAdmin)
 admin.site.register(models.Billing)
 admin.site.register(models.Hours)
@@ -159,3 +172,4 @@ admin.site.register(models.Projection)
 admin.site.register(models.Category)
 admin.site.register(models.Service)
 admin.site.register(models.PostEventSurvey)
+admin.site.register(models.Workshop, WorkshopAdmin)

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+		<meta name="description" content="{{ description }}">
+        {% if title %}
+		<title>Lens and Lights | {{ title }}</title>
+        {% else %}
+        <title>Lens and Lights</title>
+        {% endif %}
+        <base href="/">
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+        <link rel="stylesheet" href="assets/css/main.css">
+        <style>{% if styles %}{{ styles }}{% endif %}</style>
+		<script>
+			(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+				(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		  		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		  	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+		  	ga('create', 'UA-66611753-1', 'auto');
+		  	ga('send', 'pageview');
+		</script>
+		<!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+		<!--[if lt IE 9]>
+		  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+		<![endif]-->
+
+		<!-- Fav and touch icons -->
+		<link rel="shortcut icon" href="assets/ico/favicon.ico">
+		<link rel="apple-touch-icon-precomposed" sizes="144x144" href="assets/ico/apple-touch-icon-144-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="114x114" href="assets/ico/apple-touch-icon-114-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="72x72" href="assets/ico/apple-touch-icon-72-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" href="assets/ico/apple-touch-icon-57-precomposed.png">
+	</head>
+	<body>
+		<header>
+			<div id="system-alert"></div>
+			<nav id="main-nav" class="navbar mb-4 justify-content-between">
+				<h1 style="color: white; padding-top: 5px" class="h3"><img id="brand" src="assets/ico/LNL-logo-transparent.png" onclick="window.location.href='/';" alt="LNL Logo"/></h1>
+				<i class="fas fa-bars fa-2x" id="menu" onclick="toggleMenu();"></i>
+				<i class="fas fa-bars" id="menu-sm" onclick="toggleMenu();"></i>
+				<nav class="my-2 my-md-0 mr-md-3" id="nav">
+					<a class="p-2 text-light" href="about.html" title="About">About</a>
+					<a class="p-2 text-light" href="services/lighting.html" title="Lighting">Lighting</a>
+					<a class="p-2 text-light" href="services/sound.html" title="Sound">Sound</a>
+					<a class="p-2 text-light" href="services/projection.html" title="Projection">Projection</a>
+					<a class="p-2 text-light" href="pricing/" title="Pricing">Pricing</a>
+					<a class="p-2 text-light" href="workorder/" title="Workorder">Workorder</a>
+					<a class="p-2 text-light" href="db/" title="Login">My&nbsp;Account</a>
+				</nav>
+			</nav>
+			<div class="pt-5 pb-4"></div>
+		</header>
+		{% block content %}
+        {% endblock %}
+		<!--Modal Views-->
+		<div class="modal" tabindex="-1" role="dialog" id="critical-alert">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<div class="modal-header" id="alert-header">
+						<h5 class="modal-title" id="alert-title"></h5>
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
+					</div>
+					<div class="modal-body" id="alert-message">
+						<p></p>
+					</div>
+					<div class="modal-footer">
+						<button class="btn btn-secondary" data-dismiss="modal">Close</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<form id="page-id">
+			<input hidden name="project_id" value="LNL">
+			<input id="dirID" hidden name="directory" value="">
+			<input id="pageID" hidden name="page_id" value="">
+		</form>
+		<footer role="contentinfo" class="pt-5 pb-4 bg-black m-0">
+			<div class="container px-5">
+				<div class="row">
+					<div class="col-12 col-md">
+						<img class="fluid" id="long" src="assets/ico/LNL-logo-long.png" alt="LNL Logo - Long"/>
+						<small class="d-block mb-3" style="color: #bbb;">&nbsp;Worcester&nbsp;Polytechnic&nbsp;Institute<br>&nbsp;&copy; 2019 - <span id="year">2020</span></small>
+					</div>
+					<div id="spacer" class="col-6 col-md"></div>
+					<div class="col-6 col-md">
+						<h6>About</h6>
+						<ul class="list-unstyled text-small">
+							<li><a href="about.html">About</a></li>
+							<li><a href="history.html">History</a></li>
+							<li><a href="about.html#exec">Exec</a></li>
+						</ul>
+					</div>
+					<div class="col-6 col-md">
+						<h6>Services</h6>
+						<ul class="list-unstyled text-small">
+							<li><a href="services/sound.html">Sound</a></li>
+							<li><a href="services/lighting.html">Lighting</a></li>
+							<li><a href="services/projection.html">Projection</a></li>
+						</ul>
+					</div>
+					<div class="col-6 col-md">
+						<h6>Resources</h6>
+						<ul class="list-unstyled text-small">
+							<li><a href="pricing/">Pricing</a></li>
+							<li><a href="workorder/">Submit Workorder</a></li>
+							<li><a href="db/">My&nbsp;Account</a></li>
+						</ul>
+					</div>
+					<div class="col-6 col-md">
+						<h6>Contact</h6>
+						<ul class="list-unstyled text-small">
+							<li><a href="contact.html">Contact Us</a></li>
+							<li><a href="legal/rentals/">Rental&nbsp;Policy</a></li>
+							<li><a href="legal/privacy/">Privacy&nbsp;Policy</a></li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</footer>
+		<script>
+		function setYear() {
+			document.getElementById("year").innerHTML = (new Date()).getFullYear();
+			getNotifications();
+		}
+
+		function toggleMenu(){
+        	if (document.getElementById("nav").style.display == "block"){
+        		document.getElementById("nav").style.display = "none";
+        	}else{
+        		document.getElementById("nav").style.display = "block";
+        	}
+        }
+
+		window.onload = setYear;
+		</script>
+		<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    	<script src="assets/js/api.js"></script>
+    	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+	</body>
+</html>

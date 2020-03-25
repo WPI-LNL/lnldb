@@ -1385,3 +1385,20 @@ class PostEventSurvey(models.Model):
             ("view_posteventsurvey", "View post-event survey results"),
         )
         ordering = ['event', 'person']
+
+
+@python_2_unicode_compatible
+class Workshop(models.Model):
+    name = models.CharField(max_length=128)
+    instructors = models.CharField(max_length=100)
+    description = models.TextField()
+    location = models.CharField(max_length=100)
+    notes = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class WorkshopDate(models.Model):
+    workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE, related_name='dates')
+    date = models.DateTimeField()

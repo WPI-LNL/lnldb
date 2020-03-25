@@ -9,7 +9,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from events.charts import SurveyVpChart, SurveyCrewChart, SurveyPricelistChart, SurveyLnlChart
-from events.models import BaseEvent
+from events.models import BaseEvent, Workshop
 from helpers.challenges import is_officer
 
 
@@ -255,3 +255,14 @@ def survey_dashboard(request):
         else:
             context['wma']['overall'] = None
     return render(request, 'survey_dashboard.html', context)
+
+
+def workshops(request):
+    context = {
+        'workshops': Workshop.objects.all(),
+        'title': "Workshops",
+        'description': "Learn more about out our upcoming sound and lighting workshops.",
+        'styles': "strong {\n\tcolor: orange;\n}\npre {\n\tfont-size: 1rem;\n\tcolor: white;\n\tfont-family: "
+                  "Helvetica Neue, Helvetica, Arial, sans-serif;\n} "
+    }
+    return render(request, 'workshops.html', context)
