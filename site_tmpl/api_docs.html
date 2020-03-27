@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+		<meta name="description" content="Documentation for the LNL API. Provides limited access to the LNLDB.">
+		<title>LNL API | Docs</title>
+		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Monserrat:400,700"/>
+		<script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+		<script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
+		<style>
+		#popover {
+			cursor: help;
+			text-decoration: none;
+		}
+		.selected a {
+			color: black;
+		}
+		li a:hover {
+			text-decoration: none;
+		}
+		.well {
+			min-height: 20px;
+			padding: 19px;
+			margin-bottom: 20px;
+			background-color: #f5f5f5;
+			border: 1px solid #e3e3e3;
+			border-radius: 4px;
+			-webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, .05);
+			box-shadow:inset 0 1px 1px rgba(0, 0, 0, .05)
+		}
+		@media (max-width: 1065px) {
+			#navPanel {
+				width: 90% !important;
+				position: relative !important;
+				margin: auto;
+			}
+			header {
+				position: relative !important;
+				padding-left: 4%;
+			}
+			nav {
+				display: none;
+			}
+			#doc {
+				float: none !important;
+				width: 100% !important;
+				padding-left: 2% !important;
+				padding-right: 2% !important;
+				padding-top: 20%;
+			}
+		}
+		@media (min-width: 1350px) {
+			#navPanel {
+				top: 10% !important;
+			}
+			#doc {
+				padding-top: 6% !important;
+			}
+		}
+		</style>
+	</head>
+	<body>
+		<header role="banner" class="top pt-2 pb-2 mb-5 bg-dark" style="width: 100%; position: fixed; z-index: 99">
+			<div class="container">
+				<div class="row">
+					<div class="col-xs-12 col-nd-12">
+						<h2 style="color: white">API Documentation</h2>
+					</div>
+				</div>
+			</div>
+		</header>
+		<div class="main" style="padding-left: 1%;">
+			<div id="navPanel" style="width: 20%; position: fixed; top: 15%" class="card">
+				<div class="card-header">
+					<h5>API Reference</h5>
+				</div>
+				<ul class="list-group list-group-flush">
+					<li class="list-group-item"><a href="#getting-started">Getting Started</a></li>
+				</ul>
+				<div class="card-header">
+					<h5>Endpoints</h5>
+				</div>
+				<ul class="list-group list-group-flush">
+                    {% for endpoint in endpoints %}
+					<li class="list-group-item"><a href="#{{ endpoint.url }}">{{ endpoint.name }}</a></li>
+                    {% endfor %}
+				</ul>
+				<div class="card-header">
+					<h5>Authentication</h5>
+				</div>
+				<ul class="list-group list-group-flush">
+					<li class="list-group-item"><a href="#auth">Session-based</a></li>
+				</ul>
+			</div>
+		</div>
+        <article id="doc" style="width: 77%; float: right; padding-right: 1%; padding-top: 7%">
+            <section id="getting-started">
+                <div>
+                    <h2>WPI Lens and Lights API</h2>
+                    <div style="border-top: 1px solid #eee">
+                        <p style="padding-top: 20px; padding-bottom: 20px">The LNL API is a simple REST API which can be used to connect apps and services with the LNL Database (LNLDB). The LNL API currently provides read-only access to information already available on our public-facing webpages.</p>
+                        <h3 style="color: gray">Getting Started</h3>
+                    </div>
+                    <div style="border-top: 1px solid #eee">
+                        <p style="padding-top: 20px; padding-bottom: 20px">The LNL API can be accessed through standard HTTP requests and will return JSON metadata. To access protected information, your application will be required to authenticate through the LNLDB first. The API is currently
+                            configured to respond to the following HTTP Methods:</p>
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr class="bg-dark" style="color: white">
+                                    <td><strong>Method</strong></td>
+                                    <td><strong>Action</strong></td>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="badge badge-primary" style="font-size: 1.2em">GET</span></td>
+                                    <td>Retrieves the specified resources</td>
+                                </tr>
+                                <!--<tr>
+                                    <td><span class="badge badge-success" style="font-size: 1.2em">POST</span></td>
+                                    <td>Saves information in the database</td>
+                                </tr>-->
+                            </tbody>
+                        </table>
+                        <div class="alert alert-info"><strong>Note:</strong> If attempting to communicate with the API through methods such as ajax, note that by default, CORS prohibits cross-origin requests. You may need to register your application with the API before using such methods. Contact <a href="mailto:lnl-w@wpi.edu">lnl-w@wpi.edu</a> for assistance.</div><br>
+                        <h3 style="color: gray">Endpoints</h3>
+                    </div>
+                </div>
+            </section>
+            <section>
+                {% for endpoint in endpoints %}
+                <div style="border-top: 1px solid #eee" id="{{ endpoint.url }}">
+                    <br>
+                    {% if endpoint == endpoints|first %}
+                    <p style="padding-top: 20px; padding-bottom: 20px">When sending requests to the API, they should be sent to one or more of the following endpoints. For most endpoints, if specific parameters are not specified, the API will return all objects at that endpoint.</p>
+                    {% endif %}
+                    <h4>{{ endpoint.name }} {% for method in endpoint.methods.all %}
+                        <span class="badge {% if method.method == "GET" %}
+                        badge-primary
+                        {% elif method.method == "POST" %}
+                        badge-success
+                        {% endif %}">{{ method.method }}</span> {% endfor %}</h4>
+                    <code>http://lnl.wpi.edu/api/v1/{{ endpoint.url }}</code>
+                    <p style="padding-top: 20px;">{{ endpoint.description }}</p>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr class="bg-dark" style="color: white">
+                                <td><strong>Parameter</strong></td>
+                                <td><strong>Value</strong></td>
+                                <td><strong>Description</strong></td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for parameter in endpoint.parameters.all %}
+                            <tr>
+                                <td>{{ parameter.name }}</td>
+                                <td>{{ parameter.type }}</td>
+                                <td>{{ parameter.description|safe }} {% if parameter.required %}<strong>[required]</strong>{% endif %}
+                                {% if parameter.type == "datetime" %}<br><strong>Format: </strong>YYYY-MM-dd hh:mm:ssZ{% elif parameter.type == "date" %}
+                                <br><strong>Format: </strong>YYYY-MM-dd{% elif parameter.type == "time" %}<br><strong>Format: </strong>hh:mm:ssZ{% endif %}
+                                {% if parameter.options.all %}<br><strong>Options: </strong>
+                                {% for option in parameter.options.all %}
+                                    {% if option.key == "etc." %}
+                                        etc.
+                                    {% else %}
+                                        <code>{{ option.key }}</code>{% if option.value %} = {{ option.value }}{% endif %}{% if option != parameter.options.all.last %}, {% endif %}
+                                    {% endif %}
+                                {% endfor %}{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if endpoint.parameter_note %}
+                    <div class="alert alert-info"><strong>Note: </strong>{{ endpoint.parameter_note|safe }}</div>
+                    {% endif %}
+                    <h5 class="pt-2">Authentication</h5>
+                    {% for method in endpoint.methods.all %}
+                        <p><span class="badge {% if method.method == "GET" %}
+                        badge-primary
+                        {% elif method.method == "POST" %}
+                        badge-success
+                        {% endif %}">{{ method.method }}</span>&nbsp;
+                        {% if method.auth == "session" %}
+                            This method requires your application to be authenticated through the LNLDB. This endpoint accepts session-based authentication.
+                        {% elif method.auth == "project" %}
+                            Not required, although some information may be restricted by project
+                        {% else %}
+                            Not required
+                        {% endif %}</p>
+                    {% endfor %}
+                    <h5 class="pt-2">Response</h5>
+                    <p>The following request:</p>
+                    <div class="well">
+                        <code class="prettyprint">GET http://lnl.wpi.edu/api/v1/{{ endpoint.url }}?{{ endpoint.example }}</code>
+                    </div>
+                    <p>might return:</p>
+                    <div class="well">
+                        <code class="prettyprint">HTTP/1.1 200 OK<br>
+                        Content-Type: application/json<br>
+                        Content-Length: {{ endpoint.response|length }}<br><br>
+                        {{ endpoint.response }}</code>
+                    </div>
+                    {% if endpoint.responsekeys %}
+                        <p>The response will use the following format:</p>
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr class="bg-dark" style="color: white">
+                                    <td><strong>Parameter</strong></td>
+                                    <td><strong>Value</strong></td>
+                                    <td><strong>Description</strong></td>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for parameter in endpoint.responsekeys.all %}
+                                    <tr>
+                                        <td>{{ parameter.name }}</td>
+                                        <td>{{ parameter.type }}</td>
+                                        <td>{{ parameter.description|safe }} {% if parameter.options.all %}
+                                            <br><strong>Options: </strong>
+                                            {% for option in parameter.options.all %}
+                                            <code>{{ option.key }}</code>{% if option.value %} = {{ option.value }}
+                                            {% endif %}{% if option != parameter.options.all.last %}, {% endif %}
+                                            {% endfor %}
+                                        {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+                </div><br>
+                {% endfor %}
+                <h3 id="auth" style="color: gray">Authentication</h3>
+            </section>
+            <section>
+                <div style="border-top: 1px solid #eee">
+                    <br>
+                    <h4>Session-based</h4>
+                    <p>Some endpoints access data that requires authentication. To make the process as simple as possible, the API utilizes session-based authentication through the LNLDB.
+                        If the user does not have an active session, or their current session has expired, simply redirect them to the login page.</p>
+                    <div class="alert alert-warning"><strong>Note: </strong>Endpoints that require authentication are currently unavailable as we work to update authentication methods site-wide.</div>
+                </div>
+                <div style="padding-top: 20px; padding-bottom: 3%">
+                    <p>Last updated: March 25, 2020</p>
+                    <p style="color: gray"><em>Unless otherwise stated, any code samples on this site are licensed under the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache 2.0 license</a>.</em></p>
+                </div>
+            </section>
+        </article>
+	</body>
+	<script>
+	let topOff = 100;
+	let menu = $("#navPanel"),
+    menuHeight = menu.outerHeight()+15,
+    menuItems = menu.find("a"),
+    scrollItems = menuItems.map(function(){
+      let item = $($(this).attr("href"));
+      if (item.length) { return item; }
+    });
+	$(window).scroll(function() {
+		let fromTop = $(this).scrollTop()+menuHeight;
+		let cur = scrollItems.map(function(){
+		if ($(this).offset().top < fromTop)
+		   return this;
+	    });
+	    cur = cur[cur.length-1];
+   		let id = cur && cur.length ? cur[0].id : "";
+   		menuItems.parent().removeClass("selected").end().filter("[href='#"+id+"']").parent().addClass("selected");
+	});
+
+	$(function () {
+	  $('[data-toggle="popover"]').popover()
+	})
+	</script>
+</html>

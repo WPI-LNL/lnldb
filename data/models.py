@@ -4,6 +4,17 @@ from django.db import models
 from django.contrib.sites.models import Site
 from django.utils.translation import gettext_lazy as _
 
+NOTIF_TYPE = (
+    ('info', 'Info'),
+    ('advisory', 'Advisory'),
+    ('warning', 'Warning')
+)
+
+FORMATS = (
+    ('alert', 'Alert'),
+    ('notification', 'Notification')
+)
+
 
 class StupidCat(models.Model):
     """ For logging when a user goes somewhere they shouldn't be going """
@@ -48,3 +59,23 @@ class ResizedRedirect(models.Model):
 
     def __str__(self):
         return "%s ---> %s" % (self.old_path, self.new_path)
+
+
+class Notification(models.Model):
+    title = models.CharField(max_length=128)
+    message = models.TextField(max_length=500)
+    format = models.CharField(max_length=12, choices=FORMATS)
+    type = models.CharField(max_length=8, choices=NOTIF_TYPE)
+    dismissible = models.BooleanField(default=False)
+    target = models.CharField(max_length=200,
+                              help_text="To target a specific page, include the full pathname (i.e. "
+                                        "'/services/lighting.html' or '/events/'). To target a directory, "
+                                        "include only the directory name (i.e. 'events'). For a sitewide "
+                                        "notification, enter 'All'.")
+    expires = models.DateTimeField()
+
+    def __str__(self):
+        return self.title + " - " + self.target
+
+    class Meta:
+        unique_together = ("format", "target")

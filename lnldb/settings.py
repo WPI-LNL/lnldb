@@ -296,6 +296,7 @@ INSTALLED_APPS = (
     'members',
     'mptt',
     'laptops',
+    'api',
 
     'bootstrap_toolkit',
     'crispy_forms',
@@ -312,6 +313,7 @@ INSTALLED_APPS = (
     'compat',
     'polymorphic',
     'jchart',
+    'rest_framework',
 )
 if SAML2_ENABLED:
     INSTALLED_APPS += ('django_saml2_auth',)

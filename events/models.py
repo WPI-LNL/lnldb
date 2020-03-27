@@ -1402,3 +1402,44 @@ class Workshop(models.Model):
 class WorkshopDate(models.Model):
     workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE, related_name='dates')
     date = models.DateTimeField()
+
+
+DAYS_OF_WEEK = (
+    ('0', 'Sunday'),
+    ('1', 'Monday'),
+    ('2', 'Tuesday'),
+    ('3', 'Wednesday'),
+    ('4', 'Thursday'),
+    ('5', 'Friday'),
+    ('6', 'Saturday')
+)
+
+
+@python_2_unicode_compatible
+class Hour(models.Model):
+    officer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    day = models.CharField(max_length=1, choices=DAYS_OF_WEEK)
+    hour_start = models.TimeField(auto_now=False, auto_now_add=False)
+    hour_end = models.TimeField(auto_now=False, auto_now_add=False)
+
+    def __str__(self):
+        return self.officer.first_name + " " + self.officer.last_name + " - " + self.get_day_display()
+
+    class Meta:
+        permissions = (
+            ('manage_hours', 'Manage Office Hours'),
+        )
+        verbose_name = "Office Hour"
+
+
+class HourChange(models.Model):
+    officer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    date_posted = models.DateTimeField(auto_now=True)
+    expires = models.DateTimeField(auto_now=False, auto_now_add=False)
+    message = models.TextField(max_length=244)
+
+    def __str__(self):
+        return self.officer.first_name + " " + self.officer.last_name
+
+    class Meta:
+        verbose_name = "Office Hour Update"

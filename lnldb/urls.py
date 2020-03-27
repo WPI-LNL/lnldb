@@ -54,6 +54,7 @@ urlpatterns += [
     url(r'^email/', include('emails.urls', namespace='emails')),
     url(r'', include('accounts.urls', namespace='accounts')),
     url(r'', include('members.urls', namespace='members')),
+    url(r'^api/', include('api.urls', namespace='api')),
 
     # special urls
     url(r'^db/$', db_home, name="home"),

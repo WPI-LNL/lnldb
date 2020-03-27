@@ -25,7 +25,7 @@ class UserEditForm(FieldAccessForm):
         self.helper.field_class = 'col-lg-8'
         layout = [
             Fieldset("User Info",
-                     'first_name', 'last_name', 'username', 'email', 'nickname',
+                     'first_name', 'last_name', 'username', 'email', 'nickname', 'img',
                      HTML("""
                  <div class="col-lg-offset-2 col-lg-8">
                      <a href="{% url 'accounts:password' object.pk %}">Set a password for non-CAS login</a>
@@ -39,7 +39,7 @@ class UserEditForm(FieldAccessForm):
                 Fieldset("Student Info",
                          'wpibox', 'class_year', 'student_id'),
                 Fieldset("Internal Info",
-                         'mdc', 'groups', 'away_exp'),
+                         'title', 'mdc', 'groups', 'away_exp'),
             ])
         layout.append(
             FormActions(
@@ -54,7 +54,7 @@ class UserEditForm(FieldAccessForm):
     class Meta:
         model = get_user_model()
         fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'groups', 'addr',
-                  'wpibox', 'mdc', 'phone', 'class_year', 'student_id', 'away_exp', 'carrier']
+                  'wpibox', 'mdc', 'phone', 'class_year', 'student_id', 'away_exp', 'carrier', 'title', 'img']
 
     class FieldAccess:
         def __init__(self):
@@ -70,7 +70,7 @@ class UserEditForm(FieldAccessForm):
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.change_group', instance),
-            enable=('groups', 'away_exp')
+            enable=('groups', 'away_exp', 'title', 'img')
         )
         edit_mdc = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.edit_mdc', instance),

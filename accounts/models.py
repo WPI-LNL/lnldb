@@ -6,7 +6,6 @@ from django.utils.six import python_2_unicode_compatible
 
 from events.models import Organization
 
-
 # from django_custom_user_migration.models import AbstractUser
 
 carrier_choices = (
@@ -25,6 +24,7 @@ carrier_choices = (
     ('vtext.com', 'Xfinity Mobile')
 )
 
+
 @python_2_unicode_compatible
 class User(AbstractUser):
     def save(self, *args, **kwargs):
@@ -33,6 +33,9 @@ class User(AbstractUser):
             self.email = "%s@wpi.edu" % self.username
         super(User, self).save(*args, **kwargs)
 
+    title = CharField(max_length=60, null=True, blank=True, verbose_name="Officer Position")
+    img = CharField(max_length=500, help_text="URL pointing to location of officer's photo", null=True, blank=True,
+                    verbose_name="Image")
     wpibox = IntegerField(null=True, blank=True, verbose_name="WPI Box Number")
     phone = CharField(max_length=24, null=True, blank=True, verbose_name="Phone Number")
     carrier = CharField(choices=carrier_choices, max_length=25, verbose_name="Cellular Carrier",
@@ -74,7 +77,7 @@ class User(AbstractUser):
     @property
     def is_lnl(self):
         return self.groups.filter(Q(name="Alumni") | Q(name="Active") | Q(name="Officer") | Q(name="Associate") | Q(
-                name="Away") | Q(name="Inactive")).exists()
+            name="Away") | Q(name="Inactive")).exists()
 
     @property
     def is_complete(self):
