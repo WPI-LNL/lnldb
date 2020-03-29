@@ -236,7 +236,10 @@ class PITRequest(LoginRequiredMixin, HasPermMixin, FormView):
 
     def form_valid(self, form):
         if self.request.POST:
-            form.instance.projectionist = get_object_or_404(Projectionist, user=self.request.user)
+            projectionist = Projectionist.objects.filter(user=self.request.user).first()
+            if projectionist is None:
+                projectionist = Projectionist.objects.create(user=self.request.user)
+            form.instance.projectionist = projectionist
             if form.is_valid():
                 form.save()
                 name = form.instance.projectionist.user.get_full_name()

@@ -77,7 +77,7 @@ class EventBasicViewTest(TestCase):
 
         # Default input should be good
         response = self.client.post(reverse("events:review", args=[self.e.pk]))
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
 
     def test_ccr_add(self):
         response = self.client.get(reverse("events:reports:new", args=[self.e.pk]))

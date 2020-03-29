@@ -2,6 +2,7 @@ from django.core.urlresolvers import reverse
 from data.tests.util import ViewTestCase
 from django.contrib.auth.models import Permission
 from . import models
+import datetime
 
 
 class ProjViewTest(ViewTestCase):
@@ -182,3 +183,58 @@ class ProjViewTest(ViewTestCase):
         self.assertOk(self.client.get(reverse("projection:add-movies")))
 
         # TODO: the rest of the test
+
+    def test_pit_request(self):
+        # Creates new projectionist if necessary
+        data = {
+            "level": "P3",
+            "submitted_for": datetime.datetime.now(),
+            "requested_on": datetime.datetime.now()
+        }
+
+        # Only members should be able to see
+        res = self.client.post(reverse("projection:pit-request"), data)
+        self.assertEqual(res.status_code, 403)
+
+        permission = Permission.objects.get(codename='view_pits')
+        self.user.user_permissions.add(permission)
+
+        res = self.client.post(reverse("projection:pit-request"), data)
+        self.assertEqual(res.status_code, 200)
+
+    def test_pit_schedule(self):
+        # Only those with editing permissions should have access
+        self.assertOk(self.client.get(reverse("projection:pit-schedule")), 403)
+
+        permission = Permission.objects.get(codename='edit_pits')
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("projection:pit-schedule")), 200)
+
+    def test_pit_request_manage(self):
+        proj = models.Projectionist.objects.create(user=self.user)
+        proj.save()
+        date = datetime.datetime.now()
+        level = models.PITLevel.objects.create(name_long="PIT 3", name_short="P3")
+        level.save()
+        request = models.PitRequest.objects.create(projectionist=proj, level=level, requested_on=date,
+                                                   scheduled_for=date)
+        request.save()
+
+        # Only those with view permissions should have access to update a PIT request
+        self.assertOk(self.client.get(reverse("projection:edit-request", args=[request.id])), 403)
+        self.assertOk(self.client.get(reverse("projection:cancel-request", args=[request.id])), 403)
+
+        permission = Permission.objects.get(codename='view_pits')
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("projection:edit-request", args=[request.id])), 200)
+        self.assertOk(self.client.get(reverse("projection:cancel-request", args=[request.id])), 200)
+
+        # Only those with edit access should be able to manage/approve PIT requests
+        self.assertOk(self.client.get(reverse("projection:manage-request", args=[request.id])), 403)
+
+        permission = Permission.objects.get(codename='edit_pits')
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("projection:manage-request", args=[request.id])), 200)
