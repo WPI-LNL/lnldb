@@ -1405,20 +1405,20 @@ class WorkshopDate(models.Model):
 
 
 DAYS_OF_WEEK = (
-    ('0', 'Sunday'),
-    ('1', 'Monday'),
-    ('2', 'Tuesday'),
-    ('3', 'Wednesday'),
-    ('4', 'Thursday'),
-    ('5', 'Friday'),
-    ('6', 'Saturday')
+    (0, 'Sunday'),
+    (1, 'Monday'),
+    (2, 'Tuesday'),
+    (3, 'Wednesday'),
+    (4, 'Thursday'),
+    (5, 'Friday'),
+    (6, 'Saturday')
 )
 
 
 @python_2_unicode_compatible
 class Hour(models.Model):
     officer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    day = models.CharField(max_length=1, choices=DAYS_OF_WEEK)
+    day = models.IntegerField(choices=DAYS_OF_WEEK)
     hour_start = models.TimeField(auto_now=False, auto_now_add=False)
     hour_end = models.TimeField(auto_now=False, auto_now_add=False)
 

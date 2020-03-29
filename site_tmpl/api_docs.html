@@ -123,6 +123,14 @@
                                     <td><span class="badge badge-success" style="font-size: 1.2em">POST</span></td>
                                     <td>Saves information in the database</td>
                                 </tr>-->
+                                <tr>
+                                    <td><span class="badge badge-warning" style="font-size: 1.2em">HEAD</span></td>
+                                    <td>Identical to GET request, except without the response body</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge badge-warning" style="font-size: 1.2em">OPTIONS</span></td>
+                                    <td>Provides communication options for the endpoint</td>
+                                </tr>
                             </tbody>
                         </table>
                         <div class="alert alert-info"><strong>Note:</strong> If attempting to communicate with the API through methods such as ajax, note that by default, CORS prohibits cross-origin requests. You may need to register your application with the API before using such methods. Contact <a href="mailto:lnl-w@wpi.edu">lnl-w@wpi.edu</a> for assistance.</div><br>
@@ -133,9 +141,10 @@
             <section>
                 {% for endpoint in endpoints %}
                 <div style="border-top: 1px solid #eee" id="{{ endpoint.url }}">
-                    <br>
                     {% if endpoint == endpoints|first %}
-                    <p style="padding-top: 20px; padding-bottom: 20px">When sending requests to the API, they should be sent to one or more of the following endpoints. For most endpoints, if specific parameters are not specified, the API will return all objects at that endpoint.</p>
+                        <p style="padding-top: 20px; padding-bottom: 20px">When sending requests to the API, they should be sent to one or more of the following endpoints. For most endpoints, if specific parameters are not specified, the API will return all objects at that endpoint.</p>
+                    {% else %}
+                        <br>
                     {% endif %}
                     <h4>{{ endpoint.name }} {% for method in endpoint.methods.all %}
                         <span class="badge {% if method.method == "GET" %}
@@ -154,7 +163,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for parameter in endpoint.parameters.all %}
+                            {% for parameter in requestParameters.all %}{% if parameter.endpoint == endpoint %}
                             <tr>
                                 <td>{{ parameter.name }}</td>
                                 <td>{{ parameter.type }}</td>
@@ -170,7 +179,7 @@
                                     {% endif %}
                                 {% endfor %}{% endif %}</td>
                             </tr>
-                            {% endfor %}
+                            {% endif %}{% endfor %}
                         </tbody>
                     </table>
                     {% if endpoint.parameter_note %}
@@ -203,7 +212,7 @@
                         Content-Length: {{ endpoint.response|length }}<br><br>
                         {{ endpoint.response }}</code>
                     </div>
-                    {% if endpoint.responsekeys %}
+                    <div class="response-section">
                         <p>The response will use the following format:</p>
                         <table class="table table-bordered">
                             <thead>
@@ -213,8 +222,8 @@
                                     <td><strong>Description</strong></td>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {% for parameter in endpoint.responsekeys.all %}
+                            <tbody class="response-table">
+                                {% for parameter in responseKeys %}{% if parameter.endpoint == endpoint %}
                                     <tr>
                                         <td>{{ parameter.name }}</td>
                                         <td>{{ parameter.type }}</td>
@@ -227,10 +236,10 @@
                                         {% endif %}
                                         </td>
                                     </tr>
-                                {% endfor %}
+                                {% endif %}{% endfor %}
                             </tbody>
                         </table>
-                    {% endif %}
+                    </div>
                 </div><br>
                 {% endfor %}
                 <h3 id="auth" style="color: gray">Authentication</h3>
@@ -273,5 +282,17 @@
 	$(function () {
 	  $('[data-toggle="popover"]').popover()
 	})
+
+    function setup(){
+	    let sections = document.getElementsByClassName("response-section");
+	    let tables = document.getElementsByClassName("response-table");
+	    for (var i = 0; i < tables.length; i++){
+	        if (tables[i].getElementsByTagName('td').length == 0){
+                sections[i].style.display = "none";
+            }
+        }
+    }
+
+    window.onload = setup;
 	</script>
 </html>

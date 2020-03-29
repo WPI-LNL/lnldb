@@ -8,7 +8,6 @@ METHODS = (
     ('GET', 'GET'),
     ('POST', 'POST'),
     ('DELETE', 'DELETE'),
-    ('OPTIONS', 'OPTIONS'),
 )
 
 AUTH_OPTIONS = (
@@ -52,6 +51,7 @@ class Method(models.Model):
 
 
 class Parameter(models.Model):
+    endpoint = models.ForeignKey(Endpoint, related_name="parameters")
     name = models.CharField(max_length=20)
     type = models.CharField(max_length=8, choices=PRIMITIVE_TYPES)
     description = models.TextField()
@@ -61,7 +61,6 @@ class Parameter(models.Model):
 
 
 class RequestParameter(Parameter):
-    endpoint = models.ForeignKey(Endpoint, related_name="parameters")
     required = models.BooleanField(null=False, default=False)
 
     class Meta:
@@ -69,8 +68,6 @@ class RequestParameter(Parameter):
 
 
 class ResponseKey(Parameter):
-    endpoint = models.ForeignKey(Endpoint, related_name="responsekeys")
-
     class Meta:
         verbose_name = "Response Value"
 
@@ -80,3 +77,6 @@ class Option(models.Model):
     parameter = models.ForeignKey(Parameter, related_name="options")
     key = models.CharField(max_length=20)
     value = models.CharField(max_length=120, null=True, blank=True)
+
+    def __str__(self):
+        return self.parameter.name

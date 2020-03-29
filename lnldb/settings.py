@@ -408,6 +408,12 @@ AUTHENTICATION_BACKENDS = (
     'permission.backends.PermissionBackend',
 )
 
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    )
+}
+
 # Various Other Settings
 
 # Number of hours to show on the admin landing

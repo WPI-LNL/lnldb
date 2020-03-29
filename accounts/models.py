@@ -75,6 +75,10 @@ class User(AbstractUser):
             return has_perm
 
     @property
+    def name(self):
+        return self.first_name + " " + self.last_name
+
+    @property
     def is_lnl(self):
         return self.groups.filter(Q(name="Alumni") | Q(name="Active") | Q(name="Officer") | Q(name="Associate") | Q(
             name="Away") | Q(name="Inactive")).exists()
