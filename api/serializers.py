@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from events.models import Hour, HourChange
+from events.models import OfficeHour, HourChange
 from accounts.models import User
 
 
@@ -30,7 +30,7 @@ class HourSerializer(serializers.ModelSerializer):
     officer = serializers.CharField(source='officer.title')
 
     class Meta:
-        model = Hour
+        model = OfficeHour
         fields = ('officer', 'day', 'hour_start', 'hour_end')
 
 

@@ -1416,7 +1416,7 @@ DAYS_OF_WEEK = (
 
 
 @python_2_unicode_compatible
-class Hour(models.Model):
+class OfficeHour(models.Model):
     officer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     day = models.IntegerField(choices=DAYS_OF_WEEK)
     hour_start = models.TimeField(auto_now=False, auto_now_add=False)
@@ -1424,6 +1424,10 @@ class Hour(models.Model):
 
     def __str__(self):
         return self.officer.first_name + " " + self.officer.last_name + " - " + self.get_day_display()
+
+    @property
+    def get_day(self):
+        return self.get_day_display()
 
     class Meta:
         permissions = (

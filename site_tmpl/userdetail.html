@@ -82,6 +82,16 @@
                         <td>{{ u.mdc }}</td>
                     </tr>
                 {% endif %}
+                {% if u.title and office_hours.count > 0 %}
+                    <tr>
+                        <th>Office Hours</th>
+                        <td>{% for hour in office_hours %}
+                            {{ hour.0 }}&nbsp;&nbsp;&nbsp;&nbsp;<span style="text-align: right">{{ hour.1|date:"g:i A" }} - {{ hour.2|date:"g:i A" }}</span><br>
+                        {% endfor %}{% if request.user == u %}
+                            <br><div style="text-align: right"><a href="{% url "my:office-hours" %}">Edit Hours</a></div>
+                        {% endif %}</td>
+                    </tr>
+                {% endif %}
             </table>
         </div>
 

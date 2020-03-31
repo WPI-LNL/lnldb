@@ -9,7 +9,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.exceptions import APIException, NotFound, ParseError, NotAuthenticated, PermissionDenied
 
-from events.models import Hour, HourChange
+from events.models import OfficeHour, HourChange
 from data.models import Notification
 from .models import Endpoint, RequestParameter, ResponseKey
 from .serializers import OfficerSerializer, HourSerializer, ChangeSerializer, NotificationSerializer
@@ -58,9 +58,17 @@ class OfficerViewSet(viewsets.ReadOnlyModelViewSet):
 class HourViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = HourSerializer
 
+    def list(self, request):
+        queryset = self.get_queryset()
+        if queryset.count() is 0:
+            content = {'204': 'No entries were found for the specified parameters'}
+            return Response(content, status=status.HTTP_204_NO_CONTENT)
+        serializer = HourSerializer(queryset, many=True)
+        return Response(serializer.data)
+
     def get_queryset(self):
         verify_endpoint('Office Hours')
-        queryset = Hour.objects.all().order_by('day')
+        queryset = OfficeHour.objects.all().order_by('day')
         officer = self.request.query_params.get('officer', None)
         day = self.request.query_params.get('day', None)
         start = self.request.query_params.get('start', None)
@@ -75,13 +83,19 @@ class HourViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(hour_start=start)
         if end is not None and start is None:
             queryset = queryset.filter(hour_end=end)
-        if queryset.count() is 0:
-            raise NotFound(detail='Not found', code=404)
         return queryset
 
 
 class ChangeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ChangeSerializer
+
+    def list(self, request):
+        queryset = self.get_queryset()
+        if queryset.count() is 0:
+            content = {'204': 'No updates were found for the specified parameters'}
+            return Response(content, status=status.HTTP_204_NO_CONTENT)
+        serializer = ChangeSerializer(queryset, many=True)
+        return Response(serializer.data)
 
     def get_queryset(self):
         verify_endpoint('Office Hour Updates')
@@ -92,8 +106,6 @@ class ChangeViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(officer__title=officer)
         if expires is not None:
             queryset = queryset.filter(expires__gte=expires)
-        if queryset.count() is 0:
-            raise NotFound(detail='Not found', code=404)
         return queryset
 
 

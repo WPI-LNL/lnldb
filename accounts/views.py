@@ -21,7 +21,7 @@ from django_saml2_auth.views import signin as saml_login
 
 from data.forms import form_footer
 from emails.generators import DefaultLNLEmailGenerator
-from events.models import Event2019
+from events.models import Event2019, OfficeHour
 from helpers import mixins
 
 from . import forms
@@ -105,6 +105,13 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
         moviesccd = Event2019.objects.filter(ccinstances__crew_chief=self.get_object(), serviceinstance__service__category__name="Projection").distinct()
 
         context['moviesccd'] = moviesccd.count()
+
+        hours = OfficeHour.objects.filter(officer=u)
+        output = []
+        for hour in hours:
+            output.append((hour.get_day, hour.hour_start, hour.hour_end))
+        context['office_hours'] = output
+
         return context
 
 
@@ -119,6 +126,7 @@ class BaseUserList(mixins.HasPermMixin, generic.ListView):
         context = super(BaseUserList, self).get_context_data(**kwargs)
         context['h2'] = self.name
         context['accounts_disabled_column'] = self.accounts_disabled_column
+        context['positions_column'] = self.positions
         return context
 
 
@@ -127,6 +135,7 @@ class OfficerList(BaseUserList):
     queryset = get_user_model().objects.filter(groups__name="Officer")
     name = "Officer List"
     accounts_disabled_column = False
+    positions = True
 
 
 class ActiveList(BaseUserList):
@@ -134,6 +143,7 @@ class ActiveList(BaseUserList):
     queryset = get_user_model().objects.filter(groups__name="Active")
     name = "Active List"
     accounts_disabled_column = False
+    positions = False
 
 
 class AwayList(BaseUserList):
@@ -141,6 +151,7 @@ class AwayList(BaseUserList):
     queryset = get_user_model().objects.filter(groups__name="Away")
     name = "Away List"
     accounts_disabled_column = False
+    positions = False
 
 
 class AssociateList(BaseUserList):
@@ -148,6 +159,7 @@ class AssociateList(BaseUserList):
     queryset = get_user_model().objects.filter(groups__name="Associate")
     name = "Associate List"
     accounts_disabled_column = False
+    positions = False
 
 
 class AlumniList(BaseUserList):
@@ -155,6 +167,7 @@ class AlumniList(BaseUserList):
     queryset = get_user_model().objects.filter(groups__name="Alumni")
     name = "Alumni List"
     accounts_disabled_column = False
+    positions = False
 
 
 class InactiveList(BaseUserList):
@@ -162,6 +175,7 @@ class InactiveList(BaseUserList):
     queryset = get_user_model().objects.filter(groups__name="Inactive")
     name = "Inactive List"
     accounts_disabled_column = True
+    positions = False
 
 
 class AllMembersList(BaseUserList):
@@ -169,12 +183,14 @@ class AllMembersList(BaseUserList):
     queryset = get_user_model().objects.filter(groups__isnull=False).distinct()
     name = "All Members List"
     accounts_disabled_column = False
+    positions = False
 
 
 class LimboList(BaseUserList):
     queryset = get_user_model().objects.filter(groups__isnull=True)
     name = "Users without Association"
     accounts_disabled_column = False
+    positions = False
 
 
 class MeDirectView(generic.RedirectView):

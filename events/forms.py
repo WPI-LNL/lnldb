@@ -30,7 +30,7 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
                            ExtraInstance, Fund, Hours, Lighting, Location, Organization,
                            OrganizationTransfer, OrgBillingVerificationEvent,
-                           Projection, Service, ServiceInstance, Sound, PostEventSurvey)
+                           Projection, Service, ServiceInstance, Sound, PostEventSurvey, OfficeHour, HourChange)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 from helpers.util import curry_class
@@ -1695,6 +1695,49 @@ class PostEventSurveyForm(forms.ModelForm):
         widget=SurveyCustomRadioSelect,
         choices=PostEventSurvey._meta.get_field('customer_would_return').choices,
     )
+
+
+class OfficeHoursForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+            Field('day'),
+            Field('hour_start'),
+            Field('hour_end'),
+            FormActions(
+                Submit('save', 'Save Changes'),
+            )
+        )
+        super(OfficeHoursForm, self).__init__(*args, **kwargs)
+
+    class Meta:
+        model = OfficeHour
+        fields = ('day', 'hour_start', 'hour_end')
+
+
+class OfficeHourUpdateForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+            Field('message'),
+            Field('expires', css_class="form-control"),
+            FormActions(
+                Submit('save', 'Save Changes'),
+            )
+        )
+        super(OfficeHourUpdateForm, self).__init__(*args, **kwargs)
+
+    expires = forms.SplitDateTimeField(required=True)
+
+    class Meta:
+        model = HourChange
+        fields = ('message', 'expires')
 
 
 # __        __         _                 _

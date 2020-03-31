@@ -1,9 +1,9 @@
-
+import datetime
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 from model_mommy import mommy
 
-from ..models import Event, EventCCInstance
+from ..models import Event, EventCCInstance, OfficeHour, HourChange
 from .generators import EventFactory, OrgFactory, UserFactory
 
 
@@ -96,3 +96,30 @@ class MyViewTest(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertIsNotNone(self.e.ccreport_set.get(crew_chief=self.user))
+
+    def test_office_hours(self):
+        hour = OfficeHour.objects.create(officer=self.user, day=2, hour_start=datetime.datetime.now().time(),
+                                         hour_end=datetime.datetime.now().time())
+        hour.save()
+        res = self.client.get(reverse("my:office-hours"))
+        self.assertEqual(res.status_code, 200)
+
+        formset = res.context['formset']
+        self.assertIsNotNone(formset.queryset)
+        self.assertTrue(formset.queryset.filter(officer=self.user).exists())
+
+    def test_hours_update(self):
+        update = HourChange.objects.create(officer=self.user, expires=datetime.datetime.now(), message="Test")
+        update.save()
+        res = self.client.get(reverse("my:hours-update"))
+        self.assertEqual(res.status_code, 200)
+
+        formset = res.context['formset']
+        self.assertIsNotNone(formset.queryset)
+        self.assertTrue(formset.queryset.filter(officer=self.user).exists())
+
+    def test_get_day(self):
+        hour = OfficeHour.objects.create(officer=self.user, day=3, hour_start=datetime.datetime.now().time(),
+                                         hour_end=datetime.datetime.now().time())
+        hour.save()
+        self.assertEqual(hour.get_day, "Wednesday")

@@ -10,6 +10,9 @@ urlpatterns = [
     url(r'^workorders/$', views.my.mywo, name="workorders"),
     url(r'^workorders/attach/(?P<id>[0-9]+)/$', views.flow.assignattach_external, name="event-attach"),
 
+    url(r'^office-hours/$', views.my.office_hours, name="office-hours"),
+    url(r'^office-hours/update/$', views.my.hours_update, name="hours-update"),
+
     url(r'^orgs/', include([
         url(r'^$', views.my.myorgs, name="orgs"),
         url(r'^form/$', views.my.myorgform, name="org-request"),
@@ -38,6 +41,6 @@ urlpatterns = [
 
         # TODO: kill this with fire "foo.bar"
         url(r'^(?P<eventid>[0-9]+)/repeat/$', views.my.myworepeat, name="repeat"),
-    ]))
+    ])),
 
 ]

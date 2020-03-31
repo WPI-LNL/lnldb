@@ -1,0 +1,61 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+                <h2> {{msg }}</h2>
+                <form method="post" action="" class="form-inline" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ formset.management_form }}
+                <table class="table table-striped" valign="top">
+                    <tr>
+                        <th>Day </th>
+                        <th>Start Time </th>
+                        <th>End Time </th>
+                        <th>Delete?</th>
+                    </tr>
+                {% for form in formset %}
+                    {% if form.errors %}
+                    <tr class="warning">
+                        <td>{% for e in form.non_field_errors %}
+                        {{ e }}
+                        {% endfor %}
+                        {% for e in form.user.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.officer.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.hour_start.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.hour_end.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.DELETE.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td>{{ form.day }}</td>
+                        <td>{{ form.hour_start }} </td>
+                        <td>{{ form.hour_end }} </td>
+                        <td>{{ form.DELETE }} </td>
+                    </tr>
+                    {% for hidden in form.hidden_fields %}
+                        {{ hidden }}
+                    {% endfor %}
+                {% endfor %}
+                </table>
+                
+                <div class="form-actions"><input name="save" value="Save Changes" class="btn btn-primary" id="submit-id-save" type="submit"> </div>
+                </form>
+                
+        </div>
+        <div class="col-md-12" style="margin-top: 4%">
+            <h3>Temporary Hour Adjustment</h3>
+            <button class="btn btn-warning" onclick="window.location.href='{% url 'my:hours-update' %}'">Post Announcement</button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extras %}
+{{ formset.media }}
+{% include "js_datetimepick.tmpl" %}
+{% endblock %}
+
+{% block finalsay %}
+
+{% endblock %}

@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.db.models.aggregates import Sum
-from django.forms.models import inlineformset_factory
+from django.forms.models import inlineformset_factory, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls.base import reverse
@@ -18,8 +18,8 @@ from django.template import loader
 from emails.generators import generate_selfservice_notice_email
 from events.forms import (EditHoursForm, InternalReportForm, MKHoursForm,
                           SelfServiceOrgRequestForm, WorkorderRepeatForm,
-                          PostEventSurveyForm)
-from events.models import CCReport, BaseEvent, Event, Hours, PostEventSurvey, CCR_DELTA
+                          PostEventSurveyForm, OfficeHoursForm, OfficeHourUpdateForm)
+from events.models import CCReport, BaseEvent, Event, Hours, PostEventSurvey, CCR_DELTA, OfficeHour, HourChange
 from helpers.mixins import LoginRequiredMixin
 from helpers.revision import set_revision_comment
 from helpers.util import curry_class
@@ -403,3 +403,58 @@ def survey_success(request):
         'NO_FOOT': True,
         'EXIT_BTN': True
     }, request))
+
+
+@login_required
+def office_hours(request):
+    context = {}
+    user = request.user
+
+    context['msg'] = "Office Hours"
+
+    hours = OfficeHour.objects.filter(officer=user)
+
+    hour_formset = modelformset_factory(OfficeHour, exclude=[], extra=2, can_delete=True, form=OfficeHoursForm)
+    formset = hour_formset(queryset=hours)
+
+    if request.method == 'POST':
+        formset = hour_formset(request.POST)
+        if formset.is_valid():
+            for form in formset.forms:
+                form.instance.officer = user
+            formset.save()
+            return HttpResponseRedirect(reverse("accounts:detail", args=[user.id]))
+        else:
+            context['formset'] = formset
+
+    else:
+        context['formset'] = formset
+
+    return render(request, 'formset_office_hours.html', context)
+
+
+@login_required
+def hours_update(request):
+    context = {}
+    user = request.user
+
+    context['msg'] = "Temporary Office Hours Update"
+
+    updates = HourChange.objects.filter(officer=user)
+
+    update_formset = modelformset_factory(HourChange, exclude=[], extra=2, can_delete=True, form=OfficeHourUpdateForm)
+    formset = update_formset(queryset=updates)
+
+    if request.method == "POST":
+        formset = update_formset(request.POST)
+        if formset.is_valid():
+            for form in formset.forms:
+                form.instance.officer = user
+            formset.save()
+            return HttpResponseRedirect(reverse("accounts:detail", args=[user.id]))
+        else:
+            context['formset'] = formset
+    else:
+        context['formset'] = formset
+
+    return render(request, 'formset_office_hour_updates.html', context)

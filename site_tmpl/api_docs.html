@@ -1,3 +1,4 @@
+{% load path_safe %}
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -85,7 +86,7 @@
 				</div>
 				<ul class="list-group list-group-flush">
                     {% for endpoint in endpoints %}
-					<li class="list-group-item"><a href="#{{ endpoint.url }}">{{ endpoint.name }}</a></li>
+					<li class="list-group-item"><a href="#{{ endpoint.url|path_safe }}">{{ endpoint.name }}</a></li>
                     {% endfor %}
 				</ul>
 				<div class="card-header">
@@ -140,7 +141,7 @@
             </section>
             <section>
                 {% for endpoint in endpoints %}
-                <div style="border-top: 1px solid #eee" id="{{ endpoint.url }}">
+                <div style="border-top: 1px solid #eee" id="{{ endpoint.url|path_safe }}">
                     {% if endpoint == endpoints|first %}
                         <p style="padding-top: 20px; padding-bottom: 20px">When sending requests to the API, they should be sent to one or more of the following endpoints. For most endpoints, if specific parameters are not specified, the API will return all objects at that endpoint.</p>
                     {% else %}
@@ -168,8 +169,8 @@
                                 <td>{{ parameter.name }}</td>
                                 <td>{{ parameter.type }}</td>
                                 <td>{{ parameter.description|safe }} {% if parameter.required %}<strong>[required]</strong>{% endif %}
-                                {% if parameter.type == "datetime" %}<br><strong>Format: </strong>YYYY-MM-dd hh:mm:ssZ{% elif parameter.type == "date" %}
-                                <br><strong>Format: </strong>YYYY-MM-dd{% elif parameter.type == "time" %}<br><strong>Format: </strong>hh:mm:ssZ{% endif %}
+                                    {% if parameter.type == "datetime" %}<br><strong>Format: </strong><code>YYYY-MM-dd hh:mm:ssZ</code>{% elif parameter.type == "date" %}
+                                    <br><strong>Format: </strong><code>YYYY-MM-dd</code>{% elif parameter.type == "time" %}<br><strong>Format: </strong><code>hh:mm:ssZ</code>{% endif %}
                                 {% if parameter.options.all %}<br><strong>Options: </strong>
                                 {% for option in parameter.options.all %}
                                     {% if option.key == "etc." %}

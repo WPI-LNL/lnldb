@@ -34,7 +34,7 @@ class User(AbstractUser):
         super(User, self).save(*args, **kwargs)
 
     title = CharField(max_length=60, null=True, blank=True, verbose_name="Officer Position")
-    img = CharField(max_length=500, help_text="URL pointing to location of officer's photo", null=True, blank=True,
+    img = CharField(max_length=500, help_text="URL pointing to location of photo", null=True, blank=True,
                     verbose_name="Image")
     wpibox = IntegerField(null=True, blank=True, verbose_name="WPI Box Number")
     phone = CharField(max_length=24, null=True, blank=True, verbose_name="Phone Number")
