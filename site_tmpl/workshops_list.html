@@ -1,0 +1,43 @@
+{% extends 'base_admin.html' %}
+
+{% block content %}
+	<div class="container">
+		<h2>Manage Workshops</h2>
+        <p>&nbsp;</p>
+		<div>
+			<div class="row">
+				<div class="col-md-12">
+					<table class="table table-striped table-bordered">
+						<tr>
+							<th> Workshop </th>
+							<th> Instructors </th>
+							<th> Location </th>
+                            <th> Date(s) </th>
+                            <th> Actions </th>
+						</tr>
+						{% if not workshops %}
+						<tr>
+							<td colspan="5">There are currently no workshops to manage</td>
+						</tr>
+						{% endif %}
+						{% for event in workshops %}
+						<tr>
+							<td>{{ event.name }}</td>
+							<td>{{ event.instructors }}</td>
+                            <td>{{ event.location }}</td>
+                            <td>{% if event.dates.all.count > 0 %}{% for value in event.dates.all %}
+                            {{ value.date|date:"M d" }} at {{ value.date|date:"h:i A" }}{% if value != workshop.dates.all.last %},{% endif %}
+                            {% endfor %}{% else %}None{% endif %}</td>
+							<td><a href="{% url "events:workshops:edit" event.pk %}" class="btn btn-primary" style="margin-bottom: 5px">Manage</a>
+                                <a href="{% url "events:workshops:dates" event.pk %}" class="btn btn-primary" style="margin-bottom: 5px">Edit Dates</a>
+                            <a href="{% url "events:workshops:delete" event.pk %}" class="btn btn-danger" style="margin-bottom: 5px">Cancel</a></td>
+						</tr>
+						{% endfor %}
+					</table>
+				</div>
+			</div>
+			<br>
+		</div>
+        <a href="{% url "events:workshops:add" %}" class="btn btn-primary">New Workshop</a>
+    </div>
+{% endblock %}

@@ -70,6 +70,10 @@
                         <li><a href="{% url "events:multibillings:list" %}">MultiBills</a></li>
                         {% endpermission %}
 
+                        {% permission request.user has 'events.edit_workshops' %}
+                        <li role="presentation" class="divider"></li>
+                        <li><a href="{% url "events:workshops:list" %}">Workshops</a></li>
+                        {% endpermission %}
                     </ul>
                 </li>
                 <li class="{% ancestor '/db/clients/' %} dropdown">

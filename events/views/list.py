@@ -5,13 +5,17 @@ import pytz
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Count, F, Q, Sum, Case, When, IntegerField
+from django.forms.models import modelformset_factory
 from django.http.response import HttpResponseRedirect
+from django.views.generic.edit import DeleteView
 from django.shortcuts import render
 from django.urls.base import reverse
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 
-from events.models import BaseEvent, Event2019, Category, MultiBilling
+from helpers.mixins import HasPermMixin, LoginRequiredMixin
+from events.models import BaseEvent, Event2019, Category, MultiBilling, Workshop, WorkshopDate
+from events.forms import WorkshopForm, WorkshopDatesForm
 
 DEFAULT_ENTRY_COUNT = 40
 DATEFILTER_COOKIE_MAX_AGE = 600
@@ -1163,3 +1167,82 @@ def multibillings(request):
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render(request, 'multibillings.html', context)
+
+
+@login_required
+@permission_required('events.edit_workshops', raise_exception=True)
+def new_workshop(request):
+    context = {'msg': "Create Workshop"}
+    if request.method == 'POST':
+        form = WorkshopForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('events:workshops:list'))
+        else:
+            context['form'] = form
+    else:
+        context['form'] = WorkshopForm()
+    return render(request, 'form_crispy.html', context)
+
+
+@login_required
+@permission_required('events.edit_workshops', raise_exception=True)
+def edit_workshop(request, pk):
+    context = {'msg': "Edit Workshop"}
+    workshop = Workshop.objects.get(pk=pk)
+    if request.method == 'POST':
+        form = WorkshopForm(request.POST)
+        if form.is_valid():
+            workshop.name = request.POST['name']
+            workshop.instructors = request.POST['instructors']
+            workshop.description = request.POST['description']
+            workshop.location = request.POST['location']
+            workshop.notes = request.POST['notes']
+            workshop.save()
+            return HttpResponseRedirect(reverse("events:workshops:list"))
+        else:
+            context['form'] = form
+    else:
+        context['form'] = WorkshopForm(instance=workshop)
+    return render(request, 'form_crispy.html', context)
+
+
+@login_required
+@permission_required('events.edit_workshops', raise_exception=True)
+def workshop_dates(request, pk):
+    context = {}
+    workshop = Workshop.objects.get(pk=pk)
+    dates = WorkshopDate.objects.filter(workshop=workshop)
+    dates_formset = modelformset_factory(WorkshopDate, exclude=['workshop'], extra=5, can_delete=True,
+                                         form=WorkshopDatesForm)
+    formset = dates_formset(queryset=dates)
+
+    if request.method == 'POST':
+        formset = dates_formset(request.POST)
+        if formset.is_valid():
+            for form in formset.forms:
+                form.instance.workshop = workshop
+            formset.save()
+            return HttpResponseRedirect(reverse("events:workshops:list"))
+        else:
+            context['formset'] = formset
+    else:
+        context['formset'] = formset
+    return render(request, 'formset_workshop_dates.html', context)
+
+
+@login_required
+@permission_required('events.edit_workshops', raise_exception=True)
+def workshops_list(request):
+    workshops = Workshop.objects.all()
+    return render(request, 'workshops_list.html', {'workshops': workshops})
+
+
+class DeleteWorkshop(LoginRequiredMixin, HasPermMixin, DeleteView):
+    model = Workshop
+    template_name = "form_delete_cbv.html"
+    msg = "Delete Workshop"
+    perms = 'events.edit_workshops'
+
+    def get_success_url(self):
+        return reverse('events:workshops:list')

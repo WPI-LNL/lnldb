@@ -1395,6 +1395,11 @@ class Workshop(models.Model):
     location = models.CharField(max_length=100)
     notes = models.TextField(null=True, blank=True)
 
+    class Meta:
+        permissions = (
+            ("edit_workshops", "Modify workshops"),
+        )
+
     def __str__(self):
         return self.name
 

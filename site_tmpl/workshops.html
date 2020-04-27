@@ -1,39 +1,32 @@
 {% extends 'base_static.html' %}
 
 {% block content %}
-    <section class="bg-dark">
-        <br>
-        <div class="container" id="alert"></div>
-        <div class="container mt-4 pb-4 text-white">
-            <h1>Workshops</h1>
-            <p> </p>
-            <p>Join us as we invite guest speakers to lead a series of workshops on how to set up and run high quality sound and lighting events! They will include an engaging mixture of presentations, discussions, and hands-on experience.</p>
-            <p>These workshops are free and open to the WPI Community. Anyone who is interested can attend, regardless of skill level!</p>
-            <p>While we recommend you attend as many sessions as possible for the complete experience, you can feel free to pick which workshop sessions seem most interesting to you. Just know that information from previous workshop sessions may be assumed and thus will not be covered again.</p>
-            {% if workshops.count != 0 %}
-                {% for workshop in workshops %}
-                <div class="pt-4">
-                    <h2 style="color: yellow">{{ workshop.name }}</h2>
-                    <p><strong>Instructors:</strong> {{ workshop.instructors }}<br>
-                        <strong>Description:</strong> {{ workshop.description }}<br>
-                        <strong>Location:</strong> {{ workshop.location }}<br>
-                        <strong>Dates:</strong>
-                        {% if workshop.dates.all.count != 0 %}
-                            {% for value in workshop.dates.all %}
-                                {{ value.date|date:"M d" }} at {{ value.date|date:"h:i A" }}{% if value != workshop.dates.all.last %},{% endif %}
-                            {% endfor %}<br><br>
-                        {% else %}
-                            See below<br><br>
-                        {% endif %}</p>
-                    <pre>{{ workshop.notes }}</pre>
-                <br>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="pt-4">
-                    <h3 class="h5"><strong>Unfortunately, there are no upcoming workshops. Please check back again soon!</strong></h3>
-                </div>
-            {% endif %}
+    <h1>Workshops</h1>
+    <p> </p>
+    <p>Join us as we invite guest speakers to lead a series of workshops on how to set up and run high quality sound and lighting events! They will include an engaging mixture of presentations, discussions, and hands-on experience.</p>
+    <p>These workshops are free and open to the WPI Community. Anyone who is interested can attend, regardless of skill level!</p>
+    <p>While we recommend you attend as many sessions as possible for the complete experience, you can feel free to pick which workshop sessions seem most interesting to you. Just know that information from previous workshop sessions may be assumed and thus will not be covered again.</p>
+    {% if workshops.count != 0 %}
+        {% for workshop in workshops %}
+        <div class="pt-4">
+            <h2 style="color: yellow">{{ workshop.name }}</h2>
+            <p><strong>Instructors:</strong> {{ workshop.instructors }}<br>
+                <strong>Description:</strong> {{ workshop.description }}<br>
+                <strong>Location:</strong> {{ workshop.location }}<br>
+                <strong>Dates:</strong>
+                {% if workshop.dates.all.count != 0 %}
+                    {% for value in workshop.dates.all %}
+                        {{ value.date|date:"M d" }} at {{ value.date|date:"h:i A" }}{% if value != workshop.dates.all.last %},{% endif %}
+                    {% endfor %}<br><br>
+                {% else %}
+                    See below<br><br>
+                {% endif %}</p>
+            <pre>{{ workshop.notes }}</pre>
         </div>
-    </section>
+        {% endfor %}
+    {% else %}
+        <div class="pt-4">
+            <h3 class="h5"><strong>Unfortunately, there are no upcoming workshops. Please check back again soon!</strong></h3>
+        </div>
+    {% endif %}
 {% endblock %}

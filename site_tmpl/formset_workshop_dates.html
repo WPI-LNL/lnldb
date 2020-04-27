@@ -1,0 +1,63 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+                <h2> {{msg }}</h2>
+                <form method="post" action="" class="form-inline" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ formset.management_form }}
+                <table class="table table-striped" valign="top">
+                    <tr>
+                        <th>Date </th>
+                        <th>Delete?</th>
+                    </tr>
+                {% for form in formset %}
+                    {% if form.errors %}
+                    <tr class="warning">
+                        <td>{% for e in form.non_field_errors %}
+                        {{ e }}
+                        {% endfor %}
+                        {% for e in form.user.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.workshop.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.date.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.DELETE.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td>{{ form.date }}</td>
+                        <td>{{ form.DELETE }} </td>
+                    </tr>
+                    {% for hidden in form.hidden_fields %}
+                        {{ hidden }}
+                    {% endfor %}
+                {% endfor %}
+                </table>
+                
+                <div class="form-actions"><input name="save" value="Save Changes" class="btn btn-primary" id="submit-id-save" type="submit"> </div>
+                </form>
+                <script>
+                    $("[id*='date_0']").datepicker({
+                        format: 'yyyy-mm-dd',
+                    });
+                    $("[id*='date_1']").timepicker({
+                        minuteStep: 30,
+                        showInputs: true,
+                        disableFocus: true,
+                        showMeridian: true,
+                        defaultTime: false,
+                    });
+                </script>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extras %}
+{{ formset.media }}
+{% include "js_datetimepick.tmpl" %}
+{% endblock %}
+
+{% block finalsay %}
+
+{% endblock %}

@@ -29,7 +29,7 @@ from events.fields import GroupedModelChoiceField
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail,
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
                            ExtraInstance, Fund, Hours, Lighting, Location, Organization,
-                           OrganizationTransfer, OrgBillingVerificationEvent,
+                           OrganizationTransfer, OrgBillingVerificationEvent, Workshop, WorkshopDate,
                            Projection, Service, ServiceInstance, Sound, PostEventSurvey, OfficeHour, HourChange)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
@@ -1738,6 +1738,51 @@ class OfficeHourUpdateForm(forms.ModelForm):
     class Meta:
         model = HourChange
         fields = ('message', 'expires')
+
+
+class WorkshopForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal col-md-6"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+            Field('name'),
+            Field('instructors'),
+            Field('description'),
+            Field('location'),
+            Field('notes'),
+            FormActions(
+                Submit('save', 'Save')
+            )
+        )
+        super(WorkshopForm, self).__init__(*args, **kwargs)
+
+    class Meta:
+        model = Workshop
+        fields = ('name', 'instructors', 'description', 'location', 'notes')
+
+
+class WorkshopDatesForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal col-md-6"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+            Field('workshop'),
+            Field('date', css_class="form-control"),
+            FormActions(
+                Submit('save', 'Save')
+            )
+        )
+        super(WorkshopDatesForm, self).__init__(*args, **kwargs)
+
+    date = forms.SplitDateTimeField(required=False)
+
+    class Meta:
+        model = WorkshopDate
+        fields = ('workshop', 'date')
 
 
 # __        __         _                 _

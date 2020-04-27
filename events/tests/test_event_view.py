@@ -1,8 +1,11 @@
 import datetime
 from django.core.urlresolvers import reverse
+from django.contrib.auth.models import Permission
 from django.test import TestCase
+from data.tests.util import ViewTestCase
 
 from .generators import CCReportFactory, EventFactory, UserFactory
+from .. import models
 
 
 class EventBasicViewTest(TestCase):
@@ -180,3 +183,90 @@ class EventListBasicViewTest(TestCase):
     def closed(self):
         response = self.client.get(reverse('events:closed'))
         self.assertEqual(response.status_code, 200)
+
+
+class WorkshopTests(ViewTestCase):
+    def test_workshops_list(self):
+        self.assertEqual(self.client.get(reverse("events:workshops:list")).status_code, 403)
+
+        permission = Permission.objects.get(codename="edit_workshops")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:workshops:list")))
+
+    def test_edit_workshop(self):
+        workshop = models.Workshop.objects.create(name="Test Workshop", instructors="John, Peter, Janice",
+                                                  location="Alden Hall",
+                                                  description="Human Resources wants us to go over the Acceptable Use "
+                                                              "Policy again.", notes="This sounds boring")
+        workshop.save()
+
+        self.assertEqual(self.client.get(reverse("events:workshops:edit", args=[workshop.pk])).status_code, 403)
+
+        permission = Permission.objects.get(codename="edit_workshops")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:workshops:edit", args=[workshop.pk])))
+
+        valid_data = {
+            'name': 'Test Event',
+            'description': 'A test event',
+            'instructors': 'John Doe',
+            'location': 'Alden',
+            'notes': 'None'
+        }
+        self.assertRedirects(self.client.post(reverse("events:workshops:edit", args=[1]), valid_data),
+                             reverse("events:workshops:list"))
+
+    def test_new_workshop(self):
+        self.assertEqual(self.client.get(reverse("events:workshops:add")).status_code, 403)
+
+        permission = Permission.objects.get(codename="edit_workshops")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:workshops:add")))
+
+        valid_data = {
+            'name': 'Test Event',
+            'description': 'A test event',
+            'instructors': 'John Doe',
+            'location': 'Alden',
+            'notes': 'None'
+        }
+        self.assertRedirects(self.client.post(reverse("events:workshops:add"), valid_data),
+                             reverse("events:workshops:list"))
+        workshop = models.Workshop.objects.get(name="Test Event")
+        self.assertEqual(workshop.description, "A test event")
+
+    def test_workshop_dates(self):
+        workshop = models.Workshop.objects.create(name="Test Workshop", instructors="John, Peter, Janice",
+                                                  location="Alden Hall",
+                                                  description="Human Resources wants us to go over the Acceptable Use "
+                                                              "Policy again.", notes="This sounds boring")
+        workshop.save()
+
+        self.assertEqual(self.client.get(reverse("events:workshops:dates", args=[workshop.pk])).status_code, 403)
+
+        permission = Permission.objects.get(codename="edit_workshops")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:workshops:dates", args=[workshop.pk])))
+
+    def test_delete_workshop(self):
+        workshop = models.Workshop.objects.create(name="Test Workshop", instructors="John, Peter, Janice",
+                                                  location="Alden Hall",
+                                                  description="Human Resources wants us to go over the Acceptable Use "
+                                                              "Policy again.", notes="This sounds boring")
+        workshop.save()
+
+        self.assertOk(self.client.get(reverse("events:workshops:delete", args=[workshop.pk])), 403)
+
+        permission = Permission.objects.get(codename="edit_workshops")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:workshops:delete", args=[workshop.pk])))
+
+        self.assertRedirects(self.client.post(reverse("events:workshops:delete", args=[workshop.pk])),
+                             reverse("events:workshops:list"))
+
+        self.assertFalse(models.Workshop.objects.all().filter(name="Test Workshop").exists())
