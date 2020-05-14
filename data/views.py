@@ -256,7 +256,7 @@ def err403(request, *args, **kwargs):
 
 
 def err404(request, *args, **kwargs):
-    context = {}
+    context = {'status': '404', 'error_message': 'Not Found'}
     return render(request, '404.html', context, status=404)
 
 

@@ -107,4 +107,12 @@ urlpatterns = [
         url(r'^email/(?P<multibilling>[0-9]+)/$', flow_views.MultiBillingEmailCreate.as_view(), name="email"),
         url(r'^pdf/(?P<multibilling>[0-9]+)/$', pdf_views.generate_multibill_pdf, name="pdf"),
     ], 'lnldb'), namespace="multibillings")),
+
+    url(r'^workshops/', include(([
+        url(r'^manage/$', list_views.workshops_list, name="list"),
+        url(r'^(?P<pk>[0-9]+)/edit/$', list_views.edit_workshop, name="edit"),
+        url(r'^(?P<pk>[0-9]+)/dates/$', list_views.workshop_dates, name="dates"),
+        url(r'^new/$', list_views.new_workshop, name="add"),
+        url(r'^rm/(?P<pk>[0-9]+)/$', list_views.DeleteWorkshop.as_view(), name="delete")
+    ], 'lnldb'), namespace="workshops"))
 ]

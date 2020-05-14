@@ -54,8 +54,16 @@
 			</nav>
 			<div class="pt-5 pb-4"></div>
 		</header>
-		{% block content %}
-        {% endblock %}
+        <section class="bg-dark">
+            <div id="system-spacer"></div>
+            <div class="pt-5 pb-4"></div>
+            <br>
+            <div class="container" id="alert"></div>
+            <div class="container mt-4 pb-4 text-white">
+		    {% block content %}
+            {% endblock %}
+            </div>
+        </section>
 		<!--Modal Views-->
 		<div class="modal" tabindex="-1" role="dialog" id="critical-alert">
 			<div class="modal-dialog" role="document">
@@ -86,6 +94,9 @@
 					<div class="col-12 col-md">
 						<img class="fluid" id="long" src="assets/ico/LNL-logo-long.png" alt="LNL Logo - Long"/>
 						<small class="d-block mb-3" style="color: #bbb;">&nbsp;Worcester&nbsp;Polytechnic&nbsp;Institute<br>&nbsp;&copy; 2019 - <span id="year">2020</span></small>
+						<p style="font-size: 1.2em" class="pl-2"><a href="https://instagram.com/wpilnl" target="_blank" title="Follow us on Instagram"><i class="fab fa-instagram text-light"></i></a>&nbsp;&nbsp;
+							<a href="https://facebook.com/wpilnl" target="_blank" title="Like us on Facebook"><i class="fab fa-facebook text-light"></i></a>&nbsp;&nbsp;
+							<a href="mailto:lnl@wpi.edu" title="Email Us"><i class="fas fa-envelope text-light"></i></a></p>
 					</div>
 					<div id="spacer" class="col-6 col-md"></div>
 					<div class="col-6 col-md">
@@ -108,15 +119,15 @@
 						<h6>Resources</h6>
 						<ul class="list-unstyled text-small">
 							<li><a href="pricing/">Pricing</a></li>
-							<li><a href="workorder/">Submit Workorder</a></li>
+							<li><a href="workorder/">Workorder</a></li>
 							<li><a href="db/">My&nbsp;Account</a></li>
 						</ul>
 					</div>
 					<div class="col-6 col-md">
 						<h6>Contact</h6>
 						<ul class="list-unstyled text-small">
+							<li><a href="join/">Join Us</a></li>
 							<li><a href="contact.html">Contact Us</a></li>
-							<li><a href="legal/rentals/">Rental&nbsp;Policy</a></li>
 							<li><a href="legal/privacy/">Privacy&nbsp;Policy</a></li>
 						</ul>
 					</div>

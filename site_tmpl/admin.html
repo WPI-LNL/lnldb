@@ -40,6 +40,9 @@
                             <a class="btn btn-primary" href="https://lnl-rt.wpi.edu/rt/">RT</a>
                             <a class="btn btn-primary" href="https://lnl-rt.wpi.edu/snipe/">Snipe</a>
                         {% endif %}
+                        {% if request.user.is_superuser %}
+                            <a class="btn btn-danger" href="../admin">Admin</a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
