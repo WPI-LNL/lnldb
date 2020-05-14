@@ -12,6 +12,7 @@ INTERP = "/home/lnl/bin/python2.7"
 if sys.executable != INTERP:
     os.execl(INTERP, INTERP, *sys.argv)
 
+os.environ['LD_LIBRARY_PATH'] += ":/home/lnl/lib"
 os.environ['DJANGO_SETTINGS_MODULE'] = "lnldb.settings"
 from django.core.wsgi import get_wsgi_application  # NOQA isort:skip
 application = _application = get_wsgi_application()
