@@ -3,9 +3,10 @@ import sys
 
 
 cwd = os.getcwd()
-sys.path.append('/isihome/lnl/lnldb')
+sys.path.append(cwd)
+sys.path.append('/home/lnl/lnldb')
 
-INTERP = "/isihome/lnl/bin/python2.7"
+INTERP = "/home/lnl/bin/python2.7"
 
 # Switch to new python
 if sys.executable != INTERP:
@@ -19,6 +20,6 @@ application = _application = get_wsgi_application()
 # def application(env, start_response):
 #     start_response('200 OK', [('Content-Type','text/html')])
 #     try:
-#         return _application(env, start_response)
+#	application = get_wsgi_application()
 #     except Exception, e:
 #         return str(e)
