@@ -69,14 +69,13 @@
                 {% endif %}
                 {% if SAML2_ENABLED %}
                     <p>
-                        <!--
                         <form>
                             <label>
                                 <input type="checkbox" id="prefer_saml" name="prefer_saml">
                                 Automatically send me to Microsoft SSO in the future.
                             </label>
-                        </form>-->
-                        <a class="btn btn-lg btn-block btn-primary" href="{% url 'accounts:login' %}?force_saml=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}"><!--Microsoft Login-->Testing do not push</a>
+                        </form>
+                        <a class="btn btn-lg btn-block btn-primary" href="{% url 'accounts:login' %}?force_saml=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}">Microsoft Login</a>
                     </p>
                 {% endif %}
             </div>
