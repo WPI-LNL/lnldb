@@ -58,24 +58,25 @@
                 <p class="lead">If you are currently part of the WPI Community, you can login to the application via CAS or Microsoft Azure SSO.</p>
                 {% if USE_CAS %}
                     <p>
+                        <a class="btn btn-lg btn-block btn-primary" href="{% url 'accounts:login' %}?force_cas=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}">CAS Login</a>
                         <form>
                             <label>
                                 <input type="checkbox" id="prefer_cas" name="prefer_cas">
                                 Automatically send me to CAS in the future.
                             </label>
                         </form>
-                        <a class="btn btn-lg btn-block btn-primary" href="{% url 'accounts:login' %}?force_cas=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}">CAS Login</a>
                     </p>
                 {% endif %}
                 {% if SAML2_ENABLED %}
                     <p>
+                        <a class="btn btn-lg btn-block btn-primary" href="{% url 'accounts:login' %}?force_saml=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}"
+                           style="background: #2f2f2f url('/static/img/ms_signin_dark.png') no-repeat center;">&nbsp;</a>
                         <form>
                             <label>
                                 <input type="checkbox" id="prefer_saml" name="prefer_saml">
                                 Automatically send me to Microsoft SSO in the future.
                             </label>
                         </form>
-                        <a class="btn btn-lg btn-block btn-primary" href="{% url 'accounts:login' %}?force_saml=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}">Microsoft Login</a>
                     </p>
                 {% endif %}
             </div>

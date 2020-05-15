@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+		<meta name="robots" content="noindex">
+        {% if status %}
+		<title>{{ status }} - {{ error_message }}</title>
+        {% else %}
+        <title>Whoops!</title>
+        {% endif %}
+        <base href="/">
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+        <link rel="stylesheet" href="assets/css/main.css">
+        <style>{% if styles %}{{ styles }}{% endif %}</style>
+		<!-- Fav and touch icons -->
+		<link rel="shortcut icon" href="assets/ico/favicon.ico">
+		<link rel="apple-touch-icon-precomposed" sizes="144x144" href="assets/ico/apple-touch-icon-144-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="114x114" href="assets/ico/apple-touch-icon-114-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="72x72" href="assets/ico/apple-touch-icon-72-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" href="assets/ico/apple-touch-icon-57-precomposed.png">
+	</head>
+	<body>
+		<header>
+			<div id="system-alert"></div>
+			<nav id="main-nav" class="navbar mb-4 justify-content-between">
+				<h1 style="color: white; padding-top: 5px" class="h3"><img id="brand" src="assets/ico/LNL-logo-transparent.png" onclick="window.location.href='/';" alt="LNL Logo"/></h1>
+                <h2 style="color: yellow" class="h6">WPI Lens and Lights</h2>
+			</nav>
+			<div class="pt-5 pb-4"></div>
+		</header>
+        <section class="bg-dark" style="height: 100vh">
+            <div id="system-spacer"></div>
+            <div class="pt-5 pb-4"></div>
+            <br>
+            <div class="container" id="alert"></div>
+            <div class="container mt-4 pb-4 text-white">
+		    {% block content %}
+            {% endblock %}
+            <p class="pl-2">{% if status %}{{ status }} - {% endif %}{{ error_message }}</p>
+            </div>
+        </section>
+	</body>
+</html>
