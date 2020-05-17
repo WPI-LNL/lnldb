@@ -153,7 +153,7 @@
                         {% elif method.method == "POST" %}
                         badge-success
                         {% endif %}">{{ method.method }}</span> {% endfor %}</h4>
-                    <code>http://lnl.wpi.edu/api/v1/{{ endpoint.url }}</code>
+                    <code>https://lnl.wpi.edu/api/v1/{{ endpoint.url }}</code>
                     <p style="padding-top: 20px;">{{ endpoint.description }}</p>
                     <table class="table table-bordered">
                         <thead>
@@ -204,7 +204,7 @@
                     <h5 class="pt-2">Response</h5>
                     <p>The following request:</p>
                     <div class="well">
-                        <code class="prettyprint">GET http://lnl.wpi.edu/api/v1/{{ endpoint.url }}?{{ endpoint.example }}</code>
+                        <code class="prettyprint">GET https://lnl.wpi.edu/api/v1/{{ endpoint.url }}?{{ endpoint.example }}</code>
                     </div>
                     <p>might return:</p>
                     <div class="well">
