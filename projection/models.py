@@ -43,7 +43,7 @@ class Projectionist(models.Model):
 
         today = datetime.date.today()
         delta = today + datetime.timedelta(days=EXPIRY_WARNING_DAYS)
-        if delta > self.license_expiry > today:
+        if delta >= self.license_expiry > today:
             return True
         else:
             return False
@@ -91,20 +91,20 @@ class PitInstance(models.Model):
     valid = models.BooleanField(default=True)
 
 
-def create_projectionist(sender, instance, created, **kwargs):
-    if created:
-        Projectionist.objects.create(user=instance)
-
-
+# def create_projectionist(sender, instance, created, **kwargs):
+#     if created:
+#         Projectionist.objects.create(user=instance)
+#
+#
 # post_save.connect(create_projectionist, sender=User)
 
 class PitRequest(models.Model):
-    def __str__(self):
-        return self.projectionist.user.get_full_name() + " - " + self.level.name_short
-
     projectionist = models.ForeignKey(Projectionist, on_delete=models.CASCADE, related_name="pitrequest")
     level = models.ForeignKey(PITLevel, on_delete=models.PROTECT, related_name="pitrequest")
     requested_on = models.DateTimeField(auto_now_add=True)
 
     approved = models.BooleanField(default=False)
     scheduled_for = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.projectionist.user.get_full_name() + " - " + self.level.name_short

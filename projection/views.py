@@ -3,7 +3,6 @@ import datetime
 
 from crispy_forms.layout import Submit
 from django.contrib.auth.decorators import login_required, permission_required
-from django.contrib.auth.models import User
 from django.db.models import Q
 from django.forms.formsets import formset_factory
 from django.http import HttpResponseRedirect
@@ -57,8 +56,7 @@ def plist_detail(request):
 @permission_required('projection.edit_pits', raise_exception=True)
 def projection_update(request, id):
     projectionist = get_object_or_404(Projectionist, pk=id)
-    context = {}
-    context['msg'] = "Updating Projectionist %s" % projectionist
+    context = {'msg': "Updating Projectionist %s" % projectionist}
 
     if request.method == "POST":
         form = ProjectionistUpdateForm(request.POST, instance=projectionist, prefix="main")
@@ -87,28 +85,28 @@ class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
         context = super(ProjectionCreate, self).get_context_data(**kwargs)
         context['type'] = "hide"
         # No longer using the PIT form in this view
-#         if self.request.POST:
-#             context['formset'] = PITFormset(self.request.POST)
-#         else:
-#             context['formset'] = PITFormset()
-#             f = context['form']
-#             f.helper.layout.pop(-1)
-#             f.helper.form_tag = False
-#             context['form'] = f
+        # if self.request.POST:
+        #     context['formset'] = PITFormset(self.request.POST)
+        # else:
+        #     context['formset'] = PITFormset()
+        #     f = context['form']
+        #     f.helper.layout.pop(-1)
+        #     f.helper.form_tag = False
+        #     context['form'] = f
 
         return context
 
-    def form_valid(self, form):
-        context = self.get_context_data()
-        #pitform = context['formset']
-
-        if form.is_valid():# and pitform.is_valid():
-            self.object = form.save()
-            #pitform.instance = self.object
-            #pitform.save()
-            return HttpResponseRedirect(self.success_url)
-        else:
-            return self.render_to_response(self.get_context_data(form=form))
+    # def form_valid(self, form):
+    #     context = self.get_context_data()
+    #     pitform = context['formset']
+    #
+    #     if form.is_valid() and pitform.is_valid():
+    #         self.object = form.save()
+    #         pitform.instance = self.object
+    #         pitform.save()
+    #         return HttpResponseRedirect(self.success_url)
+    #     else:
+    #         return self.render_to_response(self.get_context_data(form=form))
 
     model = Projectionist
     template_name = "form_crispy_projection.html"
@@ -217,6 +215,25 @@ def bulk_projection(request):
         return render(request, "form_crispy.html", context)
 
 
+def send_request_notification(form, update=False):
+    name = form.instance.projectionist.user.get_full_name()
+    pit = form.instance.level.name_long
+    requested_date = form.instance.scheduled_for
+    if requested_date is None:
+        requested_date = "None"
+    else:
+        requested_date = requested_date.strftime('%b %d, %Y, %I:%M %p')
+    message_context = {'CUSTOM_URL': True}
+    message = "<strong>Projectionist:</strong> " + name + "<br><strong>PIT Level:</strong> " + \
+              pit + "<br><strong>Requested Date:</strong> " + requested_date + \
+              "<br><br><a href='https://lnl.wpi.edu" + reverse("projection:pit-schedule") + "'>Review</a>"
+    if update:
+        email = PITRequestEmailGenerator(subject="PIT Request Updated", body=message, context=message_context)
+    else:
+        email = PITRequestEmailGenerator(body=message, context=message_context)
+    email.send()
+
+
 class PITRequest(LoginRequiredMixin, HasPermMixin, FormView):
     perms = 'projection.view_pits'
     model = PitRequest
@@ -226,7 +243,8 @@ class PITRequest(LoginRequiredMixin, HasPermMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super(PITRequest, self).get_context_data(**kwargs)
         context['title'] = "Request PIT"
-        context['desc'] = "Select the level of training you would like to receive. Then, if you\'d like, you may also request a specific date and time."
+        context['desc'] = "Select the level of training you would like to receive. Then, if you\'d like, you may " \
+                          "also request a specific date and time."
         context['NO_FOOT'] = True
         if 'title' in kwargs:
             context['title'] = kwargs['title']
@@ -240,25 +258,17 @@ class PITRequest(LoginRequiredMixin, HasPermMixin, FormView):
             if projectionist is None:
                 projectionist = Projectionist.objects.create(user=self.request.user)
             form.instance.projectionist = projectionist
-            if form.is_valid():
-                form.save()
-                name = form.instance.projectionist.user.get_full_name()
-                pit = form.instance.level.name_long
-                requested_date = form.instance.scheduled_for
-                if requested_date is None:
-                    requested_date = "None"
-                else:
-                    requested_date = requested_date.strftime('%b %d, %Y, %I:%M %p')
-                message_context = {'CUSTOM_URL': True}
-                message = "<strong>Projectionist:</strong> " + name + "<br><strong>PIT Level:</strong> " + pit + "<br><strong>Requested Date:</strong> " + requested_date + "<br><br><a href='http://lnl.wpi.edu/db/projection/training/schedule/'>Review</a>";
-                email = PITRequestEmailGenerator(body=message, context=message_context)
-                email.send()
-                return self.render_to_response(self.get_context_data(title="Request Submitted", desc="You have successfully requested your next PIT. The HP will reach out to you shortly."))
+            form.save()
+            send_request_notification(form)
+            return self.render_to_response(self.get_context_data(
+                title="Request Submitted",
+                desc="You have successfully requested your next PIT. The HP will reach out to you shortly.")
+            )
 
 
 @login_required
 @permission_required('projection.edit_pits', raise_exception=True)
-def PITSchedule(request):
+def pit_schedule(request):
     context = {}
 
     approved = PitRequest.objects.filter(approved=True)
@@ -283,29 +293,19 @@ class CancelPITRequest(LoginRequiredMixin, HasPermMixin, DeleteView):
         else:
             return reverse("projection:grid")
 
+
 @login_required
 @permission_required('projection.view_pits', raise_exception=True)
 def pit_request_update(request, id):
     pit_request = get_object_or_404(PitRequest, pk=id)
 
-    context = {}
-    context['title'] = "Update PIT Request"
+    context = {'title': "Update PIT Request"}
 
     if request.method == "POST":
         form = PITRequestForm(request.POST, instance=pit_request, prefix="main")
         if form.is_valid():
             form.save()
-            name = form.instance.projectionist.user.get_full_name()
-            pit = form.instance.level.name_long
-            requested_date = form.instance.scheduled_for
-            if requested_date is None:
-                requested_date = "None"
-            else:
-                requested_date = requested_date.strftime('%b %d, %Y, %I:%M %p')
-            message_context = {'CUSTOM_URL': True}
-            message = "<strong>Projectionist:</strong> " + name + "<br><strong>PIT Level:</strong> " + pit + "<br><strong>Requested Date:</strong> " + requested_date + "<br><br><a href='http://lnl.wpi.edu/db/projection/training/schedule/'>Review</a>";
-            email = PITRequestEmailGenerator(subject="PIT Request Updated", body=message, context=message_context)
-            email.send()
+            send_request_notification(form, True)
             if request.user.has_perm('projection.edit_pits', pit_request):
                 return HttpResponseRedirect(reverse("projection:pit-schedule"))
             else:
@@ -319,13 +319,13 @@ def pit_request_update(request, id):
 
     return render(request, 'projection_pit_request.html', context)
 
+
 @login_required
 @permission_required('projection.edit_pits', raise_exception=True)
 def manage_pit_request(request, id):
     pit_request = get_object_or_404(PitRequest, pk=id)
 
-    context = {}
-    context['title'] = "Manage PIT Request"
+    context = {'title': "Manage PIT Request"}
 
     if request.method == "POST":
         form = PITRequestAdminForm(request.POST, instance=pit_request, prefix="main")
@@ -335,8 +335,14 @@ def manage_pit_request(request, id):
             pit = form.instance.level.name_long
             requested_date = form.instance.scheduled_for.strftime('%b %d, %Y at %I:%M %p')
             message_context = {'CUSTOM_URL': True}
-            message = "Your PIT request has been approved! You're now scheduled to get " + pit + " on <strong>" + requested_date + "</strong>. In the event that you need to reschedule or cancel this appointment, please use the links below.<br><br><a href='http://lnl.wpi.edu/db/projection/training/" + id + "/update/'>Reschedule</a><br><a href='http://lnl.wpi.edu/db/projection/training/" + id + "/cancel/'>Cancel</a>";
-            email = PITRequestEmailGenerator(to_emails=user, subject="PIT Scheduled", body=message, context=message_context, reply_to=["lnl-hp@wpi.edu"])
+            message = "Your PIT request has been approved! You're now scheduled to get " + pit + " on <strong>" + \
+                      requested_date + "</strong>. In the event that you need to reschedule or cancel this " \
+                                       "appointment, please use the links below.<br><br><a href='https://lnl.wpi.edu"\
+                      + reverse("projection:edit-request", args=[id]) + \
+                      "'>Reschedule</a><br><a href='https://lnl.wpi.edu" + \
+                      reverse("projection:cancel-request", args=[id]) + "'>Cancel</a>"
+            email = PITRequestEmailGenerator(to_emails=user, subject="PIT Scheduled", body=message,
+                                             context=message_context, reply_to=["lnl-hp@wpi.edu"])
             if form.instance.approved is True:
                 email.send()
             return HttpResponseRedirect(reverse("projection:pit-schedule"))

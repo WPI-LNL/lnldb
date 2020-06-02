@@ -20,7 +20,7 @@ urlpatterns = [
     url(r'^bulkevents/$', views.bulk_projection, name="add-movies"),
 
     url(r'^training/request/$', views.PITRequest.as_view(), name="pit-request"),
-    url(r'^training/schedule/$', views.PITSchedule, name="pit-schedule"),
+    url(r'^training/schedule/$', views.pit_schedule, name="pit-schedule"),
     url(r'^training/(?P<id>[0-9a-f]+)/update/$', views.pit_request_update, name="edit-request"),
     url(r'^training/manage/(?P<id>[0-9a-f]+)/$', views.manage_pit_request, name="manage-request"),
     url(r'^training/(?P<pk>[0-9a-f]+)/cancel/$', views.CancelPITRequest.as_view(), name="cancel-request"),

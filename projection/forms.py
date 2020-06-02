@@ -1,6 +1,5 @@
 from __future__ import division
 import datetime
-from math import ceil
 
 from ajax_select.fields import (AutoCompleteSelectField,
                                 AutoCompleteSelectMultipleField)
@@ -12,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.forms.models import inlineformset_factory
 from django.utils import timezone
 
-from events.models import Service, Extra, ExtraInstance
+from events.models import Service
 from events.models import Building, Category, Event2019, Location
 from projection.models import PitInstance, PITLevel, Projectionist, PitRequest
 
@@ -124,7 +123,7 @@ class BulkCreateForm(forms.Form):
             Field('date_first', css_class="datepick", ),
             Field('date_second', css_class="datepick", ),
             FormActions(
-                Submit('save', 'Save Changes'),
+                Submit('save', 'Continue'),
             )
         )
         super(BulkCreateForm, self).__init__(*args, **kwargs)
@@ -263,4 +262,5 @@ class PITRequestAdminForm(PITRequestForm):
         )
 
     scheduled_for = forms.SplitDateTimeField(label="Date / Time", required=True)
-    approved = forms.BooleanField(label="Approve", required=False, help_text="Select this to approve the request and schedule this PIT")
+    approved = forms.BooleanField(label="Approve", required=False, help_text="Select this to approve the request "
+                                                                             "and schedule this PIT")
