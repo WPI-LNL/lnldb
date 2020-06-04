@@ -5,8 +5,7 @@ from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 from factory import DjangoModelFactory, Faker, Sequence, SubFactory
 
-from events.models import (Building, CCReport, Event, Fund, Location,
-                           Organization)
+from events.models import (Building, CCReport, Event, Event2019, Fund, Location, Organization)
 
 __author__ = 'jmerdich'
 
@@ -50,6 +49,18 @@ class EventFactory(DjangoModelFactory):
     event_name = Faker('company')
     location = SubFactory(LocationFactory)
     submitted_by = SubFactory(UserFactory)
+
+
+class Event2019Factory(DjangoModelFactory):
+    class Meta:
+        model = Event2019
+    datetime_setup_complete = timezone.now()
+    datetime_start = timezone.now() + timedelta(hours=1)
+    datetime_end = timezone.now() + timedelta(hours=3)
+    event_name = Faker('company')
+    location = SubFactory(LocationFactory)
+    submitted_by = SubFactory(UserFactory)
+    submitted_ip = '127.0.0.1'
 
 
 class CCReportFactory(DjangoModelFactory):

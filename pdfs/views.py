@@ -44,6 +44,70 @@ def link_callback(uri, rel):
         raise Exception('media URI must start with %s or %s' % (surl, murl))
     return path
 
+
+def generate_pdf(context, template, request):
+    # Render html content through html template with context
+    html = render_to_string(template, context=context, request=request)
+
+    if 'raw' in request.GET and bool(request.GET['raw']):
+        return HttpResponse(html)
+
+    # Write PDF to file
+    pdf_file = BytesIO()
+    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+
+    # Return PDF document through a Django HTTP response
+    return HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
+
+
+def get_category_data(event):
+    is_event2019 = isinstance(event, Event2019)
+    event_data = {
+        'event': event,
+        'is_event2019': is_event2019
+    }
+    if is_event2019:
+        categories_data = []
+        for category in Category.objects.filter(service__serviceinstance__event=event).distinct():
+            o = {'category': category, 'serviceinstances_data': []}
+            for serviceinstance in event.serviceinstance_set.filter(service__category=category):
+                o['serviceinstances_data'].append({
+                    'serviceinstance': serviceinstance,
+                    'attachment': event.attachments.filter(for_service=serviceinstance.service).exists()
+                })
+            categories_data.append(o)
+        event_data['categories_data'] = categories_data
+    return event_data
+
+
+def get_multibill_data(multibilling):
+    data = {'multibilling': multibilling}
+    orgsets = map(lambda event: event.org.all(), multibilling.events.all())
+    orgs = next(iter(orgsets))
+    for orgset in orgsets:
+        orgs |= orgset
+    orgs = orgs.distinct()
+    data['orgs'] = orgs
+    billing_org = multibilling.org
+    data['billing_org'] = billing_org
+    events = multibilling.events.order_by('datetime_start')
+    data['events'] = events
+    data['total_cost'] = sum(map(lambda event: event.cost_total, multibilling.events.all()))
+    return data
+
+
+def get_extras(event):
+    event_data = {
+        'event': event,
+        'extras': {}
+    }
+    for cat in Category.objects.all():
+        e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
+        if len(e_for_cat) > 0:
+            event_data['extras'][cat] = e_for_cat
+    return event_data
+
+
 @login_required
 @permission_required("projection.view_pits", raise_exception=True)
 def generate_projection_pdf(request):
@@ -64,9 +128,7 @@ def generate_projection_pdf(request):
     data['levels'] = levels
 
     # Render html content through html template with context
-    html = render_to_string('pdf_templates/projection.html',
-                            context=data,
-                            request=request)
+    html = render_to_string('pdf_templates/projection.html', context=data, request=request)
     if 'raw' in request.GET and bool(request.GET['raw']):
         return HttpResponse(html)
     # write file
@@ -84,40 +146,10 @@ def generate_event_pdf(request, id):
         raise PermissionDenied
     # Prepare context
     data = {}
-    is_event2019 = isinstance(event, Event2019)
-    event_data = {
-        'event': event,
-        'is_event2019': is_event2019
-    }
-    if is_event2019:
-        categories_data = []
-        for category in Category.objects.filter(service__serviceinstance__event=event).distinct():
-            o = {}
-            o['category'] = category
-            o['serviceinstances_data'] = []
-            for serviceinstance in event.serviceinstance_set.filter(service__category=category):
-                o['serviceinstances_data'].append({
-                    'serviceinstance': serviceinstance,
-                    'attachment': event.attachments.filter(for_service=serviceinstance.service).exists()
-                })
-            categories_data.append(o)
-        event_data['categories_data'] = categories_data
+    event_data = get_category_data(event)
     data['events_data'] = [event_data]
 
-    # Render html content through html template with context
-    html = render_to_string('pdf_templates/events.html',
-                            context=data,
-                            request=request)
-
-    if 'raw' in request.GET and bool(request.GET['raw']):
-        return HttpResponse(html)
-
-    # Write PDF to file
-    pdf_file = BytesIO()
-    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
-
-    # Return PDF document through a Django HTTP response
-    resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
+    resp = generate_pdf(data, 'pdf_templates/events.html', request)
     resp['Content-Disposition'] = 'inline; filename="%s.pdf"' % slugify(event.event_name)
     return resp
 
@@ -136,26 +168,10 @@ def generate_event_bill_pdf(request, event):
     if not event.approved and not request.user.has_perm('events.bill_event', event):
         raise PermissionDenied
     data = {}
-    event_data = {
-        'event': event,
-        'extras': {}
-    }
-    for cat in Category.objects.all():
-        e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
-        if len(e_for_cat) > 0:
-            event_data['extras'][cat] = e_for_cat
+    event_data = get_extras(event)
     data['events_data'] = [event_data]
-    # Render html content through html template with context
-    html = render_to_string('pdf_templates/bill-itemized.html',
-                            context=data,
-                            request=request)
 
-    if 'raw' in request.GET and bool(request.GET['raw']):
-        return HttpResponse(html)
-
-    # Write PDF to file
-    pdf_file = BytesIO()
-    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    resp = generate_pdf(data, 'pdf_templates/bill-itemized.html', request)
 
 # Commented out to remove IDT from invoices due to Workday transition
 #    # if it's actually an invoice, attach an idt, eh?
@@ -163,22 +179,13 @@ def generate_event_bill_pdf(request, event):
 #        idt = make_idt_single(event, request.user)
 #        pdf_file = concat_pdf(pdf_file, idt)
 
-    # Return PDF document through a Django HTTP response
-    resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
     resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
     return resp
 
 
-def generate_event_bill_pdf_standalone(event, idt_originator, request=None):
+def generate_event_bill_pdf_standalone(event, request=None):
     data = {}
-    event_data = {
-        'event': event,
-        'extras': {}
-    }
-    for cat in Category.objects.all():
-        e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
-        if len(e_for_cat) > 0:
-            event_data['extras'][cat] = e_for_cat
+    event_data = get_extras(event)
     data['events_data'] = [event_data]
     # Render html content through html template with context
     html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
@@ -201,59 +208,26 @@ def generate_multibill_pdf(request, multibilling):
     if not request.user.has_perm('events.view_event_billing'):
         raise PermissionDenied
     # Prepare context
-    data = {}
     multibilling = get_object_or_404(MultiBilling.objects.annotate(num_events=Count('events')), pk=multibilling)
-    data['multibilling'] = multibilling
-    orgsets = map(lambda event : event.org.all(), multibilling.events.all())
-    orgs = next(iter(orgsets))
-    for orgset in orgsets:
-        orgs |= orgset
-    orgs = orgs.distinct()
-    data['orgs'] = orgs
-    billing_org = multibilling.org
-    data['billing_org'] = billing_org
-    events = multibilling.events.order_by('datetime_start')
-    data['events'] = events
-    data['total_cost'] = sum(map(lambda event : event.cost_total, multibilling.events.all()))
+    data = get_multibill_data(multibilling)
+
     # Render html content through html template with context
-    html = render_to_string('pdf_templates/bill-multi.html',
-                            context=data,
-                            request=request)
-
-    if 'raw' in request.GET and bool(request.GET['raw']):
-        return HttpResponse(html)
-
-    # Write PDF to file
-    pdf_file = BytesIO()
-    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    resp = generate_pdf(data, 'pdf_templates/bill-multi.html', request)
 
 # Commented out to remove IDT from invoices due to Workday transition
 #    if "invoiceonly" not in request.GET:
 #        idt = make_idt_bulk(events, request.user, billing_org)
 #        pdf_file = concat_pdf(pdf_file, idt)
 
-    # Return PDF document through a Django HTTP response
-    resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
     resp['Content-Disposition'] = 'inline; filename="bill.pdf"'
     return resp
 
 
-def generate_multibill_pdf_standalone(multibilling, idt_originator, request=None):
+def generate_multibill_pdf_standalone(multibilling, request=None):
     # Prepare context
-    data = {}
     multibilling = MultiBilling.objects.annotate(num_events=Count('events')).get(id=multibilling.id)
-    data['multibilling'] = multibilling
-    orgsets = map(lambda event : event.org.all(), multibilling.events.all())
-    orgs = next(iter(orgsets))
-    for orgset in orgsets:
-        orgs |= orgset
-    orgs = orgs.distinct()
-    data['orgs'] = orgs
-    billing_org = multibilling.org
-    data['billing_org'] = billing_org
-    events = multibilling.events.order_by('datetime_start')
-    data['events'] = events
-    data['total_cost'] = sum(map(lambda event : event.cost_total, multibilling.events.all()))
+    data = get_multibill_data(multibilling)
+
     # Render html content through html template with context
     html = render_to_string('pdf_templates/bill-multi.html', context=data, request=request)
 
@@ -278,28 +252,10 @@ def generate_pdfs_standalone(ids=None):
     events = BaseEvent.objects.filter(pk__in=ids)
     data['events_data'] = []
     for event in events:
-        is_event2019 = isinstance(event, Event2019)
-        event_data = {
-            'event': event,
-            'is_event2019': is_event2019
-        }
-        if is_event2019:
-            categories_data = []
-            for category in Category.objects.filter(service__serviceinstance__event=event).distinct():
-                o = {}
-                o['category'] = category
-                o['serviceinstances_data'] = []
-                for serviceinstance in event.serviceinstance_set.filter(service__category=category):
-                    o['serviceinstances_data'].append({
-                        'serviceinstance': serviceinstance,
-                        'attachment': event.attachments.filter(for_service=serviceinstance.service).exists()
-                    })
-                categories_data.append(o)
-            event_data['categories_data'] = categories_data
+        event_data = get_category_data(event)
         data['events_data'].append(event_data)
 
-    html = render_to_string('pdf_templates/events.html',
-                            context=data)
+    html = render_to_string('pdf_templates/events.html', context=data)
 
     pdf_file = BytesIO()
     pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
@@ -310,7 +266,7 @@ def generate_pdfs_standalone(ids=None):
 def generate_event_pdf_multi(request, ids=None):
     if not request.user.has_perm('events.view_event'):
         raise PermissionDenied
-    # this shoud fix UTC showing up in PDFs
+    # this should fix UTC showing up in PDFs
     timezone.activate(timezone.get_current_timezone())
 
     if not ids:
@@ -322,42 +278,13 @@ def generate_event_pdf_multi(request, ids=None):
     events = BaseEvent.objects.filter(pk__in=idlist)
     data['events_data'] = []
     for event in events:
-        is_event2019 = isinstance(event, Event2019)
-        event_data = {
-            'event': event,
-            'is_event2019': is_event2019
-        }
-        if is_event2019:
-            categories_data = []
-            for category in Category.objects.filter(service__serviceinstance__event=event).distinct():
-                o = {}
-                o['category'] = category
-                o['serviceinstances_data'] = []
-                for serviceinstance in event.serviceinstance_set.filter(service__category=category):
-                    o['serviceinstances_data'].append({
-                        'serviceinstance': serviceinstance,
-                        'attachment': event.attachments.filter(for_service=serviceinstance.service).exists()
-                    })
-                categories_data.append(o)
-            event_data['categories_data'] = categories_data
+        event_data = get_category_data(event)
         data['events_data'].append(event_data)
 
-    # Render html content through html template with context
-    html = render_to_string('pdf_templates/events.html',
-                            context=data,
-                            request=request)
-
-    if 'raw' in request.GET and bool(request.GET['raw']):
-        return HttpResponse(html)
-
-    # Write PDF to file
-    pdf_file = BytesIO()
-    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
-
-    # Return PDF document through a Django HTTP response
-    resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
+    resp = generate_pdf(data, 'pdf_templates/events.html', request)
     resp['Content-Disposition'] = 'inline; filename="events.pdf"'
     return resp
+
 
 @login_required
 def generate_event_bill_pdf_multi(request, ids=None):
@@ -368,30 +295,12 @@ def generate_event_bill_pdf_multi(request, ids=None):
     # Prepare IDs
     idlist = ids.split(',')
     # Prepare context
-    data = {}
-    data['events_data'] = []
+    data = {'events_data': []}
     events = BaseEvent.objects.filter(pk__in=idlist)
     for event in events:
-        event_data = {
-            'event': event,
-            'extras': {}
-        }
-        for cat in Category.objects.all():
-            e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
-            if len(e_for_cat) > 0:
-                event_data['extras'][cat] = e_for_cat
+        event_data = get_extras(event)
         data['events_data'].append(event_data)
-    # Render html content through html template with context
-    html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
 
-    if 'raw' in request.GET and bool(request.GET['raw']):
-        return HttpResponse(html)
-
-    # Write PDF to file
-    pdf_file = BytesIO()
-    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
-
-    # Return PDF document through a Django HTTP response
-    resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
+    resp = generate_pdf(data, 'pdf_templates/bill-itemized.html', request)
     resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
     return resp
