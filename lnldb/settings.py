@@ -260,6 +260,7 @@ MIDDLEWARE = (
                  # 'events.middleware.ContactReminderMiddleware',
                  'debug_toolbar.middleware.DebugToolbarMiddleware',
                  'data.middleware.SwappableRedirectMiddleware',
+                 'data.middleware.HttpResponseNotAllowedMiddleware',
              )
 
 ROOT_URLCONF = 'lnldb.urls'

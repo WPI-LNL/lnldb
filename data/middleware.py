@@ -2,7 +2,9 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ImproperlyConfigured
-from django.http import HttpResponseGone, HttpResponseRedirect
+from django.template import loader
+from django.http import HttpResponseGone, HttpResponseRedirect, HttpResponseNotAllowed
+from django.utils.deprecation import MiddlewareMixin
 
 from .models import ResizedRedirect
 
@@ -58,4 +60,15 @@ class SwappableRedirectMiddleware(object):
             response = self.get_response(request)
         if hasattr(self, 'process_response'):
             response = self.process_response(request, response)
+        return response
+
+
+class HttpResponseNotAllowedMiddleware(MiddlewareMixin):
+    def process_response(self, request, response):
+        if response.status_code != 405:
+            return response
+
+        if isinstance(response, HttpResponseNotAllowed) and request.method == "GET":
+            context = {'status': '405', 'error_message': 'Method Not Allowed (GET)'}
+            response.content = loader.render_to_string("405.html", context=context, request=request)
         return response
