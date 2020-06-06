@@ -4,6 +4,9 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 		<meta name="description" content="{{ description }}">
+        {% if noindex %}
+        <meta name="robots" content="noindex">
+        {% endif %}
         {% if title %}
 		<title>Lens and Lights | {{ title }}</title>
         {% else %}
@@ -56,9 +59,16 @@
 		</header>
         <section class="bg-dark">
             <div id="system-spacer"></div>
-            <div class="pt-5 pb-4"></div>
+            {% if page.imgs.all %}
+            <div class="pt-4 pb-4"></div>
             <br>
-            <div class="container" id="alert"></div>
+            <div class="alert-inline" id="alert"></div>
+            {% else %}
+            <div class="pt-5 pb-4"></div>
+            <div class="container pt-4" id="alert"></div>
+            {% endif %}
+            {% block carousel %}
+            {% endblock %}
             <div class="container mt-4 pb-4 text-white">
 		    {% block content %}
             {% endblock %}

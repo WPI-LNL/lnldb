@@ -5,7 +5,7 @@ from pages import models
 
 class PageAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("title",)}
-    list_display = ('title', 'slug', 'main_nav', 'nav_pos')
+    list_display = ('title', 'slug', 'noindex')
 
     filter_horizontal = ['imgs', ]
 

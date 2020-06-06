@@ -14,10 +14,15 @@ def page(request, slug):
     page_obj = get_object_or_404(Page, slug=slug)
     nav = navs(request)
     context['page'] = page_obj
+    context['title'] = page_obj.title
+    context['description'] = page_obj.description
+    context['styles'] = page_obj.css
+    context['noindex'] = page_obj.noindex
     # the processors are on crack :-\
     context['navs'] = nav
     return render(request, 'static_page.html', context, )
     # context_instance=context)
+
 
 @require_GET
 def recruitment_page(request):

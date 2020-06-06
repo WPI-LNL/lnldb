@@ -1,70 +1,40 @@
-{% extends 'base_pages.html' %}
-{% load markdown_deux_tags %}
+{% extends 'base_static.html' %}
 
-{% block content %}
-
-
-
+{% block carousel %}
     {% if page.imgs.all %}
-    <div id="lnlCarousel" class="carousel slide" data-ride="carousel">
-      <!-- Indicators -->
-      <ol class="carousel-indicators">
-        {% for img in page.imgs.all %}
-        <li data-target="#lnlCarousel" data-slide-to="{{ forloop.counter }}" class="{% if forloop.counter == 1 %}active {%endif %}"></li>
-        {% endfor %}
-      </ol>
-      <div class="carousel-inner">
-      {% for img in page.imgs.all %}
-        <div class="item {% if forloop.counter == 1 %}active {%endif %}">
-          <img src="{{ MEDIA_URL }}{{img.img}}" alt="">
-          <div class="container">
-            {% if img.href %}
-            <div class="carousel-caption">
-              <h1>{{ img.href }}</h1>
-              <p>{{ img.href_desc }}</p>
-              <p><a class="btn btn-lg btn-primary" href="{% url "page" img.href.slug %}">{{ img.href_words }}</a></p>
-            </div>
-            {% else %}
-            <div class="carousel-caption">
-                <h4>{{ img.href_words }}</h4>
-                <p>{{ img.href_desc }}</p>
+    <section class="pb-0" style="background-color: #777; border-bottom: 2px solid yellow">
+        <div id="slides" class="carousel slide" data-ride="carousel">
+            <div class="carousel-inner">
+                {% for img in page.imgs.all %}
+                <div class="carousel-item full{% if img == page.imgs.all|first %} active{% endif %}"
+                     style="background-image: url('{{ img.img.url }}');">
+                    {% if img.caption_title or img.caption_desc %}
+                    <div class="carousel-caption">
+                        <p><span class="head">{{ img.caption_title }}</span> {{ img.caption_desc }}</p>
+                    </div>
+                    {% endif %}
                 </div>
+                {% endfor %}
+            </div>
+            {% if page.imgs.all.count > 1 %}
+            <a class="carousel-control-prev" href="#slides" role="button" data-slide="prev">&lsaquo;</a>
+            <a class="carousel-control-next" href="#slides" role="button" data-slide="next">&rsaquo;</a>
             {% endif %}
-          </div>
         </div>
-        {% endfor %}
-      </div>
-      <a class="left carousel-control" href="#lnlCarousel" data-slide="prev"><span class="glyphicon glyphicon-chevron-left"></span></a>
-      <a class="right carousel-control" href="#lnlCarousel" data-slide="next"><span class="glyphicon glyphicon-chevron-right"></span></a>
-    </div><!-- /.carousel -->
-    {% else %}
-    <div class="carousel-spacer"></div>
+    </section>
     {% endif %}
-    
-    
-    <div class="container">
-    {% if page.body_in_hero %}
-    <div class="jumbotron">
-    {% endif %}
-    
-    {{ page.body|markdown }} <BR />
-    <div class="clearfix"> </div>
-    
-    
-    {% if page.body_in_hero %}
-    </div> <!-- /hero-unit  -->
-    {% endif %}
-    
-    </div> <!-- /container -->
 {% endblock %}
 
-{% block finaljs %}
-<script type="text/javascript">
-      !function ($) {
-        $(function(){
-          // carousel demo
-          $('#lnlCarousel').carousel()
-        })
-      }(window.jQuery)
-</script>
+{% block content %}
+    <div class="container{% if page.imgs.all %} py-5{% endif %}">
+    {% if page.body_in_jumbo %}
+        <div class="jumbotron" style="color: black">
+            {{ page.body|safe }}
+        </div>
+    {% else %}
+        <h2>{{ page.title }}</h2>
+        <br>
+        {{ page.body|safe }}
+    {% endif %}
+    </div>
 {% endblock %}
