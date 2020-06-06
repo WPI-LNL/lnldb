@@ -1,10 +1,14 @@
 # noinspection PyProtectedMember
 from django.contrib.auth.models import AbstractUser, _user_has_perm
-from django.db.models import (BooleanField, CharField, IntegerField,
-                              PositiveIntegerField, Q, TextField, DateField)
-from django.utils.six import python_2_unicode_compatible
+from django.db.models import (Model, BooleanField, CharField, IntegerField, PositiveIntegerField, Q, TextField,
+                              DateField, OneToOneField, ImageField, CASCADE, signals)
+from six import python_2_unicode_compatible
+from django.dispatch import receiver
 
+from data.storage import OverwriteStorage
 from events.models import Organization
+
+import os
 
 # from django_custom_user_migration.models import AbstractUser
 
@@ -34,8 +38,6 @@ class User(AbstractUser):
         super(User, self).save(*args, **kwargs)
 
     title = CharField(max_length=60, null=True, blank=True, verbose_name="Officer Position")
-    img = CharField(max_length=500, help_text="URL pointing to location of photo", null=True, blank=True,
-                    verbose_name="Image")
     wpibox = IntegerField(null=True, blank=True, verbose_name="WPI Box Number")
     phone = CharField(max_length=24, null=True, blank=True, verbose_name="Phone Number")
     carrier = CharField(choices=carrier_choices, max_length=25, verbose_name="Cellular Carrier",
@@ -149,3 +151,26 @@ class User(AbstractUser):
             ('view_user', 'View users'),
             ('view_member', 'View LNL members'),
         )
+
+
+def path_and_rename(instance, filename):
+    upload_to = 'officers'
+    ext = filename.split('.')[-1]
+    if instance.officer.get_username():
+        filename = "{}.{}".format(instance.officer.get_username(), ext)
+    return os.path.join(upload_to, filename)
+
+
+@python_2_unicode_compatible
+class OfficerImg(Model):
+    officer = OneToOneField(User, on_delete=CASCADE, related_name="img")
+    img = ImageField(upload_to=path_and_rename, storage=OverwriteStorage(), verbose_name="Image")
+
+    def __str__(self):
+        return self.internal_name
+
+
+@receiver(signals.post_delete, sender=OfficerImg)
+def officer_img_cleanup(sender, instance, **kwargs):
+    """ When an instance of OfficerImg is deleted, delete the respective files as well. """
+    instance.img.delete(False)

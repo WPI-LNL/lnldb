@@ -1,5 +1,5 @@
 from datetime import timedelta
-import math, datetime
+import math
 
 from crispy_forms.helper import FormHelper
 from django.conf import settings
@@ -25,6 +25,7 @@ from events.models import Event2019, OfficeHour
 from helpers import mixins
 
 from . import forms
+from .models import OfficerImg
 
 
 class UserAddView(mixins.HasPermMixin, generic.CreateView):
@@ -102,7 +103,8 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
 
         context['active'] = self.get_object().is_active
 
-        moviesccd = Event2019.objects.filter(ccinstances__crew_chief=self.get_object(), serviceinstance__service__category__name="Projection").distinct()
+        moviesccd = Event2019.objects.filter(ccinstances__crew_chief=self.get_object(),
+                                             serviceinstance__service__category__name="Projection").distinct()
 
         context['moviesccd'] = moviesccd.count()
 
@@ -261,12 +263,19 @@ def secretary_dashboard(request):
     simple_majority = int(math.ceil(num_active / 2.0))
     two_thirds_majority = int(math.ceil(num_active * 2 / 3.0))
     members_to_activate = get_user_model().objects.filter(groups__name='Associate') \
-        .annotate(hours_count=Count(Case(When(hours__event__datetime_start__gte=semester_ago, then=F('hours'))), distinct=True)).filter(hours_count__gte=5) \
-        .annotate(meeting_count=Count(Case(When(meeting__datetime__gte=semester_ago, then=F('meeting'))), distinct=True)).filter(meeting_count__gte=3)
+        .annotate(hours_count=Count(Case(When(hours__event__datetime_start__gte=semester_ago, then=F('hours'))),
+                                    distinct=True)).filter(hours_count__gte=5) \
+        .annotate(
+        meeting_count=Count(Case(When(meeting__datetime__gte=semester_ago, then=F('meeting'))), distinct=True)).filter(
+        meeting_count__gte=3)
     members_to_deactivate = get_user_model().objects.filter(groups__name='Active').exclude(groups__name='Away') \
-        .annotate(hours_count=Count(Case(When(hours__event__datetime_start__gte=term_ago, then=F('hours'))), distinct=True)).filter(hours_count__lt=4) \
-        .annotate(meeting_count=Count(Case(When(meeting__datetime__gte=term_ago, meeting__meeting_type__name='General', then=F('meeting'))), distinct=True)).filter(meeting_count__lt=4)
-    members_to_associate = get_user_model().objects.filter(groups=None).filter(Q(meeting__datetime__gte=term_ago) | Q(hours__event__datetime_start__gte=term_ago)).distinct()
+        .annotate(hours_count=Count(Case(When(hours__event__datetime_start__gte=term_ago, then=F('hours'))),
+                                    distinct=True)).filter(hours_count__lt=4) \
+        .annotate(meeting_count=Count(
+        Case(When(meeting__datetime__gte=term_ago, meeting__meeting_type__name='General', then=F('meeting'))),
+        distinct=True)).filter(meeting_count__lt=4)
+    members_to_associate = get_user_model().objects.filter(groups=None).filter(
+        Q(meeting__datetime__gte=term_ago) | Q(hours__event__datetime_start__gte=term_ago)).distinct()
     members_on_away = get_user_model().objects.filter(groups__name='Away', away_exp__isnull=False)
 
     context['num_active'] = num_active
@@ -285,10 +294,14 @@ def secretary_dashboard(request):
 def shame(request):
     context = {}
     worst_cc_report_forgetters = get_user_model().objects.annotate(Count('ccinstances', distinct=True)) \
-        .annotate(did_ccreport_count=Count(Case(When(ccinstances__event__ccreport__crew_chief=F('pk'), then=F('ccinstances'))), distinct=True)) \
-        .annotate(failed_to_do_ccreport_count=(F('ccinstances__count') - F('did_ccreport_count'))) \
-        .annotate(failed_to_do_ccreport_percent=(F('failed_to_do_ccreport_count') * 100 / F('ccinstances__count'))) \
-        .order_by('-failed_to_do_ccreport_count', '-failed_to_do_ccreport_percent')[:10]
+                                     .annotate(
+        did_ccreport_count=Count(Case(When(ccinstances__event__ccreport__crew_chief=F('pk'), then=F('ccinstances'))),
+                                 distinct=True)) \
+                                     .annotate(
+        failed_to_do_ccreport_count=(F('ccinstances__count') - F('did_ccreport_count'))) \
+                                     .annotate(
+        failed_to_do_ccreport_percent=(F('failed_to_do_ccreport_count') * 100 / F('ccinstances__count'))) \
+                                     .order_by('-failed_to_do_ccreport_count', '-failed_to_do_ccreport_percent')[:10]
 
     context['worst_cc_report_forgetters'] = worst_cc_report_forgetters
 
@@ -334,3 +347,39 @@ class PasswordSetView(generic.FormView):
     def dispatch(self, request, pk, *args, **kwargs):
         self.user = get_object_or_404(get_user_model(), pk=int(pk))
         return super(PasswordSetView, self).dispatch(request, pk, *args, **kwargs)
+
+
+@login_required
+@permission_required('accounts.change_group', raise_exception=True)
+def officer_photos(request, pk=None):
+    context = {}
+    if pk is None:
+        pk = request.user.pk
+    officer = get_object_or_404(get_user_model(), pk=pk)
+    groups = [group.name for group in officer.groups.all()]
+    if "Officer" not in groups:
+        messages.add_message(request, messages.ERROR, 'This feature is not available for this user.')
+        return HttpResponseRedirect(reverse("home"))
+
+    context['officer'] = officer
+    img = OfficerImg.objects.filter(officer=officer).first()
+    form = forms.OfficerPhotoForm(instance=img)
+
+    if request.method == "POST":
+        form = forms.OfficerPhotoForm(request.POST, request.FILES, instance=img)
+        if request.POST['save'] == "Remove":
+            img = OfficerImg.objects.filter(officer=officer).first()
+            if img is not None:
+                img.delete()
+                messages.success(request, "Your profile photo was removed successfully!", extra_tags='success')
+            return HttpResponseRedirect(reverse("accounts:detail", args=[officer.pk]))
+        if form.is_valid():
+            form.instance.officer = officer
+            form.save()
+            messages.success(request, "Your profile photo was updated successfully!", extra_tags='success')
+            return HttpResponseRedirect(reverse("accounts:detail", args=[officer.pk]))
+        else:
+            context['form'] = form
+    else:
+        context['form'] = form
+    return render(request, 'form_crispy.html', context)

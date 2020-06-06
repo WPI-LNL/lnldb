@@ -6,6 +6,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.forms import ModelForm
 
 from data.forms import FieldAccessForm, FieldAccessLevel
+from .models import OfficerImg
 
 
 class LoginForm(AuthenticationForm):
@@ -25,7 +26,7 @@ class UserEditForm(FieldAccessForm):
         self.helper.field_class = 'col-lg-8'
         layout = [
             Fieldset("User Info",
-                     'first_name', 'last_name', 'username', 'email', 'nickname', 'img',
+                     'first_name', 'last_name', 'username', 'email', 'nickname',
                      HTML("""
                  <div class="col-lg-offset-2 col-lg-8">
                      <a href="{% url 'accounts:password' object.pk %}">Set a password for non-CAS login</a>
@@ -54,7 +55,7 @@ class UserEditForm(FieldAccessForm):
     class Meta:
         model = get_user_model()
         fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'groups', 'addr',
-                  'wpibox', 'mdc', 'phone', 'class_year', 'student_id', 'away_exp', 'carrier', 'title', 'img']
+                  'wpibox', 'mdc', 'phone', 'class_year', 'student_id', 'away_exp', 'carrier', 'title']
 
     class FieldAccess:
         def __init__(self):
@@ -70,7 +71,7 @@ class UserEditForm(FieldAccessForm):
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.change_group', instance),
-            enable=('groups', 'away_exp', 'title', 'img')
+            enable=('groups', 'away_exp', 'title')
         )
         edit_mdc = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.edit_mdc', instance),
@@ -137,3 +138,22 @@ class UserAddForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class OfficerPhotoForm(ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.label_class = "col-lg-2"
+        self.helper.field_class = "col-lg-8"
+        self.helper.layout = Layout(
+            Fieldset('Officer Photo - {{ officer.get_full_name }}', 'img'),
+            FormActions(
+                Submit('save', 'Save Changes'),
+                HTML('<input type="submit" name="save" value="Remove" class="btn btn-danger"></input>'))
+        )
+        super(OfficerPhotoForm, self).__init__(*args, **kwargs)
+
+    class Meta:
+        model = OfficerImg
+        fields = ['img']

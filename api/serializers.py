@@ -21,6 +21,8 @@ class OfficerSerializer(serializers.ModelSerializer):
             self.fields.pop('img')
             self.fields.pop('class_year')
 
+    img = serializers.CharField(source='img.img.url')
+
     class Meta:
         model = User
         fields = ('title', 'name', 'img', 'class_year')
