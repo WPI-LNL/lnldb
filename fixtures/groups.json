@@ -1,5 +1,7 @@
 [
 {
+  "model": "auth.group",
+  "pk": 1,
   "fields": {
     "name": "Officer",
     "permissions": [
@@ -24,6 +26,11 @@
         "user"
       ],
       [
+        "edit_mdc",
+        "accounts",
+        "user"
+      ],
+      [
         "view_member",
         "accounts",
         "user"
@@ -44,29 +51,29 @@
         "globalperms"
       ],
       [
-        "add_building",
-        "events",
-        "building"
+        "retrieve_admin_password",
+        "devices",
+        "laptop"
       ],
       [
-        "change_building",
-        "events",
-        "building"
+        "retrieve_user_password",
+        "devices",
+        "laptop"
+      ],
+      [
+        "view_laptop_details",
+        "devices",
+        "laptop"
+      ],
+      [
+        "view_laptop_history",
+        "devices",
+        "laptop"
       ],
       [
         "add_event_report",
         "events",
         "baseevent"
-      ],
-      [
-        "change_ccreport",
-        "events",
-        "ccreport"
-      ],
-      [
-        "delete_ccreport",
-        "events",
-        "ccreport"
       ],
       [
         "add_raw_event",
@@ -197,6 +204,26 @@
         "view_test_event",
         "events",
         "baseevent"
+      ],
+      [
+        "add_building",
+        "events",
+        "building"
+      ],
+      [
+        "change_building",
+        "events",
+        "building"
+      ],
+      [
+        "change_ccreport",
+        "events",
+        "ccreport"
+      ],
+      [
+        "delete_ccreport",
+        "events",
+        "ccreport"
       ],
       [
         "add_extra",
@@ -509,6 +536,26 @@
         "targetemaillist"
       ],
       [
+        "edit_trainee_notes",
+        "members",
+        "trainee"
+      ],
+      [
+        "revoke_training",
+        "members",
+        "trainee"
+      ],
+      [
+        "add_training",
+        "members",
+        "training"
+      ],
+      [
+        "view_training",
+        "members",
+        "training"
+      ],
+      [
         "add_pitlevel",
         "projection",
         "pitlevel"
@@ -532,57 +579,13 @@
         "view_pits",
         "projection",
         "projectionist"
-      ],
-      [
-        "view_training",
-        "members",
-        "training"
-      ],
-      [
-        "add_training",
-        "members",
-        "training"
-      ],
-      [
-        "edit_trainee_notes",
-        "members",
-        "trainee"
-      ],
-      [
-        "revoke_training",
-        "members",
-        "trainee"
-      ],
-      [
-        "view_laptop",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "view_laptop_history",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "retrieve_user_password",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "retrieve_admin_password",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "view_posteventsurvey",
-        "events",
-        "posteventsurvey"
       ]
     ]
-  },
-  "model": "auth.group"
+  }
 },
 {
+  "model": "auth.group",
+  "pk": 2,
   "fields": {
     "name": "Associate",
     "permissions": [
@@ -622,10 +625,11 @@
         "projectionist"
       ]
     ]
-  },
-  "model": "auth.group"
+  }
 },
 {
+  "model": "auth.group",
+  "pk": 3,
   "fields": {
     "name": "Active",
     "permissions": [
@@ -638,6 +642,16 @@
         "search",
         "data",
         "globalperms"
+      ],
+      [
+        "retrieve_user_password",
+        "devices",
+        "laptop"
+      ],
+      [
+        "view_laptop_details",
+        "devices",
+        "laptop"
       ],
       [
         "can_chief_event",
@@ -730,38 +744,34 @@
         "meeting"
       ],
       [
-        "view_pits",
-        "projection",
-        "projectionist"
-      ],
-      [
         "view_training",
         "members",
         "training"
       ],
       [
-        "view_laptop",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "retrieve_user_password",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "retrieve_admin_password",
-        "laptops",
-        "laptop"
+        "view_pits",
+        "projection",
+        "projectionist"
       ]
     ]
-  },
-  "model": "auth.group"
+  }
 },
 {
+  "model": "auth.group",
+  "pk": 4,
   "fields": {
     "name": "Alumni",
     "permissions": [
+      [
+        "retrieve_user_password",
+        "devices",
+        "laptop"
+      ],
+      [
+        "view_laptop_details",
+        "devices",
+        "laptop"
+      ],
       [
         "can_chief_event",
         "events",
@@ -818,40 +828,21 @@
         "meeting"
       ],
       [
-        "view_pits",
-        "projection",
-        "projectionist"
-      ],
-      [
         "view_training",
         "members",
         "training"
       ],
       [
-        "view_laptop",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "retrieve_user_password",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "retrieve_admin_password",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "search",
-        "data",
-        "globalperms"
+        "view_pits",
+        "projection",
+        "projectionist"
       ]
     ]
-  },
-  "model": "auth.group"
+  }
 },
 {
+  "model": "auth.group",
+  "pk": 5,
   "fields": {
     "name": "Away",
     "permissions": [
@@ -859,6 +850,11 @@
         "search",
         "data",
         "globalperms"
+      ],
+      [
+        "view_laptop_details",
+        "devices",
+        "laptop"
       ],
       [
         "event_images",
@@ -906,25 +902,21 @@
         "meeting"
       ],
       [
-        "view_pits",
-        "projection",
-        "projectionist"
-      ],
-      [
         "view_training",
         "members",
         "training"
       ],
       [
-        "view_laptop",
-        "laptops",
-        "laptop"
+        "view_pits",
+        "projection",
+        "projectionist"
       ]
     ]
-  },
-  "model": "auth.group"
+  }
 },
 {
+  "model": "auth.group",
+  "pk": 6,
   "fields": {
     "name": "Inactive",
     "permissions": [
@@ -964,20 +956,37 @@
         "projectionist"
       ]
     ]
-  },
-  "model": "auth.group"
+  }
 },
 {
+  "model": "auth.group",
+  "pk": 7,
   "fields": {
     "name": "Contact",
     "permissions": []
-  },
-  "model": "auth.group"
+  }
 },
 {
+  "model": "auth.group",
+  "pk": 8,
   "fields": {
     "name": "ATD",
     "permissions": [
+      [
+        "retrieve_user_password",
+        "devices",
+        "laptop"
+      ],
+      [
+        "view_laptop_details",
+        "devices",
+        "laptop"
+      ],
+      [
+        "view_laptop_history",
+        "devices",
+        "laptop"
+      ],
       [
         "add_equipmentcategory",
         "inventory",
@@ -1042,35 +1051,51 @@
         "change_equipmentstatus",
         "inventory",
         "equipmentstatus"
-      ],
-      [
-        "view_laptop",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "view_laptop_history",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "retrieve_user_password",
-        "laptops",
-        "laptop"
-      ],
-      [
-        "retrieve_admin_password",
-        "laptops",
-        "laptop"
       ]
     ]
-  },
-  "model": "auth.group"
+  }
 },
 {
+  "model": "auth.group",
+  "pk": 9,
   "fields": {
     "name": "Committee Leader",
     "permissions": [
+      [
+        "add_workshop",
+        "events",
+        "workshop"
+      ],
+      [
+        "change_workshop",
+        "events",
+        "workshop"
+      ],
+      [
+        "delete_workshop",
+        "events",
+        "workshop"
+      ],
+      [
+        "edit_workshops",
+        "events",
+        "workshop"
+      ],
+      [
+        "add_workshopdate",
+        "events",
+        "workshopdate"
+      ],
+      [
+        "change_workshopdate",
+        "events",
+        "workshopdate"
+      ],
+      [
+        "delete_workshopdate",
+        "events",
+        "workshopdate"
+      ],
       [
         "add_meeting",
         "meetings",
@@ -1122,7 +1147,6 @@
         "meetingtype"
       ]
     ]
-  },
-  "model": "auth.group"
+  }
 }
 ]

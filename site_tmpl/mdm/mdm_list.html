@@ -1,0 +1,32 @@
+{% extends 'base_admin.html' %}
+{% load permissionif %}
+
+{% block content %}
+    <h1>Devices</h1>
+    <br>
+    <div class="row">
+        {% for laptop in laptops %}
+        <div class="col-sm-3">
+            <div class="panel panel-default">
+                <div class="panel-heading">{{ laptop }}</div>
+                <div class="panel-body">
+                    <p>{{ laptop.description|linebreaks }}<br><br>{% if laptop.serial %}
+                        <strong>Serial Number:</strong> {{ laptop.serial }}<br>{% endif %}{% if laptop.asset_tag %}
+                        <strong>Asset Tag:</strong> {{ laptop.asset_tag }}<br>{% endif %}{% if laptop.last_checkin %}
+                        <strong>Last Check-in:</strong> {{ laptop.last_checkin|date:"M d, h:i A" }}<br>{% endif %}
+                        {% if laptop.last_ip %}<strong>Last IP Address:</strong> {{ laptop.last_ip }}{% endif %}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div>
+        <div class="panel panel-default">
+            <div class="panel-heading">Management Tools</div>
+            <div class="panel-body">
+                <a class="btn btn-warning" href="{% url 'home' %}">Documentation</a>
+                <!-- Maybe checkin log? -->
+            </div>
+        </div>
+    </div>
+{% endblock %}

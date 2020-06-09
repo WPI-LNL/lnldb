@@ -296,7 +296,7 @@ INSTALLED_APPS = (
     'emails',
     'members',
     'mptt',
-    'laptops',
+    'devices',
     'api',
 
     'bootstrap_toolkit',

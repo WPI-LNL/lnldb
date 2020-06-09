@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 from hashlib import sha256
 from itertools import chain
 import json
@@ -12,16 +15,18 @@ from django.views.decorators.http import require_GET, require_POST
 
 from .models import Laptop, LaptopPasswordRetrieval, LaptopPasswordRotation
 
+
 @login_required
 @require_GET
-@permission_required('laptops.view_laptop', raise_exception=True)
+@permission_required('devices.view_laptop_details', raise_exception=True)
 def laptops_list(request):
     laptops = Laptop.objects.filter(retired=False)
     return render(request, 'laptops/laptops_list.html', {"laptops": laptops})
 
+
 @login_required
 @require_GET
-@permission_required('laptops.view_laptop_history', raise_exception=True)
+@permission_required('devices.view_laptop_history', raise_exception=True)
 def laptop_history(request, id):
     laptop = get_object_or_404(Laptop, retired=False, pk=id)
     password_retrievals = laptop.password_retrievals.all()
@@ -33,11 +38,12 @@ def laptop_history(request, id):
         ), key=lambda event: event[1].timestamp, reverse=True)
     return render(request, 'laptops/laptop_history.html', {'laptop': laptop, 'events': events})
 
+
 @login_required
 @require_GET
 def laptop_user_password(request, id):
     laptop = get_object_or_404(Laptop, retired=False, pk=id)
-    if not request.user.has_perm('laptops.retrieve_user_password', laptop):
+    if not request.user.has_perm('devices.retrieve_user_password', laptop):
         raise PermissionDenied
     LaptopPasswordRetrieval.objects.create(laptop=laptop, user=request.user, admin=False)
     context = {
@@ -47,11 +53,12 @@ def laptop_user_password(request, id):
     }
     return render(request, 'laptops/password.html', context)
 
+
 @login_required
 @require_GET
 def laptop_admin_password(request, id):
     laptop = get_object_or_404(Laptop, retired=False, pk=id)
-    if not request.user.has_perm('laptops.retrieve_admin_password', laptop):
+    if not request.user.has_perm('devices.retrieve_admin_password', laptop):
         raise PermissionDenied
     LaptopPasswordRetrieval.objects.create(laptop=laptop, user=request.user, admin=True)
     context = {
@@ -60,6 +67,7 @@ def laptop_admin_password(request, id):
         'now': timezone.now()
     }
     return render(request, 'laptops/password.html', context)
+
 
 @require_POST
 @csrf_exempt
@@ -72,3 +80,10 @@ def rotate_passwords(request):
     laptop.save()
     LaptopPasswordRotation.objects.create(laptop=laptop)
     return JsonResponse(response_data)
+
+
+@login_required
+@permission_required('devices.manage_mdm', raise_exception=True)
+def mdm_list(request):
+    laptops = Laptop.objects.filter(retired=False)
+    return render(request, 'mdm/mdm_list.html', {'laptops': laptops})

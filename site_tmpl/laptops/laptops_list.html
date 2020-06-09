@@ -10,13 +10,13 @@
                 <div class="panel-heading">{{ laptop }}</div>
                 <div class="panel-body">
                     <p>{{ laptop.description|linebreaks }}</p>
-                    {% permission request.user has 'laptops.retrieve_user_password' of laptop %}
+                    {% permission request.user has 'devices.retrieve_user_password' of laptop %}
                         <a class="btn btn-default btn-block" href="{% url 'laptops:user-password' laptop.pk %}">View Password</a>
                     {% endpermission %}
-                    {% permission request.user has 'laptops.retrieve_admin_password' of laptop %}
+                    {% permission request.user has 'devices.retrieve_admin_password' of laptop %}
                         <a class="btn btn-default btn-block" href="{% url 'laptops:admin-password' laptop.pk %}">View Admin Password</a>
                     {% endpermission %}
-                    {% permission request.user has 'laptops.view_laptop_history' of laptop %}
+                    {% permission request.user has 'devices.view_laptop_history' of laptop %}
                         <a class="btn btn-default btn-block" href="{% url 'laptops:history' laptop.pk %}">View History</a>
                     {% endpermission %}
                 </div>

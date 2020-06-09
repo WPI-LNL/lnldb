@@ -37,15 +37,15 @@ urlpatterns += [
     # url(r'^lnldb/', include('lnldb.foo.urls', [namespace='foo'])),
 
     # Include other modules
-    url(r'^admin/', include(admin.site.urls)),
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
+    url(r'^admin/', include(admin.site.urls)),
     url(r'^hijack/', include('hijack.urls')),
     url(r'^__debug__/', include(debug_toolbar.urls)),
     url(r'^db/lookups/', include(ajax_select_urls)),
     url(r'^db/meetings/', include('meetings.urls', namespace='meetings')),
     url(r'^db/clients/', include('events.urls.orgs', namespace='orgs')),
     url(r'^db/equipment/', include('inventory.urls', namespace='equipment')),
-    url(r'^db/laptops/', include('laptops.urls', namespace='laptops')),
+    url(r'^db/laptops/', include('devices.urls.laptops', namespace='laptops')),
     url(r'^db/projection/', include('projection.urls', namespace='projection')),
     url(r'^db/events/', include('events.urls.events', namespace='events')),
     url(r'^workorder-old/', include('events.urls.wizard', namespace='wizard')),
@@ -67,6 +67,8 @@ urlpatterns += [
     url(r'^workorder/', RedirectView.as_view(url='/workorder/', permanent=False)),
     url(r'^join/$', recruitment_page, name='recruitment-page'),
     url(r'^workshops/$', workshops, name='workshops'),
+
+    url(r'^mdm/', include('devices.urls.mdm'), name="mdm"),
 
     # keep old urls
     url(r'^lnadmin/$', RedirectView.as_view(url="/db/", permanent=True)),
