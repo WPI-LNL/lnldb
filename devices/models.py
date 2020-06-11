@@ -47,15 +47,15 @@ class LaptopPasswordRotation(models.Model):
     laptop = models.ForeignKey(Laptop, on_delete=models.CASCADE, related_name='password_rotations')
 
 
-class ConfigurationProfile(models.Model):
-    profile = models.FilePathField(path=settings.MEDIA_ROOT + "/profiles/", match=".*\.json$")
-    created_on = models.DateTimeField(auto_now_add=True)
-    last_modified = models.DateTimeField(auto_now=True)
-    pending_install = models.ManyToManyField(Laptop, related_name="pending", blank=True)
-    installed = models.ManyToManyField(Laptop, related_name="installed", blank=True)
-
-    class Meta:
-        ordering = ['last_modified']
-
-    def __str__(self):
-        return self.profile.split('/')[-1].replace('.json', '')
+# class ConfigurationProfile(models.Model):
+#     profile = models.FilePathField(path=settings.MEDIA_ROOT + "/profiles/", match=".*\.json$")
+#     created_on = models.DateTimeField(auto_now_add=True)
+#     last_modified = models.DateTimeField(auto_now=True)
+#     pending_install = models.ManyToManyField(Laptop, related_name="pending", blank=True)
+#     installed = models.ManyToManyField(Laptop, related_name="installed", blank=True)
+#
+#     class Meta:
+#         ordering = ['last_modified']
+#
+#     def __str__(self):
+#         return self.profile.split('/')[-1].replace('.json', '')

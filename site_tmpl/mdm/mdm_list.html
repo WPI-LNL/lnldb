@@ -15,6 +15,13 @@
                         <strong>Asset Tag:</strong> {{ laptop.asset_tag }}<br>{% endif %}{% if laptop.last_checkin %}
                         <strong>Last Check-in:</strong> {{ laptop.last_checkin|date:"M d, h:i A" }}<br>{% endif %}
                         {% if laptop.last_ip %}<strong>Last IP Address:</strong> {{ laptop.last_ip }}{% endif %}</p>
+                    {% if not laptop.mdm_enrolled and laptop.serial %}
+                        <a class="btn btn-default btn-block" href="{% url 'mdm:enroll' laptop.pk %}">Continue Enrollment</a>
+                    {% elif not laptop.mdm_enrolled %}
+                        <a class="btn btn-default btn-block" href="{% url 'mdm:install-client' %}">Enroll</a>
+                    {% else %}
+                        <a class="btn btn-default btn-block" href="{% url 'mdm:remove' laptop.pk %}">Remove</a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -24,6 +31,7 @@
         <div class="panel panel-default">
             <div class="panel-heading">Management Tools</div>
             <div class="panel-body">
+                <a class="btn btn-primary" href="{% url 'mdm:install-client' %}">New Device</a>
                 <a class="btn btn-warning" href="{% url 'home' %}">Documentation</a>
                 <!-- Maybe checkin log? -->
             </div>
