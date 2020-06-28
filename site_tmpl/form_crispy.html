@@ -37,6 +37,9 @@
         }
     });
 </script>
+{% if custom_script %}
+    <script>{{ custom_script|safe }}</script>
+{% endif %}
 <style>
     .padleft {
     margin-left:65px;

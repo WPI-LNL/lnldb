@@ -1,0 +1,794 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+
+<plist version="1.0">
+<dict>
+    <key>PayloadDisplayName</key>
+	<string>{{ data.display_name|default_if_none:"Settings for LNL MacBooks" }}</string>
+	<key>PayloadDescription</key>
+	<string>{{ data.description|default_if_none:"Management Profile for LNL MacBooks" }}</string>
+	<key>PayloadIdentifier</key>
+	<string>edu.wpi.lnl.MacBookConfig.{{ UUID }}</string>
+	<key>PayloadOrganization</key>
+	<string>WPI Lens and Lights</string>
+	<key>PayloadRemovalDisallowed</key>
+	<false/>
+	<key>PayloadScope</key>
+	<string>{{ data.scope }}</string>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadUUID</key>
+	<string>{{ UUID }}</string>{% if data.auto_remove == 'expire' %}{% if data.removal_date %}
+    <key>RemovalDate</key>
+    <date>{{ data.removal_date }}</date>{% endif %}{% if data.removal_period %}
+    <key>DurationUntilRemoval</key>
+    <real>{{ data.removal_period }}</real>{% endif %}{% endif %}
+	<key>PayloadVersion</key>
+	<integer>{{ data.version }}</integer>
+	<key>PayloadContent</key>
+	<array>{% if data.ad_tracking %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Opts out of targeted advertising</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.AdLib.{{ identifiers.ad_tracking }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.AdLib</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.ad_tracking }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.restrictions_version }}</integer>
+            <key>forceLimitAdTracking</key>
+            <true/>
+        </dict>{% endif %}{% if data.disable_airdrop %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Disables AirDrop</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.NetworkBrowser.{{ identifiers.airdrop }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.NetworkBrowser</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.airdrop }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.restrictions_version }}</integer>
+            <key>DisableAirDrop</key>
+            <true/>
+        </dict>{% endif %}{% if payloads.store %}
+		<dict>
+            <key>PayloadDescription</key>
+			<string>Configures software permissions</string>
+            <key>PayloadDisplayName</key>
+            <string>App Store</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.appstore.{{ identifiers.store }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.appstore</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.store }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.store_version }}</integer>
+			<key>restrict-store-require-admin-to-install</key>{% if data.admin_install %}
+			<true/>{% else %}
+            <false/>{% endif %}
+			<key>restrict-store-softwareupdate-only</key>{% if data.softwareupdate_only %}
+            <true/>{% else %}
+			<false/>{% endif %}
+			<key>restrict-store-disable-app-adoption</key>{% if data.app_adoption %}
+			<true/>{% else %}
+            <false/>{% endif %}
+			<key>DisableSoftwareUpdateNotifications</key>{% if data.update_notifications %}
+            <true/>{% else %}
+			<false/>{% endif %}
+		</dict>{% endif %}{% if payloads.siri %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Configures Siri</string>
+            <key>PayloadDisplayName</key>
+            <string>Siri</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.assistant.support.{{ identifiers.siri }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.assistant.support</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.siri }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.siri_version }}</integer>{% if data.siri_enabled %}
+            <key>Assistant Enabled</key>
+            <true/>{% endif %}{% if data.improve_siri %}
+            <key>Siri Data Sharing Opt-In Status</key>
+            <integer>{{ data.improve_siri }}</integer>{% endif %}
+        </dict>{% endif %}{% if payloads.desktop %}
+		<dict>
+            <key>PayloadDescription</key>
+			<string>Configures the desktop background</string>
+			<key>PayloadDisplayName</key>
+			<string>Desktop Background</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.desktop.{{ identifiers.desktop }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.desktop</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.desktop }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.desktop_version }}</integer>
+			<key>locked</key>{% if data.locked %}
+			<true/>{% else %}
+            <false/>{% endif %}{% if data.desktop_path %}
+            <key>override-picture-path</key>
+            <string>{{ data.desktop_path }}</string>{% endif %}
+		</dict>{% endif %}{% if data.ds_store %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Prevent .DS_Store file creation on network volumes</string>
+            <key>PayloadDisplayName</key>
+            <string>Desktop Services</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.desktopservices.{{ identifiers.desktop_services }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.desktopservices</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.desktop_services }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.finder_version }}</integer>
+            <key>DSDontWriteNetworkStores</key>
+            <true/>
+        </dict>{% endif %}{% if payloads.dock %}
+		<dict>
+			<key>PayloadDescription</key>
+			<string>Configures the dock</string>
+            <key>PayloadDisplayName</key>
+            <string>Dock</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.dock.{{ identifiers.dock }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.dock</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.dock }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.dock_version }}</integer>{% if data.orientation %}
+			<key>orientation</key>
+			<string>{{ data.orientation }}</string>{% endif %}{% if data.position %}
+			<key>position-immutable</key>
+			<true/>{% endif %}{% if data.autohide %}
+			<key>autohide</key>
+            <true/>{% endif %}{% if data.autohide_immutable %}
+			<key>autohide-immutable</key>
+			<true/>{% endif %}{% if data.mini_app %}
+			<key>minimize-to-application</key>
+            <true/>{% endif %}{% if data.magnify %}
+			<key>magnification</key>
+			<true/>{% endif %}{% if data.magnify_immutable %}
+			<key>magnify-immutable</key>
+			<true/>{% endif %}{% if data.magsize_immutable %}
+			<key>magsize-immutable</key>
+			<true/>{% endif %}{% if data.process %}
+			<key>show-process-indicators</key>
+			<true/>{% endif %}{% if data.anim %}
+			<key>launchanim</key>
+			<true/>{% endif %}{% if data.anim_immutable %}
+			<key>launchanim-immutable</key>
+			<true/>{% endif %}{% if data.mineffect %}
+			<key>mineffect</key>
+			<string>{{ data.mineffect }}</string>{% endif %}{% if data.mineffect_immutable %}
+			<key>mineffect-immutable</key>
+			<true/>{% endif %}{% if data.size_immutable %}
+			<key>size-immutable</key>
+			<true/>{% endif %}{% if data.static_apps %}
+			<key>static-apps</key>
+			<array>{% for app in data.static_apps %}
+				<dict>
+					<key>tile-data</key>
+					<dict>
+						<key>label</key>
+						<string>{{ app.name }}</string>
+						<key>file-data</key>
+						<dict>
+							<key>_CFURLString</key>
+							<string>{{ app.path }}</string>
+							<key>_CFURLStringType</key>
+							<integer>0</integer>
+						</dict>
+					</dict>
+					<key>tile-type</key>
+					<string>file-tile</string>
+				</dict>{% endfor %}
+			</array>
+			<key>static-others</key>
+			<array>
+				<dict>
+					<key>tile-data</key>
+					<dict>
+						<key>arrangement</key>
+						<integer>2</integer>
+						<key>displayas</key>
+						<integer>2</integer>
+						<key>home directory relative</key>
+						<string>~/Downloads</string>
+						<key>label</key>
+						<string>Downloads</string>
+						<key>showas</key>
+						<integer>1</integer>
+					</dict>
+					<key>tile-type</key>
+					<string>directory-tile</string>
+				</dict>
+			</array>
+            <key>static-only</key>
+            <true/>{% endif %}{% if data.content_immutable %}
+			<key>contents-immutable</key>
+			<true/>{% endif %}
+		</dict>{% endif %}{% if payloads.energy and data.scope == "System" %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Configures the Energy Saver settings</string>
+			<key>PayloadDisplayName</key>
+			<string>Energy Saver</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.MCX.{{ identifiers.energy }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.MCX</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.energy }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.energy_version }}</integer>{% if data.disable_sleep %}
+            <key>SleepDisabled</key>
+            <true/>{% endif %}
+            <key>com.apple.EnergySaver.portable.ACPower</key>
+            <dict>{% if data.ac_display_timer %}
+                <key>Display Sleep Timer</key>
+                <integer>{{ data.ac_display_timer }}</integer>{% endif %}{% if data.ac_system_timer %}
+                <key>System Sleep Timer</key>
+                <integer>{{ data.ac_system_timer }}</integer>{% endif %}
+                <key>Wake On LAN</key>
+                <integer>{% if data.ac_wake_lan %}1{% else %}0{% endif %}</integer>
+                <key>Wake On Modem Ring</key>
+                <integer>{% if data.ac_wake_modem %}1{% else %}0{% endif %}</integer>
+                <key>Automatic Restart On Power Loss</key>
+                <integer>{% if data.ac_power_failure %}1{% else %}0{% endif %}</integer>
+            </dict>
+            <key>com.apple.EnergySaver.portable.BatteryPower</key>
+            <dict>{% if data.battery_display_timer %}
+                <key>Display Sleep Timer</key>
+                <integer>{{ data.battery_display_timer }}</integer>{% endif %}{% if data.battery_system_timer %}
+                <key>System Sleep Timer</key>
+                <integer>{{ data.battery_system_timer }}</integer>{% endif %}
+                <key>Wake On LAN</key>
+                <integer>{% if data.battery_wake_lan %}1{% else %}0{% endif %}</integer>
+                <key>Wake On Modem Ring</key>
+                <integer>{% if data.battery_wake_modem %}1{% else %}0{% endif %}</integer>
+                <key>Automatic Restart On Power Loss</key>
+                <integer>{% if data.battery_power_failure %}1{% else %}0{% endif %}</integer>
+            </dict>
+        </dict>{% endif %}{% if payloads.finder %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Configures the Finder app</string>
+			<key>PayloadDisplayName</key>
+			<string>Finder</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.finder.{{ identifiers.finder }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.finder</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.finder }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.finder_version }}</integer>{% if data.preferred_style %}
+            <key>FXPreferredViewStyle</key>
+            <string>{{ data.preferred_style }}</string>{% endif %}{% if data.window_target %}
+            <key>NewWindowTarget</key>
+            <string>{{ data.window_target }}</string>{% endif %}{% if data.warn_trash %}
+            <key>WarnOnEmptyTrash</key>
+            <true/>{% endif %}{% if data.empty_trash %}
+            <key>FXRemoveOldTrashItems</key>
+            <true/>{% endif %}{% if data.prohibit_goto %}
+            <key>ProhibitGoToFolder</key>
+            <true/>{% endif %}{% if data.prohibit_connect %}
+            <key>ProhibitConnectTo</key>
+            <true/>{% endif %}{% if data.show_connected %}
+            <key>ShowMountedServersOnDesktop</key>
+            <true/>{% endif %}
+        </dict>{% endif %}{% if data.filevault %}
+		<dict>
+			<key>PayloadDescription</key>
+			<string>Disables FileVault</string>
+			<key>PayloadDisplayName</key>
+			<string>Disable FileVault</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.MCX.FileVault2.{{ identifiers.filevault }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.MCX.FileVault2</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.filevault }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.filevault_version }}</integer>
+			<key>Enable</key>
+            <string>Off</string>
+		</dict>{% endif %}{% if data.scope == "System" and payloads.firewall %}
+        <dict>
+            <key>PayloadDescription</key>
+            <string>Configures the firewall</string>
+            <key>PayloadDisplayName</key>
+            <string>Firewall</string>
+            <key>PayloadIdentifier</key>
+            <string>com.apple.security.firewall.{{ identifiers.firewall }}</string>
+            <key>PayloadType</key>
+            <string>com.apple.security.firewall</string>
+            <key>PayloadUUID</key>
+            <string>{{ identifiers.firewall }}</string>
+            <key>PayloadVersion</key>
+            <integer>{{ data.firewall_version }}</integer>
+            <key>EnableFirewall</key>{% if data.firewall_enable %}
+            <true/>{% else %}
+            <false/>{% endif %}{% if data.block_all %}
+            <key>BlockAllIncoming</key>
+            <true/>{% endif %}{% if data.stealth %}
+            <key>EnableStealthMode</key>
+            <true/>{% endif %}{% if data.firewall_apps %}
+            <key>Applications</key>
+            <array>{% for app in data.firewall_apps %}
+                <dict>
+                    <key>BundleID</key>
+                    <string>{{ app.bundle_id }}</string>
+                    <key>Allowed</key>{% if app.allowed %}
+                    <true/>{% else %}
+                    <false/>{% endif %}
+                </dict>{% endfor %}
+            </array>{% endif %}
+        </dict>{% endif %}{% if payloads.itunes %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Configures iTunes</string>
+            <key>PayloadDisplayName</key>
+            <string>iTunes</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.iTunes.{{ identifiers.itunes }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.iTunes</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.itunes }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.itunes_version }}</integer>{% if data.itunes_agreement %}
+            <key>license-agreements</key>
+            <dict>
+                <key>EA1510</key>
+                <true/>
+            </dict>{% endif %}{% if data.library_sharing %}
+            <key>disableShareLibraryInfo</key>
+            <true/>{% endif %}{% if data.device_backups %}
+            <key>DisableDeviceBackups</key>
+            <true/>{% endif %}{% if data.apple_music %}
+            <key>disableAppleMusic</key>
+            <true/>{% endif %}{% if data.update_check %}
+            <key>disableCheckForUpdates</key>
+            <true/>{% endif %}{% if data.music_store %}
+            <key>disableMusicStore</key>
+            <true/>{% endif %}{% if data.shared_music %}
+            <key>disableSharedMusic</key>
+            <true/>{% endif %}{% if data.ipod_sync %}
+            <key>dontAutomaticallySyncIPods</key>
+            <true/>{% endif %}
+        </dict>{% endif %}{% if payloads.login %}
+		<dict>
+			<key>PayloadDescription</key>
+			<string>Configures the login screen</string>
+            <key>PayloadDisplayName</key>
+            <string>Login Window</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.loginwindow.{{ identifiers.login }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.loginwindow</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.login }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.login_version }}</integer>
+			<key>SHOWFULLNAME</key>{% if data.login_full_name %}
+			<true/>{% else %}
+            <false/>{% endif %}{% if data.disable_password_change %}
+            <key>ChangePasswordDisabled</key>
+            <true/>{% endif %}{% if data.retries_till_hint > 0 %}
+            <key>RetriesUntilHint</key>
+            <integer>{{ data.retries_till_hint }}</integer>{% endif %}{% if data.hide_admin %}
+			<key>HideAdminUsers</key>
+			<true/>{% endif %}{% if data.host_info %}
+            <key>AdminHostInfo</key>
+            <string>{{ data.host_info }}</string>{% endif %}{% if data.shutdown %}
+			<key>ShutDownDisabled</key>
+			<true/>{% endif %}{% if data.restart %}
+			<key>RestartDisabled</key>
+			<true/>{% endif %}{% if data.sleep %}
+			<key>SleepDisabled</key>
+			<true/>{% endif %}{% if data.console %}
+			<key>DisableConsoleAccess</key>
+			<true/>{% endif %}{% if data.shutdown_loggedin %}
+			<key>ShutDownDisabledWhileLoggedIn</key>
+			<true/>{% endif %}{% if data.restart_loggedin %}
+			<key>RestartDisabledWhileLoggedIn</key>
+			<true/>{% endif %}{% if data.power_loggedin %}
+            <key>PowerOffDisabledWhileLoggedIn</key>
+            <true/>{% endif %}{% if data.text %}
+			<key>LoginwindowText</key>
+			<string>{{ data.text }}</string>{% endif %}{% if data.screen_lock %}
+            <key>DisableScreenLockImmediate</key>
+            <true/>{% endif %}
+		</dict>{% endif %}{% if payloads.passcode %}
+        <dict>
+            <key>PayloadDescription</key>
+            <string>Configures password requirements</string>
+            <key>PayloadDisplayName</key>
+            <string>Password Policy</string>
+            <key>PayloadIdentifier</key>
+            <string>com.apple.mobiledevice.passwordpolicy.{{ identifiers.passcode }}</string>
+            <key>PayloadType</key>
+            <string>com.apple.mobiledevice.passwordpolicy</string>
+            <key>PayloadUUID</key>
+            <string>{{ identifiers.passcode }}</string>
+            <key>PayloadVersion</key>
+            <integer>{{ data.passcode_version }}</integer>{% if data.passcode_simple %}
+            <key>allowSimple</key>
+            <true/>{% endif %}{% if data.passcode_force %}
+            <key>forcePIN</key>
+            <true/>{% endif %}{% if data.passcode_attempts > 0 %}
+            <key>maxFailedAttempts</key>
+            <integer>{{ data.passcode_attempts }}</integer>{% endif %}{% if data.time_reset > 0 %}
+            <key>minutesUntilFailedLoginReset</key>
+            <integer>{{ data.time_reset }}</integer>{% endif %}{% if data.pin_inactivity > 0 %}
+            <key>maxInactivity</key>
+            <integer>{{ data.pin_inactivity }}</integer>{% endif %}{% if data.pin_age > 0 %}
+            <key>maxPINAgeInDays</key>
+            <integer>{{ data.pin_age }}</integer>{% endif %}{% if data.complexity > 0 %}
+            <key>minComplexChars</key>
+            <integer>{{ data.complexity }}</integer>{% endif %}{% if data.pin_min_length > 0 %}
+            <key>minLength</key>
+            <integer>{{ data.pin_min_length }}</integer>{% endif %}{% if data.alpha %}
+            <key>requireAlphanumeric</key>
+            <true/>{% endif %}{% if data.pin_history > 0 %}
+            <key>pinHistory</key>
+            <integer>{{ data.pin_history }}</integer>{% endif %}{% if data.grace_period >= 0 %}
+            <key>maxGracePeriod</key>
+            <integer>{{ data.grace_period }}</integer>{% endif %}{% if data.force_reset %}
+            <key>changeAtNextAuth</key>
+            <true/>{% endif %}
+        </dict>{% endif %}{% if payloads.password %}
+		<dict>
+			<key>PayloadDescription</key>
+			<string>Removal password</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.profileRemovalPassword.{{ identifiers.password }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.profileRemovalPassword</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.password }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.password_version }}</integer>
+			<key>RemovalPassword</key>
+			<string>{{ password }}</string>
+		</dict>{% endif %}{% if payloads.restrictions %}
+		<dict>
+			<key>PayloadDescription</key>
+			<string>Configure restrictions</string>
+            <key>PayloadDisplayName</key>
+            <string>Restrictions</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.applicationaccess.{{ identifiers.restrictions }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.applicationaccess</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.restrictions }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.restrictions_version }}</integer>{% if data.disable_handoff %}
+            <key>allowActivityContinuation</key>
+            <false/>{% endif %}{% if data.disable_assistant %}
+            <key>allowAssistant</key>
+            <false/>{% endif %}{% if data.disable_camera %}
+            <key>allowCamera</key>
+            <false/>{% endif %}{% if data.cloud_bookmarks %}
+            <key>allowCloudBookmarks</key>
+            <false/>{% endif %}{% if data.cloud_mail %}
+            <key>allowCloudMail</key>
+            <false/>{% endif %}{% if data.cloud_cal %}
+            <key>allowCloudCalendar</key>
+            <false/>{% endif %}{% if data.cloud_reminders %}
+            <key>allowCloudReminders</key>
+            <false/>{% endif %}{% if data.cloud_address %}
+            <key>allowCloudAddressBook</key>
+            <false/>{% endif %}{% if data.cloud_notes %}
+            <key>allowCloudNotes</key>
+            <false/>{% endif %}{% if data.cloud_doc_sync %}
+            <key>allowCloudDocumentSync</key>
+            <false/>{% endif %}{% if data.cloud_keychain %}
+            <key>allowCloudKeychainSync</key>
+            <false/>{% endif %}{% if data.caching %}
+            <key>allowContentCaching</key>
+            <false/>{% endif %}{% if data.disable_touchid %}
+            <key>allowFingerprintForUnlock</key>
+            <false/>{% endif %}{% if data.itunes_file_share %}
+            <key>allowiTunesFileSharing</key>
+            <false/>{% endif %}{% if data.spotlight_internet %}
+            <key>allowSpotlightInternetResults</key>
+            <false/>{% endif %}{% if data.disable_screenshot %}
+            <key>allowScreenShot</key>
+            <false/>{% endif %}{% if data.disable_autounlock %}
+			<key>allowAutoUnlock</key>
+			<false/>{% endif %}{% if data.cloud_docs_desk %}
+			<key>allowCloudDesktopAndDocuments</key>
+			<false/>{% endif %}{% if data.pass_autofill %}
+			<key>allowPasswordAutoFill</key>
+			<false/>{% endif %}{% if data.pass_proximity %}
+			<key>allowPasswordProximityRequests</key>
+			<false/>{% endif %}{% if data.pass_share %}
+			<key>allowPasswordSharing</key>
+			<false/>{% endif %}
+		</dict>{% endif %}{% if payloads.safari %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Configures Safari preferences</string>
+            <key>PayloadDisplayName</key>
+            <string>Safari</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.Safari.{{ identifiers.safari }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.Safari</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.safari }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.safari_version }}</integer>{% if data.homepage %}
+            <key>HomePage</key>
+            <string>{{ data.homepage }}</string>{% endif %}{% if data.new_window %}
+            <key>NewWindowBehavior</key>
+            <integer>{{ data.new_window }}</integer>{% endif %}{% if data.new_tab %}
+            <key>NewTabBehavior</key>
+            <integer>{{ data.new_tab }}</integer>{% endif %}{% if data.tab_policy %}
+            <key>TabCreationPolicy</key>
+            <integer>{{ data.tab_policy }}</integer>{% endif %}
+            <key>CommandClickMakesTabs</key>{% if data.command_click %}
+            <true/>{% else %}
+            <false/>{% endif %}{% if data.history_limit %}
+            <key>HistoryAgeInDaysLimit</key>
+            <integer>{{ data.history_limit }}</integer>{% endif %}{% if data.downloads_path %}
+            <key>DownloadsPath</key>
+            <string>{{ data.downloads_path }}</string>{% endif %}{% if data.downloads_clear %}
+            <key>DownloadsClearingPolicy</key>
+            <integer>{{ data.downloads_clear }}</integer>{% endif %}
+            <key>AutoOpenSafeDownloads</key>{% if data.safe_downloads %}
+            <true/>{% else %}
+            <false/>{% endif %}{% if data.multiple_pages %}
+            <key>ConfirmClosingMultiplePages</key>
+            <true/>{% endif %}{% if data.default_browser %}
+            <key>DefaultBrowserPromptingState2</key>
+            <integer>1</integer>{% endif %}
+            <key>AutoFillFromAddressBook</key>{% if data.autofill_address %}
+            <true/>{% else %}
+            <false/>{% endif %}
+            <key>AutoFillMiscellaneousForms</key>{% if data.autofill_forms %}
+            <true/>{% else %}
+            <false/>{% endif %}
+            <key>com.apple.Safari.ContentPageGroupIdentifier.WebKit2PluginsEnabled</key>{% if data.plugins %}
+            <true/>{% else %}
+            <false/>{% endif %}
+            <key>com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaEnabled</key>{% if data.java %}
+            <true/>{% else %}
+            <false/>{% endif %}
+            <key>com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaScriptEnabled</key>{% if data.javascript %}
+            <true/>{% else %}
+            <false/>{% endif %}{% if data.insecure_forms %}
+            <key>AskBeforeSubmittingInsecureForms</key>
+            <true/>{% endif %}{% if data.private_browsing %}
+            <key>com.apple.Safari.ContentPageGroupIdentifier.WebKit2PrivateBrowsingEnabled</key>
+            <true/>{% endif %}{% if data.cookies %}
+            <key>BlockStoragePolicy</key>
+            <integer>{{ data.cookies }}</integer>{% endif %}{% if data.disallow_notifications %}
+            <key>CanPromptForPushNotifications</key>
+            <false/>{% endif %}{% if data.tab_links %}
+            <key>com.apple.Safari.ContentPageGroupIdentifier.WebKit2TabsToLinks</key>
+            <true/>{% endif %}
+        </dict>{% endif %}{% if payloads.screensaver %}
+		<dict>
+			<key>PayloadDescription</key>
+			<string>Configure screensaver</string>
+            <key>PayloadDisplayName</key>
+            <string>Screensaver</string>
+			<key>PayloadIdentifier</key>{% if data.scope == "System" %}
+			<string>com.apple.screensaver.{{ identifiers.screensaver }}</string>{% else %}
+            <string>com.apple.screensaver.user.{{ identifiers.screensaver }}</string>{% endif %}
+			<key>PayloadType</key>{% if data.scope == "System" %}
+			<string>com.apple.screensaver</string>{% else %}
+            <string>com.apple.screensaver.user</string>{% endif %}
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.screensaver }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.screensaver_version }}</integer>{% if data.scope == "System" %}{% if data.screensaver_password %}
+			<key>askForPassword</key>
+			<true/>
+			<key>askForPasswordDelay</key>
+			<integer>{{ data.screensaver_delay }}</integer>{% endif %}{% if data.screensaver_path %}
+            <key>loginWindowModulePath</key>
+            <string>{{ data.screensaver_path }}</string>{% endif %}{% if data.screensaver_idle %}
+            <key>loginWindowIdleTime</key>
+            <integer>{{ data.screensaver_idle }}</integer>{% endif %}{% else %}{% if data.screensaver_path %}
+            <key>modulePath</key>
+            <string>{{ data.screensaver_path }}</string>{% endif %}{% if data.screensaver_idle %}
+            <key>idleTime</key>
+            <integer>{{ data.screensaver_idle }}</integer>{% endif %}{% endif %}
+		</dict>{% endif %}{% if payloads.setup %}
+		<dict>
+			<key>PayloadDescription</key>
+			<string>Configure setup assistant</string>
+            <key>PayloadDisplayName</key>
+            <string>Setup Assistant</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.SetupAssistant.managed.{{ identifiers.setup }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.SetupAssistant.managed</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.setup }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.setup_version }}</integer>{% if data.skip_cloud %}
+			<key>SkipCloudSetup</key>
+			<true/>{% endif %}{% if data.skip_siri %}
+			<key>SkipSiriSetup</key>
+			<true/>{% endif %}{% if data.skip_privacy %}
+			<key>SkipPrivacySetup</key>
+			<true/>{% endif %}{% if data.skip_cloud_storage %}
+			<key>SkipiCloudStorageSetup</key>
+			<true/>{% endif %}{% if data.skip_true_tone %}
+			<key>SkipTrueTone</key>
+			<true/>{% endif %}{% if data.skip_appearance %}
+			<key>SkipAppearance</key>
+			<true/>{% endif %}
+		</dict>{% endif %}{% if payloads.software %}
+		<dict>
+			<key>PayloadDescription</key>
+			<string>Configure software updates</string>
+            <key>PayloadDisplayName</key>
+            <string>Software Updates</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.SoftwareUpdate.{{ identifiers.software }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.SoftwareUpdate</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.software }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.software_version }}</integer>
+            <key>AllowPreReleaseInstallation</key>{% if data.disable_beta %}
+			<false/>{% else %}
+            <true/>{% endif %}
+            <key>AutomaticCheckEnabled</key>{% if data.auto_check %}
+            <true/>{% else %}
+            <false/>{% endif %}
+            <key>AutomaticDownload</key>{% if data.auto_download %}
+            <true/>{% else %}
+            <false/>{% endif %}
+            <key>AutomaticallyInstallMacOSUpdates</key>{% if data.os_auto %}
+            <true/>{% else %}
+            <false/>{% endif %}
+            <key>AutomaticallyInstallAppUpdates</key>{% if data.app_auto %}
+            <true/>{% else %}
+            <false/>{% endif %}
+            <key>ConfigDataInstall</key>{% if data.config_install %}
+            <true/>{% else %}
+            <false/>{% endif %}
+		</dict>{% endif %}{% if data.diagnostics %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Allows diagnostic information to be sent to Apple automatically</string>
+			<key>PayloadDisplayName</key>
+			<string>Submit Diagnostic Information</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.SubmitDiagInfo.{{ identifiers.diagnostics }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.SubmitDiagInfo</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.diagnostics }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.diagnostics_version }}</integer>
+            <key>AutoSubmit</key>
+            <true/>
+        </dict>{% endif %}{% if payloads.policy and data.scope == "System" %}
+        <dict>
+            <key>PayloadDescription</key>
+            <string>Manages System Policy Control</string>
+            <key>PayloadIdentifier</key>
+            <string>com.apple.systempolicy.control.{{ identifiers.policy }}</string>
+            <key>PayloadType</key>
+            <string>com.apple.systempolicy.control</string>
+            <key>PayloadUUID</key>
+            <string>{{ identifiers.policy }}</string>
+            <key>PayloadVersion</key>
+            <integer>{{ data.policy_version }}</integer>{% if data.policy_enable %}
+            <key>EnableAssessment</key>
+            <true/>
+            <key>AllowIdentifiedDevelopers</key>{% if data.developers_policy %}
+            <true/>{% else %}
+            <false/>{% endif %}{% else %}
+            <key>EnableAssessment</key>
+            <false/>{% endif %}
+        </dict>{% endif %}{% if data.disable_context and data.scope == "System" %}
+        <dict>
+            <key>PayloadDescription</key>
+            <string>Disable bypass of System Policy Restrictions</string>
+            <key>PayloadIdentifier</key>
+            <string>com.apple.systempolicy.managed.{{ identifiers.policy_2 }}</string>
+            <key>PayloadType</key>
+            <string>com.apple.systempolicy.managed</string>
+            <key>PayloadUUID</key>
+            <string>{{ identifiers.policy_2 }}</string>
+            <key>PayloadVersion</key>
+            <integer>{{ data.policy_version }}</integer>
+            <key>DisableOverride</key>
+            <true/>
+        </dict>{% endif %}{% if payloads.preferences %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Enables/Disables preference panes in System Preferences</string>
+			<key>PayloadDisplayName</key>
+			<string>System Preferences</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.systempreferences.{{ identifiers.preferences }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.systempreferences</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.preferences }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.preferences_version }}</integer>
+            <key>EnabledPreferencePanes</key>
+            <array>{% for pane in data.enabled_panes %}
+                <string>{{ pane }}</string>{% endfor %}
+            </array>
+            <key>DisabledPreferencePanes</key>
+            <array>{% for pane in data.disabled_panes %}
+                <string>{{ pane }}</string>{% endfor %}
+            </array>
+            <key>HiddenPreferencePanes</key>
+            <array>{% for pane in data.hidden_panes %}
+                <string>{{ pane }}</string>{% endfor %}
+            </array>
+        </dict>{% endif %}{% if data.password_change or data.lockmessage_ui %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Determines if the user can change their password or set a lock message</string>
+			<key>PayloadDisplayName</key>
+			<string>System Preferences: Security</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.preference.security.{{ identifiers.preferences_security }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.preference.security</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.preferences_security }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.preferences_version }}</integer>{% if data.lockmessage_ui %}
+            <key>dontAllowLockMessageUI</key>
+            <true/>{% endif %}{% if data.password_change %}
+            <key>dontAllowPasswordResetUI</key>
+            <true/>{% endif %}
+        </dict>{% endif %}{% if payloads.time_machine and data.scope == "System" %}
+        <dict>
+            <key>PayloadDescription</key>
+			<string>Configures Time Machine backups</string>
+			<key>PayloadDisplayName</key>
+			<string>Time Machine</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.MCX.TimeMachine.{{ identifiers.time_machine }}</string>
+			<key>PayloadType</key>
+			<string>com.apple.MCX.TimeMachine</string>
+			<key>PayloadUUID</key>
+			<string>{{ identifiers.time_machine }}</string>
+			<key>PayloadVersion</key>
+			<integer>{{ data.time_machine_version }}</integer>{% if data.auto_backup %}
+            <key>AutoBackup</key>
+            <true/>{% endif %}{% if data.backup_volumes %}
+            <key>BackupAllVolumes</key>
+            <true/>{% endif %}{% if data.backup_url %}
+            <key>BackupDestURL</key>
+            <string>{{ data.backup_url }}</string>{% endif %}{% if data.backup_size %}
+            <key>BackupSizeMB</key>
+            <integer>{{ data.backup_size }}</integer>{% endif %}{% if data.backup_sys %}
+            <key>BackupSkipSys</key>
+            <true/>{% endif %}{% if data.mobile_backups %}
+            <key>MobileBackups</key>
+            <true/>{% endif %}
+        </dict>{% endif %}
+	</array>
+</dict>
+</plist>

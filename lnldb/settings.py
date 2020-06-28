@@ -114,7 +114,7 @@ SAML2_AUTH = {
 
 MDM_UUID = env.str('MDM_UUID', None)
 MDM_PASS = env.str('MDM_PASS', None)
-MDM_TOKEN = env.str('MDM_TOKEN', None)
+MDM_TOKEN = env.str('MDM_TOKEN', 'DEV_TOKEN')
 
 # options we don't want in our env variables...
 for key in DATABASES:

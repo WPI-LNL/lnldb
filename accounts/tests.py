@@ -1,6 +1,7 @@
 from django import test
 from django.urls.base import reverse
 from django.contrib.auth.models import Group, Permission
+from django.conf import settings
 from django.core import management
 from django.core.files.uploadedfile import SimpleUploadedFile
 from six import StringIO
@@ -68,14 +69,14 @@ class OfficerImgTestCase(test.TestCase):
 
         models.OfficerImg.objects.get(officer=self.user).delete()
 
-        self.assertFalse(os.path.exists("/runtime/media/officers/tester.jpg"))
+        self.assertFalse(os.path.exists(os.path.join(settings.MEDIA_ROOT, "officers", "tester.jpg")))
 
     def test_path_and_rename(self):
         self.setup()
 
         self.assertEqual(models.path_and_rename(self.img, self.img.img.name), "officers/tester.jpg")
 
-        os.remove('runtime/media/officers/tester.jpg')
+        os.remove(os.path.join(settings.MEDIA_ROOT, "officers", "tester.jpg"))
 
 
 class OfficerImgViewTestCase(ViewTestCase):
@@ -145,4 +146,4 @@ class OfficerImgViewTestCase(ViewTestCase):
                              reverse("accounts:detail", args=[self.user.pk]))
 
         # Ensure file has been deleted from server
-        self.assertFalse(os.path.exists("runtime/media/officers/testuser.png"))
+        self.assertFalse(os.path.exists(os.path.join(settings.MEDIA_ROOT, "officers", "testuser.png")))

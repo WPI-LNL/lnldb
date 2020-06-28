@@ -47,15 +47,32 @@ class LaptopPasswordRotation(models.Model):
     laptop = models.ForeignKey(Laptop, on_delete=models.CASCADE, related_name='password_rotations')
 
 
-# class ConfigurationProfile(models.Model):
-#     profile = models.FilePathField(path=settings.MEDIA_ROOT + "/profiles/", match=".*\.json$")
-#     created_on = models.DateTimeField(auto_now_add=True)
-#     last_modified = models.DateTimeField(auto_now=True)
-#     pending_install = models.ManyToManyField(Laptop, related_name="pending", blank=True)
-#     installed = models.ManyToManyField(Laptop, related_name="installed", blank=True)
-#
-#     class Meta:
-#         ordering = ['last_modified']
-#
-#     def __str__(self):
-#         return self.profile.split('/')[-1].replace('.json', '')
+class ConfigurationProfile(models.Model):
+    name = models.CharField(max_length=100)
+    profile = models.FilePathField(path=settings.MEDIA_ROOT + "/profiles/", match=".*\.json$")
+    created_on = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
+    pending_install = models.ManyToManyField(Laptop, related_name="pending", blank=True)
+    installed = models.ManyToManyField(Laptop, related_name="installed", blank=True)
+
+    class Meta:
+        ordering = ['last_modified']
+        permissions = (
+            ('view_removal_password', 'Retrieve the removal password for a profile'),
+        )
+
+    def __str__(self):
+        return self.name
+
+
+class InstallationRecord(models.Model):
+    profile = models.ForeignKey(ConfigurationProfile, on_delete=models.CASCADE, null=True, blank=True,
+                                related_name="install_records")
+    device = models.ForeignKey(Laptop, on_delete=models.CASCADE, related_name="install_records")
+    version = models.CharField(max_length=36, blank=True, null=True)
+    installed_on = models.DateTimeField(auto_now_add=True)
+    expires = models.DateTimeField(null=True, blank=True)
+    active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return "%s (v%s) on %s" % (str(self.profile), str(self.version), str(self.device))

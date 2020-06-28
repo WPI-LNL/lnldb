@@ -1,0 +1,90 @@
+{% extends 'base_admin.html' %}
+
+{% block content %}
+	<div class="container">
+		<div class="row">
+            {% if installed %}
+			<h3>Installed</h3>
+			<div class="row">
+				<div class="col-md-8">
+					<table class="table table-striped table-bordered">
+						<tr> 
+							<th> Device </th>
+							<th> Type </th>
+                            <th> Version </th>
+                            <th> Expires </th>
+                            <th> Actions </th>
+						</tr>
+						{% for record in installed %}
+						<tr>
+							<td>{{ record.device.name }}</td>
+							<td>macOS</td>
+                            <td>{{ record.version }}</td>
+                            <td>{{ record.expires|default_if_none:"Never" }}{% if record.expires %}
+                                {% if today < record.expires and record.expires < expiration_warning %}<br>
+                                    <span class="label label-danger">Expiring Soon</span>{% endif %}{% endif %}</td>
+							<td><a href="{% url "mdm:disassociate" record.device.pk resource.pk %}" class="btn btn-danger">Remove</a></td>
+						</tr>
+						{% endfor %}
+					</table>
+				</div>
+			</div>
+            {% endif %}
+            {% if pending %}
+			<h3>Assigned</h3>
+            <p>Will be installed during the next checkin</p>
+			<div class="row">
+				<div class="col-md-8">
+					<table class="table table-striped table-bordered">
+						<tr> 
+							<th> Device </th>
+							<th> Type </th>
+							<th> Last Checkin </th>
+                            <th> Actions </th>
+						</tr>
+						{% for device in pending %}
+                            <tr>
+                                <td>{{ device.name }}</td>
+                                <td>macOS</td>
+                                <td>{{ device.last_checkin }}</td>
+                                <td><a href="{% url 'mdm:disassociate' device.pk resource.pk %}" class="btn btn-danger">Cancel</a></td>
+                            </tr>
+						{% endfor %}
+					</table>
+				</div>
+			</div>
+            {% endif %}
+            {% if pending_removal %}
+			<h3>Pending Removal</h3>
+            <p>Will be removed during the next checkin</p>
+			<div class="row">
+				<div class="col-md-8">
+					<table class="table table-striped table-bordered">
+						<tr>
+							<th> Device </th>
+							<th> Type </th>
+							<th> Last Checkin </th>
+                            <th> Actions </th>
+						</tr>
+						{% for device in pending_removal %}
+						<tr>
+							<td>{{ device.name }}</td>
+							<td>macOS</td>
+                            <td>{{ device.last_checkin }}</td>
+                            <td><a href="{% url 'mdm:disassociate' device.pk resource.pk %}" class="btn btn-danger">Cancel</a></td>
+						</tr>
+						{% endfor %}
+					</table>
+				</div>
+			</div>
+            {% endif %}
+            {% if not installed and not pending and not pending_removal %}
+            <h3>This {{ resource_type|lower }} has not been assigned to any devices</h3>
+            {% endif %}
+			<br>
+            {% if resource_type == 'Profile' %}
+                <a href="{% url 'mdm:profile-add-devices' resource.pk %}" class="btn btn-primary">Add Devices</a>
+            {% endif %}
+		</div>
+    </div>
+{% endblock %}

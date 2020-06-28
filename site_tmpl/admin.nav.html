@@ -148,7 +148,10 @@
                     </a>
                     <ul class="dropdown-menu">
 						<li><a target="_blank" href="https://wpi0.sharepoint.com/:f:/r/sites/gr-lnl/Shared%20Documents/Technical%20Reference?csf=1&e=uEtBtt">User Guides &amp; Datasheets</a></li>
-                        {% permission request.user has 'laptops.view_laptop' %}
+                        {% if request.user.is_superuser %}
+                            <li><a href="{% url 'mdm:list' %}">MDM Console</a></li>
+                        {% endif %}
+                        {% permission request.user has 'devices.view_laptop_details' %}
                             <li><a href="{% url 'laptops:list' %}">Laptop passwords</a></li>
                         {% endpermission %}
                         <li><a href="{% url 'inventory:snipe_checkout' %}">Inventory checkout</a></li>
