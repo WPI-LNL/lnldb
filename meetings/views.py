@@ -10,7 +10,7 @@ from django.http.response import Http404
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 from django.utils import timezone
-from django.utils.functional import curry
+from functools import partial as curry
 
 from data.views import serve_file
 from emails.generators import generate_notice_cc_email, generate_notice_email

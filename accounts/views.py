@@ -83,7 +83,7 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
     slug_url_kwarg = "username"
     model = get_user_model()
     template_name = "userdetail.html"
-    perms = ['accounts.view_user']
+    perms = ['accounts.read_user']
 
     def user_passes_test(self, request, *args, **kwargs):
         # members looking at other members is fine, and you should always be able to look at yourself.
@@ -93,7 +93,7 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
         if object.is_lnl:
             return request.user.has_perm('accounts.view_member')
         else:
-            return request.user.has_perm('accounts.view_user', object)
+            return request.user.has_perm('accounts.read_user', object)
 
     def get_context_data(self, **kwargs):
         context = super(UserDetailView, self).get_context_data(**kwargs)
@@ -122,7 +122,7 @@ class BaseUserList(mixins.HasPermMixin, generic.ListView):
     context_object_name = 'users'
     template_name = 'users.html'
     name = "User List"
-    perms = ['accounts.view_user']
+    perms = ['accounts.read_user']
 
     def get_context_data(self, **kwargs):
         context = super(BaseUserList, self).get_context_data(**kwargs)

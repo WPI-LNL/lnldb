@@ -43,17 +43,24 @@ def search_or_create_users(q):
         ldap_u = ldap_u['attributes']
         if 'uid' not in ldap_u:
             continue
-        class_year = ldap_u.get('wpieduPersonClass', [None])[0]
+        try:
+            class_year = ldap_u.get('wpieduPersonClass', [None])[0]
+        except IndexError:
+            class_year = None
         try:
             class_year = int(class_year)
         except (ValueError, TypeError):
             class_year = None
+        given_name = ldap_u.get('givenName', [''])
+        given_name.append('')
+        last_name = ldap_u.get('sn', [''])
+        last_name.append('')
         u, created = get_user_model().objects.get_or_create(
             username=ldap_u['uid'][0],
             defaults={
                 'email': ldap_u.get('mail', [False])[0] or ldap_u['uid'][0] + "@wpi.edu",
-                'first_name': ldap_u.get('givenName', [''])[0][0:NAME_LENGTH - 1],
-                'last_name': ldap_u.get('sn', [''])[0][0:NAME_LENGTH - 1],
+                'first_name': given_name[0][0:NAME_LENGTH - 1],
+                'last_name': last_name[0][0:NAME_LENGTH - 1],
                 'class_year': class_year,
             }
         )
@@ -78,7 +85,10 @@ def fill_in_user(user):
         if not user.email:
             user.email = resp.get('mail', [False])[0][0] or user.username + "@wpi.edu"
         if not user.class_year:
-            class_year = resp.get('wpieduPersonClass', [None])[0]
+            try:
+                class_year = resp.get('wpieduPersonClass', [None])[0]
+            except IndexError:
+                class_year = None
             try:
                 class_year = int(class_year)
             except (ValueError, TypeError):

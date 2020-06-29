@@ -1,17 +1,12 @@
 import debug_toolbar
-import django.contrib.auth.views
 import permission
 from ajax_select import urls as ajax_select_urls
 from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
 from django.views.generic.base import RedirectView
-import django_saml2_auth.views
 
 import data.views
-from emails.views import MeetingAnnounceCCView, MeetingAnnounceView
-from events.forms import named_event_forms
-from events.views.flow import CCRCreate, CCRDelete, CCRUpdate
 from events.views.indices import admin as db_home
 from events.views.indices import event_search, survey_dashboard, workshops
 from pages.views import page as view_page, recruitment_page

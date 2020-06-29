@@ -32,7 +32,7 @@ class HasPermMixin(object):
     # assumed you have to log in to have any permissions...
     @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
-        from django.utils import six
+        import six
 
         if not request.user.is_active:
             logout(request)
@@ -54,7 +54,7 @@ class HasPermOrTestMixin(object):
     # assumed you have to log in to have any permissions...
     @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
-        from django.utils import six
+        import six
 
         if not request.user.is_active:
             logout(request)

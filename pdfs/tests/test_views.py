@@ -1,4 +1,4 @@
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
 
@@ -131,7 +131,7 @@ class PdfViewTest(TestCase):
 
         # Test with no ids
         response = self.client.get(reverse('events:pdf-multi'))
-        self.assertEqual(response.content, "Should probably give some ids to return pdfs for.")
+        self.assertEqual(response.content, b"Should probably give some ids to return pdfs for.")
 
         # Test with "2019" event
         response = self.client.get(reverse('events:pdf-multi', args=["%s,%s" % (self.e3.pk, self.e4.pk)]))
@@ -145,7 +145,7 @@ class PdfViewTest(TestCase):
 
         # Test with no ids
         response = self.client.get(reverse('events:bill-pdf-multi'))
-        self.assertEqual(response.content, "Should probably give some ids to return pdfs for.")
+        self.assertEqual(response.content, b"Should probably give some ids to return pdfs for.")
 
         # Test with "2019" event
         response = self.client.get(reverse('events:bill-pdf-multi', args=["%s,%s" % (self.e3.pk, self.e4.pk)]))

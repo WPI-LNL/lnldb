@@ -532,3 +532,6 @@ if "STATIC_ROOT" in locals() and not os.path.exists(STATIC_ROOT):
 
 if "MEDIA_ROOT" in locals() and not os.path.exists(MEDIA_ROOT):
     os.makedirs(MEDIA_ROOT)
+
+if os.path.exists(MEDIA_ROOT) and not os.path.exists(os.path.join(MEDIA_ROOT, 'profiles')):
+    os.makedirs(os.path.join(MEDIA_ROOT, 'profiles'))

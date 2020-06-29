@@ -14,7 +14,7 @@ from django.db.models import Count, Sum
 from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.functional import cached_property
-from django.utils.encoding import python_2_unicode_compatible
+from six import python_2_unicode_compatible
 from polymorphic.models import PolymorphicManager, PolymorphicModel
 import reversion
 
@@ -1135,7 +1135,7 @@ class Fund(models.Model):
 
     class Meta:
         permissions = (
-            ('view_fund', 'View a fund'),
+            ('manage_fund', 'View a fund'),
         )
 
 
@@ -1382,7 +1382,7 @@ class PostEventSurvey(models.Model):
 
     class Meta:
         permissions = (
-            ("view_posteventsurvey", "View post-event survey results"),
+            ("view_posteventsurveyresults", "View post-event survey results"),
         )
         ordering = ['event', 'person']
 

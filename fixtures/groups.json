@@ -36,7 +36,7 @@
         "user"
       ],
       [
-        "view_user",
+        "read_user",
         "accounts",
         "user"
       ],
@@ -246,7 +246,7 @@
         "fund"
       ],
       [
-        "view_fund",
+        "manage_fund",
         "events",
         "fund"
       ],
@@ -354,6 +354,11 @@
         "view_verifications",
         "events",
         "organization"
+      ],
+      [
+        "view_posteventsurveyresults",
+        "events",
+        "posteventsurvey"
       ],
       [
         "add_projection",
@@ -551,7 +556,7 @@
         "training"
       ],
       [
-        "view_training",
+        "view_training_details",
         "members",
         "training"
       ],
@@ -744,7 +749,7 @@
         "meeting"
       ],
       [
-        "view_training",
+        "view_training_details",
         "members",
         "training"
       ],
@@ -828,7 +833,7 @@
         "meeting"
       ],
       [
-        "view_training",
+        "view_training_details",
         "members",
         "training"
       ],
@@ -902,7 +907,7 @@
         "meeting"
       ],
       [
-        "view_training",
+        "view_training_details",
         "members",
         "training"
       ],

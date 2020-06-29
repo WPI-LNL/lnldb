@@ -86,7 +86,7 @@ def event_search(request):
 
 
 @login_required
-@permission_required('events.view_posteventsurvey', raise_exception=True)
+@permission_required('events.view_posteventsurveyresults', raise_exception=True)
 def survey_dashboard(request):
     now = timezone.now()
     year_ago = now - datetime.timedelta(days=365)

@@ -656,7 +656,7 @@ def viewevent(request, id):
             # do not add category if it is empty
             if services_and_extras[0] or services_and_extras[1]:
                 context['categorized_services_and_extras'][category.name] = services_and_extras
-    if event.surveys.exists() and request.user.has_perm('events.view_posteventsurvey'):
+    if event.surveys.exists() and request.user.has_perm('events.view_posteventsurveyresults'):
         context['survey_takers'] = get_user_model().objects.filter(pk__in=event.surveys.values_list('person', flat=True))
         work_order_method_choices = dict(PostEventSurvey._meta.get_field('work_order_method').choices)
         context['survey_workorder_methods'] = [work_order_method_choices[choice] for choice in event.surveys.values_list('work_order_method', flat=True)]

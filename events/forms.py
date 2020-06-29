@@ -4,6 +4,7 @@ import re
 import uuid
 
 import pytz
+import six
 from ajax_select import make_ajax_field
 from ajax_select.fields import (AutoCompleteSelectField,
                                 AutoCompleteSelectMultipleField)
@@ -20,7 +21,7 @@ from django.db.models import Model, Q
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget
 from django.forms.models import inlineformset_factory
 from django.urls.base import reverse
-from django.utils import timezone, six
+from django.utils import timezone
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
 
@@ -661,13 +662,13 @@ class InternalEventForm2019(FieldAccessForm):
         )
 
         survey_edit = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.view_posteventsurvey') and \
+            lambda user, instance: user.has_perm('events.view_posteventsurveyresults') and \
                                    (instance is None or not instance.survey_sent),
             enable=('send_survey',)
         )
 
         survey_view = FieldAccessLevel(
-            lambda user, instance: not user.has_perm('events.view_posteventsurvey'),
+            lambda user, instance: not user.has_perm('events.view_posteventsurveyresults'),
             exclude=('send_survey',)
         )
 
@@ -678,7 +679,7 @@ class InternalEventForm2019(FieldAccessForm):
                   'datetime_end', 'sensitive', 'test_event', 'entered_into_workday', 'send_survey')
         widgets = {
             'description': PagedownWidget(),
-            'internal_notes': PagedownWidget,
+            'internal_notes': PagedownWidget(),
         }
 
     location = GroupedModelChoiceField(
@@ -1562,7 +1563,8 @@ class PostEventSurveyForm(forms.ModelForm):
                     HTML('<div class="striped">'),
                     'sound_quality',
                     HTML('</div>'),
-                    HTML('<div class="row" style="padding-top: 1%; padding-bottom: 1%; padding-left: 1%"><div class="col-md-4"'),
+                    HTML(
+                        '<div class="row" style="padding-top: 1%; padding-bottom: 1%; padding-left: 1%"><div class="col-md-4"'),
                     'work_order_method',
                     HTML('</div></div>'),
                     HTML('<div style="border-bottom: 2px solid gray; padding-bottom: 1%; margin: 0"></div>'),

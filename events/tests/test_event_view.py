@@ -1,5 +1,5 @@
 import datetime, logging
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.auth.models import Permission
 from django.test import TestCase
 from data.tests.util import ViewTestCase

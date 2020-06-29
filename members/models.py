@@ -3,6 +3,7 @@ from datetime import date
 from django.conf import settings
 from django.db import models
 
+
 class TrainingType(models.Model):
     name = models.CharField(max_length=64, unique=True)
     external = models.BooleanField(default=False)
@@ -13,6 +14,7 @@ class TrainingType(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class Training(models.Model):
     training_type = models.ForeignKey(TrainingType, on_delete=models.PROTECT, related_name='trainings')
@@ -25,13 +27,14 @@ class Training(models.Model):
 
     class Meta:
         ordering = ['-date', '-recorded_on']
-        permissions = (('view_training', 'View a training'),)
+        permissions = (('view_training_details', 'View a training'),)
 
     def __str__(self):
         return str(self.training_type) + ' on ' + str(self.date)
 
     def is_expired(self):
         return self.expiration_date is not None and date.today() > self.expiration_date
+
 
 class Trainee(models.Model):
     training = models.ForeignKey(Training, on_delete=models.CASCADE, related_name='trainees')

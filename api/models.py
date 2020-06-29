@@ -30,9 +30,8 @@ PRIMITIVE_TYPES = (
 # Create your models here.
 class Endpoint(models.Model):
     name = models.CharField(max_length=60)
-    url = models.CharField(max_length=100, verbose_name="Path", help_text="Relative path to endpoint (Ex: "
-                                                                          "http://lnl.wpi.edu/api/v1/example "
-                                                                          "--> example)")
+    url = models.CharField(max_length=100, verbose_name="Path",
+                           help_text="Relative path to endpoint (Ex: https://lnl.wpi.edu/api/v1/example --> example)")
     description = models.TextField(help_text="What is this endpoint used for?")
     parameter_note = models.CharField(max_length=500, null=True, blank=True, verbose_name="Note",
                                       help_text="Explain any special relationships between parameters here")
@@ -45,13 +44,13 @@ class Endpoint(models.Model):
 
 
 class Method(models.Model):
-    endpoint = models.ForeignKey(Endpoint, related_name="methods")
+    endpoint = models.ForeignKey(Endpoint, related_name="methods", on_delete=models.CASCADE)
     method = models.CharField(max_length=7, choices=METHODS)
     auth = models.CharField(max_length=7, choices=AUTH_OPTIONS)
 
 
 class Parameter(models.Model):
-    endpoint = models.ForeignKey(Endpoint, related_name="parameters")
+    endpoint = models.ForeignKey(Endpoint, related_name="parameters", on_delete=models.CASCADE)
     name = models.CharField(max_length=20)
     type = models.CharField(max_length=8, choices=PRIMITIVE_TYPES)
     description = models.TextField()
@@ -73,8 +72,8 @@ class ResponseKey(Parameter):
 
 
 class Option(models.Model):
-    endpoint = models.ForeignKey(Endpoint, related_name="parameterOptions")
-    parameter = models.ForeignKey(Parameter, related_name="options")
+    endpoint = models.ForeignKey(Endpoint, related_name="parameterOptions", on_delete=models.CASCADE)
+    parameter = models.ForeignKey(Parameter, related_name="options", on_delete=models.CASCADE)
     key = models.CharField(max_length=20)
     value = models.CharField(max_length=120, null=True, blank=True)
 
