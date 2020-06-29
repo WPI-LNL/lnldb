@@ -1,7 +1,6 @@
-import datetime
-
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.encoding import python_2_unicode_compatible
 
@@ -41,8 +40,8 @@ class Projectionist(models.Model):
         if self.license_expiry is None:
             return None
 
-        today = datetime.date.today()
-        delta = today + datetime.timedelta(days=EXPIRY_WARNING_DAYS)
+        today = timezone.datetime.today().date()
+        delta = today + timezone.timedelta(days=EXPIRY_WARNING_DAYS)
         if delta >= self.license_expiry > today:
             return True
         else:
@@ -52,7 +51,7 @@ class Projectionist(models.Model):
     def expired(self):
         if self.license_expiry is None:
             return None
-        elif datetime.date.today() >= self.license_expiry:
+        elif timezone.datetime.today().date() >= self.license_expiry:
             return True
         else:
             return False
@@ -87,7 +86,7 @@ class PITLevel(models.Model):
 class PitInstance(models.Model):
     projectionist = models.ForeignKey(Projectionist, on_delete=models.CASCADE, related_name="pitinstances")
     pit_level = models.ForeignKey(PITLevel, on_delete=models.PROTECT, related_name="pitinstances")
-    created_on = models.DateTimeField()
+    created_on = models.DateField()
     valid = models.BooleanField(default=True)
 
 

@@ -11,9 +11,8 @@ from django.views.generic.edit import CreateView, DeleteView, FormView
 from django.urls.base import reverse
 
 from helpers.mixins import HasPermMixin, LoginRequiredMixin
-from projection.forms import (BulkCreateForm, BulkUpdateForm,
-                              DateEntryFormSetBase, PITFormset,
-                              ProjectionistForm, ProjectionistUpdateForm, PITRequestForm, PITRequestAdminForm)
+from projection.forms import (BulkCreateForm, BulkUpdateForm, DateEntryFormSetBase, ProjectionistForm,
+                              ProjectionistUpdateForm, PITRequestForm, PITRequestAdminForm, PITFormset)
 from projection.models import PITLevel, Projectionist, PitRequest
 from emails.generators import PITRequestEmailGenerator
 

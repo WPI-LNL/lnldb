@@ -1,4 +1,4 @@
-import datetime
+import datetime, logging
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import Permission
 from django.test import TestCase
@@ -6,6 +6,9 @@ from data.tests.util import ViewTestCase
 
 from .generators import CCReportFactory, EventFactory, UserFactory
 from .. import models
+
+
+logging.disable(logging.WARNING)
 
 
 class EventBasicViewTest(TestCase):

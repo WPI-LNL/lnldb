@@ -22,7 +22,7 @@ from django_saml2_auth.views import signin as saml_login
 from data.forms import form_footer
 from emails.generators import DefaultLNLEmailGenerator
 from events.models import Event2019, OfficeHour
-from helpers import mixins
+from helpers import mixins, challenges
 
 from . import forms
 from .models import OfficerImg
@@ -356,8 +356,7 @@ def officer_photos(request, pk=None):
     if pk is None:
         pk = request.user.pk
     officer = get_object_or_404(get_user_model(), pk=pk)
-    groups = [group.name for group in officer.groups.all()]
-    if "Officer" not in groups:
+    if not challenges.is_officer(officer):
         messages.add_message(request, messages.ERROR, 'This feature is not available for this user.')
         return HttpResponseRedirect(reverse("home"))
 

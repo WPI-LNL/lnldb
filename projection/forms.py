@@ -69,17 +69,17 @@ class InstanceForm(forms.ModelForm):
         self.helper.form_tag = False
         self.helper.layout = Layout(
             Field('pit_level'),
-            Field('created_on', css_class="dtp"),
+            Field('created_on'),
             Field('valid'),
             HTML('<hr>'),
         )
         super(InstanceForm, self).__init__(*args, **kwargs)
 
+    created_on = forms.DateField(widget=forms.TextInput(attrs={'class': 'dateinput'}))
+
     class Meta:
         model = PitInstance
         fields = ('pit_level', 'created_on', 'valid')
-
-    created_on = forms.SplitDateTimeField()
 
 
 class BulkUpdateForm(forms.Form):
@@ -107,8 +107,7 @@ class BulkUpdateForm(forms.Form):
             PitInstance.objects.create(projectionist=p, pit_level=i['pit_level'], created_on=i['date'])
 
 
-PITFormset = inlineformset_factory(Projectionist, PitInstance, extra=1,
-                                   form=InstanceForm)  # ,formset=ProjectionistUpdateForm)
+PITFormset = inlineformset_factory(Projectionist, PitInstance, extra=1, form=InstanceForm)
 
 
 # ITS TIME FOR A WIZAAAAAAARD

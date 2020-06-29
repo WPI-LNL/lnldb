@@ -5,8 +5,10 @@ from django.contrib.auth.models import Permission
 from django.forms.formsets import formset_factory
 from events.tests.generators import UserFactory
 from events.models import Organization, Fund, Event2019
+from django.utils import timezone
 from . import models, forms, views
-import datetime, logging
+import datetime
+import logging
 
 
 # Disable annoying permission warnings
@@ -20,9 +22,9 @@ class ProjectionistModelTests(TestCase):
         self.projectionist.save()
 
     def test_expired(self):
-        today = datetime.date.today()
-        yesterday = datetime.date.today() + datetime.timedelta(days=-1)
-        tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+        today = timezone.datetime.today().date()
+        yesterday = today + timezone.timedelta(days=-1)
+        tomorrow = today + timezone.timedelta(days=1)
 
         self.projectionist.license_expiry = today
         self.projectionist.save()
@@ -37,10 +39,10 @@ class ProjectionistModelTests(TestCase):
         self.assertFalse(self.projectionist.expired)
 
     def test_expiring(self):
-        today = datetime.date.today()
-        day_15 = today + datetime.timedelta(days=15)
-        day_30 = today + datetime.timedelta(days=30)
-        day_45 = today + datetime.timedelta(days=45)
+        today = timezone.datetime.today().date()
+        day_15 = today + timezone.timedelta(days=15)
+        day_30 = today + timezone.timedelta(days=30)
+        day_45 = today + timezone.timedelta(days=45)
 
         self.projectionist.license_expiry = day_15
         self.projectionist.save()
@@ -118,8 +120,7 @@ class ProjViewTest(ViewTestCase):
             'pitinstances-MAX_NUM_FORMS': 1000,
             'pitinstances-0-id': "",
             'pitinstances-0-pit_level': "",
-            'pitinstances-0-created_on_0': "",
-            'pitinstances-0-created_on_1': "",
+            'pitinstances-0-created_on': "",
             'pitinstances-0-valid': "on",
             'submit': 'Save changes'
         }
@@ -188,8 +189,7 @@ class ProjViewTest(ViewTestCase):
             'nested-MAX_NUM_FORMS': 1000,
             'nested-0-id': "",
             'nested-0-pit_level': "",
-            'nested-0-created_on_0': "",
-            'nested-0-created_on_1': "",
+            'nested-0-created_on': "",
             'nested-0-valid': "on",
             'submit': 'Save changes'
         }
@@ -203,8 +203,7 @@ class ProjViewTest(ViewTestCase):
             'nested-MAX_NUM_FORMS': 1000,
             'nested-0-id': "",
             'nested-0-pit_level': "",
-            'nested-0-created_on_0': "",
-            'nested-0-created_on_1': "",
+            'nested-0-created_on': "",
             'nested-0-valid': "on",
             'submit': 'Save changes'
         }
@@ -247,7 +246,7 @@ class ProjViewTest(ViewTestCase):
 
         cleaned_data = {
             'users': str(self.user.pk),
-            'date': datetime.date.today(),
+            'date': timezone.datetime.today().date(),
             'pit_level': str(level.pk),
             'submit': 'Save Changes'
         }
@@ -284,7 +283,7 @@ class ProjViewTest(ViewTestCase):
 
         # Create test organization
         fund = Fund.objects.create(fund=0, organization=0, account=12345, name="LNL Test",
-                                   last_used=datetime.datetime.today(), last_updated=datetime.datetime.today())
+                                   last_used=timezone.datetime.today(), last_updated=timezone.datetime.today())
         org = Organization.objects.create(name="LNL", email="test@test.com", phone="1234567890",
                                           user_in_charge=self.user)
         org.save()
@@ -295,8 +294,8 @@ class ProjViewTest(ViewTestCase):
         valid_details = {
             'contact': str(self.user.pk),
             'billing': str(org.pk),
-            'date_first': datetime.date.today(),
-            'date_second': datetime.date.today() + datetime.timedelta(days=14),
+            'date_first': timezone.datetime.today().date(),
+            'date_second': timezone.datetime.today().date() + timezone.timedelta(days=14),
             'submit': 'Save Changes'
         }
         # Should present errors on invalid data
@@ -381,14 +380,15 @@ class ProjViewTest(ViewTestCase):
         # Check that event was automatically approved
         movie = Event2019.objects.get(
             event_name="Test Movie",
-            datetime_start=datetime.datetime.combine(datetime.date(2020, 1, 4), datetime.time(20))
+            datetime_start=timezone.make_aware(datetime.datetime.combine(datetime.date(2020, 1, 4), datetime.time(20)))
         )
         self.assertTrue(movie.approved)
 
         # Check for both saturday and sunday events in output
         self.assertTrue(Event2019.objects.filter(
             event_name="Test Movie",
-            datetime_start=datetime.datetime.combine(datetime.date(2020, 1, 5), datetime.time(20))).exists())
+            datetime_start=timezone.make_aware(datetime.datetime.combine(datetime.date(2020, 1, 5),
+                                                                         datetime.time(20)))).exists())
 
     def test_get_saturdays_for_range(self):
         # Test no Saturday in range
@@ -410,7 +410,7 @@ class ProjViewTest(ViewTestCase):
         data = {
             "level": str(level.pk),
             "submitted_for": '',  # Allows empty date field
-            "requested_on": datetime.datetime.now()
+            "requested_on": timezone.now()
         }
 
         # Only members should be able to see
@@ -441,7 +441,7 @@ class ProjViewTest(ViewTestCase):
     def test_pit_request_management(self):
         proj = models.Projectionist.objects.create(user=self.user)
         proj.save()
-        date = datetime.datetime.now()
+        date = timezone.now()
         level = models.PITLevel.objects.create(name_long="PIT 3", name_short="P3")
         level.save()
         request = models.PitRequest.objects.create(projectionist=proj, level=level, requested_on=date,
@@ -461,8 +461,8 @@ class ProjViewTest(ViewTestCase):
         # On valid post, without edit permissions, should redirect to projection:grid
         valid_data = {
             'main-level': str(level.pk),
-            'main-scheduled_for_0': datetime.date.today(),
-            'main-scheduled_for_1': datetime.time(),
+            'main-scheduled_for_0': timezone.datetime.today().date(),
+            'main-scheduled_for_1': timezone.now().time(),
             'main-approved': True,
             'submit': 'Update'
         }
