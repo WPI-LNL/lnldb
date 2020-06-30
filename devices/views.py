@@ -79,7 +79,7 @@ def laptop_admin_password(request, id):
 @csrf_exempt
 def rotate_passwords(request):
     data = json.loads(request.body)
-    laptop = get_object_or_404(Laptop, retired=False, api_key_hash=sha256(data['apiKey']).hexdigest())
+    laptop = get_object_or_404(Laptop, retired=False, api_key_hash=sha256(data['apiKey'].encode('utf-8')).hexdigest())
     response_data = {"oldUserPassword": laptop.user_password, "oldAdminPassword": laptop.admin_password}
     laptop.user_password = data['userPassword']
     laptop.admin_password = data['adminPassword']
@@ -117,10 +117,10 @@ def mdm_enroll(request):
     data = json.loads(request.body)
     if data['token'] == settings.MDM_TOKEN:
         try:
-            laptop = Laptop.objects.all().get(api_key_hash=sha256(data['APIKey']).hexdigest())
+            laptop = Laptop.objects.all().get(api_key_hash=sha256(data['APIKey'].encode('utf-8')).hexdigest())
         except Laptop.DoesNotExist:
-            laptop = Laptop.objects.all().create(api_key_hash=sha256(data['APIKey']).hexdigest(), name=data['hostname'],
-                                                 user_password="None", admin_password="None")
+            laptop = Laptop.objects.all().create(api_key_hash=sha256(data['APIKey'].encode('utf-8')).hexdigest(),
+                                                 name=data['hostname'], user_password="None", admin_password="None")
         laptop.serial = data['serial']
         laptop.last_ip = data['networkIP']
         laptop.save()
@@ -167,7 +167,8 @@ def complete_enrollment(request, pk):
 @csrf_exempt
 def mdm_checkin(request):
     data = json.loads(request.body)
-    laptop = get_object_or_404(Laptop, api_key_hash=sha256(data['APIKey']).hexdigest(), mdm_enrolled=True)
+    laptop = get_object_or_404(Laptop, api_key_hash=sha256(data['APIKey'].encode('utf-8')).hexdigest(),
+                               mdm_enrolled=True)
     profiles_install = []
     profiles_remove = []
     apps_install = []
@@ -199,7 +200,8 @@ def mdm_checkin(request):
 @csrf_exempt
 def install_confirmation(request):
     data = json.loads(request.body)
-    device = get_object_or_404(Laptop, api_key_hash=sha256(data['APIKey']).hexdigest(), mdm_enrolled=True)
+    device = get_object_or_404(Laptop, api_key_hash=sha256(data['APIKey'].encode('utf-8')).hexdigest(),
+                               mdm_enrolled=True)
     profiles_installed = data['installed']
     profiles_removed = data['removed']
     for pk in profiles_installed:
