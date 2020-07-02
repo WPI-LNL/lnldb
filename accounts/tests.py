@@ -280,7 +280,7 @@ class AccountsTestCase(ViewTestCase):
         self.assertTrue(lookup.check_auth(request))
 
         # Test get_query with bogus query
-        self.assertEqual(lookup.get_query('1234', request, True), [])
+        self.assertEqual(list(lookup.get_query('1234', request, False)), [])
 
         # Test get_query with valid query
         self.assertIn(self.user, list(lookup.get_query('test user', request, False)))
