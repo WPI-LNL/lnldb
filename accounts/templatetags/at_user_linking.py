@@ -22,7 +22,7 @@ def userlink(value):
         r = m.groupdict()
         try:
             user = get_user_model().objects.get(username=r['username'])
-            new_value = new_value.replace(m.group(), '<a href="%s">@%s</a> ' % (
+            new_value = new_value.replace(m.group(), '<a href="%s">@%s</a>' % (
                 reverse("accounts:detail", args=(user.id,)), user.username))
         except get_user_model().DoesNotExist:
             pass
@@ -42,7 +42,7 @@ def mduserlink(value):
         try:
             user = get_user_model().objects.get(username=r['username'])
             new_value = new_value.replace(m.group(),
-                                          '[@%s](%s) ' % (user.username, reverse("accounts:detail", args=(user.id,))))
+                                          '[@%s](%s)' % (user.username, reverse("accounts:detail", args=(user.id,))))
         except get_user_model().DoesNotExist:
             pass
     return new_value
