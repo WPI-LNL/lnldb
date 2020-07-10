@@ -10,6 +10,7 @@ from six import StringIO
 
 from data.tests.util import ViewTestCase
 from events.tests.generators import UserFactory, OrgFactory
+from helpers.challenges import is_officer
 from .templatetags import at_user_linking
 from . import ldap, models, lookups
 import os, logging
@@ -522,3 +523,16 @@ class OfficerImgViewTestCase(ViewTestCase):
 
         # Ensure file has been deleted from server
         self.assertFalse(os.path.exists(os.path.join(settings.MEDIA_ROOT, "officers", "testuser.png")))
+
+
+class HelpersTestCase(ViewTestCase):
+    def test_is_officer(self):
+        # Test that failing to provide a user results in False
+        self.assertFalse(is_officer(None))
+
+        # Test with non-officer
+        self.assertFalse(is_officer(self.user))
+
+        # Test with officer
+        Group.objects.create(name="Officer").user_set.add(self.user)
+        self.assertTrue(is_officer(self.user))
