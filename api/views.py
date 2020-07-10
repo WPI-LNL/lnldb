@@ -45,11 +45,11 @@ class OfficerViewSet(viewsets.ReadOnlyModelViewSet):
         first_name = self.request.query_params.get('first_name', None)
         last_name = self.request.query_params.get('last_name', None)
         if title is not None:
-            queryset = queryset.filter(title=title)
+            queryset = queryset.filter(title__iexact=title)
         if first_name is not None:
-            queryset = queryset.filter(first_name=first_name)
+            queryset = queryset.filter(first_name__iexact=first_name)
         if last_name is not None:
-            queryset = queryset.filter(last_name=last_name)
+            queryset = queryset.filter(last_name__iexact=last_name)
         if queryset.count() is 0:
             raise NotFound(detail='Not found', code=404)
         return queryset
@@ -74,7 +74,7 @@ class HourViewSet(viewsets.ReadOnlyModelViewSet):
         start = self.request.query_params.get('start', None)
         end = self.request.query_params.get('end', None)
         if officer is not None:
-            queryset = queryset.filter(officer__title=officer)
+            queryset = queryset.filter(officer__title__iexact=officer)
         if day is not None:
             queryset = queryset.filter(day=day)
         if start is not None and end is not None:
@@ -103,7 +103,7 @@ class ChangeViewSet(viewsets.ReadOnlyModelViewSet):
         officer = self.request.query_params.get('officer', None)
         expires = self.request.query_params.get('expires', None)
         if officer is not None:
-            queryset = queryset.filter(officer__title=officer)
+            queryset = queryset.filter(officer__title__iexact=officer)
         if expires is not None:
             queryset = queryset.filter(expires__gte=expires)
         return queryset
@@ -129,7 +129,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         if page is None:
             raise ParseError(detail='Page ID is required', code=400)
         queryset |= Notification.objects.filter(target=page)
-        if dir is not None:
+        if dir not in [None, '']:
             query = Q()
             directories = dir.split('/')
             directories.pop(0)
@@ -142,9 +142,18 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
 @login_required
 def docs(request):
+    endpoints = Endpoint.objects.all()
+
+    # Obtain the most recent last_modified date
+    last_modified = None
+    for endpoint in endpoints:
+        if last_modified is None or endpoint.last_modified > last_modified:
+            last_modified = endpoint.last_modified
+
     context = {
-        'endpoints': Endpoint.objects.all(),
+        'endpoints': endpoints,
         'requestParameters': RequestParameter.objects.all(),
         'responseKeys': ResponseKey.objects.all(),
+        'last_modified': last_modified
     }
     return render(request, 'api_docs.html', context)

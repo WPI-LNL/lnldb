@@ -38,6 +38,7 @@ class Endpoint(models.Model):
     example = models.CharField(max_length=200, help_text="Provide an example of how the parameters might be "
                                                          "formatted. (Ex: id=Example&display=true)")
     response = models.TextField(help_text="Paste the API response using the URL generated from the example above")
+    last_modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name

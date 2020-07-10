@@ -10,5 +10,5 @@ router.register(r'notifications', views.NotificationViewSet, basename='Notificat
 
 urlpatterns = [
     url(r'v1/', include(router.urls)),
-    url(r'^docs/$', views.docs, name="api-documentation"),
+    url(r'^docs/$', views.docs, name="documentation"),
 ]

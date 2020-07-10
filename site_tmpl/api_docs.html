@@ -169,8 +169,8 @@
                                 <td>{{ parameter.name }}</td>
                                 <td>{{ parameter.type }}</td>
                                 <td>{{ parameter.description|safe }} {% if parameter.required %}<strong>[required]</strong>{% endif %}
-                                    {% if parameter.type == "datetime" %}<br><strong>Format: </strong><code>YYYY-MM-dd hh:mm:ssZ</code>{% elif parameter.type == "date" %}
-                                    <br><strong>Format: </strong><code>YYYY-MM-dd</code>{% elif parameter.type == "time" %}<br><strong>Format: </strong><code>hh:mm:ssZ</code>{% endif %}
+                                    {% if parameter.type == "datetime" %}<br><strong>Format: </strong><code>YYYY-MM-ddThh:mm:ssZ</code>{% elif parameter.type == "date" %}
+                                    <br><strong>Format: </strong><code>YYYY-MM-dd</code>{% elif parameter.type == "time" %}<br><strong>Format: </strong><code>hh:mm:ss</code>{% endif %}
                                 {% if parameter.options.all %}<br><strong>Options: </strong>
                                 {% for option in parameter.options.all %}
                                     {% if option.key == "etc." %}
@@ -249,12 +249,12 @@
                 <div style="border-top: 1px solid #eee">
                     <br>
                     <h4>Session-based</h4>
-                    <p>Some endpoints access data that requires authentication. To make the process as simple as possible, the API utilizes session-based authentication through the LNLDB.
+                    <p>Some endpoints access data that requires authentication. To make the process as simple as possible, these endpoints may utilize session-based authentication through the LNLDB.
                         If the user does not have an active session, or their current session has expired, simply redirect them to the login page.</p>
-                    <div class="alert alert-warning"><strong>Note: </strong>Endpoints that require authentication are currently unavailable as we work to update authentication methods site-wide.</div>
+                    <div class="alert alert-warning"><strong>Note: </strong>There are currently no endpoints that require authentication.</div>
                 </div>
                 <div style="padding-top: 20px; padding-bottom: 3%">
-                    <p>Last updated: March 25, 2020</p>
+                    <p>Last updated: {% if last_modified %}{{ last_modified|date:"F j, Y" }}{% else %}July 9, 2020{% endif %}</p>
                     <p style="color: gray"><em>Unless otherwise stated, any code samples on this site are licensed under the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache 2.0 license</a>.</em></p>
                 </div>
             </section>
