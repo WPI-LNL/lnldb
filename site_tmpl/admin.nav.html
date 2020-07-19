@@ -115,6 +115,10 @@
                             <li><a href="{% url "accounts:limbo" %}">Unafiliated Users</a></li>
                         {% endpermission %}
                         <li class="divider"></li>
+                        {% permission request.user has 'emails.send' or request.user has 'events.edit_event_hours' %}
+                        <li><a href="{% url "emails:dispatch" %}">Send Message...</a></li>
+                        <li class="divider"></li>
+                        {% endpermission %}
                         <li><a href="{% url "accounts:mdc" %}">MDC List</a></li>
                         <li><a href="{% url "members:training:list" %}">Training</a></li>
                         {% permission request.user has 'accounts.change_group' %}

@@ -1006,7 +1006,6 @@ class ServiceInstance(models.Model):
         return '{} for {}'.format(str(self.service), str(self.event))
     
 
-
 @python_2_unicode_compatible
 class Billing(models.Model):
     """

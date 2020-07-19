@@ -7,25 +7,11 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from events.models import Event
-from helpers.revision import set_revision_comment
+from events.models import Event, Category, Service, ServiceInstance
 
 EMAIL_KEY_START_END = settings.EMAIL_KEY_START_END
 EMAIL_TARGET_START_END = settings.EMAIL_TARGET_START_END
 DEFAULT_TO_ADDR = settings.DEFAULT_TO_ADDR
-
-
-def generate_sms_email(data):
-    body = data["message"]
-    user = data["user"]
-
-    if user.carrier is None or user.carrier == "" or user.phone is None:
-        return None
-
-    to_email = ''.join(e for e in user.phone if e.isalnum()) + "@" + user.carrier
-
-    email = BasicEmailGenerator(to_emails=to_email, body=body)
-    return email
 
 
 def send_survey_if_necessary(event):
@@ -46,11 +32,24 @@ def generate_web_service_email(details):
     body = details["message"]
     from_email = settings.DEFAULT_FROM_ADDR
     reply_to_email = [settings.EMAIL_TARGET_W]
-    to_email = settings.DEFAULT_TO_ADDR
+    to_email = details["email_to"]
 
-    email = WebServiceEmailGenerator(subject=subject, to_emails=to_email, from_email=from_email,
-                                     reply_to=reply_to_email, body=body)
+    email = GenericEmailGenerator(subject=subject, to_emails=to_email, bcc=reply_to_email, from_email=from_email,
+                                  reply_to=reply_to_email, body=body)
 
+    return email
+
+
+def generate_sms_email(data):
+    body = data["message"]
+    user = data["user"]
+
+    if user.carrier is None or user.carrier == "" or user.phone is None:
+        return None
+
+    to_email = ''.join(e for e in user.phone if e.isalnum()) + "@" + user.carrier
+
+    email = BasicEmailGenerator(to_emails=to_email, body=body)
     return email
 
 
@@ -166,19 +165,53 @@ def generate_selfservice_notice_email(context):
     return email
 
 
-# Self service member email
-def generate_selfmember_notice_email(context):
-    subject = "Self Service Member Request Submission"
-    from_email = settings.DEFAULT_FROM_ADDR
-    to_email = settings.EMAIL_TARGET_S
+# Self service member email (deprecated)
+# def generate_selfmember_notice_email(context):
+#     subject = "Self Service Member Request Submission"
+#     from_email = settings.DEFAULT_FROM_ADDR
+#     to_email = settings.EMAIL_TARGET_S
+#
+#     cont_html = render_to_string('emails/email_selfmember.html', context)
+#     cont_text = render_to_string('emails/email_selfmember.txt', context)
+#
+#     email = EmailMultiAlternatives(subject, cont_text, from_email, [to_email])
+#     email.attach_alternative(cont_html, "text/html")
+#
+#     return email
 
-    cont_html = render_to_string('emails/email_selfmember.html', context)
-    cont_text = render_to_string('emails/email_selfmember.txt', context)
 
-    email = EmailMultiAlternatives(subject, cont_text, from_email, [to_email])
-    email.attach_alternative(cont_html, "text/html")
-
-    return email
+def generate_poke_cc_email_content(services, message):
+    event_details = ""
+    events = []
+    for service in services:
+        service = ServiceInstance.objects.get(pk=service)
+        if service.event not in events:
+            events.append(service.event)
+    for event in events:
+        categories = Category.objects.filter(service__serviceinstance__in=services,
+                                             service__serviceinstance__event=event).distinct()
+        details = Service.objects.filter(serviceinstance__in=services, serviceinstance__event=event)
+        ccs_needed = []
+        service_details = []
+        for category in categories:
+            ccs_needed.append(category.name)
+        for service in details:
+            service_details.append(service.longname)
+        ccs_needed = ', '.join(ccs_needed)
+        service_details = ', '.join(service_details)
+        start = event.datetime_start
+        end = event.datetime_end
+        if start.date() == end.date():
+            when = start.strftime("%A (%-m/%-d) %-I:%M %p - ") + end.strftime("%-I:%M %p")
+        else:
+            when = start.strftime("%A (%-m/%-d) %-I:%M %p to ") + end.strftime("%A (%-m/%-d) %-I:%M %p")
+        setup = event.datetime_setup_complete.strftime("%A (%-m/%-d) %-I:%M %p")
+        event_details += "<strong>CC's needed:</strong> %s\n<strong>Services:</strong> %s\n<strong>What:</strong> %s" \
+                         "\n<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n<strong>Where:</strong> %s\n" \
+                         "<strong>Description:</strong> %s\n\n" % (ccs_needed, service_details, event.event_name, when,
+                                                                   setup, event.location.name, event.description)
+    body = message + "<hr>" + event_details
+    return body
 
 
 class DefaultLNLEmailGenerator(object):  # yay classes
@@ -376,51 +409,21 @@ class SurveyEmailGenerator(DefaultLNLEmailGenerator):
             attachments=attachments)
 
 
-class WebServiceEmailGenerator(DefaultLNLEmailGenerator):
+class GenericEmailGenerator(DefaultLNLEmailGenerator):
     def __init__(self,
-                 subject="Upcoming Maintenance",
+                 subject=None,
                  to_emails=settings.DEFAULT_TO_ADDR,
-                 cc=None,
-                 bcc=[settings.EMAIL_TARGET_W],
-                 from_email=settings.DEFAULT_FROM_ADDR,
-                 reply_to=[settings.EMAIL_TARGET_W],
-                 context=None,
-                 template_basename="emails/email_generic",
-                 build_html=True,
-                 body=None,
-                 attachments=None):
-        if context is None:
-            context = {}
-        super(WebServiceEmailGenerator, self).__init__(
-            subject=subject,
-            to_emails=to_emails,
-            cc=cc,
-            bcc=bcc,
-            from_email=from_email,
-            reply_to=reply_to,
-            context=context,
-            template_basename=template_basename,
-            build_html=build_html,
-            body=body,
-            attachments=attachments)
-
-
-class PITRequestEmailGenerator(DefaultLNLEmailGenerator):
-    def __init__(self,
-                 subject="New PIT Request",
-                 to_emails=settings.EMAIL_TARGET_HP,
                  cc=None,
                  bcc=None,
                  from_email=settings.DEFAULT_FROM_ADDR,
                  reply_to=None,
                  context=None,
-                 template_basename="emails/email_generic",
                  build_html=True,
                  body=None,
                  attachments=None):
         if context is None:
             context = {}
-        super(PITRequestEmailGenerator, self).__init__(
+        super(GenericEmailGenerator, self).__init__(
             subject=subject,
             to_emails=to_emails,
             cc=cc,
@@ -428,7 +431,7 @@ class PITRequestEmailGenerator(DefaultLNLEmailGenerator):
             from_email=from_email,
             reply_to=reply_to,
             context=context,
-            template_basename=template_basename,
+            template_basename="emails/email_generic",
             build_html=build_html,
             body=body,
             attachments=attachments
@@ -437,7 +440,7 @@ class PITRequestEmailGenerator(DefaultLNLEmailGenerator):
 
 class BasicEmailGenerator(object):
     def __init__(self, to_emails=settings.DEFAULT_TO_ADDR, from_email=settings.EMAIL_FROM_NOREPLY, reply_to=None,
-                 context=None, template_basename="emails/email_basic", build_html=False, body=None):
+                 bcc=None, context=None, template_basename="emails/email_basic", body=None):
         if isinstance(to_emails, string_types):
             to_emails = [to_emails]
         if context is None:
@@ -448,12 +451,7 @@ class BasicEmailGenerator(object):
         template_txt = "%s.txt" % template_basename
         content_txt = render_to_string(template_txt, context)
         subject = ""
-        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, reply_to=reply_to)
-
-        if build_html:
-            template_html = "%s.html" % template_basename
-            content_html = render_to_string(template_html, context)
-            self.email.attach_alternative(content_html, "text/html")
+        self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, reply_to=reply_to)
 
     def send(self):
         self.email.send()

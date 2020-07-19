@@ -55,7 +55,7 @@ def addeditorgs(request, org_id=None):
     by the org transfer form. Clients should use the much less confusing 'orgedit' view.
     """
     if not request.user.has_perm('events.view_org'):
-            raise PermissionDenied
+        raise PermissionDenied
     context = {}
     if org_id:
         instance = get_object_or_404(Organization, pk=org_id)

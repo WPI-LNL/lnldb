@@ -74,6 +74,23 @@ class MyViewTest(TestCase):
         response = self.client.get(reverse("my:org-request"))
         self.assertEqual(response.status_code, 200)
 
+    def test_org_req_filled(self):
+        # check that the request data can be submitted properly
+        data = {
+            "client_name": "LNL",
+            "email": "lnl@wpi.edu",
+            "address": "Campus Center 339",
+            "phone": "5088675309",
+            "fund_info": "12345-6789-8765",
+            "save": "Submit Request"
+        }
+
+        self.assertContains(self.client.post(reverse("my:org-request"), data), "Request Received")
+
+        # Check that nothing happens on invalid data
+        data['client_name'] = None
+        self.assertEqual(self.client.post(reverse("my:org-request"), data).status_code, 200)
+
     def test_cc_report_blank(self):
         mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
         response = self.client.get(reverse("my:report", args=[self.e.pk]))
