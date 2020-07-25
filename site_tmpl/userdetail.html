@@ -25,13 +25,24 @@
             </div>
         </div>
     </div>
+    {% if pending_reports and request.user == u %}
+    <div class="container">
+        <div class="alert alert-warning">You have {{ pending_reports|length }} pending CC report{{ pending_reports|length|pluralize }}</div>
+    </div>
+    {% endif %}
     <div class="row">
         <div class="col-md-4">
             <h3>Stats</h3>
             <table class="table">
                 {% if u.is_lnl %}
+                {% if hour_total.hours %}
                 <tr>
-                    <th>Events CCd:</th>
+                    <th>Hours:</th>
+                    <td>{{ hour_total.hours|floatformat:"0" }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <th>Events CC'd:</th>
                     <td>{{u.crewchiefx.count|add:u.ccinstances.count}}</td>
                 </tr>
                 <tr>
@@ -39,11 +50,19 @@
                     <td>{{u.hours.count}}</td>
                 </tr>
                 <tr>
-                    <th>Films CC'd</th>
+                    <th>Films CC'd:</th>
                     <td>{{ moviesccd }}</td>
                 </tr>
+                {% if pending_reports %}
+                {% permission request.user has 'accounts.change_user' of u %}
                 <tr>
-                    <th>Meeting Attendance Count</th>
+                    <th>Missing CC Reports:</th>
+                    <td>{{ pending_reports|length }}</td>
+                </tr>
+                {% endpermission %}
+                {% endif %}
+                <tr>
+                    <th>Meeting Attendance Count:</th>
                     <td>{{ u.meeting_set.count }}</td>
                 </tr>
                 {% endif %}
@@ -118,13 +137,22 @@
                     <li><a href="{% url "events:detail" event.id %}">{{ event }}</a> ({{ event.datetime_start }})</li>
                 {% endfor %}
             </ul>
+            {% if pending_reports and request.user == u %}
+            <br>
+            <h4>Pending Reports</h4>
+            <ul class="list-unstyled">
+                {% for report in pending_reports %}
+                    <li><a href="{% url "my:report" report.event.id %}">{{ report.event }}</a></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
         </div>
         {% endif %}
         {% if hours %}
         <div class="col-md-4">
             <h3>Events Participated</h3>
             <ul class="list-unstyled">
-                {% for h in hours %}
+                {% for h in hours|dictsortreversed:"event.datetime_start" %}
                     <li><a href="{% url "events:detail" h.event.id %}">{{ h.event }} {% if h.service %} ({{ h.service.shortname }}){% else %} (N/A){% endif %}</a> : {{ h.hours }}h ({{ h.event.datetime_start|date:'N d, Y' }})</li>
                 {% endfor %}
             </ul>

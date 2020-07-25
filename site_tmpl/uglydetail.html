@@ -545,6 +545,10 @@
                     {% endfor %}
                     {% if event.crew_needing_reports %}
                         <h4> Crew Chiefs Needing Reports </h4>
+                        {% permission request.user has 'events.review_event' %}
+                        <a class="btn btn-info btn-default btn-xs" href="{% url 'events:remindall' id=event.id %}">Remind All</a>
+                        <br><br>
+                        {% endpermission %}
                         <ul>
                         {% for crew in event.crew_needing_reports %}
                             <li>

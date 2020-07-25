@@ -107,9 +107,9 @@ class EmailTestCase(ViewTestCase):
 
         # Test with 1 service passed in
         expected = "Some example message<hr><strong>CC's needed:</strong> Lighting\n<strong>Services:</strong> " \
-                   "Basic Lighting\n<strong>What:</strong> All set\n<strong>When:</strong> %s\n" \
-                   "<strong>Setup by:</strong> %s\n<strong>Where:</strong> Test Location\n" \
-                   "<strong>Description:</strong> An event that is pretty much all set\n\n" % \
+                   "Basic Lighting\n<strong>What:</strong> <a href='https://lnl.wpi.edu/db/events/view/1/'>" \
+                   "All set</a>\n<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n<strong>Where:</strong> " \
+                   "Test Location\n<strong>Description:</strong> An event that is pretty much all set\n\n" % \
                    (event1_start + event1_end, event1_setup)
 
         content = generators.generate_poke_cc_email_content([str(self.service1.pk)], "Some example message")
@@ -118,13 +118,14 @@ class EmailTestCase(ViewTestCase):
 
         # Test with 2 services passed in
         expected = "Some example message<hr><strong>CC's needed:</strong> Lighting\n<strong>Services:</strong> " \
-                   "Basic Lighting\n<strong>What:</strong> All set\n<strong>When:</strong> %s\n" \
-                   "<strong>Setup by:</strong> %s\n<strong>Where:</strong> Test Location\n" \
-                   "<strong>Description:</strong> An event that is pretty much all set\n\n" \
+                   "Basic Lighting\n<strong>What:</strong> <a href='https://lnl.wpi.edu/db/events/view/1/'>" \
+                   "All set</a>\n<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n<strong>Where:</strong> " \
+                   "Test Location\n<strong>Description:</strong> An event that is pretty much all set\n\n" \
                    "<strong>CC's needed:</strong> Sound\n<strong>Services:</strong> Basic Sound\n" \
-                   "<strong>What:</strong> Need Chiefs\n<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n" \
-                   "<strong>Where:</strong> Test Location\n<strong>Description:</strong> A test event that we need " \
-                   "CCs for\n\n" % (event1_start + event1_end, event1_setup, event2_start + event2_end, event2_setup)
+                   "<strong>What:</strong> <a href='https://lnl.wpi.edu/db/events/view/2/'>Need Chiefs</a>\n" \
+                   "<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n<strong>Where:</strong> Test Location\n" \
+                   "<strong>Description:</strong> A test event that we need CCs for\n\n" % \
+                   (event1_start + event1_end, event1_setup, event2_start + event2_end, event2_setup)
 
         content = generators.generate_poke_cc_email_content([str(self.service1.pk), str(self.service2.pk)],
                                                             "Some example message")

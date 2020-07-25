@@ -227,7 +227,6 @@ def reviewremind(request, id, uid):
         return HttpResponse("Bad Call")
 
 
-@require_POST
 @login_required
 def remindall(request, id):
     event = get_object_or_404(BaseEvent, pk=id)
@@ -238,7 +237,8 @@ def remindall(request, id):
         messages.add_message(request, messages.ERROR, 'Event is closed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     if event.reviewed or not event.approved:
-        messages.add_message(request, messages.ERROR, 'Can only send reminders for an event that is approved and not reviewed.')
+        messages.add_message(request, messages.ERROR, 'Can only send reminders for an event that is approved and not '
+                                                      'reviewed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
     if event.num_crew_needing_reports == 0:
@@ -254,7 +254,8 @@ def remindall(request, id):
         email = ReportReminderEmailGenerator(reminder=reminder, attachments=attachments)
         email.send()
 
-    messages.add_message(request, messages.INFO, 'Reminders sent to all crew chiefs needing reports for %s' % event.event_name)
+    messages.add_message(request, messages.INFO, 'Reminders sent to all crew chiefs needing reports for %s' %
+                         event.event_name)
     if 'next' in request.GET:
         return HttpResponseRedirect(request.GET['next'])
     else:

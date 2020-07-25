@@ -135,8 +135,8 @@ def poke_cc(request):
             if request.POST['save'] == "Preview":
                 form = PokeCCForm(request.POST, preview=preview)
             else:
-                email = GenericEmailGenerator("Crew Chiefs Needed", settings.EMAIL_TARGET_ACTIVE,
-                                              reply_to=[settings.EMAIL_TARGET_VP], body=preview)
+                email = GenericEmailGenerator("Crew Chiefs Needed", settings.EMAIL_TARGET_ACTIVE, body=preview,
+                                              reply_to=[settings.EMAIL_TARGET_VP], context={'CUSTOM_URL': True})
                 email.send()
                 return HttpResponseRedirect(reverse("home"))
     else:

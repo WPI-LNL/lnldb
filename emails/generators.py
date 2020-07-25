@@ -5,6 +5,7 @@ from six import string_types
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.urls.base import reverse
 from django.utils import timezone
 
 from events.models import Event, Category, Service, ServiceInstance
@@ -199,6 +200,7 @@ def generate_poke_cc_email_content(services, message):
             service_details.append(service.longname)
         ccs_needed = ', '.join(ccs_needed)
         service_details = ', '.join(service_details)
+        link = "https://lnl.wpi.edu" + reverse("events:detail", args=[event.id])
         start = event.datetime_start
         end = event.datetime_end
         if start.date() == end.date():
@@ -206,10 +208,11 @@ def generate_poke_cc_email_content(services, message):
         else:
             when = start.strftime("%A (%-m/%-d) %-I:%M %p to ") + end.strftime("%A (%-m/%-d) %-I:%M %p")
         setup = event.datetime_setup_complete.strftime("%A (%-m/%-d) %-I:%M %p")
-        event_details += "<strong>CC's needed:</strong> %s\n<strong>Services:</strong> %s\n<strong>What:</strong> %s" \
-                         "\n<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n<strong>Where:</strong> %s\n" \
-                         "<strong>Description:</strong> %s\n\n" % (ccs_needed, service_details, event.event_name, when,
-                                                                   setup, event.location.name, event.description)
+        event_details += "<strong>CC's needed:</strong> %s\n<strong>Services:</strong> %s\n<strong>What:</strong> " \
+                         "<a href='%s'>%s</a>\n<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n" \
+                         "<strong>Where:</strong> %s\n<strong>Description:</strong> %s\n\n" % \
+                         (ccs_needed, service_details, link, event.event_name, when, setup, event.location.name,
+                          event.description)
     body = message + "<hr>" + event_details
     return body
 
