@@ -3,7 +3,7 @@
 # frozen versions from prod.
 app-version==0.2.1
 dealer==2.0.4
-Django<2,>=1.11
+Django==3.1
 django-compat==1.0.15
 django-ajax-selects==1.7.1
 django-appconf==1.0.1
