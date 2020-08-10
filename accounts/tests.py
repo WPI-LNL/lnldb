@@ -6,10 +6,12 @@ from django.conf import settings
 from django.core import management
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template import Context, Template
+from django.utils import timezone
 from six import StringIO
 
 from data.tests.util import ViewTestCase
-from events.tests.generators import UserFactory, OrgFactory
+from events.tests.generators import UserFactory, OrgFactory, Event2019Factory
+from events.models import EventCCInstance, Category, Service, Location, Building
 from helpers.challenges import is_officer
 from .templatetags import at_user_linking
 from . import ldap, models, lookups
@@ -169,6 +171,18 @@ class AccountsTestCase(ViewTestCase):
         # Same permissions currently apply for accessing member profiles
         # (To require view_member permissions for this as well, you would need to update the Mixin)
         self.associate.user_set.add(self.user2)
+
+        # Make sure user has missing CC report
+        event = Event2019Factory.create(event_name="Test Event")
+        event.datetime_end = timezone.now() + timezone.timedelta(days=-1)
+        category = Category.objects.create(name="Lighting")
+        service = Service.objects.create(shortname="L1", longname="Lights", base_cost=10.00, addtl_cost=5.00,
+                                         category=category)
+        building = Building.objects.create(name="Some Building", shortname="Building")
+        location = Location.objects.create(name="Some Location", building=building)
+
+        EventCCInstance.objects.create(event=event, crew_chief=self.user2, category=category, service=service,
+                                       setup_location=location)
 
         self.assertOk(self.client.get(reverse("accounts:detail", args=[self.user2.pk])))
 

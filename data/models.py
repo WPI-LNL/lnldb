@@ -1,8 +1,11 @@
 from django.conf import settings
 from django.db import models
 
+from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
 from django.utils.translation import gettext_lazy as _
+
+from api.models import Endpoint
 
 NOTIF_TYPE = (
     ('info', 'Info'),
@@ -79,3 +82,25 @@ class Notification(models.Model):
 
     class Meta:
         unique_together = ("format", "target")
+
+
+class Extension(models.Model):
+    name = models.CharField(max_length=120)
+    developer = models.CharField(max_length=64)
+    description = models.TextField()
+    icon = models.ImageField(null=True, blank=True)
+
+    api_key = models.CharField(max_length=36, verbose_name="API Key")
+    enabled = models.BooleanField()
+
+    endpoints = models.ManyToManyField(Endpoint, related_name="apps", blank=True)
+    registered = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
+
+    users = models.ManyToManyField(get_user_model(), related_name="connected_services", blank=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Third-party application"

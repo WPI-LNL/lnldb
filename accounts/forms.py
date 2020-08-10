@@ -1,12 +1,12 @@
 from crispy_forms.bootstrap import FormActions
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import HTML, Div, Field, Fieldset, Layout, Row, Submit
+from crispy_forms.layout import HTML, Div, Field, Fieldset, Layout, Row, Submit, Hidden
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-from django.forms import ModelForm
+from django import forms
 
 from data.forms import FieldAccessForm, FieldAccessLevel
-from .models import OfficerImg
+from .models import OfficerImg, carrier_choices
 
 
 class LoginForm(AuthenticationForm):
@@ -63,11 +63,13 @@ class UserEditForm(FieldAccessForm):
 
         thisisme = FieldAccessLevel(
             lambda user, instance: (user == instance) and not user.locked,
-            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id', 'nickname', 'carrier')
+            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id',
+                    'nickname', 'carrier')
         )
         hasperm = FieldAccessLevel(
             lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
-            enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id', 'carrier')
+            enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year',
+                    'student_id', 'carrier')
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.change_group', instance),
@@ -130,7 +132,7 @@ class UserAddForm(UserCreationForm):
 
     def save(self, commit=True):
         # we want to bypass UserCreationForm's save.
-        user = ModelForm.save(self, commit=False)
+        user = forms.ModelForm.save(self, commit=False)
 
         # only set a pass if the form is filled
         if self.cleaned_data['password1']:
@@ -140,7 +142,7 @@ class UserAddForm(UserCreationForm):
         return user
 
 
-class OfficerPhotoForm(ModelForm):
+class OfficerPhotoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -157,3 +159,36 @@ class OfficerPhotoForm(ModelForm):
     class Meta:
         model = OfficerImg
         fields = ['img']
+
+
+class SMSOptInForm(forms.ModelForm):
+    phone = forms.CharField(required=True, min_length=10, max_length=10)
+    carrier = forms.ChoiceField(choices=carrier_choices[1:], required=True)
+
+    def __init__(self, *args, **kwargs):
+        exists = kwargs.pop('exists')
+        request = kwargs.pop('request')
+        self.helper = FormHelper()
+        if not exists:
+            self.helper.layout = Layout(
+                Field('phone'),
+                Field('carrier'),
+                FormActions(
+                    Submit('save', 'Continue')
+                )
+            )
+        else:
+            self.helper.layout = Layout(
+                Hidden('phone', value=request.user.phone),
+                Hidden('carrier', value=request.user.carrier),
+                FormActions(
+                    HTML('<a class="btn btn-secondary mr-2" '
+                         'href="{% url \'accounts:detail\' request.user.pk %}">Edit</a>'),
+                    Submit('save', 'Continue')
+                )
+            )
+        super(SMSOptInForm, self).__init__(*args, **kwargs)
+
+    class Meta:
+        model = get_user_model()
+        fields = ('phone', 'carrier')

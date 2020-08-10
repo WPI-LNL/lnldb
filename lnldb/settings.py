@@ -112,6 +112,11 @@ SAML2_AUTH = {
     'USE_JWT': False,
 }
 
+# Two-Factor Verification
+TFV_ATTEMPTS = env.str('TFV_ATTEMPTS', 3)
+TFV_CODE_EXPIRES = env.str('TFV_CODE_EXPIRES', 600)
+
+# Mobile Device Management
 MDM_UUID = env.str('MDM_UUID', None)
 MDM_PASS = env.str('MDM_PASS', None)
 MDM_TOKEN = env.str('MDM_TOKEN', 'DEV_TOKEN')
