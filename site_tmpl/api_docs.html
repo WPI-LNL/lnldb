@@ -75,13 +75,13 @@
 		</header>
 		<div class="main" style="padding-left: 1%;">
 			<div id="navPanel" style="width: 20%; position: fixed; top: 15%" class="card">
-				<div class="card-header">
+				<div class="card-header pb-0">
 					<h5>API Reference</h5>
 				</div>
 				<ul class="list-group list-group-flush">
 					<li class="list-group-item"><a href="#getting-started">Getting Started</a></li>
 				</ul>
-				<div class="card-header">
+				<div class="card-header pb-0">
 					<h5>Endpoints</h5>
 				</div>
 				<ul class="list-group list-group-flush">
@@ -89,11 +89,12 @@
 					<li class="list-group-item"><a href="#{{ endpoint.url|path_safe }}">{{ endpoint.name }}</a></li>
                     {% endfor %}
 				</ul>
-				<div class="card-header">
+				<div class="card-header pb-0">
 					<h5>Authentication</h5>
 				</div>
 				<ul class="list-group list-group-flush">
-					<li class="list-group-item"><a href="#auth">Session-based</a></li>
+					<li class="list-group-item"><a href="#auth">Token-based</a></li>
+                    <li class="list-group-item"><a href="#project-based">Project-based</a></li>
 				</ul>
 			</div>
 		</div>
@@ -102,11 +103,11 @@
                 <div>
                     <h2>WPI Lens and Lights API</h2>
                     <div style="border-top: 1px solid #eee">
-                        <p style="padding-top: 20px; padding-bottom: 20px">The LNL API is a simple REST API which can be used to connect apps and services with the LNL Database (LNLDB). The LNL API currently provides read-only access to information already available on our public-facing webpages.</p>
+                        <p style="padding-top: 20px; padding-bottom: 20px">The LNL API is a simple REST API which can be used to connect apps and services with the LNL Database (LNLDB). This guide provides some basic documentation for most of our endpoints and authentication methods.</p>
                         <h3 style="color: gray">Getting Started</h3>
                     </div>
                     <div style="border-top: 1px solid #eee">
-                        <p style="padding-top: 20px; padding-bottom: 20px">The LNL API can be accessed through standard HTTP requests and will return JSON metadata. To access protected information, your application will be required to authenticate through the LNLDB first. The API is currently
+                        <p style="padding-top: 20px; padding-bottom: 20px">The LNL API can be accessed through standard HTTP requests and will return JSON metadata. To access protected information, your application will be required to authenticate with the LNLDB first. The API is currently
                             configured to respond to the following HTTP Methods:</p>
                         <table class="table table-bordered">
                             <thead>
@@ -120,10 +121,10 @@
                                     <td><span class="badge badge-primary" style="font-size: 1.2em">GET</span></td>
                                     <td>Retrieves the specified resources</td>
                                 </tr>
-                                <!--<tr>
+                                <tr>
                                     <td><span class="badge badge-success" style="font-size: 1.2em">POST</span></td>
                                     <td>Saves information in the database</td>
-                                </tr>-->
+                                </tr>
                                 <tr>
                                     <td><span class="badge badge-warning" style="font-size: 1.2em">HEAD</span></td>
                                     <td>Identical to GET request, except without the response body</td>
@@ -143,7 +144,7 @@
                 {% for endpoint in endpoints %}
                 <div style="border-top: 1px solid #eee" id="{{ endpoint.url|path_safe }}">
                     {% if endpoint == endpoints|first %}
-                        <p style="padding-top: 20px; padding-bottom: 20px">When sending requests to the API, they should be sent to one or more of the following endpoints. For most endpoints, if specific parameters are not specified, the API will return all objects at that endpoint.</p>
+                        <p style="padding-top: 20px; padding-bottom: 20px">When sending requests to the API, they should be sent to one or more of the following endpoints.</p>
                     {% else %}
                         <br>
                     {% endif %}
@@ -194,9 +195,11 @@
                         badge-success
                         {% endif %}">{{ method.method }}</span>&nbsp;
                         {% if method.auth == "session" %}
-                            This method requires your application to be authenticated through the LNLDB. This endpoint accepts session-based authentication.
+                            Requires an active login session through the LNLDB. See <a href="#session-based">Session-based</a>.
                         {% elif method.auth == "project" %}
-                            Not required, although some information may be restricted by project
+                            Access is restricted by application. Contact the <a href="mailto: lnl-w@wpi.edu">Webmaster</a> to register a new project.
+                        {% elif method.token == "token" %}
+                            Requires authentication token. See <a href="#token-based">Token-based</a>.
                         {% else %}
                             Not required
                         {% endif %}</p>
@@ -246,12 +249,85 @@
                 <h3 id="auth" style="color: gray">Authentication</h3>
             </section>
             <section>
-                <div style="border-top: 1px solid #eee">
+                <!--<div style="border-top: 1px solid #eee" id="session-based">
                     <br>
                     <h4>Session-based</h4>
-                    <p>Some endpoints access data that requires authentication. To make the process as simple as possible, these endpoints may utilize session-based authentication through the LNLDB.
-                        If the user does not have an active session, or their current session has expired, simply redirect them to the login page.</p>
-                    <div class="alert alert-warning"><strong>Note: </strong>There are currently no endpoints that require authentication.</div>
+                    <p>Session-based authentication uses the LNLDB's existing authentication backends making it ideal for other web applications.
+                        If the user does not have an active session, or their current session has expired, simply redirect them to our login page.</p>
+                </div>-->
+                <div style="border-top: 1px solid #eee" id="token-based">
+                    <br>
+                    <h4>Token-based</h4>
+                    <p>This method uses a simple token-based HTTP Authentication scheme ideal for client-server configurations (i.e. native desktop or mobile clients).
+                        To acquire tokens, applications should use the Token endpoint, unless instructed otherwise by our Webmaster. Note that use of this endpoint
+                        will require an approved project registration.<br><br></p>
+                    <h5>Using the Token Endpoint</h5>
+                    <p>Before you will be able to fetch a user's token, you will first need to direct them to grant access to your application. This can be accomplished
+                    by opening the following URL in any web browser:<br><br><code>https://lnl.wpi.edu/api/token/request/{API_KEY_HASH}</code><br><br>where
+                    <code>{API_KEY_HASH}</code> is the SHA-256 hash of your application's API Key. Once the user has enabled access to their account, they will be sent a
+                    verification code which they will then need to enter into your application. You will need to send this code, along with your API Key and their username,
+                    to the endpoint described below. If everything checks out, then the server will return the user's token.<br><br>Note that, at any given time, tokens
+                    can be revoked or changed either by the system or the user. Your application should therefore be prepared to handle this accordingly. To fetch the new
+                    token (if applicable), simply repeat the process above.<br><br></p>
+                    <h5>Fetch Token <span class="badge badge-success">POST</span></h5>
+                    <code>https://lnl.wpi.edu/api/token/fetch/</code>
+                    <br><br>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr class="bg-dark" style="color: white">
+                                <td><strong>Parameter</strong></td>
+                                <td><strong>Value</strong></td>
+                                <td><strong>Description</strong></td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>APIKey</td>
+                                <td>string</td>
+                                <td>Your application's API Key <strong>[required]</strong></td>
+                            </tr>
+                            <tr>
+                                <td>code</td>
+                                <td>integer</td>
+                                <td>The user's verification code <strong>[required]</strong></td>
+                            </tr>
+                            <tr>
+                                <td>username</td>
+                                <td>string</td>
+                                <td>The user's username <strong>[required]</strong><br><strong>Ex: </strong><code>rhgoddard</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <h6 class="pt-2">Authentication</h6>
+                    <p><span class="badge badge-success">POST</span>&nbsp;Access is restricted to registered applications only. Contact the <a href="mailto: lnl-w@wpi.edu">Webmaster</a> to register a new project.</p>
+                    <h6 class="pt-2">Response</h6>
+                    <p>The following request:</p>
+                    <div class="well">
+                        <code class="prettyprint">POST https://lnl.wpi.edu/api/token/fetch/<br><br>{"APIKey": "API_KEY", "code": 123456, "username": "rhgoddard"}</code>
+                    </div>
+                    <p>might return:</p>
+                    <div class="well">
+                        <code class="prettyprint">HTTP/1.1 200 OK<br>
+                        Content-Type: application/json<br>
+                        Content-Length: 52<br><br>
+                        {"token":"9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b"}</code>
+                    </div>
+                    <br>
+                    <h5>Usage</h5>
+                    <p>To authenticate using your token, simply include your key in the <code>Authorization</code> HTTP header. The key should be prefixed by the
+                    string literal "Token", with whitespace separating the two strings.</p>
+                    <div class="well">
+                        <code class="prettyprint">Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b</code>
+                    </div>
+                    <br>
+                </div>
+                <hr>
+                <div id="project-based">
+                    <br>
+                    <h4>Project-based</h4>
+                    <p>Access to some endpoints may be limited to certain registered applications only. This method is often used with backend services that do not
+                        handle user data. To gain access to an endpoint that utilizes project-based authentication,
+                        contact our <a href="mailto: lnl-w@wpi.edu">Webmaster</a>.</p>
                 </div>
                 <div style="padding-top: 20px; padding-bottom: 3%">
                     <p>Last updated: {% if last_modified %}{{ last_modified|date:"F j, Y" }}{% else %}July 9, 2020{% endif %}</p>

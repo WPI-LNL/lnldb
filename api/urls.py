@@ -11,4 +11,6 @@ router.register(r'notifications', views.NotificationViewSet, basename='Notificat
 urlpatterns = [
     url(r'v1/', include(router.urls)),
     url(r'^docs/$', views.docs, name="documentation"),
+    url(r'^token/request/$', views.request_token, name="request-token"),
+    url(r'^token/fetch/$', views.fetch_token, name="fetch-token"),
 ]

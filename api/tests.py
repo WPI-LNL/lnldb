@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from data.tests.util import ViewTestCase
+from django.test.client import RequestFactory
 from django.urls.base import reverse
+from django.conf import settings
 from django.contrib.auth.models import Group
 from django.utils import timezone
 from rest_framework.exceptions import APIException, PermissionDenied
@@ -9,7 +11,7 @@ from . import models, views
 from .templatetags import path_safe
 from events.tests.generators import UserFactory
 from events.models import OfficeHour, HourChange
-from data.models import Notification
+from data.models import Notification, Extension
 import pytz
 import logging
 
@@ -28,23 +30,27 @@ class APIViewTest(ViewTestCase):
         endpoint = models.Endpoint.objects.create(name="Example", url="example", description="Example endpoint",
                                                        example="title=something", response="[]")
         # Include additional methods to test various authentication options
-        endpoint_get = models.Method.objects.create(endpoint=endpoint, method="GET", auth="session")
+        endpoint_get = models.Method.objects.create(endpoint=endpoint, method="GET", auth="token")
 
         # Try with endpoint that is not yet configured
         with self.assertRaises(APIException, detail="Configuration error. Please contact the webmaster.", code=500):
-            views.verify_endpoint("Example2")
+            views.verify_endpoint("Example2", None)
 
-        # Try with endpoint that requires authentication - (not supported yet)
+        # Try with endpoint that requires authentication
         for method in endpoint.methods.all():
             if method.auth != "none":
+                request = RequestFactory()
+                request.user = self.user
+                request.data = {'APIKey': 'ABCDEFG'}
+                request.method = 'GET'
                 with self.assertRaises(PermissionDenied,
                                        detail="You are not allowed to access this resource.", code=403):
-                    views.verify_endpoint("Example")
+                    views.verify_endpoint("Example", request)
 
         # Try with properly configured endpoint
         endpoint_get.auth = "none"
         endpoint_get.save()
-        self.assertEqual(views.verify_endpoint("Example"), None)
+        self.assertEqual(views.verify_endpoint("Example", None), None)
 
     def test_officer_endpoint(self):
         models.Endpoint.objects.create(name="Officers", url="officers", description="Officer endpoint",
@@ -240,6 +246,84 @@ class APIViewTest(ViewTestCase):
         self.assertEqual(self.client.get("/api/v1/notifications",
                                          {"project_id": "LNL", "page_id": "/meetings/index.html",
                                           "directory": "/meetings"}).data, default_response)
+
+    def test_token_endpoint(self):
+        # Check that page loads ok
+        self.assertOk(self.client.get(reverse("api:request-token")))
+
+        # If user does not have phone number and carrier listed, they will need to fill out the form
+        self.assertOk(self.client.post(reverse("api:request-token")))
+
+        self.assertFalse(models.TokenRequest.objects.filter(user=self.user).exists())
+
+        valid_data = {
+            "phone": 1234567890,
+            "carrier": "vtext.com",
+            "save": "Continue"
+        }
+
+        self.assertOk(self.client.post(reverse("api:request-token"), valid_data))
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.phone, '1234567890')
+
+        # User must confirm that information is accurate (users who have already provided this information start here)
+        resp = self.client.post(reverse("api:request-token"), valid_data)
+        self.assertContains(resp, "Check your messages")
+
+        self.assertTrue(models.TokenRequest.objects.filter(user=self.user).exists())
+
+        # If code expires on the user, check that they can request a new one (will replace exisiting code)
+        resp = self.client.post(reverse("api:request-token"), valid_data)
+        self.assertContains(resp, "Check your messages")
+
+        # Ensure GET requests are not allowed when obtaining the token with verification code
+        self.assertOk(self.client.get(reverse("api:fetch-token")), 405)
+
+        # If information is missing we should get a 400 error
+        self.assertOk(self.client.post(reverse("api:fetch-token"), {'code': 12345}), 400)
+
+        # Application should send the following to obtain the token
+        token_request = models.TokenRequest.objects.get(user=self.user)
+        data = {
+            "APIKey": "ABCDEFG",
+            "code": "12345",
+            "username": "testuser"
+        }
+
+        # If user or application with the given information does not exist, we should get 404
+        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 404)
+
+        app = Extension.objects.create(name="Test App", developer="Lens and Lights",
+                                       description="An app used for testing", api_key="ABCDEFG", enabled=True)
+
+        # If application exists, but user has not allowed full permissions, we should get 403
+        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 403)
+
+        # Simulate trusting an application
+        self.user.connected_services.add(app)
+
+        # If codes do not match we should see invalid code error and attempts count should be decreased
+        self.assertEqual(self.client.post(reverse("api:fetch-token"), data).data['detail'],
+                         "Invalid verification code. {} attempts remaining.".format(settings.TFV_ATTEMPTS - 1))
+
+        data["code"] = token_request.code
+
+        # If too much time has elapsed, request should have expired
+        request = models.TokenRequest.objects.get(user=self.user)
+        request.timestamp = timezone.now() + timezone.timedelta(hours=-1)
+        request.save()
+
+        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 410)
+
+        token_request.save()
+
+        # Otherwise everything should work out just fine
+        resp = self.client.post(reverse("api:fetch-token"), data).data
+        self.assertIsNotNone(resp['token'])
+
+        # If a code has already been used we should get a 410 error
+        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 410)
 
     def test_docs(self):
         # Create a couple endpoints to include in the docs

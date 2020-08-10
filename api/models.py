@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from django.db import models
-from accounts.models import User
+from django.conf import settings
 
 METHODS = (
     ('GET', 'GET'),
@@ -12,7 +12,8 @@ METHODS = (
 
 AUTH_OPTIONS = (
     ('none', 'None'),
-    ('session', 'Session-based'),
+    # ('session', 'Session-based'),
+    ('token', 'Token-based'),
     ('project', 'Project-based')
 )
 
@@ -80,3 +81,10 @@ class Option(models.Model):
 
     def __str__(self):
         return self.parameter.name
+
+
+class TokenRequest(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="token_requests", on_delete=models.CASCADE)
+    code = models.PositiveSmallIntegerField()
+    attempts = models.PositiveSmallIntegerField()
+    timestamp = models.DateTimeField()
