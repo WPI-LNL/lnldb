@@ -465,6 +465,7 @@ class BaseEvent(PolymorphicModel):
         )
         ordering = ['-datetime_start']
 
+
 # do not use ignore_duplicates=True because it does not follow relations
 @reversion.register(follow=['baseevent_ptr'])
 class Event(BaseEvent):
@@ -774,6 +775,7 @@ class Event(BaseEvent):
     class Meta:
         verbose_name = '2012 Event'
 
+
 # do not use ignore_duplicates=True because it does not follow relations (and is slow)
 @reversion.register(follow=['baseevent_ptr'])
 class Event2019(BaseEvent):
@@ -800,6 +802,9 @@ class Event2019(BaseEvent):
     # Post-event survey
     send_survey = models.BooleanField(default=False, help_text='Check if the event contact should be emailed the post-event survey after the event')
     survey_sent = models.BooleanField(default=False, help_text='The post-event survey has been sent to the client')
+
+    # Added during COVID pandemic
+    max_crew = models.PositiveIntegerField(null=True, blank=True)
 
     @property
     def has_projection(self):
@@ -1320,6 +1325,7 @@ class EventAttachment(models.Model):
     note = models.TextField(null=True, blank=True, default="")
     externally_uploaded = models.BooleanField(default=False)
 
+
 @reversion.register()
 class EventArbitrary(models.Model):
     event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="arbitraryfees")
@@ -1340,6 +1346,7 @@ class EventArbitrary(models.Model):
     @property
     def abs_cost(self):
         return abs(self.totalcost)
+
 
 @python_2_unicode_compatible
 class PostEventSurvey(models.Model):
@@ -1447,7 +1454,23 @@ class HourChange(models.Model):
     message = models.TextField(max_length=244)
 
     def __str__(self):
-        return self.officer.first_name + " " + self.officer.last_name
+        return self.officer.name
 
     class Meta:
         verbose_name = "Office Hour Update"
+
+
+class CrewAttendanceRecord(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="event_records")
+    event = models.ForeignKey(Event2019, on_delete=models.SET_NULL, null=True, related_name="crew_attendance")
+    checkin = models.DateTimeField(default=timezone.now)
+    checkout = models.DateTimeField(blank=True, null=True)
+    active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.user.name + " - " + self.event.event_name
+
+    class Meta:
+        permissions = (
+            ('view_attendance_records', 'View Attendance Records'),
+        )

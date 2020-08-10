@@ -497,6 +497,10 @@
                             </td>
                         {% endfor %}
                     </table>
+                    {% if event.max_crew %}
+                    <h3 class="h5">Maximum Crew Limit: {{ event.max_crew }}</h3>
+                    <h3 class="h5">Current Crew Count: {{ crew_count }}</h3>
+                    {% endif %}
                     {% comment %}
                     <a class="btn btn-lg btn-info pull-right" href="{% url "events:add-crew" event.id %}">Modify</a>
                     <h2> Crew </h2>

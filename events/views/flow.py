@@ -36,8 +36,7 @@ from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standa
 @login_required
 @permission_required('events.approve_event', raise_exception=True)
 def approval(request, id):
-    context = {}
-    context['msg'] = "Approve Event"
+    context = {'msg': "Approve Event"}
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.approve_event', event):
         raise PermissionDenied
@@ -68,7 +67,8 @@ def approval(request, id):
                 services_formset.save()
             # Automatically add the event contact to the client (if the event has only one client)
             if e.contact is not None and e.org.count() == 1 and e.contact not in e.org.get().associated_users.all():
-                set_revision_comment("Approved {}. Event contact {} automatically added to {}.".format(e.event_name, e.contact, e.org.get()), form)
+                set_revision_comment("Approved {}. Event contact {} automatically added to {}.".format(
+                    e.event_name, e.contact, e.org.get()), form)
                 e.org.get().associated_users.add(e.contact)
             else:
                 set_revision_comment("Approved", form)
@@ -99,7 +99,8 @@ def approval(request, id):
                                        .distinct()
         unbilled_events = map(str, unbilled_events)
         if event.org.exists() and unbilled_events:
-            messages.add_message(request, messages.WARNING, "Organization has unbilled events: %s" % ", ".join(unbilled_events))
+            messages.add_message(request, messages.WARNING, "Organization has unbilled events: %s" % ", ".join(
+                unbilled_events))
         for org in event.org.filter(delinquent=True):
             messages.add_message(request, messages.WARNING, "The client '%s' has been marked as delinquent. \
                     This means that the client has one or more long-outstanding bills which they should be required to \
@@ -112,8 +113,7 @@ def approval(request, id):
 
 @login_required
 def denial(request, id):
-    context = {}
-    context['msg'] = "Deny Event"
+    context = {'msg': "Deny Event"}
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.decline_event', event):
         raise PermissionDenied
@@ -148,11 +148,8 @@ def denial(request, id):
                 messages.add_message(request, messages.INFO,
                                      'No contact info on file for denial. Please give them the bad news.')
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
-        else:
-            context['form'] = form
-    else:
-        form = EventDenialForm(instance=event)
-        context['form'] = form
+    form = EventDenialForm(instance=event)
+    context['form'] = form
     return render(request, 'form_crispy.html', context)
 
 
@@ -347,7 +344,12 @@ def assigncrew(request, id):
     context = {}
     context['msg'] = "Crew"
 
-    event = get_object_or_404(Event, pk=id)
+    event = get_object_or_404(BaseEvent, pk=id)
+
+    # The new events model doesn't really use this anymore
+    if isinstance(event, Event2019):
+        return HttpResponseRedirect(reverse('events:detail', args=[event.id]) + "#crew")
+
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
@@ -361,13 +363,10 @@ def assigncrew(request, id):
         if formset.is_valid():
             formset.save()
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-        else:
-            context['formset'] = formset
-
     else:
         formset = CrewAssign(instance=event)
 
-        context['formset'] = formset
+    context['formset'] = formset
 
     return render(request, 'form_crew_add.html', context)
 
@@ -378,7 +377,8 @@ def hours_bulk_admin(request, id):
 
     context['msg'] = "Bulk Hours Entry"
     event = get_object_or_404(BaseEvent, pk=id)
-    if not event.reports_editable and not request.user.has_perm('events.edit_event_hours') and request.user.has_perm('events.edit_event_hours', event):
+    if not event.reports_editable and not request.user.has_perm('events.edit_event_hours') and \
+            request.user.has_perm('events.edit_event_hours', event):
         return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event) and event.reports_editable):
@@ -646,6 +646,7 @@ def viewevent(request, id):
     context['event'] = event
     # do not use .get_unique() because it does not follow relations
     context['history'] = Version.objects.get_for_object(event)
+    context['crew_count'] = Hours.objects.filter(event=event).values('user').distinct().count()
     if event.serviceinstance_set.exists():
         context['categorized_services_and_extras'] = {}
         for category in Category.objects.all():

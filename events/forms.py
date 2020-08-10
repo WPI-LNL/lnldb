@@ -563,6 +563,9 @@ class InternalEventForm2019(FieldAccessForm):
                 'location',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
+                HTML('<div style="width: 50%">'),
+                'max_crew',
+                HTML('</div>'),
                 'billed_in_bulk',
                 'sensitive',
                 'test_event',
@@ -628,7 +631,7 @@ class InternalEventForm2019(FieldAccessForm):
         edit_descriptions = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_text', instance),
             enable=('event_name', 'location', 'description',
-                    'lighting_reqs', 'sound_reqs', 'proj_reqs', 'otherservice_reqs')
+                    'lighting_reqs', 'sound_reqs', 'proj_reqs', 'otherservice_reqs', 'max_crew')
         )
 
         change_owner = FieldAccessLevel(
@@ -676,7 +679,7 @@ class InternalEventForm2019(FieldAccessForm):
         model = Event2019
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org',
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
-                  'datetime_end', 'sensitive', 'test_event', 'entered_into_workday', 'send_survey')
+                  'datetime_end', 'sensitive', 'test_event', 'entered_into_workday', 'send_survey', 'max_crew')
         widgets = {
             'description': PagedownWidget(),
             'internal_notes': PagedownWidget(),
@@ -693,6 +696,8 @@ class InternalEventForm2019(FieldAccessForm):
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
     datetime_start = forms.SplitDateTimeField(initial=timezone.now, label="Event Start")
     datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
+    max_crew = forms.IntegerField(label="Maximum Crew", help_text="Include this to enforce an occupancy limit",
+                                  required=False)
 
 
 class EventReviewForm(forms.ModelForm):
