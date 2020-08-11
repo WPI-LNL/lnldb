@@ -40,6 +40,21 @@ class LocationFactory(DjangoModelFactory):
     building = SubFactory(BuildingFactory)
 
 
+class CategoryFactory(DjangoModelFactory):
+    class Meta:
+        model = Category
+
+
+class ServiceFactory(DjangoModelFactory):
+    class Meta:
+        model = Service
+    shortname = 'L1'
+    longname = Faker('company')
+    base_cost = 100000.00
+    addtl_cost = 1.00
+    category = SubFactory(CategoryFactory)
+
+
 class EventFactory(DjangoModelFactory):
     class Meta:
         model = Event
@@ -69,9 +84,8 @@ class CCInstanceFactory(DjangoModelFactory):
         model = EventCCInstance
 
     event = SubFactory(Event2019Factory)
-    category = Category.objects.create(name="Event Services")
-    service = Service.objects.create(shortname="L1", longname="Lighting", base_cost=100000.00, addtl_cost=1.00,
-                                     category=category)
+    category = SubFactory(CategoryFactory)
+    service = SubFactory(ServiceFactory)
     setup_location = SubFactory(LocationFactory)
 
 
