@@ -646,7 +646,8 @@ def viewevent(request, id):
     context['event'] = event
     # do not use .get_unique() because it does not follow relations
     context['history'] = Version.objects.get_for_object(event)
-    context['crew_count'] = Hours.objects.filter(event=event).values('user').distinct().count()
+    if isinstance(event, Event2019):
+        context['crew_count'] = event.crew_attendance.filter(active=True).values('user').count()
     if event.serviceinstance_set.exists():
         context['categorized_services_and_extras'] = {}
         for category in Category.objects.all():

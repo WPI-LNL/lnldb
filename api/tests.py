@@ -6,11 +6,13 @@ from django.urls.base import reverse
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.utils import timezone
+from rest_framework.test import APIClient
 from rest_framework.exceptions import APIException, PermissionDenied
+from rest_framework.authtoken.models import Token
 from . import models, views
 from .templatetags import path_safe
-from events.tests.generators import UserFactory
-from events.models import OfficeHour, HourChange
+from events.tests.generators import UserFactory, Event2019Factory, CCInstanceFactory
+from events.models import OfficeHour, HourChange, Building, Location, CrewAttendanceRecord
 from data.models import Notification, Extension
 import pytz
 import logging
@@ -51,6 +53,84 @@ class APIViewTest(ViewTestCase):
         endpoint_get.auth = "none"
         endpoint_get.save()
         self.assertEqual(views.verify_endpoint("Example", None), None)
+
+    def test_token_endpoint(self):
+        # Check that page loads ok
+        self.assertOk(self.client.get(reverse("api:request-token")))
+
+        # If user does not have phone number and carrier listed, they will need to fill out the form
+        self.assertOk(self.client.post(reverse("api:request-token")))
+
+        self.assertFalse(models.TokenRequest.objects.filter(user=self.user).exists())
+
+        valid_data = {
+            "phone": 1234567890,
+            "carrier": "vtext.com",
+            "save": "Continue"
+        }
+
+        self.assertOk(self.client.post(reverse("api:request-token"), valid_data))
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.phone, '1234567890')
+
+        # User must confirm that information is accurate (users who have already provided this information start here)
+        resp = self.client.post(reverse("api:request-token"), valid_data)
+        self.assertContains(resp, "Check your messages")
+
+        self.assertTrue(models.TokenRequest.objects.filter(user=self.user).exists())
+
+        # If code expires on the user, check that they can request a new one (will replace exisiting code)
+        resp = self.client.post(reverse("api:request-token"), valid_data)
+        self.assertContains(resp, "Check your messages")
+
+        # Ensure GET requests are not allowed when obtaining the token with verification code
+        self.assertOk(self.client.get(reverse("api:fetch-token")), 405)
+
+        # If information is missing we should get a 400 error
+        self.assertOk(self.client.post(reverse("api:fetch-token"), {'code': 12345}), 400)
+
+        # Application should send the following to obtain the token
+        token_request = models.TokenRequest.objects.get(user=self.user)
+        data = {
+            "APIKey": "ABCDEFG",
+            "code": "12345",
+            "username": "testuser"
+        }
+
+        # If user or application with the given information does not exist, we should get 404
+        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 404)
+
+        app = Extension.objects.create(name="Test App", developer="Lens and Lights",
+                                       description="An app used for testing", api_key="ABCDEFG", enabled=True)
+
+        # If application exists, but user has not allowed full permissions, we should get 403
+        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 403)
+
+        # Simulate trusting an application
+        self.user.connected_services.add(app)
+
+        # If codes do not match we should see invalid code error and attempts count should be decreased
+        self.assertEqual(self.client.post(reverse("api:fetch-token"), data).data['detail'],
+                         "Invalid verification code. {} attempts remaining.".format(settings.TFV_ATTEMPTS - 1))
+
+        data["code"] = token_request.code
+
+        # If too much time has elapsed, request should have expired
+        request = models.TokenRequest.objects.get(user=self.user)
+        request.timestamp = timezone.now() + timezone.timedelta(hours=-1)
+        request.save()
+
+        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 410)
+
+        token_request.save()
+
+        # Otherwise everything should work out just fine
+        resp = self.client.post(reverse("api:fetch-token"), data).data
+        self.assertIsNotNone(resp['token'])
+
+        # If a code has already been used we should get a 410 error
+        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 410)
 
     def test_officer_endpoint(self):
         models.Endpoint.objects.create(name="Officers", url="officers", description="Officer endpoint",
@@ -247,83 +327,153 @@ class APIViewTest(ViewTestCase):
                                          {"project_id": "LNL", "page_id": "/meetings/index.html",
                                           "directory": "/meetings"}).data, default_response)
 
-    def test_token_endpoint(self):
-        # Check that page loads ok
-        self.assertOk(self.client.get(reverse("api:request-token")))
+    def test_events_endpoint(self):
+        models.Endpoint.objects.create(name="Events", url="events", description="Get your event info here",
+                                       example="name=Test Event", response="[]")
 
-        # If user does not have phone number and carrier listed, they will need to fill out the form
-        self.assertOk(self.client.post(reverse("api:request-token")))
+        # Test that we get 204 response if no events can be found matching query
+        self.assertOk(self.client.get("/api/v1/events"), 204)
 
-        self.assertFalse(models.TokenRequest.objects.filter(user=self.user).exists())
+        building = Building.objects.create(name="Campus Center", shortname="CC")
+        location1 = Location.objects.create(name="CC Office", building=building)
+        location2 = Location.objects.create(name="Dunkin Donuts", building=building)
+        now = timezone.now().replace(microsecond=0)
+        time_past = timezone.now() + timezone.timedelta(hours=-1)
+        time_past = time_past.replace(microsecond=0)
+        time_future = timezone.now() + timezone.timedelta(hours=1)
+        time_future = time_future.replace(microsecond=0)
 
-        valid_data = {
-            "phone": 1234567890,
-            "carrier": "vtext.com",
-            "save": "Continue"
-        }
+        Event2019Factory.create(event_name="Test Event", location=location1, datetime_start=now,
+                                datetime_end=time_future, description="An event", approved=True)
+        Event2019Factory.create(event_name="Another Event", location=location2, datetime_start=time_past,
+                                datetime_end=time_future, approved=True)
+        Event2019Factory.create(event_name="Past Event", location=location1, datetime_start=time_past,
+                                datetime_end=time_past, approved=True)
 
-        self.assertOk(self.client.post(reverse("api:request-token"), valid_data))
+        now_str = timezone.localtime(now).strftime("%Y-%m-%dT%H:%M:%S%z")
+        time_past_str = timezone.localtime(time_past).strftime("%Y-%m-%dT%H:%M:%S%z")
+        time_future_str = timezone.localtime(time_future).strftime("%Y-%m-%dT%H:%M:%S%z")
 
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.phone, '1234567890')
+        # Default response should be just upcoming events that are not sensitive, cancelled, or designated as a test
+        default_response = '[{"id":1,"event_name":"Test Event","description":"An event","location":"CC Office",' \
+                           '"datetime_start":"' + now_str + '","datetime_end":"' + time_future_str + '"},' \
+                           '{"id":2,"event_name":"Another Event","description":null,"location":"Dunkin Donuts",' \
+                           '"datetime_start":"' + time_past_str + '","datetime_end":"' + time_future_str + '"}]'
 
-        # User must confirm that information is accurate (users who have already provided this information start here)
-        resp = self.client.post(reverse("api:request-token"), valid_data)
-        self.assertContains(resp, "Check your messages")
+        self.assertEqual(self.client.get("/api/v1/events").content.decode('utf-8'), default_response)
 
-        self.assertTrue(models.TokenRequest.objects.filter(user=self.user).exists())
+        # Test filter by name
+        name_response = '[{"id":1,"event_name":"Test Event","description":"An event","location":"CC Office",' \
+                        '"datetime_start":"' + now_str + '","datetime_end":"' + time_future_str + '"}]'
 
-        # If code expires on the user, check that they can request a new one (will replace exisiting code)
-        resp = self.client.post(reverse("api:request-token"), valid_data)
-        self.assertContains(resp, "Check your messages")
+        self.assertEqual(self.client.get("/api/v1/events", {"name": "test"}).content.decode('utf-8'), name_response)
 
-        # Ensure GET requests are not allowed when obtaining the token with verification code
-        self.assertOk(self.client.get(reverse("api:fetch-token")), 405)
+        # Test filter by location
+        location_response = '[{"id":2,"event_name":"Another Event","description":null,"location":"Dunkin Donuts",' \
+                            '"datetime_start":"' + time_past_str + '","datetime_end":"' + time_future_str + '"}]'
 
-        # If information is missing we should get a 400 error
-        self.assertOk(self.client.post(reverse("api:fetch-token"), {'code': 12345}), 400)
+        self.assertEqual(self.client.get("/api/v1/events", {"location": "dunkin"}).content.decode('utf-8'),
+                         location_response)
 
-        # Application should send the following to obtain the token
-        token_request = models.TokenRequest.objects.get(user=self.user)
-        data = {
-            "APIKey": "ABCDEFG",
-            "code": "12345",
-            "username": "testuser"
-        }
+        # Test filter by start or end time (match)
+        start = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        end = time_future.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        # If user or application with the given information does not exist, we should get 404
-        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 404)
+        self.assertEqual(self.client.get("/api/v1/events", {"start": start}).content.decode('utf-8'), name_response)
+        self.assertEqual(self.client.get("/api/v1/events", {"end": end}).content.decode('utf-8'), default_response)
 
-        app = Extension.objects.create(name="Test App", developer="Lens and Lights",
-                                       description="An app used for testing", api_key="ABCDEFG", enabled=True)
+        # Test both start and end time
+        time_response = '[{"id":2,"event_name":"Another Event","description":null,"location":"Dunkin Donuts",' \
+                        '"datetime_start":"' + time_past_str + '","datetime_end":"' + time_future_str + '"},' \
+                        '{"id":3,"event_name":"Past Event","description":null,"location":"CC Office",' \
+                        '"datetime_start":"' + time_past_str + '","datetime_end":"' + time_past_str + '"}]'
 
-        # If application exists, but user has not allowed full permissions, we should get 403
-        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 403)
+        self.assertEqual(self.client.get("/api/v1/events", {"start": str(time_past + timezone.timedelta(hours=-1)),
+                                                            "end": str(now + timezone.timedelta(minutes=-1))}
+                                         ).content.decode('utf-8'), time_response)
+        self.assertEqual(self.client.get("/api/v1/events",
+                                         {"start": str(now), "end": str(time_future + timezone.timedelta(hours=1))}
+                                         ).content.decode('utf-8'), default_response)
 
-        # Simulate trusting an application
-        self.user.connected_services.add(app)
+    def test_crew_endpoint(self):
+        models.Endpoint.objects.create(name="Crew Checkin", url="crew/checkin", description="Checkin to events",
+                                       example="user=12345&event=1", response="[]")
+        models.Endpoint.objects.create(name="Crew Checkout", url="crew/checkout", description="Checkout from events",
+                                       example="user=12345&event=1", response="[]")
 
-        # If codes do not match we should see invalid code error and attempts count should be decreased
-        self.assertEqual(self.client.post(reverse("api:fetch-token"), data).data['detail'],
-                         "Invalid verification code. {} attempts remaining.".format(settings.TFV_ATTEMPTS - 1))
+        # Get token for authentication
+        token, created = Token.objects.get_or_create(user=self.user)
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
 
-        data["code"] = token_request.code
+        # Test that only POST requests are permitted
+        self.assertOk(client.get("/api/v1/crew/checkin"), 405)
+        self.assertOk(client.get("/api/v1/crew/checkout"), 405)
 
-        # If too much time has elapsed, request should have expired
-        request = models.TokenRequest.objects.get(user=self.user)
-        request.timestamp = timezone.now() + timezone.timedelta(hours=-1)
-        request.save()
+        # Test that student ID is required (the next several tests will be the same for both actions)
+        self.assertOk(client.post("/api/v1/crew/checkin", {'event': 1}), 400)
 
-        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 410)
+        # Test that failure to provide event id results in 400
+        self.assertOk(client.post("/api/v1/crew/checkin", {'id': 12345}), 400)
 
-        token_request.save()
+        # Return 404 if user cannot be found with student ID
+        self.assertOk(client.post("/api/v1/crew/checkin", {'id': 12345, 'event': 1}), 404)
 
-        # Otherwise everything should work out just fine
-        resp = self.client.post(reverse("api:fetch-token"), data).data
-        self.assertIsNotNone(resp['token'])
+        self.user.student_id = 12345
+        self.user.save()
 
-        # If a code has already been used we should get a 410 error
-        self.assertOk(self.client.post(reverse("api:fetch-token"), data), 410)
+        # Return error if event cannot be found or is otherwise not eligible for checkin / checkout
+        self.assertOk(client.post("/api/v1/crew/checkin", {'id': 12345, 'event': 1}), 404)
+
+        event = Event2019Factory.create(event_name="Test Event")
+        event.datetime_end = timezone.now() + timezone.timedelta(hours=1)
+        event.max_crew = 1
+        event2 = Event2019Factory.create(event_name="Another Event")
+        event2.datetime_end = timezone.now() + timezone.timedelta(hours=1)
+        event2.approved = True
+        event2.max_crew = 1
+        event.save()
+        event2.save()
+        CCInstanceFactory.create(crew_chief=self.user, event=event, setup_start=timezone.now())
+        CCInstanceFactory.create(crew_chief=self.user, event=event2, setup_start=timezone.now())
+
+        self.assertOk(client.post("/api/v1/crew/checkin", {'id': 12345, 'event': 1}), 403)
+
+        event.approved = True
+        event.save()
+
+        second_user = UserFactory.create(password="9876")
+        other_checkin = CrewAttendanceRecord.objects.create(event=event, user=second_user, active=True)
+
+        # Should display an error if we have reached maximum crew
+        self.assertOk(client.post("/api/v1/crew/checkin", {'id': 12345, 'event': 1}), 403)
+
+        other_checkin.delete()
+
+        # Check response on successful checkin
+        resp = client.post("/api/v1/crew/checkin", {'id': 12345, 'event': 1})
+        self.assertOk(resp, 201)
+
+        self.assertTrue(CrewAttendanceRecord.objects.filter(user=self.user).exists())
+
+        # Return 409 if checkin record already exists for the user (even if it's for another event)
+        self.assertOk(client.post("/api/v1/crew/checkin", {'id': 12345, 'event': 2}), 409)
+
+        # Return 404 if checkin record could not be found during checkout
+        self.assertOk(client.post("/api/v1/crew/checkout", {'id': 12345, 'event': 2}), 404)
+
+        # Test with checkout time included
+        custom_datetime = timezone.now() + timezone.timedelta(days=-1)
+        self.assertOk(client.post("/api/v1/crew/checkout",
+                                  {'id': 12345, 'event': 1, 'checkout': custom_datetime}), 201)
+
+        self.assertEqual(CrewAttendanceRecord.objects.get(user=self.user).checkout, custom_datetime)
+
+        # Test with Checkin time included
+        self.assertOk(client.post("/api/v1/crew/checkin",
+                                  {'id': 12345, 'event': 1, 'checkin': custom_datetime}), 201)
+
+        self.assertEqual(CrewAttendanceRecord.objects.get(user=self.user, active=True).checkin, custom_datetime)
 
     def test_docs(self):
         # Create a couple endpoints to include in the docs

@@ -12,7 +12,6 @@ METHODS = (
 
 AUTH_OPTIONS = (
     ('none', 'None'),
-    # ('session', 'Session-based'),
     ('token', 'Token-based'),
     ('project', 'Project-based')
 )

@@ -123,7 +123,7 @@ def send_active_sms(request):
 def poke_cc(request):
     context = {}
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False) \
-        .filter(datetime_setup_complete__gt=timezone.now()).exclude().distinct()
+        .filter(datetime_start__gt=timezone.now()).exclude().distinct()
     if events.count() is 0:
         return render(request, 'default.html',
                       {'title': 'Error 404: No events found', 'NO_FOOT': True,

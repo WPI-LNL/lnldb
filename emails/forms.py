@@ -123,7 +123,7 @@ class PokeCCForm(forms.Form):
         super(PokeCCForm, self).__init__(*args, **kwargs)
         options = []
         events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False)\
-            .filter(datetime_setup_complete__gt=timezone.now()).exclude().distinct()
+            .filter(datetime_start__gt=timezone.now()).exclude().distinct()
         for event in events:
             for instance in ServiceInstance.objects.filter(event=event):
                 options.append((instance.pk, instance))

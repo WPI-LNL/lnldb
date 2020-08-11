@@ -10,7 +10,9 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, authentication_classes
+from rest_framework.decorators import api_view, authentication_classes, action
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import APIException, NotFound, ParseError, AuthenticationFailed, PermissionDenied
 
@@ -18,10 +20,11 @@ from random import randint
 
 from accounts.forms import SMSOptInForm
 from emails.generators import generate_sms_email
-from events.models import OfficeHour, HourChange
+from events.models import OfficeHour, HourChange, Event2019, Location, CrewAttendanceRecord
 from data.models import Notification, Extension
 from .models import Endpoint, RequestParameter, ResponseKey, TokenRequest
-from .serializers import OfficerSerializer, HourSerializer, ChangeSerializer, NotificationSerializer
+from .serializers import OfficerSerializer, HourSerializer, ChangeSerializer, NotificationSerializer, EventSerializer, \
+    AttendanceSerializer
 
 
 # Create your views here.
@@ -158,6 +161,116 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
                     query |= Q(target__icontains=directory)
             queryset |= Notification.objects.filter(query)
         return queryset
+
+
+class EventViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = EventSerializer
+    authentication_classes = []
+
+    # For now, do not accept new event submissions through the API (the workorder tool already does that well)
+    def list(self, request):
+        queryset = self.get_queryset()
+        if queryset.count() is 0:
+            content = {'204': 'No events could be found with the specified parameters'}
+            return Response(content, status=status.HTTP_204_NO_CONTENT)
+        serializer = EventSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def get_queryset(self):
+        verify_endpoint('Events', self.request)
+        queryset = Event2019.objects.filter(sensitive=False, test_event=False, approved=True).order_by('id')
+        name = self.request.query_params.get('name', None)
+        location_slug = self.request.query_params.get('location', None)
+        start = self.request.query_params.get('start', None)
+        end = self.request.query_params.get('end', None)
+        default = True
+        if name:
+            default = False
+            queryset = queryset.filter(event_name__icontains=name)
+        if location_slug:
+            search = Event2019.objects.none()
+            for location in Location.objects.filter(Q(name__icontains=location_slug) |
+                                                    Q(building__name__icontains=location_slug)):
+                default = False
+                search |= queryset.filter(location=location)
+            queryset = search
+        if start and end:
+            default = False
+            queryset = queryset.filter(datetime_start__lte=end, datetime_end__gte=start)
+        elif start:
+            default = False
+            queryset = queryset.filter(datetime_start=start)
+        elif end:
+            default = False
+            queryset = queryset.filter(datetime_end=end)
+
+        if default is True:
+            queryset = queryset.filter(datetime_end__gt=timezone.now(), reviewed=False, closed=False, cancelled=False)
+        return queryset
+
+
+class AttendanceViewSet(viewsets.ModelViewSet):
+    serializer_class = AttendanceSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def check_required_fields(self):
+        student_id = self.request.data.get('id', None)
+        event_id = self.request.data.get('event', None)
+        if student_id in [None, ''] or event_id in [None, '']:
+            raise ParseError(detail="Bad request. One or more required keys are missing or malformed.")
+        user = get_object_or_404(get_user_model(), student_id=student_id)
+        event = get_object_or_404(Event2019, pk=event_id)
+        if not event.approved or event.datetime_end + timezone.timedelta(hours=5) <= timezone.now() or event.closed or \
+                min(event.ccinstances.values_list('setup_start', flat=True)) > timezone.now() or event.cancelled:
+            raise PermissionDenied(detail="This event is not currently accepting checkin / checkout requests.")
+        return user, event
+
+    @action(['POST'], True)
+    def checkin(self, request):
+        verify_endpoint('Crew Checkin', self.request)
+        user, event = self.check_required_fields()
+        time = request.data.get('checkin', None)
+        if time in [None, '']:
+            time = str(timezone.now().replace(second=0, microsecond=0))
+        if event.max_crew and event.crew_attendance.filter(active=True).values('user').count() == event.max_crew:
+            raise PermissionDenied(detail="This event has reached it's crew member or occupancy limit. Please try "
+                                          "again later.")
+        if CrewAttendanceRecord.objects.filter(user=user, active=True).exists():
+            return Response({'detail': 'This user is already checked into an event.'}, status=status.HTTP_409_CONFLICT)
+        data = {
+            "user": user.pk,
+            "event": event.pk,
+            "checkin": time,
+            "active": True
+        }
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        if not event.hours.filter(user=user).exists():
+            event.hours.create(user=user)
+        return Response(status=status.HTTP_201_CREATED)
+
+    @action(['POST'], True)
+    def checkout(self, request):
+        verify_endpoint('Crew Checkout', self.request)
+        user, event = self.check_required_fields()
+        time = request.data.get('checkout', None)
+        if time in [None, '']:
+            time = timezone.now().replace(second=0, microsecond=0)
+        record = CrewAttendanceRecord.objects.filter(user=user, event=event, active=True).first()
+        if record is None:
+            raise NotFound(detail="It appears this user has not yet checked in for this event")
+        data = {
+            "user": user.pk,
+            "event": event.pk,
+            "checkout": time,
+            "active": False
+        }
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.update(record, serializer.validated_data)
+        return Response(status=status.HTTP_201_CREATED)
 
 
 @login_required

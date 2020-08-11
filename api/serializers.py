@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from events.models import OfficeHour, HourChange
+from events.models import OfficeHour, HourChange, Event2019, CrewAttendanceRecord
 from accounts.models import User
 
 
@@ -64,3 +64,19 @@ class NotificationSerializer(serializers.BaseSerializer):
             'title': instance.title,
             'message': instance.message,
         }
+
+
+class EventSerializer(serializers.ModelSerializer):
+    location = serializers.CharField(source='location.name')
+    datetime_start = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S%z", read_only=True)
+    datetime_end = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S%z", read_only=True)
+
+    class Meta:
+        model = Event2019
+        fields = ('id', 'event_name', 'description', 'location', 'datetime_start', 'datetime_end',)
+
+
+class AttendanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CrewAttendanceRecord
+        fields = ('user', 'event', 'checkin', 'checkout', 'active')
