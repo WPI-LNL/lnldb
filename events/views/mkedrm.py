@@ -107,7 +107,7 @@ def eventnew(request, id=None):
         else:
             context['e'] = form.errors
             context['form'] = form
-            if not services_formset.is_valid():
+            if not services_formset.is_valid() and is_event2019:
                 messages.add_message(request, messages.ERROR, "Whoops! There was an error updating the services "
                                                               "for this event.")
             if is_event2019:

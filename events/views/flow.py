@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -21,12 +22,14 @@ from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator
 from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
-                          BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm)
+                          BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
+                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm)
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
-                           ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA)
+                           ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord)
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
+from helpers.challenges import is_officer
 from helpers.revision import set_revision_comment
 from helpers.util import curry_class
 from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standalone,
@@ -155,8 +158,7 @@ def denial(request, id):
 
 @login_required
 def review(request, id):
-    context = {}
-    context['h2'] = "Review Event for Billing"
+    context = {'h2': "Review Event for Billing"}
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.review_event', event):
         raise PermissionDenied
@@ -203,7 +205,8 @@ def reviewremind(request, id, uid):
         messages.add_message(request, messages.ERROR, 'Event is closed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     if event.reviewed or not event.approved:
-        messages.add_message(request, messages.ERROR, 'Can only send reminders for an event that is approved and not reviewed.')
+        messages.add_message(request, messages.ERROR, 'You can only send reminders for an event that is approved and '
+                                                      'has not yet been reviewed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
     cci = event.ccinstances.filter(crew_chief_id=uid)
@@ -263,8 +266,6 @@ def remindall(request, id):
 @require_POST
 def close(request, id):
     set_revision_comment("Closed", None)
-    context = {}
-    context['msg'] = "Closing Event"
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.close_event', event):
         raise PermissionDenied
@@ -281,8 +282,6 @@ def close(request, id):
 @require_POST
 def cancel(request, id):
     set_revision_comment("Cancelled", None)
-    context = {}
-    context['msg'] = "Event Cancelled"
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.cancel_event', event):
         raise PermissionDenied
@@ -299,7 +298,8 @@ def cancel(request, id):
     else:
         targets = []
 
-    email_body = 'The event "%s" has been cancelled by %s. If this is incorrect, please contact our vice president at lnl-vp@wpi.edu.' % (event.event_name, str(request.user))
+    email_body = 'The event "%s" has been cancelled by %s. If this is incorrect, please contact our vice president ' \
+                 'at lnl-vp@wpi.edu.' % (event.event_name, str(request.user))
     if request.user.email:
         email_body = email_body[:-1]
         email_body += " or try them at %s." % request.user.email
@@ -312,8 +312,6 @@ def cancel(request, id):
 @require_POST
 def reopen(request, id):
     set_revision_comment("Reopened", None)
-    context = {}
-    context['msg'] = "Event Reopened"
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.reopen_event', event):
         raise PermissionDenied
@@ -341,8 +339,7 @@ def rmcrew(request, id, user):
 
 @login_required
 def assigncrew(request, id):
-    context = {}
-    context['msg'] = "Crew"
+    context = {'msg': "Crew"}
 
     event = get_object_or_404(BaseEvent, pk=id)
 
@@ -373,9 +370,8 @@ def assigncrew(request, id):
 
 @login_required
 def hours_bulk_admin(request, id):
-    context = {}
+    context = {'msg': "Bulk Hours Entry"}
 
-    context['msg'] = "Bulk Hours Entry"
     event = get_object_or_404(BaseEvent, pk=id)
     if not event.reports_editable and not request.user.has_perm('events.edit_event_hours') and \
             request.user.has_perm('events.edit_event_hours', event):
@@ -422,6 +418,227 @@ def hours_prefill_self(request, id):
     Hours.objects.create(event=event, user=request.user)
     messages.add_message(request, messages.SUCCESS, 'You have been added as crew for this event.')
     return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+
+
+@login_required
+@require_GET
+def crew_tracker(request):
+    context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True}
+    return render(request, 'crew_checkin.html', context)
+
+
+@login_required
+def checkin(request):
+    context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True}
+
+    if not request.user.is_lnl:
+        raise PermissionDenied
+
+    events = Event2019.objects.filter(
+        sensitive=False, closed=False, ccinstances__setup_start__lte=timezone.now(),
+        datetime_end__gt=timezone.now() + timezone.timedelta(hours=-5), cancelled=False).distinct()
+    for event in events:
+        if event.max_crew and event.crew_attendance.filter(active=True).count() == event.max_crew:
+            events = events.exclude(pk=event.pk)
+    if events.count() is 0:
+        context['page'] = {"title": "There are currently no events available for checkin",
+                           "body": "<a href='" + reverse("events:crew-tracker") + "' class='btn btn-primary'>Back</a>"}
+        return render(request, 'static_page.html', context)
+
+    if request.user.event_records.filter(active=True).exists():
+        context['page'] = {"title": "You are already checked into an event",
+                           "body": "<a href='" + reverse("events:crew-tracker") + "' class='btn btn-primary'>Back</a>"}
+        return render(request, 'static_page.html', context)
+
+    if request.method == 'POST':
+        form = CrewCheckinForm(request.POST, events=events, title="Checkin")
+        if form.is_valid():
+            event = Event2019.objects.get(pk=request.POST['event'])
+            event.crew_attendance.create(user=request.user)
+            if not event.hours.filter(user=request.user).exists():
+                event.hours.create(user=request.user)
+            name = request.user.nickname
+            if not name:
+                name = request.user.first_name
+            messages.success(request, "Welcome, %s. You have checked in successfully!" % name, extra_tags="success")
+            return HttpResponseRedirect(reverse("events:detail", args=[event.pk]))
+    else:
+        form = CrewCheckinForm(events=events, title="Checkin")
+    context['form'] = form
+    return render(request, 'form_crispy_static.html', context)
+
+
+@login_required
+def checkout(request):
+    context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True,
+               'styles': ".control {\n\tpadding: .375rem .75rem;\n\tfont-size: 1rem;\n\tline-height: 1.5;\n\t"
+                         "border-radius: .25rem;\n\tborder: 1px solid #cde4da;\n\tbackground-clip: padding-box;}"}
+
+    if not request.user.is_lnl:
+        raise PermissionDenied
+
+    record = CrewAttendanceRecord.objects.filter(user=request.user, active=True).first()
+    if record is None:
+        context['page'] = {"title": "Whoops! It appears you haven't checked in yet.",
+                           "body": "<a href='" + reverse("events:crew-tracker") + "' class='btn btn-primary'>Back</a>"}
+        return render(request, 'static_page.html', context)
+
+    categories = []
+    for category in ServiceInstance.objects.filter(event=record.event).values_list('service__category', flat=True) \
+            .distinct():
+        categories.append(Category.objects.get(pk=int(category)))
+
+    # Calculate hours worked
+    if record.checkout:
+        delta = record.checkout - record.checkin
+        quarter_hrs = delta.seconds / 900
+        hours = delta.seconds / 3600
+        remainder = (quarter_hrs % 4) * 0.25
+        total = hours + remainder
+
+    if request.method == 'POST':
+        if not record.checkout:
+            form = CrewCheckoutForm(request.POST)
+            if form.is_valid():
+                checkin_datetime = timezone.make_aware(timezone.datetime.strptime(
+                    "%s%s" % (request.POST['checkin_0'], request.POST['checkin_1']), "%Y-%m-%d%I:%M %p"))
+                checkout_datetime = timezone.make_aware(timezone.datetime.strptime(
+                    "%s%s" % (request.POST['checkout_0'], request.POST['checkout_1']), "%Y-%m-%d%I:%M %p"))
+                # Ensure that no one can have a checkin time before setup starts
+                if checkin_datetime < min(record.event.ccinstances.values_list('setup_start', flat=True)):
+                    checkin_datetime = min(record.event.ccinstances.values_list('setup_start', flat=True))
+                record.checkin = checkin_datetime
+                record.checkout = checkout_datetime
+                record.save()
+
+                delta = checkout_datetime - checkin_datetime
+                quarter_hrs = delta.seconds / 900
+                hours = delta.seconds / 3600
+                remainder = (quarter_hrs % 4) * 0.25
+                total = hours + remainder
+                form = CheckoutHoursForm(categories=categories, total_hrs=total)
+        else:
+            form = CheckoutHoursForm(request.POST, categories=categories, total_hrs=total)
+            if form.is_valid():
+                record.active = False
+                record.save()
+
+                hour_fields = []
+                # Get the hours fields
+                for field in request.POST:
+                    if "hour" in field:
+                        hour_fields.append(field)
+                # If values were entered, save to hours log
+                for field in hour_fields:
+                    hour_input = request.POST[field]
+                    if hour_input not in [None, ''] and Decimal(hour_input) != 0:
+                        cat = field.replace('hours_', '')
+                        category = Category.objects.get(name=cat)
+                        # Check for pending hour record
+                        placeholder = Hours.objects.filter(category__isnull=True, event=record.event,
+                                                           user=request.user).first()
+                        if placeholder:
+                            placeholder.category = category
+                            placeholder.hours = 0
+                            placeholder.save()
+                        hour_record, created = Hours.objects.get_or_create(event=record.event, user=request.user,
+                                                                           category=category)
+                        if created:
+                            hour_record.hours = Decimal(hour_input)
+                        else:
+                            hour_record.hours += Decimal(hour_input)
+                        hour_record.save()
+                messages.success(request, "You have successfully checked out!", extra_tags="success")
+                return HttpResponseRedirect(reverse("events:detail", args=[record.event.pk]))
+    else:
+        if not record.checkout:
+            form = CrewCheckoutForm(initial={'checkin': record.checkin, 'checkout': timezone.now()})
+        else:
+            form = CheckoutHoursForm(categories=categories, total_hrs=total)
+    context['form'] = form
+    return render(request, 'form_crispy_static.html', context)
+
+
+@login_required
+def bulk_checkin(request):
+    context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True}
+
+    if not request.user.is_lnl:
+        raise PermissionDenied
+
+    event_id = request.GET.get('id', None)
+    if event_id:
+        event = get_object_or_404(Event2019, pk=event_id)
+
+        if request.method == 'POST':
+            form = BulkCheckinForm(request.POST, result=None, user_name=None, event=event.event_name)
+            if form.is_valid():
+                student_id = request.POST['id']
+                user = get_user_model().objects.filter(student_id=student_id).first()
+                name = ""
+                if not user:
+                    # Could not match user to id
+                    result = "fail"
+                else:
+                    existing_checkin = CrewAttendanceRecord.objects.filter(user=user, active=True).first()
+                    if existing_checkin and existing_checkin.event != event:
+                        # User is checked in somewhere else
+                        result = "checkin-fail"
+                    else:
+                        # Check for crew limit
+                        if event.max_crew and event.crew_attendance.filter(active=True).count() == event.max_crew and \
+                                not existing_checkin:
+                            result = "checkin-limit"
+                        else:
+                            record, created = CrewAttendanceRecord.objects.get_or_create(
+                                event=event, user=user, active=True
+                            )
+                            if not created:
+                                # Check out
+                                record.checkout = timezone.now()
+                                record.active = False
+                                record.save()
+                                result = "checkout-success"
+                            else:
+                                # Checked in (get user's name to display)
+                                name = user.nickname
+                                if not name:
+                                    name = user.first_name
+                                if not event.hours.filter(user=user).exists():
+                                    # Record placeholder hour if hours are not already recorded
+                                    event.hours.create(user=user)
+                                result = "checkin-success"
+                form = BulkCheckinForm(result=result, user_name=name, event=event.event_name)
+        else:
+            form = BulkCheckinForm(result=None, user_name=None, event=event.event_name)
+    else:
+        events = Event2019.objects.filter(
+            datetime_end__gt=timezone.now() + timezone.timedelta(hours=-5), sensitive=False, closed=False,
+            cancelled=False, ccinstances__setup_start__lte=timezone.now()).distinct()
+
+        # Officers can use this tool even if they aren't a CC for the event
+        if not is_officer(request.user):
+            events = events.filter(ccinstances__crew_chief=request.user)
+        for event in events:
+            if event.max_crew and event.crew_attendance.filter(active=True).count() == event.max_crew:
+                events = events.exclude(pk=event.pk)
+
+        if events.count() is 0:
+            context['page'] = {"title": "Hmm. We couldn't find any eligible events.",
+                               "body": "<p>If you are not a crew chief, please use the standard checkin / checkout "
+                                       "tools.<br><br></p><a href='" + reverse("events:crew-tracker") +
+                                       "' class='btn btn-primary'>Back</a>"}
+            return render(request, 'static_page.html', context)
+
+        if request.method == 'POST':
+            form = CrewCheckinForm(request.POST, events=events, title="Bulk Checkin")
+            if form.is_valid():
+                event = request.POST['event']
+                return HttpResponseRedirect(reverse("events:crew-bulk") + "?id=" + event)
+        else:
+            form = CrewCheckinForm(events=events, title="Bulk Checkin")
+    context['form'] = form
+    return render(request, 'form_crispy_static.html', context)
 
 
 @login_required
@@ -492,10 +709,10 @@ def assignattach(request, id):
         formset = att_formset(request.POST, request.FILES, instance=event)
         if formset.is_valid():
             formset.save()
-            event.save() # for revision to be created
+            event.save()  # for revision to be created
             should_send_email = not event.test_event
             if should_send_email:
-                to=[settings.EMAIL_TARGET_VP]
+                to = [settings.EMAIL_TARGET_VP]
                 if hasattr(event, 'projection') and event.projection \
                         or event.serviceinstance_set.filter(service__category__name='Projection').exists():
                     to.append(settings.EMAIL_TARGET_HP)
@@ -542,7 +759,7 @@ def assignattach_external(request, id):
             for i in f:
                 i.externally_uploaded = True
                 i.save()
-            event.save() # for revision to be created
+            event.save()  # for revision to be created
             return HttpResponseRedirect(reverse('my:workorders', ))
         else:
             context['formset'] = formset
@@ -558,8 +775,7 @@ def assignattach_external(request, id):
 @login_required
 def extras(request, id):
     """ This form is for adding extras to an event """
-    context = {}
-    context['msg'] = "Extras"
+    context = {'msg': "Extras"}
 
     event = get_object_or_404(BaseEvent, pk=id)
 
@@ -579,7 +795,7 @@ def extras(request, id):
         formset = mk_extra_formset(request.POST, request.FILES, instance=event)
         if formset.is_valid():
             formset.save()
-            event.save() # for revision to be created
+            event.save()  # for revision to be created
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#billing")
         else:
             context['formset'] = formset
@@ -599,8 +815,7 @@ def extras(request, id):
 @login_required
 def oneoff(request, id):
     """ This form is for adding oneoff fees to an event """
-    context = {}
-    context['msg'] = "One-Off Charges"
+    context = {'msg': "One-Off Charges"}
 
     event = get_object_or_404(BaseEvent, pk=id)
     context['event'] = event
@@ -619,7 +834,7 @@ def oneoff(request, id):
         formset = mk_oneoff_formset(request.POST, request.FILES, instance=event)
         if formset.is_valid():
             formset.save()
-            event.save() # for revision to be created
+            event.save()  # for revision to be created
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#billing")
         else:
             context['formset'] = formset
@@ -792,7 +1007,8 @@ class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, Login
 
     def dispatch(self, request, *args, **kwargs):
         self.event = get_object_or_404(BaseEvent, pk=kwargs['event'])
-        if not self.event.reports_editable and not request.user.has_perm(self.perms) and request.user.has_perm(self.perms, self.event):
+        if not self.event.reports_editable and not request.user.has_perm(self.perms) and \
+                request.user.has_perm(self.perms, self.event):
             return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': self.event})
         return super(CCRCreate, self).dispatch(request, *args, **kwargs)
 
@@ -1161,23 +1377,28 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
             messages.add_message(request, messages.ERROR, 'Event has already been paid.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
         if self.object.entered_into_workday:
-            messages.add_message(request, messages.ERROR, 'An Internal Service Delivery has already been created in Workday for this event. The worktag to charge can no longer be edited through this webiste.')
+            messages.add_message(request, messages.ERROR, 'An Internal Service Delivery has already been created in '
+                                                          'Workday for this event. The worktag to charge can no longer '
+                                                          'be edited through this website.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
         if self.is_update:
-            messages.add_message(request, messages.INFO, 'This bill payment form has already been filled out by {}. You are editing it.'.format(self.object.workday_entered_by))
+            messages.add_message(request, messages.INFO, 'This bill payment form has already been filled out by {}. '
+                                                         'You are editing it.'.format(self.object.workday_entered_by))
         return super(WorkdayEntry, self).dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         # Automatically add the user who submitted the workday form to the client
         org = self.object.org_to_be_billed
         if org is not None and self.request.user not in org.associated_users.all():
-            set_revision_comment("Entered Workday billing info for {}. User automatically added to client.".format(self.object.event_name), form)
+            set_revision_comment("Entered Workday billing info for {}. User automatically added to client.".format(
+                self.object.event_name), form)
             org.associated_users.add(self.request.user)
         else:
             set_revision_comment("Entered Workday billing info", form)
         # If the workday info is being updated as opposed to entered for the first time, send an email to the Treasurer
         if self.is_update:
-            email_body="The workday billing info for the following event was updated by {}. The previous version had been entered by {}.".format(self.request.user, self.object.workday_entered_by)
+            email_body="The workday billing info for the following event was updated by {}. The previous version " \
+                       "had been entered by {}.".format(self.request.user, self.object.workday_entered_by)
             if len(form.changed_data) > 0:
                 email_body += "\nFields changed: "
                 for field_name in form.changed_data:
@@ -1191,7 +1412,8 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
             )
             email.send()
         self.object.workday_entered_by = self.request.user
-        messages.success(self.request, "Billing info received. Please approve the Internal Service Delivery in Workday when you receive it.", extra_tags='success')
+        messages.success(self.request, "Billing info received. Please approve the Internal Service Delivery in "
+                                       "Workday when you receive it.", extra_tags='success')
         return super(WorkdayEntry, self).form_valid(form)
 
     def get_success_url(self):

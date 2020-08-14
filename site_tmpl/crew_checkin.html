@@ -1,0 +1,18 @@
+{% extends 'base_static.html' %}
+
+{% block content %}
+<h3 style="color: black" class="h2 text-center">Crew Check-in / <nobr>Check-out</nobr></h3>
+{% if request.user.is_lnl %}
+    <div style="max-width: 330px; margin: 0 auto; color: black" class="text-center">
+        <br>
+        <a class="btn btn-primary btn-block" href="{% url 'events:crew-checkin' %}">Checkin</a>
+        <a class="btn btn-primary btn-block" href="{% url 'events:crew-checkout' %}">Checkout</a>
+        <br>
+        <a href="{% url 'events:crew-bulk' %}" style="color: gray" class="small" target="_blank">Open Bulk Checkin <i class="fas fa-external-link-alt small" style="color: grey"></i></a>
+{% else %}
+    <div style="margin: 0 auto; color: black" class="text-center">
+        <br>
+        <p>Whoops! It appears you are not an LNL member. If you believe this to be in error, please contact our <a href="mailto:lnl-w@wpi.edu">Webmaster</a>.</p>
+{% endif %}
+</div>
+{% endblock %}
