@@ -34,6 +34,7 @@
 
 
             <div>
+                {% comment %}
                 <div class="pull-right btn-group">
                     {% permission request.user has 'inventory.add_equipmentclass' %}
                         {% if cat %}
@@ -77,7 +78,7 @@
                         {% endif %}
                     {% endpermission %}
                 </div>
-
+                {% endcomment %}
                 {% if cat %}
                     <h2>Equipment Types in '{{ cat }}'{% if not exclusive %} and related{% endif %}:</h2>
                 {% else %}
@@ -151,6 +152,7 @@
 {% endblock %}
 
 {% block finalsay %}
+{% comment %}
 {% permission request.user has 'inventory.delete_equipmentcategory'  %}
     {% if cat and not cat.get_children.exists and not cat.equipmentclass_set.exists %}
         <form id="rmcat" method="post" action="{% url 'inventory:cat_rm' cat.pk %}">
@@ -158,5 +160,6 @@
         </form>
     {% endif %}
 {% endpermission %}
+{% endcomment %}
 {{ block.super }}
 {% endblock %}

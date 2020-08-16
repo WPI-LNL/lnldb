@@ -79,7 +79,7 @@ class EquipmentCategory(MPTTModel):
         order_insertion_by = ['name']
 
 
-class EquimentItemManager(TreeManager):
+class EquipmentItemManager(TreeManager):
     def bulk_add_helper(self, item_type, num_to_add, put_into=None):
         # items = []
 
@@ -100,8 +100,9 @@ class EquimentItemManager(TreeManager):
 
 
 class EquipmentItem(MPTTModel):
-    objects = EquimentItemManager()
-    item_type = models.ForeignKey('EquipmentClass', on_delete=models.CASCADE, related_name="items", null=False, blank=False)
+    objects = EquipmentItemManager()
+    item_type = models.ForeignKey('EquipmentClass', on_delete=models.CASCADE, related_name="items", null=False,
+                                  blank=False)
     serial_number = models.CharField(max_length=190, null=True, blank=True)
     case = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True,
                           related_name='contents', db_index=True,
@@ -109,7 +110,8 @@ class EquipmentItem(MPTTModel):
 
     barcode = models.BigIntegerField(null=True, blank=True, unique=True)
     purchase_date = models.DateField(null=False, blank=True)
-    home = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True, help_text="Place where this item typically resides.")
+    home = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True,
+                             help_text="Place where this item typically resides.")
     features = models.CharField(max_length=128, null=True, blank=True, verbose_name='Identifying Features')
 
     def save(self, *args, **kwargs):

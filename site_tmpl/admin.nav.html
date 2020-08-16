@@ -162,7 +162,7 @@
                         <li><a href="{% url 'inventory:snipe_checkin' %}">Inventory checkin</a></li>
                         <li><a target="_blank" href="https://lnl-rt.wpi.edu/snipe/">View inventory - Snipe <i class="glyphicon glyphicon-new-window"></i></a></li>
                         <li><a target="_blank" href="https://lnl-rt.wpi.edu/rt/">Repairs ticket system - RT <i class="glyphicon glyphicon-new-window"></i></a></li>
-                        <!--<li class="divider"></li>
+                        {% comment %}<!--<li class="divider"></li>
                         <li class="dropdown-header">Old soon-to-be-removed</li>
                         <li><a href="{% url "inventory:view_all" %}">View Inventory</a></li>
                         {% permission request.user has 'inventory.add_equipmentclass' %}
@@ -170,7 +170,7 @@
                         {% endpermission %}
                         {% permission request.user has 'inventory.add_equipmentitem' %}
                             <li><a href="{% url "inventory:fast_mk" %}">Quick Add Items</a></li>
-                        {% endpermission %}-->
+                        {% endpermission %}-->{% endcomment %}
                     </ul>
                 </li>
                 {% endpermission %}

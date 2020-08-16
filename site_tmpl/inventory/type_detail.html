@@ -6,6 +6,7 @@
 
 
 {% block modals %}
+    {% comment %}
     {% permission request.user has 'inventory.add_equipmentitem' %}
         <!-- AddItemModal -->
         <div id="addItemModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="addItemModalLabel"
@@ -59,6 +60,7 @@
             </div>
         </div>
     {% endpermission %}
+    {% endcomment %}
 {% endblock %}
 
 {% block jumbotitle %}
@@ -67,6 +69,7 @@
 
 
 {% block buttons %}
+        {% comment %}
         {% permission request.user has 'inventory.change_equipmentclass' of equipment %}
             <a class="btn btn-default btn-lg"
                href="{% url 'inventory:type_edit' equipment.pk %}"
@@ -87,6 +90,7 @@
                href="{% url 'inventory:bulk_edit' equipment.pk %}"
                role="button">Edit Items</a>
         {% endpermission %}
+        {% endcomment %}
 {% endblock %}
 
 
