@@ -238,4 +238,34 @@ class SnipeCheckinForm(forms.Form):
         )
         super(SnipeCheckinForm, self).__init__(*args, **kwargs)
 
-    asset_tags = forms.CharField(widget=forms.Textarea(), help_text='Enter asset tags separated by any non-alphanumeric character, white space, or new lines.')
+    asset_tags = forms.CharField(widget=forms.Textarea(),
+                                 help_text='Enter asset tags separated by any non-alphanumeric character, white space, '
+                                           'or new lines.')
+
+
+class AccessForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        space = kwargs.pop('location')
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal col-md-6 m-auto"
+        self.helper.form_method = 'post'
+        self.helper.form_action = ''
+        self.helper.layout = Layout(
+            HTML('<h2 class="h3">Sign in</h2><br><p><strong>Location: </strong>' + space + '</p><hr>'),
+            Field('users'),
+            Field('reason'),
+            FormActions(
+                Submit('save', 'Submit')
+            )
+        )
+        super(AccessForm, self).__init__(*args, **kwargs)
+
+    users = AutoCompleteSelectMultipleField('Users', label="Select Members",
+                                            help_text="<span class='small'>Enter text to search. List everyone who is "
+                                                      "with you. Each member only needs to be checked in once per "
+                                                      "visit.</span><br><br>")
+    reason = forms.CharField(label="Reason for visit")
+
+    class Meta:
+        model = models.AccessRecord
+        fields = ('users', 'reason')

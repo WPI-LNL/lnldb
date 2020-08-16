@@ -19,6 +19,7 @@ from django.utils import timezone
 from xhtml2pdf import pisa
 
 from . import forms, models
+from events.models import Location
 from emails.generators import DefaultLNLEmailGenerator
 from pdfs.views import link_callback
 
@@ -598,3 +599,48 @@ def snipe_checkin(request):
         'msg': 'Inventory checkin',
         'form': form,
     })
+
+
+@login_required
+def log_access(request, location=None):
+    context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True}
+
+    location = location.replace('-', ' ')
+    space = Location.objects.filter(holds_equipment=True, name__icontains=location).first()
+    if not space:
+        return HttpResponseNotFound("Invalid Location ID")
+
+    if request.method == 'POST':
+        form = forms.AccessForm(request.POST, location=space.name, initial={'users': [request.user]})
+        if form.is_valid():
+            record = form.save(commit=False)
+            record.location = space
+            record.save()
+            form.save_m2m()
+            messages.success(request, "Thank you! You are now signed in.", extra_tags="success")
+            return HttpResponseRedirect(reverse("home"))
+    else:
+        form = forms.AccessForm(location=space.name, initial={'users': [request.user]})
+    context['form'] = form
+    return render(request, 'form_crispy_static.html', context)
+
+
+@login_required
+@permission_required('inventory.view_access_logs', raise_exception=True)
+def view_logs(request):
+
+    def get_timestamp(data):
+        return data.get('timestamp')
+
+    records = []
+    for record in models.AccessRecord.objects.all():
+        for user in record.users.all():
+            obj = {'timestamp': record.timestamp, 'user': user, 'location': record.location, 'reason': record.reason}
+            records.append(obj)
+    records.sort(key=get_timestamp, reverse=True)
+
+    paginator = Paginator(records, 50)
+    page_number = request.GET.get('page', 1)
+    current_page = paginator.page(page_number)  # TODO: Change when switching to py3 (get_page)
+    context = {'records': current_page, 'title': 'Access Log'}
+    return render(request, 'access_log.html', context)

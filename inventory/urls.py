@@ -45,5 +45,7 @@ urlpatterns = [
 
     url(r'^checkout/$', views.snipe_checkout, name="snipe_checkout"),
     url(r'^checkin/$', views.snipe_checkin, name="snipe_checkin"),
-    #url(r'^guides/$', views.user_guides, name="user_guides"),
+
+    url(r'^locations/(?P<location>[-\w]+)/checkin/$', views.log_access, name="log_access"),
+    url(r'^access-logs/$', views.view_logs, name="view_logs"),
 ]

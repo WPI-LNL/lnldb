@@ -1,52 +1,62 @@
 {% extends 'base_admin.html' %}
 {% block content %}
-<h2> Access Log </h2>
-<table class="table table-striped table-bordered">
-    <tr> 
-        <th> User Name </th>
-        <th> User IP </th>
-        <th> URI </th>
-        <th> TimeStamp </th>
-    </tr>
-    {% for access in accesses %}
-            <tr>
-                <td><a href="{% url "projection:edit" access.user.id %}">{{ access.user }}</a></td>
-                <td>
-                    {{ access.user_ip }}
-                </td>
-                <td>
-                    {{ access.requested_uri }}
-                </td>
-                <td>
-                    {{ access.timestamp }}
-                </td>
-            </tr>
-    {% endfor %}
-    
-</table>
-<div class="row">
-    <ul class="pager">
-        {% if accesses.has_previous %}
-            <li class="previous">
-            <a href="?page={{ accesses.previous_page_number }}">&larr; Newer</a>
-        {% else %}
-            <li class="previous disabled">
-            <a href="#" >&larr; Newer</a>
-        {% endif %}
-        
-        </li>
-        <li class="current">
-            <a href="#">Page {{ accesses.number }} of {{ accesses.paginator.num_pages }}.</a>
-        </li>
-        
-        {% if accesses.has_next %}
-            <li class="next">
-            <a href="?page={{ accesses.next_page_number }}">Older &rarr;</a>
-        {% else %}
-            <li class="next disabled">
-            <a href="#">Older &rarr;</a>
-        {% endif %}
-        </li>
-    </ul>
-</div>
+    <h1>{{ title }}</h1>
+    <br>
+    <table class="table table-striped">
+        <tr style="background-color: gray; color: white">
+            {% if records.0.timestamp %}
+            <th> Timestamp </th>
+            <th> User </th>
+            <th> Location </th>
+            <th> Reason </th>
+            {% else %}
+            <th> User </th>
+            <th> Event </th>
+            <th> Location </th>
+            <th> Checkin </th>
+            <th> Checkout </th>
+            {% endif %}
+        </tr>
+        {% for record in records %}
+                <tr>
+                    {% if record.timestamp %}
+                    <td>{{ record.timestamp }}</td>
+                    <td><a href="{% url "accounts:detail" record.user.pk %}">{{ record.user }}</a></td>
+                    <td>{{ record.location }}</td>
+                    <td>{{ record.reason }}</td>
+                    {% else %}
+                    <td><a href="{% url "accounts:detail" record.user.pk %}">{{ record.user }}</a></td>
+                    <td>{{ record.event }}</td>
+                    <td>{{ record.event.location }}</td>
+                    <td>{{ record.checkin }}</td>
+                    <td><span {% if record.checkout == "UNKNOWN" %}class="label label-danger"{% endif %}>{{ record.checkout|default_if_none:"--" }}</span></td>
+                    {% endif %}
+                </tr>
+        {% endfor %}
+    </table>
+    <div class="row">
+        <ul class="pager">
+            {% if records.has_previous %}
+                <li class="previous">
+                <a href="?page={{ records.previous_page_number }}">&larr; Newer</a>
+            {% else %}
+                <li class="previous disabled">
+                <a href="#" >&larr; Newer</a>
+            {% endif %}
+
+            </li>
+            <li class="current">
+                <a href="#">Page {{ records.number }} of {{ records.paginator.num_pages }}.</a>
+            </li>
+
+            {% if records.has_next %}
+                <li class="next">
+                <a href="?page={{ records.next_page_number }}">Older &rarr;</a>
+            {% else %}
+                <li class="next disabled">
+                <a href="#">Older &rarr;</a>
+            {% endif %}
+            </li>
+        </ul>
+    </div>
 {% endblock %}

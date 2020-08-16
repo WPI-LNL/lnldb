@@ -1,4 +1,8 @@
 import logging
+from django.urls import reverse
+from django.contrib.auth.models import Permission
+from data.tests.util import ViewTestCase
+from events.tests.generators import LocationFactory
 
 logging.disable(logging.WARNING)
 
@@ -74,3 +78,34 @@ logging.disable(logging.WARNING)
 #         self.assertTrue(form.is_valid())
 #         obj = form.save()
 #         self.assertIsNone(obj.parent)
+
+
+class AccessRecordTests(ViewTestCase):
+    def test_log_access(self):
+        location = LocationFactory(name="CC Office", holds_equipment=True)
+
+        # Check that we get 404 if location matching query cannot be found
+        self.assertOk(self.client.get(reverse("inventory:log_access", args=['Alden-Sub'])), 404)
+
+        # Check that everything loads ok when there's a match
+        self.assertOk(self.client.get(reverse("inventory:log_access", args=['CC-Office'])))
+
+        # Verify that the form redirects home once submitted successfully
+        valid_data = {
+            "users": [str(self.user.pk)],
+            "location": str(location.pk),
+            "reason": "To play with the Bose Cannon",
+            "save": "Submit"
+        }
+
+        self.assertRedirects(self.client.post(reverse("inventory:log_access", args=['CC-Office']), valid_data),
+                             reverse("home"))
+
+    def test_view_logs(self):
+        # Default user should not have permission to view access logs
+        self.assertOk(self.client.get(reverse("inventory:view_logs")), 403)
+
+        permission = Permission.objects.get(codename="view_access_logs")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("inventory:view_logs")))
