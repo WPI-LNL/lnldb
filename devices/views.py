@@ -102,8 +102,15 @@ def install_client(request):
     if request.method == 'POST':
         form = ClientForm(request.POST)
         if form.is_valid():
-            # TODO: Download client
-            return render(request, 'default.html', context)
+            installer = os.path.join(settings.MEDIA_ROOT, "software", "mdm", "client_installer.dmg")
+            if os.path.exists(installer):
+                with open(installer, 'rb') as f:
+                    response = HttpResponse(f.read(), content_type='application/octet-stream')
+                    response['Content-Disposition'] = 'attachment; filename=LNL MDM.dmg'
+                    return response
+            messages.add_message(request, messages.WARNING, "Hmm, we couldn't seem to find the installer. Please try "
+                                                            "again later.")
+            context['form'] = form
         else:
             context['form'] = form
     else:
