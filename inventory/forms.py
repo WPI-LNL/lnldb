@@ -1,7 +1,7 @@
 from django import forms
 from crispy_forms.bootstrap import FormActions, Tab, TabHolder
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import HTML, Div, Field, Layout, Submit
+from crispy_forms.layout import HTML, Div, Field, Hidden, Layout, Submit
 from ajax_select.fields import AutoCompleteSelectField, AutoCompleteSelectMultipleField
 
 from . import models
@@ -246,14 +246,22 @@ class SnipeCheckinForm(forms.Form):
 class AccessForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         space = kwargs.pop('location')
+        r = kwargs.pop('reason')
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal col-md-6 m-auto"
         self.helper.form_method = 'post'
         self.helper.form_action = ''
+        title = "Sign in"
+        if not r:
+            reason_field = Field('reason')
+        else:
+            reason_field = Hidden('reason', value=r)
+            if r == "OUT":
+                title = "Sign out"
         self.helper.layout = Layout(
-            HTML('<h2 class="h3">Sign in</h2><br><p><strong>Location: </strong>' + space + '</p><hr>'),
+            HTML('<h2 class="h3">' + title + '</h2><br><p><strong>Location: </strong>' + space + '</p><hr>'),
             Field('users'),
-            Field('reason'),
+            reason_field,
             FormActions(
                 Submit('save', 'Submit')
             )

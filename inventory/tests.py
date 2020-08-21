@@ -90,7 +90,7 @@ class AccessRecordTests(ViewTestCase):
         # Check that everything loads ok when there's a match
         self.assertOk(self.client.get(reverse("inventory:log_access", args=['CC-Office'])))
 
-        # Verify that the form redirects home once submitted successfully
+        # Verify that the checkin form redirects home once submitted successfully
         valid_data = {
             "users": [str(self.user.pk)],
             "location": str(location.pk),
@@ -99,6 +99,17 @@ class AccessRecordTests(ViewTestCase):
         }
 
         self.assertRedirects(self.client.post(reverse("inventory:log_access", args=['CC-Office']), valid_data),
+                             reverse("home"))
+
+        # Test the checkout process (checking out is optional)
+        valid_data = {
+            "users": [str(self.user.pk)],
+            "location": str(location.pk),
+            "reason": "OUT",
+            "save": "Submit"
+        }
+
+        self.assertRedirects(self.client.post(reverse("inventory:log_exit", args=['cc']), valid_data),
                              reverse("home"))
 
     def test_view_logs(self):

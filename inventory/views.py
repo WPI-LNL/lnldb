@@ -602,7 +602,7 @@ def snipe_checkin(request):
 
 
 @login_required
-def log_access(request, location=None):
+def log_access(request, location=None, reason=None):
     context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True}
 
     location = location.replace('-', ' ')
@@ -611,16 +611,19 @@ def log_access(request, location=None):
         return HttpResponseNotFound("Invalid Location ID")
 
     if request.method == 'POST':
-        form = forms.AccessForm(request.POST, location=space.name, initial={'users': [request.user]})
+        form = forms.AccessForm(request.POST, location=space.name, reason=reason, initial={'users': [request.user]})
         if form.is_valid():
             record = form.save(commit=False)
             record.location = space
             record.save()
             form.save_m2m()
-            messages.success(request, "Thank you! You are now signed in.", extra_tags="success")
+            if reason == "OUT":
+                messages.success(request, "Thank you! Come again soon!", extra_tags="success")
+            else:
+                messages.success(request, "Thank you! You are now signed in.", extra_tags="success")
             return HttpResponseRedirect(reverse("home"))
     else:
-        form = forms.AccessForm(location=space.name, initial={'users': [request.user]})
+        form = forms.AccessForm(location=space.name, reason=reason, initial={'users': [request.user]})
     context['form'] = form
     return render(request, 'form_crispy_static.html', context)
 

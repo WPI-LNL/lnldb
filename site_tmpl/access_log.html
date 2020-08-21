@@ -23,7 +23,7 @@
                     <td>{{ record.timestamp }}</td>
                     <td><a href="{% url "accounts:detail" record.user.pk %}">{{ record.user }}</a></td>
                     <td>{{ record.location }}</td>
-                    <td>{{ record.reason }}</td>
+                        <td>{% if record.reason == "OUT" %}<span class="label label-primary">CHECKOUT</span>{% else %}{{ record.reason }}{% endif %}</td>
                     {% else %}
                     <td><a href="{% url "accounts:detail" record.user.pk %}">{{ record.user }}</a></td>
                     <td>{{ record.event }}</td>
