@@ -183,6 +183,9 @@ def review(request, id):
             form.save_m2m()
             # Remove prefilled hours that were never finished
             Hours.objects.filter(event=e, hours__isnull=True).delete()
+            # Close any "active" crew member records for this event
+            if isinstance(e, Event2019):
+                e.crew_attendance.filter(active=True).update(active=False)
             # confirm with user
             messages.add_message(request, messages.INFO, 'Event has been reviewed and is ready for billing!')
 
@@ -677,13 +680,10 @@ def assigncc(request, id):
         if formset.is_valid():
             formset.save()
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-        else:
-            context['formset'] = formset
-
     else:
         formset = cc_formset(instance=event)
 
-        context['formset'] = formset
+    context['formset'] = formset
 
     return render(request, 'formset_crispy_helpers.html', context)
 
@@ -724,13 +724,10 @@ def assignattach(request, id):
                 email = EventEmailGenerator(event=event, subject=subject, to_emails=to, body=email_body)
                 email.send()
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-        else:
-            context['formset'] = formset
-
     else:
         formset = att_formset(instance=event)
 
-        context['formset'] = formset
+    context['formset'] = formset
 
     return render(request, 'formset_crispy_attachments.html', context)
 
@@ -761,13 +758,10 @@ def assignattach_external(request, id):
                 i.save()
             event.save()  # for revision to be created
             return HttpResponseRedirect(reverse('my:workorders', ))
-        else:
-            context['formset'] = formset
-
     else:
         formset = mk_att_formset(instance=event, queryset=EventAttachment.objects.filter(externally_uploaded=True))
 
-        context['formset'] = formset
+    context['formset'] = formset
 
     return render(request, 'formset_crispy_attachments.html', context)
 
@@ -797,13 +791,10 @@ def extras(request, id):
             formset.save()
             event.save()  # for revision to be created
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#billing")
-        else:
-            context['formset'] = formset
-
     else:
         formset = mk_extra_formset(instance=event)
 
-        context['formset'] = formset
+    context['formset'] = formset
 
     if any(event.extrainstance_set.values_list('extra__disappear', flat=True)):
         messages.add_message(request, messages.ERROR, 'One or more of the existing extras of this \
@@ -836,13 +827,10 @@ def oneoff(request, id):
             formset.save()
             event.save()  # for revision to be created
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#billing")
-        else:
-            context['formset'] = formset
-
     else:
         formset = mk_oneoff_formset(instance=event)
 
-        context['formset'] = formset
+    context['formset'] = formset
 
     return render(request, 'formset_crispy_arbitrary.html', context)
 
@@ -1363,7 +1351,7 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
-        self.is_update = self.object.workday_fund is not None or self.object.worktag is not None
+        is_update = self.object.workday_fund is not None or self.object.worktag is not None
         if self.object.closed:
             messages.add_message(request, messages.ERROR, 'Event is closed.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
@@ -1381,7 +1369,7 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
                                                           'Workday for this event. The worktag to charge can no longer '
                                                           'be edited through this website.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
-        if self.is_update:
+        if is_update:
             messages.add_message(request, messages.INFO, 'This bill payment form has already been filled out by {}. '
                                                          'You are editing it.'.format(self.object.workday_entered_by))
         return super(WorkdayEntry, self).dispatch(request, *args, **kwargs)
@@ -1396,9 +1384,9 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
         else:
             set_revision_comment("Entered Workday billing info", form)
         # If the workday info is being updated as opposed to entered for the first time, send an email to the Treasurer
-        if self.is_update:
-            email_body="The workday billing info for the following event was updated by {}. The previous version " \
-                       "had been entered by {}.".format(self.request.user, self.object.workday_entered_by)
+        if self.object.workday_fund is not None or self.object.worktag is not None:
+            email_body = "The workday billing info for the following event was updated by {}. The previous version " \
+                         "had been entered by {}.".format(self.request.user, self.object.workday_entered_by)
             if len(form.changed_data) > 0:
                 email_body += "\nFields changed: "
                 for field_name in form.changed_data:

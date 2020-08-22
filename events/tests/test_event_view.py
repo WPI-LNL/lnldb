@@ -2,6 +2,8 @@ import logging
 import pytz
 from django.urls import reverse
 from django.contrib.auth.models import Permission, Group
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.exceptions import ValidationError
 from django.http import QueryDict
 from django.test import TestCase
 from django.test.client import RequestFactory
@@ -9,8 +11,9 @@ from data.tests.util import ViewTestCase
 from django.utils import timezone
 
 from .generators import CCReportFactory, EventFactory, Event2019Factory, UserFactory, OrgFactory, CCInstanceFactory, \
-    ServiceFactory
+    ServiceFactory, LocationFactory
 from .. import models
+from ..templatetags import append_get, at_event_linking, gpa_scale_emoji
 
 
 logging.disable(logging.WARNING)
@@ -22,31 +25,46 @@ class EventBasicViewTest(ViewTestCase):
         self.e2 = EventFactory.create(event_name="Other Test Event")
         self.e3 = Event2019Factory.create(event_name="2019 Test Event")
         self.report = CCReportFactory.create(event=self.e)
+        self.org = OrgFactory.create(name="Test Org")
 
-    # def test_pay(self):
-    #     self.setup()
-    #     b = self.e.billings.create(date_billed=datetime.date(2000, 1, 1), amount=3.14)
-    #
-    #     # random clicks wont work
-    #     self.assertOk(self.client.get(reverse('events:bills:pay', args=[self.e.pk, b.pk])), 405)
-    #
-    #     # on success, redirects to event page
-    #     self.assertRedirects(self.client.post(reverse('events:bills:pay', args=[self.e.pk, b.pk])),
-    #                          reverse("events:detail", args=[self.e.pk]))
-    #
-    #     # check it is actually paid
-    #     b.refresh_from_db()
-    #     self.assertIsNotNone(b.date_paid)
-    #     self.assertTrue(self.e.paid)
-    #
-    #     # TODO: Test perms
-    #
-    # def test_detail(self):
-    #     self.setup()
-    #     self.assertOk(self.client.get(reverse('events:detail', args=[self.e.pk])))
-    #
-    #     # TODO: Test perms
-    #
+    def test_detail(self):
+        self.setup()
+
+        self.e2.sensitive = True
+        self.e2.save()
+
+        # By default, user should not have permission to view event details
+        self.assertOk(self.client.get(reverse('events:detail', args=[self.e.pk])), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:detail", args=[self.e.pk])))
+
+        # Check that you need permission to view a sensitive event
+        self.assertOk(self.client.get(reverse("events:detail", args=[self.e2.pk])), 403)
+
+        permission = Permission.objects.get(codename="view_hidden_event")
+        self.user.user_permissions.add(permission)
+
+        # Check that we get no errors when including survey results (will need permission)
+        permission = Permission.objects.get(codename="view_posteventsurveyresults")
+        self.user.user_permissions.add(permission)
+
+        models.PostEventSurvey.objects.create(event=self.e, person=self.user, services_quality=1, lighting_quality=2,
+                                              sound_quality=3, work_order_method=1, work_order_experience=4,
+                                              work_order_ease=1, communication_responsiveness=0, pricelist_ux=1,
+                                              setup_on_time=2, crew_respectfulness=3, price_appropriate=4,
+                                              customer_would_return=4, comments="Things were alright")
+        models.PostEventSurvey.objects.create(event=self.e2, person=self.user, services_quality=-1,
+                                              lighting_quality=-1, sound_quality=-1, work_order_method=2,
+                                              work_order_experience=-1, work_order_ease=-1, pricelist_ux=-1,
+                                              communication_responsiveness=-1, setup_on_time=-1, crew_respectfulness=-1,
+                                              price_appropriate=-1, customer_would_return=-1)
+
+        self.assertOk(self.client.get(reverse("events:detail", args=[self.e.pk])))
+        self.assertOk(self.client.get(reverse("events:detail", args=[self.e2.pk])))
+
     # def test_edit(self):
     #     self.setup()
     #     self.assertOk(self.client.get(reverse('events:edit', args=[self.e.pk])))
@@ -318,6 +336,10 @@ class EventBasicViewTest(ViewTestCase):
 
         self.e.refresh_from_db()
         self.assertTrue(self.e.reviewed)
+
+        # Check with 2019 Event
+        self.assertRedirects(self.client.post(reverse("events:review", args=[self.e3.pk]), valid_data),
+                             reverse("events:detail", args=[self.e3.pk]) + "#billing")
 
     def test_reviewremind(self):
         self.setup()
@@ -595,7 +617,7 @@ class EventBasicViewTest(ViewTestCase):
         CCInstanceFactory.create(crew_chief=self.user, event=self.e3, setup_start=timezone.now())
         self.e3.datetime_end = timezone.now() + timezone.timedelta(hours=2)
         self.e3.approved = True
-        self.e3.max_crew = 1
+        self.e3.max_crew = 2
         self.e3.save()
 
         self.assertOk(self.client.get(reverse("events:crew-checkin")))
@@ -619,7 +641,8 @@ class EventBasicViewTest(ViewTestCase):
         self.assertEqual(models.CrewAttendanceRecord.objects.filter(active=True, user=self.user).count(), 1)
 
         # Check that we cannot checkin again until we have checked out
-        self.assertOk(self.client.post(reverse("events:crew-checkin"), valid_data))
+        self.assertContains(self.client.post(reverse("events:crew-checkin"), valid_data), "You are already checked "
+                                                                                          "into an event")
 
         record = models.CrewAttendanceRecord.objects.get(active=True, user=self.user)
         record.active = False
@@ -627,6 +650,9 @@ class EventBasicViewTest(ViewTestCase):
 
         user2 = UserFactory.create(password="123")
         models.CrewAttendanceRecord.objects.create(event=self.e3, user=user2, active=True)
+
+        self.e3.max_crew = 1
+        self.e3.save()
 
         # Check that once max_crew limit has been reached, user can no longer check in (if all events full, show this)
         self.assertContains(self.client.get(reverse("events:crew-checkin")), "There are currently no events available "
@@ -683,6 +709,9 @@ class EventBasicViewTest(ViewTestCase):
         self.assertContains(self.client.post(reverse("events:crew-checkout"), valid_data), "Hours")
         record.refresh_from_db()
         self.assertIsNotNone(record.checkout)
+
+        # The hour summary should be the new state of the page
+        self.assertContains(self.client.get(reverse("events:crew-checkout")), "Hours")
 
         # Submitting hours should be optional, but check that when included, information is accurate
         # When someone tries to change the checkin time to before the setup start, the date is set to the setup start
@@ -796,57 +825,807 @@ class EventBasicViewTest(ViewTestCase):
         # TODO: Valid swipe
         # TODO: Invalid swipe
 
-    # def test_rmcc(self):
-    #
-    # def test_assigncc(self):
-    #
-    # def test_assignattach(self):
-    #
-    # def test_assignattach_external(self):
-    #
-    # def test_extras(self):
-    #
-    # def test_oneoff(self):
+    def test_rmcc(self):
+        self.setup()
 
-    # def test_ccr_add(self):
-    #     response = self.client.get(reverse("events:reports:new", args=[self.e.pk]))
-    #     self.assertEqual(response.status_code, 200)
-    #
-    #     # Empty (bad) input
-    #     response = self.client.post(reverse("events:reports:new", args=[self.e.pk]))
-    #     self.assertEqual(response.status_code, 200)
-    #
-    #     # later: test post saved
-    #
-    # def test_ccr_edit(self):
-    #     response = self.client.get(reverse("events:reports:edit", args=[self.e.pk, self.report.pk]))
-    #     self.assertEqual(response.status_code, 200)
-    #
-    #     # Empty (bad) input
-    #     response = self.client.post(reverse("events:reports:edit", args=[self.e.pk, self.report.pk]))
-    #     self.assertEqual(response.status_code, 200)
-    #
-    #     # later: test post saved
-    #
-    # def test_myccr_add(self):
-    #     response = self.client.get(reverse("my:report", args=[self.e.pk]))
-    #     self.assertEqual(response.status_code, 200)
-    #
-    #     # Bad (empty) input
-    #     response = self.client.post(reverse("my:report", args=[self.e.pk]))
-    #     self.assertEqual(response.status_code, 200)
-    #
-    #     # later: test post saved
-    #
-    # def test_bill_add(self):
-    #     response = self.client.get(reverse("events:bills:new", args=[self.e.pk]))
-    #     self.assertEqual(response.status_code, 200)
-    #
-    #     # Bad input
-    #     response = self.client.post(reverse("events:bills:new", args=[self.e.pk]))
-    #     self.assertEqual(response.status_code, 200)
-    #
-    #     # later: test post
+        # By default, user should not have permission to remove CC
+        self.assertOk(self.client.get(reverse("events:remove-chief", args=[self.e.pk, self.user.pk])), 403)
+
+        permission = Permission.objects.get(codename="edit_event_hours")
+        self.user.user_permissions.add(permission)
+
+        CCInstanceFactory(event=self.e, crew_chief=self.user)
+        self.e.closed = True
+        self.e.save()
+
+        # If event is closed, return to detail page
+        self.assertRedirects(self.client.get(reverse("events:remove-chief", args=[self.e.pk, self.user.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+
+        self.e.closed = False
+        self.e.save()
+
+        self.assertRedirects(self.client.get(reverse("events:remove-chief", args=[self.e.pk, self.user.pk])),
+                             reverse("events:chiefs", args=[self.e.pk]))
+        self.assertNotIn(self.user, self.e.crew_chief.all())
+
+    def test_assigncc(self):
+        self.setup()
+
+        category = models.Category.objects.create(name="Lighting")
+        l1 = models.Lighting.objects.create(shortname="L1", longname="Lighting", base_cost=1000.00, addtl_cost=1.00,
+                                            category=category)
+        l2 = ServiceFactory(shortname="L2", longname="More Lighting", category=category)
+        models.ServiceInstance.objects.create(event=self.e3, service=l2)
+        self.e.lighting = l1
+        self.e.save()
+        location = LocationFactory(name="Office", setup_only=True)
+
+        # By default, user should not have permission to assign a CC
+        self.assertOk(self.client.get(reverse("events:chiefs", args=[self.e.pk])), 403)
+
+        permission = Permission.objects.get(codename="edit_event_hours")
+        self.user.user_permissions.add(permission)
+
+        # Will need view event permissions for redirect
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.e.closed = True
+        self.e.save()
+
+        # If event is closed return to detail page
+        self.assertRedirects(self.client.get(reverse("events:chiefs", args=[self.e.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+
+        self.e.closed = False
+        self.e.save()
+
+        # Check that page loads ok
+        self.assertOk(self.client.get(reverse("events:chiefs", args=[self.e.pk])))
+
+        # Check that we can add new crew chief
+        event_data = {
+            "ccinstances-TOTAL_FORMS": 1,
+            "ccinstances-INITIAL_FORMS": 0,
+            "ccinstances-MIN_NUM_FORMS": 0,
+            "ccinstances-MAX_NUM_FORMS": 1000,
+            "ccinstances-0-crew_chief": str(self.user.pk),
+            "ccinstances-0-service": str(l1.pk),
+            "ccinstances-0-setup_location": str(location.pk),
+            "ccinstances-0-setup_start_0": timezone.now().date(),
+            "ccinstances-0-setup_start_1": timezone.now().time()
+        }
+        self.assertRedirects(self.client.post(reverse("events:chiefs", args=[self.e.pk]), event_data),
+                             reverse("events:detail", args=[self.e.pk]))
+        self.assertTrue(models.EventCCInstance.objects.filter(crew_chief=self.user, event=self.e).exists())
+
+        event2019_data = {
+            "ccinstances-TOTAL_FORMS": 1,
+            "ccinstances-INITIAL_FORMS": 0,
+            "ccinstances-MIN_NUM_FORMS": 0,
+            "ccinstances-MAX_NUM_FORMS": 1000,
+            "ccinstances-0-crew_chief": str(self.user.pk),
+            "ccinstances-0-category": str(category.pk),
+            "ccinstances-0-setup_location": str(location.pk),
+            "ccinstances-0-setup_start_0": timezone.now().date(),
+            "ccinstances-0-setup_start_1": timezone.now().time()
+        }
+        self.assertRedirects(self.client.post(reverse("events:chiefs", args=[self.e3.pk]), event2019_data),
+                             reverse("events:detail", args=[self.e3.pk]))
+        self.assertTrue(models.EventCCInstance.objects.filter(crew_chief=self.user, event=self.e3).exists())
+
+    def test_assignattach(self):
+        self.setup()
+
+        # By default, should not have permission to modify attachments
+        self.assertOk(self.client.get(reverse("events:files", args=[self.e.pk])), 403)
+
+        permission = Permission.objects.get(codename="event_attachments")
+        self.user.user_permissions.add(permission)
+
+        # Will need view_event permission for redirect
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        # Check that we redirect to detail page if event is closed
+        self.e.closed = True
+        self.e.save()
+
+        self.assertRedirects(self.client.get(reverse("events:files", args=[self.e.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+
+        self.e.closed = False
+        self.e.save()
+
+        # Everything should load ok
+        self.assertOk(self.client.get(reverse("events:files", args=[self.e.pk])))
+
+        proj = models.Category.objects.create(name="Projection")
+        dp = models.Projection.objects.create(category=proj, shortname="DP", longname="Digital Projection",
+                                              base_cost=1.00, addtl_cost=1.00)
+        self.e.projection = dp
+        self.e.save()
+        CCInstanceFactory(crew_chief=self.user, event=self.e, service=dp)
+
+        valid_data = {
+            "attachments-TOTAL_FORMS": 1,
+            "attachments-INITIAL_FORMS": 0,
+            "attachments-MIN_NUM_FORMS": 0,
+            "attachments-MAX_NUM_FORMS": 1000,
+            "attachments-0-for_service": str(dp.pk),
+            "attachments-0-attachment": SimpleUploadedFile('test.txt', b"some content"),
+            "attachments-0-note": ""
+        }
+
+        # Check that we can add attachment ok
+        self.assertRedirects(self.client.post(reverse("events:files", args=[self.e.pk]), valid_data),
+                             reverse("events:detail", args=[self.e.pk]))
+
+    def test_extras(self):
+        self.setup()
+
+        category = models.Category.objects.create(name="Lighting")
+        extra = models.Extra.objects.create(name="Mirror Ball", cost=4500.99, desc="A very nice mirror ball.",
+                                            category=category)
+
+        # By default, should not have permission to modify extras
+        self.assertOk(self.client.get(reverse("events:extras", args=[self.e.pk])), 403)
+
+        permission = Permission.objects.get(codename="adjust_event_charges")
+        self.user.user_permissions.add(permission)
+
+        # Will need view_event permissions for redirect
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.e.closed = True
+        self.e.save()
+
+        # Check that we redirect to event detail if event is already closed
+        self.assertRedirects(self.client.get(reverse("events:extras", args=[self.e.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+
+        self.e.closed = False
+        self.e.save()
+
+        # Check that page loads ok
+        self.assertOk(self.client.get(reverse("events:extras", args=[self.e.pk])))
+
+        # Check that we can submit form ok
+        valid_data = {
+            "extrainstance_set-TOTAL_FORMS": 1,
+            "extrainstance_set-INITIAL_FORMS": 0,
+            "extrainstance_set-MIN_NUM_FORMS": 0,
+            "extrainstance_set-MAX_NUM_FORMS": 1000,
+            "extrainstance_set-0-extra": str(extra.pk),
+            "extrainstance_set-0-quant": 1
+        }
+        self.assertRedirects(self.client.post(reverse("events:extras", args=[self.e.pk]), valid_data),
+                             reverse("events:detail", args=[self.e.pk]) + "#billing")
+        self.assertTrue(models.ExtraInstance.objects.filter(event=self.e, extra=extra).exists())
+
+        # Check disappear warning
+        extra.disappear = True
+        extra.save()
+
+        self.assertOk(self.client.get(reverse("events:extras", args=[self.e.pk])))
+
+    def test_oneoff(self):
+        self.setup()
+
+        # By default, user should not have permission to adjust one-offs
+        self.assertOk(self.client.get(reverse("events:oneoffs", args=[self.e.pk])), 403)
+
+        # Will need view_event permission for redirects
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        permission = Permission.objects.get(codename="adjust_event_charges")
+        self.user.user_permissions.add(permission)
+
+        # Check that we redirect to detail page when event is closed
+        self.e.closed = True
+        self.e.save()
+
+        self.assertRedirects(self.client.get(reverse("events:oneoffs", args=[self.e.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+
+        self.e.closed = False
+        self.e.save()
+
+        # Check that page loads ok
+        self.assertOk(self.client.get(reverse("events:oneoffs", args=[self.e.pk])))
+
+        # Check that form can be submitted ok
+        valid_data = {
+            "arbitraryfees-TOTAL_FORMS": 1,
+            "arbitraryfees-INITIAL_FORMS": 0,
+            "arbitraryfees-MIN_NUM_FORMS": 0,
+            "arbitraryfees-MAX_NUM_FORMS": 1000,
+            "arbitraryfees-0-key_name": "Labor",
+            "arbitraryfees-0-key_value": 50.00,
+            "arbitraryfees-0-key_quantity": 100
+        }
+
+        self.assertRedirects(self.client.post(reverse("events:oneoffs", args=[self.e.pk]), valid_data),
+                             reverse("events:detail", args=[self.e.pk]) + "#billing")
+
+    def test_ccr_add(self):
+        self.setup()
+
+        # By default user should not have permission to create a CC report
+        self.assertOk(self.client.get(reverse("events:reports:new", args=[self.e.pk])), 403)
+
+        permission = Permission.objects.get(codename="add_event_report")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:reports:new", args=[self.e.pk])))
+
+        # Check that too late message is displayed if it has been too long since the event
+        self.user.user_permissions.remove(permission)
+        self.e.datetime_end = timezone.now() + timezone.timedelta(days=-30)
+        CCInstanceFactory.create(crew_chief=self.user, event=self.e)
+        self.e.save()
+
+        self.assertContains(self.client.get(reverse("events:reports:new", args=[self.e.pk])), "Too Late!")
+
+        self.e.datetime_end = timezone.now()
+        self.e.save()
+
+        # Test valid data
+        valid_data = {
+            "crew_chief": str(self.user.pk),
+            "report": "There was food at this event!",
+            "save": "Save Changes"
+        }
+        self.assertRedirects(self.client.post(reverse("events:reports:new", args=[self.e.pk]), valid_data),
+                             reverse("events:detail", args=[self.e.pk]))
+
+    def test_ccr_edit(self):
+        self.setup()
+
+        # By default user should not have permission to edit a cc report
+        self.assertOk(self.client.get(reverse("events:reports:edit", args=[self.e.pk, self.report.pk])), 403)
+
+        permission = Permission.objects.get(codename="change_ccreport")
+        self.user.user_permissions.add(permission)
+
+        # Will need permission for redirect
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.report.crew_chief = self.user
+        self.report.report = "There was no food"
+        self.report.save()
+
+        self.assertOk(self.client.get(reverse("events:reports:edit", args=[self.e.pk, self.report.pk])))
+
+        # Test valid input
+        valid_data = {
+            "crew_chief": str(self.user.pk),
+            "report": "Ok...there was some food. But it wasn't very good.",
+            "save": "Save Changes"
+        }
+        self.assertRedirects(self.client.post(reverse("events:reports:edit", args=[self.e.pk, self.report.pk]),
+                                              valid_data), reverse("events:detail", args=[self.e.pk]))
+
+    def test_ccr_delete(self):
+        self.setup()
+
+        # By default, user should not have permission to delete a cc report
+        self.assertOk(self.client.get(reverse("events:reports:remove", args=[self.e.pk, self.report.pk])), 403)
+
+        permission = Permission.objects.get(codename="delete_ccreport")
+        self.user.user_permissions.add(permission)
+
+        # Will need the following permission for redirect
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:reports:remove", args=[self.e.pk, self.report.pk])))
+
+        # Check that we get error if event is closed
+        self.e.closed = True
+        self.e.save()
+
+        with self.assertRaises(ValidationError):
+            logging.disable(logging.ERROR)
+            self.client.get(reverse("events:reports:remove", args=[self.e.pk, self.report.pk]))
+
+        self.e.closed = False
+        self.e.save()
+
+        # Check that report is deleted successfully
+        self.assertRedirects(self.client.post(reverse("events:reports:remove", args=[self.e.pk, self.report.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+        self.assertFalse(models.CCReport.objects.filter(event=self.e.pk, crew_chief=self.user).exists())
+
+    def test_bill_add(self):
+        self.setup()
+
+        # By default, user should not have permission to create bills
+        self.assertOk(self.client.get(reverse("events:bills:new", args=[self.e.pk])), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        # Will need permission for redirect
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:bills:new", args=[self.e.pk])))
+
+        # If event is closed redirect to detail page
+        self.e.closed = True
+        self.e.save()
+
+        self.assertRedirects(self.client.get(reverse("events:bills:new", args=[self.e.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+
+        self.e.closed = False
+        self.e.save()
+
+        # Check with valid input
+        data_email = {
+            "date_billed": timezone.now().date(),
+            "amount": 20.00,
+            "save-and-make-email": "Save and Make Email"
+        }
+
+        data_no_email = {
+            "date_billed": timezone.now().date(),
+            "amount": 30.00,
+            "save-and-return": "Save and Return"
+        }
+
+        self.assertRedirects(self.client.post(reverse("events:bills:new", args=[self.e.pk]), data_email),
+                             reverse("events:bills:email", args=[self.e.pk, 1]))
+
+        self.assertRedirects(self.client.post(reverse("events:bills:new", args=[self.e.pk]), data_no_email),
+                             reverse("events:detail", args=[self.e.pk]) + "#billing")
+
+        self.assertTrue(models.Billing.objects.filter(amount=20.00).exists())
+        self.assertTrue(models.Billing.objects.filter(amount=30.00).exists())
+
+    def test_bill_edit(self):
+        self.setup()
+
+        self.e2.closed = True
+        self.e2.save()
+
+        bill = models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e, amount=200.00)
+        another_bill = models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2, amount=50.00)
+
+        # By default, user should not have permission to modify bills
+        self.assertOk(self.client.get(reverse("events:bills:edit", args=[self.e.pk, bill.pk])), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        # Will need view_event permission for redirects
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:bills:edit", args=[self.e.pk, bill.pk])))
+
+        # If event is closed, redirect to detail page
+        self.assertRedirects(self.client.get(reverse("events:bills:edit", args=[self.e2.pk, another_bill.pk])),
+                             reverse("events:detail", args=[self.e2.pk]))
+
+        # Raise permission denied if for some reason event and bill pks do not match
+        self.assertOk(self.client.get(reverse("events:bills:edit", args=[self.e.pk, another_bill.pk])), 403)
+
+        # Test valid input
+        valid_data = {
+            "date_billed": timezone.now().date(),
+            "amount": 500.00,
+            "save": "Save Changes"
+        }
+        self.assertRedirects(self.client.post(reverse("events:bills:edit", args=[self.e.pk, bill.pk]), valid_data),
+                             reverse("events:detail", args=[self.e.pk]) + "#billing")
+
+        bill.refresh_from_db()
+        self.assertEqual(bill.amount, 500.00)
+
+    def test_bill_delete(self):
+        self.setup()
+
+        self.e2.closed = True
+        self.e2.save()
+
+        bill = models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e, amount=200.00)
+        another_bill = models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2, amount=400.00)
+
+        # By default, user should not have permission to delete bills
+        self.assertOk(self.client.get(reverse("events:bills:remove", args=[self.e.pk, bill.pk])), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        # Will need view_event permission for redirects
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:bills:remove", args=[self.e.pk, bill.pk])))
+
+        # If event is closed, redirect to the detail page
+        self.assertRedirects(self.client.get(reverse("events:bills:remove", args=[self.e2.pk, another_bill.pk])),
+                             reverse("events:detail", args=[self.e2.pk]))
+
+        # Raise permission denied if event and bill pks do not match and event is either closed or has been paid
+        self.assertOk(self.client.get(reverse("events:bills:remove", args=[self.e.pk, another_bill.pk])), 403)
+
+        bill.date_paid = timezone.now().date()
+        bill.save()
+
+        self.assertOk(self.client.get(reverse("events:bills:remove", args=[self.e.pk, bill.pk])), 403)
+
+        bill.date_paid = None
+        bill.save()
+
+        # Test POST
+        self.assertRedirects(self.client.post(reverse("events:bills:remove", args=[self.e.pk, bill.pk])),
+                             reverse("events:detail", args=[self.e.pk]) + "#billing")
+
+        self.assertFalse(models.Billing.objects.filter(pk=bill.pk).exists())
+
+    def test_multibill_add(self):
+        self.setup()
+
+        self.e.reviewed = True
+        self.e.billed_in_bulk = True
+        self.e.billing_org = self.org
+        self.e.save()
+
+        self.e2.reviewed = True
+        self.e2.billed_in_bulk = True
+        self.e2.save()
+
+        # By default, user should not have permission to create multibills
+        self.assertOk(self.client.get(reverse("events:multibillings:new")), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:multibillings:new")))
+
+        # Test POST
+        data_email = {
+            "events": [str(self.e.pk), str(self.e2.pk)],
+            "date_billed": timezone.now().date(),
+            "amount": 500.00,
+            "save-and-make-email": "Save and Make Email"
+        }
+
+        data_no_email = {
+            "events": [str(self.e.pk), str(self.e2.pk)],
+            "date_billed": timezone.now().date(),
+            "amount": 400.00,
+            "save-and-return": "Save and Return"
+        }
+
+        # Throw error if events do not have same billing organization
+        self.assertOk(self.client.post(reverse("events:multibillings:new"), data_email))
+
+        self.e2.org.add(self.org)
+        self.e2.save()
+
+        self.assertRedirects(self.client.post(reverse("events:multibillings:new"), data_email),
+                             reverse("events:multibillings:email", args=[1]))
+
+        self.assertRedirects(self.client.post(reverse("events:multibillings:new"), data_no_email),
+                             reverse("events:multibillings:list"))
+
+        self.assertTrue(models.MultiBilling.objects.filter(amount=500.00).exists())
+        self.assertTrue(models.MultiBilling.objects.filter(amount=400.00).exists())
+
+    def test_multibill_edit(self):
+        self.setup()
+
+        multibill = models.MultiBilling.objects.create(date_billed=timezone.now().date(), amount=200.00)
+        multibill.events.add(self.e)
+        multibill.events.add(self.e2)
+
+        # By default, user should not have permission to edit multibills
+        self.assertOk(self.client.get(reverse("events:multibillings:edit", args=[multibill.pk])), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:multibillings:edit", args=[multibill.pk])))
+
+        # Check that if one or more event is closed we get permission denied
+        self.e2.closed = True
+        self.e2.save()
+
+        self.assertOk(self.client.get(reverse("events:multibillings:edit", args=[multibill.pk])), 403)
+
+        self.e2.closed = False
+        self.e2.save()
+
+        # Check with valid input
+        valid_data = {
+            "date_paid": timezone.now().date(),
+            "amount": 400.00,
+            "save": "Save Changes"
+        }
+        self.assertRedirects(self.client.post(reverse("events:multibillings:edit", args=[multibill.pk]), valid_data),
+                             reverse("events:multibillings:list"))
+
+        multibill.refresh_from_db()
+        self.assertEqual(multibill.amount, 400.00)
+
+    def test_multibill_delete(self):
+        self.setup()
+
+        multibill = models.MultiBilling.objects.create(date_billed=timezone.now().date(), amount=1000.00)
+        multibill.events.add(self.e)
+        multibill.events.add(self.e2)
+
+        # By default, user should not have permission to delete multibills
+        self.assertOk(self.client.get(reverse("events:multibillings:remove", args=[multibill.pk])), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:multibillings:remove", args=[multibill.pk])))
+
+        # Check that if one or more events is closed, we get permission denied
+        self.e2.closed = True
+        self.e2.save()
+
+        self.assertOk(self.client.get(reverse("events:multibillings:remove", args=[multibill.pk])), 403)
+
+        self.e2.closed = False
+        self.e2.save()
+
+        # Check that if the bill has been paid we cannot delete it
+        multibill.date_paid = timezone.now().date()
+        multibill.save()
+
+        self.assertOk(self.client.get(reverse("events:multibillings:remove", args=[multibill.pk])), 403)
+
+        multibill.date_paid = None
+        multibill.save()
+
+        # Test POST
+        self.assertRedirects(self.client.post(reverse("events:multibillings:remove", args=[multibill.pk])),
+                             reverse("events:multibillings:list"))
+
+        self.assertFalse(models.MultiBilling.objects.filter(pk=multibill.pk).exists())
+
+    def test_pay(self):
+        self.setup()
+
+        b = self.e.billings.create(date_billed=timezone.now().date(), amount=3.14)
+
+        # random clicks wont work
+        self.assertOk(self.client.get(reverse('events:bills:pay', args=[self.e.pk, b.pk])), 405)
+
+        # User needs permission
+        self.assertOk(self.client.post(reverse("events:bills:pay", args=[self.e.pk, b.pk])), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        # Will need view_event permission for redirect
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        # If event is closed, redirect to detail page
+        self.e.closed = True
+        self.e.save()
+
+        self.assertRedirects(self.client.post(reverse("events:bills:pay", args=[self.e.pk, b.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+
+        self.e.closed = False
+        self.e.save()
+
+        # on success, redirects to event page
+        self.assertRedirects(self.client.post(reverse('events:bills:pay', args=[self.e.pk, b.pk])),
+                             reverse("events:detail", args=[self.e.pk]) + "#billing")
+
+        # check it is actually paid
+        b.refresh_from_db()
+        self.assertIsNotNone(b.date_paid)
+        self.assertTrue(self.e.paid)
+
+        # If bill has already been paid, redirect to next page
+        self.assertRedirects(self.client.post(reverse("events:bills:pay", args=[self.e.pk, b.pk]) + "?next=/db/"),
+                             reverse("home"))
+
+    def test_billing_email(self):
+        self.setup()
+
+        b = self.e.billings.create(date_billed=timezone.now().date(), amount=75.95)
+
+        # User needs permission to create a billing email
+        self.assertOk(self.client.get(reverse("events:bills:email", args=[self.e.pk, b.pk])), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        # Will need view_event permission for the redirect
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:bills:email", args=[self.e.pk, b.pk])))
+
+        # Test valid data
+        valid_data = {
+            "subject": "Your Bill",
+            "message": "Thank you for choosing LNL! Now pay your bill.",
+            "email_to_users": str(self.user.pk),
+            "email_to_orgs": [],
+            "save": "Send Email"
+        }
+
+        self.assertRedirects(self.client.post(reverse("events:bills:email", args=[self.e.pk, b.pk]), valid_data),
+                             reverse("events:detail", args=[self.e.pk]) + "#billing")
+
+    def test_multibilling_email(self):
+        self.setup()
+
+        b = self.e.multibillings.create(date_billed=timezone.now().date(), amount=1.50)
+
+        # User needs permission to create a billing email
+        self.assertOk(self.client.get(reverse("events:multibillings:email", args=[b.pk])), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:multibillings:email", args=[b.pk])))
+
+        # Test valid input
+        valid_data = {
+            "subject": "Your Bill",
+            "message": "Welcome back valued customer! Here's your bill.",
+            "email_to_users": str(self.user.pk),
+            "email_to_orgs": [],
+            "save": "Send Email"
+        }
+
+        self.assertRedirects(self.client.post(reverse("events:multibillings:email", args=[b.pk]), valid_data),
+                             reverse("events:multibillings:list"))
+
+    def test_workday_entry(self):
+        self.setup()
+
+        self.e3.billing_org = self.org
+        self.e3.save()
+
+        # Will need view_event permission for redirects
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        # Should redirect to detail page - Event must have been reviewed
+        self.assertRedirects(self.client.get(reverse("events:worktag-form", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+        self.e3.reviewed = True
+        self.e3.save()
+
+        # Should redirect to detail page - Event has not yet been billed
+        self.assertRedirects(self.client.get(reverse("events:worktag-form", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+        bill = models.Billing.objects.create(event=self.e3, date_billed=timezone.now().date(), amount=5000.00)
+        self.e3.closed = True
+        self.e3.save()
+
+        # Should redirect to detail page - Event is closed
+        self.assertRedirects(self.client.get(reverse("events:worktag-form", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+        self.e3.closed = False
+        self.e3.save()
+        bill.date_paid = timezone.now().date()
+        bill.save()
+
+        # Should redirect to detail page - Bill has already been paid
+        self.assertRedirects(self.client.get(reverse("events:worktag-form", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+        bill.date_paid = None
+        bill.save()
+        self.e3.entered_into_workday = True
+        self.e3.save()
+
+        # Should redirect to detail page - ISD for this event is already in Workday
+        self.assertRedirects(self.client.get(reverse("events:worktag-form", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+        self.e3.entered_into_workday = False
+        self.e3.save()
+
+        # User will need permission (also only works with Event2019 objects)
+        self.assertOk(self.client.get(reverse("events:worktag-form", args=[self.e3.pk])), 403)
+
+        permission = Permission.objects.get(codename="edit_org_billing")
+        self.user.user_permissions.add(permission)
+
+        # Should load ok
+        self.assertOk(self.client.get(reverse("events:worktag-form", args=[self.e3.pk])))
+
+        # Test POST with data
+        invalid_tag = {
+            "workday_fund": 810,
+            "worktag": "Example",
+            "workday_form_comments": "",
+            "submit": "Pay"
+        }
+
+        self.assertOk(self.client.post(reverse("events:worktag-form", args=[self.e3.pk]), invalid_tag))
+
+        valid_data = {
+            "workday_fund": 810,
+            "worktag": "1234-AB",
+            "workday_form_comments": "",
+            "submit": "Pay"
+        }
+        self.assertRedirects(self.client.post(reverse("events:worktag-form", args=[self.e3.pk]), valid_data),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+        # Check that user is automatically added to the associated users list for the organization if not already on it
+        self.assertIn(self.user, self.org.associated_users.all())
+
+        revised_data = {
+            "workday_fund": 810,
+            "worktag": "5678-CC",
+            "workday_form_comments": "I made a few adjustments",
+            "submit": "Pay"
+        }
+
+        # Check that we can reload and submit the form again to edit details
+        self.assertRedirects(self.client.post(reverse("events:worktag-form", args=[self.e3.pk]), revised_data),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+    def test_entered_into_workday(self):
+        self.setup()
+
+        # GET should not be permitted
+        self.assertOk(self.client.get(reverse("events:workday-entered", args=[self.e3.pk])), 405)
+
+        # User will need permission
+        self.assertOk(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        # Will need view_event permission for redirect
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        # Should redirect to event detail page - Event has not yet been reviewed
+        self.assertRedirects(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+        self.e3.reviewed = True
+        self.e3.closed = True
+        self.e3.save()
+
+        # Should redirect to event detail page - Event is closed
+        self.assertRedirects(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+        self.e3.closed = False
+        self.e3.save()
+
+        # Should redirect to event detail page - Event has not been billed
+        self.assertRedirects(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+        models.Billing.objects.create(event=self.e3, date_billed=timezone.now().date(), amount=26.33)
+
+        # Should now be able to mark as entered into workday
+        self.assertRedirects(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])),
+                             reverse("events:awaitingworkday"))
+
+        # Check that we get no errors when trying to mark an event that has already been marked
+        self.assertRedirects(self.client.post(reverse("events:workday-entered", args=[self.e3.pk])),
+                             reverse("events:awaitingworkday"))
 
 
 class EventListBasicViewTest(TestCase):
@@ -996,3 +1775,177 @@ class WorkshopTests(ViewTestCase):
                              reverse("events:workshops:list"))
 
         self.assertFalse(models.Workshop.objects.all().filter(name="Test Workshop").exists())
+
+
+class EventIndices(ViewTestCase):
+    def test_index(self):
+        self.assertOk(self.client.get(reverse("index")))
+
+    def test_admin(self):
+        self.assertOk(self.client.get(reverse("home")))
+
+    def test_event_search(self):
+        EventFactory(event_name="Test Event")
+
+        # By default, should not have access to search events
+        self.assertOk(self.client.get(reverse("events-search")), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        # If query is too short, display message
+        self.assertContains(self.client.get(reverse("events-search"), {'q': 'hi'}), "Too Short")
+
+        # Otherwise return events
+        self.assertOk(self.client.get(reverse("events-search"), {'q': 'test'}))
+
+    def test_survey_dashboard(self):
+        event = EventFactory(event_name="An Event", datetime_start=timezone.now() + timezone.timedelta(days=-2),
+                             datetime_end=timezone.now() + timezone.timedelta(minutes=-30), approved=True)
+        second_event = Event2019Factory(event_name="Another Event", approved=True,
+                                        datetime_end=timezone.now() + timezone.timedelta(minutes=-1),
+                                        datetime_start=timezone.now() + timezone.timedelta(days=-1))
+        models.PostEventSurvey.objects.create(event=event, person=self.user, services_quality=1, lighting_quality=2,
+                                              sound_quality=3, work_order_method=1, work_order_experience=4,
+                                              work_order_ease=-1, communication_responsiveness=0, pricelist_ux=1,
+                                              setup_on_time=2, crew_respectfulness=3, price_appropriate=4,
+                                              customer_would_return=4, comments="Things were alright")
+        models.PostEventSurvey.objects.create(event=second_event, person=self.user, services_quality=-1,
+                                              lighting_quality=-1, sound_quality=-1, work_order_method=2,
+                                              work_order_experience=-1, work_order_ease=-1, pricelist_ux=-1,
+                                              communication_responsiveness=-1, setup_on_time=-1, crew_respectfulness=-1,
+                                              price_appropriate=-1, customer_would_return=-1)
+
+        # By default, use should not have permission to view the dashboard
+        self.assertOk(self.client.get(reverse("survey-dashboard")), 403)
+
+        permission = Permission.objects.get(codename="view_posteventsurveyresults")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("survey-dashboard")))
+
+    def test_attendance_logs(self):
+        event = Event2019Factory(event_name="Test Event")
+        models.CrewAttendanceRecord(event=event, user=self.user, active=False)
+
+        # By default the user should not have permission
+        self.assertOk(self.client.get(reverse("events:crew-logs")), 403)
+
+        permission = Permission.objects.get(codename="view_attendance_records")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:crew-logs")))
+
+
+class EventTemplateTags(TestCase):
+    def test_append_get(self):
+        request = RequestFactory()
+        get_dict = {'test': 'test-content'}
+        request.GET = QueryDict('', mutable=True)
+        request.GET.update(get_dict)
+        context = {'request': request}
+
+        # Test with that we don't append item if argument is None
+        self.assertEqual(append_get.append_to_get(context, True, page=None), "?test=test-content")
+
+        # Test that replace=True overwrites existing items (if applicable)
+        self.assertEqual(append_get.append_to_get(context, True, test=None), "")
+
+        # Test that we can append items when everything is normal
+        self.assertEqual(append_get.append_to_get(context, True, page=1), "?test=test-content&page=1")
+
+        # Check that replace=False allows duplicate
+        self.assertEqual(append_get.append_to_get(context, False, test='something-else'),
+                         "?test=test-content&test=something-else")
+
+    def test_eventlink(self):
+        event = EventFactory.create(event_name="Test Event")
+        test_with_link = "If you would like more information about @1 then you should read my report"
+        test_without_link = "You should read some of those reports from previous events"
+
+        self.assertEqual(
+            at_event_linking.eventlink(test_with_link),
+            "If you would like more information about <a href=\"" + reverse("events:detail", args=[event.pk]) +
+            "\">@Test Event</a> then you should read my report"
+        )
+
+        self.assertEqual(
+            at_event_linking.eventlink(test_with_link, "events:add-crew"),
+            "If you would like more information about <a href=\"" + reverse("events:add-crew", args=[event.pk]) +
+            "\">@Test Event</a> then you should read my report"
+        )
+
+        self.assertEqual(at_event_linking.eventlink(test_without_link), test_without_link)
+
+    def test_mdeventlink(self):
+        event = EventFactory.create(event_name="Test Event")
+        test_with_link = "If you would like more information about @1 then you should read my report"
+        test_without_link = "You should read some of those reports from previous events"
+
+        self.assertEqual(
+            at_event_linking.mdeventlink(test_with_link),
+            "If you would like more information about [@Test Event](" + reverse("events:detail", args=[event.pk]) +
+            ") then you should read my report"
+        )
+
+        self.assertEqual(
+            at_event_linking.mdeventlink(test_with_link, "events:add-crew"),
+            "If you would like more information about [@Test Event](" + reverse("events:add-crew", args=[event.pk]) +
+            ") then you should read my report"
+        )
+
+        self.assertEqual(at_event_linking.mdeventlink(test_without_link), test_without_link)
+
+    def test_gpa_scale_emoji(self):
+        value = None
+        self.assertEqual(gpa_scale_emoji.gpa_scale_emoji(value), u'\U00002753')
+
+        value = 0.5
+        self.assertEqual(gpa_scale_emoji.gpa_scale_emoji(value), u'\U00002620')
+
+        value = 1.5
+        self.assertEqual(gpa_scale_emoji.gpa_scale_emoji(value), u'\U0001f621')
+
+        value = 2.5
+        self.assertEqual(gpa_scale_emoji.gpa_scale_emoji(value), u'\U0001f641')
+
+        value = 3.5
+        self.assertEqual(gpa_scale_emoji.gpa_scale_emoji(value), u'\U0001f610')
+
+        value = 4.0
+        self.assertEqual(gpa_scale_emoji.gpa_scale_emoji(value), u'\U0001f600')
+
+        value = 5.0
+        self.assertEqual(gpa_scale_emoji.gpa_scale_emoji(value), 'ERROR')
+
+    def test_gpa_scale_clean(self):
+        value = None
+        self.assertEqual(gpa_scale_emoji.gpa_scale_clean(value), 'N/A')
+
+        value = -1
+        self.assertEqual(gpa_scale_emoji.gpa_scale_clean(value), 'N/A')
+
+        value = 2.56
+        self.assertEqual(gpa_scale_emoji.gpa_scale_clean(value), '2.6')
+
+    def test_gpa_scale_color(self):
+        value = None
+        self.assertEqual(gpa_scale_emoji.gpa_scale_color(value), 'gray')
+
+        value = -1
+        self.assertEqual(gpa_scale_emoji.gpa_scale_color(value), 'gray')
+
+        value = 0
+        self.assertEqual(gpa_scale_emoji.gpa_scale_color(value), 'red')
+
+        value = 1
+        self.assertEqual(gpa_scale_emoji.gpa_scale_color(value), 'red')
+
+        value = 2
+        self.assertEqual(gpa_scale_emoji.gpa_scale_color(value), 'orange')
+
+        value = 3
+        self.assertEqual(gpa_scale_emoji.gpa_scale_color(value), 'gray')
+
+        value = 4
+        self.assertEqual(gpa_scale_emoji.gpa_scale_color(value), 'green')

@@ -112,14 +112,17 @@
                         <li><a href="{% url "accounts:alumni" %}">Alumni</a></li>
                         <li><a href="{% url "accounts:allmembers" %}">All Members</a></li>
                         {% permission request.user has 'accounts.view_user' %}
-                            <li><a href="{% url "accounts:limbo" %}">Unafiliated Users</a></li>
+                            <li><a href="{% url "accounts:limbo" %}">Unaffiliated Users</a></li>
                         {% endpermission %}
                         <li class="divider"></li>
+                        <li><a href="{% url "accounts:mdc" %}">MDC List</a></li>
                         {% permission request.user has 'emails.send' or request.user has 'events.edit_event_hours' %}
                         <li><a href="{% url "emails:dispatch" %}">Send Message...</a></li>
                         <li class="divider"></li>
                         {% endpermission %}
-                        <li><a href="{% url "accounts:mdc" %}">MDC List</a></li>
+                        {% permission request.user has 'events.view_attendance_records' %}
+                        <li><a href="{% url "events:crew-logs" %}">Crew Logs</a></li>
+                        {% endpermission %}
                         <li><a href="{% url "members:training:list" %}">Training</a></li>
                         {% permission request.user has 'accounts.change_group' %}
                             <li><a href="{% url "accounts:secretary_dashboard" %}">Secretary</a></li>

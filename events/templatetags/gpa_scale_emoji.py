@@ -36,11 +36,11 @@ def gpa_scale_color(value):
         return 'gray'
     elif value < 0:
         return 'gray'
-    elif value <= 1.0 and value >= 0:
+    elif 1.0 >= value >= 0:
         return 'red'
     elif value <= 2.0:
         return 'orange'
-    elif value > 3.0 and value <= 4.0:
+    elif 3.0 < value <= 4.0:
         return 'green'
     else:
-        return 'ERROR'
+        return 'gray'

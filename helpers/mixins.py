@@ -66,8 +66,7 @@ class HasPermOrTestMixin(object):
         elif not request.user.has_perms(self.perms):
             raise PermissionDenied
 
-        return super(HasPermOrTestMixin, self).dispatch(request,
-                                                        *args, **kwargs)
+        return super(HasPermOrTestMixin, self).dispatch(request, *args, **kwargs)
 
 
 class SetFormMsgMixin(object):
