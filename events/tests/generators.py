@@ -5,7 +5,8 @@ from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 from factory import DjangoModelFactory, Faker, Sequence, SubFactory
 
-from events.models import (Building, CCReport, Event, Event2019, Fund, Location, Organization)
+from events.models import (Building, CCReport, Event, Event2019, Fund, Location, Category, Organization,
+                           EventCCInstance, Service)
 
 __author__ = 'jmerdich'
 
@@ -39,6 +40,21 @@ class LocationFactory(DjangoModelFactory):
     building = SubFactory(BuildingFactory)
 
 
+class CategoryFactory(DjangoModelFactory):
+    class Meta:
+        model = Category
+
+
+class ServiceFactory(DjangoModelFactory):
+    class Meta:
+        model = Service
+    shortname = 'L1'
+    longname = Faker('company')
+    base_cost = 100000.00
+    addtl_cost = 1.00
+    category = SubFactory(CategoryFactory)
+
+
 class EventFactory(DjangoModelFactory):
     class Meta:
         model = Event
@@ -61,6 +77,16 @@ class Event2019Factory(DjangoModelFactory):
     location = SubFactory(LocationFactory)
     submitted_by = SubFactory(UserFactory)
     submitted_ip = '127.0.0.1'
+
+
+class CCInstanceFactory(DjangoModelFactory):
+    class Meta:
+        model = EventCCInstance
+
+    event = SubFactory(Event2019Factory)
+    category = SubFactory(CategoryFactory)
+    service = SubFactory(ServiceFactory)
+    setup_location = SubFactory(LocationFactory)
 
 
 class CCReportFactory(DjangoModelFactory):

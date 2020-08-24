@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from django.contrib import admin
-from django.core.urlresolvers import resolve
+from django.urls import resolve
 from .models import Endpoint, Method, Parameter, RequestParameter, ResponseKey, Option
 
 

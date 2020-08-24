@@ -4,14 +4,12 @@ from itertools import chain
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
 from django.db.models.aggregates import Sum
 from django.forms.models import inlineformset_factory, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls.base import reverse
 from django.utils import timezone
-from django.utils.functional import curry
 from django.views.generic import CreateView
 from django.template import loader
 
@@ -184,7 +182,7 @@ def ccreport(request, eventid):
     uevent = user.ccinstances.filter(event__pk=eventid)
     # check that the event in question belongs to the user
     if not uevent:
-        return HttpResponse("This Event Must not Have been yours, or is closed")
+        return HttpResponse("This event must not have been yours, or is closed")
 
     event = uevent[0].event
     if not event.reports_editable:
@@ -245,7 +243,7 @@ def hours_mk(request, eventid):
     uevent = user.ccinstances.filter(event__pk=eventid)
 
     if not uevent:
-        return HttpResponse("This Event Must not Have been yours, or is closed")
+        return HttpResponse("This event must not have been yours, or is closed")
 
     event = uevent[0].event
     if not event.reports_editable:

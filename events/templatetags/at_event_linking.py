@@ -24,10 +24,10 @@ def eventlink(value, targeturlname=None):
         try:
             event = Event.objects.get(pk=r['eventid'])
             if targeturlname:
-                new_value = new_value.replace(m.group(), '<a href="%s">@%s</a> ' % (
+                new_value = new_value.replace(m.group(), '<a href="%s">@%s</a>' % (
                     reverse(targeturlname, args=(event.id,)), event.event_name))
             else:
-                new_value = new_value.replace(m.group(), '<a href="%s">@%s</a> ' % (
+                new_value = new_value.replace(m.group(), '<a href="%s">@%s</a>' % (
                     reverse("events:detail", args=(event.id,)), event.event_name))
         except Event.DoesNotExist:
             pass
@@ -47,10 +47,10 @@ def mdeventlink(value, targeturlname=None):
         try:
             event = Event.objects.get(pk=r['eventid'])
             if targeturlname:
-                new_value = new_value.replace(m.group(), '[@%s](%s) ' % (
+                new_value = new_value.replace(m.group(), '[@%s](%s)' % (
                     event.event_name, reverse(targeturlname, args=(event.id,))))
             else:
-                new_value = new_value.replace(m.group(), '[@%s](%s) ' % (
+                new_value = new_value.replace(m.group(), '[@%s](%s)' % (
                     event.event_name, reverse("events:detail", args=(event.id,))))
         except Event.DoesNotExist:
             pass

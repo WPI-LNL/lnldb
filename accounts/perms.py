@@ -8,7 +8,7 @@ class EventUserPermLogic(AssocUsersCustomPermissionLogic):
                   'ccinstances__event_crew_chief',
                   'crewchiefx__contact', 'crewchiefx__submitted_by',
                   'crewchiefx__ccinstances__crew_chief']
-    perms = ('accounts.view_user',)
+    perms = ('accounts.read_user',)
 
 
 # Begin Intra-Org
@@ -16,7 +16,7 @@ class EventUserPermLogic(AssocUsersCustomPermissionLogic):
 class IntraOrgPermLogic(AssocUsersCustomPermissionLogic):
     field_name = ['orgusers__associated_users', 'orgowner__associated_users',
                   'orgusers__user_in_charge']
-    perms = ('accounts.view_user',)
+    perms = ('accounts.read_user',)
 
 
 # will only go one level. And that's a good thing.
@@ -25,7 +25,7 @@ class AssocOrgPermLogic(AssocUsersCustomPermissionLogic):
                   'orgowner__associated_orgs__associated_users',
                   'orgusers__associated_orgs__user_in_charge',
                   'orgowner__associated_orgs__user_in_charge']
-    perms = ('accounts.view_user',)
+    perms = ('accounts.read_user',)
 
 
 PERMISSION_LOGICS = (

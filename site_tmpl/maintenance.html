@@ -1,17 +1,8 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Lens and Lights at WPI</title>
-    <base href="/">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"
-    integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+{% extends 'base_static.html' %}
+{% block extras %}
     <style>
         #wrapper {
-            height: 100vh;
-            width: 100vw;
+            height: 50vh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -36,21 +27,21 @@
             animation: fa-spin 6s infinite linear reverse;
         }
     </style>
-</head>
-<body>
-    <app-root>
-        <div id="wrapper">
-            <div>
-                <div id="iconWrapper">
-                    <span id="big-icon" class="fa fa-cog fa-4x"></span>
-                    <span id="small-icon" class="fa fa-cog fa-2x"></span>
-                </div>
-                <div id="maintenance-message">
-                    <p>Maintenance in progress</p>
-                    <p>You can contact us at <a href="mailto:lnl@wpi.edu">lnl@wpi.edu</a>.</p>
-                </div>
+{% endblock %}
+{% block content %}
+    <div id="wrapper">
+        <div>
+            <h2 class="h5 text-center">Maintenance In Progress</h2>
+            <p><br></p>
+            <div id="iconWrapper">
+                <span id="big-icon" class="fa fa-cog fa-4x"></span>
+                <span id="small-icon" class="fa fa-cog fa-2x"></span>
+            </div>
+            <div id="maintenance-message">
+                <br>
+                <p>We apologize for the inconvenience.<br>We hope to be back up and rolling again soon!</p>
+                <p>Need assistance? Contact us at <a href="mailto:lnl-w@wpi.edu" class="text-warning">lnl-w@wpi.edu</a>.</p>
             </div>
         </div>
-    </app-root>
-</body>
-</html>
+    </div>
+{% endblock %}

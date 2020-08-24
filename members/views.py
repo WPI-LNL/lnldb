@@ -11,8 +11,9 @@ from django.views.decorators.http import require_GET, require_POST
 from .forms import TrainingForm, TraineeNotesForm
 from .models import TrainingType, Training, Trainee
 
+
 @login_required
-@permission_required('members.view_training')
+@permission_required('members.view_training_details')
 @require_GET
 def training_list(request):
     context = {}
@@ -43,6 +44,7 @@ def training_list(request):
 
     return render(request, 'traininglist.html', context)
 
+
 @login_required
 @permission_required('members.add_training')
 def enter_training(request):
@@ -64,6 +66,7 @@ def enter_training(request):
         form = TrainingForm()
     return render(request, 'form_crispy.html', {'form': form})
 
+
 @login_required
 @permission_required('members.edit_trainee_notes')
 def trainee_notes(request, pk):
@@ -80,6 +83,7 @@ def trainee_notes(request, pk):
     else:
         form = TraineeNotesForm(instance=trainee)
     return render(request, 'form_crispy.html', {'form': form})
+
 
 @login_required
 @permission_required('members.revoke_training')

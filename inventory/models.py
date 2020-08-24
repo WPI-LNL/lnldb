@@ -1,15 +1,14 @@
 import datetime
 # Create your models here.
 import logging
-import os
 
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.urls.base import reverse
-from django.utils.encoding import python_2_unicode_compatible
+from six import python_2_unicode_compatible
+from django.utils import timezone
 from django.utils.functional import cached_property
-from django.core.files.storage import FileSystemStorage
 from mptt.fields import TreeForeignKey
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel
@@ -81,7 +80,7 @@ class EquipmentCategory(MPTTModel):
         order_insertion_by = ['name']
 
 
-class EquimentItemManager(TreeManager):
+class EquipmentItemManager(TreeManager):
     def bulk_add_helper(self, item_type, num_to_add, put_into=None):
         # items = []
 
@@ -102,8 +101,9 @@ class EquimentItemManager(TreeManager):
 
 
 class EquipmentItem(MPTTModel):
-    objects = EquimentItemManager()
-    item_type = models.ForeignKey('EquipmentClass', on_delete=models.CASCADE, related_name="items", null=False, blank=False)
+    objects = EquipmentItemManager()
+    item_type = models.ForeignKey('EquipmentClass', on_delete=models.CASCADE, related_name="items", null=False,
+                                  blank=False)
     serial_number = models.CharField(max_length=190, null=True, blank=True)
     case = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True,
                           related_name='contents', db_index=True,
@@ -111,7 +111,8 @@ class EquipmentItem(MPTTModel):
 
     barcode = models.BigIntegerField(null=True, blank=True, unique=True)
     purchase_date = models.DateField(null=False, blank=True)
-    home = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True, help_text="Place where this item typically resides.")
+    home = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True,
+                             help_text="Place where this item typically resides.")
     features = models.CharField(max_length=128, null=True, blank=True, verbose_name='Identifying Features')
 
     def save(self, *args, **kwargs):
@@ -242,34 +243,16 @@ class EquipmentMaintEntry(models.Model):
         ordering = ['-date']
 
 
-# def guide_file_name(instance, filename):
-#     return '/'.join(['guides', filename])
-# 
-# 
-# class DocStorage(FileSystemStorage):
-# 	def get_available_name(self, name, max_length=None):
-# 		if self.exists(name):
-# 			dir_name, file_name = os.path.split(name)
-# 			file_root, file_ext = os.path.splitext(file_name)
-# 			
-# 			apd = ''
-# 			
-# 			name = os.path.join(dir_name, '{}_{}{}'.format(file_root, apd, file_ext))
-# 			
-# 		return name
-# 
-# class EquipmentUserGuide(models.Model):
-# 	file = models.FileField(upload_to=guide_file_name, storage=DocStorage())
-# 	name = models.CharField(max_length=50)
-# 	date_modified = models.DateTimeField(auto_now_add=True)
-# 	tmpl = models.BooleanField(default=False)
-# 	datasheet = models.BooleanField(default=False)
-# 	
-# 	def __str__(self):
-# 		return str(self.name)
-# 		
-# 	class Meta:
-# 		permissions = (
-# 			("edit_guides", "Upload or edit User Guides"),
-# 			("view_guides", "View User Guides")
-# 		)
+class AccessRecord(models.Model):
+    users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="access_logs")
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="access_logs")
+    timestamp = models.DateTimeField(default=timezone.now)
+    reason = models.CharField(max_length=120)
+
+    def __str__(self):
+        return self.location.name
+
+    class Meta:
+        permissions = (
+            ('view_access_logs', 'View Access Logs'),
+        )

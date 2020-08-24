@@ -112,6 +112,11 @@ SAML2_AUTH = {
     'USE_JWT': False,
 }
 
+# Two-Factor Verification
+TFV_ATTEMPTS = env.str('TFV_ATTEMPTS', 3)
+TFV_CODE_EXPIRES = env.str('TFV_CODE_EXPIRES', 600)
+
+# Mobile Device Management
 MDM_UUID = env.str('MDM_UUID', None)
 MDM_PASS = env.str('MDM_PASS', None)
 MDM_TOKEN = env.str('MDM_TOKEN', 'DEV_TOKEN')
@@ -319,6 +324,7 @@ INSTALLED_APPS = (
     'polymorphic',
     'jchart',
     'rest_framework',
+    'rest_framework.authtoken',
 )
 if SAML2_ENABLED:
     INSTALLED_APPS += ('django_saml2_auth',)
@@ -416,7 +422,10 @@ AUTHENTICATION_BACKENDS = (
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
-    )
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ]
 }
 
 # Various Other Settings
@@ -439,6 +448,7 @@ EMAIL_TARGET_TD = "lnl-td@wpi.edu"
 EMAIL_TARGET_W = "lnl-w@wpi.edu"
 EMAIL_TARGET_HP = "lnl-hp@wpi.edu"
 EMAIL_TARGET_NEWS = "lnl-news@wpi.edu"
+EMAIL_TARGET_ACTIVE = "lnl-active@wpi.edu"
 
 SEND_EMAIL_ORG_TRANSFER = True
 SEND_START_END_EMAILS = False
@@ -532,3 +542,7 @@ if "STATIC_ROOT" in locals() and not os.path.exists(STATIC_ROOT):
 
 if "MEDIA_ROOT" in locals() and not os.path.exists(MEDIA_ROOT):
     os.makedirs(MEDIA_ROOT)
+
+if os.path.exists(MEDIA_ROOT) and not os.path.exists(os.path.join(MEDIA_ROOT, 'profiles')):
+    os.makedirs(os.path.join(MEDIA_ROOT, 'profiles'))
+    os.makedirs(os.path.join(MEDIA_ROOT, 'software'))

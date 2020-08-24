@@ -10,7 +10,7 @@ from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
 from django.contrib.auth.models import Group
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
-from django.db.models import F, Q, Count, Case, When
+from django.db.models import F, Q, Count, Case, When, Sum
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
@@ -21,7 +21,7 @@ from django_saml2_auth.views import signin as saml_login
 
 from data.forms import form_footer
 from emails.generators import DefaultLNLEmailGenerator
-from events.models import Event2019, OfficeHour
+from events.models import Event2019, OfficeHour, CCReport
 from helpers import mixins, challenges
 
 from . import forms
@@ -70,6 +70,10 @@ class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, gen
                 )
                 email.send()
                 messages.success(self.request, "Welcome email sent")
+            # Ensure that title is stripped when no longer an officer
+            if Group.objects.get(name="Officer") not in newgroups:
+                self.object.title = None
+                self.object.save()
 
         messages.success(self.request, "Account Info Saved!", extra_tags='success')
         return super(UserUpdateView, self).form_valid(form)
@@ -83,7 +87,7 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
     slug_url_kwarg = "username"
     model = get_user_model()
     template_name = "userdetail.html"
-    perms = ['accounts.view_user']
+    perms = ['accounts.read_user']
 
     def user_passes_test(self, request, *args, **kwargs):
         # members looking at other members is fine, and you should always be able to look at yourself.
@@ -93,13 +97,23 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
         if object.is_lnl:
             return request.user.has_perm('accounts.view_member')
         else:
-            return request.user.has_perm('accounts.view_user', object)
+            return request.user.has_perm('accounts.read_user', object)
 
     def get_context_data(self, **kwargs):
         context = super(UserDetailView, self).get_context_data(**kwargs)
         context['u'] = u = self.object
         context['hours'] = u.hours.filter(hours__isnull=False).select_related('event', 'service')
+        context['hour_total'] = u.hours.aggregate(hours=Sum('hours'))
         context['ccs'] = u.ccinstances.select_related('event').all()
+
+        pending_reports = []
+        for instance in context['ccs']:
+            if not CCReport.objects.all().filter(crew_chief=u, event=instance.event).exists():
+                event = instance.event
+                if event.datetime_end < timezone.now() and not event.reviewed and not event.closed and \
+                        not event.cancelled:
+                    pending_reports.append(instance)
+        context['pending_reports'] = pending_reports
 
         context['active'] = self.get_object().is_active
 
@@ -122,7 +136,7 @@ class BaseUserList(mixins.HasPermMixin, generic.ListView):
     context_object_name = 'users'
     template_name = 'users.html'
     name = "User List"
-    perms = ['accounts.view_user']
+    perms = ['accounts.read_user']
 
     def get_context_data(self, **kwargs):
         context = super(BaseUserList, self).get_context_data(**kwargs)
@@ -293,15 +307,12 @@ def secretary_dashboard(request):
 @permission_required('accounts.view_member', raise_exception=True)
 def shame(request):
     context = {}
-    worst_cc_report_forgetters = get_user_model().objects.annotate(Count('ccinstances', distinct=True)) \
-                                     .annotate(
+    worst_cc_report_forgetters = get_user_model().objects.annotate(Count('ccinstances', distinct=True)).annotate(
         did_ccreport_count=Count(Case(When(ccinstances__event__ccreport__crew_chief=F('pk'), then=F('ccinstances'))),
-                                 distinct=True)) \
-                                     .annotate(
-        failed_to_do_ccreport_count=(F('ccinstances__count') - F('did_ccreport_count'))) \
-                                     .annotate(
-        failed_to_do_ccreport_percent=(F('failed_to_do_ccreport_count') * 100 / F('ccinstances__count'))) \
-                                     .order_by('-failed_to_do_ccreport_count', '-failed_to_do_ccreport_percent')[:10]
+                                 distinct=True)).annotate(
+        failed_to_do_ccreport_count=(F('ccinstances__count') - F('did_ccreport_count'))).annotate(
+        failed_to_do_ccreport_percent=(F('failed_to_do_ccreport_count') * 100 / F('ccinstances__count'))).order_by(
+        '-failed_to_do_ccreport_count', '-failed_to_do_ccreport_percent')[:10]
 
     context['worst_cc_report_forgetters'] = worst_cc_report_forgetters
 

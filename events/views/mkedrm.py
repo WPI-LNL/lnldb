@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.forms.models import inlineformset_factory
@@ -106,6 +107,9 @@ def eventnew(request, id=None):
         else:
             context['e'] = form.errors
             context['form'] = form
+            if not services_formset.is_valid() and is_event2019:
+                messages.add_message(request, messages.ERROR, "Whoops! There was an error updating the services "
+                                                              "for this event.")
             if is_event2019:
                 context['services_formset'] = services_formset
     else:

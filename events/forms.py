@@ -4,15 +4,13 @@ import re
 import uuid
 
 import pytz
+import six
 from ajax_select import make_ajax_field
 from ajax_select.fields import (AutoCompleteSelectField,
                                 AutoCompleteSelectMultipleField)
-from crispy_forms.bootstrap import (FormActions, InlineCheckboxes,
-                                    InlineRadios, PrependedText, Tab,
-                                    TabHolder)
+from crispy_forms.bootstrap import (FormActions, InlineCheckboxes, InlineRadios, PrependedText, Tab, TabHolder)
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import (HTML, Div, Field, Fieldset, Hidden, Layout,
-                                 Reset, Submit)
+from crispy_forms.layout import (HTML, Div, Row, Column, Field, Fieldset, Hidden, Layout, Reset, Submit)
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -20,7 +18,7 @@ from django.db.models import Model, Q
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget
 from django.forms.models import inlineformset_factory
 from django.urls.base import reverse
-from django.utils import timezone, six
+from django.utils import timezone
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
 
@@ -28,9 +26,9 @@ from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
 from events.fields import GroupedModelChoiceField
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail,
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
-                           ExtraInstance, Fund, Hours, Lighting, Location, Organization,
-                           OrganizationTransfer, OrgBillingVerificationEvent, Workshop, WorkshopDate,
-                           Projection, Service, ServiceInstance, Sound, PostEventSurvey, OfficeHour, HourChange)
+                           ExtraInstance, Fund, Hours, Lighting, Location, Organization, OrganizationTransfer,
+                           OrgBillingVerificationEvent, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
+                           Sound, PostEventSurvey, OfficeHour, HourChange)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 from helpers.util import curry_class
@@ -172,14 +170,14 @@ class IOrgForm(FieldAccessForm):
                     'delinquent'
                 )
             )
-        readOnly = 'rw'
+        read_only = 'rw'
         instance = kwargs['instance']
         if instance is not None and instance.locked is True:
-            readOnly = 'r'
+            read_only = 'r'
         tabs.extend([
             Tab(
                 'Contact',
-                Field('name', css_class=readOnly),
+                Field('name', css_class=read_only),
                 'exec_email',
                 'address',
                 Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
@@ -562,6 +560,9 @@ class InternalEventForm2019(FieldAccessForm):
                 'location',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
+                HTML('<div style="width: 50%">'),
+                'max_crew',
+                HTML('</div>'),
                 'billed_in_bulk',
                 'sensitive',
                 'test_event',
@@ -627,7 +628,7 @@ class InternalEventForm2019(FieldAccessForm):
         edit_descriptions = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_text', instance),
             enable=('event_name', 'location', 'description',
-                    'lighting_reqs', 'sound_reqs', 'proj_reqs', 'otherservice_reqs')
+                    'lighting_reqs', 'sound_reqs', 'proj_reqs', 'otherservice_reqs', 'max_crew')
         )
 
         change_owner = FieldAccessLevel(
@@ -661,13 +662,12 @@ class InternalEventForm2019(FieldAccessForm):
         )
 
         survey_edit = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.view_posteventsurvey') and \
-                                   (instance is None or not instance.survey_sent),
-            enable=('send_survey',)
+            lambda user, instance: user.has_perm('events.view_posteventsurveyresults') and \
+                                   (instance is None or not instance.survey_sent), enable=('send_survey',)
         )
 
         survey_view = FieldAccessLevel(
-            lambda user, instance: not user.has_perm('events.view_posteventsurvey'),
+            lambda user, instance: not user.has_perm('events.view_posteventsurveyresults'),
             exclude=('send_survey',)
         )
 
@@ -675,10 +675,10 @@ class InternalEventForm2019(FieldAccessForm):
         model = Event2019
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org',
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
-                  'datetime_end', 'sensitive', 'test_event', 'entered_into_workday', 'send_survey')
+                  'datetime_end', 'sensitive', 'test_event', 'entered_into_workday', 'send_survey', 'max_crew')
         widgets = {
             'description': PagedownWidget(),
-            'internal_notes': PagedownWidget,
+            'internal_notes': PagedownWidget(),
         }
 
     location = GroupedModelChoiceField(
@@ -692,6 +692,8 @@ class InternalEventForm2019(FieldAccessForm):
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
     datetime_start = forms.SplitDateTimeField(initial=timezone.now, label="Event Start")
     datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
+    max_crew = forms.IntegerField(label="Maximum Crew", help_text="Include this to enforce an occupancy limit",
+                                  required=False)
 
 
 class EventReviewForm(forms.ModelForm):
@@ -770,6 +772,9 @@ class InternalReportForm(FieldAccessForm):
     crew_chief = AutoCompleteSelectField('Members', required=False)
 
     class FieldAccess:
+        def __init__(self):
+            pass
+
         avg_user = FieldAccessLevel(
             lambda user, instance: not user.has_perm('events.add_event_report'),
             exclude=('crew_chief',)
@@ -984,7 +989,8 @@ class MultiBillingForm(forms.ModelForm):
         if show_nonbulk_events:
             layout += [
                 HTML(
-                    '<a href="?show_nonbulk_events=false">Switch back to showing only events marked for semester billing</a>')
+                    '<a href="?show_nonbulk_events=false">Switch back to showing only events marked for '
+                    'semester billing</a>')
             ]
         else:
             layout += [
@@ -1077,9 +1083,9 @@ class BillingEmailForm(forms.ModelForm):
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-10'
         self.helper.layout = Layout(
-            HTML('<p class="text-muted">The bill PDF for this event will be attached to the email.'
-                 'The message you type below is not the entire contents of the email; a large "PAY NOW" button'
-                 ' and identifying information about the event being billed will be added to the email below your message.</p>'),
+            HTML('<p class="text-muted">The bill PDF for this event will be attached to the email. The message you '
+                 'type below is not the entire contents of the email; a large "PAY NOW" button and identifying '
+                 'information about the event being billed will be added to the email below your message.</p>'),
             'subject',
             'message',
             'email_to_users',
@@ -1336,7 +1342,6 @@ class CCIForm(forms.ModelForm):
             obj.category
         except Category.DoesNotExist:
             try:
-                obj.service
                 obj.category = obj.service.category
             except Service.DoesNotExist:
                 pass
@@ -1562,7 +1567,10 @@ class PostEventSurveyForm(forms.ModelForm):
                     HTML('<div class="striped">'),
                     'sound_quality',
                     HTML('</div>'),
-                    HTML('<div class="row" style="padding-top: 1%; padding-bottom: 1%; padding-left: 1%"><div class="col-md-4"'),
+                    HTML(
+                        '<div class="row" style="padding-top: 1%; padding-bottom: 1%; padding-left: 1%">'
+                        '<div class="col-md-4">'
+                    ),
                     'work_order_method',
                     HTML('</div></div>'),
                     HTML('<div style="border-bottom: 2px solid gray; padding-bottom: 1%; margin: 0"></div>'),
@@ -1783,6 +1791,147 @@ class WorkshopDatesForm(forms.ModelForm):
     class Meta:
         model = WorkshopDate
         fields = ('workshop', 'date')
+
+
+class CrewCheckinForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        events = kwargs.pop('events')
+        title = kwargs.pop('title')
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal col-md-6 m-auto"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+            HTML('<h2 class="h3">' + title + '</h2><br>'),
+            Field('event'),
+            HTML('<hr>'),
+            FormActions(
+                Submit('save', 'Submit')
+            )
+        )
+        super(CrewCheckinForm, self).__init__(*args, **kwargs)
+
+        options = []
+        for event in events:
+            if event.max_crew:
+                options.append(
+                    (event.pk, " %s (%i spots remaining)" %
+                     (event.event_name, event.max_crew - event.crew_attendance.filter(active=True).count())))
+            else:
+                options.append((event.pk, " %s" % event.event_name))
+
+        self.fields['event'] = forms.ChoiceField(choices=options, label="Select Event", widget=forms.RadioSelect)
+
+
+class CrewCheckoutForm(forms.Form):
+    checkin = forms.SplitDateTimeField(required=True, label="Verify Checkin Time")
+    checkout = forms.SplitDateTimeField(required=True, label="Confirm Checkout Time")
+
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal container"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+            HTML('<br><h2 class="h3">Does this look correct?</h2><p>Review the checkin and checkout times listed '
+                 'below and verify that they are accurate. Once you submit, you will not be able to edit this '
+                 'information.<br><br></p>'),
+            Field('checkin', css_class="control mb-2"),
+            Field('checkout', css_class="control mb-2"),
+            FormActions(
+                Submit('save', 'Confirm')
+            )
+        )
+        super(CrewCheckoutForm, self).__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super(CrewCheckoutForm, self).clean()
+        if cleaned_data['checkout'] > timezone.now():
+            raise ValidationError('Ha, nice try. Unless you\'ve figured out time travel, you cannot submit a '
+                                  'checkout time in the future.')
+
+
+class CheckoutHoursForm(forms.Form):
+    disabled_widget = forms.NumberInput(attrs={'readonly': True, 'step': 0.25})
+    total = forms.DecimalField(label="Total", decimal_places=2, widget=disabled_widget, required=False)
+
+    def __init__(self, *args, **kwargs):
+        categories = kwargs.pop('categories')
+        self.total_hrs = kwargs.pop('total_hrs')
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal container"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        hour_set = Row(css_class="justify-between")
+        self.helper.layout = Layout(
+            HTML('<br><h2 class="h3">Submit Hours</h2><p>If you\'d like to log the hours you have worked, please '
+                 'indicate which services you helped provide.<br><br></p>'),
+            hour_set,
+            HTML('<hr>'),
+            FormActions(
+                Submit('save', 'Submit')
+            )
+        )
+        super(CheckoutHoursForm, self).__init__(*args, **kwargs)
+
+        self.fields['total'].initial = self.total_hrs
+        for category in categories:
+            self.fields['hours_%s' % category.name] = forms.DecimalField(label=category.name, required=False,
+                                                                         min_value=0)
+            hour_set.fields.append(Column('hours_%s' % category.name, css_class="mx-2"))
+        hour_set.fields.append(Column('total', css_class="mx-2"))
+
+    def clean(self):
+        cleaned_data = super(CheckoutHoursForm, self).clean()
+        hour_fields = []
+        for field in self.fields:
+            if "hour" in field:
+                hour_fields.append(field)
+        total = 0
+        for field in hour_fields:
+            if cleaned_data[field]:
+                total += self.cleaned_data[field]
+        if total != self.total_hrs and total > 0:
+            raise ValidationError('Hour totals do not match')
+
+
+class BulkCheckinForm(forms.Form):
+    secure_widget = forms.PasswordInput(attrs={'autofocus': 'autofocus'})
+    id = forms.IntegerField(required=True, label="Scan / Swipe Student ID", widget=secure_widget)
+
+    def __init__(self, *args, **kwargs):
+        event = kwargs.pop('event')
+        result = kwargs.pop('result')
+        user_name = kwargs.pop('user_name')
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal col-md-8 m-auto"
+        self.helper.form_method = 'post'
+        self.helper.form_action = ""
+        output = HTML("")
+        if result == 'checkin-success':
+            output = HTML("<div class='alert alert-success w-75 m-auto'>Welcome " + user_name + "</div>")
+        elif result == 'checkin-fail':
+            output = HTML("<div class='alert alert-danger w-75 m-auto'>Checkin Failed - User is checked into "
+                          "another event</div>")
+        elif result == 'checkin-limit':
+            output = HTML("<div class='alert alert-warning w-100 m-auto'>Checkin Failed - This event has reached its "
+                          "crew member or occupancy limit</div>")
+        elif result == 'checkout-success':
+            output = HTML("<div class='alert alert-success w-75 m-auto'>Bye. Thanks for your help!</div>")
+        elif result == 'fail':
+            output = HTML("<div class='alert alert-danger w-75 m-auto'>Invalid ID</div>")
+        elif result:
+            output = HTML("<div class='alert w-75 m-auto' style='background-color: black; color: white'>"
+                          "An unknown error occurred.</div>")
+        self.helper.layout = Layout(
+            HTML('<h2 class="h6"><strong>Event:</strong> ' + event + '</h2><br>'),
+            Field('id'),
+            FormActions(
+                Submit('save', 'Enter', css_class="d-none")
+            ),
+            Div(output, css_class="mt-4 text-center")
+        )
+        super(BulkCheckinForm, self).__init__(*args, **kwargs)
 
 
 # __        __         _                 _

@@ -497,6 +497,10 @@
                             </td>
                         {% endfor %}
                     </table>
+                    {% if event.max_crew %}
+                    <h3 class="h5">Maximum Crew Limit: {{ event.max_crew }}</h3>
+                    <h3 class="h5">Current Crew Count: {{ crew_count }}</h3>
+                    {% endif %}
                     {% comment %}
                     <a class="btn btn-lg btn-info pull-right" href="{% url "events:add-crew" event.id %}">Modify</a>
                     <h2> Crew </h2>
@@ -545,6 +549,10 @@
                     {% endfor %}
                     {% if event.crew_needing_reports %}
                         <h4> Crew Chiefs Needing Reports </h4>
+                        {% permission request.user has 'events.review_event' %}
+                        <a class="btn btn-info btn-default btn-xs" href="{% url 'events:remindall' id=event.id %}">Remind All</a>
+                        <br><br>
+                        {% endpermission %}
                         <ul>
                         {% for crew in event.crew_needing_reports %}
                             <li>

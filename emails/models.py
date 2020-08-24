@@ -18,10 +18,18 @@ class MeetingNoticeMail(models.Model):
     sent = models.BooleanField(default=False)
 
 
+aliases = (
+    (settings.DEFAULT_TO_ADDR, 'Exec Board'),
+    (settings.EMAIL_TARGET_ACTIVE, 'Active Members'),
+    (settings.EMAIL_TARGET_NEWS, 'LNL News'),
+    (settings.EMAIL_TARGET_W, 'Webmaster')
+)
+
+
 class ServiceAnnounce(models.Model):
     subject = models.CharField(max_length=128)
     message = models.TextField()
-    email_to = 'lnl@wpi.edu'
+    email_to = models.CharField(choices=aliases, max_length=24, default='lnl@wpi.edu')
 
     uuid = models.UUIDField(editable=False, default=uuid.uuid4, blank=True)
 

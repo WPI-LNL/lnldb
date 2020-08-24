@@ -1,0 +1,46 @@
+{% extends 'base_static.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+                <h2> {{ msg }} </h2>
+            {% if helper %}
+                {% crispy form helper %}
+            {% else %}
+                {% crispy form %}
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block extras %}
+{% include "js_datetimepick.tmpl" %}
+{% include "js_phonelimit.tmpl" %}
+<script>
+    $(document).ready(function () {
+        $(".dateinput").datepicker({
+            format: 'yyyy-mm-dd',
+        });
+
+        $(".timeinput").timepicker({
+            minuteStep: 1,
+            showInputs: true,
+            disableFocus: true,
+            showMeridian: true,
+            defaultTime: false,
+        });
+    });
+</script>
+{% if custom_script %}
+    <script>{{ custom_script|safe }}</script>
+{% endif %}
+<style>
+    .padleft {
+    margin-left:65px;
+    }
+    .pushdown {
+    margin-top:5px
+    }
+</style>
+{% endblock %}

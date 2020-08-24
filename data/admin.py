@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.redirects.models import Redirect as BaseRedirect
-from .models import ResizedRedirect, Notification
+from .models import ResizedRedirect, Notification, Extension
 
 
 class RedirectAdmin(admin.ModelAdmin):
@@ -11,3 +11,4 @@ admin.site.index_template = "admin/index.html"
 admin.site.unregister(BaseRedirect)
 admin.site.register(ResizedRedirect, RedirectAdmin)
 admin.site.register(Notification)
+admin.site.register(Extension)

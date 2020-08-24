@@ -2,6 +2,7 @@ import datetime
 import os
 
 from django.conf import settings
+from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Avg, Count, Q
 from django.http import HttpResponse
@@ -9,7 +10,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from events.charts import SurveyVpChart, SurveyCrewChart, SurveyPricelistChart, SurveyLnlChart
-from events.models import BaseEvent, Workshop
+from events.models import BaseEvent, Workshop, CrewAttendanceRecord
 from helpers.challenges import is_officer
 
 
@@ -27,8 +28,7 @@ def index(request):
 def admin(request, msg=None):
     """ admin landing page """
 
-    context = {}
-    context['msg'] = msg
+    context = {'msg': msg}
 
     if settings.LANDING_TIMEDELTA:
         delta = settings.LANDING_TIMEDELTA
@@ -51,8 +51,9 @@ def admin(request, msg=None):
     context['tznow'] = now
 
     # get ongoing events for self-crew feature
-    selfcrew_events = BaseEvent.objects.filter(ccinstances__setup_start__lte=now,
-        datetime_end__gte=(now - datetime.timedelta(hours=3))).exclude(hours__user=request.user).distinct()
+    selfcrew_events = BaseEvent.objects.filter(
+        ccinstances__setup_start__lte=now, datetime_end__gte = (now - datetime.timedelta(hours=3)))\
+        .exclude(hours__user=request.user).distinct()
     context['selfcrew_events'] = selfcrew_events
 
     return render(request, 'admin.html', context)
@@ -86,28 +87,23 @@ def event_search(request):
 
 
 @login_required
-@permission_required('events.view_posteventsurvey', raise_exception=True)
+@permission_required('events.view_posteventsurveyresults', raise_exception=True)
 def survey_dashboard(request):
     now = timezone.now()
     year_ago = now - datetime.timedelta(days=365)
 
-    context = {'chart_vp': SurveyVpChart(), 'chart_crew': SurveyCrewChart(), 'chart_pricelist': SurveyPricelistChart(), 'chart_lnl': SurveyLnlChart()}
-    context['survey_composites'] = []
-    context['wma'] = {
-        'vp': 0,
-        'crew': 0,
-        'pricelist': 0,
-        'overall': 0,
-    }
-    context['num_eligible_events'] = BaseEvent.objects \
-        .filter(approved=True, datetime_start__gte=year_ago, datetime_end__lt=now) \
-        .distinct().count()
+    context = {'chart_vp': SurveyVpChart(), 'chart_crew': SurveyCrewChart(), 'chart_pricelist': SurveyPricelistChart(),
+               'chart_lnl': SurveyLnlChart(), 'survey_composites': [], 'wma': {'vp': 0, 'crew': 0, 'pricelist': 0,
+                                                                               'overall': 0},
+               'num_eligible_events': BaseEvent.objects.filter(approved=True, datetime_start__gte=year_ago,
+                                                               datetime_end__lt=now).distinct().count()}
     events = BaseEvent.objects \
         .filter(approved=True, datetime_start__gte=year_ago, datetime_end__lt=now) \
         .filter(surveys__isnull=False) \
         .distinct()
     context['num_events'] = events.count()
-    context['response_rate'] = 0 if context['num_eligible_events'] == 0 else context['num_events'] / float(context['num_eligible_events']) * 100
+    context['response_rate'] = 0 if context['num_eligible_events'] == 0 else \
+        context['num_events'] / float(context['num_eligible_events']) * 100
     if context['num_events'] > 0:
         vp_denominator = 0
         crew_denominator = 0
@@ -266,3 +262,25 @@ def workshops(request):
                   "Helvetica Neue, Helvetica, Arial, sans-serif;\n} "
     }
     return render(request, 'workshops.html', context)
+
+
+@login_required
+@permission_required('events.view_attendance_records', raise_exception=True)
+def attendance_logs(request):
+
+    def get_checkin_time(data):
+        return data.get('checkin')
+
+    records = []
+    for record in CrewAttendanceRecord.objects.all():
+        obj = {'user': record.user, 'event': record.event, 'checkin': record.checkin, 'checkout': record.checkout}
+        if not record.active and not record.checkout:
+            obj['checkout'] = "UNKNOWN"
+        records.append(obj)
+    records.sort(key=get_checkin_time, reverse=True)
+
+    paginator = Paginator(records, 50)
+    page_number = request.GET.get('page', 1)
+    current_page = paginator.page(page_number)  # TODO: Change when switching to py3 (get_page)
+    context = {'records': current_page, 'title': 'Crew Logs'}
+    return render(request, 'access_log.html', context)

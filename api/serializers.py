@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from events.models import OfficeHour, HourChange
+from events.models import OfficeHour, HourChange, Event2019, CrewAttendanceRecord
 from accounts.models import User
 
 
@@ -46,21 +46,37 @@ class ChangeSerializer(serializers.ModelSerializer):
 
 class NotificationSerializer(serializers.BaseSerializer):
     def to_representation(self, instance):
-        id = "LNLWN-" + str(instance.pk)
-        classType = 2
+        ref_id = "LNLWN-" + str(instance.pk)
+        class_type = 2
         if instance.target == "all" or instance.target == "All":
             if instance.dismissible is True and instance.format == "alert":
-                classType = 2
+                class_type = 2
             else:
-                classType = 1
+                class_type = 1
         elif instance.dismissible is True:
-            classType = 3
+            class_type = 3
         return {
-            'id': id,
+            'id': ref_id,
+            'class': class_type,
             'format': instance.format,
             'type': instance.type,
-            'class': classType,
+            'expires': instance.expires,
             'title': instance.title,
             'message': instance.message,
-            'expires': instance.expires
         }
+
+
+class EventSerializer(serializers.ModelSerializer):
+    location = serializers.CharField(source='location.name')
+    datetime_start = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S%z", read_only=True)
+    datetime_end = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S%z", read_only=True)
+
+    class Meta:
+        model = Event2019
+        fields = ('id', 'event_name', 'description', 'location', 'datetime_start', 'datetime_end',)
+
+
+class AttendanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CrewAttendanceRecord
+        fields = ('user', 'event', 'checkin', 'checkout', 'active')

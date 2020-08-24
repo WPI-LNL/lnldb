@@ -1,0 +1,51 @@
+{% extends 'base_admin.html' %}
+{% load permissionif %}
+
+{% block extras %}
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+{% endblock %}
+
+{% block content %}
+    <h1>Communication Tools</h1>
+    <br>
+    <div class="row text-center">
+        {% if request.user.is_superuser %}
+        <div class="col-md-4">
+            <div class="well" style="cursor: pointer" onclick="window.location.href='{% url 'emails:service-announcement' %}';">
+                <h3>Service Alert</h3>
+                <br>
+                <i class="fas fa-hammer fa-5x"></i>
+                <p><br>Send out a service announcement</p>
+            </div>
+        </div>
+        {% endif %}
+        {% permission request.user has 'emails.send' %}
+        <div class="col-md-4">
+            <div class="well" style="cursor: pointer" onclick="window.location.href='{% url 'emails:sms' %}';">
+                <h3>SMS (User)</h3>
+                <br>
+                <i class="fas fa-sms fa-5x"></i>
+                <p><br>Send a text message</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="well" style="cursor: pointer" onclick="window.location.href='{% url 'emails:sms-active' %}';">
+                <h3>SMS (Active)</h3>
+                <br>
+                <i class="fas fa-sms fa-5x"></i>
+                <p><br>Send a text message to active members</p>
+            </div>
+        </div>
+        {% endpermission %}
+        {% permission request.user has 'events.edit_event_hours' %}
+        <div class="col-md-4">
+            <div class="well" style="cursor: pointer" onclick="window.location.href='{% url 'emails:poke-cc' %}';">
+                <h3>Poke for Crew Chief</h3>
+                <br>
+                <i class="fas fa-envelope fa-5x"></i>
+                <p><br>Request crew chief(s) for an event</p>
+            </div>
+        </div>
+        {% endpermission %}
+    </div>
+{% endblock %}

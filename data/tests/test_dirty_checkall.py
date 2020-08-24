@@ -5,7 +5,7 @@ import importlib
 from django import test
 from django.conf import settings
 from django.contrib.auth.models import Permission
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import override_settings
 
 

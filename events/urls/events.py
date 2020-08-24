@@ -1,6 +1,6 @@
 from django.conf.urls import include, url
 
-from ..views import list as list_views, flow as flow_views, mkedrm as mkedrm_views
+from ..views import list as list_views, flow as flow_views, mkedrm as mkedrm_views, indices
 from pdfs import views as pdf_views
 
 
@@ -114,5 +114,11 @@ urlpatterns = [
         url(r'^(?P<pk>[0-9]+)/dates/$', list_views.workshop_dates, name="dates"),
         url(r'^new/$', list_views.new_workshop, name="add"),
         url(r'^rm/(?P<pk>[0-9]+)/$', list_views.DeleteWorkshop.as_view(), name="delete")
-    ], 'lnldb'), namespace="workshops"))
+    ], 'lnldb'), namespace="workshops")),
+
+    url(r'^crew/self-service/$', flow_views.crew_tracker, name="crew-tracker"),
+    url(r'^crew/checkin/$', flow_views.checkin, name="crew-checkin"),
+    url(r'^crew/checkout/$', flow_views.checkout, name="crew-checkout"),
+    url(r'^crew/bulk/$', flow_views.bulk_checkin, name="crew-bulk"),
+    url(r'^crew/logs/$', indices.attendance_logs, name="crew-logs")
 ]

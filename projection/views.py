@@ -4,6 +4,7 @@ import datetime
 from crispy_forms.layout import Submit
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
+from django.conf import settings
 from django.forms.formsets import formset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
@@ -14,7 +15,7 @@ from helpers.mixins import HasPermMixin, LoginRequiredMixin
 from projection.forms import (BulkCreateForm, BulkUpdateForm, DateEntryFormSetBase, ProjectionistForm,
                               ProjectionistUpdateForm, PITRequestForm, PITRequestAdminForm, PITFormset)
 from projection.models import PITLevel, Projectionist, PitRequest
-from emails.generators import PITRequestEmailGenerator
+from emails.generators import GenericEmailGenerator
 
 
 @login_required
@@ -227,9 +228,11 @@ def send_request_notification(form, update=False):
               pit + "<br><strong>Requested Date:</strong> " + requested_date + \
               "<br><br><a href='https://lnl.wpi.edu" + reverse("projection:pit-schedule") + "'>Review</a>"
     if update:
-        email = PITRequestEmailGenerator(subject="PIT Request Updated", body=message, context=message_context)
+        email = GenericEmailGenerator(subject="PIT Request Updated", to_emails=settings.EMAIL_TARGET_HP, body=message,
+                                      context=message_context)
     else:
-        email = PITRequestEmailGenerator(body=message, context=message_context)
+        email = GenericEmailGenerator(subject="New PIT Request", to_emails=settings.EMAIL_TARGET_HP, body=message,
+                                      context=message_context)
     email.send()
 
 
@@ -340,8 +343,8 @@ def manage_pit_request(request, id):
                       + reverse("projection:edit-request", args=[id]) + \
                       "'>Reschedule</a><br><a href='https://lnl.wpi.edu" + \
                       reverse("projection:cancel-request", args=[id]) + "'>Cancel</a>"
-            email = PITRequestEmailGenerator(to_emails=user, subject="PIT Scheduled", body=message,
-                                             context=message_context, reply_to=["lnl-hp@wpi.edu"])
+            email = GenericEmailGenerator(to_emails=user, subject="PIT Scheduled", body=message,
+                                          context=message_context, reply_to=[settings.EMAIL_TARGET_HP])
             if form.instance.approved is True:
                 email.send()
             return HttpResponseRedirect(reverse("projection:pit-schedule"))

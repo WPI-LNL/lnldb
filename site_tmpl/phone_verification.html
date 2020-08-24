@@ -1,0 +1,31 @@
+{% extends 'base_static.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="col-md-7" style="margin: 0 auto">
+    {% if not missing and not sent %}
+        <p>Two-factor authentication is required for this application. A verification code will be sent to {{ phone }}.
+            If this looks correct, click "Continue".<br><br></p>
+        {% if helper %}
+            {% crispy form helper %}
+        {% else %}
+            {% crispy form %}
+        {% endif %}
+    {% elif missing %}
+        <h2 class="h5">Two-factor authentication is required for this application. Enter your phone number and select your
+            cellular carrier below to receive your one-time passcode.<br><br></h2>
+        {% if helper %}
+            {% crispy form helper %}
+        {% else %}
+            {% crispy form %}
+        {% endif %}
+        <p><span class="small">By clicking "Continue", you agree to receive electronic (SMS) text messages from WPI Lens and
+            Lights in accordance with our <a href="/legal/privacy/">Privacy Policy</a>. You can change these settings at any
+            time by visiting your profile page. Messaging and data rates may apply.</span></p>
+    {% else %}
+        <h2 class="h4">Check your messages and enter the 6-digit code when prompted by the application.</h2><p class="small">
+        <br><br>It may take a few minutes to receive your code. If you do not receive a code, ensure that you have entered
+        your phone number and carrier information correctly and try again. This code will expire in 10 minutes.</p>
+    {% endif %}
+</div>
+{% endblock %}

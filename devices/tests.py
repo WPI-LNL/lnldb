@@ -78,7 +78,7 @@ class LaptopTestCase(ViewTestCase):
         response = {'oldUserPassword': 'User', 'oldAdminPassword': 'Admin'}
 
         resp = self.client.post(reverse("laptops:rotate-passwords"), json.dumps(data), content_type='application/json')
-        self.assertEqual(resp.content, json.dumps(response))
+        self.assertEqual(resp.content, json.dumps(response).encode('utf-8'))
         laptop = models.Laptop.objects.get(name="Test Laptop")
         self.assertEqual(laptop.user_password, 'NewPass')
         self.assertEqual(laptop.admin_password, 'OtherNewPass')
@@ -206,12 +206,12 @@ class MDMTestCase(ViewTestCase):
     def test_mdm_list(self):
         self.setup()
         # User should not have permission by default
-        self.assertEqual(self.client.get(reverse("mdm:list")).status_code, 403)
+        self.assertOk(self.client.get(reverse("mdm:list")), 403)
 
         permission = Permission.objects.get(codename="manage_mdm")
         self.user.user_permissions.add(permission)
 
-        self.assertEqual(self.client.get(reverse("mdm:list")).status_code, 200)
+        self.assertOk(self.client.get(reverse("mdm:list")))
 
     def test_install_client(self):
         # User should not have permission by default
@@ -231,7 +231,7 @@ class MDMTestCase(ViewTestCase):
         self.setup()
 
         # GET request should not be allowed
-        self.assertEqual(self.client.get(reverse("mdm:start-enrollment")).status_code, 405)
+        self.assertOk(self.client.get(reverse("mdm:start-enrollment")), 405)
 
         # Example with existing computer
         data = {
@@ -257,8 +257,8 @@ class MDMTestCase(ViewTestCase):
         resp = self.client.post(reverse("mdm:start-enrollment"), json.dumps(data), content_type="application/json")
         invalid_resp = self.client.post(reverse("mdm:start-enrollment"), json.dumps(invalid_data),
                                         content_type="application/json")
-        self.assertEqual(resp.content, json.dumps(response))
-        self.assertEqual(invalid_resp.content, json.dumps(invalid_response))
+        self.assertEqual(resp.content, json.dumps(response).encode('utf-8'))
+        self.assertEqual(invalid_resp.content, json.dumps(invalid_response).encode('utf-8'))
         self.laptop.refresh_from_db()
         self.assertEqual(self.laptop.serial, 'ABCD1234EFG567')
         self.assertEqual(self.laptop.last_ip, '192.168.1.2')
@@ -274,7 +274,7 @@ class MDMTestCase(ViewTestCase):
         response = {'next': '/mdm/enrollment/3/'}
 
         resp = self.client.post(reverse("mdm:start-enrollment"), json.dumps(data), content_type="application/json")
-        self.assertEqual(resp.content, json.dumps(response))
+        self.assertEqual(resp.content, json.dumps(response).encode('utf-8'))
         laptop = models.Laptop.objects.all().get(name="New-Computer")
         self.assertEqual(laptop.serial, '987654321CBA')
         self.assertEqual(laptop.last_ip, '192.168.1.3')
@@ -282,12 +282,12 @@ class MDMTestCase(ViewTestCase):
     def test_complete_enrollment(self):
         self.setup()
         # User should not have permission by default
-        self.assertEqual(self.client.get(reverse("mdm:enroll", args=[2])).status_code, 403)
+        self.assertOk(self.client.get(reverse("mdm:enroll", args=[2])), 403)
 
         permission = Permission.objects.get(codename="manage_mdm")
         self.user.user_permissions.add(permission)
 
-        self.assertEqual(self.client.get(reverse("mdm:enroll", args=[2])).status_code, 200)
+        self.assertOk(self.client.get(reverse("mdm:enroll", args=[2])))
 
         # Passing an argument of 0 should throw permission denied (token was likely invalid on initial contact)
         self.assertOk(self.client.get(reverse("mdm:enroll", args=[0])), 403)
@@ -357,7 +357,7 @@ class MDMTestCase(ViewTestCase):
         self.assertOk(self.client.get(reverse("mdm:checkin")), 405)
 
         resp = self.client.post(reverse("mdm:checkin"), json.dumps(data), content_type="application/json")
-        self.assertEqual(resp.content, json.dumps(output_with_profiles))
+        self.assertEqual(resp.content, json.dumps(output_with_profiles).encode('utf-8'))
 
         # Simulate a confirmed install
         profile = models.ConfigurationProfile.objects.get(name="Test")
@@ -367,7 +367,7 @@ class MDMTestCase(ViewTestCase):
         # Check that no more profiles are pending for this device on next checkin
         resp = self.client.post(reverse("mdm:checkin"), json.dumps(data),
                                 content_type="application/json")
-        self.assertEqual(resp.content, json.dumps(output_without_resources))
+        self.assertEqual(resp.content, json.dumps(output_without_resources).encode('utf-8'))
 
         # Prepare for removal
         models.InstallationRecord.objects.create(profile=profile, device=self.laptop2, active=True, version="RM")
@@ -376,7 +376,7 @@ class MDMTestCase(ViewTestCase):
 
         # Check that profile is pending for removal this time
         resp = self.client.post(reverse("mdm:checkin"), json.dumps(data), content_type="application/json")
-        self.assertEqual(resp.content, json.dumps(output_remove_profiles))
+        self.assertEqual(resp.content, json.dumps(output_remove_profiles).encode('utf-8'))
 
         # TODO: Assign app to laptop
 
@@ -413,7 +413,7 @@ class MDMTestCase(ViewTestCase):
         # Process installed profiles
         resp = self.client.post(reverse("mdm:confirm-install"), json.dumps(data_install_profile),
                                 content_type="application/json")
-        self.assertEqual(resp.content, json.dumps({'status': 200}))
+        self.assertEqual(resp.content, json.dumps({'status': 200}).encode('utf-8'))
 
         self.assertNotIn(profile, self.laptop2.pending.all())
         self.assertIn(profile, self.laptop2.installed.all())
@@ -431,7 +431,7 @@ class MDMTestCase(ViewTestCase):
         # Now test that the profile has been removed correctly
         resp = self.client.post(reverse("mdm:confirm-install"), json.dumps(data_remove_profile),
                                 content_type="application/json")
-        self.assertEqual(resp.content, json.dumps({'status': 200}))
+        self.assertEqual(resp.content, json.dumps({'status': 200}).encode('utf-8'))
 
         self.assertNotIn(profile, self.laptop2.pending.all())
         self.assertNotIn(profile, self.laptop2.installed.all())
@@ -757,7 +757,7 @@ class MDMTestCase(ViewTestCase):
         permission = Permission.objects.get(codename="manage_mdm")
         self.user.user_permissions.add(permission)
 
-        self.assertOk(self.client.get(reverse('mdm:generate')), 200)
+        self.assertOk(self.client.get(reverse('mdm:generate')))
 
         # Test that we can get the form to edit profiles as well (essentially the same view)
         self.assertOk(self.client.get(reverse("mdm:edit", args=[existing])))

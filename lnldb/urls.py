@@ -1,18 +1,13 @@
 import debug_toolbar
-import django.contrib.auth.views
 import permission
 from ajax_select import urls as ajax_select_urls
 from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
 from django.views.generic.base import RedirectView
-import django_saml2_auth.views
 
 import data.views
-from emails.views import MeetingAnnounceCCView, MeetingAnnounceView
-from events.forms import named_event_forms
-from events.views.flow import CCRCreate, CCRDelete, CCRUpdate
-from events.views.indices import admin as db_home
+from events.views.indices import admin as db_home, index
 from events.views.indices import event_search, survey_dashboard, workshops
 from pages.views import page as view_page, recruitment_page
 
@@ -55,9 +50,11 @@ urlpatterns += [
     url(r'', include('accounts.urls', namespace='accounts')),
     url(r'', include('members.urls', namespace='members')),
     url(r'^api/', include('api.urls', namespace='api')),
+    url(r'^mdm/', include('devices.urls.mdm'), name="mdm"),
 
     # special urls
     url(r'^db/$', db_home, name="home"),
+    url(r'^welcome/$', index, name="index"),
     url(r'^db/oldsearch$', event_search, name="events-search"),
     url(r'^db/search$', data.views.search, name="search"),
     url(r'^db/survey-dashboard/$', survey_dashboard, name="survey-dashboard"),
@@ -68,7 +65,9 @@ urlpatterns += [
     url(r'^join/$', recruitment_page, name='recruitment-page'),
     url(r'^workshops/$', workshops, name='workshops'),
 
-    url(r'^mdm/', include('devices.urls.mdm'), name="mdm"),
+    # Download checkin data (hopefully this url can be removed some day)
+    url(r'^downloads/logs/contact-tracing/$', data.views.contact_tracing_logs, name="csv-logs"),
+    url(r'^maintenance/$', data.views.maintenance, name="maintenance"),
 
     # keep old urls
     url(r'^lnadmin/$', RedirectView.as_view(url="/db/", permanent=True)),

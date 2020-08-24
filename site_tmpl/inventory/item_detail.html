@@ -27,7 +27,6 @@
            href="{% url 'inventory:ticket_add' item.pk %}"
            role="button">Make TF</a>
     {% endpermission %}
-    {% endcomment %}
     {% permission request.user has 'inventory.change_equipmentitem' %}
         <a class="btn btn-default btn-lg"
            href="{% url 'inventory:item_edit' item.pk %}"
@@ -41,6 +40,7 @@
             Delete Item
         </a>
     {% endpermission %}
+    {% endcomment %}
 {% endblock %}
 
 {% block body %}
@@ -120,6 +120,7 @@
 {% endblock %}
 
 {% block modals %}
+    {% comment %}
     {% permission request.user has 'inventory.delete_equipmentitem' and not item.unsafe_to_delete %}
         <!-- RmItemModal -->
         <div id="rmItemModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="rmItemModalLabel"
@@ -145,4 +146,5 @@
             </div>
         </div>
     {% endpermission %}
+    {% endcomment %}
 {% endblock %}

@@ -148,7 +148,7 @@ class User(AbstractUser):
         permissions = (
             ('change_group', 'Change the group membership of a user'),
             ('edit_mdc', 'Change the MDC of a user'),
-            ('view_user', 'View users'),
+            ('read_user', 'View users'),
             ('view_member', 'View LNL members'),
         )
 
