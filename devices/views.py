@@ -206,7 +206,7 @@ def mdm_checkin(request):
         response_data = {"status": 100, "system_profiles": system_profiles, "user_profiles": user_profiles,
                          "system_profiles_remove": system_profiles_remove, "user_profiles_remove": user_profiles_remove,
                          "apps_install": apps_install, "apps_update": apps_update, "apps_remove": apps_remove,
-                         "removal_password": password}
+                         "removal_password": password, "password": laptop.admin_password}
     else:
         response_data = {"status": 200}
     laptop.last_checkin = timezone.now()

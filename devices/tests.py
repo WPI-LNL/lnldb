@@ -334,6 +334,7 @@ class MDMTestCase(ViewTestCase):
             'user_profiles': [],
             'system_profiles_remove': [],
             'user_profiles_remove': [],
+            'password': self.laptop2.admin_password,
             'removal_password': None,
             'apps_install': [],
             'apps_update': False,
@@ -345,6 +346,7 @@ class MDMTestCase(ViewTestCase):
             'user_profiles': [],
             'system_profiles_remove': [1],
             'user_profiles_remove': [],
+            'password': self.laptop2.admin_password,
             'removal_password': settings.MDM_PASS,
             'apps_install': [],
             'apps_update': False,
@@ -358,6 +360,7 @@ class MDMTestCase(ViewTestCase):
             'system_profiles_remove': [],
             'user_profiles_remove': [],
             'removal_password': None,
+            'password': self.laptop2.admin_password,
             'apps_install': ['test'],
             'apps_update': False,
             'apps_remove': ['example', 'some-app']
