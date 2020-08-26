@@ -50,6 +50,7 @@ class LaptopPasswordRotation(models.Model):
 class ConfigurationProfile(models.Model):
     name = models.CharField(max_length=100)
     profile = models.FilePathField(path=settings.MEDIA_ROOT + "/profiles/", match=".*\.json$")
+    scope = models.CharField(choices=(('System', 'System'), ('User', 'User')), max_length=6, default='System')
     created_on = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
     pending_install = models.ManyToManyField(Laptop, related_name="pending", blank=True)

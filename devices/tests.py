@@ -181,6 +181,7 @@ class MDMTestCase(ViewTestCase):
             profile=os.path.join(settings.MEDIA_ROOT, 'profiles', 'Test.json'))
         config_profile_copy = models.ConfigurationProfile.objects.create(
             name="Test-2",
+            scope='User',
             profile=os.path.join(settings.MEDIA_ROOT, 'profiles', 'Test-2.json'))
 
         config_profile.pending_install.add(self.laptop2)
@@ -329,16 +330,22 @@ class MDMTestCase(ViewTestCase):
         output_without_resources = {'status': 200}
         output_with_profiles = {
             'status': 100,
-            'profiles_install': [1],
-            'profiles_remove': [],
+            'system_profiles': [1],
+            'user_profiles': [],
+            'system_profiles_remove': [],
+            'user_profiles_remove': [],
+            'removal_password': None,
             'apps_install': [],
             'apps_update': False,
             'apps_remove': []
         }
         output_remove_profiles = {
             'status': 100,
-            'profiles_install': [],
-            'profiles_remove': [1],
+            'system_profiles': [],
+            'user_profiles': [],
+            'system_profiles_remove': [1],
+            'user_profiles_remove': [],
+            'removal_password': settings.MDM_PASS,
             'apps_install': [],
             'apps_update': False,
             'apps_remove': []
@@ -346,8 +353,11 @@ class MDMTestCase(ViewTestCase):
 
         output_with_apps = {
             'status': 100,
-            'profiles_install': [],
-            'profiles_remove': [],
+            'system_profiles': [],
+            'user_profiles': [],
+            'system_profiles_remove': [],
+            'user_profiles_remove': [],
+            'removal_password': None,
             'apps_install': ['test'],
             'apps_update': False,
             'apps_remove': ['example', 'some-app']

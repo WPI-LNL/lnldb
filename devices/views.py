@@ -176,25 +176,37 @@ def mdm_checkin(request):
     data = json.loads(request.body)
     laptop = get_object_or_404(Laptop, api_key_hash=sha256(data['APIKey'].encode('utf-8')).hexdigest(),
                                mdm_enrolled=True)
-    profiles_install = []
-    profiles_remove = []
+    system_profiles = []
+    user_profiles = []
+    system_profiles_remove = []
+    user_profiles_remove = []
+    password = None
     apps_install = []
     apps_update = False
     apps_remove = []
 
     for record in InstallationRecord.objects.filter(device=laptop, profile__isnull=False, version="RM", active=True):
         profile = record.profile
-        profiles_remove.append(profile.pk)
+        if profile.scope == 'System':
+            system_profiles_remove.append(profile.pk)
+        else:
+            user_profiles_remove.append(profile.pk)
+            password = settings.MDM_PASS
 
     for profile in laptop.pending.all():
-        if profile.pk not in profiles_remove:
-            profiles_install.append(profile.pk)
+        if profile.pk not in system_profiles_remove and profile.pk not in user_profiles_remove:
+            if profile.scope == 'System':
+                system_profiles.append(profile.pk)
+            else:
+                user_profiles.append(profile.pk)
 
     # TODO: Add apps
-    if len(profiles_install) > 0 or len(profiles_remove) > 0 or len(apps_install) > 0 or \
-            len(apps_remove) > 0 or apps_update:
-        response_data = {"status": 100, "profiles_install": profiles_install, "profiles_remove": profiles_remove,
-                         "apps_install": apps_install, "apps_update": apps_update, "apps_remove": apps_remove}
+    if len(system_profiles) > 0 or len(user_profiles) > 0 or len(system_profiles_remove) > 0 or \
+            len(user_profiles_remove) > 0 or len(apps_install) > 0 or len(apps_remove) > 0 or apps_update:
+        response_data = {"status": 100, "system_profiles": system_profiles, "user_profiles": user_profiles,
+                         "system_profiles_remove": system_profiles_remove, "user_profiles_remove": user_profiles_remove,
+                         "apps_install": apps_install, "apps_update": apps_update, "apps_remove": apps_remove,
+                         "removal_password": password}
     else:
         response_data = {"status": 200}
     laptop.last_checkin = timezone.now()
@@ -231,7 +243,7 @@ def install_confirmation(request):
     for pk in profiles_removed:
         profile = get_object_or_404(ConfigurationProfile, pk=pk)
         device.pending.remove(profile)
-        record = InstallationRecord.objects.get(profile=profile, device=device)
+        record = InstallationRecord.objects.get(profile=profile, device=device, active=True)
         record.active = False
         record.expires = timezone.now()
         record.save()
@@ -485,6 +497,7 @@ def generate_profile(request, pk=0):
                 name=display_name,
                 profile=os.path.join(settings.MEDIA_ROOT, 'profiles', '{}.json'.format(filename))
             )
+            new_profile.scope = context['data']['scope']
             new_profile.save()
 
             # If 'Save and Redeploy' selected, configure MDM to update all previously installed copies as well
@@ -549,7 +562,6 @@ def mobile_config(request, profile_id, action='Install'):
         context['identifiers'] = load_ids(context['identifiers'])
         context['password'] = settings.MDM_PASS
         if action == 'Uninstall':
-            context['payloads'] = []
             context['data']['auto_remove'] = 'expire'
             context['data']['removal_date'] = None
             context['data']['removal_period'] = 15
