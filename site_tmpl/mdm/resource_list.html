@@ -1,4 +1,5 @@
 {% extends 'base_admin.html' %}
+{% load permissionif %}
 {% block content %}
 <h2> {{ h2 }} </h2>
 <br>
@@ -69,9 +70,13 @@
                         <a class="btn btn-danger" href="{% url "mdm:uninstall-app" device_id app.meta.pk %}">
                             {% if app.status == 'Installed' %}Remove{% else %}Cancel{% endif %}</a>
                     {% else %}
+                        {% permission request.user has 'devices.manage_apps' %}
                         <a class="btn btn-primary" href="{% url "mdm:edit-app" app.meta.pk %}">Edit</a>
                         <a class="btn btn-primary" href="{% url "mdm:app-devices" app.meta.pk %}">Manage Devices</a>
                         <a class="btn btn-danger" href="{% url "mdm:remove-app" app.meta.pk %}">Delete</a>
+                        {% elpermission request.user has 'devices.view_apps' %}
+                        None
+                        {% endpermission %}
                     {% endif %}</td>
                 </tr>
             {% endfor %}
