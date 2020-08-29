@@ -262,10 +262,14 @@ def install_confirmation(request):
         record.expires = timezone.now()
         record.save()
     installed = []
+    bypass = False
     for identifier in apps:
-        app = MacOSApp.objects.filter(identifier=identifier).first()
-        if app:
-            installed.append(app)
+        if identifier == "BYPASS":
+            bypass = True
+        else:
+            app = MacOSApp.objects.filter(identifier=identifier).first()
+            if app:
+                installed.append(app)
     failed = []
     for app in MacOSApp.objects.filter(pending_install=device):
         if app in installed:
@@ -274,7 +278,7 @@ def install_confirmation(request):
             InstallationRecord.objects.create(app=app, device=device, version=app.version)
         else:
             failed.append(app)
-    if len(failed) > 0:
+    if len(failed) > 0 and not bypass:
         details = ""
         for app in failed:
             details += "<li>" + app.name + " (Version " + app.version + ")</li>"

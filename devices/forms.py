@@ -1459,6 +1459,7 @@ class UpdateAppForm(forms.ModelForm):
                                               "Please enter the respective identifier above."
         self.fields['update_available'].help_text = "Check this to instruct the MDM to update this application to " \
                                                     "the newest version"
+        self.fields['version'].help_text = "Include the version to make the application available for deployment"
 
     class Meta:
         model = MacOSApp
