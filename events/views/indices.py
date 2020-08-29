@@ -268,6 +268,8 @@ def workshops(request):
 @permission_required('events.view_attendance_records', raise_exception=True)
 def attendance_logs(request):
 
+    headers = ['User', 'Event', 'Location', 'Checkin', 'Checkout']
+
     def get_checkin_time(data):
         return data.get('checkin')
 
@@ -282,5 +284,5 @@ def attendance_logs(request):
     paginator = Paginator(records, 50)
     page_number = request.GET.get('page', 1)
     current_page = paginator.page(page_number)  # TODO: Change when switching to py3 (get_page)
-    context = {'records': current_page, 'title': 'Crew Logs'}
+    context = {'records': current_page, 'title': 'Crew Logs', 'headers': headers}
     return render(request, 'access_log.html', context)

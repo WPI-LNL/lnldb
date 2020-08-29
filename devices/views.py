@@ -7,6 +7,7 @@ import json, os, datetime, uuid, pytz
 
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.contrib import messages
 from django.conf import settings
 from django.db.models import Q
@@ -18,8 +19,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.cache import never_cache
 
-from .models import Laptop, LaptopPasswordRetrieval, LaptopPasswordRotation, ConfigurationProfile, InstallationRecord
-from .forms import ProfileForm, EnrollmentForm, RemovalForm, ClientForm, AssignmentForm, ProfileRemovalForm
+from .models import Laptop, LaptopPasswordRetrieval, LaptopPasswordRotation, ConfigurationProfile, InstallationRecord, \
+    MacOSApp
+from .forms import ProfileForm, EnrollmentForm, RemovalForm, ClientForm, AssignmentForm, ProfileRemovalForm, \
+    NewAppForm, UpdateAppForm, UninstallAppForm
+from emails.generators import GenericEmailGenerator
 
 
 @login_required
@@ -200,7 +204,16 @@ def mdm_checkin(request):
             else:
                 user_profiles.append(profile.pk)
 
-    # TODO: Add apps
+    for app in laptop.apps_pending.all():
+        apps_install.append(app.identifier)
+
+    for app in laptop.apps_installed.all():
+        if app.update_available:
+            apps_update = True
+
+    for app in laptop.apps_remove.all():
+        apps_remove.append(app.identifier)
+
     if len(system_profiles) > 0 or len(user_profiles) > 0 or len(system_profiles_remove) > 0 or \
             len(user_profiles_remove) > 0 or len(apps_install) > 0 or len(apps_remove) > 0 or apps_update:
         response_data = {"status": 100, "system_profiles": system_profiles, "user_profiles": user_profiles,
@@ -223,6 +236,7 @@ def install_confirmation(request):
                                mdm_enrolled=True)
     profiles_installed = data['installed']
     profiles_removed = data['removed']
+    apps = data['apps']
     for pk in profiles_installed:
         profile = get_object_or_404(ConfigurationProfile, pk=pk)
         timestamp = datetime.datetime.strptime(data['timestamp'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=pytz.UTC)
@@ -247,6 +261,24 @@ def install_confirmation(request):
         record.active = False
         record.expires = timezone.now()
         record.save()
+    installed = []
+    for identifier in apps:
+        app = MacOSApp.objects.filter(identifier=identifier).first()
+        if app:
+            installed.append(app)
+    for app in MacOSApp.objects.filter(pending_install=device):
+        if app in installed:
+            app.pending_install.remove(device)
+            app.installed.add(device)
+            InstallationRecord.objects.create(app=app, device=device, version=app.version)
+    for app in MacOSApp.objects.filter(Q(pending_removal=device) | Q(installed=device)):
+        if app not in installed:
+            app.installed.remove(device)
+            app.pending_removal.remove(device)
+            record = InstallationRecord.objects.get(app=app, device=device, active=True)
+            record.active = False
+            record.expires = timezone.now()
+            record.save()
     return JsonResponse({'status': 200})
 
 
@@ -702,3 +734,290 @@ def remove_profile(request, profile, device=0):
         else:
             context['form'] = form
     return render(request, 'form_crispy.html', context)
+
+
+@login_required
+@permission_required('devices.add_apps', raise_exception=True)
+def add_app(request):
+    context = {}
+    title = "New Application"
+    if not request.user.has_perm('devices.manage_apps'):
+        title = "Request Application"
+
+    if request.method == 'POST':
+        form = NewAppForm(data=request.POST, title=title, request_user=request.user)
+        if form.is_valid():
+            form.save()
+            if title == "Request Application":
+                message = request.user.name + " has requested that you add " + request.POST['name'] + \
+                          " to the list of available applications in the MDM Managed Software Library.<br><br>" \
+                          "Log into the <a href='https://lnl.wpi.edu" + reverse("mdm:list") + "'>MDM Console</a> to " \
+                          "complete the process or deny the request."
+                email = GenericEmailGenerator(subject="New MacBook Software Request", to_emails=settings.EMAIL_TARGET_W,
+                                              body=message)
+                email.send()
+                messages.success(request, "Your request has been submitted. The Webmaster will review it shortly.")
+                return HttpResponseRedirect(reverse("home"))
+            messages.success(request, "Application added successfully!")
+            return HttpResponseRedirect(reverse("mdm:apps"))
+    else:
+        form = NewAppForm(title=title, request_user=request.user)
+    context['form'] = form
+    return render(request, 'form_crispy.html', context)
+
+
+@login_required
+@permission_required('devices.view_apps', raise_exception=True)
+def app_list(request):
+    return render(request, 'mdm/app_list.html', {})
+
+
+@login_required
+@permission_required('devices.manage_apps', raise_exception=True)
+def update_app_info(request, pk):
+    context = {}
+
+    app = get_object_or_404(MacOSApp, pk=pk)
+
+    if request.method == 'POST':
+        form = UpdateAppForm(request.POST, instance=app)
+        if form.is_valid():
+            if request.POST['save'] == "Save Changes":
+                form.save()
+                messages.success(request, "Application info updated successfully")
+            else:
+                app = form.instance
+                return HttpResponseRedirect(reverse("mdm:remove-app", args=[app.pk]))
+            return HttpResponseRedirect(reverse("mdm:apps"))
+    else:
+        form = UpdateAppForm(instance=app)
+    context['form'] = form
+    return render(request, 'form_crispy.html', context)
+
+
+@login_required
+@permission_required('devices.view_apps', raise_exception=True)
+def list_apps(request, pk=0):
+    context = {'items': [], 'resource_type': 'App'}
+
+    if pk == 0:
+        context['h2'] = "Managed Applications"
+        context['header_1'] = "Developer"
+        context['header_2'] = "Version"
+        apps = MacOSApp.objects.all().reverse()
+        if not request.user.has_perm('devices.manage_apps'):
+            apps = apps.filter(version__isnull=False)
+        for app in apps:
+            assignment_count = app.pending_install.count()
+            install_count = app.installed.count()
+            data = {'meta': app, 'assignment_count': assignment_count, 'install_count': install_count}
+            context['items'].append(data)
+    else:
+        if not request.user.has_perm('devices.manage_apps'):
+            raise PermissionDenied
+
+        device = get_object_or_404(Laptop, pk=pk)
+        context['h2'] = "Applications on {}".format(device.name)
+        context['header_1'] = "Developer"
+        context['header_2'] = "Version"
+        context['device_view'] = True
+        context['device_id'] = pk
+        apps = MacOSApp.objects.filter(pending_install__in=[device])
+        apps |= MacOSApp.objects.filter(installed__in=[device])
+        apps |= MacOSApp.objects.filter(pending_removal__in=[device])
+        for app in apps:
+            status = 'Not assigned'
+            for entry in app.installed.all():
+                if entry == device:
+                    status = 'Installed'
+            for entry in app.pending_install.all():
+                if entry == device:
+                    status = 'Assigned'
+            for entry in app.pending_removal.all():
+                if entry == device:
+                    status = 'Pending Removal'
+            data = {'meta': app, 'status': status}
+            context['items'].append(data)
+
+    return render(request, 'mdm/resource_list.html', context)
+
+
+@login_required
+@permission_required('devices.manage_apps', raise_exception=True)
+def list_app_devices(request, pk):
+    context = {}
+    app = get_object_or_404(MacOSApp, pk=pk)
+    to_remove = Laptop.objects.filter(apps_remove__in=[app])
+    pending = Laptop.objects.filter(apps_pending__in=[app])
+    installed = InstallationRecord.objects.filter(app=app, device__apps_installed__in=[app], active=True)
+    context['resource'] = app
+    context['resource_type'] = 'App'
+    context['pending'] = pending
+    context['installed'] = installed
+    context['pending_removal'] = to_remove
+    return render(request, 'mdm/device_list.html', context)
+
+
+@login_required
+@permission_required('devices.manage_apps', raise_exception=True)
+def link_apps(request, device=None, app=None):
+    context = {}
+
+    if device is not None:
+        resource_type = "apps"
+        rel = get_object_or_404(Laptop, pk=device)
+        options = MacOSApp.objects.exclude(Q(pending_install__in=[rel]) | Q(installed__in=[rel]))\
+            .filter(version__isnull=False)
+        # The following message will be displayed if there are no options (doesn't render in the form view)
+        context['message'] = "It seems like there are no more applications to assign to this device."
+    else:
+        resource_type = "devices"
+        rel = get_object_or_404(MacOSApp, pk=app)
+        options = Laptop.objects.filter(mdm_enrolled=True, retired=False) \
+            .exclude(Q(apps_pending__in=[rel]) | Q(apps_installed__in=[rel]))
+        # The following message will be displayed if there are no options (doesn't render in the form view)
+        context['message'] = "It seems like there are no more eligible devices to assign this app to."
+    if request.method == 'POST':
+        form = AssignmentForm(request.POST, type=resource_type, options=options)
+        if form.is_valid():
+            selected = form.cleaned_data.get('options')
+            context['NO_FOOT'] = True
+            if isinstance(rel, Laptop):
+                for option in selected:
+                    app = MacOSApp.objects.get(pk=option)
+                    rel.apps_pending.add(app)
+                if len(selected) == 1:
+                    context['message'] = "1 app was assigned to %s" % rel.name
+                else:
+                    context['message'] = "%s apps were assigned to %s" % (len(selected), rel.name)
+            elif isinstance(rel, MacOSApp):
+                for option in selected:
+                    device = Laptop.objects.get(name=option)
+                    rel.pending_install.add(device)
+                context['message'] = "This application has been assigned to %s new device(s)" % (len(selected))
+            context['title'] = "Success!"
+            context['EXIT_BTN'] = True
+            context['EXIT_URL'] = reverse("mdm:list")
+            return render(request, 'default.html', context)
+    else:
+        if options.count() == 0:
+            context['title'] = "Hmm..."
+            context['NO_FOOT'] = True
+            return render(request, 'default.html', context)
+        form = AssignmentForm(type=resource_type, options=options)
+    context['form'] = form
+    return render(request, 'form_crispy.html', context)
+
+
+@login_required
+@permission_required('devices.manage_apps', raise_exception=True)
+def remove_app(request, app, device=0):
+    context = {}
+    app = get_object_or_404(MacOSApp, pk=app)
+    if device == 0:
+        # Completely remove Application from MDM
+        mode = 'delete'
+        if app.installed.all().count() == 0:
+            app.delete()
+            messages.success(request, "Application was successfully deleted", extra_tags='success')
+            return HttpResponseRedirect(reverse("mdm:apps"))
+        else:
+            context['form'] = UninstallAppForm(mode=mode)
+    else:
+        # Unlink app from device
+        laptop = get_object_or_404(Laptop, pk=device)
+        if app in laptop.apps_pending.all():
+            laptop.apps_pending.remove(app)
+            messages.success(request, "Application is no longer assigned to {}".format(laptop.name),
+                             extra_tags='success')
+            return HttpResponseRedirect(reverse("mdm:apps"))
+
+        # If pending removal reset to installed status
+        if app in laptop.apps_remove.all():
+            laptop.apps_installed.add(app)
+            laptop.apps_remove.remove(app)
+            messages.success(request, "Removal request cancelled", extra_tags='success')
+            return HttpResponseRedirect(reverse("mdm:apps"))
+
+        if app in laptop.apps_installed.all():
+            mode = 'disassociate'
+            context['form'] = UninstallAppForm(mode=mode)
+        else:
+            raise Http404
+
+    # If auto-removal option presented, handle form data
+    if request.method == 'POST':
+        form = UninstallAppForm(request.POST, mode=mode)
+        if form.is_valid():
+            selected = form.cleaned_data['options']
+            if selected == 'auto':
+                if mode == 'disassociate':
+                    laptop.apps_installed.remove(app)
+                    laptop.apps_remove.add(app)
+                else:
+                    # Cancel all pending assignments first
+                    for laptop in app.pending_install.all():
+                        app.pending_install.remove(laptop)
+
+                    # Prepare MDM to remove apps from device
+                    for laptop in app.installed.all():
+                        laptop.apps_installed.remove(app)
+                        laptop.apps_remove.add(app)
+                messages.success(request, "Applications will be removed automatically at next checkin",
+                                 extra_tags='success')
+            else:
+                if mode == 'disassociate':
+                    record = get_object_or_404(InstallationRecord, app=app, device=laptop, active=True)
+                    record.active = False
+                    record.expires = timezone.now()
+                    record.save()
+                    laptop.apps_installed.remove(app)
+                    messages.success(request, "Application successfully removed from {}".format(laptop.name),
+                                     extra_tags='success')
+                else:
+                    for laptop in app.installed.all():
+                        record = get_object_or_404(InstallationRecord, app=app, device=laptop, active=True)
+                        record.active = False
+                        record.expires = timezone.now()
+                        record.save()
+                    app.delete()
+                    messages.success(request, "Application deleted successfully")
+            return HttpResponseRedirect(reverse("mdm:apps"))
+        else:
+            context['form'] = form
+    return render(request, 'form_crispy.html', context)
+
+
+@login_required
+@permission_required('devices.manage_mdm', raise_exception=True)
+def logs(request):
+
+    def get_timestamp(data):
+        return data.get('timestamp')
+
+    events = []
+    for record in InstallationRecord.objects.all():
+        if record.profile:
+            resource = record.profile
+            resource_type = "Configuration Profile"
+        else:
+            resource = record.app
+            resource_type = "Application"
+        if record.active:
+            obj = {'timestamp': record.installed_on,
+                   'details': resource.name + " (" + resource_type + ") was installed on " + record.device.name}
+            events.append(obj)
+        else:
+            obj = {'timestamp': record.expires,
+                   'details': resource.name + " (" + resource_type + ") was removed from " + record.device.name}
+            events.append(obj)
+            obj = {'timestamp': record.installed_on,
+                   'details': resource.name + " (" + resource_type + ") was installed on " + record.device.name}
+            events.append(obj)
+    events.sort(key=get_timestamp, reverse=True)
+
+    paginator = Paginator(events, 50)
+    page_number = request.GET.get('page', 1)
+    current_page = paginator.page(page_number)  # TODO: Change when switching to py3 (get_page)
+    context = {'headers': ['Timestamp', 'Event'], 'title': 'Install Log', 'events': current_page}
+    return render(request, 'access_log.html', context)

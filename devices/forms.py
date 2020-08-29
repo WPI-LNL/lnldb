@@ -4,7 +4,8 @@ from crispy_forms.helper import FormHelper
 from django import forms
 from django.core.exceptions import ValidationError
 from django.shortcuts import reverse
-from .models import Laptop
+from .models import Laptop, MacOSApp
+from data.forms import FieldAccessForm, FieldAccessLevel
 
 
 class EnrollmentForm(forms.ModelForm):
@@ -88,8 +89,6 @@ class RemovalForm(forms.Form):
                                                     "responsibility associated with performing this action.")
     client_removed = forms.BooleanField(required=True, label="MDM Client and plugins removed")
     profiles_removed = forms.BooleanField(required=True)
-    password_rotation = forms.BooleanField(required=True, label="Used the default option or am willing to forgo the "
-                                                                "risk.")
 
     def __init__(self, *args, **kwargs):
         uninstalled = False
@@ -123,13 +122,6 @@ class RemovalForm(forms.Form):
                          'profiles have been removed. You can check for them in the System Preferences. By checking '
                          'the box below, you understand that failing to remove a profile could be permanent.</li>'),
                     'profiles_removed',
-                    HTML('<li>By default, when removing the MDM client, it will disable the password rotation feature.'
-                         ' If instead you opted to keep using this feature outside of a managed configuration, please '
-                         'note that even after you remove this device from the MDM, the device will continue to '
-                         'communicate with the server using the same API Key. As a result, any future attempts to '
-                         're-enroll this device may fail or have unintended consequences. By checking the box below, '
-                         'you acknowledge that you have read and understand this disclosure.</li>'),
-                    'password_rotation',
                     HTML('</ul>'),
                     'agree',
                     css_class="col-md-12"
@@ -1342,6 +1334,9 @@ class AssignmentForm(forms.Form):
         if option_type == 'devices':
             items = [(laptop, laptop.name) for laptop in option_data]
             self.fields['options'].choices = items
+        elif option_type == 'apps':
+            items = [(app.pk, app.name) for app in option_data]
+            self.fields['options'].choices = items
         elif option_type == 'profiles':
             items = [(profile.pk, str(profile)) for profile in option_data]
             self.fields['options'].choices = items
@@ -1398,3 +1393,113 @@ class ProfileRemovalForm(forms.Form):
         if mode == 'disassociate':
             self.fields['options'].choices = [('auto', 'I would like the profile to removed at the next check-in'),
                                               ('manual', 'The profile has already been removed manually')]
+
+
+class NewAppForm(FieldAccessForm):
+    def __init__(self, *args, **kwargs):
+        title = kwargs.pop('title')
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal col-md-6"
+        self.helper.layout = Layout(
+            Fieldset(title, 'name', 'identifier', 'developer', 'version', 'description'),
+            FormActions(Submit('save', "Submit"))
+        )
+        super(NewAppForm, self).__init__(*args, **kwargs)
+
+        self.fields['identifier'].help_text = "A list of applications compatible with the MDM can be found " \
+                                              "<a href='" + reverse("mdm:app-list") + "' target='_blank'>here</a>. " \
+                                              "Please enter the respective identifier above."
+
+    class Meta:
+        model = MacOSApp
+        fields = ['name', 'identifier', 'developer', 'version', 'description']
+
+    class FieldAccess:
+        def __init__(self):
+            pass
+
+        can_request = FieldAccessLevel(
+            lambda user, instance: user.has_perm('devices.view_apps', instance),
+            enable=('name', 'identifier', 'developer'),
+            exclude=('version', 'description')
+        )
+
+        can_edit = FieldAccessLevel(
+            lambda user, instance: user.has_perm('devices.manage_apps', instance),
+            enable=('name', 'identifier', 'developer', 'version', 'description')
+        )
+
+
+class UpdateAppForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal col-md-6"
+        self.helper.layout = Layout(
+            Fieldset(
+                'Application Info',
+                Div(
+                    'name',
+                    'identifier',
+                    'developer',
+                    'version',
+                    'description',
+                    'update_available',
+                    css_class="col-md-12"
+                )
+            ),
+            FormActions(
+                Submit("save", "Delete", css_class="btn-danger"),
+                Submit("save", "Save Changes")
+            )
+        )
+        super(UpdateAppForm, self).__init__(*args, **kwargs)
+
+        self.fields['identifier'].help_text = "A list of applications compatible with the MDM can be found " \
+                                              "<a href='" + reverse("mdm:app-list") + "' target='_blank'>here</a>. " \
+                                              "Please enter the respective identifier above."
+        self.fields['update_available'].help_text = "Check this to instruct the MDM to update this application to " \
+                                                    "the newest version"
+
+    class Meta:
+        model = MacOSApp
+        fields = ['name', 'identifier', 'developer', 'version', 'description', 'update_available']
+
+
+class UninstallAppForm(forms.Form):
+    options = forms.ChoiceField([('auto', 'I would like to have this app removed from all managed devices'),
+                                 ('manual', 'I would like to leave the applications as they are')],
+                                widget=forms.RadioSelect, label="Before continuing, please select one of the following")
+
+    def __init__(self, *args, **kwargs):
+        mode = kwargs.pop('mode')
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal col-md-6"
+        warning = '<p style="font-weight: bold"><span style="color: red">WARNING:</span> This app has been ' \
+                  'deployed to one or more devices. Before removing this app from the MDM, you will need to decide ' \
+                  'what to do with the existing installs.</p><p>There are two ways to handle this:</p><ul>' \
+                  '<li><strong>[Recommended]</strong> The first option is to have the MDM uninstall the app ' \
+                  'automatically. The app will be removed from each device the next time the device checks in. If ' \
+                  'you are currently using a managed device, you can sign out and sign back in to force a checkin.' \
+                  '</li><li>The second option is to leave the applications as they are. Managed applications can be ' \
+                  'removed at any time using the same method you would use to remove any other application.</li></ul>'
+        if mode == 'disassociate':
+            warning = '<p>This app may still be installed on the device. Select an option to continue.</p>'
+        self.helper.layout = Layout(
+            Fieldset(
+                'Remove Application',
+                Div(
+                    HTML(warning),
+                    HTML('<div class="col-md-12">'),
+                    'options',
+                    HTML('</div><br><br>'),
+                    FormActions(
+                        Submit('save', 'Continue')
+                    )
+                )
+            )
+        )
+        super(UninstallAppForm, self).__init__(*args, **kwargs)
+
+        if mode == 'disassociate':
+            self.fields['options'].choices = [('auto', 'I would like the app to be uninstalled at the next check-in'),
+                                              ('manual', 'The app has already been removed manually')]

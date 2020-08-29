@@ -93,7 +93,8 @@ class TargetedSMSForm(SMSForm):
 class PokeCCForm(forms.Form):
     events = forms.MultipleChoiceField()
     message = forms.CharField(widget=forms.Textarea)
-    email_to = forms.ChoiceField(choices=(('lnl-active@wpi.edu', 'Active Members'),))
+    email_to = forms.ChoiceField(choices=(('lnl-active@wpi.edu', 'Active Members'),
+                                          ('gr-lnl-needcc@wpi.edu', 'Need CCs')))
 
     def __init__(self, *args, **kwargs):
         preview = None

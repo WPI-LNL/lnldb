@@ -12,3 +12,4 @@ class LaptopAdmin(admin.ModelAdmin):
 
 admin.site.register(models.Laptop, LaptopAdmin)
 admin.site.register(models.ConfigurationProfile)
+admin.site.register(models.MacOSApp)

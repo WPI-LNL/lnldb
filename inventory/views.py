@@ -632,6 +632,8 @@ def log_access(request, location=None, reason=None):
 @permission_required('inventory.view_access_logs', raise_exception=True)
 def view_logs(request):
 
+    headers = ['Timestamp', 'User', 'Location', 'Reason']
+
     def get_timestamp(data):
         return data.get('timestamp')
 
@@ -645,5 +647,5 @@ def view_logs(request):
     paginator = Paginator(records, 50)
     page_number = request.GET.get('page', 1)
     current_page = paginator.page(page_number)  # TODO: Change when switching to py3 (get_page)
-    context = {'records': current_page, 'title': 'Access Log'}
+    context = {'records': current_page, 'title': 'Access Log', 'headers': headers}
     return render(request, 'access_log.html', context)
