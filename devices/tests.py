@@ -428,18 +428,12 @@ class MDMTestCase(ViewTestCase):
         self.laptop2.mdm_enrolled = True
         self.laptop2.save()
 
-        app = models.MacOSApp.objects.get(name="Test Application")
-        app2 = models.MacOSApp.objects.get(name="Another Application")
-        app.pending_install.add(self.laptop2)
-        app2.pending_removal.add(self.laptop2)
-        models.InstallationRecord.objects.create(app=app2, device=self.laptop2, active=True)
-
         # Check that GET request is not allowed
         self.assertOk(self.client.get(reverse("mdm:confirm-install")), 405)
 
         data_install_profile = {
             'APIKey': self.api_key2,
-            'apps': [],
+            'apps': '',
             'installed': ['%s' % pk],
             'removed': [],
             'timestamp': '2020-01-01T11:59:00Z'
@@ -447,7 +441,7 @@ class MDMTestCase(ViewTestCase):
 
         data_remove_profile = {
             'APIKey': self.api_key2,
-            'apps': [],
+            'apps': '',
             'installed': [],
             'removed': ['%s' % pk],
             'timestamp': '2020-01-01T11:59:00Z'
@@ -455,7 +449,7 @@ class MDMTestCase(ViewTestCase):
 
         data_with_apps = {
             'APIKey': self.api_key2,
-            'apps': ['test'],
+            'apps': 'test',
             'installed': [],
             'removed': [],
             'timestamp': '2020-01-01T11:59:00Z'
@@ -492,6 +486,12 @@ class MDMTestCase(ViewTestCase):
         self.assertNotIn(profile, self.laptop2.installed.all())
 
         self.assertFalse(models.InstallationRecord.objects.get(profile=profile, device=self.laptop2).active)
+
+        app = models.MacOSApp.objects.get(name="Test Application")
+        app2 = models.MacOSApp.objects.get(name="Another Application")
+        app.pending_install.add(self.laptop2)
+        app2.pending_removal.add(self.laptop2)
+        models.InstallationRecord.objects.create(app=app2, device=self.laptop2, active=True)
 
         # Check that apps are accounted for properly (either when removed or installed)
         resp = self.client.post(reverse("mdm:confirm-install"), json.dumps(data_with_apps),
