@@ -236,7 +236,7 @@ def install_confirmation(request):
                                mdm_enrolled=True)
     profiles_installed = data['installed']
     profiles_removed = data['removed']
-    apps = data['apps']
+    apps = data['apps'].split('.')
     for pk in profiles_installed:
         profile = get_object_or_404(ConfigurationProfile, pk=pk)
         timestamp = datetime.datetime.strptime(data['timestamp'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=pytz.UTC)
@@ -266,11 +266,25 @@ def install_confirmation(request):
         app = MacOSApp.objects.filter(identifier=identifier).first()
         if app:
             installed.append(app)
+    failed = []
     for app in MacOSApp.objects.filter(pending_install=device):
         if app in installed:
             app.pending_install.remove(device)
             app.installed.add(device)
             InstallationRecord.objects.create(app=app, device=device, version=app.version)
+        else:
+            failed.append(app)
+    if len(failed) > 0:
+        details = ""
+        for app in failed:
+            details += "<li>" + app.name + " (Version " + app.version + ")</li>"
+        message = "One or more managed applications failed to deploy to <strong>" + device.name + "</strong>. Note " \
+                  "that a small number of applications are incompatible with this method of deployment. If " \
+                  "problems persist, we recommend attempting to deploy this software through Munki instead.<hr><br>" \
+                  "<ul>" + details + "</ul>"
+        email = GenericEmailGenerator(subject="Application Deployment Failed", to_emails=settings.EMAIL_TARGET_W,
+                                      body=message)
+        email.send()
     for app in MacOSApp.objects.filter(Q(pending_removal=device) | Q(installed=device)):
         if app not in installed:
             app.installed.remove(device)
