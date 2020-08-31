@@ -12,7 +12,7 @@
 							<th> Device </th>
 							<th> Type </th>
                             <th> Version </th>
-                            <th> Expires </th>
+                            <th> {% if resource_type == 'Profile' %}Expires{% else %}Installed{% endif %} </th>
                             <th> Actions </th>
 						</tr>
 						{% for record in installed %}
@@ -20,10 +20,12 @@
 							<td>{{ record.device.name }}</td>
 							<td>macOS</td>
                             <td>{{ record.version }}</td>
-                            <td>{{ record.expires|default_if_none:"Never" }}{% if record.expires %}
+                            <td>{% if resource_type == 'Profile' %}{{ record.expires|default_if_none:"Never" }}{% if record.expires %}
                                 {% if today < record.expires and record.expires < expiration_warning %}<br>
-                                    <span class="label label-danger">Expiring Soon</span>{% endif %}{% endif %}</td>
-							<td><a href="{% url "mdm:disassociate" record.device.pk resource.pk %}" class="btn btn-danger">Remove</a></td>
+                                    <span class="label label-danger">Expiring Soon</span>{% endif %}{% endif %}{% else %}
+                                {{ record.installed_on|default_if_none:"Never" }}{% endif %}</td>
+							<td><a href="{% if resource_type == "Profile" %}{% url "mdm:disassociate" record.device.pk resource.pk %}{% else %}{% url "mdm:uninstall-app" record.device.pk resource.pk %}{% endif %}"
+                                   class="btn btn-danger">Remove</a></td>
 						</tr>
 						{% endfor %}
 					</table>
@@ -47,7 +49,8 @@
                                 <td>{{ device.name }}</td>
                                 <td>macOS</td>
                                 <td>{{ device.last_checkin }}</td>
-                                <td><a href="{% url 'mdm:disassociate' device.pk resource.pk %}" class="btn btn-danger">Cancel</a></td>
+                                <td><a href="{% if resource_type == "Profile" %}{% url "mdm:disassociate" device.pk resource.pk %}{% else %}{% url "mdm:uninstall-app" device.pk resource.pk %}{% endif %}"
+                                       class="btn btn-danger">Cancel</a></td>
                             </tr>
 						{% endfor %}
 					</table>
@@ -71,7 +74,8 @@
 							<td>{{ device.name }}</td>
 							<td>macOS</td>
                             <td>{{ device.last_checkin }}</td>
-                            <td><a href="{% url 'mdm:disassociate' device.pk resource.pk %}" class="btn btn-danger">Cancel</a></td>
+                            <td><a href="{% if resource_type == "Profile" %}{% url "mdm:disassociate" device.pk resource.pk %}{% else %}{% url "mdm:uninstall-app" device.pk resource.pk %}{% endif %}"
+                                   class="btn btn-danger">Cancel</a></td>
 						</tr>
 						{% endfor %}
 					</table>
@@ -82,9 +86,8 @@
             <h3>This {{ resource_type|lower }} has not been assigned to any devices</h3>
             {% endif %}
 			<br>
-            {% if resource_type == 'Profile' %}
-                <a href="{% url 'mdm:profile-add-devices' resource.pk %}" class="btn btn-primary">Add Devices</a>
-            {% endif %}
+            <a href="{% if resource_type == 'Profile' %}{% url 'mdm:profile-add-devices' resource.pk %}{% else %}{% url 'mdm:app-link-devices' resource.pk %}{% endif %}"
+               class="btn btn-primary">Add Devices</a>
 		</div>
     </div>
 {% endblock %}

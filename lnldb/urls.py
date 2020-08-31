@@ -50,7 +50,7 @@ urlpatterns += [
     url(r'', include('accounts.urls', namespace='accounts')),
     url(r'', include('members.urls', namespace='members')),
     url(r'^api/', include('api.urls', namespace='api')),
-    url(r'^mdm/', include('devices.urls.mdm'), name="mdm"),
+    url(r'^mdm/', include('devices.urls.mdm', namespace="mdm")),
 
     # special urls
     url(r'^db/$', db_home, name="home"),

@@ -4,38 +4,36 @@
     <br>
     <table class="table table-striped">
         <tr style="background-color: gray; color: white">
-            {% if records.0.timestamp %}
-            <th> Timestamp </th>
-            <th> User </th>
-            <th> Location </th>
-            <th> Reason </th>
-            {% else %}
-            <th> User </th>
-            <th> Event </th>
-            <th> Location </th>
-            <th> Checkin </th>
-            <th> Checkout </th>
-            {% endif %}
+            {% for header in headers %}
+            <th> {{ header }} </th>
+            {% endfor %}
         </tr>
         {% for record in records %}
-                <tr>
-                    {% if record.timestamp %}
-                    <td>{{ record.timestamp }}</td>
-                    <td><a href="{% url "accounts:detail" record.user.pk %}">{{ record.user }}</a></td>
-                    <td>{{ record.location }}</td>
-                        <td>{% if record.reason == "OUT" %}<span class="label label-primary">CHECKOUT</span>{% else %}{{ record.reason }}{% endif %}</td>
-                    {% else %}
-                    <td><a href="{% url "accounts:detail" record.user.pk %}">{{ record.user }}</a></td>
-                    <td>{{ record.event }}</td>
-                    <td>{{ record.event.location }}</td>
-                    <td>{{ record.checkin }}</td>
-                    <td><span {% if record.checkout == "UNKNOWN" %}class="label label-danger"{% endif %}>{{ record.checkout|default_if_none:"--" }}</span></td>
-                    {% endif %}
-                </tr>
+            <tr>
+                {% if record.timestamp %}
+                <td>{{ record.timestamp }}</td>
+                <td><a href="{% url "accounts:detail" record.user.pk %}">{{ record.user }}</a></td>
+                <td>{{ record.location }}</td>
+                    <td>{% if record.reason == "OUT" %}<span class="label label-primary">CHECKOUT</span>{% else %}{{ record.reason }}{% endif %}</td>
+                {% else %}
+                <td><a href="{% url "accounts:detail" record.user.pk %}">{{ record.user }}</a></td>
+                <td>{{ record.event }}</td>
+                <td>{{ record.event.location }}</td>
+                <td>{{ record.checkin }}</td>
+                <td><span {% if record.checkout == "UNKNOWN" %}class="label label-danger"{% endif %}>{{ record.checkout|default_if_none:"--" }}</span></td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+        {% for event in events %}
+            <tr>
+                <td>{{ event.timestamp }}</td>
+                <td>{{ event.details }}</td>
+            </tr>
         {% endfor %}
     </table>
     <div class="row">
         <ul class="pager">
+        {% if records %}
             {% if records.has_previous %}
                 <li class="previous">
                 <a href="?page={{ records.previous_page_number }}">&larr; Newer</a>
@@ -57,6 +55,29 @@
                 <a href="#">Older &rarr;</a>
             {% endif %}
             </li>
+        {% else %}
+             {% if events.has_previous %}
+                <li class="previous">
+                <a href="?page={{ events.previous_page_number }}">&larr; Newer</a>
+            {% else %}
+                <li class="previous disabled">
+                <a href="#" >&larr; Newer</a>
+            {% endif %}
+
+            </li>
+            <li class="current">
+                <a href="#">Page {{ events.number }} of {{ events.paginator.num_pages }}.</a>
+            </li>
+
+            {% if events.has_next %}
+                <li class="next">
+                <a href="?page={{ events.next_page_number }}">Older &rarr;</a>
+            {% else %}
+                <li class="next disabled">
+                <a href="#">Older &rarr;</a>
+            {% endif %}
+            </li>
+        {% endif %}
         </ul>
     </div>
 {% endblock %}

@@ -16,6 +16,7 @@
                         <strong>Last Check-in:</strong> {{ laptop.last_checkin|date:"M d, h:i A" }}<br>{% endif %}
                         {% if laptop.last_ip %}<strong>Last IP Address:</strong> {{ laptop.last_ip }}{% endif %}</p>
                     {% if laptop.mdm_enrolled %}
+                        <a class="btn btn-default btn-block" href="{% url 'mdm:device-apps' laptop.pk %}">Applications</a>
                         <a class="btn btn-default btn-block" href="{% url 'mdm:device-profiles' laptop.pk %}">Profiles</a>
                     {% endif %}
                     {% if not laptop.mdm_enrolled and laptop.serial %}
@@ -35,9 +36,10 @@
             <div class="panel-heading">Management Tools</div>
             <div class="panel-body">
                 <a class="btn btn-primary" href="{% url 'mdm:install-client' %}">New Device</a>
+                <a class="btn btn-primary" href="{% url 'mdm:apps' %}">Manage Apps</a>
                 <a class="btn btn-primary" href="{% url 'mdm:profiles' %}">Manage Profiles</a>
+                <a class="btn btn-primary" href="{% url 'mdm:install-logs' %}">Logs</a>
                 <a class="btn btn-warning" href="https://wpi0.sharepoint.com/:f:/r/sites/gr-lnl-w/Shared%20Documents/Mobile%20Device%20Management?csf=1&web=1&e=Qsh4V3" target="_blank">Documentation</a>
-                <!-- Maybe checkin log? -->
             </div>
         </div>
     </div>

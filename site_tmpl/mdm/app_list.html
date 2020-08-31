@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+		<meta name="robots" content="noindex">
+		<title>MDM Apps</title>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+        <base href="https://formulae.brew.sh">
+		<style>
+		p, h2 {
+			display: none;
+		}
+
+        table {
+            width: 100%;
+        }
+
+		a:hover {
+			text-decoration: none;
+		}
+		</style>
+	</head>
+	<body class="px-4">
+		<br>
+		<div class="container">
+			<h1>Available for Install</h1>
+			<small>If your app is listed below, take note of the ID in blue. This is the app identifier.</small>
+            <br><br>
+            <input id="search" type="text" class="form-control" placeholder="Search"/>
+            <br>
+			<div id="apps" class="table-responsive pt-4"></div>
+		</div>
+	</body>
+	<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+	<script>
+	$('#apps').load('https://formulae.brew.sh/cask/ #default');
+
+	document.addEventListener('keyup', (event) => {
+	    filterList();
+    });
+
+	function filterList(){
+	    query = document.getElementById("search").value;
+	    const rows = document.getElementsByTagName("tr");
+	    for (var i = 0; i < rows.length; i++) {
+	        const id = rows[i].children[0].children[0].innerHTML;
+            const name = rows[i].children[1].innerHTML;
+            console.log(id);
+            console.log(name);
+            if (!id.toString().includes(query) && !name.toString().includes(query) && query != "") {
+                rows[i].style.display = "none";
+            }else{
+                rows[i].removeAttribute("style");
+            }
+        }
+    }
+
+
+	</script>
+</html>

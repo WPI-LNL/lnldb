@@ -1,6 +1,8 @@
 {% extends 'base_admin.html' %}
+{% load permissionif %}
 {% block content %}
 <h2> {{ h2 }} </h2>
+<br>
 {% if items %}
 <div class="table-responsive">
     <table class="table table-striped table-bordered">
@@ -55,21 +57,26 @@
         {% elif resource_type == 'App' %}
             {% for app in items %}
                 <tr>
-                    <td>{{ app.name }}</td>
-                    <td>{{ app.developer }}</td>
-                    <td>{{ app.version }}</td>
+                    <td>{{ app.meta.name }}</td>
+                    <td>{{ app.meta.developer }}</td>
+                    <td>{{ app.meta.version }}</td>
                     {% if device_view %}
                         <td>{{ app.status }}</td>
                     {% else %}
-                        <td>{{ app.assignment_count }} app{{ app.assignment_count|pluralize }}</td>
-                        <td>{{ app.install_count }} app{{ app.install_count|pluralize }}</td>
+                        <td>{{ app.assignment_count }} device{{ app.assignment_count|pluralize }}</td>
+                        <td>{{ app.install_count }} device{{ app.install_count|pluralize }}</td>
                     {% endif %}
                     <td>{% if device_view %}
-                        <a class="btn btn-danger" href="{% url "mdm:disassociate" device_id app.meta.pk %}">Uninstall</a>
+                        <a class="btn btn-danger" href="{% url "mdm:uninstall-app" device_id app.meta.pk %}">
+                            {% if app.status == 'Installed' %}Remove{% else %}Cancel{% endif %}</a>
                     {% else %}
-                        <a class="btn btn-primary" href="{% url "mdm:edit" app.meta.pk %}">Update Version</a>
-                        <a class="btn btn-primary" href="{% url "mdm:assignments" app.meta.pk %}">Manage Devices</a>
-                        <a class="btn btn-danger" href="{% url "mdm:delete" app.meta.pk %}">Delete</a>
+                        {% permission request.user has 'devices.manage_apps' %}
+                        <a class="btn btn-primary" href="{% url "mdm:edit-app" app.meta.pk %}">Edit</a>
+                        <a class="btn btn-primary" href="{% url "mdm:app-devices" app.meta.pk %}">Manage Devices</a>
+                        <a class="btn btn-danger" href="{% url "mdm:remove-app" app.meta.pk %}">Delete</a>
+                        {% elpermission request.user has 'devices.view_apps' %}
+                        None
+                        {% endpermission %}
                     {% endif %}</td>
                 </tr>
             {% endfor %}
@@ -82,10 +89,10 @@
     <br><br>
     {% if device_view %}
         <a class="btn btn-large btn-primary" {% if resource_type == 'Profile' %}href="{% url "mdm:add-profiles" device_id %}"
-        {% elif resource_type == 'App' %}href="{% url "mdm:profiles" %}"{% endif %}>Add {{ resource_type }}s</a>
+        {% elif resource_type == 'App' %}href="{% url "mdm:assign-apps" device_id %}"{% endif %}>Add {{ resource_type }}s</a>
     {% else %}
         <a class="btn btn-large btn-primary" {% if resource_type == 'Profile' %}href="{% url "mdm:generate" %}"
-        {% elif resource_type == 'App' %}href="{% url "mdm:generate" %}"{% endif %}>New {{ resource_type }}</a>
+        {% elif resource_type == 'App' %}href="{% url "mdm:add-app" %}"{% endif %}>New {{ resource_type }}</a>
     {% endif %}
 </div>
 {% endblock %}

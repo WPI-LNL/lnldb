@@ -66,9 +66,34 @@ class ConfigurationProfile(models.Model):
         return self.name
 
 
+class MacOSApp(models.Model):
+    name = models.CharField(max_length=128)
+    identifier = models.CharField(max_length=64, help_text="Homebrew Identifier")
+    version = models.CharField(max_length=36, blank=True, null=True)
+    developer = models.CharField(max_length=64, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    pending_install = models.ManyToManyField(Laptop, related_name="apps_pending", blank=True)
+    pending_removal = models.ManyToManyField(Laptop, related_name="apps_remove", blank=True)
+    installed = models.ManyToManyField(Laptop, related_name="apps_installed", blank=True)
+    update_available = models.BooleanField(blank=True, default=False)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = "managed app"
+        permissions = (
+            ('view_apps', 'View managed laptop applications'),
+            ('add_apps', 'Add apps to library'),
+            ('manage_apps', 'Manage the app library')
+        )
+
+
 class InstallationRecord(models.Model):
     profile = models.ForeignKey(ConfigurationProfile, on_delete=models.CASCADE, null=True, blank=True,
                                 related_name="install_records")
+    app = models.ForeignKey(MacOSApp, on_delete=models.CASCADE, null=True, blank=True, related_name="install_records")
     device = models.ForeignKey(Laptop, on_delete=models.CASCADE, related_name="install_records")
     version = models.CharField(max_length=36, blank=True, null=True)
     installed_on = models.DateTimeField(auto_now_add=True)
@@ -76,4 +101,7 @@ class InstallationRecord(models.Model):
     active = models.BooleanField(default=True)
 
     def __str__(self):
-        return "%s (v%s) on %s" % (str(self.profile), str(self.version), str(self.device))
+        if self.profile:
+            return "%s (v%s) on %s" % (str(self.profile), str(self.version), str(self.device))
+        else:
+            return "%s (v%s) on %s" % (str(self.app), str(self.version), str(self.device))
