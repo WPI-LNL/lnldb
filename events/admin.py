@@ -132,7 +132,7 @@ class OTAdmin(admin.ModelAdmin):
 
 
 class LocAdmin(admin.ModelAdmin):
-    list_filter = ('show_in_wo_form', 'building', 'setup_only')
+    list_filter = ('show_in_wo_form', 'building', 'setup_only', 'holds_equipment')
     actions = [enable_show_in_wo_form, disable_show_in_wo_form, enable_setup_only, disable_setup_only]
 
 

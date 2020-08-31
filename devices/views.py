@@ -290,7 +290,7 @@ def install_confirmation(request):
                                       body=message)
         email.send()
     for app in MacOSApp.objects.filter(Q(pending_removal=device) | Q(installed=device)):
-        if app not in installed:
+        if app not in installed and not bypass:
             app.installed.remove(device)
             app.pending_removal.remove(device)
             record = InstallationRecord.objects.get(app=app, device=device, active=True)
