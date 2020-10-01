@@ -7,14 +7,10 @@ from . import models
 from meetings.models import get_default_email, mtg_attachment_file_name
 from events import models as eventmodels
 from events.tests.generators import UserFactory
-import reverse
 from django.urls.base import reverse
 import logging
 
 logging.disable(logging.WARNING)
-
-# remove
-import pdb;
 
 class MeetingsModelTest(TestCase):
     def setUp(self):
