@@ -3,7 +3,6 @@ from django.urls import reverse
 from django.contrib.auth.models import Permission
 from data.tests.util import ViewTestCase
 from events.tests.generators import LocationFactory
-
 logging.disable(logging.WARNING)
 
 # Remnants of the old inventory system
@@ -79,7 +78,7 @@ logging.disable(logging.WARNING)
 #         obj = form.save()
 #         self.assertIsNone(obj.parent)
 
-
+# Testing the new access system for our storage and office locations
 class AccessRecordTests(ViewTestCase):
     def test_log_access(self):
         location = LocationFactory(name="CC Office", holds_equipment=True)

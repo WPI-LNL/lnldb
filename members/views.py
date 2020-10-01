@@ -13,7 +13,7 @@ from .models import TrainingType, Training, Trainee
 
 
 @login_required
-@permission_required('members.view_training_details')
+@permission_required('members.view_training_details', raise_exception=True)
 @require_GET
 def training_list(request):
     context = {}
@@ -46,7 +46,7 @@ def training_list(request):
 
 
 @login_required
-@permission_required('members.add_training')
+@permission_required('members.add_training', raise_exception=True)
 def enter_training(request):
     if request.method == 'POST':
         form = TrainingForm(request.POST)
@@ -68,7 +68,7 @@ def enter_training(request):
 
 
 @login_required
-@permission_required('members.edit_trainee_notes')
+@permission_required('members.edit_trainee_notes', raise_exception=True)
 def trainee_notes(request, pk):
     trainee = get_object_or_404(Trainee, pk=pk)
     if trainee.training.is_expired():
@@ -86,7 +86,7 @@ def trainee_notes(request, pk):
 
 
 @login_required
-@permission_required('members.revoke_training')
+@permission_required('members.revoke_training', raise_exception=True)
 @require_POST
 def revoke_training(request, pk):
     trainee = get_object_or_404(Trainee, pk=pk)
