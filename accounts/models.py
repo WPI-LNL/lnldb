@@ -167,7 +167,7 @@ class OfficerImg(Model):
     img = ImageField(upload_to=path_and_rename, storage=OverwriteStorage(), verbose_name="Image")
 
     def __str__(self):
-        return self.internal_name
+        return self.officer.name
 
 
 @receiver(signals.post_delete, sender=OfficerImg)

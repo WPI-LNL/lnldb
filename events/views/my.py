@@ -15,8 +15,7 @@ from django.template import loader
 
 from emails.generators import generate_selfservice_notice_email
 from events.forms import (EditHoursForm, InternalReportForm, MKHoursForm,
-                          SelfServiceOrgRequestForm, WorkorderRepeatForm,
-                          PostEventSurveyForm, OfficeHoursForm, OfficeHourUpdateForm)
+                          SelfServiceOrgRequestForm, PostEventSurveyForm, OfficeHoursForm, OfficeHourUpdateForm)
 from events.models import CCReport, BaseEvent, Event, Hours, PostEventSurvey, CCR_DELTA, OfficeHour, HourChange
 from helpers.mixins import LoginRequiredMixin
 from helpers.revision import set_revision_comment
@@ -24,15 +23,8 @@ from helpers.util import curry_class
 
 
 @login_required
-def myacct(request):
-    """ Account Change Page """
-    context = {}
-    return render(request, 'myacct.html', context)
-
-
-@login_required
 def mywo(request):
-    """ List Events (if lnl member will list their events)"""
+    """ List Events (if LNL member will list their events)"""
     context = {}
 
     user = request.user
@@ -58,39 +50,6 @@ def mywo(request):
 
 
 @login_required
-def myworepeat(request, eventid):
-    context = {'msg': "Workorder Repeat"}
-
-    event = get_object_or_404(Event, pk=eventid)
-    if request.method == "POST":
-        f = WorkorderRepeatForm(request.POST, instance=event)
-        if f.is_valid():
-            o = f.save(commit=False)
-            o.contact = request.user
-            # reset some fields for our standard workflow
-            o.id = None  # for copy
-            o.closed = False
-            o.closed_on = None
-            o.closed_by = None
-            o.approved = False
-            o.approved_on = None
-            o.approved_by = None
-            o.cancelled = False
-            o.cancelled_on = None
-            o.cancelled_by = None
-            o.cancelled_reason = None
-            o.save()
-            return render(request, 'wizard_finished.html', context)
-        else:
-            context['formset'] = f
-            return render(request, 'mycrispy.html', context)
-    else:
-        f = WorkorderRepeatForm(instance=event)
-        context['formset'] = f
-        return render(request, 'mycrispy.html', context)
-
-
-@login_required
 def myorgs(request):
     """ List of associated organizations """
     context = {}
@@ -106,9 +65,9 @@ def myorgs(request):
 def myorgform(request):
     """ Organization Creation Request Form"""
     context = {'msg': "Client Request",
-               'extra_text': 'Note: The information being requested here is not your personal information'
+               'extra_text': 'Note: The information being requested here is not your personal information.'
                              ' This information should relate to the client account that is being requested '
-                             'and should only mirror your personal information if you are requesting a '
+                             'and should only mirror your personal information if you are requesting that a '
                              'personal account be made.'}
     if request.method == "POST":
         form = SelfServiceOrgRequestForm(request.POST)
@@ -120,18 +79,13 @@ def myorgform(request):
             email = generate_selfservice_notice_email(email_context)
             email.send()
             return render(request, 'org.service.html', context)
-        else:
-            context['formset'] = form
-            return render(request, 'mycrispy.html', context)
     else:
         form = SelfServiceOrgRequestForm()
-        context['formset'] = form
+    context['formset'] = form
+    return render(request, 'mycrispy.html', context)
 
-        return render(request, 'mycrispy.html', context)
 
-
-# lnl facing
-
+# LNL facing
 @login_required
 def myevents(request):
     """ List Events That Have been CC'd / involved """
@@ -146,28 +100,8 @@ def myevents(request):
     return render(request, 'myevents.html', context)
 
 
-# @login_required
-# def myeventdetail(request, id):
-#     """ Shows detail for users event """
-#     context = {}
-#     event = get_object_or_404(Event, pk=id)
-#
-#     u = request.user
-#     if not event.usercanseeevent(u):
-#         return HttpResponse("You can't see this event, sorry")
-#     else:
-#         context['event'] = event
-#         return render(request, 'eventdetail.html', context)
-
-
 @login_required
 def eventfiles(request, eventid):
-    #	""" Files for an event"""
-    #    context = {}
-    #    event = get_object_or_404(Event, pk=eventid)
-    #
-    #    context['event'] = event
-    #    return render(request, 'myeventfiles.html', context)
     return redirect('/db/events/view/' + eventid + '/#files')
 
 
@@ -246,6 +180,11 @@ def hours_mk(request, eventid):
         return HttpResponse("This event must not have been yours, or is closed")
 
     event = uevent[0].event
+
+    if not isinstance(event, Event):
+        # New event - redirect to bulk update tool instead
+        return HttpResponseRedirect(reverse("my:hours-bulk", args=(event.id,)))
+
     if not event.reports_editable:
         return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
 
@@ -255,13 +194,10 @@ def hours_mk(request, eventid):
         if formset.is_valid():
             formset.save()
             return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
-        else:
-            context['formset'] = formset
-
     else:
         formset = MKHoursForm(event)
 
-        context['formset'] = formset
+    context['formset'] = formset
 
     return render(request, 'mycrispy.html', context)
 
@@ -288,13 +224,10 @@ def hours_edit(request, eventid, userid):
         if formset.is_valid():
             formset.save()
             return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
-        else:
-            context['formset'] = formset
-
     else:
         formset = EditHoursForm(instance=hours)
 
-        context['formset'] = formset
+    context['formset'] = formset
 
     return render(request, 'mycrispy.html', context)
 
@@ -325,13 +258,10 @@ def hours_bulk(request, eventid):
         if formset.is_valid():
             formset.save()
             return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
-        else:
-            context['formset'] = formset
-
     else:
         formset = mk_event_formset(instance=event)
 
-        context['formset'] = formset
+    context['formset'] = formset
 
     return render(request, 'formset_hours_bulk.html', context)
 
@@ -345,8 +275,7 @@ class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
         kwargs = super(PostEventSurveyCreate, self).get_form_kwargs()
         now = timezone.now()
         kwargs['event'] = get_object_or_404(
-            BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now,
-                                                          datetime_end__gt=(now - datetime.timedelta(days=60))),
+            BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now),
             pk=self.kwargs['eventid']
         )
         return kwargs
@@ -354,11 +283,10 @@ class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super(PostEventSurveyCreate, self).get_context_data(**kwargs)
         now = timezone.now()
-        context['CCSS'] = 'survey';
-        context['NO_FOOT'] = True;
+        context['CCSS'] = 'survey'
+        context['NO_FOOT'] = True
         context['event'] = get_object_or_404(
-            BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now,
-                                                          datetime_end__gt=(now - datetime.timedelta(days=60))),
+            BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=now),
             pk=self.kwargs['eventid']
         )
         return context
@@ -372,6 +300,20 @@ class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
                 'message': "If you believe that you are receiving this message in error, please ",
                 'link': "mailto:lnl-vp@wpi.edu",
                 'link_desc': "contact us",
+                'NO_FOOT': True
+            }, request))
+        event = get_object_or_404(
+            BaseEvent.objects.exclude(closed=True).filter(approved=True, datetime_end__lt=timezone.now()),
+            pk=kwargs['eventid']
+        )
+        if event.datetime_end <= (timezone.now() - timezone.timedelta(days=60)):
+            template = loader.get_template('default.html')
+            return HttpResponse(template.render({
+                'title': "Sorry, this link has expired",
+                'message': "Unfortunately the survey for this event is no longer available. If you would still like to "
+                           "share your feedback with us, email ",
+                'link': "mailto:lnl@wpi.edu",
+                'link_desc': "lnl@wpi.edu",
                 'NO_FOOT': True
             }, request))
         return super(PostEventSurveyCreate, self).dispatch(request, *args, **kwargs)
@@ -395,7 +337,7 @@ def survey_success(request):
     template = loader.get_template('default.html')
     return HttpResponse(template.render({
         'title': "Thank you!",
-        'message': "Your response has been recorded. If you have any further comments, feel free to shoot us an email at ",
+        'message': "Your response has been recorded. If you have any further comments, feel free to email us at ",
         'link': "mailto:lnl@wpi.edu",
         'link_desc': "lnl@wpi.edu",
         'NO_FOOT': True,
@@ -422,11 +364,7 @@ def office_hours(request):
                 form.instance.officer = user
             formset.save()
             return HttpResponseRedirect(reverse("accounts:detail", args=[user.id]))
-        else:
-            context['formset'] = formset
-
-    else:
-        context['formset'] = formset
+    context['formset'] = formset
 
     return render(request, 'formset_office_hours.html', context)
 
@@ -450,9 +388,6 @@ def hours_update(request):
                 form.instance.officer = user
             formset.save()
             return HttpResponseRedirect(reverse("accounts:detail", args=[user.id]))
-        else:
-            context['formset'] = formset
-    else:
-        context['formset'] = formset
+    context['formset'] = formset
 
     return render(request, 'formset_office_hour_updates.html', context)

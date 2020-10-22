@@ -1,21 +1,26 @@
+import logging
 from django.urls import reverse
-from django.test import TestCase
 from django.utils import timezone
+from django.contrib.auth.models import Permission
+from django.core.files.uploadedfile import SimpleUploadedFile
 from model_mommy import mommy
 
-from ..models import Event, EventCCInstance, OfficeHour, HourChange
-from .generators import EventFactory, OrgFactory, UserFactory
+from data.tests.util import ViewTestCase
+from ..models import EventCCInstance, OfficeHour, HourChange, Category, Lighting, Hours, ServiceInstance
+from .generators import EventFactory, OrgFactory, CCInstanceFactory, Event2019Factory, ServiceFactory
+
+logging.disable(logging.WARNING)
 
 
-class MyViewTest(TestCase):
+class MyViewTest(ViewTestCase):
     def setUp(self):
+        super(MyViewTest, self).setUp()
         self.e = EventFactory.create(event_name="Test Event")
         self.e2 = EventFactory.create(event_name="Other Test Event")
-        self.user = UserFactory.create(password='123')
+        self.e3 = Event2019Factory.create(event_name="2019 Event")
         self.org = OrgFactory.create(user_in_charge=self.user)
         self.org2 = OrgFactory.create()
         self.org2.associated_users.add(self.user)
-        self.client.login(username=self.user.username, password='123')
 
     def test_my_wo_blank(self):
         response = self.client.get(reverse("my:workorders"))
@@ -46,22 +51,218 @@ class MyViewTest(TestCase):
         self.assertContains(response, self.e.event_name)
         # I see the events I submitted
 
+    def test_my_events(self):
+        self.e.submitted_by = self.user
+        self.e.save()
+
+        response = self.client.get(reverse("my:events"))
+        self.assertContains(response, self.e.event_name)
+        # I can see events I've been involved with
+
+    def test_event_files(self):
+        # Will need view_event permission
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertRedirects(self.client.get(reverse("my:event-files", args=[self.e.pk])),
+                             reverse('events:detail', args=[self.e.pk]) + '#files')
+
+    def test_hours_list(self):
+        CCInstanceFactory.create(crew_chief=self.user, event=self.e, setup_start=timezone.now())
+
+        self.assertOk(self.client.get(reverse("my:hours-list", args=[self.e.pk])))
+
+    def test_add_hours(self):
+        CCInstanceFactory.create(crew_chief=self.user, event=self.e, setup_start=timezone.now())
+        CCInstanceFactory.create(crew_chief=self.user, event=self.e3, setup_start=timezone.now())
+        category = Category.objects.create(name="Lighting")
+        l1 = Lighting.objects.create(shortname="L1", longname="Lighting", base_cost=1000.00, addtl_cost=1.00,
+                                     category=category)
+
+        # Check if it is too late
+        self.e.lighting = l1
+        self.e.datetime_end = timezone.now() - timezone.timedelta(days=30)
+        self.e.save()
+
+        self.assertContains(self.client.get(reverse("my:hours-new", args=[self.e.pk])), "Too Late")
+
+        self.e.datetime_end = timezone.now()
+        self.e.save()
+
+        self.assertNotContains(self.client.get(reverse("my:hours-new", args=[self.e.pk])), "Too Late")
+
+        # Check valid post
+        valid_data = {
+            "user": str(self.user.pk),
+            "hours": 5.00,
+            "service": str(l1.pk),
+            "save": "Save Changes"
+        }
+
+        self.assertRedirects(self.client.post(reverse("my:hours-new", args=[self.e.pk]), valid_data),
+                             reverse("my:hours-list", args=[self.e.pk]))
+
+        # Handle new 2019 events
+        self.assertRedirects(self.client.get(reverse("my:hours-new", args=[self.e3.pk])),
+                             reverse("my:hours-bulk", args=[self.e3.pk]))
+
+    def test_edit_hours(self):
+        CCInstanceFactory.create(crew_chief=self.user, event=self.e, setup_start=timezone.now())
+        Hours.objects.create(event=self.e, user=self.user, hours=2.00)
+        category = Category.objects.create(name="Lighting")
+        l1 = Lighting.objects.create(shortname="L2", longname="More Lighting", base_cost=1000.00, addtl_cost=1.00,
+                                     category=category)
+
+        # Check if it is too late
+        self.e.lighting = l1
+        self.e.datetime_end = timezone.now() - timezone.timedelta(days=30)
+        self.e.save()
+
+        self.assertContains(self.client.get(reverse("my:hours-edit", args=[self.e.pk, self.user.pk])), "Too Late")
+
+        self.e.datetime_end = timezone.now()
+        self.e.save()
+
+        self.assertNotContains(self.client.get(reverse("my:hours-edit", args=[self.e.pk, self.user.pk])), "Too Late")
+
+        # Check valid post
+        valid_data = {"hours": 5.00, "save": "Save Changes"}
+
+        self.assertRedirects(self.client.post(reverse("my:hours-edit", args=[self.e.pk, self.user.pk]), valid_data),
+                             reverse("my:hours-list", args=[self.e.pk]))
+
+    def test_hours_bulk(self):
+        CCInstanceFactory.create(crew_chief=self.user, event=self.e, setup_start=timezone.now())
+        CCInstanceFactory.create(crew_chief=self.user, event=self.e3, setup_start=timezone.now())
+        category = Category.objects.create(name="Lighting")
+        l1 = Lighting.objects.create(shortname="L3", longname="A bit of lighting", base_cost=1000.00, addtl_cost=1.00,
+                                     category=category)
+        l2 = ServiceFactory.create(category=category)
+        ServiceInstance.objects.create(service=l2, event=self.e3)
+
+        # Check if it is too late
+        self.e.lighting = l1
+        self.e.datetime_end = timezone.now() - timezone.timedelta(days=30)
+        self.e.save()
+
+        self.assertContains(self.client.get(reverse("my:hours-bulk", args=[self.e.pk])), "Too Late")
+
+        self.e.datetime_end = timezone.now()
+        self.e.save()
+
+        self.assertNotContains(self.client.get(reverse("my:hours-bulk", args=[self.e.pk])), "Too Late")
+
+        # Check valid post
+        event_data = {
+            "hours-TOTAL_FORMS": 1,
+            "hours-INITIAL_FORMS": 0,
+            "hours-MIN_NUM_FORMS": 0,
+            "hours-MAX_NUM_FORMS": 1000,
+            "hours-0-user": str(self.user.pk),
+            "hours-0-hours": 5.00,
+            "hours-0-category": "",
+            "hours-0-service": str(l1.pk),
+            "save": "Save Changes"
+        }
+
+        event2019_data = {
+            "hours-TOTAL_FORMS": 1,
+            "hours-INITIAL_FORMS": 0,
+            "hours-MIN_NUM_FORMS": 0,
+            "hours-MAX_NUM_FORMS": 1000,
+            "hours-0-user": str(self.user.pk),
+            "hours-0-hours": 5.00,
+            "hours-0-category": str(category.pk),
+            "hours-0-service": "",
+            "save": "Save Changes"
+        }
+
+        self.assertRedirects(self.client.post(reverse("my:hours-bulk", args=[self.e.pk]), event_data),
+                             reverse("my:hours-list", args=[self.e.pk]))
+
+        self.assertRedirects(self.client.post(reverse("my:hours-bulk", args=[self.e3.pk]), event2019_data),
+                             reverse("my:hours-list", args=[self.e3.pk]))
+
+    def test_posteventsurvey(self):
+        self.e.approved = True
+        self.e.datetime_end = timezone.now() - timezone.timedelta(days=61)
+        new_org = OrgFactory.create()
+        self.e.org.add(new_org)
+        self.e.save()
+
+        # Check that we get message on expired link
+        self.assertContains(self.client.get(reverse("my:post-event-survey", args=[self.e.pk])), "expired")
+
+        self.e.datetime_end = timezone.now() - timezone.timedelta(hours=1)
+        self.e.save()
+
+        self.assertOk(self.client.get(reverse("my:post-event-survey", args=[self.e.pk])))
+
+        # Check valid survey submission
+        valid_data = {
+            "services_quality": 0,
+            "lighting_quality": 1,
+            "sound_quality": 2,
+            "work_order_method": 3,
+            "work_order_experience": 4,
+            "work_order_ease": 3,
+            "work_order_comments": "",
+            "communication_responsiveness": 2,
+            "pricelist_ux": 1,
+            "setup_on_time": 0,
+            "crew_respectfulness": -1,
+            "price_appropriate": 0,
+            "customer_would_return": 1,
+            "comments": "",
+            "save": "Submit"
+        }
+
+        self.assertRedirects(self.client.post(reverse("my:post-event-survey", args=[self.e.pk]), valid_data),
+                             reverse("my:survey-success"))
+
+        self.assertContains(self.client.get(reverse("my:post-event-survey", args=[self.e.pk])),
+                            "You have already taken this survey")
+
     def test_attach(self):
         # I can get to the attachments page of an event I submitted
         self.e.submitted_by = self.user
-        self.e.closed = False
-        self.e.save()
-
-        response = self.client.get(reverse("my:event-attach", args=[self.e.pk]))
-        self.assertEqual(response.status_code, 200)
-
         self.e.closed = True
         self.e.save()
 
-        response = self.client.get(reverse("my:event-attach", args=[self.e.pk]))
-        self.assertEqual(response.status_code, 302)
+        # Will need view_event permission for redirect
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
 
-        # TODO: check attachments functionality more thoroughly
+        # If closed, redirect to detail page
+        self.assertRedirects(self.client.get(reverse("my:event-attach", args=[self.e.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+
+        self.e.closed = False
+        self.e.save()
+
+        self.assertOk(self.client.get(reverse("my:event-attach", args=[self.e.pk])))
+
+        lighting = Category.objects.create(name="Lighting")
+        l1 = Lighting.objects.create(category=lighting, shortname="LY", longname="Big Lighting",
+                                     base_cost=1.00, addtl_cost=1.00)
+        self.e.lighting = l1
+        self.e.save()
+        CCInstanceFactory(crew_chief=self.user, event=self.e, service=l1)
+
+        valid_data = {
+            "attachments-TOTAL_FORMS": 1,
+            "attachments-INITIAL_FORMS": 0,
+            "attachments-MIN_NUM_FORMS": 0,
+            "attachments-MAX_NUM_FORMS": 1000,
+            "attachments-0-for_service": str(l1.pk),
+            "attachments-0-attachment": SimpleUploadedFile('test.txt', b"some content"),
+            "attachments-0-note": "",
+            "save": "Save Changes"
+        }
+
+        # Check that we can add attachment ok
+        self.assertRedirects(self.client.post(reverse("my:event-attach", args=[self.e.pk]), valid_data),
+                             reverse("my:workorders"))
 
     def test_orgs(self):
         # I see both orgs that I own and orgs I am a member of in My Orgs
@@ -71,8 +272,7 @@ class MyViewTest(TestCase):
 
     def test_org_req_blank(self):
         # check that the request form shows a valid page
-        response = self.client.get(reverse("my:org-request"))
-        self.assertEqual(response.status_code, 200)
+        self.assertOk(self.client.get(reverse("my:org-request")))
 
     def test_org_req_filled(self):
         # check that the request data can be submitted properly
@@ -89,29 +289,26 @@ class MyViewTest(TestCase):
 
         # Check that nothing happens on invalid data
         data['client_name'] = None
-        self.assertEqual(self.client.post(reverse("my:org-request"), data).status_code, 200)
+        self.assertOk(self.client.post(reverse("my:org-request"), data))
 
     def test_cc_report_blank(self):
         mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
-        response = self.client.get(reverse("my:report", args=[self.e.pk]))
-        self.assertEqual(response.status_code, 200)
+        self.assertOk(self.client.get(reverse("my:report", args=[self.e.pk])))
 
     def test_cc_report_error_post(self):
         mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
-        response = self.client.post(reverse("my:report", args=[self.e.pk]),)
-        self.assertEqual(response.status_code, 200)
+        self.assertOk(self.client.post(reverse("my:report", args=[self.e.pk]),))
         self.assertEqual(list(self.e.ccreport_set.filter(crew_chief=self.user)), [])
 
     def test_cc_report_post(self):
         mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
-        response = self.client.post(
+        self.assertRedirects(self.client.post(
             reverse("my:report", args=[self.e.pk]),
             data={
                 'report': "lorem ipsum something or another",
                 'crew_chief': self.user.pk
             }
-        )
-        self.assertEqual(response.status_code, 302)
+        ), reverse("my:events"))
         self.assertIsNotNone(self.e.ccreport_set.get(crew_chief=self.user))
 
     def test_office_hours(self):
@@ -119,21 +316,53 @@ class MyViewTest(TestCase):
                                          hour_end=timezone.now().time())
         hour.save()
         res = self.client.get(reverse("my:office-hours"))
-        self.assertEqual(res.status_code, 200)
+        self.assertOk(res)
 
         formset = res.context['formset']
         self.assertIsNotNone(formset.queryset)
         self.assertTrue(formset.queryset.filter(officer=self.user).exists())
+
+        # Test POST
+        valid_data = {
+            "form-TOTAL_FORMS": 1,
+            "form-INITIAL_FORMS": 0,
+            "form-MIN_NUM_FORMS": 0,
+            "form-MAX_NUM_FORMS": 1000,
+            "form-0-day": 1,
+            "form-0-hour_start": "08:00 AM",
+            "form-0-hour_end": "09:00 AM",
+            "form-0-DELETE": False,
+            "save": "Save Changes"
+        }
+
+        self.assertRedirects(self.client.post(reverse("my:office-hours"), valid_data),
+                             reverse("accounts:detail", args=[self.user.pk]))
 
     def test_hours_update(self):
         update = HourChange.objects.create(officer=self.user, expires=timezone.now(), message="Test")
         update.save()
         res = self.client.get(reverse("my:hours-update"))
-        self.assertEqual(res.status_code, 200)
+        self.assertOk(res)
 
         formset = res.context['formset']
         self.assertIsNotNone(formset.queryset)
         self.assertTrue(formset.queryset.filter(officer=self.user).exists())
+
+        # Test POST
+        valid_data = {
+            "form-TOTAL_FORMS": 1,
+            "form-INITIAL_FORMS": 0,
+            "form-MIN_NUM_FORMS": 0,
+            "form-MAX_NUM_FORMS": 1000,
+            "form-0-message": 1,
+            "form-0-expires_0": "2020-01-01",
+            "form-0-expires_1": "09:00 AM",
+            "form-0-DELETE": False,
+            "save": "Save Changes"
+        }
+
+        self.assertRedirects(self.client.post(reverse("my:hours-update"), valid_data),
+                             reverse("accounts:detail", args=[self.user.pk]))
 
     def test_get_day(self):
         hour = OfficeHour.objects.create(officer=self.user, day=3, hour_start=timezone.now().time(),

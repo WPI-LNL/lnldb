@@ -36,11 +36,9 @@ urlpatterns = [
             name="hours-new"),
         url(r'^(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', views.my.hours_edit,
             name="hours-edit"),
-        url(r'^(?P<eventid>[0-9]+)/survey/$', login_required(views.my.PostEventSurveyCreate.as_view()), name="post-event-survey"),
+        url(r'^(?P<eventid>[0-9]+)/survey/$', login_required(views.my.PostEventSurveyCreate.as_view()),
+            name="post-event-survey"),
         url(r'^survey/success/$', views.my.survey_success, name="survey-success"),
-
-        # TODO: kill this with fire "foo.bar"
-        url(r'^(?P<eventid>[0-9]+)/repeat/$', views.my.myworepeat, name="repeat"),
     ])),
 
 ]

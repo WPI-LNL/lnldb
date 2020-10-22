@@ -15,7 +15,7 @@
         <tr>
             <td>{{ hour.user.get_full_name }}</td>
             <td>{{ hour.hours }}</td>
-            <td>{{ hour.service }}</td>
+            <td>{{ hour.category }}</td>
             <td><a href="{% url "my:hours-edit" event.id hour.user.id %}">Update</a>
         </tr>
     {% endfor %}
