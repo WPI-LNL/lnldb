@@ -43,7 +43,6 @@ urlpatterns += [
     url(r'^db/laptops/', include('devices.urls.laptops', namespace='laptops')),
     url(r'^db/projection/', include('projection.urls', namespace='projection')),
     url(r'^db/events/', include('events.urls.events', namespace='events')),
-    url(r'^workorder-old/', include('events.urls.wizard', namespace='wizard')),
     url(r'^my/', include('events.urls.my', namespace='my')),
     url(r'^list/', include('events.urls.cal', namespace='cal')),
     url(r'^email/', include('emails.urls', namespace='emails')),
