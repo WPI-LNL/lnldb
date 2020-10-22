@@ -78,6 +78,7 @@ logging.disable(logging.WARNING)
 #         obj = form.save()
 #         self.assertIsNone(obj.parent)
 
+
 # Testing the new access system for our storage and office locations
 class AccessRecordTests(ViewTestCase):
     def test_log_access(self):

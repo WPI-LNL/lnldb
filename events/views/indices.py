@@ -52,7 +52,8 @@ def admin(request, msg=None):
 
     # get ongoing events for self-crew feature
     selfcrew_events = BaseEvent.objects.filter(
-        Q(closed=False) & Q(cancelled=False), ccinstances__setup_start__lte=now, datetime_end__gte=(now - datetime.timedelta(hours=3)))
+        Q(closed=False) & Q(cancelled=False), ccinstances__setup_start__lte=now,
+        datetime_end__gte=(now - datetime.timedelta(hours=3))).distinct()
     context['selfcrew_events'] = selfcrew_events
 
     return render(request, 'admin.html', context)

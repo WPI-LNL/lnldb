@@ -6,11 +6,10 @@ from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
-import reversion
 
 from emails.generators import EventEmailGenerator
 from events.forms import InternalEventForm, InternalEventForm2019, ServiceInstanceForm
-from events.models import BaseEvent, Event, Event2019, ServiceInstance
+from events.models import BaseEvent, Event2019, ServiceInstance
 from helpers.revision import set_revision_comment
 from helpers.util import curry_class
 
@@ -44,7 +43,7 @@ def eventnew(request, id=None):
             # calculate whether an email should be sent based on the event information *before* saving the form.
             should_send_email = not instance.test_event
             if should_send_email:
-                bcc=[settings.EMAIL_TARGET_VP]
+                bcc = [settings.EMAIL_TARGET_VP]
                 if instance.has_projection:
                     bcc.append(settings.EMAIL_TARGET_HP)
 
@@ -52,7 +51,7 @@ def eventnew(request, id=None):
             if instance:
                 form = InternalEventForm2019(data=request.POST, request_user=request.user, instance=instance)
             else:
-                form = InternalEventForm2019(data=request.POST, request_user=request.user, instance=Event2019())
+                form = InternalEventForm2019(data=request.POST, request_user=request.user)
         else:
             form = InternalEventForm(data=request.POST, request_user=request.user, instance=instance)
         if is_event2019:
@@ -71,11 +70,13 @@ def eventnew(request, id=None):
                             bcc.append(ccinstance.crew_chief.email)
                     if obj.reviewed:
                         subject = "Reviewed Event Edited"
-                        email_body = "The following event was edited by %s after the event was reviewed for billing." % request.user.get_full_name()
+                        email_body = "The following event was edited by %s after the event was reviewed for billing." \
+                                     % request.user.get_full_name()
                         bcc.append(settings.EMAIL_TARGET_T)
                     elif obj.approved:
                         subject = "Approved Event Edited"
-                        email_body = "The following event was edited by %s after the event was approved." % request.user.get_full_name()
+                        email_body = "The following event was edited by %s after the event was approved." % \
+                                     request.user.get_full_name()
                     else:
                         subject = "Event Edited"
                         email_body = "The following event was edited by %s." % request.user.get_full_name()
@@ -86,9 +87,9 @@ def eventnew(request, id=None):
                             email_body += field_name + ", "
                         email_body = email_body[:-2]
                     # add HP to the email if projection was just added to the event
-                    if obj.has_projection and not settings.EMAIL_TARGET_HP in bcc:
+                    if obj.has_projection and settings.EMAIL_TARGET_HP not in bcc:
                         bcc.append(settings.EMAIL_TARGET_HP)
-                    to_emails=[]
+                    to_emails = []
                     if request.user.email:
                         to_emails.append(request.user.email)
                     email = EventEmailGenerator(event=obj, subject=subject, to_emails=to_emails, body=email_body, bcc=bcc)

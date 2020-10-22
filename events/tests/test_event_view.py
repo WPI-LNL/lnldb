@@ -65,14 +65,99 @@ class EventBasicViewTest(ViewTestCase):
         self.assertOk(self.client.get(reverse("events:detail", args=[self.e.pk])))
         self.assertOk(self.client.get(reverse("events:detail", args=[self.e2.pk])))
 
-    # def test_edit(self):
-    #     self.setup()
-    #     self.assertOk(self.client.get(reverse('events:edit', args=[self.e.pk])))
-    #
-    #     # Bad input
-    #     self.assertOk(self.client.post(reverse('events:edit', args=[self.e.pk])))
-    #
-    #     # TODO: Test POST and perms
+    def test_new_event(self):
+        self.setup()
+        self.assertOk(self.client.get(reverse("events:new")), 403)
+
+        permission = Permission.objects.get(codename="add_raw_event")
+        self.user.user_permissions.add(permission)
+
+        # Will also need the following for adjusting required fields
+        permission = Permission.objects.get(codename="edit_event_times")
+        self.user.user_permissions.add(permission)
+
+        permission = Permission.objects.get(codename="edit_event_text")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:new")))
+
+        building = models.Building.objects.create(name="Fuller Laboratories", shortname="FL")
+        booth = models.Location.objects.create(name="Booth", building=building)
+        category = models.Category.objects.create(name="Lighting")
+        service = ServiceFactory.create(category=category)
+        valid_data = {
+            "event_name": "New Event",
+            "location": str(booth.pk),
+            "description": "A new test event for stuff",
+            "internal_notes": "",
+            "max_crew": 1,
+            "billed_in_bulk": False,
+            "sensitive": False,
+            "test_event": True,
+            "entered_into_workday": False,
+            "send_survey": True,
+            "org": "|",
+            "datetime_setup_complete_0": timezone.now().date(),
+            "datetime_setup_complete_1": timezone.now().time(),
+            "datetime_start_0": timezone.now().date(),
+            "datetime_start_1": timezone.now().time(),
+            "datetime_end_0": timezone.now().date(),
+            "datetime_end_1": timezone.now().time(),
+            "serviceinstance_set-TOTAL_FORMS": 1,
+            "serviceinstance_set-INITIAL_FORMS": 0,
+            "serviceinstance_set-MIN_NUM_FORMS": 0,
+            "serviceinstance_set-MAX_NUM_FORMS": 1000,
+            "serviceinstance_set-0-id": '',
+            "serviceinstance_set-0-service": str(service.pk),
+            "serviceinstance_set-0-detail": "Services for things and stuff",
+            "save": "Save Changes"
+        }
+
+        self.assertRedirects(self.client.post(reverse("events:new"), valid_data), reverse("events:detail", args=[4]))
+
+        self.assertTrue(models.Event2019.objects.filter(event_name="New Event").exists())
+
+    def test_edit(self):
+        self.setup()
+
+        category = models.Category.objects.create(name="Projection")
+        proj = models.Projection.objects.create(longname="Digital Projection", shortname="DP", base_cost=100.00,
+                                                addtl_cost=5.00, category=category)
+        self.e.projection = proj
+        self.e.reviewed = True
+        self.e.save()
+
+        self.assertOk(self.client.get(reverse('events:edit', args=[self.e.pk])), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse('events:edit', args=[self.e.pk])))
+
+        # Bad input
+        self.assertRedirects(self.client.post(reverse('events:edit', args=[self.e.pk])),
+                             reverse('events:detail', args=[self.e.pk]))
+
+        building = models.Building.objects.create(name="Fuller Laboratories", shortname="FL")
+        booth = models.Location.objects.create(name="Booth", building=building)
+        valid_data = {
+            "event_name": "Edited event",
+            "location": str(booth.pk),
+            "description": "A new test event for stuff",
+            "internal_notes": "",
+            "billed_in_bulk": False,
+            "sensitive": False,
+            "test_event": False,
+            "org": "|",
+            "datetime_setup_complete_0": timezone.now().date(),
+            "datetime_setup_complete_1": timezone.now().time(),
+            "datetime_start": timezone.now(),
+            "datetime_end": timezone.now(),
+            "save": "Save Changes"
+        }
+
+        self.assertRedirects(self.client.post(reverse('events:edit', args=[self.e.pk]), valid_data),
+                             reverse('events:detail', args=[self.e.pk]))
 
     def test_cancel(self):
         self.setup()
@@ -1628,12 +1713,77 @@ class EventBasicViewTest(ViewTestCase):
                              reverse("events:awaitingworkday"))
 
 
-class EventListBasicViewTest(TestCase):
+class EventListBasicViewTest(ViewTestCase):
     def setUp(self):
-        self.e = EventFactory.create(event_name="Test Event")
-        self.e2 = EventFactory.create(event_name="Other Test Event")
-        self.user = UserFactory.create(password='123')
-        self.client.login(username=self.user.username, password='123')
+        super(EventListBasicViewTest, self).setUp()
+        self.e = EventFactory.create(event_name="Test Event", sensitive=True,
+                                     datetime_start=timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)),
+                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 01, 01)))
+        self.e2 = EventFactory.create(event_name="Other Event", test_event=True,
+                                      datetime_start=timezone.make_aware(timezone.datetime(2020, 01, 01)),
+                                      datetime_end=timezone.make_aware(timezone.datetime(2020, 02, 01)))
+
+        self.e2019 = Event2019Factory.create(event_name="2019 Event", approved=True,
+                                             datetime_start=timezone.make_aware(timezone.datetime(2020, 01, 01)),
+                                             datetime_end=timezone.make_aware(timezone.datetime(2020, 01, 02)))
+        proj = models.Category.objects.create(name="Projection")
+        models.Category.objects.create(name="Lighting")
+        models.Category.objects.create(name="Sound")
+        service = ServiceFactory.create(category=proj, base_cost=100.00)
+        models.ServiceInstance.objects.create(service=service, event=self.e2019)
+
+    def generic_list(self, url):
+        # Check that page loads ok (should not include either event)
+        resp = self.client.get(reverse(url))
+        self.assertOk(resp)
+        self.assertNotContains(resp, "Test Event")
+        self.assertNotContains(resp, "Other Event")
+
+        # Check that even with proper date range we don't see sensitive or test events unless we have permission
+        self.assertNotContains(self.client.get(reverse(url, args=['2019-12-30', '2020-02-02'])), "Test Event")
+
+        self.e.sensitive = False
+        self.e.save()
+
+        self.assertContains(self.client.get(reverse(url, args=['2019-12-30', '2020-02-02'])), "Test Event")
+
+        self.e.sensitive = True
+        self.e.save()
+
+        # Add view_hidden_event permission
+        permission = Permission.objects.get(codename="view_hidden_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertContains(self.client.get(reverse(url, args=['2019-12-30', '2020-02-02'])), "Test Event")
+
+        self.assertNotContains(self.client.get(reverse(url, args=['2019-12-30', '2020-02-02'])), "Other Event")
+
+        self.e2.test_event = False
+        self.e2.save()
+
+        self.assertContains(self.client.get(reverse(url, args=['2019-12-30', '2020-02-02'])), "Other Event")
+
+        self.e2.test_event = True
+        self.e2.save()
+
+        # Add view_test_event permission
+        permission = Permission.objects.get(codename="view_test_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertContains(self.client.get(reverse(url, args=['2019-12-30', '2020-02-02'])), "Other Event")
+
+        # Test projection cookies
+        resp = self.client.get(reverse(url, args=['2019-12-30', '2020-02-02']) + "?projection=hide")
+        self.assertOk(resp)
+        self.assertNotContains(resp, "2019 Event")
+
+        resp = self.client.get(reverse(url, args=['2019-12-30', '2020-02-02']) + "?projection=only")
+        self.assertOk(resp)
+        self.assertContains(resp, "2019 Event")
+        self.assertNotContains(resp, "Test Event")
+
+        resp = self.client.get(reverse(url, args=['2019-12-30', '2020-02-02']))
+        self.assertRedirects(resp, reverse(url, args=['2019-12-30', '2020-02-02']) + "?projection=only")
 
     def test_public(self):
         response = self.client.get(reverse('cal:list'))
@@ -1650,44 +1800,455 @@ class EventListBasicViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_incoming(self):
-        response = self.client.get(reverse('events:incoming'))
-        self.assertEqual(response.status_code, 200)
+        # By default, user should not have permission to view this page
+        self.assertOk(self.client.get(reverse('events:incoming')), 403)
+
+        permission = Permission.objects.get(codename="approve_event")
+        self.user.user_permissions.add(permission)
+
+        self.e2019.approved = False
+        self.e2019.save()
+
+        # Run generic tests
+        self.generic_list('events:incoming')
+
+    def test_incoming_cal(self):
+        # By default, should not have permission to view
+        self.assertOk(self.client.get(reverse("events:incoming-cal")), 403)
+
+        permission = Permission.objects.get(codename="approve_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:incoming-cal")))
 
     def test_upcoming(self):
-        response = self.client.get(reverse('events:upcoming'))
-        self.assertEqual(response.status_code, 200)
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:upcoming')), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.e.approved = True
+        self.e2.approved = True
+        self.e.save()
+        self.e2.save()
+
+        # Run generic tests
+        self.generic_list('events:upcoming')
 
     def test_findchief(self):
-        response = self.client.get(reverse('events:findchief'))
-        self.assertEqual(response.status_code, 200)
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:findchief')), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.e.approved = True
+        self.e2.approved = True
+        self.e.save()
+        self.e2.save()
+
+        light = models.Category.objects.create(name="Lighting")
+        lighting = models.Lighting.objects.create(category=light, shortname="L1", longname="Lighting", base_cost=20.00,
+                                                  addtl_cost=1.00)
+        self.e.lighting = lighting
+        self.e2.lighting = lighting
+        self.e.save()
+        self.e2.save()
+
+        # Run generic tests
+        self.generic_list('events:findchief')
+
+    def test_chief_cal(self):
+        # By default, should not have permission to view
+        self.assertOk(self.client.get(reverse("events:findchief-cal")), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:findchief-cal")))
 
     def test_open(self):
-        response = self.client.get(reverse('events:open'))
-        self.assertEqual(response.status_code, 200)
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:open')), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.e.approved = True
+        self.e2.approved = True
+        self.e.save()
+        self.e2.save()
+
+        # Run generic tests
+        self.generic_list('events:open')
+
+    def test_open_cal(self):
+        # By default, should not have permission to view
+        self.assertOk(self.client.get(reverse("events:open-cal")), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:open-cal")))
 
     def test_unreviewed(self):
-        response = self.client.get(reverse('events:unreviewed'))
-        self.assertEqual(response.status_code, 200)
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:unreviewed')), 403)
+
+        permission = Permission.objects.get(codename="review_event")
+        self.user.user_permissions.add(permission)
+
+        self.e.approved = True
+        self.e2.approved = True
+        self.e.save()
+        self.e2.save()
+
+        # Run generic tests
+        self.generic_list('events:unreviewed')
+
+    def test_unreviewed_cal(self):
+        # By default, should not have permission to view
+        self.assertOk(self.client.get(reverse("events:unreviewed-cal")), 403)
+
+        permission = Permission.objects.get(codename="review_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:unreviewed-cal")))
 
     def test_unbilled(self):
-        response = self.client.get(reverse('events:unbilled'))
-        self.assertEqual(response.status_code, 200)
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:unbilled')), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        self.e.reviewed = True
+        self.e2.reviewed = True
+        self.e2019.reviewed = True
+        self.e.save()
+        self.e2.save()
+        self.e2019.save()
+
+        # Run generic tests
+        self.generic_list('events:unbilled')
+
+    def test_unbilled_cal(self):
+        # By default, should not have permission to view
+        self.assertOk(self.client.get(reverse("events:unbilled-cal")), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:unbilled-cal")))
 
     def test_unbilled_semester(self):
-        response = self.client.get(reverse('events:unbilled-semester'))
-        self.assertEqual(response.status_code, 200)
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:unbilled-semester')), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        self.e.reviewed = True
+        self.e.billed_in_bulk = True
+        self.e2.reviewed = True
+        self.e2.billed_in_bulk = True
+        self.e2019.reviewed = True
+        self.e2019.billed_in_bulk = True
+        self.e.save()
+        self.e2.save()
+        self.e2019.save()
+
+        # Run generic tests
+        self.generic_list('events:unbilled-semester')
+
+    def test_unbilled_semester_cal(self):
+        # By default, should not have permission to view
+        self.assertOk(self.client.get(reverse("events:unbilled-semester-cal")), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:unbilled-semester-cal")))
 
     def test_paid(self):
-        response = self.client.get(reverse('events:paid'))
-        self.assertEqual(response.status_code, 200)
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:paid')), 403)
 
-    def unpaid(self):
-        response = self.client.get(reverse('events:unpaid'))
-        self.assertEqual(response.status_code, 200)
+        permission = Permission.objects.get(codename="close_event")
+        self.user.user_permissions.add(permission)
 
-    def closed(self):
-        response = self.client.get(reverse('events:closed'))
-        self.assertEqual(response.status_code, 200)
+        models.Billing.objects.create(date_billed=timezone.now().date(), date_paid=timezone.now().date(), event=self.e,
+                                      amount=25.00)
+        models.Billing.objects.create(date_billed=timezone.now().date(), date_paid=timezone.now().date(), event=self.e2,
+                                      amount=300.00)
+        models.Billing.objects.create(date_billed=timezone.now().date(), date_paid=timezone.now().date(),
+                                      event=self.e2019, amount=0.00)
+
+        # Run generic tests
+        self.generic_list('events:paid')
+
+    def test_paid_cal(self):
+        # By default, should not have permission to view
+        self.assertOk(self.client.get(reverse("events:paid-cal")), 403)
+
+        permission = Permission.objects.get(codename="close_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:paid-cal")))
+
+    def test_unpaid(self):
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:unpaid')), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e, amount=25.00)
+        models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2, amount=300.00)
+        models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2019, amount=0.00)
+        self.e.reviewed = True
+        self.e2.reviewed = True
+        self.e2019.reviewed = True
+        self.e.save()
+        self.e2.save()
+        self.e2019.save()
+
+        # Run generic tests
+        self.generic_list('events:unpaid')
+
+    def test_unpaid_cal(self):
+        # By default, should not have permission to view
+        self.assertOk(self.client.get(reverse("events:unpaid-cal")), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:unpaid-cal")))
+
+    def test_awaitingworkday(self):
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:awaitingworkday')), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        # Only works with 2019 events
+        e1 = Event2019Factory.create(event_name="Test Event", sensitive=True, reviewed=True, workday_fund=900,
+                                     datetime_start=timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)),
+                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 01, 01)), worktag="1234")
+        e2 = Event2019Factory.create(event_name="Other Event", test_event=True, reviewed=True, workday_fund=900,
+                                     datetime_start=timezone.make_aware(timezone.datetime(2020, 01, 01)),
+                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 02, 01)), worktag="1234")
+
+        models.Billing.objects.create(date_billed=timezone.now().date(), event=e1, amount=0.00)
+        models.Billing.objects.create(date_billed=timezone.now().date(), event=e2, amount=0.00)
+        models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2019, amount=0.00)
+
+        self.e2019.reviewed = True
+        self.e2019.workday_fund = 900
+        self.e2019.worktag = "1234"
+        self.e2019.save()
+
+        # Run generic tests
+        # Check that page loads ok (should not include either event)
+        resp = self.client.get(reverse("events:awaitingworkday"))
+        self.assertOk(resp)
+        self.assertNotContains(resp, "Test Event")
+        self.assertNotContains(resp, "Other Event")
+
+        # Check that even with proper date range we don't see sensitive or test events unless we have permission
+        self.assertNotContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
+                               "Test Event")
+
+        e1.sensitive = False
+        e1.save()
+
+        self.assertContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
+                            "Test Event")
+
+        e1.sensitive = True
+        e1.save()
+
+        # Add view_hidden_event permission
+        permission = Permission.objects.get(codename="view_hidden_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
+                            "Test Event")
+
+        self.assertNotContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
+                               "Other Event")
+
+        e2.test_event = False
+        e2.save()
+
+        self.assertContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
+                            "Other Event")
+
+        e2.test_event = True
+        e2.save()
+
+        # Add view_test_event permission
+        permission = Permission.objects.get(codename="view_test_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertContains(self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02'])),
+                            "Other Event")
+
+        # Test projection cookies
+        resp = self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02']) +
+                               "?projection=hide")
+        self.assertOk(resp)
+        self.assertNotContains(resp, "2019 Event")
+
+        resp = self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02']) +
+                               "?projection=only")
+        self.assertOk(resp)
+        self.assertContains(resp, "2019 Event")
+        self.assertNotContains(resp, "Test Event")
+
+        resp = self.client.get(reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02']))
+        self.assertRedirects(resp, reverse("events:awaitingworkday", args=['2019-12-30', '2020-02-02']) +
+                             "?projection=only")
+
+    def test_unpaid_workday(self):
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:unpaid-workday')), 403)
+
+        permission = Permission.objects.get(codename="bill_event")
+        self.user.user_permissions.add(permission)
+
+        # Only works with 2019 events
+        e1 = Event2019Factory.create(event_name="Test Event", sensitive=True, reviewed=True, entered_into_workday=True,
+                                     datetime_start=timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)),
+                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 01, 01)))
+        e2 = Event2019Factory.create(event_name="Other Event", reviewed=True, entered_into_workday=True,
+                                     datetime_start=timezone.make_aware(timezone.datetime(2020, 01, 01)),
+                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 02, 01)), test_event=True)
+
+        models.Billing.objects.create(date_billed=timezone.now().date(), event=e1, amount=0.00)
+        models.Billing.objects.create(date_billed=timezone.now().date(), event=e2, amount=0.00)
+        models.Billing.objects.create(date_billed=timezone.now().date(), event=self.e2019, amount=0.00)
+
+        self.e2019.reviewed = True
+        self.e2019.entered_into_workday = True
+        self.e2019.save()
+
+        # Run generic tests
+        # Check that page loads ok (should not include either event)
+        resp = self.client.get(reverse("events:unpaid-workday"))
+        self.assertOk(resp)
+        self.assertNotContains(resp, "Test Event")
+        self.assertNotContains(resp, "Other Event")
+
+        # Check that even with proper date range we don't see sensitive or test events unless we have permission
+        self.assertNotContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
+                               "Test Event")
+
+        e1.sensitive = False
+        e1.save()
+
+        self.assertContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
+                            "Test Event")
+
+        e1.sensitive = True
+        e1.save()
+
+        # Add view_hidden_event permission
+        permission = Permission.objects.get(codename="view_hidden_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
+                            "Test Event")
+
+        self.assertNotContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
+                               "Other Event")
+
+        e2.test_event = False
+        e2.save()
+
+        self.assertContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
+                            "Other Event")
+
+        e2.test_event = True
+        e2.save()
+
+        # Add view_test_event permission
+        permission = Permission.objects.get(codename="view_test_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertContains(self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02'])),
+                            "Other Event")
+
+        # Test projection cookies
+        resp = self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02']) +
+                               "?projection=hide")
+        self.assertOk(resp)
+        self.assertNotContains(resp, "2019 Event")
+
+        resp = self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02']) +
+                               "?projection=only")
+        self.assertOk(resp)
+        self.assertContains(resp, "2019 Event")
+        self.assertNotContains(resp, "Test Event")
+
+        resp = self.client.get(reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02']))
+        self.assertRedirects(resp, reverse("events:unpaid-workday", args=['2019-12-30', '2020-02-02']) +
+                             "?projection=only")
+
+    def test_closed(self):
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:closed')), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.e.closed = True
+        self.e2.closed = True
+        self.e2019.closed = True
+        self.e.save()
+        self.e2.save()
+        self.e2019.save()
+
+        # Run generic tests
+        self.generic_list('events:closed')
+
+    def test_closed_cal(self):
+        # By default, should not have permission to view
+        self.assertOk(self.client.get(reverse("events:closed-cal")), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:closed-cal")))
+
+    def test_all(self):
+        # By default, user should not have permission to view events
+        self.assertOk(self.client.get(reverse('events:all')), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        # Without approve permission, non-approved events won't appear
+        self.e.approved = True
+        self.e2.approved = True
+        self.e2019.approved = True
+        self.e.save()
+        self.e2.save()
+        self.e2019.save()
+
+        # Run generic tests
+        self.generic_list('events:all')
+
+    def test_all_cal(self):
+        # By default, should not have permission to view
+        self.assertOk(self.client.get(reverse("events:all-cal")), 403)
+
+        permission = Permission.objects.get(codename="view_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:all-cal")))
 
 
 class WorkshopTests(ViewTestCase):
@@ -1756,6 +2317,21 @@ class WorkshopTests(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:workshops:dates", args=[workshop.pk])))
+
+        valid_data = {
+            "form-TOTAL_FORMS": 1,
+            "form-INITIAL_FORMS": 0,
+            "form-MIN_NUM_FORMS": 0,
+            "form-MAX_NUM_FORMS": 1000,
+            "form-0-day": 1,
+            "form-0-hour_start": timezone.now().time(),
+            "form-0-hour_end": timezone.now().time(),
+            "form-0-DELETE": False,
+            "save": "Save Changes"
+        }
+
+        self.assertRedirects(self.client.post(reverse("events:workshops:dates", args=[workshop.pk]), valid_data),
+                             reverse("events:workshops:list"))
 
     def test_delete_workshop(self):
         workshop = models.Workshop.objects.create(name="Test Workshop", instructors="John, Peter, Janice",

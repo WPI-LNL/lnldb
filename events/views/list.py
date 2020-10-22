@@ -126,13 +126,13 @@ def paginate_helper(queryset, page, sort=None, count=DEFAULT_ENTRY_COUNT):
 
 
 # currently this function is dead code
-def get_farback_date_range_plus_next_week(delta=180):
-    today = datetime.date.today()
-    end = today + datetime.timedelta(days=7)
-    end = end.strftime('%Y-%m-%d')
-    start = today - datetime.timedelta(days=delta)
-    start = start.strftime('%Y-%m-%d')
-    return start, end
+# def get_farback_date_range_plus_next_week(delta=180):
+#     today = datetime.date.today()
+#     end = today + datetime.timedelta(days=7)
+#     end = end.strftime('%Y-%m-%d')
+#     start = today - datetime.timedelta(days=delta)
+#     start = start.strftime('%Y-%m-%d')
+#     return start, end
 
 
 # helper function to return start and end that go very far into past and future
@@ -149,8 +149,66 @@ def build_redirect(request, **kwargs):
     return HttpResponseRedirect(request.path + '?' + urlencode(kwargs))
 
 
+def filter_events(request, context, events, start, end, prefetch_org=False, prefetch_cc=False, prefetch_billing=False,
+                  hide_unapproved=False, event2019=False):
+    if not request.user.has_perm('events.view_hidden_event'):
+        events = events.exclude(sensitive=True)
+    if not request.user.has_perm('events.view_test_event'):
+        events = events.exclude(test_event=True)
+    if not request.user.has_perm('events.approve_event') and hide_unapproved:
+        events = events.exclude(approved=False)
+    if prefetch_billing:
+        events = events.select_related('location__building').prefetch_related('org')\
+            .prefetch_related('ccinstances__crew_chief')
+    elif prefetch_cc:
+        events = events.select_related('location__building').prefetch_related('org') \
+            .prefetch_related('ccinstances__crew_chief')
+    elif prefetch_org:
+        events = events.prefetch_related('org')
+    else:
+        events = events.select_related('location__building').prefetch_related('org')
+    if event2019:
+        if request.GET.get('projection') == 'hide':
+            events = events.exclude(
+                Q(serviceinstance__service__category__name='Projection') &
+                ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection')
+                   .values_list('name', flat=True))
+            )
+        elif request.GET.get('projection') == 'only':
+            events = events.filter(serviceinstance__service__category__name='Projection')
+    else:
+        if request.GET.get('projection') == 'hide':
+            events = events.exclude(
+                (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) |
+                 Q(serviceinstance__service__category__name='Projection')) &
+                ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection')
+                   .values_list('name', flat=True))
+            )
+        elif request.GET.get('projection') == 'only':
+            events = events.filter(Q(Event___projection__isnull=False) |
+                                   Q(serviceinstance__service__category__name='Projection'))
+    events, context = datefilter(events, context, start, end)
+
+    page = request.GET.get('page')
+    sort = request.GET.get('sort') or 'datetime_start'
+    events = paginate_helper(events, page, sort)
+    return events, context
+
+
+def generate_response(request, context, start, end, time_range_unspecified):
+    context['cols'] = map_fields(context['cols'])  # must use because there are strings
+    response = render(request, 'events.html', context)
+
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
+        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
+        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+    return response
+
+
 # ## EVENT VIEWS
-@login_required()
+@login_required
 @permission_required('events.view_event', raise_exception=True)
 def upcoming(request, start=None, end=None):
     """
@@ -161,7 +219,8 @@ def upcoming(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:upcoming', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:upcoming',
+                                                args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:upcoming', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
@@ -174,28 +233,12 @@ def upcoming(request, start=None, end=None):
         end = today + datetime.timedelta(days=15)
         end = end.strftime('%Y-%m-%d')
 
-    events = BaseEvent.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)).distinct()  # .filter(paid=False)
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('ccinstances__crew_chief')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
-    events, context = datefilter(events, context, start, end)
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort') or 'datetime_start'
-    events = paginate_helper(events, page, sort)
+    events = BaseEvent.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_cc=True)
 
     context['h2'] = "Upcoming Events"
     context['events'] = events
@@ -204,19 +247,10 @@ def upcoming(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('cal:list')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       'crew_chief',
+    context['cols'] = ['event_name', 'org', 'location', 'crew_chief',
                        FakeExtendedField('datetime_start', verbose_name="Starts At"),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
@@ -227,7 +261,8 @@ def incoming(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:incoming', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:incoming', args=(request.COOKIES.get('start'),
+                                                                         request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:incoming', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
@@ -240,28 +275,12 @@ def incoming(request, start=None, end=None):
         end = today + datetime.timedelta(days=365.25)
         end = end.strftime('%Y-%m-%d')
 
-    events = BaseEvent.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)) \
-        .distinct()
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
-    events, context = datefilter(events, context, start, end)
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort') or 'datetime_start'
-    events = paginate_helper(events, page, sort)
+    events = BaseEvent.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
+    events, context = filter_events(request, context, events, start, end)
 
     context['h2'] = "Incoming Events"
     context['events'] = events
@@ -270,30 +289,18 @@ def incoming(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:incoming-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       'submitted_on',
+    context['cols'] = ['event_name', 'org', 'location', 'submitted_on',
                        FakeExtendedField('datetime_start', verbose_name="Starts At"),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
-
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
-@login_required()
+@login_required
 @permission_required('events.approve_event', raise_exception=True)
 def incoming_cal(request, start=None, end=None):
-    context = {}
-    context['h2'] = "Incoming Events"
-    context['listurl'] = reverse('events:incoming')
-    context['bootcal_endpoint'] = reverse('cal:api-incoming')
+    context = {'h2': "Incoming Events", 'listurl': reverse('events:incoming'),
+               'bootcal_endpoint': reverse('cal:api-incoming')}
     return render(request, 'events_cal.html', context)
 
 
@@ -304,7 +311,8 @@ def openworkorders(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:open', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:open', args=(request.COOKIES.get('start'),
+                                                                     request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:open', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
@@ -313,28 +321,12 @@ def openworkorders(request, start=None, end=None):
     if not start and not end:
         start, end = get_very_large_date_range()
 
-    events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).distinct()
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
-    events, context = datefilter(events, context, start, end)
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort')
-    events = paginate_helper(events, page, sort)
+    events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
 
     context['h2'] = "Open Events"
     context['events'] = events
@@ -343,41 +335,29 @@ def openworkorders(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:open-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       'crew_chief',
+    context['cols'] = ['event_name', 'org', 'location', 'crew_chief',
                        FakeExtendedField('datetime_start', verbose_name="Starting At"),
-                       FakeField('short_services', verbose_name="Services", sortable=False),
-                       FakeField('tasks')]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+                       FakeField('short_services', verbose_name="Services", sortable=False), FakeField('tasks')]
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
-@login_required()
+@login_required
 @permission_required('events.view_event', raise_exception=True)
 def openworkorders_cal(request, start=None, end=None):
-    context = {}
-    context['h2'] = "Open Events"
-    context['listurl'] = reverse('events:open')
-    context['bootcal_endpoint'] = reverse('cal:api-open')
+    context = {'h2': "Open Events", 'listurl': reverse('events:open'), 'bootcal_endpoint': reverse('cal:api-open')}
     return render(request, 'events_cal.html', context)
 
 
-@login_required()
+@login_required
 @permission_required('events.view_event', raise_exception=True)
 def findchief(request, start=None, end=None):
     context = {}
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:findchief', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:findchief', args=(request.COOKIES.get('start'),
+                                                                          request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:findchief', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
@@ -390,33 +370,16 @@ def findchief(request, start=None, end=None):
         end = today + datetime.timedelta(days=30.5)
         end = end.strftime('%Y-%m-%d')
 
-    events = BaseEvent.objects \
-        .filter(approved=True).filter(closed=False).filter(cancelled=False) \
-        .annotate(num_ccs=Count('ccinstances')) \
-        .filter(Q(Event___ccs_needed__gt=F('num_ccs')) | Q(num_ccs__lt=Count('serviceinstance__service__category', distinct=True))).distinct()
-
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('ccinstances__crew_chief')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
 
-    events, context = datefilter(events, context, start, end)
+    events = BaseEvent.objects.filter(approved=True).filter(closed=False).filter(cancelled=False)\
+        .annotate(num_ccs=Count('ccinstances'))\
+        .filter(Q(Event___ccs_needed__gt=F('num_ccs')) |
+                Q(num_ccs__lt=Count('serviceinstance__service__category', distinct=True))).distinct()
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort') or 'datetime_start'
-    events = paginate_helper(events, page, sort)
+    events, context = filter_events(request, context, events, start, end, prefetch_cc=True)
 
     context['h2'] = "Needs a Crew Chief"
     context['takes_param_projection'] = True
@@ -425,31 +388,18 @@ def findchief(request, start=None, end=None):
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:findchief-cal')
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       FakeExtendedField('datetime_start', verbose_name="Starting At"),
-                       'submitted_on',
-                       'num_ccs',
-                       FakeField('eventcount', verbose_name="# Services"),
+    context['cols'] = ['event_name', 'org', 'location', FakeExtendedField('datetime_start', verbose_name="Starting At"),
+                       'submitted_on', 'num_ccs', FakeField('eventcount', verbose_name="# Services"),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
-@login_required()
+@login_required
 @permission_required('events.view_event', raise_exception=True)
 def findchief_cal(request, start=None, end=None):
-    context = {}
-    context['h2'] = "Needs a Crew Chief"
-    context['listurl'] = reverse('events:findchief')
-    context['bootcal_endpoint'] = reverse('cal:api-findchief')
+    context = {'h2': "Needs a Crew Chief", 'listurl': reverse('events:findchief'),
+               'bootcal_endpoint': reverse('cal:api-findchief')}
     return render(request, 'events_cal.html', context)
 
 
@@ -460,7 +410,8 @@ def unreviewed(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:unreviewed', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:unreviewed', args=(request.COOKIES.get('start'),
+                                                                           request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:unreviewed', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
@@ -473,66 +424,35 @@ def unreviewed(request, start=None, end=None):
         end = today + datetime.timedelta(days=180)
         end = end.strftime('%Y-%m-%d')
 
-    now = datetime.datetime.now(pytz.utc)
-    events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False) \
-        .filter(reviewed=False) \
-        .filter(datetime_end__lte=now) \
-        .order_by('datetime_start') \
-        .distinct()
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('ccinstances__crew_chief')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
-    events, context = datefilter(events, context, start, end)
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort')
-    events = paginate_helper(events, page, sort)
+    now = datetime.datetime.now(pytz.utc)
+    events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).filter(reviewed=False)\
+        .filter(datetime_end__lte=now).order_by('datetime_start').distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_cc=True)
 
     context['h2'] = "Events Pending Billing Review"
     context['events'] = events
     context['baseurl'] = reverse("events:unreviewed")
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
-    #context['calurl'] = reverse('events:unreviewed-cal')
+    # context['calurl'] = reverse('events:unreviewed-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+    context['cols'] = ['event_name', 'org', 'location', FakeExtendedField('datetime_start', verbose_name="Event Time"),
                        'crew_chief',
                        FakeField('num_crew_needing_reports', sortable=True, verbose_name="Missing Reports"),
-                       FakeField('short_services', verbose_name="Services", sortable=False),
-                       FakeField('tasks')]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+                       FakeField('short_services', verbose_name="Services", sortable=False), FakeField('tasks')]
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
-@login_required()
+@login_required
 @permission_required('events.review_event', raise_exception=True)
 def unreviewed_cal(request, start=None, end=None):
-    context = {}
-    context['h2'] = "Events Pending Billing Review"
-    context['listurl'] = reverse('events:unreviewed')
-    context['bootcal_endpoint'] = reverse('cal:api-unreviewed')
+    context = {'h2': "Events Pending Billing Review", 'listurl': reverse('events:unreviewed'),
+               'bootcal_endpoint': reverse('cal:api-unreviewed')}
     return render(request, 'events_cal.html', context)
 
 
@@ -543,7 +463,8 @@ def unbilled(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:unbilled', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:unbilled', args=(request.COOKIES.get('start'),
+                                                                         request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:unbilled', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
@@ -552,33 +473,14 @@ def unbilled(request, start=None, end=None):
     if not start and not end:
         start, end = get_very_large_date_range()
 
-    events = BaseEvent.objects.filter(closed=False) \
-        .filter(reviewed=True) \
-        .filter(billings__isnull=True, multibillings__isnull=True) \
-        .filter(billed_in_bulk=False) \
-        .order_by('datetime_start') \
-        .distinct()
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
-    events, context = datefilter(events, context, start, end)
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort')
-    events = paginate_helper(events, page, sort)
+    events = BaseEvent.objects.filter(closed=False).filter(reviewed=True)\
+        .filter(billings__isnull=True, multibillings__isnull=True).filter(billed_in_bulk=False)\
+        .order_by('datetime_start').distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
 
     context['h2'] = "Events to be Billed"
     context['events'] = events
@@ -587,29 +489,18 @@ def unbilled(request, start=None, end=None):
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:unbilled-cal')
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+    context['cols'] = ['event_name', 'org', 'location', FakeExtendedField('datetime_start', verbose_name="Event Time"),
                        FakeField('num_crew_needing_reports', sortable=True, verbose_name="Missing Reports"),
-                       FakeField('short_services', verbose_name="Services", sortable=False), ]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
-@login_required()
+@login_required
 @permission_required('events.bill_event', raise_exception=True)
 def unbilled_cal(request, start=None, end=None):
-    context = {}
-    context['h2'] = "Events to be Billed"
-    context['listurl'] = reverse('events:unbilled')
-    context['bootcal_endpoint'] = reverse('cal:api-unbilled')
+    context = {'h2': "Events to be Billed", 'listurl': reverse('events:unbilled'),
+               'bootcal_endpoint': reverse('cal:api-unbilled')}
     return render(request, 'events_cal.html', context)
 
 
@@ -620,7 +511,8 @@ def unbilled_semester(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:unbilled-semester', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:unbilled-semester', args=(request.COOKIES.get('start'),
+                                                                                  request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:unbilled-semester', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
@@ -629,33 +521,14 @@ def unbilled_semester(request, start=None, end=None):
     if not start and not end:
         start, end = get_very_large_date_range()
 
-    events = BaseEvent.objects.filter(closed=False) \
-        .filter(reviewed=True) \
-        .filter(billings__isnull=True, multibillings__isnull=True) \
-        .filter(billed_in_bulk=True) \
-        .order_by('datetime_start') \
-        .distinct()
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
-    events, context = datefilter(events, context, start, end)
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort')
-    events = paginate_helper(events, page, sort)
+    events = BaseEvent.objects.filter(closed=False).filter(reviewed=True)\
+        .filter(billings__isnull=True, multibillings__isnull=True).filter(billed_in_bulk=True)\
+        .order_by('datetime_start').distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
 
     context['h2'] = "Events to be Billed in Bulk"
     context['events'] = events
@@ -664,29 +537,17 @@ def unbilled_semester(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:unbilled-semester-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       'crew_chief',
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+    context['cols'] = ['event_name', 'org', 'location', FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       'crew_chief', FakeField('short_services', verbose_name="Services", sortable=False)]
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
-@login_required()
+@login_required
 @permission_required('events.bill_event', raise_exception=True)
 def unbilled_semester_cal(request, start=None, end=None):
-    context = {}
-    context['h2'] = "Events to be Billed in Bulk"
-    context['listurl'] = reverse('events:unbilled-semester')
-    context['bootcal_endpoint'] = reverse('cal:api-unbilled-semester')
+    context = {'h2': "Events to be Billed in Bulk", 'listurl': reverse('events:unbilled-semester'),
+               'bootcal_endpoint': reverse('cal:api-unbilled-semester')}
     return render(request, 'events_cal.html', context)
 
 
@@ -697,7 +558,8 @@ def paid(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:paid', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:paid', args=(request.COOKIES.get('start'),
+                                                                     request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:paid', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
@@ -706,34 +568,14 @@ def paid(request, start=None, end=None):
     if not start and not end:
         start, end = get_very_large_date_range()
 
-    # events = Event.objects.filter(approved=True).filter(paid=True)
-    events = BaseEvent.objects.filter(closed=False) \
-        .filter(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)) \
-        .distinct()
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
-    events, context = datefilter(events, context, start, end)
 
-    # if events:
-    # events = events.latest('billings__date_paid') # limit further
-
-    page = request.GET.get('page')
-    sort = request.GET.get('sort')
-    events = paginate_helper(events, page, sort)
+    # events = Event.objects.filter(approved=True).filter(paid=True)
+    events = BaseEvent.objects.filter(closed=False).filter(Q(billings__date_paid__isnull=False) |
+                                                           Q(multibillings__date_paid__isnull=False)).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
 
     context['h2'] = "Paid Events"
     context['events'] = events
@@ -742,30 +584,18 @@ def paid(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:paid-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name',
-                       'org',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+    context['cols'] = ['event_name', 'org', FakeExtendedField('datetime_start', verbose_name="Event Time"),
                        FakeField('last_billed', sortable=True),
                        FakeField('last_paid', verbose_name="Paid On", sortable=True),
-                       FakeField('short_services', verbose_name="Services", sortable=False),
-                       FakeField('workday')]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+                       FakeField('short_services', verbose_name="Services", sortable=False), FakeField('workday')]
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
-@login_required()
+@login_required
 @permission_required('events.close_event', raise_exception=True)
 def paid_cal(request, start=None, end=None):
-    context = {}
-    context['h2'] = "Paid Events"
-    context['listurl'] = reverse('events:paid')
-    context['bootcal_endpoint'] = reverse('cal:api-paid')
+    context = {'h2': "Paid Events", 'listurl': reverse('events:paid'), 'bootcal_endpoint': reverse('cal:api-paid')}
     return render(request, 'events_cal.html', context)
 
 
@@ -776,43 +606,24 @@ def unpaid(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:unpaid', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:unpaid', args=(request.COOKIES.get('start'),
+                                                                       request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:unpaid', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
         return HttpResponseRedirect(reverse('events:unpaid', args=(start, request.COOKIES.get('end'))))
     time_range_unspecified = not start and not end
 
-    events = BaseEvent.objects.annotate(
-        numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
-        .filter(Q(billings__isnull=False) | Q(multibillings__isnull=False)) \
-        .exclude(closed=True) \
-        .exclude(numpaid__gt=0) \
-        .filter(reviewed=True) \
-        .exclude(billings__isnull=False, Event2019___workday_fund__isnull=False, Event2019___worktag__isnull=False) \
-        .exclude(billings__isnull=False, Event2019___entered_into_workday=True) \
-        .order_by('datetime_start').distinct()
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
-    events, context = datefilter(events, context, start, end)
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort')
-    events = paginate_helper(events, page, sort)
+    events = BaseEvent.objects.annotate(numpaid=Count('billings__date_paid')+Count('multibillings__date_paid'))\
+        .filter(Q(billings__isnull=False) | Q(multibillings__isnull=False)).exclude(closed=True)\
+        .exclude(numpaid__gt=0).filter(reviewed=True) \
+        .exclude(billings__isnull=False, Event2019___workday_fund__isnull=False, Event2019___worktag__isnull=False) \
+        .exclude(billings__isnull=False, Event2019___entered_into_workday=True).order_by('datetime_start').distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
 
     context['h2'] = "Pending Payments"
     context['events'] = events
@@ -821,30 +632,18 @@ def unpaid(request, start=None, end=None):
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:unpaid-cal')
-    context['cols'] = ['event_name',
-                       'org',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       FakeField('last_billed', sortable=True),
-                       FakeField('times_billed', sortable=True),
-                       FakeField('cost_total', verbose_name='Price', sortable=True),
-                       FakeField('tasks')]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+    context['cols'] = ['event_name', 'org', FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       FakeField('last_billed', sortable=True), FakeField('times_billed', sortable=True),
+                       FakeField('cost_total', verbose_name='Price', sortable=True), FakeField('tasks')]
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
-@login_required()
+@login_required
 @permission_required('events.bill_event', raise_exception=True)
 def unpaid_cal(request, start=None, end=None):
-    context = {}
-    context['h2'] = "Pending Payments"
-    context['listurl'] = reverse('events:unpaid')
-    context['bootcal_endpoint'] = reverse('cal:api-unpaid')
+    context = {'h2': "Pending Payments", 'listurl': reverse('events:unpaid'),
+               'bootcal_endpoint': reverse('cal:api-unpaid')}
     return render(request, 'events_cal.html', context)
 
 
@@ -855,37 +654,23 @@ def awaitingworkday(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:awaitingworkday', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:awaitingworkday', args=(request.COOKIES.get('start'),
+                                                                                request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:awaitingworkday', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
         return HttpResponseRedirect(reverse('events:awaitingworkday', args=(start, request.COOKIES.get('end'))))
     time_range_unspecified = not start and not end
 
-    events = Event2019.objects.filter(closed=False) \
-        .filter(reviewed=True, billings__isnull=False, workday_fund__isnull=False, worktag__isnull=False, entered_into_workday=False) \
-        .exclude(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)) \
-        .distinct()
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            Q(serviceinstance__service__category__name='Projection') \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(serviceinstance__service__category__name='Projection')
-    events, context = datefilter(events, context, start, end)
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort')
-    events = paginate_helper(events, page, sort)
+    events = Event2019.objects.filter(closed=False)\
+        .filter(reviewed=True, billings__isnull=False, workday_fund__isnull=False, worktag__isnull=False,
+                entered_into_workday=False) \
+        .exclude(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, event2019=True)
 
     context['h2'] = "Events to Enter Into Workday"
     context['events'] = events
@@ -893,25 +678,12 @@ def awaitingworkday(request, start=None, end=None):
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['takes_param_projection'] = True
-    context['cols'] = [
-        FakeField('cost_total', verbose_name='Extended Amount'),
-        FakeField('contact', verbose_name='Requester'),
-        FakeExtendedField('datetime_start', verbose_name="Event Time"),
-        FakeField('workday_memo', verbose_name='Memo'),
-        'org',
-        'workday_fund',
-        'worktag',
-        'workday_form_comments',
-        FakeField('bill'),
-        FakeField('tasks')
-    ]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+    context['cols'] = [FakeField('cost_total', verbose_name='Extended Amount'),
+                       FakeField('contact', verbose_name='Requester'),
+                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       FakeField('workday_memo', verbose_name='Memo'), 'org', 'workday_fund', 'worktag',
+                       'workday_form_comments', FakeField('bill'), FakeField('tasks')]
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
@@ -922,37 +694,22 @@ def unpaid_workday(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:unpaid', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:unpaid-workday', args=(request.COOKIES.get('start'),
+                                                                               request.COOKIES.get('end'))))
         else:
-            return HttpResponseRedirect(reverse('events:unpaid', args=(request.COOKIES.get('start'), end)))
+            return HttpResponseRedirect(reverse('events:unpaid-workday', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
-        return HttpResponseRedirect(reverse('events:unpaid', args=(start, request.COOKIES.get('end'))))
+        return HttpResponseRedirect(reverse('events:unpaid-workday', args=(start, request.COOKIES.get('end'))))
     time_range_unspecified = not start and not end
 
-    events = Event2019.objects \
-        .annotate(numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
-        .filter(closed=False, reviewed=True, entered_into_workday=True) \
-        .exclude(numpaid__gt=0) \
-        .order_by('datetime_start').distinct()
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.prefetch_related('org')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            Q(serviceinstance__service__category__name='Projection') \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(serviceinstance__service__category__name='Projection')
-    events, context = datefilter(events, context, start, end)
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort')
-    events = paginate_helper(events, page, sort)
+    events = Event2019.objects.annotate(numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
+        .filter(closed=False, reviewed=True, entered_into_workday=True).exclude(numpaid__gt=0)\
+        .order_by('datetime_start').distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_org=True, event2019=True)
 
     context['h2'] = "Pending Workday ISDs"
     context['events'] = events
@@ -960,20 +717,9 @@ def unpaid_workday(request, start=None, end=None):
     context['takes_param_projection'] = True
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
-    context['cols'] = ['event_name',
-                       'org',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       'workday_fund',
-                       'worktag',
-                       'workday_form_comments',
-                       FakeField('tasks')]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+    context['cols'] = ['event_name', 'org', FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       'workday_fund', 'worktag', 'workday_form_comments', FakeField('tasks')]
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
@@ -984,7 +730,8 @@ def closed(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:closed', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:closed', args=(request.COOKIES.get('start'),
+                                                                       request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:closed', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
@@ -993,28 +740,12 @@ def closed(request, start=None, end=None):
     if not start and not end:
         start, end = get_very_large_date_range()
 
-    events = BaseEvent.objects.filter(closed=True)
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('ccinstances__crew_chief')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
-    events, context = datefilter(events, context, start, end)
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort')
-    events = paginate_helper(events, page, sort)
+    events = BaseEvent.objects.filter(closed=True)
+    events, context = filter_events(request, context, events, start, end, prefetch_cc=True)
 
     context['h2'] = "Closed Events"
     context['events'] = events
@@ -1023,29 +754,17 @@ def closed(request, start=None, end=None):
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:closed-cal')
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       'crew_chief',
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+    context['cols'] = ['event_name', 'org', 'location', FakeExtendedField('datetime_start', verbose_name="Event Time"),
+                       'crew_chief', FakeField('short_services', verbose_name="Services", sortable=False)]
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
-@login_required()
+@login_required
 @permission_required('events.view_event', raise_exception=True)
 def closed_cal(request, start=None, end=None):
-    context = {}
-    context['h2'] = "Closed Events"
-    context['listurl'] = reverse('events:closed')
-    context['bootcal_endpoint'] = reverse('cal:api-closed')
+    context = {'h2': "Closed Events", 'listurl': reverse('events:closed'),
+               'bootcal_endpoint': reverse('cal:api-closed')}
     return render(request, 'events_cal.html', context)
 
 
@@ -1056,7 +775,8 @@ def all(request, start=None, end=None):
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:all', args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:all', args=(request.COOKIES.get('start'),
+                                                                    request.COOKIES.get('end'))))
         else:
             return HttpResponseRedirect(reverse('events:all', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
@@ -1065,30 +785,12 @@ def all(request, start=None, end=None):
     if not start and not end:
         start, end = get_very_large_date_range()
 
-    events = BaseEvent.objects.distinct()
-    if not request.user.has_perm('events.view_hidden_event'):
-        events = events.exclude(sensitive=True)
-    if not request.user.has_perm('events.view_test_event'):
-        events = events.exclude(test_event=True)
-    if not request.user.has_perm('events.approve_event'):
-        events = events.exclude(approved=False)
-    events = events.select_related('location__building').prefetch_related('org') \
-        .prefetch_related('ccinstances__crew_chief').prefetch_related('billings')
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
-        and request.COOKIES['projection'] != 'show'):
+            and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
-    if request.GET.get('projection') == 'hide':
-        events = events.exclude(
-            (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
-            | Q(serviceinstance__service__category__name='Projection')) \
-            & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
-    elif request.GET.get('projection') == 'only':
-        events = events.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
-    events, context = datefilter(events, context, start, end)
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort')
-    events = paginate_helper(events, page, sort)
+    events = BaseEvent.objects.distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, hide_unapproved=True)
 
     context['h2'] = "All Events"
     context['events'] = events
@@ -1097,33 +799,20 @@ def all(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:all-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name',
-                       'org',
-                       'location',
-                       'crew_chief',
+    context['cols'] = ['event_name', 'org', 'location', 'crew_chief',
                        FakeExtendedField('datetime_start', verbose_name="Event Start"),
                        FakeExtendedField('datetime_end', verbose_name="Event End"),
-                       FakeField('short_services', verbose_name="Services", sortable=False),
-                       FakeField('tasks')]
+                       FakeField('short_services', verbose_name="Services", sortable=False), FakeField('tasks')]
     if request.user.has_perm('events.approve_event'):
         context['cols'].append(FakeField('approval'))
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    response = render(request, 'events.html', context)
-    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
-        response.set_cookie('projection', request.GET['projection'])
-    if not time_range_unspecified and (start != request.COOKIES.get('start') or end != request.COOKIES.get('end')):
-        response.set_cookie('start', start, max_age=DATEFILTER_COOKIE_MAX_AGE)
-        response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
+    response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
 
 @login_required()
 @permission_required('events.view_event', raise_exception=True)
 def all_cal(request, start=None, end=None):
-    context = {}
-    context['h2'] = "All Events"
-    context['listurl'] = reverse('events:all')
-    context['bootcal_endpoint'] = reverse('cal:api-all')
+    context = {'h2': "All Events", 'listurl': reverse('events:all'), 'bootcal_endpoint': reverse('cal:api-all')}
     return render(request, 'events_cal.html', context)
 
 
@@ -1146,24 +835,20 @@ def public_facing(request):
 def multibillings(request):
     context = {}
 
-    multibillings = MultiBilling.objects \
-        .annotate(num_closed_events=Sum(Case(
+    multibills = MultiBilling.objects.annotate(num_closed_events=Sum(Case(
             When(events__closed=True, then=1),
             default=0,
             output_field=IntegerField())))
 
     page = request.GET.get('page')
     sort = request.GET.get('sort')
-    multibillings = paginate_helper(multibillings, page, sort)
+    multibills = paginate_helper(multibills, page, sort)
 
     context['h2'] = "MultiBills"
-    context['multibillings'] = multibillings
-    context['cols'] = ['events',
-                       FakeField('org', verbose_name="Client", sortable=True),
+    context['multibillings'] = multibills
+    context['cols'] = ['events', FakeField('org', verbose_name="Client", sortable=True),
                        FakeExtendedField('date_billed', model=MultiBilling),
-                       FakeExtendedField('date_paid', model=MultiBilling),
-                       'amount',
-                       FakeField('email_sent'),
+                       FakeExtendedField('date_paid', model=MultiBilling), 'amount', FakeField('email_sent'),
                        FakeField('tasks')]
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     return render(request, 'multibillings.html', context)
@@ -1178,10 +863,9 @@ def new_workshop(request):
         if form.is_valid():
             form.save()
             return HttpResponseRedirect(reverse('events:workshops:list'))
-        else:
-            context['form'] = form
     else:
-        context['form'] = WorkshopForm()
+        form = WorkshopForm()
+    context['form'] = form
     return render(request, 'form_crispy.html', context)
 
 
@@ -1200,10 +884,9 @@ def edit_workshop(request, pk):
             workshop.notes = request.POST['notes']
             workshop.save()
             return HttpResponseRedirect(reverse("events:workshops:list"))
-        else:
-            context['form'] = form
     else:
-        context['form'] = WorkshopForm(instance=workshop)
+        form = WorkshopForm(instance=workshop)
+        context['form'] = form
     return render(request, 'form_crispy.html', context)
 
 
@@ -1224,10 +907,7 @@ def workshop_dates(request, pk):
                 form.instance.workshop = workshop
             formset.save()
             return HttpResponseRedirect(reverse("events:workshops:list"))
-        else:
-            context['formset'] = formset
-    else:
-        context['formset'] = formset
+    context['formset'] = formset
     return render(request, 'formset_workshop_dates.html', context)
 
 
