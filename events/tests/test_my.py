@@ -6,7 +6,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_mommy import mommy
 
 from data.tests.util import ViewTestCase
-from ..models import EventCCInstance, OfficeHour, HourChange, Category, Lighting, Hours, ServiceInstance
+from ..models import EventCCInstance, OfficeHour, HourChange, Category, Lighting, Hours, ServiceInstance, \
+    OrganizationTransfer
 from .generators import EventFactory, OrgFactory, CCInstanceFactory, Event2019Factory, ServiceFactory
 
 logging.disable(logging.WARNING)
@@ -290,6 +291,40 @@ class MyViewTest(ViewTestCase):
         # Check that nothing happens on invalid data
         data['client_name'] = None
         self.assertOk(self.client.post(reverse("my:org-request"), data))
+
+    def test_accept_orgtransfer(self):
+        transfer = OrganizationTransfer.objects.create(initiator=self.user, uuid="6ab57f4a278e470b92e428b6a2594269",
+                                                       new_user_in_charge=self.user, old_user_in_charge=self.user,
+                                                       org=self.org)
+        transfer.expiry = timezone.now() - timezone.timedelta(days=1)
+        transfer.save()
+
+        # If transfer has expired, display message
+        self.assertContains(self.client.get(reverse("my:org-accept", args=[transfer.uuid])), "expired")
+
+        transfer.expiry = timezone.now() + timezone.timedelta(days=1)
+        transfer.save()
+
+        self.assertContains(self.client.get(reverse("my:org-accept", args=[transfer.uuid])), "Success")
+
+        # Now check that we get message when already completed
+        self.assertContains(self.client.get(reverse("my:org-accept", args=[transfer.uuid])), "Already Completed")
+
+    def test_orgedit(self):
+        self.org.user_in_charge = self.user
+
+        self.assertOk(self.client.get(reverse("my:org-edit", args=[self.org.pk])))
+
+        valid_data = {
+            "exec_email": "lnl@wpi.edu",
+            "address": "142 West Street",
+            "phone": "(123) 456 7890",
+            "associated_users": [str(self.user.pk)],
+            "save": "Save Changes"
+        }
+
+        self.assertRedirects(self.client.post(reverse("my:org-edit", args=[self.org.pk]), valid_data),
+                             reverse("orgs:detail", args=[self.org.pk]))
 
     def test_cc_report_blank(self):
         mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)

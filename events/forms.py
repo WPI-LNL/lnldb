@@ -353,6 +353,9 @@ class EventApprovalForm(forms.ModelForm):
     # datetime_setup_start =  forms.SplitDateTimeField(initial=timezone.now)
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
 
+    def clean_description(self):
+        return self.cleaned_data['description'].replace('LnL', 'LNL')
+
 
 class EventDenialForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -549,6 +552,12 @@ class InternalEventForm(FieldAccessForm):
     datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
     otherservices = ModelMultipleChoiceField(queryset=Service.objects.filter(enabled_event2012=True), required=False)
 
+    def clean_description(self):
+        return self.cleaned_data['description'].replace('LnL', 'LNL')
+
+    def clean_event_name(self):
+        return self.cleaned_data['event_name'].replace('LnL', 'LNL')
+
 
 class InternalEventForm2019(FieldAccessForm):
     def __init__(self, request_user, *args, **kwargs):
@@ -694,6 +703,12 @@ class InternalEventForm2019(FieldAccessForm):
     datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
     max_crew = forms.IntegerField(label="Maximum Crew", help_text="Include this to enforce an occupancy limit",
                                   required=False)
+
+    def clean_description(self):
+        return self.cleaned_data['description'].replace('LnL', 'LNL')
+
+    def clean_event_name(self):
+        return self.cleaned_data['event_name'].replace('LnL', 'LNL')
 
 
 class EventReviewForm(forms.ModelForm):
@@ -899,8 +914,8 @@ class WorkdayForm(forms.ModelForm):
     def clean_worktag(self):
         pattern = re.compile('[0-9]+-[A-Z][A-Z]')
         if pattern.match(self.cleaned_data['worktag']) is None:
-            raise ValidationError(
-                'What you entered is not a valid worktag. Here are some examples of what a worktag looks like: 1234-CC, 123-AG')
+            raise ValidationError('What you entered is not a valid worktag. Here are some examples of what a worktag '
+                                  'looks like: 1234-CC, 123-AG')
         return self.cleaned_data['worktag']
 
     class Meta:

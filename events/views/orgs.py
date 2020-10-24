@@ -60,9 +60,14 @@ def addeditorgs(request, org_id=None):
     if org_id:
         instance = get_object_or_404(Organization, pk=org_id)
         msg = "Edit Client"
+        if not request.user.has_perm('events.edit_org'):
+            raise PermissionDenied
     else:
         instance = None
         msg = "New Client"
+        if not request.user.has_perm('events.list_org_members') \
+                or not request.user.has_perm('events.transfer_org_ownership'):
+            raise PermissionDenied
 
     if request.method == 'POST':
         form = IOrgForm(request.user, request.POST, instance=instance)
@@ -147,12 +152,10 @@ def fund_edit_external(request, fund_id=None, org=None):
             instance = form.save()
             messages.add_message(request, messages.SUCCESS, 'Changes saved.')
             return HttpResponseRedirect(reverse('orgs:list'))
-        else:
-            context['form'] = form
-            messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
+        messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
     else:
         form = ExternalFundEditForm(instance=instance)
-        context['form'] = form
+    context['form'] = form
 
     context['msg'] = msg
 
@@ -178,15 +181,15 @@ def orgdetail(request, org_id):
 
 
 # External Form Editing Views (NOW DEPRECATED!)
-@login_required
-def orglist(request):
-    context = {}
-    orgs = Organization.objects.filter(user_in_charge=request.user)
-    context['orgs'] = orgs
-
-    return render(request, 'myorgsincharge.html', context)
-
-
+# @login_required
+# def orglist(request):
+#     context = {}
+#     orgs = Organization.objects.filter(user_in_charge=request.user)
+#     context['orgs'] = orgs
+#
+#     return render(request, 'myorgsincharge.html', context)
+#
+#
 @login_required
 def orgedit(request, id):
     context = {}
@@ -205,14 +208,10 @@ def orgedit(request, id):
             set_revision_comment('Edited', formset)
             formset.save()
             return HttpResponseRedirect(reverse('orgs:detail', args=(org.pk,)))
-
-        else:
-            context['formset'] = formset
     else:
-
         formset = ExternalOrgUpdateForm(instance=org)
 
-        context['formset'] = formset
+    context['formset'] = formset
 
     return render(request, 'mycrispy.html', context)
 
@@ -302,4 +301,4 @@ class OrgVerificationCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, C
         return super(OrgVerificationCreate, self).form_valid(form)
 
     def get_success_url(self):
-        return reverse("orgs:detail", args=(self.kwargs['org'],))
+        return reverse("orgs:detail", args=(self.kwargs['org_id'],))
