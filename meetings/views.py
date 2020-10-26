@@ -10,7 +10,7 @@ from django.http.response import Http404
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 from django.utils import timezone
-from functools import partial as curry
+from helpers.util import curry_class
 
 from data.views import serve_file
 from emails.generators import generate_notice_cc_email, generate_notice_email
@@ -67,11 +67,9 @@ def modify_att(request, mtg_id, att_id):
             form.save()
             url = reverse('meetings:detail', args=(mtg_id,)) + "#minutes"
             return HttpResponseRedirect(url)
-        else:
-            context['form'] = form
     else:
         form = MtgAttachmentEditForm(instance=att)
-        context['form'] = form
+    context['form'] = form
     return render(request, 'form_crispy.html', context)
 
 
@@ -115,7 +113,7 @@ def updateevent(request, mtg_id, event_id):
     context['event'] = event.event_name
 
     cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
-    cc_formset.form = staticmethod(curry(CCIForm, event=event))
+    cc_formset.form = curry_class(CCIForm, event=event)
 
     if request.method == 'POST':
         formset = cc_formset(request.POST, instance=event, prefix="main")
@@ -123,11 +121,9 @@ def updateevent(request, mtg_id, event_id):
             formset.save()
             url = reverse('meetings:detail', args=(mtg_id,)) + "#events"
             return HttpResponseRedirect(url)
-        else:
-            context['formset'] = formset
     else:
         formset = cc_formset(instance=event, prefix="main")
-        context['formset'] = formset
+    context['formset'] = formset
     return render(request, 'formset_crispy_helpers.html', context)
 
 
@@ -150,11 +146,9 @@ def editattendance(request, mtg_id):
             m = form.save()
             url = reverse('meetings:detail', args=(m.id,)) + "#attendance"
             return HttpResponseRedirect(url)
-        else:
-            context['form'] = form
     else:
         form = MeetingAdditionForm(instance=m)
-        context['form'] = form
+    context['form'] = form
     return render(request, 'form_crispy.html', context)
 
 
@@ -196,13 +190,10 @@ def newattendance(request):
         if form.is_valid():
             m = form.save()
             return HttpResponseRedirect(reverse('meetings:detail', args=(m.id,)))
-        else:
-            context['form'] = form
-            context['msg'] = "New Meeting (Errors In Form)"
     else:
         form = MeetingAdditionForm()
-        context['form'] = form
-        context['msg'] = "New Meeting"
+    context['form'] = form
+    context['msg'] = "New Meeting"
     return render(request, 'form_crispy.html', context)
 
 
@@ -227,13 +218,10 @@ def mknotice(request, mtg_id):
             AnnounceSend.objects.create(announce=notice, sent_success=success)
             url = reverse('meetings:detail', args=(meeting.id,)) + "#emails"
             return HttpResponseRedirect(url)
-        else:
-            context['form'] = form
-
     else:
         form = AnnounceSendForm(meeting)
-        context['form'] = form
-        context['msg'] = "New Meeting Notice"
+    context['form'] = form
+    context['msg'] = "New Meeting Notice"
     return render(request, 'form_crispy.html', context)
 
 
@@ -261,11 +249,8 @@ def mkccnotice(request, mtg_id):
 
             url = reverse('meetings:detail', args=(meeting.id,)) + "#emails"
             return HttpResponseRedirect(url)
-        else:
-            context['form'] = form
-
     else:
         form = AnnounceCCSendForm(meeting)
-        context['form'] = form
-        context['msg'] = "CC Meeting Notice"
+    context['form'] = form
+    context['msg'] = "CC Meeting Notice"
     return render(request, 'form_crispy.html', context)

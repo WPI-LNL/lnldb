@@ -124,9 +124,11 @@ class BaseCalJsonView(HasPermMixin, View):
             queryset = queryset.exclude(
                 (Q(Event___projection__isnull=False, Event___lighting__isnull=True, Event___sound__isnull=True) \
                 | Q(serviceinstance__service__category__name='Projection')) \
-                & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection').values_list('name', flat=True)))
+                & ~Q(serviceinstance__service__category__name__in=Category.objects.exclude(name='Projection')
+                     .values_list('name', flat=True)))
         elif projection == 'only':
-            queryset = queryset.filter(Q(Event___projection__isnull=False) | Q(serviceinstance__service__category__name='Projection'))
+            queryset = queryset.filter(Q(Event___projection__isnull=False)
+                                       | Q(serviceinstance__service__category__name='Projection'))
         from_date = request.GET.get('from', False)
         to_date = request.GET.get('to', False)
         response = HttpResponse(generate_cal_json(queryset, from_date, to_date))
@@ -152,8 +154,8 @@ class FindChiefCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
         queryset = BaseEvent.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)) \
             .annotate(num_ccs=Count('ccinstances')) \
-            .filter(Q(Event___ccs_needed__gt=F('num_ccs')) | Q(num_ccs__lt=Count('serviceinstance__service__category', distinct=True))) \
-            .distinct()
+            .filter(Q(Event___ccs_needed__gt=F('num_ccs'))
+                    | Q(num_ccs__lt=Count('serviceinstance__service__category', distinct=True))).distinct()
         return super(FindChiefCalJsonView, self).get(request, queryset)
 
 
