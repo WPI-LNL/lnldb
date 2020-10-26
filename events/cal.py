@@ -1,4 +1,3 @@
-import datetime
 import json
 import pytz
 from time import mktime
@@ -8,6 +7,7 @@ from django.db.models import Count, F, Q
 from django.http import HttpResponse
 from django.template.defaultfilters import slugify
 from django.urls.base import reverse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.html import conditional_escape
 from django.views.generic.base import View
@@ -141,7 +141,7 @@ class PublicFacingCalJsonView(View):
 
     def get(self, request, *args, **kwargs):
         queryset = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False,
-                                        sensitive=False).filter(datetime_end__gte=datetime.datetime.now(pytz.utc))
+                                            sensitive=False).filter(datetime_end__gte=timezone.datetime.now(pytz.utc))
 
         from_date = request.GET.get('from', False)
         to_date = request.GET.get('to', False)
@@ -177,7 +177,7 @@ class UnreviewedCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
         queryset = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False) \
             .filter(reviewed=False) \
-            .filter(datetime_end__lte=datetime.datetime.now()) \
+            .filter(datetime_end__lte=timezone.now()) \
             .distinct()
         return super(UnreviewedCalJsonView, self).get(request, queryset)
 
@@ -249,7 +249,7 @@ def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):
         if from_date and to_date:
             queryset = queryset.filter(
                 datetime_start__range=(
-                    timestamp_to_datetime(from_date) + datetime.timedelta(-30),
+                    timestamp_to_datetime(from_date) + timezone.timedelta(-30),
                     timestamp_to_datetime(to_date)
                 )
             )
@@ -266,8 +266,8 @@ def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):
             field = {
                 "title": conditional_escape(event.cal_name()),
                 "url": "#" + str(event.id),
-                "start": datetime_to_timestamp(event.cal_start() + datetime.timedelta(hours=-5)),
-                "end": datetime_to_timestamp(event.cal_end() + datetime.timedelta(hours=-5))
+                "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
+                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5))
             }
             objects_body.append(field)
 
@@ -279,7 +279,7 @@ def generate_cal_json(queryset, from_date=None, to_date=None):
         if from_date and to_date:
             queryset = queryset.filter(
                 datetime_start__range=(
-                    timestamp_to_datetime(from_date) + datetime.timedelta(-30),
+                    timestamp_to_datetime(from_date) + timezone.timedelta(-30),
                     timestamp_to_datetime(to_date)
                 )
             )
@@ -298,8 +298,8 @@ def generate_cal_json(queryset, from_date=None, to_date=None):
                 "title": conditional_escape(event.cal_name()),
                 "url": reverse('events:detail', args=[event.id]),
                 "class": 'cal-status-' + slugify(event.status),
-                "start": datetime_to_timestamp(event.cal_start() + datetime.timedelta(hours=-5)),
-                "end": datetime_to_timestamp(event.cal_end() + datetime.timedelta(hours=-5))
+                "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
+                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5))
             }
             objects_body.append(field)
 
@@ -317,7 +317,7 @@ def timestamp_to_datetime(timestamp):
         if len(timestamp) == 13:
             timestamp = int(timestamp) / 1000
 
-        return datetime.datetime.fromtimestamp(timestamp)
+        return timezone.make_aware(timezone.datetime.fromtimestamp(float(timestamp)))
     else:
         return ""
 
@@ -327,7 +327,7 @@ def datetime_to_timestamp(date):
     Converts datetime to timestamp
     with json fix
     """
-    if isinstance(date, datetime.datetime):
+    if isinstance(date, timezone.datetime):
 
         timestamp = mktime(date.timetuple())
         json_timestamp = int(timestamp) * 1000

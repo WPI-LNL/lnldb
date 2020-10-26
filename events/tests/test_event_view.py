@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from .generators import CCReportFactory, EventFactory, Event2019Factory, UserFactory, OrgFactory, CCInstanceFactory, \
     ServiceFactory, LocationFactory
-from .. import models
+from .. import models, lookups
 from ..templatetags import append_get, at_event_linking, gpa_scale_emoji
 
 
@@ -1785,6 +1785,62 @@ class EventListBasicViewTest(ViewTestCase):
         resp = self.client.get(reverse(url, args=['2019-12-30', '2020-02-02']))
         self.assertRedirects(resp, reverse(url, args=['2019-12-30', '2020-02-02']) + "?projection=only")
 
+    def base_cal_json(self, url):
+        # Reset permissions
+        permission = Permission.objects.get(codename="view_test_event")
+        self.user.user_permissions.remove(permission)
+
+        # Check that page loads ok (should not include either event)
+        resp = self.client.get(reverse(url))
+        self.assertOk(resp)
+        self.assertNotContains(resp, "Test Event")
+        self.assertNotContains(resp, "Other Event")
+
+        # Check that even with proper date range we don't see sensitive or test events unless we have permission
+        # Note we use Epoch timestamps here
+        self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600&projection=show'),
+                               "Test Event")
+
+        self.e.sensitive = False
+        self.e.save()
+
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Test Event")
+
+        self.e.sensitive = True
+        self.e.save()
+
+        # Add view_hidden_event permission
+        permission = Permission.objects.get(codename="event_view_sensitive")
+        self.user.user_permissions.add(permission)
+
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Test Event")
+
+        self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Other Event")
+
+        self.e2.test_event = False
+        self.e2.save()
+
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Other Event")
+
+        self.e2.test_event = True
+        self.e2.save()
+
+        # Add view_test_event permission
+        permission = Permission.objects.get(codename="view_test_event")
+        self.user.user_permissions.add(permission)
+
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Other Event")
+
+        # Test projection cookies
+        resp = self.client.get(reverse(url) + '?from=1577664000&to=1580601600&projection=hide')
+        self.assertOk(resp)
+        self.assertNotContains(resp, "2019 Event")
+
+        resp = self.client.get(reverse(url) + '?from=1577664000&to=1580601600&projection=only')
+        self.assertOk(resp)
+        self.assertContains(resp, "2019 Event")
+        self.assertNotContains(resp, "Test Event")
+
     def test_public(self):
         response = self.client.get(reverse('cal:list'))
         self.assertEqual(response.status_code, 200)
@@ -1811,6 +1867,7 @@ class EventListBasicViewTest(ViewTestCase):
 
         # Run generic tests
         self.generic_list('events:incoming')
+        self.base_cal_json('cal:api-incoming')
 
     def test_incoming_cal(self):
         # By default, should not have permission to view
@@ -1858,6 +1915,7 @@ class EventListBasicViewTest(ViewTestCase):
 
         # Run generic tests
         self.generic_list('events:findchief')
+        self.base_cal_json('cal:api-findchief')
 
     def test_chief_cal(self):
         # By default, should not have permission to view
@@ -1882,6 +1940,7 @@ class EventListBasicViewTest(ViewTestCase):
 
         # Run generic tests
         self.generic_list('events:open')
+        self.base_cal_json('cal:api-open')
 
     def test_open_cal(self):
         # By default, should not have permission to view
@@ -1906,6 +1965,7 @@ class EventListBasicViewTest(ViewTestCase):
 
         # Run generic tests
         self.generic_list('events:unreviewed')
+        self.base_cal_json('cal:api-unreviewed')
 
     def test_unreviewed_cal(self):
         # By default, should not have permission to view
@@ -1932,6 +1992,7 @@ class EventListBasicViewTest(ViewTestCase):
 
         # Run generic tests
         self.generic_list('events:unbilled')
+        self.base_cal_json('cal:api-unbilled')
 
     def test_unbilled_cal(self):
         # By default, should not have permission to view
@@ -1961,6 +2022,7 @@ class EventListBasicViewTest(ViewTestCase):
 
         # Run generic tests
         self.generic_list('events:unbilled-semester')
+        self.base_cal_json('cal:api-unbilled-semester')
 
     def test_unbilled_semester_cal(self):
         # By default, should not have permission to view
@@ -1987,6 +2049,7 @@ class EventListBasicViewTest(ViewTestCase):
 
         # Run generic tests
         self.generic_list('events:paid')
+        self.base_cal_json('cal:api-paid')
 
     def test_paid_cal(self):
         # By default, should not have permission to view
@@ -2016,6 +2079,7 @@ class EventListBasicViewTest(ViewTestCase):
 
         # Run generic tests
         self.generic_list('events:unpaid')
+        self.base_cal_json('cal:api-unpaid')
 
     def test_unpaid_cal(self):
         # By default, should not have permission to view
@@ -2213,6 +2277,7 @@ class EventListBasicViewTest(ViewTestCase):
 
         # Run generic tests
         self.generic_list('events:closed')
+        self.base_cal_json('cal:api-closed')
 
     def test_closed_cal(self):
         # By default, should not have permission to view
@@ -2240,6 +2305,7 @@ class EventListBasicViewTest(ViewTestCase):
 
         # Run generic tests
         self.generic_list('events:all')
+        self.base_cal_json('cal:api-all')
 
     def test_all_cal(self):
         # By default, should not have permission to view
@@ -2525,3 +2591,65 @@ class EventTemplateTags(TestCase):
 
         value = 4
         self.assertEqual(gpa_scale_emoji.gpa_scale_color(value), 'green')
+
+
+class LookupTests(ViewTestCase):
+    def test_org_lookup(self):
+        org = OrgFactory.create(name="Lens & Lights", shortname="LNL")
+
+        request_factory = RequestFactory()
+        request = request_factory.get("/", {'term': 'test'})
+        request.user = self.user
+        lookup = lookups.OrgLookup()
+        lookup_limited = lookups.UserLimitedOrgLookup()
+        self.assertTrue(lookup.check_auth(request))
+        self.assertTrue(lookup_limited.check_auth(request))
+
+        # Test get_query with bogus query
+        self.assertEqual(list(lookup.get_query('1234', request)), [])
+        self.assertEqual(list(lookup_limited.get_query('1234', request)), [])
+
+        # Test that if user is not associated with org, it does not appear in limited lookup
+        self.assertEqual(list(lookup_limited.get_query('LNL', request)), [])
+
+        org.user_in_charge = self.user
+        org.save()
+
+        # Test get_query with valid query
+        self.assertIn(org, list(lookup.get_query('LNL', request)))
+        self.assertIn(org, list(lookup_limited.get_query('LNL', request)))
+
+        # Test format_match with default user
+        self.assertEqual(lookup.format_match(org), "&nbsp;<strong>Lens &amp; Lights</strong>")
+        self.assertEqual(lookup_limited.format_match(org), "&nbsp;<strong>Lens &amp; Lights</strong>")
+
+    def test_fund_lookup(self):
+        org = OrgFactory.create(name="Lens & Lights", shortname="LNL")
+        fund = models.Fund.objects.create(name="Test", account=12345, organization=1, fund=123)
+        org.accounts.add(fund)
+
+        request_factory = RequestFactory()
+        request = request_factory.get("/", {'term': 'test'})
+        request.user = self.user
+        lookup = lookups.FundLookup()
+        lookup_limited = lookups.FundLookupLimited()
+        self.assertTrue(lookup.check_auth(request))
+        self.assertTrue(lookup_limited.check_auth(request))
+
+        # Test get_query with bogus query
+        self.assertEqual(list(lookup.get_query('bla', request)), [])
+        self.assertEqual(list(lookup_limited.get_query('bla', request)), [])
+
+        # Test that if user is not associated with org, it does not appear in limited lookup
+        self.assertEqual(list(lookup_limited.get_query('123', request)), [])
+
+        org.user_in_charge = self.user
+        org.save()
+
+        # Test get_query with valid query
+        self.assertIn(fund, list(lookup.get_query('123', request)))
+        self.assertIn(fund, list(lookup_limited.get_query('123', request)))
+
+        # Test format_match with default user
+        self.assertEqual(lookup.format_match(fund), "&nbsp;<strong>Test (123-1-12345)</strong>")
+        self.assertEqual(lookup_limited.format_match(fund), "&nbsp;<strong>Test (123-1-12345)</strong>")
