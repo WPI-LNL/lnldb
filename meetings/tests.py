@@ -21,16 +21,8 @@ class MeetingsModelTest(TestCase):
     def test_name(self):
         self.assertEqual(self.meeting.name, "Exec Meeting on %s" % timezone.now().date())
 
-    def test_endtime(self):
-        end_time = timezone.now()
-        end_time += timezone.timedelta(hours=1)
-        self.assertEqual(end_time, self.meeting.endtime)
-
     def test_cal_name(self):
         self.assertEqual("Meeting - %s" % self.meeting_type1.name, self.meeting.cal_name())
-
-    def test_cal_desc(self):
-        self.assertEqual("", self.meeting.cal_desc())
 
     def test_cal_location(self):
         self.assertEqual("", self.meeting.cal_location())
@@ -38,14 +30,6 @@ class MeetingsModelTest(TestCase):
         test_location = eventmodels.Location(name="Test Location", building=test_building)
         self.meeting.location = test_location
         self.assertEqual(test_location.name, self.meeting.cal_location())
-
-    def test_cal_start(self):
-        self.assertEqual(timezone.now(), self.meeting.cal_start())
-
-    def test_cal_end(self):
-        end_time = timezone.now()
-        end_time += timezone.timedelta(hours=1)
-        self.assertEqual(end_time, self.meeting.cal_end())
 
     def test_cal_link(self):
         path = reverse('meetings:detail', args=[self.meeting.pk])

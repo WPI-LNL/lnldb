@@ -165,6 +165,9 @@ class DateEntryFormSetBase(forms.Form):
     saturday = forms.BooleanField(required=False, initial=True)
     sunday = forms.BooleanField(required=False, initial=True)
 
+    def clean_name(self):
+        return self.cleaned_data['name'].replace('LnL', 'LNL')
+
     def save_objects(self, user, contact, org, ip=None):
         out = []
         tz = timezone.get_current_timezone()
