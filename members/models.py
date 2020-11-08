@@ -27,7 +27,6 @@ class Training(models.Model):
 
     class Meta:
         ordering = ['-date', '-recorded_on']
-        permissions = (('view_training_details', 'View a training'),)
 
     def __str__(self):
         return str(self.training_type) + ' on ' + str(self.date)

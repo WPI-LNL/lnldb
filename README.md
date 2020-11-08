@@ -2,14 +2,22 @@
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy) [![Build Status](https://travis-ci.org/WPI-LNL/lnldb.svg)](https://travis-ci.org/WPI-LNL/lnldb) [![Coverage Status](https://coveralls.io/repos/WPI-LNL/lnldb/badge.svg?branch=master&service=github)](https://coveralls.io/github/WPI-LNL/lnldb?branch=master) [![Code Health](https://landscape.io/github/WPI-LNL/lnldb/master/landscape.svg?style=flat)](https://landscape.io/github/WPI-LNL/lnldb/master)
 
 ## Intro
-LNLDB runs under Python2.x and Django.
+LNLDB now runs under Python3.x and Django 2.2 or later.
 
 ## To Install (Testing)
 ##### Install required system packages
-You are going to need some basic Python/Git tools to run the code. The most important are python2 (not 3) and virtualenv (which allows you to install python libs without root). The rest are to compile the python binary libraries, namely MySQL and image manipulation.
+You are going to need some basic Python/Git tools to run the code. The most important are Python3 and virtualenv (which allows you to install python libs without root). The rest are to compile the python binary libraries, namely MySQL and image manipulation.
 
+###### Linux:
 ```
-sudo apt-get install python2.7 python2.7-dev python-pip python-virtualenv git libtiff5-dev libjpeg8-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev libmysqlclient-dev
+sudo apt-get install python3 python3-dev python-pip python-virtualenv git libtiff5-dev libjpeg8-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev libmysqlclient-dev
+```
+
+###### macOS:
+```
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python get-pip.py
+pip install virtualenv
 ```
 
 It is certainly possible to run via Windows practically without changes, but figuring out that setup is left as an
@@ -28,7 +36,7 @@ This uses a lot of library functionalities in the form of plugins. We will make 
 from the system Python installation (ie. don't need root), and install our packages directly to the `env` folder.
 
 ```
-virtualenv --python=python2.7 env
+virtualenv env
 source env/bin/activate
 pip install -r requirements_debug.txt
 ```
@@ -49,9 +57,9 @@ python manage.py loaddata fixtures/*.json
 python manage.py createsuperuser
 ```
 
-##### (Optional) Run the tests
+##### Run the tests
 
-This app includes a number of self-checks to sanity test new code. All new patches are highly recommended to have
+This app includes a number of self-checks to sanity test new code. All new patches are expected to have
 tests included, and will be checked automatically when pushed to Github. Also try using the '-n' flag to speed it up.
 
 ```

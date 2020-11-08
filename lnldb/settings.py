@@ -308,7 +308,7 @@ INSTALLED_APPS = (
     'devices',
     'api',
 
-    'bootstrap_toolkit',
+    'bootstrap3',
     'crispy_forms',
     'lineage',
     'django_bootstrap_calendar',
@@ -397,7 +397,7 @@ AUTH_USER_MODEL = 'accounts.User'
 # AJAX_SELECT_BOOTSTRAP = False
 # AJAX_SELECT_INLINES = False
 # let's just shit all over the page. its okay. I'm fine with it :-\
-AJAX_SELECT_BOOTSTRAP = False
+AJAX_SELECT_BOOTSTRAP = True
 # AJAX_SELECT_INLINES = 'staticfiles'
 
 AJAX_LOOKUP_CHANNELS = {

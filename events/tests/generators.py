@@ -3,7 +3,8 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
-from factory import DjangoModelFactory, Faker, Sequence, SubFactory
+from factory import Faker, Sequence, SubFactory
+from factory.django import DjangoModelFactory
 
 from events.models import (Building, CCReport, Event, Event2019, Fund, Location, Category, Organization,
                            EventCCInstance, Service)

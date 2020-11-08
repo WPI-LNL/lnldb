@@ -62,7 +62,7 @@ class MyViewTest(ViewTestCase):
 
     def test_event_files(self):
         # Will need view_event permission
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertRedirects(self.client.get(reverse("my:event-files", args=[self.e.pk])),
@@ -231,7 +231,7 @@ class MyViewTest(ViewTestCase):
         self.e.save()
 
         # Will need view_event permission for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         # If closed, redirect to detail page
@@ -289,7 +289,7 @@ class MyViewTest(ViewTestCase):
         self.assertContains(self.client.post(reverse("my:org-request"), data), "Request Received")
 
         # Check that nothing happens on invalid data
-        data['client_name'] = None
+        data['client_name'] = ''
         self.assertOk(self.client.post(reverse("my:org-request"), data))
 
     def test_accept_orgtransfer(self):

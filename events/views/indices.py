@@ -69,7 +69,7 @@ def dbg_land(request):
 
 
 @login_required
-@permission_required('events.view_event', raise_exception=True)
+@permission_required('events.view_events', raise_exception=True)
 def event_search(request):
     context = {}
     if request.GET:

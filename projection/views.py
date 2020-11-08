@@ -2,6 +2,7 @@
 import datetime
 
 from crispy_forms.layout import Submit
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.conf import settings
@@ -248,10 +249,6 @@ class PITRequest(LoginRequiredMixin, HasPermMixin, FormView):
         context['desc'] = "Select the level of training you would like to receive. Then, if you\'d like, you may " \
                           "also request a specific date and time."
         context['NO_FOOT'] = True
-        if 'title' in kwargs:
-            context['title'] = kwargs['title']
-            context['desc'] = kwargs['desc']
-            context['form'] = ''
         return context
 
     def form_valid(self, form):
@@ -262,10 +259,9 @@ class PITRequest(LoginRequiredMixin, HasPermMixin, FormView):
             form.instance.projectionist = projectionist
             form.save()
             send_request_notification(form)
-            return self.render_to_response(self.get_context_data(
-                title="Request Submitted",
-                desc="You have successfully requested your next PIT. The HP will reach out to you shortly.")
-            )
+            messages.add_message(self.request, messages.SUCCESS, 'You have successfully requested your next PIT. '
+                                                                 'The HP will reach out to you shortly.')
+            return HttpResponseRedirect(reverse('projection:grid'))
 
 
 @login_required

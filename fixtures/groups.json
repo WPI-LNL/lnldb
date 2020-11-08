@@ -36,7 +36,7 @@
         "user"
       ],
       [
-        "read_user",
+        "view_user",
         "accounts",
         "user"
       ],
@@ -61,7 +61,7 @@
         "laptop"
       ],
       [
-        "view_laptop_details",
+        "view_laptop",
         "devices",
         "laptop"
       ],
@@ -181,7 +181,7 @@
         "baseevent"
       ],
       [
-        "view_event",
+        "view_events",
         "events",
         "baseevent"
       ],
@@ -556,7 +556,7 @@
         "training"
       ],
       [
-        "view_training_details",
+        "view_training",
         "members",
         "training"
       ],
@@ -595,7 +595,7 @@
     "name": "Associate",
     "permissions": [
       [
-        "view_event",
+        "view_events",
         "events",
         "baseevent"
       ],
@@ -654,7 +654,7 @@
         "laptop"
       ],
       [
-        "view_laptop_details",
+        "view_laptop",
         "devices",
         "laptop"
       ],
@@ -669,7 +669,7 @@
         "baseevent"
       ],
       [
-        "view_event",
+        "view_events",
         "events",
         "baseevent"
       ],
@@ -749,7 +749,7 @@
         "meeting"
       ],
       [
-        "view_training_details",
+        "view_training",
         "members",
         "training"
       ],
@@ -773,7 +773,7 @@
         "laptop"
       ],
       [
-        "view_laptop_details",
+        "view_laptop",
         "devices",
         "laptop"
       ],
@@ -783,7 +783,7 @@
         "baseevent"
       ],
       [
-        "view_event",
+        "view_events",
         "events",
         "baseevent"
       ],
@@ -833,7 +833,7 @@
         "meeting"
       ],
       [
-        "view_training_details",
+        "view_training",
         "members",
         "training"
       ],
@@ -857,7 +857,7 @@
         "globalperms"
       ],
       [
-        "view_laptop_details",
+        "view_laptop",
         "devices",
         "laptop"
       ],
@@ -867,7 +867,7 @@
         "baseevent"
       ],
       [
-        "view_event",
+        "view_events",
         "events",
         "baseevent"
       ],
@@ -907,7 +907,7 @@
         "meeting"
       ],
       [
-        "view_training_details",
+        "view_training",
         "members",
         "training"
       ],
@@ -926,7 +926,7 @@
     "name": "Inactive",
     "permissions": [
       [
-        "view_event",
+        "view_events",
         "events",
         "baseevent"
       ],
@@ -983,7 +983,7 @@
         "laptop"
       ],
       [
-        "view_laptop_details",
+        "view_laptop",
         "devices",
         "laptop"
       ],

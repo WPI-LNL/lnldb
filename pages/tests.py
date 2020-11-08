@@ -1,5 +1,5 @@
 from data.tests.util import ViewTestCase
-from django.core.urlresolvers import reverse
+from django.urls.base import reverse
 
 from . import models
 

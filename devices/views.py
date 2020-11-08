@@ -28,7 +28,7 @@ from emails.generators import GenericEmailGenerator
 
 @login_required
 @require_GET
-@permission_required('devices.view_laptop_details', raise_exception=True)
+@permission_required('devices.view_laptop', raise_exception=True)
 def laptops_list(request):
     laptops = Laptop.objects.filter(retired=False)
     return render(request, 'laptops/laptops_list.html', {"laptops": laptops})

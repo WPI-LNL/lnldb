@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 from django.db import models
 from django.conf import settings
-from django.utils.encoding import python_2_unicode_compatible
+from six import python_2_unicode_compatible
 
 
 @python_2_unicode_compatible
@@ -24,7 +24,6 @@ class Laptop(models.Model):
 
     class Meta:
         permissions = (
-            ('view_laptop_details', 'View details of a laptop'),
             ('view_laptop_history', 'View password retrieval history for a laptop'),
             ('retrieve_user_password', 'Retrieve the user password for a laptop'),
             ('retrieve_admin_password', 'Retrieve the admin password for a laptop'),

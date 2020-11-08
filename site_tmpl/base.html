@@ -31,16 +31,13 @@
             <script src="//cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
         {% endif %}
 
-
+        <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet">
         <!--         <link href="{% static 'css/bootstrap-responsive.css' %}" rel="stylesheet"> -->
-        <link href="{% static 'css/datepicker.css' %}" rel="stylesheet" type="text/css">
-        <link href="{% static 'css/bootstrap-timepicker.min.css' %}" rel="stylesheet" type="text/css">
-        <script src="{% static 'js/bootstrap-datepicker.js' %}"></script>
-        <script src="{% static 'js/bootstrap-timepicker.min.js' %}"></script>
 
         <script src="{% static 'js/flexmenu.min.js' %}"></script>
         <link href='{% static 'ajax_select/css/ajax_select.css' %}' rel="stylesheet" type="text/css">
-        <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet">
+        <script src="{% static 'ajax_select/js/ajax_select.js' %}"></script>
+
         <link rel="stylesheet" type="text/css" href="{% static 'hijack/hijack-styles.css' %}" />
         {% if CCSS == 'survey' %}
         <link rel="stylesheet" type="text/css" href="{% static 'css/survey.css' %}"/>
@@ -53,14 +50,13 @@
                     todayBtn: true,
                     todayHighlight: true,
                     orientation: 'top'
-                    });
-                $(".timeinput").timepicker(
-                    {
-                        minuteStep: 15,
-                        showInputs: true,
-                        defaultTime: false,
-                        showMeridian: true
-                    });
+                });
+                $(".timeinput").timepicker({
+                    minuteStep: 1,
+                    showInputs: true,
+                    defaultTime: false,
+                    showMeridian: true
+                });
 
                 // Collapse main navbar if too big
 					 function autoresize_nav (media_query) {
@@ -132,6 +128,11 @@
         <meta name="theme-color" content="#ffffff">
         {% block extras %}
         {% endblock %}
+
+        <link href="{% static 'css/datepicker.css' %}" rel="stylesheet" type="text/css">
+        <link href="{% static 'css/bootstrap-timepicker.min.css' %}" rel="stylesheet" type="text/css">
+        <script src="{% static 'js/bootstrap-datepicker.js' %}"></script>
+        <script src="{% static 'js/bootstrap-timepicker.min.js' %}"></script>
     </head>
 
     <body>

@@ -424,7 +424,7 @@ class ProjViewTest(ViewTestCase):
         form = forms.PITRequestForm(data=data)
         self.assertTrue(form.is_valid())
 
-        self.assertOk(self.client.post(reverse("projection:pit-request"), data))
+        self.assertRedirects(self.client.post(reverse("projection:pit-request"), data), reverse("projection:grid"))
 
         # Test that new projectionist has been created
         self.assertTrue(models.Projectionist.objects.filter(user=self.user).exists())

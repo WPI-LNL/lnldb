@@ -54,7 +54,7 @@ class AssocUsersCustomPermissionLogic(PermissionLogic):
 
 class CrewChiefPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'ccinstances__crew_chief'
-    perms = ('events.view_event', 'events.event_images', 'events.cancel_event',
+    perms = ('events.view_events', 'events.event_images', 'events.cancel_event',
              'events.event_attachments', 'events.edit_event_times',
              'events.add_event_report', 'events.edit_event_text',
              'events.view_hidden_event', 'events.edit_event_fund',
@@ -64,7 +64,7 @@ class CrewChiefPermLogic(AssocUsersCustomPermissionLogic):
 
 class EventContactPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'contact'
-    perms = ('events.view_event', 'events.event_images', 'events.cancel_event',
+    perms = ('events.view_events', 'events.event_images', 'events.cancel_event',
              'events.event_attachments', 'events.edit_event_times',
              'events.add_event_report', 'events.edit_event_text',
              'events.view_hidden_event', 'events.edit_event_fund',
@@ -73,7 +73,7 @@ class EventContactPermLogic(AssocUsersCustomPermissionLogic):
 
 class EventCreatorPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'submitted_by'
-    perms = ('events.view_event', 'events.event_images', 'events.cancel_event',
+    perms = ('events.view_events', 'events.event_images', 'events.cancel_event',
              'events.event_attachments', 'events.edit_event_times',
              'events.add_event_report', 'events.edit_event_text',
              'events.view_hidden_event', 'events.edit_event_fund',
@@ -83,7 +83,7 @@ class EventCreatorPermLogic(AssocUsersCustomPermissionLogic):
 
 class EventOrgMemberPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'org__associated_users'
-    perms = ('events.view_event', 'events.event_images', 'events.cancel_event',
+    perms = ('events.view_events', 'events.event_images', 'events.cancel_event',
              'events.event_attachments', 'events.edit_event_times',
              'events.add_event_report', 'events.edit_event_text',
              'events.view_hidden_event', 'events.edit_event_fund',
@@ -98,7 +98,7 @@ class EventOrgOwnerPermLogic(AssocUsersCustomPermissionLogic):
 
 class WorkedAtEventPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'hours__user'
-    perms = ('events.view_event', 'events.add_event_report', 'events.event_images')
+    perms = ('events.view_events', 'events.add_event_report', 'events.event_images')
 
 
 class OrgMemberPermLogic(AssocUsersCustomPermissionLogic):
