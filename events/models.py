@@ -280,7 +280,7 @@ class BaseEvent(PolymorphicModel):
         return self.event_name
 
     def cal_name(self):
-        return self.event_name
+        return self.event_name.replace('LnL', 'LNL')
     
     def cal_desc(self):
         desc = ""
@@ -297,7 +297,7 @@ class BaseEvent(PolymorphicModel):
             desc = desc[:-2] + ".\n"  # removes trailing comma
         if self.description:
             desc += self.description + "\n"
-        return desc
+        return desc.replace('LnL', 'LNL')
 
     def cal_location(self):
         return self.location.name

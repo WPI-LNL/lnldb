@@ -29,7 +29,7 @@ class UserEditForm(FieldAccessForm):
                      'first_name', 'last_name', 'username', 'email', 'nickname',
                      HTML("""
                  <div class="col-lg-offset-2 col-lg-8">
-                     <a href="{% url 'accounts:password' object.pk %}">Set a password for non-CAS login</a>
+                     <a href="{% url 'accounts:password' object.pk %}">Set a password for non-SSO login</a>
                  </div>
                  """)),
             Fieldset("Contact Info",
@@ -69,7 +69,7 @@ class UserEditForm(FieldAccessForm):
         hasperm = FieldAccessLevel(
             lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
             enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year',
-                    'student_id', 'carrier')
+                    'student_id')
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.change_group', instance),

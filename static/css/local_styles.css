@@ -272,3 +272,7 @@ td.checkbox {
     background-color: #f2dede;
     border-color: #eed3d7;
 }
+
+.hijacked-warning {
+    position: absolute !important;
+}

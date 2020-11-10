@@ -16,7 +16,6 @@ from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 from django.utils import timezone
 from django.views import generic
-from django_cas_ng.views import login as cas_login
 from django_saml2_auth.views import signin as saml_login
 
 from data.forms import form_footer
@@ -217,20 +216,14 @@ class MeDirectView(generic.RedirectView):
 def smart_login(request):
     pref_saml = request.COOKIES.get('prefer_saml', None)
     use_saml = request.GET.get('force_saml', None)
-    pref_cas = request.COOKIES.get('prefer_cas', None)
-    use_cas = request.GET.get('force_cas', None)
 
     next_url = request.GET.get('next', reverse('home'))
     if request.user.is_authenticated:
         return HttpResponseRedirect(next_url)
     if settings.SAML2_ENABLED and use_saml == "true":
         return saml_login(request)
-    if settings.USE_CAS and (use_cas == "true" or "ticket" in request.GET):
-        return cas_login(request, next_url)
     if settings.SAML2_ENABLED and pref_saml == "true":
         return saml_login(request)
-    if settings.USE_CAS and pref_cas == "true":
-        return cas_login(request, next_url)
     else:
         return LoginView.as_view(template_name='registration/login.html', authentication_form=forms.LoginForm)(request)
 

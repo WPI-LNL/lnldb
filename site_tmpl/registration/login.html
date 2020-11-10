@@ -6,26 +6,6 @@
 {% endblock %}
 
 {% block extras %}
-    {% if USE_CAS %}
-    <script type="application/javascript">
-
-        $(function () {
-            var value = "; " + document.cookie;
-            var parts = value.split("; prefer_cas=");
-            if (parts.length == 2) {
-                var cook = parts.pop().split(";").shift();
-                $("#prefer_cas").prop('checked', cook == "true");
-            }
-
-            $("#prefer_cas").change(function () {
-                var d = new Date();
-                d.setTime(d.getTime() + (24 * 60 * 60 * 365 * 1000)); // a year is plenty
-                document.cookie = "prefer_cas=" + $(this).is(":checked") + ";expires=" + d.toUTCString() + ";path=/";
-            });
-        });
-
-    </script>
-    {% endif %}
     {% if SAML2_ENABLED  %}
     <script type="application/javascript">
 
@@ -52,21 +32,10 @@
 
 <div class="container marketing" style="text-align:center;">
     <div class="row">
-        {% if USE_CAS or SAML2_ENABLED %}
+        {% if SAML2_ENABLED %}
             <div class="col-md-5 offset1">
                 <h2> Login via WPI Account</h2>
-                <p class="lead">If you are currently part of the WPI Community, you can login to the application via CAS or Microsoft Azure SSO.</p>
-                {% if USE_CAS %}
-                    <p>
-                        <a class="btn btn-lg btn-block btn-primary" href="{% url 'accounts:login' %}?force_cas=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}">CAS Login</a>
-                        <form>
-                            <label>
-                                <input type="checkbox" id="prefer_cas" name="prefer_cas">
-                                Automatically send me to CAS in the future.
-                            </label>
-                        </form>
-                    </p>
-                {% endif %}
+                <p class="lead">If you are currently part of the WPI Community, you can login to the application via Microsoft Azure SSO.</p>
                 {% if SAML2_ENABLED %}
                     <p>
                         <a class="btn btn-lg btn-block btn-primary" href="{% url 'accounts:login' %}?force_saml=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}"

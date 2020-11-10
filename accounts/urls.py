@@ -2,8 +2,7 @@ from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib.auth import views as auth_views
 from django.urls.base import reverse_lazy
-
-import django_cas_ng.views
+from django_saml2_auth.views import signout as saml_logout
 
 from . import views, forms
 
@@ -14,13 +13,13 @@ each_member_pattern = [
     url(r'^detail/$', views.UserDetailView.as_view(), name="detail"),
 ]
 
-# Usually use CAS for logout, since it's guaranteed to log the user out
+# Usually use Microsoft SSO for logout, since it's guaranteed to log the user out
 #  (without immediately signing them back in), and will ignore our
 #  local users.
-# But when we're doing development, we can't use cas, as there's 
+# But when we're doing development, we can't use SSO, as there's
 #  no server to send login info to.
-if settings.CAS_SERVER_URL:
-    best_logout_url = url(r'^logout/$', django_cas_ng.views.logout, name="logout")
+if settings.SAML2_ENABLED:
+    best_logout_url = url(r'^logout/$', saml_logout, name="logout")
 else:
     best_logout_url = url(r'^logout/$', auth_views.LogoutView.as_view(), {'template_name': 'registration/logout.html'},
                           name="logout")
@@ -57,10 +56,10 @@ urlpatterns = [
     best_logout_url,
 
     # now for logical separation of the two auth portals
-    url(r'^cas/', include(([
-        url(r'^login/$', django_cas_ng.views.login, name="login"),
-        url(r'^logout/$', django_cas_ng.views.logout, name="logout"),
-    ], 'accounts'), namespace="cas")),
+    # url(r'^cas/', include(([
+    #     url(r'^login/$', django_cas_ng.views.login, name="login"),
+    #     url(r'^logout/$', django_cas_ng.views.logout, name="logout"),
+    # ], 'accounts'), namespace="cas")),
 
     url(r'^local/', include(([
         url(r'^login/$', auth_views.LoginView.as_view(), {'template_name': 'registration/login.html',
