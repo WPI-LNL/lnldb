@@ -1,17 +1,17 @@
 {% load tz %}
 {% load lnldb_tags %}
-{{ subject }}
+{{ subject|public_field }}
 
-Lens and Lights recently provided services for {{ event.event_name }}. We would appreciate you taking a short survey on how we did. Your input will help us to improve our services.
+Thank you for choosing WPI Lens and Lights! We recently provided services for {{ event.event_name|public_field }} and would love to hear about your experience working with us. If you have a moment, please consider taking a short survey to let us know how we did. The survey should take no more than 5 minutes and your response will help us understand how we can improve our services in the future.
 
-Take the survey using this link:
+Take the survey here:
 {% get_base_url %}{% url 'my:post-event-survey' event.pk %}
 
-{{ event.event_name }}
+{{ event.event_name|public_field }}
 Location: {{ event.location }}
 Start: {{ event.datetime_start }}
 End: {{ event.datetime_end }}
 Services: {{ event.short_services }}
 Organization to be billed: {{ event.org_to_be_billed }}
 
-See full details of this event at {% get_base_url %}{% url 'events:detail' event.id %}.
+You can find the full details for this event at {% get_base_url %}{% url 'events:detail' event.id %}.

@@ -4,7 +4,7 @@
 
 {{ body|safe }}
 
-{{ event.event_name }}
+{{ event.event_name|public_field }}
 Location: {{ event.location }}
 Start: {{ event.datetime_start }}
 End: {{ event.datetime_end }}

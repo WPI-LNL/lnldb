@@ -1,5 +1,6 @@
 {% extends "emails/email_base.html" %}
 {% load tz %}
+{% load lnldb_tags %}
 {% block perma %}
 {% endblock %}
 
@@ -11,12 +12,12 @@
     <tbody>
         <tr>
             <td class="w960" width="960">
-                <p align="left" class="article-title">{{ subject }}</p>
+                <p align="left" class="article-title">{{ subject|public_field }}</p>
                 <div align="left" class="article-content">
                     {% if CUSTOM_URL %}
-                    <p> {{ body|safe|linebreaksbr }} </p>
+                    <p> {{ body|public_field|safe|linebreaksbr }} </p>
                     {% else %}
-                    <p> {{  body|safe|linebreaksbr|urlize }} </p>
+                    <p> {{  body|public_field|safe|linebreaksbr|urlize }} </p>
                     {% endif %}
                 </div>
             </td>

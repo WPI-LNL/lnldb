@@ -22,6 +22,7 @@ def daterange(datetime_start, datetime_end):
 def is_list(string):
     return hasattr(string, '__iter__') and not isinstance(string, basestring)
 
+
 @register.simple_tag(takes_context=True)
 def get_base_url(context):
     if 'request' in context:
@@ -33,3 +34,10 @@ def get_base_url(context):
     scheme = 'https' if is_secure else 'http'
     return '%s://%s' % (scheme, settings.ALLOWED_HOSTS[0])
 
+
+@register.filter()
+def public_field(string):
+    output = string
+    if settings.PUBLIC_FIELD_FILTERING and string:
+        output = string.replace('LnL', 'LNL')
+    return output

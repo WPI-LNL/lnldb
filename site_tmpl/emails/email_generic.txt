@@ -1,4 +1,5 @@
 {% load tz %}
-{{ subject }}
+{% load lnldb_tags %}
+{{ subject|public_field }}
 
-{{ body|safe }}
+{{ body|public_field|safe }}

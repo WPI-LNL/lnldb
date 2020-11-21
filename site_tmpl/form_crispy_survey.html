@@ -1,19 +1,20 @@
 {% extends 'base_admin.html' %}
 {% load crispy_forms_tags %}
+{% load lnldb_tags %}
 
 {% block content %}
     <div class="row">
         <div class="container">
-            <h1>Post-event survey for {{ event.event_name }}</h1>
+            <h1>Post-event survey for {{ event.event_name|public_field }}</h1>
             <p>
                 Thank you for choosing Lens and Lights to provide sound, lighting, or projection services for your
                 recent event! In order to improve our services, we would like your honest feedback. This survey is not
                 anonymous. Your answers are not saved until you press the submit button at the bottom of the page.
             </p>
             <p style="padding-bottom: 4%">
-                You are completing this survey for {{ event.event_name }}, which took place in {{ event.location }} from
-                {{ event.datetime_start }} to {{ event.datetime_end }} See full details of this event
-                <a target="_blank" href="{% url 'events:detail' event.id %}">here</a>.
+                You are completing this survey for {{ event.event_name|public_field }}, which took place in
+                {{ event.location }} from {{ event.datetime_start }} to {{ event.datetime_end }} See full details of
+                this event <a target="_blank" href="{% url 'events:detail' event.id %}">here</a>.
             </p>
         </div>
     </div>

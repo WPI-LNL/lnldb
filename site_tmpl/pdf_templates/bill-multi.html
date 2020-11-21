@@ -1,6 +1,7 @@
 {% extends "pdf_templates/pdf_base.html" %}
 {% load static %}
 {% load tz %}
+{% load lnldb_tags %}
 {% block body %}
 <!-- have mercy on the soul of the following html.
 
@@ -59,7 +60,7 @@
             <table class="line-items">
                 {% for event in events %}
                 <tr>
-                    <td>{{ event }}</td>
+                    <td>{{ event.event_name|public_field }}</td>
                     <td class="align-right" width="50">$ {{ event.cost_total|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
