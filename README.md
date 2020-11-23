@@ -74,6 +74,96 @@ Note that in future sessions, you must first call `source env/bin/activate` to s
 
 - All server-specific keys, directories, etc. haven't and won't be included. The app checks for a file at
     `lnldb/local_settings.py`, where those and any platform-specific options can be included.
+   
+   
+   
+## Installing on Userweb / RHEL 8
+##### Install required system packages
+You are going to need some basic Python/Git tools to run the code. The most important are Python3 and virtualenv (which allows you to install python libs without root). The rest are to compile the python binary libraries, namely MySQL and image manipulation.
+
+```
+sudo yum install python3 python3-devel git gcc gdb libtiff-devel libjpeg-turbo-devel freetype-devel lcms2-devel libwebp-devel mysql-devel
+```
+
+##### Get the sources
+If you're reading this outside of Github, you can skip this.
+
+```
+git clone -b drop-python2 https://github.com/WPI-LNL/lnldb.git
+cd lnldb
+```
+
+##### Install Python packages
+This uses a lot of library functionalities in the form of plugins. We will make a virtualenv to keep all of this away
+from the system Python installation (ie. don't need root), and install our packages directly to the `env` folder.
+
+```
+python3 -m venv lnlenv
+source lnlenv/bin/activate
+pip install -r requirements_userweb.txt
+```
+
+##### Initialize the database
+The first line makes/loads the actual database schema, by walking through all of the previous schemas and making necessary
+changes to the database one-by-one so that no data is ever lost regardless of versions. On your machine, the database
+will by default be an Sqlite file in the runtime folder, on the server, it's WPI's hosted MySQL server.
+
+The second line will populate any data with a useful initial value. Examples include groups, permissions, locations, etc.
+If you have updated these or have existing data, **don't run this.**  You can also use this method to load a backup from the
+production database (`dbbak` on server).
+
+The third will create an account to let you log in once you've started the server.
+```
+python3 manage.py migrate
+python3 manage.py loaddata fixtures/*.json
+python3 manage.py createsuperuser
+```
+
+##### Run the tests
+
+This app includes a number of self-checks to sanity test new code. All new patches are expected to have
+tests included, and will be checked automatically when pushed to Github. Also try using the '-n' flag to speed it up.
+
+```
+python3 manage.py test
+```
+
+##### Run it!
+`python3 manage.py runserver` or `python3 manage.py shell_plus`
+Note that in future sessions, you must first call `source env/bin/activate` to set up the local path
+
+
+### Running with Passenger and Apache
+##### Install Passenger
+You can follow [this guide](https://www.phusionpassenger.com/docs/advanced_guides/install_and_upgrade/apache/install/oss/el8.html) to install Passenger on RHEL 8. Note the following:
+* If you run into issues installing EPEL, make sure the specific RHEL 8 release you are using is compatible (LVM in Azure Cloud is not!)
+* At time of writing, repo `rhel-8-server-optional-rpms` does not exist, you can skip enabling it
+
+##### Configure Apache
+Apache should be installed automatically.
+[Create a new virtual host](https://www.phusionpassenger.com/library/deploy/apache/deploy/python/) in the httpd.conf file (or other as applicable):
+```
+<VirtualHost *:80>
+    ServerName yourserver.com       # lnl.wpi.edu or similar
+
+    # Tell Apache and Passenger where your app's code directory is
+    DocumentRoot /path-to-your-app/public_html      # Location of static site (~/public_html
+    PassengerAppRoot /path-to-your-app              # ~/lnldb
+
+    # Tell Passenger that your app is a Python app
+    PassengerAppType wsgi
+    PassengerStartupFile passenger_wsgi.py
+
+    # Relax Apache security settings
+    <Directory /path-to-your-app/public>            # See above
+      Allow from all
+      Options -MultiViews
+      # Uncomment this if you're on Apache >= 2.4:
+      #Require all granted                          # Should be running >=2.4 so uncomment, still worth to check though
+    </Directory>
+</VirtualHost>
+```
+
 
 ## Installing on heroku
 
