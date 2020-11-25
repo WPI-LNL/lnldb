@@ -141,28 +141,34 @@ You can follow [this guide](https://www.phusionpassenger.com/docs/advanced_guide
 
 ##### Configure Apache
 Apache should be installed automatically.
-[Create a new virtual host](https://www.phusionpassenger.com/library/deploy/apache/deploy/python/) in the httpd.conf file (or other as applicable):
+[Create a new virtual host](https://www.phusionpassenger.com/library/deploy/apache/deploy/python/) in the httpd.conf file (or other as applicable)[Other resources](https://help.dreamhost.com/hc/en-us/articles/215769548-Passenger-and-Python-WSGI):
 ```
 <VirtualHost *:80>
-    ServerName yourserver.com       # lnl.wpi.edu or similar
+     ServerName lnl.example.com
+     # Be sure to point to 'public'!
+     DocumentRoot /home/lnl/public_html
+     PassengerAppRoot /home/lnl/lnldb
 
-    # Tell Apache and Passenger where your app's code directory is
-    DocumentRoot /path-to-your-app/public_html      # Location of static site (~/public_html
-    PassengerAppRoot /path-to-your-app              # ~/lnldb
+     PassengerAppType wsgi
+     PassengerStartupFile passenger_wsgi.py
 
-    # Tell Passenger that your app is a Python app
-    PassengerAppType wsgi
-    PassengerStartupFile passenger_wsgi.py
-
-    # Relax Apache security settings
-    <Directory /path-to-your-app/public>            # See above
-      Allow from all
-      Options -MultiViews
-      # Uncomment this if you're on Apache >= 2.4:
-      #Require all granted                          # Should be running >=2.4 so uncomment, still worth to check though
-    </Directory>
+     <Directory /home/lnl/public_html>
+          # Relax Apache security settings
+          AllowOverride all
+          Require all granted
+          # MultiViews must be turned off
+          Options -MultiViews
+     </Directory>
 </VirtualHost>
 ```
+
+##### Set permissions
+Make sure all directories allow the webserver to read and potentially execute (`chown 644` or `chown 755`).
+
+##### Create .env File in ~lnl/lnldb/.env
+This file should include values for all keys defined in the `~lnl/lnldb/lnldb/settings.py` file.
+
+
 
 
 ## Installing on heroku
