@@ -95,13 +95,16 @@ cd lnldb
 
 ##### Install Python packages
 This uses a lot of library functionalities in the form of plugins. We will make a virtualenv to keep all of this away
-from the system Python installation (ie. don't need root), and install our packages directly to the `env` folder.
+from the system Python installation (ie. don't need root), and install our packages directly to the `lnlenv` folder.
 
 ```
 python3 -m venv lnlenv
 source lnlenv/bin/activate
 pip install -r requirements_userweb.txt
 ```
+
+##### Verify the Settings File
+Make sure the ~lnl/lnldb/lnldb/settings.py file's `ALLOWED_HOSTS` variable contains the ip address and hostname of your system. This can be added in the .env file (see below) if desired.
 
 ##### Initialize the database
 The first line makes/loads the actual database schema, by walking through all of the previous schemas and making necessary
