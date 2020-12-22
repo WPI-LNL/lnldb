@@ -222,13 +222,15 @@ class SnipeCheckoutForm(forms.Form):
 
 
 class SnipeCheckinForm(forms.Form):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, checkin_from_choices, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_action = ''
         self.helper.help_text_inline = True
         self.helper.layout = Layout(
-            HTML('<p>This form should be used for rental checkins. It will check in the specified assets.</p>'),
+            HTML('<p>This form should be used for rental checkins. It will check in the specified assets and '
+                 'accessories from the selected user in Snipe.</p>'),
+            'checkin_from',
             'asset_tags',
             HTML('<p>Do not press "Check in" more than once. Be patient. It WILL take a while for the DB to check in '
                  'a large number of assets.</p>'),
@@ -237,10 +239,14 @@ class SnipeCheckinForm(forms.Form):
             )
         )
         super(SnipeCheckinForm, self).__init__(*args, **kwargs)
+        self.fields['checkin_from'] = forms.IntegerField(
+            widget=forms.Select(choices=checkin_from_choices), help_text='This dropdown contains all Snipe users in the '
+                                                                         '"rental" group.')
 
     asset_tags = forms.CharField(widget=forms.Textarea(),
-                                 help_text='Enter asset tags separated by any non-alphanumeric character, white space, '
-                                           'or new lines.')
+                                 help_text='Enter asset tags and accessory barcodes separated by any non-alphanumeric '
+                                           'character, white space, or new lines. For accessories, scan the accessory '
+                                           'barcode multiple times for the number of that accessory being checked in.')
 
 
 class AccessForm(forms.ModelForm):
