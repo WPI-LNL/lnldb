@@ -509,7 +509,7 @@ def snipe_checkout(request):
             total_rental_price = None if None in rental_prices else sum(rental_prices)
             checkout_to_name = next((item[1] for item in checkout_to_choices if item[0] == form.cleaned_data['checkout_to']))
             # Before returning the response, email a PDF receipt
-            html = render_to_string('pdf_templates/inventory-receipt.html', request=request, context={
+            html = render_to_string('pdf_templates/checkout_receipt.html', request=request, context={
                 'title': 'Checkout Receipt',
                 'receipt_info': receipt_info,
                 'num_assets': success_count_assets,
@@ -522,10 +522,8 @@ def snipe_checkout(request):
             pdf_handle = pdf_file.getvalue()
             filename = 'LNL-checkout-receipt-{}.pdf'.format(timezone.now().isoformat())
             attachments = [{'file_handle': pdf_handle, 'name': filename}]
-            email = DefaultLNLEmailGenerator(subject='LNL Inventory Checkout Receipt', attachments=attachments,
-                                             to_emails=(request.user.email, settings.DEFAULT_TO_ADDR),
-                                             body='A receipt for the rental checkout by {} to {} is '
-                                                  'attached.'.format(request.user, checkout_to_name))
+            email = DefaultLNLEmailGenerator(subject='LNL Inventory Checkout Receipt', to_emails=(request.user.email, settings.DEFAULT_TO_ADDR), attachments=attachments,
+                body='A receipt for the rental checkout by {} to {} is attached.'.format(request.user, checkout_to_name))
             email.send()
             # Return the response
             return render(request, 'inventory/checkout_receipt.html', {
@@ -556,45 +554,205 @@ def snipe_checkin(request):
         return HttpResponse('This page is unavailable because SNIPE_URL is not set.', status=501)
     if not settings.SNIPE_API_KEY:
         return HttpResponse('This page is unavailable because SNIPE_API_KEY is not set.', status=501)
-    error_message = 'Error communicating with Snipe. Some assets may have been checked in while some were not. ' \
-                    'Please go check Snipe.'
+    # Get the list of users in the rental group from Snipe
+    error_message = 'Error communicating with Snipe. Did not check in anything.'
+    checkin_from_choices = []
+    response = requests.request('GET', '{}api/v1/users'.format(settings.SNIPE_URL), headers={
+        'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+    })
+    if response.status_code == 200:
+        try:
+            data = json.loads(response.text)
+            if data.get('status') == 'error':
+                return HttpResponse(error_message, status=502)
+            checkin_from_choices = [(user['id'], user['name']) for user in data['rows'] if 'rental' in ((group['name'] for group in user['groups']['rows']) if user['groups'] is not None else ())]
+            checkin_from_usernames = {user['id']: user['username'] for user in data['rows'] if 'rental' in ((group['name'] for group in user['groups']['rows']) if user['groups'] is not None else ())}
+        except ValueError:
+            return HttpResponse(error_message, status=502)
+    else:
+        return HttpResponse(error_message, status=502)
+
+    # Handle the form
+    error_message = 'Error communicating with Snipe. Some things may have been checked in while some were not. Please go check Snipe.'
     if request.method == 'POST':
-        form = forms.SnipeCheckinForm(request.POST, request.FILES)
+        form = forms.SnipeCheckinForm(checkin_from_choices, request.POST, request.FILES)
         if form.is_valid():
-            success_count = 0
+            receipt_info = {}
+            receipt_info_extra = {}
+            checkin_from_name = next((item[1] for item in checkin_from_choices if item[0] == form.cleaned_data['checkin_from']))
+            checkin_from_username = checkin_from_usernames[form.cleaned_data['checkin_from']]
+            success_count_assets = 0
+            success_count_accessories = 0
+            extra_count_assets = 0
+            extra_count_accessories = 0
             for tag in [tag for tag in re.split('[^a-zA-Z0-9]', form.cleaned_data['asset_tags']) if tag]:
-                response = requests.request('GET', '{}api/v1/hardware/bytag/{}'.format(settings.SNIPE_URL, tag),
-                                            headers={'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY)})
-                if response.status_code == 200:
-                    try:
-                        data = json.loads(response.text)
-                        if data.get('status') == 'error':
-                            # The asset tag does not exist in Snipe
-                            messages.add_message(request, messages.ERROR, 'No such asset tag {}'.format(tag))
-                            continue
-                        asset_name = data['name']
-                        response = requests.request('POST', '{}api/v1/hardware/{}/checkin'.format(settings.SNIPE_URL, data['id']), headers={
-                            'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
-                            'accept': 'application/json',
-                            'content-type': 'application/json',
-                        })
-                        if response.status_code == 200:
+                match = re.match('LNLACC([0-9]+)', tag)
+                if match:
+                    tag = match.group(1)
+                    # This tag represents an accessory
+                    response = requests.request('GET', '{}api/v1/accessories/{}'.format(settings.SNIPE_URL, tag), headers={
+                        'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                        'accept': 'application/json',
+                    })
+                    if response.status_code == 200:
+                        try:
                             data = json.loads(response.text)
                             if data.get('status') == 'error':
-                                # Snipe refused to check in the asset
-                                messages.add_message(request, messages.ERROR, 'Unable to check in asset {} - {}. Snipe says: {}'.format(tag, asset_name, data['messages']))
+                                # No accessory with that ID exists in Snipe
+                                messages.add_message(request, messages.ERROR, 'No such accessory with ID {}'.format(tag))
                                 continue
-                            # The asset was successfully checked in
-                            success_count += 1
-                        else:
+                            accessory_name = data['name']
+                            rental_price = float(data['order_number']) if data['order_number'] is not None else None
+                            # Get the list of checked out instances of the accessory
+                            response = requests.request('GET', '{}api/v1/accessories/{}/checkedout'.format(settings.SNIPE_URL, tag), headers={
+                                'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                                'accept': 'application/json',
+                            })
+                            if response.status_code == 200:
+                                data = json.loads(response.text)
+                                if data.get('status') == 'error':
+                                    return HttpResponse(error_message, status=502)
+                                accessory_instances = [a for a in data['rows'] if a['username'] == checkin_from_username]
+                                if len(accessory_instances) == 0:
+                                    # There are no instances of that accessory checked out to the specified Snipe user
+                                    messages.add_message(request, messages.ERROR, 'No instance of {} checked out to {}'.format(accessory_name, checkin_from_name))
+                                    extra_count_accessories += 1
+                                    if tag in receipt_info_extra:
+                                        if receipt_info_extra[tag]['name'] != accessory_name \
+                                                or receipt_info_extra[tag]['rental_price'] != rental_price:
+                                            return HttpResponse(error_message, status=502)
+                                        receipt_info_extra[tag]['quantity'] += 1
+                                    else:
+                                        receipt_info_extra[tag] = {'name': accessory_name, 'rental_price': rental_price, 'quantity': 1}
+                                    continue
+                                # Check in the accessory
+                                response = requests.request('POST', '{}api/v1/accessories/{}/checkin'.format(settings.SNIPE_URL, accessory_instances[0]['assigned_pivot_id']), headers={
+                                    'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                                    'accept': 'application/json',
+                                    'content-type': 'application/json',
+                                })
+                                if response.status_code == 200:
+                                    data = json.loads(response.text)
+                                    if data.get('status') == 'error':
+                                        # Snipe refused to check in the accessory
+                                        messages.add_message(request, messages.ERROR, 'Unable to check in accessory {}. Snipe says: {}'.format(tag, data['messages']))
+                                        continue
+                                    # The accessory was successfully checked in
+                                    success_count_accessories += 1
+                                    if tag in receipt_info:
+                                        if receipt_info[tag]['name'] != accessory_name \
+                                                or receipt_info[tag]['rental_price'] != rental_price:
+                                            return HttpResponse(error_message, status=502)
+                                        receipt_info[tag]['quantity'] += 1
+                                    else:
+                                        receipt_info[tag] = {'name': accessory_name, 'rental_price': rental_price, 'quantity': 1}
+                                else:
+                                    return HttpResponse(error_message, status=502)
+                            else:
+                                return HttpResponse(error_message, status=502)
+                        except ValueError:
                             return HttpResponse(error_message, status=502)
-                    except ValueError:
+                    else:
                         return HttpResponse(error_message, status=502)
                 else:
-                    return HttpResponse(error_message, status=502)
-            if success_count > 0:
-                messages.add_message(request, messages.SUCCESS, 'Successfully checked in {} assets'.format(success_count))
-    form = forms.SnipeCheckinForm()
+                    # This tag represents an asset
+                    response = requests.request('GET', '{}api/v1/hardware/bytag/{}'.format(settings.SNIPE_URL, tag), headers={
+                        'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                        'accept': 'application/json',
+                    })
+                    if response.status_code == 200:
+                        try:
+                            data = json.loads(response.text)
+                            if data.get('status') == 'error':
+                                # The asset tag does not exist in Snipe
+                                messages.add_message(request, messages.ERROR, 'No such asset tag {}'.format(tag))
+                                continue
+                            asset_name = data['name']
+                            if 'custom_fields' in data and 'Rental Price' in data['custom_fields'] and \
+                                    'value' in data['custom_fields']['Rental Price'] and data['custom_fields']['Rental Price']['value'] is not None:
+                                rental_price = float(data['custom_fields']['Rental Price']['value'])
+                            else:
+                                rental_price = None
+                            if ('assigned_to' not in data
+                                    or data['assigned_to'] is None
+                                    or 'type' not in data['assigned_to']
+                                    or data['assigned_to']['type'] != 'user'
+                                    or 'id' not in data['assigned_to']
+                                    or data['assigned_to']['id'] != form.cleaned_data['checkin_from']):
+                                # That asset is not checked out to the specified Snipe user
+                                messages.add_message(request, messages.ERROR, 'Asset {} was never checked out to {}'.format(asset_name, checkin_from_name))
+                                extra_count_assets += 1
+                                if tag in receipt_info:
+                                    return HttpResponse(error_message, status=502)
+                                receipt_info_extra[tag] = {'name': asset_name, 'rental_price': rental_price, 'quantity': 1}
+                                continue
+                            # Check in the asset
+                            response = requests.request('POST', '{}api/v1/hardware/{}/checkin'.format(settings.SNIPE_URL, data['id']), headers={
+                                'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+                                'accept': 'application/json',
+                                'content-type': 'application/json',
+                            })
+                            if response.status_code == 200:
+                                data = json.loads(response.text)
+                                if data.get('status') == 'error':
+                                    # Snipe refused to check in the asset
+                                    messages.add_message(request, messages.ERROR, 'Unable to check in asset {} - {}. Snipe says: {}'.format(tag, asset_name, data['messages']))
+                                    continue
+                                # The asset was successfully checked in
+                                success_count_assets += 1
+                                if tag in receipt_info:
+                                    return HttpResponse(error_message, status=502)
+                                receipt_info[tag] = {'name': asset_name, 'rental_price': rental_price, 'quantity': 1}
+                            else:
+                                return HttpResponse(error_message, status=502)
+                        except ValueError:
+                            return HttpResponse(error_message, status=502)
+                    else:
+                        return HttpResponse(error_message, status=502)
+            if success_count_assets > 0 or success_count_accessories > 0:
+                messages.add_message(request, messages.SUCCESS, 'Successfully checked in {} assets and {} accessories'.format(success_count_assets, success_count_accessories))
+            rental_prices = [(None if asset_info['rental_price'] is None else asset_info['rental_price'] * asset_info['quantity']) for asset_info in receipt_info.values()]
+            extra_prices = [(None if asset_info['rental_price'] is None else asset_info['rental_price'] * asset_info['quantity']) for asset_info in receipt_info_extra.values()]
+            total_rental_price = None if None in rental_prices or None in extra_prices else sum(rental_prices) + sum(extra_prices)
+            # Before returning the response, email a PDF receipt
+            html = render_to_string('pdf_templates/checkin_receipt.html', request=request, context={
+                'title': 'Checkin Receipt',
+                'receipt_info': receipt_info,
+                'receipt_info_extra': receipt_info_extra,
+                'num_assets': success_count_assets,
+                'num_accessories': success_count_accessories,
+                'num_extra_assets': extra_count_assets,
+                'num_extra_accessories': extra_count_accessories,
+                'total_rental_price': total_rental_price,
+                'checkin_from': checkin_from_name,
+            })
+            pdf_file = BytesIO()
+            pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+            pdf_handle = pdf_file.getvalue()
+            filename = 'LNL-checkin-receipt-{}.pdf'.format(timezone.now().isoformat())
+            attachments = [{'file_handle': pdf_handle, 'name': filename}]
+            email = DefaultLNLEmailGenerator(subject='LNL Inventory Checkin Receipt', to_emails=(request.user.email, settings.DEFAULT_TO_ADDR), attachments=attachments,
+                body='A receipt for the rental checkin by {} from {} is attached.'.format(request.user, checkin_from_name))
+            email.send()
+            # Return the response
+            return render(request, 'inventory/checkin_receipt.html', {
+                'receipt_info': receipt_info,
+                'receipt_info_extra': receipt_info_extra,
+                'num_assets': success_count_assets,
+                'num_accessories': success_count_accessories,
+                'num_extra_assets': extra_count_assets,
+                'num_extra_accessories': extra_count_accessories,
+                'total_rental_price': total_rental_price,
+                'checkin_from': form.cleaned_data['checkin_from'],
+                'checkin_from_name': checkin_from_name,
+            })
+        else:
+            form = forms.SnipeCheckinForm(checkin_from_choices, initial={'checkin_from': form.cleaned_data['checkin_from']})
+    else:
+        if 'checkin_from' in request.GET:
+            form = forms.SnipeCheckinForm(checkin_from_choices, initial={'checkin_from': request.GET['checkin_from']})
+        else:
+            form = forms.SnipeCheckinForm(checkin_from_choices)
     return render(request, "form_crispy.html", {
         'msg': 'Inventory checkin',
         'form': form,
