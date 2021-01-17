@@ -3,6 +3,7 @@ import datetime
 
 from crispy_forms.layout import Submit
 from django.contrib import messages
+from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.conf import settings
@@ -15,7 +16,7 @@ from django.urls.base import reverse
 from helpers.mixins import HasPermMixin, LoginRequiredMixin
 from projection.forms import (BulkCreateForm, BulkUpdateForm, DateEntryFormSetBase, ProjectionistForm,
                               ProjectionistUpdateForm, PITRequestForm, PITRequestAdminForm, PITFormset)
-from projection.models import PITLevel, Projectionist, PitRequest
+from projection.models import PITLevel, Projectionist, PitRequest, PitInstance
 from emails.generators import GenericEmailGenerator
 
 
@@ -277,6 +278,24 @@ def pit_schedule(request):
     context['NO_FOOT'] = True
 
     return render(request, 'projection_pit_schedule.html', context)
+
+
+@login_required
+@permission_required('projection.edit_pits', raise_exception=True)
+@require_POST
+def pit_complete(request, id):
+    """ Mark a PIT as complete """
+    pit = get_object_or_404(PitRequest, pk=id)
+
+    # Add the PIT to the user's record automatically
+    try:
+        PitInstance.objects.get(projectionist=pit.projectionist, pit_level=pit.level)
+    except PitInstance.DoesNotExist:
+        PitInstance.objects.create(projectionist=pit.projectionist, pit_level=pit.level, created_on=pit.scheduled_for)
+
+    pit.delete()
+    messages.success(request, 'PIT updated successfully!')
+    return HttpResponseRedirect(reverse('projection:pit-schedule'))
 
 
 class CancelPITRequest(LoginRequiredMixin, HasPermMixin, DeleteView):
