@@ -97,13 +97,13 @@ class EmailTestCase(ViewTestCase):
         self.event2.save()
 
         # Format the dates for output below
-        event1_setup = self.event1.datetime_setup_complete.strftime("%A (%-m/%-d) %-I:%M %p")
-        event1_start = self.event1.datetime_start.strftime("%A (%-m/%-d) %-I:%M %p - ")
-        event1_end = self.event1.datetime_end.strftime("%-I:%M %p")
+        event1_setup = timezone.localtime(self.event1.datetime_setup_complete).strftime("%A (%-m/%-d) %-I:%M %p")
+        event1_start = timezone.localtime(self.event1.datetime_start).strftime("%A (%-m/%-d) %-I:%M %p - ")
+        event1_end = timezone.localtime(self.event1.datetime_end).strftime("%-I:%M %p")
 
-        event2_setup = self.event2.datetime_setup_complete.strftime("%A (%-m/%-d) %-I:%M %p")
-        event2_start = self.event2.datetime_start.strftime("%A (%-m/%-d) %-I:%M %p to ")
-        event2_end = self.event2.datetime_end.strftime("%A (%-m/%-d) %-I:%M %p")
+        event2_setup = timezone.localtime(self.event2.datetime_setup_complete).strftime("%A (%-m/%-d) %-I:%M %p")
+        event2_start = timezone.localtime(self.event2.datetime_start).strftime("%A (%-m/%-d) %-I:%M %p to ")
+        event2_end = timezone.localtime(self.event2.datetime_end).strftime("%A (%-m/%-d) %-I:%M %p")
 
         # Test with 1 service passed in
         expected = "Some example message<hr><strong>CC's needed:</strong> Lighting\n<strong>Services:</strong> " \
