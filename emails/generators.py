@@ -245,7 +245,10 @@ class DefaultLNLEmailGenerator(object):  # yay classes
         self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=cc,
                                             reply_to=reply_to)
         for a in attachments:
-            self.email.attach(a['name'], a['file_handle'], "application/pdf")
+            if a['file_handle']:
+                self.email.attach(a['name'], a['file_handle'], "application/pdf")
+            else:
+                self.email.attach(a)
 
         if build_html:
             template_html = "%s.html" % template_basename
