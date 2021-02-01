@@ -1,14 +1,14 @@
 # mechanize
 # BeautifulSoup
 # frozen versions from prod.
-app-version==0.2.1
+app-version==1.0.1
 dealer==2.1.0
 Django>=2.2.13
 django-compat==1.0.15
 django-ajax-selects==2.0.0
 django-appconf==1.0.4
 # -e git+https://github.com/jmerdich/django-bootstrap-calendar.git@fbe22d9dd0b2c99e8a6d3a3ad8d41063e791432c#egg=django_bootstrap_calendar-master
--e git+https://github.com/rrlapointe/django-bootstrap-calendar.git@7bc68b6e14e17246530db4fcf9c25c91fe2f2d1d#egg=django_bootstrap_calendar-master
+-e git+https://github.com/rrlapointe/django-bootstrap-calendar.git@7bc68b6e14e17246530db4fcf9c25c91fe2f2d1d#egg=django_bootstrap_calendar
 django-bootstrap3==14.2.0
 #-e git+https://github.com/WPI-lnl/django-cas2.git@6220bc8ba6eb4643e3ef58b4830616f37f1a1a8f#egg=django_cas-origin_HEAD
 django-compressor==2.4
@@ -43,7 +43,7 @@ pisa==3.0.33
 pyPdf==1.13
 PyPDF2==1.26.0
 python-dateutil==2.8.1
-pytz==2020.1
+pytz==2020.4
 raven==6.10.0
 reportlab==3.5.54
 six==1.15.0
@@ -56,5 +56,5 @@ django-environ==0.4.5
 django-polymorphic==3.0.0
 fuzzywuzzy==0.18.0
 pysaml2==4.9.0
--e git+https://github.com/WPI-LNL/django-saml2-auth.git@6348b4efcc7fc99dff5303846c60785026f67116#egg=django_saml2_auth-master
+-e git+https://github.com/WPI-LNL/django-saml2-auth.git@6348b4efcc7fc99dff5303846c60785026f67116#egg=django_saml2_auth
 django-jchart==0.4.2
