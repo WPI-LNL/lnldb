@@ -22,8 +22,10 @@ django-ical==1.7.1
 django-lineage==0.2.0
 django-markdown-deux==1.0.5
 django-mptt==0.11.0
-django-multiupload2==0.5.3
-django-natural-duration==0.1
+#django-multiupload2==0.5.3  # Current version doesn't support Django 2
+-e git+git://github.com/Chive/django-multiupload.git@ba52e161a68ce19062c3655e89544c2d377990a0#egg=django-multiupload
+#django-natural-duration==0.1
+-e git+https://github.com/thomersch/django-natural-duration.git#egg=django-natural-duration
 django-pagedown==1.0.6
 django-permission==1.0.5
 django-reversion==3.0.7
