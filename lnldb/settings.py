@@ -134,11 +134,7 @@ for key in DATABASES:
         db['OPTIONS'].update({
             'sql_mode': 'TRADITIONAL',
             'charset': 'utf8mb4',
-            'init_command': 'SET '
-                            'storage_engine=INNODB,'
-                            'character_set_connection=utf8mb4,'
-                            'collation_connection=utf8mb4_unicode_ci,'
-                            'SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
+            'init_command': 'SET NAMES utf8mb4'
         })  # Now we have a mild degree of confidence :-) Oh, MySQL....
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
