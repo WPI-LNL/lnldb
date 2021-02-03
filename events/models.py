@@ -902,7 +902,7 @@ class Location(models.Model):
     holds_equipment = models.BooleanField(default=False)
 
     #
-    building = models.ForeignKey(Building, on_delete=models.PROTECT)
+    building = models.ForeignKey(Building, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name

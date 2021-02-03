@@ -322,7 +322,7 @@ class Migration(migrations.Migration):
                 ('show_in_wo_form', models.BooleanField(default=True, verbose_name='Event Location')),
                 ('available_for_meetings', models.BooleanField(default=False)),
                 ('holds_equipment', models.BooleanField(default=False)),
-                ('building', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='events.building')),
+                ('building', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='events.building')),
             ],
             options={
                 'ordering': ['building', 'name'],

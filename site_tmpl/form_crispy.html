@@ -3,14 +3,16 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-md-12">
+        <form method="post" action="">
+            <div class="col-md-12 px-3">
                 <h2> {{msg }} </h2>
             {% if helper %}
                 {% crispy form helper %}
             {% else %}
                 {% crispy form %}
             {% endif %}
-        </div>
+            </div>
+        </form>
     </div>
 {% endblock %}
 

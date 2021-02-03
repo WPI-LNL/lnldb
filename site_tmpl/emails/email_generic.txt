@@ -1,5 +1,5 @@
 {% load tz %}
-{% load lnldb_tags %}
-{{ subject|public_field }}
+{% load markdown_deux_tags %}
+{{ subject }}
 
-{{ body|public_field|safe }}
+{{ body|safe|markdown }}

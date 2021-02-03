@@ -283,6 +283,6 @@ def attendance_logs(request):
 
     paginator = Paginator(records, 50)
     page_number = request.GET.get('page', 1)
-    current_page = paginator.page(page_number)  # TODO: Change when switching to py3 (get_page)
+    current_page = paginator.get_page(page_number)
     context = {'records': current_page, 'title': 'Crew Logs', 'headers': headers}
     return render(request, 'access_log.html', context)

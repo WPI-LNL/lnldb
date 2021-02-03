@@ -1036,6 +1036,6 @@ def logs(request):
 
     paginator = Paginator(events, 50)
     page_number = request.GET.get('page', 1)
-    current_page = paginator.page(page_number)  # TODO: Change when switching to py3 (get_page)
+    current_page = paginator.get_page(page_number)
     context = {'headers': ['Timestamp', 'Event'], 'title': 'Install Log', 'events': current_page}
     return render(request, 'access_log.html', context)

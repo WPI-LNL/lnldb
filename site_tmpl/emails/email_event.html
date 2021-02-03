@@ -15,7 +15,7 @@
                 <p align="left" class="article-title">{{ subject }}</p>
                 <div align="left" class="article-content">
                     <p> {{ body|safe|linebreaksbr|urlize }} </p>
-                    <p><b>{{ event.event_name|public_field }}</b><br>
+                    <p><b>{{ event.event_name }}</b><br>
                     <i>{{ event.location }}</i><br>
                     Start: {{ event.datetime_start }}<br>
                     End: {{ event.datetime_end }}<br>

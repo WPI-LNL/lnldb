@@ -1,6 +1,6 @@
 {% extends "emails/email_base.html" %}
 {% load tz %}
-{% load lnldb_tags %}
+{% load markdown_deux_tags %}
 {% block perma %}
 {% endblock %}
 
@@ -12,12 +12,12 @@
     <tbody>
         <tr>
             <td class="w960" width="960">
-                <p align="left" class="article-title">{{ subject|public_field }}</p>
+                <p align="left" class="article-title">{{ subject }}</p>
                 <div align="left" class="article-content">
                     {% if CUSTOM_URL %}
-                    <p> {{ body|public_field|safe|linebreaksbr }} </p>
+                    <p> {{ body|safe|markdown|linebreaksbr }} </p>
                     {% else %}
-                    <p> {{  body|public_field|safe|linebreaksbr|urlize }} </p>
+                    <p> {{  body|safe|markdown|linebreaksbr|urlize }} </p>
                     {% endif %}
                 </div>
             </td>
