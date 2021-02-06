@@ -1,6 +1,7 @@
 {% extends 'base_admin.html' %}
 {% load get_attribute %}
 {% load append_get %}
+{% load lnldb_tags %}
 {% load permissionif %}
 {% block extras %}
 {% endblock %}
@@ -47,7 +48,7 @@
                         {% if field.name == 'events' %}
                             <td class="events">
                                 {% for event in multibilling.events.all %}
-                                    <a href="{% url 'events:detail' event.id %}">{{ event.event_name }}</a><br>
+                                    <a href="{% url 'events:detail' event.id %}">{{ event.event_name|public_field }}</a><br>
                                 {% endfor %}
                             </td>
                         {% elif field.name == 'org' %}

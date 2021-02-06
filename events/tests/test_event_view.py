@@ -36,7 +36,7 @@ class EventBasicViewTest(ViewTestCase):
         # By default, user should not have permission to view event details
         self.assertOk(self.client.get(reverse('events:detail', args=[self.e.pk])), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:detail", args=[self.e.pk])))
@@ -129,7 +129,7 @@ class EventBasicViewTest(ViewTestCase):
 
         self.assertOk(self.client.get(reverse('events:edit', args=[self.e.pk])), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse('events:edit', args=[self.e.pk])))
@@ -172,7 +172,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will also need view_event permissions for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertRedirects(self.client.post(reverse("events:cancel", args=[self.e.pk])),
@@ -203,7 +203,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need view_event for redirects
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:deny", args=[self.e.pk])))
@@ -252,7 +252,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will also need view_event permissions for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertRedirects(self.client.post(reverse("events:close", args=[self.e.pk])),
@@ -276,7 +276,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will also need view_event permission for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertRedirects(self.client.post(reverse("events:reopen", args=[self.e.pk])),
@@ -294,7 +294,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # You'll also need view_event for redirects
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:approve", args=[self.e3.pk])))
@@ -386,7 +386,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need view_event for redirects
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:review", args=[self.e.pk])))
@@ -436,7 +436,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # This user will also need view_event permissions for redirects
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         # Should now redirect as event has not yet been approved
@@ -478,7 +478,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # This user will also need view_event permissions for redirects
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         # Should now redirect as event has not yet been approved
@@ -536,7 +536,7 @@ class EventBasicViewTest(ViewTestCase):
         self.assertNotIn(self.user, self.e.crew.all())
 
         # If event is closed, redirect to detail page (will need view_event permission)
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.e.closed = True
@@ -554,7 +554,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will also need view_event permission for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:add-crew", args=[self.e.pk])))
@@ -605,7 +605,7 @@ class EventBasicViewTest(ViewTestCase):
         self.e.save()
 
         # Would be best to have view_event permissions for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertRedirects(self.client.get(reverse("events:add-bulk-crew", args=[self.e.pk])),
@@ -648,7 +648,7 @@ class EventBasicViewTest(ViewTestCase):
                                       setup_start=timezone.now() + timezone.timedelta(hours=1))
 
         # Will need view_event permissions to redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         # Should redirect with message indicating that event has not started yet
@@ -719,6 +719,10 @@ class EventBasicViewTest(ViewTestCase):
             "event": self.e3.pk,
             "save": "Submit"
         }
+
+        # Will need view_events permission on redirect
+        permission = Permission.objects.get(codename="view_events")
+        self.user.user_permissions.add(permission)
 
         self.assertRedirects(self.client.post(reverse("events:crew-checkin"), valid_data),
                              reverse("events:detail", args=[self.e3.pk]))
@@ -814,6 +818,10 @@ class EventBasicViewTest(ViewTestCase):
             "save": "Submit"
         }
 
+        # Will need view_events permission for redirects
+        permission = Permission.objects.get(codename="view_events")
+        self.user.user_permissions.add(permission)
+
         self.assertRedirects(self.client.post(reverse("events:crew-checkout"), no_hours),
                              reverse("events:detail", args=[self.e3.pk]))
         self.assertFalse(self.e3.hours.filter(user=self.user, hours=11).exists())
@@ -887,25 +895,25 @@ class EventBasicViewTest(ViewTestCase):
             "save": "Enter"
         }
         # Check that we are checked in ok
-        self.assertIn("Welcome", self.client.post(url, valid_scan).content)
+        self.assertIn(b"Welcome", self.client.post(url, valid_scan).content)
         self.assertTrue(self.e3.crew_attendance.filter(active=True, user=self.user).exists())
 
         # Check that checkout works ok next
-        self.assertIn("Bye", self.client.post(url, valid_scan).content)
+        self.assertIn(b"Bye", self.client.post(url, valid_scan).content)
         self.assertFalse(self.e3.crew_attendance.filter(active=True, user=self.user).exists())
 
         second_event = Event2019Factory.create(event_name="Some other test event")
         second_record = models.CrewAttendanceRecord.objects.create(event=second_event, user=self.user, active=True)
 
         # Check that if user is checked in elsewhere that they cannot check in here
-        self.assertIn("Checkin Failed", self.client.post(url, valid_scan).content)
+        self.assertIn(b"Checkin Failed", self.client.post(url, valid_scan).content)
 
         second_record.event = self.e3
         second_record.user = UserFactory.create(password="456")
         second_record.save()
 
         # Check that if crew limit is reached we cannot checkin
-        self.assertIn("limit", self.client.post(url, valid_scan).content)
+        self.assertIn(b"limit", self.client.post(url, valid_scan).content)
 
         # TODO: Valid swipe
         # TODO: Invalid swipe
@@ -917,6 +925,10 @@ class EventBasicViewTest(ViewTestCase):
         self.assertOk(self.client.get(reverse("events:remove-chief", args=[self.e.pk, self.user.pk])), 403)
 
         permission = Permission.objects.get(codename="edit_event_hours")
+        self.user.user_permissions.add(permission)
+
+        # Will need view_events permission on redirects
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         CCInstanceFactory(event=self.e, crew_chief=self.user)
@@ -953,7 +965,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need view event permissions for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.e.closed = True
@@ -1010,7 +1022,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need view_event permission for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         # Check that we redirect to detail page if event is closed
@@ -1061,7 +1073,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need view_event permissions for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.e.closed = True
@@ -1103,7 +1115,7 @@ class EventBasicViewTest(ViewTestCase):
         self.assertOk(self.client.get(reverse("events:oneoffs", args=[self.e.pk])), 403)
 
         # Will need view_event permission for redirects
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         permission = Permission.objects.get(codename="adjust_event_charges")
@@ -1145,15 +1157,22 @@ class EventBasicViewTest(ViewTestCase):
         permission = Permission.objects.get(codename="add_event_report")
         self.user.user_permissions.add(permission)
 
+        # Will need view_event permission for redirect
+        permission = Permission.objects.get(codename="view_events")
+        self.user.user_permissions.add(permission)
+
         self.assertOk(self.client.get(reverse("events:reports:new", args=[self.e.pk])))
 
         # Check that too late message is displayed if it has been too long since the event
+        permission = Permission.objects.get(codename="add_event_report")
         self.user.user_permissions.remove(permission)
-        self.e.datetime_end = timezone.now() + timezone.timedelta(days=-30)
-        CCInstanceFactory.create(crew_chief=self.user, event=self.e)
-        self.e.save()
 
-        self.assertContains(self.client.get(reverse("events:reports:new", args=[self.e.pk])), "Too Late!")
+        self.user.refresh_from_db()
+        self.e.datetime_end = timezone.now() - timezone.timedelta(days=30)
+        self.e.save()
+        CCInstanceFactory.create(crew_chief=self.user, event=self.e)
+
+        self.assertContains(self.client.get(reverse("events:reports:new", args=[self.e.pk])), b"Too Late!")
 
         self.e.datetime_end = timezone.now()
         self.e.save()
@@ -1177,7 +1196,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need permission for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.report.crew_chief = self.user
@@ -1205,7 +1224,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need the following permission for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:reports:remove", args=[self.e.pk, self.report.pk])))
@@ -1236,7 +1255,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need permission for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:bills:new", args=[self.e.pk])))
@@ -1289,7 +1308,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need view_event permission for redirects
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:bills:edit", args=[self.e.pk, bill.pk])))
@@ -1329,7 +1348,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need view_event permission for redirects
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:bills:remove", args=[self.e.pk, bill.pk])))
@@ -1495,7 +1514,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need view_event permission for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         # If event is closed, redirect to detail page
@@ -1533,7 +1552,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need view_event permission for the redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:bills:email", args=[self.e.pk, b.pk])))
@@ -1582,7 +1601,7 @@ class EventBasicViewTest(ViewTestCase):
         self.e3.save()
 
         # Will need view_event permission for redirects
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         # Should redirect to detail page - Event must have been reviewed
@@ -1680,7 +1699,7 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Will need view_event permission for redirect
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         # Should redirect to event detail page - Event has not yet been reviewed
@@ -1718,14 +1737,14 @@ class EventListBasicViewTest(ViewTestCase):
         super(EventListBasicViewTest, self).setUp()
         self.e = EventFactory.create(event_name="Test Event", sensitive=True,
                                      datetime_start=timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)),
-                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 01, 01)))
+                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 1, 1)))
         self.e2 = EventFactory.create(event_name="Other Event", test_event=True,
-                                      datetime_start=timezone.make_aware(timezone.datetime(2020, 01, 01)),
-                                      datetime_end=timezone.make_aware(timezone.datetime(2020, 02, 01)))
+                                      datetime_start=timezone.make_aware(timezone.datetime(2020, 1, 1)),
+                                      datetime_end=timezone.make_aware(timezone.datetime(2020, 2, 1)))
 
         self.e2019 = Event2019Factory.create(event_name="2019 Event", approved=True,
-                                             datetime_start=timezone.make_aware(timezone.datetime(2020, 01, 01)),
-                                             datetime_end=timezone.make_aware(timezone.datetime(2020, 01, 02)))
+                                             datetime_start=timezone.make_aware(timezone.datetime(2020, 1, 1)),
+                                             datetime_end=timezone.make_aware(timezone.datetime(2020, 1, 2)))
         proj = models.Category.objects.create(name="Projection")
         models.Category.objects.create(name="Lighting")
         models.Category.objects.create(name="Sound")
@@ -1882,7 +1901,7 @@ class EventListBasicViewTest(ViewTestCase):
         # By default, user should not have permission to view events
         self.assertOk(self.client.get(reverse('events:upcoming')), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.e.approved = True
@@ -1897,7 +1916,7 @@ class EventListBasicViewTest(ViewTestCase):
         # By default, user should not have permission to view events
         self.assertOk(self.client.get(reverse('events:findchief')), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.e.approved = True
@@ -1921,7 +1940,7 @@ class EventListBasicViewTest(ViewTestCase):
         # By default, should not have permission to view
         self.assertOk(self.client.get(reverse("events:findchief-cal")), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:findchief-cal")))
@@ -1930,7 +1949,7 @@ class EventListBasicViewTest(ViewTestCase):
         # By default, user should not have permission to view events
         self.assertOk(self.client.get(reverse('events:open')), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.e.approved = True
@@ -1946,7 +1965,7 @@ class EventListBasicViewTest(ViewTestCase):
         # By default, should not have permission to view
         self.assertOk(self.client.get(reverse("events:open-cal")), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:open-cal")))
@@ -2100,10 +2119,10 @@ class EventListBasicViewTest(ViewTestCase):
         # Only works with 2019 events
         e1 = Event2019Factory.create(event_name="Test Event", sensitive=True, reviewed=True, workday_fund=900,
                                      datetime_start=timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)),
-                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 01, 01)), worktag="1234")
+                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 1, 1)), worktag="1234")
         e2 = Event2019Factory.create(event_name="Other Event", test_event=True, reviewed=True, workday_fund=900,
-                                     datetime_start=timezone.make_aware(timezone.datetime(2020, 01, 01)),
-                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 02, 01)), worktag="1234")
+                                     datetime_start=timezone.make_aware(timezone.datetime(2020, 1, 1)),
+                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 2, 1)), worktag="1234")
 
         models.Billing.objects.create(date_billed=timezone.now().date(), event=e1, amount=0.00)
         models.Billing.objects.create(date_billed=timezone.now().date(), event=e2, amount=0.00)
@@ -2186,10 +2205,10 @@ class EventListBasicViewTest(ViewTestCase):
         # Only works with 2019 events
         e1 = Event2019Factory.create(event_name="Test Event", sensitive=True, reviewed=True, entered_into_workday=True,
                                      datetime_start=timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)),
-                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 01, 01)))
+                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 1, 1)))
         e2 = Event2019Factory.create(event_name="Other Event", reviewed=True, entered_into_workday=True,
-                                     datetime_start=timezone.make_aware(timezone.datetime(2020, 01, 01)),
-                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 02, 01)), test_event=True)
+                                     datetime_start=timezone.make_aware(timezone.datetime(2020, 1, 1)),
+                                     datetime_end=timezone.make_aware(timezone.datetime(2020, 2, 1)), test_event=True)
 
         models.Billing.objects.create(date_billed=timezone.now().date(), event=e1, amount=0.00)
         models.Billing.objects.create(date_billed=timezone.now().date(), event=e2, amount=0.00)
@@ -2265,7 +2284,7 @@ class EventListBasicViewTest(ViewTestCase):
         # By default, user should not have permission to view events
         self.assertOk(self.client.get(reverse('events:closed')), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.e.closed = True
@@ -2283,7 +2302,7 @@ class EventListBasicViewTest(ViewTestCase):
         # By default, should not have permission to view
         self.assertOk(self.client.get(reverse("events:closed-cal")), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:closed-cal")))
@@ -2292,7 +2311,7 @@ class EventListBasicViewTest(ViewTestCase):
         # By default, user should not have permission to view events
         self.assertOk(self.client.get(reverse('events:all')), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         # Without approve permission, non-approved events won't appear
@@ -2311,7 +2330,7 @@ class EventListBasicViewTest(ViewTestCase):
         # By default, should not have permission to view
         self.assertOk(self.client.get(reverse("events:all-cal")), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:all-cal")))
@@ -2432,7 +2451,7 @@ class EventIndices(ViewTestCase):
         # By default, should not have access to search events
         self.assertOk(self.client.get(reverse("events-search")), 403)
 
-        permission = Permission.objects.get(codename="view_event")
+        permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
         # If query is too short, display message

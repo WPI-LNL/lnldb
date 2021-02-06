@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from data.tests.util import ViewTestCase
-from django.core.urlresolvers import reverse
+from django.urls.base import reverse
 from django.contrib.auth.models import Permission
 from django.conf import settings
 from django.utils import timezone
@@ -35,7 +35,7 @@ class LaptopTestCase(ViewTestCase):
         # Make sure the user has proper permissions
         self.assertOk(self.client.get(reverse("laptops:list")), 403)
 
-        permission = Permission.objects.get(codename="view_laptop_details")
+        permission = Permission.objects.get(codename="view_laptop")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("laptops:list")))
@@ -343,11 +343,11 @@ class MDMTestCase(ViewTestCase):
             'user_profiles': [],
             'system_profiles_remove': [],
             'user_profiles_remove': [],
-            'password': self.laptop2.admin_password,
-            'removal_password': None,
             'apps_install': [],
             'apps_update': False,
-            'apps_remove': []
+            'apps_remove': [],
+            'removal_password': None,
+            'password': self.laptop2.admin_password
         }
         output_remove_profiles = {
             'status': 100,
@@ -355,11 +355,11 @@ class MDMTestCase(ViewTestCase):
             'user_profiles': [],
             'system_profiles_remove': [1],
             'user_profiles_remove': [],
-            'password': self.laptop2.admin_password,
-            'removal_password': settings.MDM_PASS,
             'apps_install': [],
             'apps_update': False,
-            'apps_remove': []
+            'apps_remove': [],
+            'removal_password': settings.MDM_PASS,
+            'password': self.laptop2.admin_password
         }
 
         output_with_apps = {
@@ -368,11 +368,11 @@ class MDMTestCase(ViewTestCase):
             'user_profiles': [],
             'system_profiles_remove': [],
             'user_profiles_remove': [],
-            'removal_password': None,
-            'password': self.laptop2.admin_password,
             'apps_install': ['test'],
             'apps_update': True,
-            'apps_remove': ['test-2']
+            'apps_remove': ['test-2'],
+            'removal_password': None,
+            'password': self.laptop2.admin_password
         }
 
         # Check that GET request is not allowed
@@ -831,7 +831,7 @@ class MDMTestCase(ViewTestCase):
             'scope': 'System',
             'version': 1,
             'autohide': True,
-            'dock_version': None,
+            'dock_version': '',
             'extra_dock': 0,
             'extra_firewall': 0,
             'save': 'Save'

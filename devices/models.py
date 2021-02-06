@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import os
 from django.db import models
 from django.conf import settings
-from django.utils.encoding import python_2_unicode_compatible
+from six import python_2_unicode_compatible
 
 
 @python_2_unicode_compatible
@@ -24,7 +25,6 @@ class Laptop(models.Model):
 
     class Meta:
         permissions = (
-            ('view_laptop_details', 'View details of a laptop'),
             ('view_laptop_history', 'View password retrieval history for a laptop'),
             ('retrieve_user_password', 'Retrieve the user password for a laptop'),
             ('retrieve_admin_password', 'Retrieve the admin password for a laptop'),
@@ -49,7 +49,7 @@ class LaptopPasswordRotation(models.Model):
 
 class ConfigurationProfile(models.Model):
     name = models.CharField(max_length=100)
-    profile = models.FilePathField(path=settings.MEDIA_ROOT + "/profiles/", match=".*\.json$")
+    profile = models.FilePathField(path=os.path.join(settings.MEDIA_ROOT, "profiles"), match=".*\.json$")
     scope = models.CharField(choices=(('System', 'System'), ('User', 'User')), max_length=6, default='System')
     created_on = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)

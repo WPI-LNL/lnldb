@@ -2,12 +2,12 @@
 {% load lnldb_tags %}
 {{ subject }}
 
-You've been added as a crew chief to the event {{ ccinstance.event }}.
+You've been added as a crew chief to the event {{ ccinstance.event.event_name }}.
 You have signed up to be crew chief for {{ ccinstance.category }}, with your setup starting on {{ ccinstance.setup_start }} in the {{ ccinstance.setup_location }}.
 
 Please note that the attached Workorder PDF contains all services relating to the event, not just your assigned service.
 
-{{ ccinstance.event }}
+{{ ccinstance.event.event_name }}
 Location: {{ ccinstance.event.location }}
 Start: {{ ccinstance.event.datetime_start }}
 End: {{ ccinstance.event.datetime_end }}

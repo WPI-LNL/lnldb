@@ -13,7 +13,7 @@ from .models import TrainingType, Training, Trainee
 
 
 @login_required
-@permission_required('members.view_training_details', raise_exception=True)
+@permission_required('members.view_training', raise_exception=True)
 @require_GET
 def training_list(request):
     context = {}

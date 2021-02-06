@@ -190,7 +190,7 @@ def filter_events(request, context, events, start, end, prefetch_org=False, pref
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
-    sort = request.GET.get('sort') or 'datetime_start'
+    sort = request.GET.get('sort') or '-datetime_start'
     events = paginate_helper(events, page, sort)
     return events, context
 
@@ -209,7 +209,7 @@ def generate_response(request, context, start, end, time_range_unspecified):
 
 # ## EVENT VIEWS
 @login_required
-@permission_required('events.view_event', raise_exception=True)
+@permission_required('events.view_events', raise_exception=True)
 def upcoming(request, start=None, end=None):
     """
     Lists Upcoming Events
@@ -305,7 +305,7 @@ def incoming_cal(request, start=None, end=None):
 
 
 @login_required
-@permission_required('events.view_event', raise_exception=True)
+@permission_required('events.view_events', raise_exception=True)
 def openworkorders(request, start=None, end=None):
     context = {}
 
@@ -343,14 +343,14 @@ def openworkorders(request, start=None, end=None):
 
 
 @login_required
-@permission_required('events.view_event', raise_exception=True)
+@permission_required('events.view_events', raise_exception=True)
 def openworkorders_cal(request, start=None, end=None):
     context = {'h2': "Open Events", 'listurl': reverse('events:open'), 'bootcal_endpoint': reverse('cal:api-open')}
     return render(request, 'events_cal.html', context)
 
 
 @login_required
-@permission_required('events.view_event', raise_exception=True)
+@permission_required('events.view_events', raise_exception=True)
 def findchief(request, start=None, end=None):
     context = {}
 
@@ -396,7 +396,7 @@ def findchief(request, start=None, end=None):
 
 
 @login_required
-@permission_required('events.view_event', raise_exception=True)
+@permission_required('events.view_events', raise_exception=True)
 def findchief_cal(request, start=None, end=None):
     context = {'h2': "Needs a Crew Chief", 'listurl': reverse('events:findchief'),
                'bootcal_endpoint': reverse('cal:api-findchief')}
@@ -724,7 +724,7 @@ def unpaid_workday(request, start=None, end=None):
 
 
 @login_required
-@permission_required('events.view_event', raise_exception=True)
+@permission_required('events.view_events', raise_exception=True)
 def closed(request, start=None, end=None):
     context = {}
 
@@ -761,7 +761,7 @@ def closed(request, start=None, end=None):
 
 
 @login_required
-@permission_required('events.view_event', raise_exception=True)
+@permission_required('events.view_events', raise_exception=True)
 def closed_cal(request, start=None, end=None):
     context = {'h2': "Closed Events", 'listurl': reverse('events:closed'),
                'bootcal_endpoint': reverse('cal:api-closed')}
@@ -769,7 +769,7 @@ def closed_cal(request, start=None, end=None):
 
 
 @login_required
-@permission_required('events.view_event', raise_exception=True)
+@permission_required('events.view_events', raise_exception=True)
 def all(request, start=None, end=None):
     context = {}
 
@@ -810,7 +810,7 @@ def all(request, start=None, end=None):
 
 
 @login_required()
-@permission_required('events.view_event', raise_exception=True)
+@permission_required('events.view_events', raise_exception=True)
 def all_cal(request, start=None, end=None):
     context = {'h2': "All Events", 'listurl': reverse('events:all'), 'bootcal_endpoint': reverse('cal:api-all')}
     return render(request, 'events_cal.html', context)
@@ -841,7 +841,7 @@ def multibillings(request):
             output_field=IntegerField())))
 
     page = request.GET.get('page')
-    sort = request.GET.get('sort')
+    sort = request.GET.get('sort') or '-date_billed'
     multibills = paginate_helper(multibills, page, sort)
 
     context['h2'] = "MultiBills"

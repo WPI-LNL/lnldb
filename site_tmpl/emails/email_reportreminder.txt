@@ -2,7 +2,7 @@
 {% load lnldb_tags %}
 {{ subject }}
 
-This is a reminder that you have a pending crew chief report for {{ reminder.event }}.
+This is a reminder that you have a pending crew chief report for {{ reminder.event.event_name }}.
 
 Submitting a crew chief report and recording crew hours are required parts of being a crew chief. These tasks are expected to be completed shortly after an event while you still have all details of the event fresh in your mind. Delaying submitting your crew chief report directly delays the billing of this event.
 
@@ -14,7 +14,7 @@ Submit crew hours at {% get_base_url %}{% url 'my:hours-list' reminder.event.id 
 
 For your convenience, the Workorder PDF is attached.
 
-{{ reminder.event }}
+{{ reminder.event.event_name }}
 Location: {{ reminder.event.location }}
 Start: {{ reminder.event.datetime_start }}
 End: {{ reminder.event.datetime_end }}

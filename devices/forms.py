@@ -148,11 +148,11 @@ class ProfileForm(forms.Form):
                                             "This should be descriptive enough to help the user understand what is "
                                             "contained within the profile.")
     filename = forms.CharField(max_length=64, required=True)
-    scope = forms.ChoiceField((('System', 'System'), ('User', 'User')), required=True,
+    scope = forms.ChoiceField(choices=(('System', 'System'), ('User', 'User')), required=True,
                               help_text="Determines if the profile should be installed system-wide or just for a "
                                         "specific user.")
-    auto_remove = forms.ChoiceField((('default', 'Never'), ('expire', 'On date or after interval')), required=True,
-                                    label="Automatically Remove Profile")
+    auto_remove = forms.ChoiceField(choices=(('default', 'Never'), ('expire', 'On date or after interval')),
+                                    required=True, label="Automatically Remove Profile")
     removal_date = forms.SplitDateTimeField(required=False,
                                             help_text="The date on which the profile will be automatically removed")
     removal_period = forms.IntegerField(required=False, label="Duration Until Removal",
@@ -174,8 +174,8 @@ class ProfileForm(forms.Form):
 
     # Siri Payload
     siri_enabled = forms.BooleanField(required=False, label="Enable Siri")
-    improve_siri = forms.ChoiceField(((None, '--'), (0, 'Unseen'), (1, 'Enabled'), (2, 'Disabled')), required=False,
-                                     label="Improve Siri & Dictation",
+    improve_siri = forms.ChoiceField(choices=((None, '--'), (0, 'Unseen'), (1, 'Enabled'), (2, 'Disabled')),
+                                     required=False, label="Improve Siri & Dictation",
                                      help_text="Help improve Siri and Dictation by allowing Apple to store and review "
                                                "audio of your Siri and Dictation interactions on this device")
     siri_version = forms.IntegerField(required=False)
@@ -187,7 +187,7 @@ class ProfileForm(forms.Form):
     desktop_version = forms.IntegerField(required=False)
 
     # Dock Payload
-    orientation = forms.ChoiceField(((None, '--'), ('bottom', 'Bottom'), ('left', 'Left'), ('right', 'Right')),
+    orientation = forms.ChoiceField(choices=((None, '--'), ('bottom', 'Bottom'), ('left', 'Left'), ('right', 'Right')),
                                     required=False, help_text="Orientation of the dock.")
     position = forms.BooleanField(required=False, help_text="If true, the position is locked.",
                                   label="Position Immutable")
@@ -206,7 +206,7 @@ class ProfileForm(forms.Form):
     anim_immutable = forms.BooleanField(required=False,
                                         help_text="If true, the Animate Opening Applications checkbox is disabled.",
                                         label="Launch Animation Immutable")
-    mineffect = forms.ChoiceField(((None, '--'), ('genie', 'Genie'), ('scale', 'Scale')), required=False,
+    mineffect = forms.ChoiceField(choices=((None, '--'), ('genie', 'Genie'), ('scale', 'Scale')), required=False,
                                   label="Minimize effect")
     mineffect_immutable = forms.BooleanField(required=False, label="Minimize Effect Immutable",
                                              help_text="If true, the Minimize Using popup is disabled")
@@ -248,15 +248,14 @@ class ProfileForm(forms.Form):
     filevault_version = forms.IntegerField(required=False)
 
     # Finder Payload
-    preferred_style = forms.ChoiceField(((None, '--'), ('icnv', 'Icon View'), ('Nlsv', 'List View'),
-                                         ('clmv', 'Column View'), ('glyv', 'Gallery View')), required=False,
+    preferred_style = forms.ChoiceField(choices=((None, '--'), ('icnv', 'Icon View'), ('Nlsv', 'List View'),
+                                                 ('clmv', 'Column View'), ('glyv', 'Gallery View')), required=False,
                                         label="Preferred Finder View Style")
-    window_target = forms.ChoiceField(((None, '--'), ('PfHm', 'User Home Folder'), ('PfCm', 'Computer'),
-                                       ('PfDe', 'Desktop'), ('PfDo', 'Documents'),
-                                       ('file:///System/Library/CoreServices/Finder.app/Contents/Resources/MyLibraries'
-                                        '/myDocuments.cannedSearch', 'Recents')), required=False,
-                                      label="New Finder windows show...",
-                                      help_text="New Finder windows will open to the selected location")
+    window_target = forms.ChoiceField(choices=(
+        (None, '--'), ('PfHm', 'User Home Folder'), ('PfCm', 'Computer'), ('PfDe', 'Desktop'), ('PfDo', 'Documents'),
+        ('file:///System/Library/CoreServices/Finder.app/Contents/Resources/MyLibraries/myDocuments.cannedSearch',
+         'Recents')), required=False, label="New Finder windows show...",
+        help_text="New Finder windows will open to the selected location")
     warn_trash = forms.BooleanField(required=False, initial=True, label="Show warning before emptying the Trash")
     empty_trash = forms.BooleanField(required=False, label="Remove items from the Trash after 30 days")
     prohibit_goto = forms.BooleanField(required=False, label="Disable Go to Folder",
@@ -362,8 +361,8 @@ class ProfileForm(forms.Form):
                                help_text="Specifies whether the user must also enter alphabetic characters ('abcd') "
                                          "along with numbers, or if numbers only are sufficient")
     pin_history = forms.IntegerField(required=False, min_value=1, max_value=50,
-                                     help_text="When the user changes the passcode, it has to be unique within the "
-                                               "last N entries in the history. Minimum value is 1, maximum value is 50.")
+                                     help_text="When the user changes the passcode, it has to be unique within the last"
+                                               " N entries in the history. Minimum value is 1, maximum value is 50.")
     grace_period = forms.IntegerField(required=False, label="Maximum Grace Period",
                                       help_text="The maximum grace period, in minutes, to unlock without entering a "
                                                 "passcode. Default is 0, that is no grace period, which requires "
@@ -433,25 +432,26 @@ class ProfileForm(forms.Form):
 
     # Safari Payload
     homepage = forms.CharField(max_length=64, required=False, help_text="Homepage URL")
-    new_window = forms.ChoiceField(((None, '--'), (0, 'Homepage'), (1, 'Empty Page'),
-                                    (2, 'Same page as current window'), (3, 'Bookmarks')), required=False,
+    new_window = forms.ChoiceField(choices=((None, '--'), (0, 'Homepage'), (1, 'Empty Page'),
+                                            (2, 'Same page as current window'), (3, 'Bookmarks')), required=False,
                                    label="Contents of New Windows", help_text="Policy for new window contents")
-    new_tab = forms.ChoiceField(((None, '--'), (0, 'Show Homepage'), (1, 'Show Empty Page'),
-                                 (2, 'Show same page as current window'), (3, 'Show Bookmarks')), required=False,
-                                label="Contents of New Tabs", help_text="Policy for new tab contents")
-    tab_policy = forms.ChoiceField(((None, '--'), (0, 'Never'), (1, 'Automatically'), (2, 'Always')),
+    new_tab = forms.ChoiceField(choices=((None, '--'), (0, 'Show Homepage'), (1, 'Show Empty Page'),
+                                         (2, 'Show same page as current window'), (3, 'Show Bookmarks')),
+                                required=False, label="Contents of New Tabs", help_text="Policy for new tab contents")
+    tab_policy = forms.ChoiceField(choices=((None, '--'), (0, 'Never'), (1, 'Automatically'), (2, 'Always')),
                                    required=False, label="Open pages in tabs instead of windows")
     command_click = forms.BooleanField(required=False, label="&#8984;-click opens a link in a new tab", initial=True,
                                        help_text="Open command-clicked links in a new tab rather than a new window")
-    history_limit = forms.ChoiceField(((None, '--'), (1, 'After one day'), (7, 'After one week'),
-                                       (14, 'After two weeks'), (31, 'After one month'), (365, 'After one year'),
-                                       (365000, 'Manually')), required=False, label="History Age Limit",
+    history_limit = forms.ChoiceField(choices=((None, '--'), (1, 'After one day'), (7, 'After one week'),
+                                               (14, 'After two weeks'), (31, 'After one month'),
+                                               (365, 'After one year'), (365000, 'Manually')), required=False,
+                                      label="History Age Limit",
                                       help_text="Policy for when to automatically remove items from History")
     downloads_path = forms.CharField(max_length=64, required=False, label="Downloads Location",
                                      help_text="File system path (can start with ~) where downloaded files will be "
                                                "saved")
-    downloads_clear = forms.ChoiceField(((None, '--'), (0, 'Manually'), (1, 'When Safari quits'),
-                                         (2, 'Upon successful download')), required=False,
+    downloads_clear = forms.ChoiceField(choices=((None, '--'), (0, 'Manually'), (1, 'When Safari quits'),
+                                                 (2, 'Upon successful download')), required=False,
                                         label="Downloads Clearing Policy",
                                         help_text="Policy for when to remove items from the Downloads window")
     safe_downloads = forms.BooleanField(required=False, label="Open Safe Downloads Automatically",
@@ -476,9 +476,9 @@ class ProfileForm(forms.Form):
                                                   "from a secure site")
     private_browsing = forms.BooleanField(required=False, label="Private Browsing",
                                           help_text="Prevent Safari from keeping track of most user activities")
-    cookies = forms.ChoiceField(((None, '--'), (0, 'Always'), (1, 'Never'),
-                                 (2, 'Third Parties except sites you visited'), (3, 'Third Parties')), required=False,
-                                label="Block cookies and other website data")
+    cookies = forms.ChoiceField(choices=((None, '--'), (0, 'Always'), (1, 'Never'),
+                                         (2, 'Third Parties except sites you visited'), (3, 'Third Parties')),
+                                required=False, label="Block cookies and other website data")
     disallow_notifications = forms.BooleanField(required=False, label="Disallow Notifications",
                                                 help_text="Prevent websites from requesting permission to send "
                                                           "notifications")
@@ -1343,9 +1343,9 @@ class AssignmentForm(forms.Form):
 
 
 class ProfileRemovalForm(forms.Form):
-    options = forms.ChoiceField([('auto', 'I would like to have the profiles removed automatically'),
-                                 ('manual', 'I have chosen to remove the profiles manually. I affirm that this profile '
-                                            'is no longer installed on any of LNL\'s devices.')],
+    options = forms.ChoiceField(choices=[('auto', 'I would like to have the profiles removed automatically'),
+                                         ('manual', 'I have chosen to remove the profiles manually. I affirm that this '
+                                                    'profile is no longer installed on any of LNL\'s devices.')],
                                 widget=forms.RadioSelect, label="Before continuing, please select one of the following")
 
     def __init__(self, *args, **kwargs):
@@ -1467,8 +1467,8 @@ class UpdateAppForm(forms.ModelForm):
 
 
 class UninstallAppForm(forms.Form):
-    options = forms.ChoiceField([('auto', 'I would like to have this app removed from all managed devices'),
-                                 ('manual', 'I would like to leave the applications as they are')],
+    options = forms.ChoiceField(choices=[('auto', 'I would like to have this app removed from all managed devices'),
+                                         ('manual', 'I would like to leave the applications as they are')],
                                 widget=forms.RadioSelect, label="Before continuing, please select one of the following")
 
     def __init__(self, *args, **kwargs):

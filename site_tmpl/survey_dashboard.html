@@ -1,5 +1,6 @@
 {% extends 'base_admin.html' %}
 {% load crispy_forms_tags %}
+{% load lnldb_tags %}
 {% load gpa_scale_emoji %}
 
 {% block content %}
@@ -55,7 +56,7 @@
                     <tbody>
                         {% for event, composites in survey_composites %}
                             <tr>
-                                <th><a href="{% url 'events:detail' event.id %}#survey">{{ event.event_name }}</a></th>
+                                <th><a href="{% url 'events:detail' event.id %}#survey">{{ event.event_name|public_field }}</a></th>
                                 <td>{{ event.datetime_start|date:'N d, Y' }}</td>
                                 <td style="font-weight: bold">
                                     {{ composites.vp|gpa_scale_clean }}</td>

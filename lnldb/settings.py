@@ -134,11 +134,7 @@ for key in DATABASES:
         db['OPTIONS'].update({
             'sql_mode': 'TRADITIONAL',
             'charset': 'utf8mb4',
-            'init_command': 'SET '
-                            'storage_engine=INNODB,'
-                            'character_set_connection=utf8mb4,'
-                            'collation_connection=utf8mb4_unicode_ci,'
-                            'SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
+            'init_command': 'SET NAMES utf8mb4'
         })  # Now we have a mild degree of confidence :-) Oh, MySQL....
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
@@ -308,7 +304,7 @@ INSTALLED_APPS = (
     'devices',
     'api',
 
-    'bootstrap_toolkit',
+    'bootstrap3',
     'crispy_forms',
     'lineage',
     'django_bootstrap_calendar',
@@ -397,7 +393,7 @@ AUTH_USER_MODEL = 'accounts.User'
 # AJAX_SELECT_BOOTSTRAP = False
 # AJAX_SELECT_INLINES = False
 # let's just shit all over the page. its okay. I'm fine with it :-\
-AJAX_SELECT_BOOTSTRAP = False
+AJAX_SELECT_BOOTSTRAP = True
 # AJAX_SELECT_INLINES = 'staticfiles'
 
 AJAX_LOOKUP_CHANNELS = {
@@ -465,6 +461,8 @@ AIRPLANE_MODE = True
 
 # crispy_forms
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
+
+PUBLIC_FIELD_FILTERING = env.bool("PUBLIC_FIELD_FILTERING", True)
 
 # Don't mess with builtins just for the sake of permissions
 PERMISSION_REPLACE_BUILTIN_IF = False

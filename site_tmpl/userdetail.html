@@ -106,7 +106,7 @@
                         <th>Position</th>
                         <td>{{ u.title }}</td>
                     </tr>
-                    {% if office_hours.count > 0 %}
+                    {% if office_hours or request.user == u %}
                         <tr>
                             <th>Office Hours</th>
                             <td>{% for hour in office_hours %}

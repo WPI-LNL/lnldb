@@ -62,7 +62,7 @@ class NotificationSerializer(serializers.BaseSerializer):
             'type': instance.type,
             'expires': instance.expires,
             'title': instance.title,
-            'message': instance.message,
+            'message': instance.message
         }
 
 

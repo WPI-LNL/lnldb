@@ -21,13 +21,15 @@ class MeetingAdditionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
+        self.helper.include_media = False
         self.helper.layout = Layout(
             TabHolder(
                 Tab(
                     'Basic Info',
                     'meeting_type',
                     'location',
-                    'datetime',
+                    Field('datetime', css_class='dtp'),
                     'duration'
                 ),
                 Tab(

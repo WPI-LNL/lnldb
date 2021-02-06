@@ -97,17 +97,17 @@ class EmailTestCase(ViewTestCase):
         self.event2.save()
 
         # Format the dates for output below
-        event1_setup = self.event1.datetime_setup_complete.strftime("%A (%-m/%-d) %-I:%M %p")
-        event1_start = self.event1.datetime_start.strftime("%A (%-m/%-d) %-I:%M %p - ")
-        event1_end = self.event1.datetime_end.strftime("%-I:%M %p")
+        event1_setup = timezone.localtime(self.event1.datetime_setup_complete).strftime("%A (%-m/%-d) %-I:%M %p")
+        event1_start = timezone.localtime(self.event1.datetime_start).strftime("%A (%-m/%-d) %-I:%M %p - ")
+        event1_end = timezone.localtime(self.event1.datetime_end).strftime("%-I:%M %p")
 
-        event2_setup = self.event2.datetime_setup_complete.strftime("%A (%-m/%-d) %-I:%M %p")
-        event2_start = self.event2.datetime_start.strftime("%A (%-m/%-d) %-I:%M %p to ")
-        event2_end = self.event2.datetime_end.strftime("%A (%-m/%-d) %-I:%M %p")
+        event2_setup = timezone.localtime(self.event2.datetime_setup_complete).strftime("%A (%-m/%-d) %-I:%M %p")
+        event2_start = timezone.localtime(self.event2.datetime_start).strftime("%A (%-m/%-d) %-I:%M %p to ")
+        event2_end = timezone.localtime(self.event2.datetime_end).strftime("%A (%-m/%-d) %-I:%M %p")
 
         # Test with 1 service passed in
         expected = "Some example message<hr><strong>CC's needed:</strong> Lighting\n<strong>Services:</strong> " \
-                   "Basic Lighting\n<strong>What:</strong> <a href='https://lnl.wpi.edu/db/events/view/1/'>" \
+                   "Basic Lighting\n<strong>What:</strong> <a href='http://lnl.wpi.edu/db/events/view/1/'>" \
                    "All set</a>\n<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n<strong>Where:</strong> " \
                    "Test Location\n<strong>Description:</strong> An event that is pretty much all set\n\n" % \
                    (event1_start + event1_end, event1_setup)
@@ -118,11 +118,11 @@ class EmailTestCase(ViewTestCase):
 
         # Test with 2 services passed in
         expected = "Some example message<hr><strong>CC's needed:</strong> Lighting\n<strong>Services:</strong> " \
-                   "Basic Lighting\n<strong>What:</strong> <a href='https://lnl.wpi.edu/db/events/view/1/'>" \
+                   "Basic Lighting\n<strong>What:</strong> <a href='http://lnl.wpi.edu/db/events/view/1/'>" \
                    "All set</a>\n<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n<strong>Where:</strong> " \
                    "Test Location\n<strong>Description:</strong> An event that is pretty much all set\n\n" \
                    "<strong>CC's needed:</strong> Sound\n<strong>Services:</strong> Basic Sound\n" \
-                   "<strong>What:</strong> <a href='https://lnl.wpi.edu/db/events/view/2/'>Need Chiefs</a>\n" \
+                   "<strong>What:</strong> <a href='http://lnl.wpi.edu/db/events/view/2/'>Need Chiefs</a>\n" \
                    "<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n<strong>Where:</strong> Test Location\n" \
                    "<strong>Description:</strong> A test event that we need CCs for\n\n" % \
                    (event1_start + event1_end, event1_setup, event2_start + event2_end, event2_setup)

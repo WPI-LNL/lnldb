@@ -26,8 +26,14 @@
 							<td>{{ request.projectionist }}</td>
 							<td>{{ request.level }}</td>
                             <td>{{ request.scheduled_for }}</td>
-							<td><a href="{% url "projection:manage-request" request.id %}" class="btn btn-primary">Modify</a>
-                                <a href="{% url "projection:cancel-request" request.id %}" class="btn btn-danger">Cancel</a></td>
+							<td>
+                                <form style="display: inline" action="{% url 'projection:pit-complete' request.id %}" method="post">
+                                    {% csrf_token %}
+                                    <button class="btn btn-success" type="submit">Complete</button>
+                                </form>
+                                <a href="{% url "projection:manage-request" request.id %}" class="btn btn-primary">Modify</a>
+                                <a href="{% url "projection:cancel-request" request.id %}" class="btn btn-danger">Cancel</a>
+                            </td>
 						</tr>
 						{% endfor %}
 					</table>

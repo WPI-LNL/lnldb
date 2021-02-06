@@ -200,14 +200,14 @@ def generate_poke_cc_email_content(services, message):
             service_details.append(service.longname)
         ccs_needed = ', '.join(ccs_needed)
         service_details = ', '.join(service_details)
-        link = "https://lnl.wpi.edu" + reverse("events:detail", args=[event.id])
-        start = event.datetime_start
-        end = event.datetime_end
+        link = "http://" + settings.ALLOWED_HOSTS[0] + reverse("events:detail", args=[event.id])
+        start = timezone.localtime(event.datetime_start)
+        end = timezone.localtime(event.datetime_end)
         if start.date() == end.date():
             when = start.strftime("%A (%-m/%-d) %-I:%M %p - ") + end.strftime("%-I:%M %p")
         else:
             when = start.strftime("%A (%-m/%-d) %-I:%M %p to ") + end.strftime("%A (%-m/%-d) %-I:%M %p")
-        setup = event.datetime_setup_complete.strftime("%A (%-m/%-d) %-I:%M %p")
+        setup = timezone.localtime(event.datetime_setup_complete).strftime("%A (%-m/%-d) %-I:%M %p")
         event_details += "<strong>CC's needed:</strong> %s\n<strong>Services:</strong> %s\n<strong>What:</strong> " \
                          "<a href='%s'>%s</a>\n<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n" \
                          "<strong>Where:</strong> %s\n<strong>Description:</strong> %s\n\n" % \
@@ -245,7 +245,10 @@ class DefaultLNLEmailGenerator(object):  # yay classes
         self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=cc,
                                             reply_to=reply_to)
         for a in attachments:
-            self.email.attach(a['name'], a['file_handle'], "application/pdf")
+            if a['file_handle']:
+                self.email.attach(a['name'], a['file_handle'], "application/pdf")
+            else:
+                self.email.attach(a)
 
         if build_html:
             template_html = "%s.html" % template_basename

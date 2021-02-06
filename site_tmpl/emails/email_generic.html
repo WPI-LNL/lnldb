@@ -1,5 +1,6 @@
 {% extends "emails/email_base.html" %}
 {% load tz %}
+{% load markdown_deux_tags %}
 {% block perma %}
 {% endblock %}
 
@@ -14,9 +15,9 @@
                 <p align="left" class="article-title">{{ subject }}</p>
                 <div align="left" class="article-content">
                     {% if CUSTOM_URL %}
-                    <p> {{ body|safe|linebreaksbr }} </p>
+                    <p> {{ body|safe|markdown|linebreaksbr }} </p>
                     {% else %}
-                    <p> {{  body|safe|linebreaksbr|urlize }} </p>
+                    <p> {{  body|safe|markdown|linebreaksbr|urlize }} </p>
                     {% endif %}
                 </div>
             </td>

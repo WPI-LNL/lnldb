@@ -1,19 +1,26 @@
 import os
 import sys
 
-
 cwd = os.getcwd()
 sys.path.append(cwd)
-sys.path.append('/home/lnl/lnldb')
 
-INTERP = "/home/lnl/bin/python2.7"
+VENV_DIR = '/home/lnl/env'
+APP_DIR = '/home/lnl/lnldb'
+INTERP = VENV_DIR + "/bin/python3"
 
 # Switch to new python
 if sys.executable != INTERP:
     os.execl(INTERP, INTERP, *sys.argv)
 
-os.environ['LD_LIBRARY_PATH'] += ":/home/lnl/lib"
+sys.path.append(APP_DIR)
+sys.path.append(APP_DIR + '/lnldb')
+
+sys.path.insert(0, VENV_DIR + '/bin')
+sys.path.insert(0, VENV_DIR + '/lib/python3.6/site-packages')
+
+os.environ['LD_LIBRARY_PATH'] = VENV_DIR + '/lib'
 os.environ['DJANGO_SETTINGS_MODULE'] = "lnldb.settings"
+
 from django.core.wsgi import get_wsgi_application  # NOQA isort:skip
 application = _application = get_wsgi_application()
 

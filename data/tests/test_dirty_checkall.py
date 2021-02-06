@@ -85,20 +85,25 @@ class UrlsTest(test.TestCase):
                     check_urls(pattern.url_patterns, prefix=new_prefix)
                 params = {}
                 skip = False
-                regex = pattern.regex
-                if regex.groups > 0:
-                    # the url expects parameters
-                    # use default_kwargs supplied
-                    if regex.groups > len(regex.groupindex.keys()) \
-                            or set(regex.groupindex.keys()) - set(default_kwargs.keys()):
-                        # there are positional parameters OR
-                        # keyword parameters that are not supplied in default_kwargs
-                        # so we skip the url
-                        skip = True
-                        skipreason = "Unknown Arguments"
-                    else:
-                        for key in set(default_kwargs.keys()) & set(regex.groupindex.keys()):
-                            params[key] = default_kwargs[key]
+                try:
+                    regex = pattern.regex
+                    if regex.groups > 0:
+                        # the url expects parameters
+                        # use default_kwargs supplied
+                        if regex.groups > len(regex.groupindex.keys()) \
+                                or set(regex.groupindex.keys()) - set(default_kwargs.keys()):
+                            # there are positional parameters OR
+                            # keyword parameters that are not supplied in default_kwargs
+                            # so we skip the url
+                            skip = True
+                            skipreason = "Unknown Arguments"
+                        else:
+                            for key in set(default_kwargs.keys()) & set(regex.groupindex.keys()):
+                                params[key] = default_kwargs[key]
+                except AttributeError:
+                    skip = True
+                    skipreason = "Attribute Error: No attribute regex for URLPattern"
+                    pass
                 if hasattr(pattern, "name") and pattern.name:
                     name = pattern.name
                 elif hasattr(pattern, "_callback_str") and pattern._callback_str:

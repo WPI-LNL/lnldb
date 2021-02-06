@@ -1,3 +1,4 @@
+import math
 from datetime import timedelta
 from decimal import Decimal
 from django.conf import settings
@@ -495,8 +496,8 @@ def checkout(request):
     if record.checkout:
         delta = record.checkout - record.checkin
         quarter_hrs = delta.seconds / 900
-        hours = delta.seconds / 3600
-        remainder = (quarter_hrs % 4) * 0.25
+        hours = math.floor(delta.seconds / 3600)
+        remainder = math.floor(quarter_hrs % 4) * 0.25
         total = hours + remainder
 
     if request.method == 'POST':
@@ -516,8 +517,8 @@ def checkout(request):
 
                 delta = checkout_datetime - checkin_datetime
                 quarter_hrs = delta.seconds / 900
-                hours = delta.seconds / 3600
-                remainder = (quarter_hrs % 4) * 0.25
+                hours = math.floor(delta.seconds / 3600)
+                remainder = math.floor(quarter_hrs % 4) * 0.25
                 total = hours + remainder
                 form = CheckoutHoursForm(categories=categories, total_hrs=total)
         else:
@@ -839,7 +840,7 @@ def oneoff(request, id):
 def viewevent(request, id):
     context = {}
     event = get_object_or_404(BaseEvent, pk=id)
-    if not (request.user.has_perm('events.view_event') or request.user.has_perm('events.view_event', event)):
+    if not (request.user.has_perm('events.view_events') or request.user.has_perm('events.view_events', event)):
         raise PermissionDenied
     if event.sensitive and not request.user.has_perm('events.view_hidden_event', event):
         raise PermissionDenied

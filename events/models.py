@@ -326,8 +326,7 @@ class BaseEvent(PolymorphicModel):
     @property
     def reports_editable(self):
         end_plus_time = self.datetime_end + datetime.timedelta(days=CCR_DELTA)
-        now = datetime.datetime.now(timezone.get_current_timezone())
-        return now < end_plus_time
+        return timezone.now() < end_plus_time
     
     @cached_property
     def status(self):
@@ -435,7 +434,7 @@ class BaseEvent(PolymorphicModel):
     class Meta:
         verbose_name = 'Event'
         permissions = (
-            ("view_event", "Show an event that isn't hidden"),
+            ("view_events", "Show an event that isn't hidden"),
             ("add_raw_event", "Use the editor to create an event"),
             ("event_images", "Upload images to an event"),
             ("view_hidden_event", "Show hidden events"),
@@ -903,7 +902,7 @@ class Location(models.Model):
     holds_equipment = models.BooleanField(default=False)
 
     #
-    building = models.ForeignKey(Building, on_delete=models.PROTECT)
+    building = models.ForeignKey(Building, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name
@@ -1139,7 +1138,7 @@ class Fund(models.Model):
 
     class Meta:
         permissions = (
-            ('manage_fund', 'View a fund'),
+            ('manage_fund', 'Manage a fund'),
         )
 
 
