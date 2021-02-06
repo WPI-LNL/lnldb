@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='configurationprofile',
             name='profile',
-            field=models.FilePathField(match='.*\\.json$', path='/Users/Tom/Projects/Websites/LNL/lnldb3/lnldb/runtime/media/profiles/'),
+            field=models.FilePathField(match='.*\\.json$', path='/home/lnl/public_html/media/profiles'),
         ),
     ]
