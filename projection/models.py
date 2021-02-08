@@ -75,6 +75,7 @@ class Projectionist(models.Model):
 
 @python_2_unicode_compatible
 class PITLevel(models.Model):
+    """ Projectionist In Training (PIT) levels """
     name_short = models.CharField(max_length=3)
     name_long = models.CharField(max_length=16)
     ordering = models.IntegerField(default=0)
@@ -84,6 +85,7 @@ class PITLevel(models.Model):
 
 
 class PitInstance(models.Model):
+    """ Record of a projectionist's completion of a PIT """
     projectionist = models.ForeignKey(Projectionist, on_delete=models.CASCADE, related_name="pitinstances")
     pit_level = models.ForeignKey(PITLevel, on_delete=models.PROTECT, related_name="pitinstances")
     created_on = models.DateField()
@@ -98,6 +100,7 @@ class PitInstance(models.Model):
 # post_save.connect(create_projectionist, sender=User)
 
 class PitRequest(models.Model):
+    """ Members can submit a request to receive their next level of training """
     projectionist = models.ForeignKey(Projectionist, on_delete=models.CASCADE, related_name="pitrequest")
     level = models.ForeignKey(PITLevel, on_delete=models.PROTECT, related_name="pitrequest")
     requested_on = models.DateTimeField(auto_now_add=True)

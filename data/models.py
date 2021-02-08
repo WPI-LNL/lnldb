@@ -73,6 +73,7 @@ class ResizedRedirect(models.Model):
 
 
 class Notification(models.Model):
+    """Passive site notifications - accessible through the API"""
     title = models.CharField(max_length=128)
     message = models.TextField(max_length=500)
     format = models.CharField(max_length=12, choices=FORMATS)
@@ -93,6 +94,7 @@ class Notification(models.Model):
 
 
 class Extension(models.Model):
+    """Application registered to use the API"""
     name = models.CharField(max_length=120)
     developer = models.CharField(max_length=64)
     description = models.TextField()

@@ -22,8 +22,8 @@ from .overlay import make_idt_single, make_idt_bulk
 from .utils import concat_pdf
 
 
-# Convert HTML URIs to absolute system paths so xhtml2pdf can access those resources
 def link_callback(uri, rel):
+    """ Convert HTML URIs to absolute system paths so xhtml2pdf can access those resources """
     # use short variable names
     surl = settings.STATIC_URL  # Typically /static/
     sroot = settings.STATIC_ROOT  # Typically /home/userX/project_static/
@@ -61,6 +61,12 @@ def generate_pdf(context, template, request):
 
 
 def get_category_data(event):
+    """
+    Parse event for service category information
+
+    :param event: The event to parse
+    :returns: A dictionary
+    """
     is_event2019 = isinstance(event, Event2019)
     event_data = {
         'event': event,
@@ -184,6 +190,11 @@ def generate_event_bill_pdf(request, event):
 
 
 def generate_event_bill_pdf_standalone(event, request=None):
+    """
+    Generate event bill PDF without HttpResponse
+
+    :returns: PDF file
+    """
     data = {}
     event_data = get_extras(event)
     data['events_data'] = [event_data]
@@ -224,6 +235,11 @@ def generate_multibill_pdf(request, multibilling):
 
 
 def generate_multibill_pdf_standalone(multibilling, request=None):
+    """
+    Generate multibill PDF without HttpResponse
+
+    :returns: PDF file
+    """
     # Prepare context
     multibilling = MultiBilling.objects.annotate(num_events=Count('events')).get(id=multibilling.id)
     data = get_multibill_data(multibilling)
@@ -243,6 +259,11 @@ def generate_multibill_pdf_standalone(multibilling, request=None):
 
 
 def generate_pdfs_standalone(ids=None):
+    """
+    Generate PDF file without HttpResponse
+
+    :returns: PDF file
+    """
     if ids is None:
         ids = []
     # returns a standalone pdf, for sending via email
@@ -264,6 +285,7 @@ def generate_pdfs_standalone(ids=None):
 
 
 def generate_event_pdf_multi(request, ids=None):
+    """ Generate workorder PDF for multiple events (combine into one document) """
     if not request.user.has_perm('events.view_event'):
         raise PermissionDenied
     # this should fix UTC showing up in PDFs
@@ -288,6 +310,7 @@ def generate_event_pdf_multi(request, ids=None):
 
 @login_required
 def generate_event_bill_pdf_multi(request, ids=None):
+    """ Generate event bill PDF for multiple events (combine into one document) """
     if not request.user.has_perm('events.view_event_billing'):
         raise PermissionDenied
     if not ids:

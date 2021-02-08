@@ -10,6 +10,7 @@ from processors import navs
 
 
 def page(request, slug):
+    """ Generate custom page """
     context = {}
     page_obj = get_object_or_404(Page, slug=slug)
     nav = navs(request)
@@ -26,6 +27,7 @@ def page(request, slug):
 
 @require_GET
 def recruitment_page(request):
+    """ Serve LNL's join page with list of upcoming or ongoing events """
     now = timezone.now()
     five_days_from_now = now + datetime.timedelta(days=5)
     events = BaseEvent.objects\

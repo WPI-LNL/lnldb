@@ -28,6 +28,7 @@ NUM_IN_PAGE = 25
 
 @login_required
 def view_all(request):
+    """ Lists all items in LNL's inventory (no longer maintained - read-only) """
     if not request.user.has_perm('inventory.view_equipment'):
         raise PermissionDenied
 
@@ -55,6 +56,11 @@ def view_all(request):
 
 @login_required
 def cat(request, category_id):
+    """
+    List items by category
+
+    :param category_id: The primary key value of the equipment category
+    """
     if not request.user.has_perm('inventory.view_equipment'):
         raise PermissionDenied
 
@@ -317,6 +323,7 @@ def cat(request, category_id):
 
 @login_required
 def type_detail(request, type_id):
+    """ Detail page for a group of items """
     e = get_object_or_404(models.EquipmentClass, pk=type_id)
 
     return render(request, 'inventory/type_detail.html', {
@@ -327,6 +334,7 @@ def type_detail(request, type_id):
 
 @login_required
 def item_detail(request, item_id):
+    """ Detail page for a specific item """
     item = get_object_or_404(models.EquipmentItem, pk=item_id)
 
     return render(request, 'inventory/item_detail.html', {
@@ -382,6 +390,7 @@ def item_detail(request, item_id):
 @login_required
 @permission_required('inventory.view_equipment', raise_exception=True)
 def snipe_checkout(request):
+    """ Equipment inventory checkout form. Communicates with Snipe via their API. """
     if not settings.SNIPE_URL:
         return HttpResponse('This page is unavailable because SNIPE_URL is not set.', status=501)
     if not settings.SNIPE_API_KEY:
@@ -550,6 +559,7 @@ def snipe_checkout(request):
 @login_required
 @permission_required('inventory.view_equipment', raise_exception=True)
 def snipe_checkin(request):
+    """ Equipment inventory checkin form. Communicates with Snipe via their API. """
     if not settings.SNIPE_URL:
         return HttpResponse('This page is unavailable because SNIPE_URL is not set.', status=501)
     if not settings.SNIPE_API_KEY:
@@ -761,6 +771,12 @@ def snipe_checkin(request):
 
 @login_required
 def log_access(request, location=None, reason=None):
+    """
+    Checkin form used by LNL members when accessing a storage location (contact tracing)
+
+    :param location: The name of the location (must match a location that contains equipment)
+    :param reason: Should be set to "OUT" if user is checking out of a location (None otherwise)
+    """
     context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True}
 
     location = location.replace('-', ' ')
@@ -789,7 +805,7 @@ def log_access(request, location=None, reason=None):
 @login_required
 @permission_required('inventory.view_access_logs', raise_exception=True)
 def view_logs(request):
-
+    """ View contact tracing logs for LNL storage spaces """
     headers = ['Timestamp', 'User', 'Location', 'Reason']
 
     def get_timestamp(data):

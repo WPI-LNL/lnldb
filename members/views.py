@@ -16,6 +16,7 @@ from .models import TrainingType, Training, Trainee
 @permission_required('members.view_training', raise_exception=True)
 @require_GET
 def training_list(request):
+    """ List all members with valid training """
     context = {}
     training_types = TrainingType.objects.all()
     context['training_types'] = training_types
@@ -48,6 +49,7 @@ def training_list(request):
 @login_required
 @permission_required('members.add_training', raise_exception=True)
 def enter_training(request):
+    """ Update training records """
     if request.method == 'POST':
         form = TrainingForm(request.POST)
         if form.is_valid():
@@ -70,6 +72,7 @@ def enter_training(request):
 @login_required
 @permission_required('members.edit_trainee_notes', raise_exception=True)
 def trainee_notes(request, pk):
+    """ Update trainee records for a particular individual (must not be expired) """
     trainee = get_object_or_404(Trainee, pk=pk)
     if trainee.training.is_expired():
         messages.add_message(request, messages.ERROR, 'Cannot add notes to an expired training.')
@@ -89,6 +92,7 @@ def trainee_notes(request, pk):
 @permission_required('members.revoke_training', raise_exception=True)
 @require_POST
 def revoke_training(request, pk):
+    """ Revoke training for a particular user """
     trainee = get_object_or_404(Trainee, pk=pk)
     if trainee.revoked:
         messages.add_message(request, messages.ERROR, 'Cannot revoke a training that is already revoked.')

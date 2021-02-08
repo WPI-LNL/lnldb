@@ -76,8 +76,8 @@ def map_fields(cols):
     return out_cols
 
 
-# generic date filtering
 def datefilter(eventqs, context, start=None, end=None):
+    """ Generic date filtering """
     today = datetime.date.today()
     weekfromnow = today + datetime.timedelta(days=7)
 
@@ -135,8 +135,8 @@ def paginate_helper(queryset, page, sort=None, count=DEFAULT_ENTRY_COUNT):
 #     return start, end
 
 
-# helper function to return start and end that go very far into past and future
 def get_very_large_date_range():
+    """ Helper function to return start and end that go very far into past and future """
     today = datetime.date.today()
     start = today - datetime.timedelta(days=3652.5)
     start = start.strftime('%Y-%m-%d')
@@ -146,22 +146,37 @@ def get_very_large_date_range():
 
 
 def build_redirect(request, **kwargs):
+    """ Add query string to URL """
     return HttpResponseRedirect(request.path + '?' + urlencode(kwargs))
 
 
 def filter_events(request, context, events, start, end, prefetch_org=False, prefetch_cc=False, prefetch_billing=False,
                   hide_unapproved=False, event2019=False):
+    """
+    Filter a queryset of events based on specified criteria
+
+    :param request: The calling view's request object
+    :param context: The calling view's current context dictionary
+    :param events: Queryset of events to filter
+    :param start: Datetime to compare event start times to
+    :param end: Datetime to compare event end times to
+    :param prefetch_org: Boolean - If true, prefetch related items based on client
+    :param prefetch_cc: Boolean - If true, prefetch related items based on client or crew chiefs and select related \
+    items based on building
+    :param prefetch_billing: Boolean - If true, prefetch related items based on client or crew chiefs and select \
+    related items based on building
+    :param hide_unapproved: Boolean - If true, exclude events that have not been approved
+    :param event2019: Boolean - If true, queryset only contains Event2019 objects
+    :returns: Queryset of events and updated context dictionary
+    """
     if not request.user.has_perm('events.view_hidden_event'):
         events = events.exclude(sensitive=True)
     if not request.user.has_perm('events.view_test_event'):
         events = events.exclude(test_event=True)
     if not request.user.has_perm('events.approve_event') and hide_unapproved:
         events = events.exclude(approved=False)
-    if prefetch_billing:
+    if prefetch_billing or prefetch_cc:
         events = events.select_related('location__building').prefetch_related('org')\
-            .prefetch_related('ccinstances__crew_chief')
-    elif prefetch_cc:
-        events = events.select_related('location__building').prefetch_related('org') \
             .prefetch_related('ccinstances__crew_chief')
     elif prefetch_org:
         events = events.prefetch_related('org')
@@ -196,6 +211,16 @@ def filter_events(request, context, events, start, end, prefetch_org=False, pref
 
 
 def generate_response(request, context, start, end, time_range_unspecified):
+    """
+    Build an event list view response object and set cookies if necessary
+
+    :param request: The calling view's request object
+    :param context: The calling view's context dictionary
+    :param start: Datetime used to filter the events (Optional)
+    :param end: Datetime used to filter the events (Optional)
+    :param time_range_unspecified: Boolean - If true, will ignore start and end times
+    :returns: Response object
+    """
     context['cols'] = map_fields(context['cols'])  # must use because there are strings
     response = render(request, 'events.html', context)
 
@@ -213,7 +238,8 @@ def generate_response(request, context, start, end, time_range_unspecified):
 def upcoming(request, start=None, end=None):
     """
     Lists Upcoming Events
-    if limit = False, then it'll show all upcoming events that are more than a week away.
+
+    If start and end are both None, then it'll show all upcoming events for the next 15 days
     """
     context = {}
 
@@ -257,6 +283,7 @@ def upcoming(request, start=None, end=None):
 @login_required
 @permission_required('events.approve_event', raise_exception=True)
 def incoming(request, start=None, end=None):
+    """ Lists all incoming events (not yet approved) """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -299,6 +326,7 @@ def incoming(request, start=None, end=None):
 @login_required
 @permission_required('events.approve_event', raise_exception=True)
 def incoming_cal(request, start=None, end=None):
+    """ Calendar view of incoming events """
     context = {'h2': "Incoming Events", 'listurl': reverse('events:incoming'),
                'bootcal_endpoint': reverse('cal:api-incoming')}
     return render(request, 'events_cal.html', context)
@@ -307,6 +335,7 @@ def incoming_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.view_events', raise_exception=True)
 def openworkorders(request, start=None, end=None):
+    """ Lists open events (not cancelled or otherwise closed) """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -345,6 +374,7 @@ def openworkorders(request, start=None, end=None):
 @login_required
 @permission_required('events.view_events', raise_exception=True)
 def openworkorders_cal(request, start=None, end=None):
+    """ Calendar view for open events """
     context = {'h2': "Open Events", 'listurl': reverse('events:open'), 'bootcal_endpoint': reverse('cal:api-open')}
     return render(request, 'events_cal.html', context)
 
@@ -352,6 +382,7 @@ def openworkorders_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.view_events', raise_exception=True)
 def findchief(request, start=None, end=None):
+    """ Lists any events that have been approved and need crew chiefs """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -398,6 +429,7 @@ def findchief(request, start=None, end=None):
 @login_required
 @permission_required('events.view_events', raise_exception=True)
 def findchief_cal(request, start=None, end=None):
+    """ Calendar view for events that need crew chiefs """
     context = {'h2': "Needs a Crew Chief", 'listurl': reverse('events:findchief'),
                'bootcal_endpoint': reverse('cal:api-findchief')}
     return render(request, 'events_cal.html', context)
@@ -406,6 +438,7 @@ def findchief_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.review_event', raise_exception=True)
 def unreviewed(request, start=None, end=None):
+    """ Lists events that are pending review for billing """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -451,6 +484,7 @@ def unreviewed(request, start=None, end=None):
 @login_required
 @permission_required('events.review_event', raise_exception=True)
 def unreviewed_cal(request, start=None, end=None):
+    """ Calendar view for events that are ready to be reviewed for billing """
     context = {'h2': "Events Pending Billing Review", 'listurl': reverse('events:unreviewed'),
                'bootcal_endpoint': reverse('cal:api-unreviewed')}
     return render(request, 'events_cal.html', context)
@@ -459,6 +493,7 @@ def unreviewed_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.bill_event', raise_exception=True)
 def unbilled(request, start=None, end=None):
+    """ Lists events that are ready to be billed """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -499,6 +534,7 @@ def unbilled(request, start=None, end=None):
 @login_required
 @permission_required('events.bill_event', raise_exception=True)
 def unbilled_cal(request, start=None, end=None):
+    """ Calendar view for events that have yet to be billed """
     context = {'h2': "Events to be Billed", 'listurl': reverse('events:unbilled'),
                'bootcal_endpoint': reverse('cal:api-unbilled')}
     return render(request, 'events_cal.html', context)
@@ -507,6 +543,7 @@ def unbilled_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.bill_event', raise_exception=True)
 def unbilled_semester(request, start=None, end=None):
+    """ Lists events that have yet to be billed and are set to be billed in bulk """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -546,6 +583,7 @@ def unbilled_semester(request, start=None, end=None):
 @login_required
 @permission_required('events.bill_event', raise_exception=True)
 def unbilled_semester_cal(request, start=None, end=None):
+    """ Calendar view for events that have yet to be billed and are set to be billed in bulk """
     context = {'h2': "Events to be Billed in Bulk", 'listurl': reverse('events:unbilled-semester'),
                'bootcal_endpoint': reverse('cal:api-unbilled-semester')}
     return render(request, 'events_cal.html', context)
@@ -554,6 +592,7 @@ def unbilled_semester_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.close_event', raise_exception=True)
 def paid(request, start=None, end=None):
+    """ Lists events where all bills have been paid """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -595,6 +634,7 @@ def paid(request, start=None, end=None):
 @login_required
 @permission_required('events.close_event', raise_exception=True)
 def paid_cal(request, start=None, end=None):
+    """ Calendar view for events that have already been paid """
     context = {'h2': "Paid Events", 'listurl': reverse('events:paid'), 'bootcal_endpoint': reverse('cal:api-paid')}
     return render(request, 'events_cal.html', context)
 
@@ -602,6 +642,7 @@ def paid_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.bill_event', raise_exception=True)
 def unpaid(request, start=None, end=None):
+    """ Lists events that have unpaid bills """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -642,6 +683,7 @@ def unpaid(request, start=None, end=None):
 @login_required
 @permission_required('events.bill_event', raise_exception=True)
 def unpaid_cal(request, start=None, end=None):
+    """ Calendar view for events that have unpaid bills """
     context = {'h2': "Pending Payments", 'listurl': reverse('events:unpaid'),
                'bootcal_endpoint': reverse('cal:api-unpaid')}
     return render(request, 'events_cal.html', context)
@@ -650,6 +692,7 @@ def unpaid_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.bill_event', raise_exception=True)
 def awaitingworkday(request, start=None, end=None):
+    """ Lists events that are waiting to be entered into Workday """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -690,6 +733,7 @@ def awaitingworkday(request, start=None, end=None):
 @login_required
 @permission_required('events.bill_event', raise_exception=True)
 def unpaid_workday(request, start=None, end=None):
+    """ Lists events that have been entered into workday but have not yet been paid for """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -726,6 +770,7 @@ def unpaid_workday(request, start=None, end=None):
 @login_required
 @permission_required('events.view_events', raise_exception=True)
 def closed(request, start=None, end=None):
+    """ Lists closed events """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -763,6 +808,7 @@ def closed(request, start=None, end=None):
 @login_required
 @permission_required('events.view_events', raise_exception=True)
 def closed_cal(request, start=None, end=None):
+    """ Calendar view for closed events """
     context = {'h2': "Closed Events", 'listurl': reverse('events:closed'),
                'bootcal_endpoint': reverse('cal:api-closed')}
     return render(request, 'events_cal.html', context)
@@ -771,6 +817,7 @@ def closed_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.view_events', raise_exception=True)
 def all(request, start=None, end=None):
+    """ Lists all events """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -812,11 +859,16 @@ def all(request, start=None, end=None):
 @login_required()
 @permission_required('events.view_events', raise_exception=True)
 def all_cal(request, start=None, end=None):
+    """ Calendar view for all events """
     context = {'h2': "All Events", 'listurl': reverse('events:all'), 'bootcal_endpoint': reverse('cal:api-all')}
     return render(request, 'events_cal.html', context)
 
 
 def public_facing(request):
+    """
+    Lists events that have been approved, have not yet ended, and can otherwise be viewed by anyone (i.e. no sensitive
+    or test events)
+    """
     context = {}
     now = datetime.datetime.now(pytz.utc)
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False, sensitive=False) \
@@ -833,6 +885,7 @@ def public_facing(request):
 @login_required
 @permission_required('events.bill_event', raise_exception=True)
 def multibillings(request):
+    """ Lists all multibills """
     context = {}
 
     multibills = MultiBilling.objects.annotate(num_closed_events=Sum(Case(
@@ -857,6 +910,7 @@ def multibillings(request):
 @login_required
 @permission_required('events.edit_workshops', raise_exception=True)
 def new_workshop(request):
+    """ Form to add a new workshop series """
     context = {'msg': "Create Workshop"}
     if request.method == 'POST':
         form = WorkshopForm(request.POST)
@@ -872,6 +926,7 @@ def new_workshop(request):
 @login_required
 @permission_required('events.edit_workshops', raise_exception=True)
 def edit_workshop(request, pk):
+    """ Form to edit the details for a workshop series """
     context = {'msg': "Edit Workshop"}
     workshop = Workshop.objects.get(pk=pk)
     if request.method == 'POST':
@@ -893,6 +948,7 @@ def edit_workshop(request, pk):
 @login_required
 @permission_required('events.edit_workshops', raise_exception=True)
 def workshop_dates(request, pk):
+    """ Form to add / edit sessions (dates) for a workshop series """
     context = {}
     workshop = Workshop.objects.get(pk=pk)
     dates = WorkshopDate.objects.filter(workshop=workshop)
@@ -914,11 +970,13 @@ def workshop_dates(request, pk):
 @login_required
 @permission_required('events.edit_workshops', raise_exception=True)
 def workshops_list(request):
+    """ List all workshop series """
     workshops = Workshop.objects.all()
     return render(request, 'workshops_list.html', {'workshops': workshops})
 
 
 class DeleteWorkshop(LoginRequiredMixin, HasPermMixin, DeleteView):
+    """ Delete a series of workshops """
     model = Workshop
     template_name = "form_delete_cbv.html"
     msg = "Delete Workshop"

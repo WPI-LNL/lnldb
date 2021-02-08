@@ -16,6 +16,12 @@ from helpers.util import curry_class
 
 @login_required
 def eventnew(request, id=None):
+    """
+    Create or edit an event
+
+    :param id: Defaults to None (create a new event). Otherwise, this is the primary key value of the event you intend \
+    to edit
+    """
     context = {}
     # get instance if id is passed in
     if id:

@@ -40,6 +40,7 @@ from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standa
 @login_required
 @permission_required('events.approve_event', raise_exception=True)
 def approval(request, id):
+    """ Approve an event (agree to provide services for the event) """
     context = {'msg': "Approve Event"}
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.approve_event', event):
@@ -117,6 +118,7 @@ def approval(request, id):
 
 @login_required
 def denial(request, id):
+    """ Deny an incoming event (LNL will not provide services for the event) """
     context = {'msg': "Deny Event"}
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.decline_event', event):
@@ -159,6 +161,7 @@ def denial(request, id):
 
 @login_required
 def review(request, id):
+    """ Review an event for billing """
     context = {'h2': "Review Event for Billing"}
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.review_event', event):
@@ -201,6 +204,12 @@ def review(request, id):
 
 @login_required
 def reviewremind(request, id, uid):
+    """
+    Remind a crew chief to complete their CC report
+
+    :param id: The primary key value of the respective event
+    :param uid: The primary key value of the user to send a reminder to
+    """
     event = get_object_or_404(BaseEvent, pk=id)
     if not (request.user.has_perm('events.review_event') or
             request.user.has_perm('events.review_event', event)):
@@ -233,6 +242,7 @@ def reviewremind(request, id, uid):
 
 @login_required
 def remindall(request, id):
+    """ Remind any crew chiefs who have not yet completed a CC report for a particular event to do so """
     event = get_object_or_404(BaseEvent, pk=id)
     if not (request.user.has_perm('events.review_event') or
             request.user.has_perm('events.review_event', event)):
@@ -269,6 +279,7 @@ def remindall(request, id):
 @login_required
 @require_POST
 def close(request, id):
+    """ Close an event (not to be confused with cancel). POST only. """
     set_revision_comment("Closed", None)
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.close_event', event):
@@ -285,6 +296,7 @@ def close(request, id):
 @login_required
 @require_POST
 def cancel(request, id):
+    """ Cancel an event (LNL will no longer provide services for this event). POST only. """
     set_revision_comment("Cancelled", None)
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.cancel_event', event):
@@ -315,6 +327,7 @@ def cancel(request, id):
 @login_required
 @require_POST
 def reopen(request, id):
+    """ Reopen an event that has already been closed. POST only. """
     set_revision_comment("Reopened", None)
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.reopen_event', event):
@@ -330,6 +343,12 @@ def reopen(request, id):
 
 @login_required
 def rmcrew(request, id, user):
+    """
+    Remove a user from the list of crew members who attended an event (pre-2019 events only)
+
+    :param id: The primary key value of the event
+    :param user: The primary key value of the user
+    """
     event = get_object_or_404(Event, pk=id)
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event)):
@@ -343,6 +362,10 @@ def rmcrew(request, id, user):
 
 @login_required
 def assigncrew(request, id):
+    """
+    - Pre-2019 Events: Assign crew members to an event
+    - Newer Events: Redirect to crew list
+    """
     context = {'msg': "Crew"}
 
     event = get_object_or_404(BaseEvent, pk=id)
@@ -374,6 +397,7 @@ def assigncrew(request, id):
 
 @login_required
 def hours_bulk_admin(request, id):
+    """ Update crew member hours in bulk """
     context = {'msg': "Bulk Hours Entry"}
 
     event = get_object_or_404(BaseEvent, pk=id)
@@ -407,6 +431,10 @@ def hours_bulk_admin(request, id):
 @login_required
 @require_GET
 def hours_prefill_self(request, id):
+    """
+    Log the current user as a crew member for an event. This only works after setup begins and will continue to work up
+    until 3 hours after the event. GET requests only.
+    """
     event = get_object_or_404(BaseEvent, pk=id)
     if not event.ccinstances.exists():
         raise PermissionDenied
@@ -427,12 +455,14 @@ def hours_prefill_self(request, id):
 @login_required
 @require_GET
 def crew_tracker(request):
+    """ Event checkin / checkout menu for crew members. GET requests only. """
     context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True}
     return render(request, 'crew_checkin.html', context)
 
 
 @login_required
 def checkin(request):
+    """ Event checkin page for crew members """
     context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True}
 
     if not request.user.is_lnl:
@@ -474,6 +504,7 @@ def checkin(request):
 
 @login_required
 def checkout(request):
+    """ Event checkout page for crew members """
     context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True,
                'styles': ".control {\n\tpadding: .375rem .75rem;\n\tfont-size: 1rem;\n\tline-height: 1.5;\n\t"
                          "border-radius: .25rem;\n\tborder: 1px solid #cde4da;\n\tbackground-clip: padding-box;}"}
@@ -565,6 +596,7 @@ def checkout(request):
 
 @login_required
 def bulk_checkin(request):
+    """ Scan or swipe a registered WPI ID to checkin or checkout of an event as a crew member """
     context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True}
 
     if not request.user.is_lnl:
@@ -647,6 +679,12 @@ def bulk_checkin(request):
 
 @login_required
 def rmcc(request, id, user):
+    """
+    Remove a crew chief from an event (pre-2019 events only)
+
+    :param id: The primary key value of the event
+    :param user: The primary key value of the user
+    """
     event = get_object_or_404(Event, pk=id)
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event)):
@@ -660,6 +698,7 @@ def rmcc(request, id, user):
 
 @login_required
 def assigncc(request, id):
+    """ Assign crew chiefs to an event """
     context = {}
 
     event = get_object_or_404(BaseEvent, pk=id)
@@ -691,6 +730,7 @@ def assigncc(request, id):
 
 @login_required
 def assignattach(request, id):
+    """ Update attachments for an event (file uploads) """
     context = {}
 
     event = get_object_or_404(BaseEvent, pk=id)
@@ -735,6 +775,7 @@ def assignattach(request, id):
 
 @login_required
 def assignattach_external(request, id):
+    """ Update attachments for an event (client-view) """
     context = {}
 
     event = get_object_or_404(BaseEvent, pk=id)
@@ -838,6 +879,7 @@ def oneoff(request, id):
 
 @login_required
 def viewevent(request, id):
+    """ View event details """
     context = {}
     event = get_object_or_404(BaseEvent, pk=id)
     if not (request.user.has_perm('events.view_events') or request.user.has_perm('events.view_events', event)):
@@ -988,6 +1030,7 @@ def viewevent(request, id):
 
 
 class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, LoginRequiredMixin, CreateView):
+    """ Create a new crew chief report """
     model = CCReport
     form_class = InternalReportForm
     template_name = "form_crispy_cbv.html"
@@ -1018,6 +1061,7 @@ class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, Login
 
 
 class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
+    """ Update an existing crew chief report """
     model = CCReport
     form_class = InternalReportForm
     template_name = "form_crispy_cbv.html"
@@ -1043,6 +1087,7 @@ class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermOrTestMixin, Login
 
 
 class CCRDelete(SetFormMsgMixin, HasPermOrTestMixin, LoginRequiredMixin, DeleteView):
+    """ Delete a crew chief report """
     model = CCReport
     template_name = "form_delete_cbv.html"
     msg = "Deleted Crew Chief Report"
@@ -1237,7 +1282,7 @@ class MultiBillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
 @login_required
 def pay_bill(request, event, pk):
     """
-    Quietly pays a bill, showing a message on the next page. POST only
+    Quietly pays a bill, showing a message on the next page. POST only.
     """
     bill = get_object_or_404(Billing, event_id=event, id=pk)
     if not request.user.has_perm('events.bill_event', bill.event):
@@ -1413,7 +1458,7 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
 @login_required
 def mark_entered_into_workday(request, id):
     """
-    Marks an event as entered into Workday. POST only
+    Marks an event as entered into Workday. POST only.
     """
     event = get_object_or_404(Event2019, id=id)
     if not request.user.has_perm('events.bill_event', event):

@@ -27,6 +27,7 @@ from inventory.models import AccessRecord
 
 
 def maintenance(request):
+    """Display maintenance page"""
     context = {'title': 'Down for maintenance', 'noindex': True}
     return render(request, 'maintenance.html', context)
 
@@ -34,6 +35,7 @@ def maintenance(request):
 @login_required
 # TODO: adjust for perm test
 def search(request):
+    """New search tool using Watson"""
     context = {}
     q = ""
     try:
@@ -70,6 +72,11 @@ def serve_file(request, att_file, forced_name=None):
 
 @require_GET
 def workorderwizard_load(request):
+    """
+    Endpoint the workorder wizard uses to load initial data.
+
+    :returns: Dictionary of event locations, organizations, and user details; 401 status code if not authenticated
+    """
     # Manually checking if user is authenticated rather than using @login_required
     # in order to return a 401 status that the workorder wizard understands so it can redirect the user to log in
     # instead of returning a 302 redirect to the login page, which wouldn't work because this view is called via AJAX
@@ -102,6 +109,11 @@ def workorderwizard_load(request):
 @csrf_exempt
 @transaction.atomic
 def workorderwizard_submit(request):
+    """
+    Handles submission of workorder from workorder wizard.
+
+    :returns: URL to event page on success; 422 status code if processing fails; 401 status code if unauthenticated
+    """
     # Manually checking if user is authenticated rather than using @login_required
     # in order to return a 401 status that the workorder wizard understands so it can display a specific error message
     # instead of returning a 302 redirect to the login page, which wouldn't work because this view is called via AJAX
@@ -199,6 +211,12 @@ def workorderwizard_submit(request):
 @require_POST
 @csrf_exempt
 def workorderwizard_findprevious(request):
+    """
+    Checks for previous events submitted by a user in the last 18 months
+
+    :returns: A previous event; 402 status code if nothing is found; 422 status code if processing fails; 401 status \
+    code if unauthenticated
+    """
     # Manually checking if user is authenticated rather than using @login_required
     # in order to return a 401 status that the workorder wizard understands so it can display a specific error message
     # instead of returning a 302 redirect to the login page, which wouldn't work because this view is called via AJAX
@@ -257,6 +275,7 @@ def workorderwizard_findprevious(request):
 # Feel free to remove this if this pandemic ever ends
 @login_required
 def contact_tracing_logs(request):
+    """Download csv file containing contact tracing logs"""
     if not request.user.is_superuser:
         return err403(request)
     response = HttpResponse(content_type="text/csv")

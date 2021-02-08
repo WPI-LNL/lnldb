@@ -4,6 +4,7 @@ import uuid
 
 
 class MeetingNoticeMail(models.Model):
+    """ Meeting Notice Email """
     ts = models.DateTimeField(auto_now_add=True)
 
     place = models.CharField(max_length=32, default="AK219")
@@ -35,6 +36,7 @@ class ServiceAnnounce(models.Model):
 
 
 class SMSMessage(models.Model):
+    """ SMS Text Message """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     message = models.TextField()
 

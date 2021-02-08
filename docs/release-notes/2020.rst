@@ -1,0 +1,80 @@
+============
+Updates 2020
+============
+
+November
+========
+This month we removed support for WPI's Central Authentication Service (CAS). Users no longer have the ability to sign
+in using CAS.
+
+
+October
+=======
+For the first time in a long time (possibly ever), we were able to get our test coverage above 90%! We also deprecated
+the old workorder wizard.
+
+
+August
+======
+We deployed a lot of new code in August! Here's an overview of what changed:
+
+- :commit:`d3e6d9066049e9872db321eeaccd86bf3e80b03e` Improved support for python 3 throughout
+- :commit:`dfb6d82bbbec9076884017dfeae497261df0faf0` The Vice President now has the ability to send an email to the club poking for crew chiefs
+- :commit:`ab73196d10abe5420ec07939cc839d793b21ccd1` Started building support for third-party extensions and 2FA
+- :commit:`d52535f04f080be76903f093d9ba4c00e571675e` Updated the API to support token-based authentication
+- :commit:`0ef4164b4e626b5ca35bec5c9db33bad892b512b` Launched the Event and Crew Member API endpoints
+- :commit:`e1574eae933a2f5534e87bd60f8b9cd76d775564` Made the old inventory system read-only; we now use Snipe for inventory tracking and management
+- Implemented new contact tracing features to support safe operations during the Coronavirus pandemic
+- Deployed the initial version (1.0.2) of the MDM
+- Various other bug fixes and minor UI improvements
+
+
+June
+====
+In June we kicked off a couple major projects. The first was the start of preparations towards dropping support for
+python 2 as it had reached End of Life in January. We also began working on a new Mobile Device Management (MDM)
+platform for the LNL MacBooks, which will save the Webmaster countless hours managing them.
+
+- Started writing unit tests for the vast amounts of untested code
+- :commit:`13f91d9858fcd07b3b127a51e8c5364185837ce1` Launched a new system for creating static pages quickly and conveniently using styles consistent with the new design for the static site
+- :commit:`b0b035f5e2dea28f17b33c7a5efc949454e9265f` Officers can now upload headshots to their profiles for display on our about page
+- Began working on the new MDM platform
+
+
+May
+===
+In May we switched over to HTTPS and added Microsoft SSO as a login option. WPI community members can now log into the
+LNL Database using their WPI Microsoft accounts with no further action required.
+
+
+April
+=====
+In April, we added the ability to manage listings for workshops. This replaced the previous version of the workshops
+page which was just a static webpage.
+
+
+March
+=====
+Here's a general overview of some of the changes we made back in March.
+
+- :commit:`242117ea8caac73b558577f0732a8feaac83e398` Added the ability to send SMS text messages to LNL members (requires opt-in)
+- :commit:`d0e548b3e80a5d8bc798799401e33134cb16cd08` Include the cost of extras when calculating discounts
+- :commit:`979ce25921a8427da38a28e9a42a4745f19fb07e` Launched a new REST API
+- :commit:`a07bbf6f97c83ea6756fd70bf6460884ff6f9993` Officers can now list their office hours on their profiles
+- Various other bug fixes and UI improvements
+
+The new REST API provides access to some of the more popular portions of our database. You can find the API
+documentation `here <https://lnl.wpi.edu/api/docs/>`_ (login required).
+
+
+February
+========
+Here's a highlight of some of the new features we deployed back in February.
+
+- :commit:`77fe096e99ff2b755d4f700d1cc53785a5b2b226` Update Admin Site UI with LNL branding
+- :commit:`7db6ce9afc69ba6c7a2f9b1bfb72e4c9f0b3180b` Add away status expiration dates
+- :commit:`b7feba37b38875ccb05e4bfb0870e5662ecafad5` Projectionists can now request PITs through the LNL database
+
+
+.. note::
+    For updates prior to February 2020, we recommend taking a look at the project on Github.

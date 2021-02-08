@@ -17,6 +17,7 @@ class TrainingType(models.Model):
 
 
 class Training(models.Model):
+    """ A training event """
     training_type = models.ForeignKey(TrainingType, on_delete=models.PROTECT, related_name='trainings')
     date = models.DateField()
     trainer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='trainings_run')
@@ -36,6 +37,7 @@ class Training(models.Model):
 
 
 class Trainee(models.Model):
+    """ Record of an individual's completion or revocation of training """
     training = models.ForeignKey(Training, on_delete=models.CASCADE, related_name='trainees')
     person = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='trainings')
     revoked = models.BooleanField(default=False)

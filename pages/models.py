@@ -7,6 +7,7 @@ from six import python_2_unicode_compatible
 
 @python_2_unicode_compatible
 class Page(models.Model):
+    """ Custom dynamic page using the static site stylesheets """
     title = models.CharField(max_length=64)
     slug = models.SlugField(max_length=64)
     description = models.TextField(blank=True, help_text="This page description may appear in search engine results "
@@ -28,6 +29,7 @@ class Page(models.Model):
 
 @python_2_unicode_compatible
 class CarouselImg(models.Model):
+    """ Image to be displayed as part of a carousel on a custom page """
     internal_name = models.CharField(max_length=64)
     img = models.ImageField(upload_to='carousel')
     href = models.ForeignKey('Page', on_delete=models.SET_NULL, null=True, blank=True)

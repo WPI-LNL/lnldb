@@ -1,0 +1,8 @@
+/* For docs */
+.wy-nav-side .caption-text {
+    color: yellow;
+}
+
+div.wy-side-nav-search, nav.wy-nav-top {
+    background-color: black;
+}

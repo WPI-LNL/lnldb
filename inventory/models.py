@@ -244,6 +244,7 @@ class EquipmentMaintEntry(models.Model):
 
 
 class AccessRecord(models.Model):
+    """ Contact tracing log for LNL storage spaces """
     users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="access_logs")
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="access_logs")
     timestamp = models.DateTimeField(default=timezone.now)

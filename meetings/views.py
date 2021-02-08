@@ -24,6 +24,12 @@ from .models import AnnounceSend, Meeting, MtgAttachment
 
 @login_required
 def download_att(request, mtg_id, att_id):
+    """
+    Download a meeting attachment
+
+    :param mtg_id: The primary key value of the meeting
+    :param att_id: The primary key value of the attachment
+    """
     mtg = get_object_or_404(Meeting, pk=mtg_id)
     if not request.user.has_perm('meetings.view_mtg', mtg):
         raise PermissionDenied
@@ -37,6 +43,12 @@ def download_att(request, mtg_id, att_id):
 
 @login_required
 def rm_att(request, mtg_id, att_id):
+    """
+    Remove an attachment from a meeting
+
+    :param mtg_id: The primary key value of the meeting
+    :param att_id: The primary key value of the attachment
+    """
     mtg = get_object_or_404(Meeting, pk=mtg_id)
     if not request.user.has_perm('meetings.edit_mtg', mtg):
         raise PermissionDenied
@@ -49,6 +61,12 @@ def rm_att(request, mtg_id, att_id):
 
 @login_required
 def modify_att(request, mtg_id, att_id):
+    """
+    Update an attachment
+
+    :param mtg_id: The primary key value of the meeting
+    :param att_id: The primary key value of the attachment
+    """
     context = {}
     mtg_perms = ('meetings.edit_mtg',)
     att_perms = []
@@ -75,6 +93,7 @@ def modify_att(request, mtg_id, att_id):
 
 @login_required
 def viewattendance(request, mtg_id):
+    """ View event details """
     context = {}
     perms = ('meetings.view_mtg_attendance',)
     try:
@@ -104,6 +123,12 @@ def viewattendance(request, mtg_id):
 
 @login_required
 def updateevent(request, mtg_id, event_id):
+    """
+    Update crew chief assignments for an event
+
+    :param mtg_id: The primary key value of the meeting (redirects to meeting detail page)
+    :param event_id: The primary key value of the event (pre-2019 events only)
+    """
     context = {}
     perms = ('meetings.edit_mtg',)
     event = get_object_or_404(Event, pk=event_id)
@@ -129,6 +154,7 @@ def updateevent(request, mtg_id, event_id):
 
 @login_required
 def editattendance(request, mtg_id):
+    """ Update event details """
     context = {}
     perms = ('meetings.edit_mtg',)
     context['msg'] = "Edit Meeting"
@@ -155,6 +181,7 @@ def editattendance(request, mtg_id):
 @login_required
 @permission_required('meetings.list_mtgs', raise_exception=True)
 def listattendance(request, page=1):
+    """ List all meetings """
     context = {}
     mtgs = Meeting.objects \
         .select_related('meeting_type') \
@@ -184,6 +211,7 @@ def listattendance(request, page=1):
 @login_required
 @permission_required('meetings.create_mtg', raise_exception=True)
 def newattendance(request):
+    """ Create a new meeting """
     context = {}
     if request.method == 'POST':
         form = MeetingAdditionForm(request.POST)
@@ -199,6 +227,7 @@ def newattendance(request):
 
 @login_required
 def mknotice(request, mtg_id):
+    """ Send a meeting notice """
     context = {}
     perms = ('meetings.send_mtg_notice',)
     meeting = get_object_or_404(Meeting, pk=mtg_id)
@@ -227,6 +256,7 @@ def mknotice(request, mtg_id):
 
 @login_required
 def mkccnotice(request, mtg_id):
+    """ Send a CC meeting notice """
     context = {}
     perms = ('meetings.send_mtg_notice',)
     meeting = get_object_or_404(Meeting, pk=mtg_id)

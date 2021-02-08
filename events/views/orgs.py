@@ -32,7 +32,7 @@ from helpers.revision import set_revision_comment
 @login_required
 @permission_required('events.view_org', raise_exception=True)
 def vieworgs(request):
-    """ Views all organizations, """
+    """ Lists all organizations """
     # todo add filters
     context = {}
 
@@ -94,7 +94,7 @@ def addeditorgs(request, org_id=None):
 
 @login_required
 def fund_edit(request, fund_id=None, org=None):
-    """form for adding an fund """
+    """form for adding or editing a fund """
     # need to fix this
     context = {}
     edit_perms = ('events.change_fund',)
@@ -139,6 +139,7 @@ def fund_edit(request, fund_id=None, org=None):
 
 @login_required
 def fund_edit_external(request, fund_id=None, org=None):
+    """ Form for editing a fund (client view) """
     context = {}
     instance = get_object_or_404(Fund, pk=fund_id)
     msg = "Edit Fund %s" % instance.fopal
@@ -164,6 +165,7 @@ def fund_edit_external(request, fund_id=None, org=None):
 
 @login_required
 def orgdetail(request, org_id):
+    """ Organization detail page """
     context = {}
     perms = ('events.view_org',)
     try:
@@ -176,7 +178,7 @@ def orgdetail(request, org_id):
     context['org'] = org
     context['history'] = Version.objects.get_for_object(org)
     context['events'] = BaseEvent.objects.filter(org=org).prefetch_related('hours__user', 'ccinstances__crew_chief',
-                                                                       'location', 'org')
+                                                                           'location', 'org')
     return render(request, 'org_detail.html', context)
 
 
@@ -192,6 +194,7 @@ def orgdetail(request, org_id):
 #
 @login_required
 def orgedit(request, id):
+    """ Form for editing organization details (client view) """
     context = {}
     if request.user.is_superuser:
         orgs = Organization.objects.all()
@@ -219,6 +222,7 @@ def orgedit(request, id):
 # Transfer Views
 @login_required
 def org_mkxfer(request, id):
+    """ Begin the process of transferring ownership of an organization """
     context = {}
     org = get_object_or_404(Organization, pk=id)
     if not request.user.has_perm('events.transfer_org_ownership', org):
@@ -254,6 +258,7 @@ def org_mkxfer(request, id):
 
 
 def org_acceptxfer(request, idstr):
+    """ Complete an organization transfer """
     context = {}
     transfer = get_object_or_404(OrganizationTransfer, uuid=idstr)
 
@@ -284,6 +289,7 @@ def org_acceptxfer(request, idstr):
 
 
 class OrgVerificationCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
+    """ Verify that a client's billing details are valid """
     model = OrgBillingVerificationEvent
     form_class = IOrgVerificationForm
     template_name = "form_crispy_cbv.html"

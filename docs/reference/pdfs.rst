@@ -1,10 +1,7 @@
 PDFs
 ====
-Models
-------
-.. automodule:: pdfs.models
-    :members:
-    :undoc-members:
+
+This module handles generating PDF files.
 
 Views
 -----

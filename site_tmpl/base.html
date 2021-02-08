@@ -171,7 +171,7 @@
           {% if NO_FOOT %}
               <!-- No footer -->
           {% else %}
-          <p>&copy; WPI Lens and Lights &middot; <a href="{% url "cal:list" %}">Want to get involved?</a>
+          <p>&copy; WPI Lens and Lights &middot; <a href="https://lnldb.readthedocs.io/en/latest/{% if HELP_PATH %}{{ HELP_PATH }}{% endif %}">Need Help?</a>
         
         </p>
         <p>Generated {% now "N d Y, P e" %}; version {{ GIT_RELEASE }}</p>

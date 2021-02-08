@@ -41,6 +41,7 @@ class MeetingAnnounceCCView(DetailView):
 
 @login_required
 def mk_srv_announce(request):
+    """ Send out a web service announcement """
     context = {}
     perms = ('meetings.send_mtg_notice',)
     if not (request.user.has_perms(perms)):
@@ -65,6 +66,7 @@ def mk_srv_announce(request):
 @login_required
 @permission_required('emails.send', raise_exception=True)
 def send_sms(request):
+    """ Send a text message to a specific user (must have opted-in to receive messages) """
     context = {}
     if request.method == 'POST':
         form = TargetedSMSForm(request.POST)
@@ -91,6 +93,7 @@ def send_sms(request):
 @login_required
 @permission_required('emails.send', raise_exception=True)
 def send_active_sms(request):
+    """ Send a text message to all active members (must have opted-in to receive text messages) """
     context = {}
     if request.method == 'POST':
         form = SMSForm(request.POST)
@@ -121,6 +124,7 @@ def send_active_sms(request):
 @login_required
 @permission_required('events.edit_event_hours', raise_exception=True)
 def poke_cc(request):
+    """ Send a "Poke for CC" email (searching for crew chiefs) """
     context = {}
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False) \
         .filter(datetime_start__gt=timezone.now()).exclude().distinct()
@@ -148,6 +152,7 @@ def poke_cc(request):
 
 @login_required
 def dispatch_console(request):
+    """ Menu for email tools """
     if not request.user.has_perm('emails.send') and not request.user.has_perm('events.edit_event_hours'):
         raise PermissionDenied
     return render(request, 'email_tools.html', {})

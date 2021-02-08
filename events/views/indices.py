@@ -26,8 +26,7 @@ def index(request):
 
 @login_required
 def admin(request, msg=None):
-    """ admin landing page """
-
+    """ Member landing page """
     context = {'msg': msg}
 
     if settings.LANDING_TIMEDELTA:
@@ -89,6 +88,7 @@ def event_search(request):
 @login_required
 @permission_required('events.view_posteventsurveyresults', raise_exception=True)
 def survey_dashboard(request):
+    """ Dashboard for post-event survey results """
     now = timezone.now()
     year_ago = now - datetime.timedelta(days=365)
 
@@ -254,6 +254,7 @@ def survey_dashboard(request):
 
 
 def workshops(request):
+    """ Public workshops page """
     context = {
         'workshops': Workshop.objects.all(),
         'title': "Workshops",
@@ -267,6 +268,7 @@ def workshops(request):
 @login_required
 @permission_required('events.view_attendance_records', raise_exception=True)
 def attendance_logs(request):
+    """ View crew attendance logs (events) """
 
     headers = ['User', 'Event', 'Location', 'Checkin', 'Checkout']
 

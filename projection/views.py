@@ -23,6 +23,7 @@ from emails.generators import GenericEmailGenerator
 @login_required
 @permission_required('projection.view_pits', raise_exception=True)
 def plist(request):
+    """ List all projectionists """
     context = {}
     users = Projectionist.objects.select_related('user').order_by('user__last_name')
 
@@ -35,6 +36,7 @@ def plist(request):
 @login_required
 @permission_required('projection.view_pits', raise_exception=True)
 def plist_detail(request):
+    """ Grid view of projectionists and their completed PITs """
     context = {}
     levels = PITLevel.objects.exclude(name_short__in=['PP', 'L']) \
         .order_by('ordering')
@@ -57,6 +59,7 @@ def plist_detail(request):
 @login_required
 @permission_required('projection.edit_pits', raise_exception=True)
 def projection_update(request, id):
+    """ Update a projectionist's license and / or PIT records """
     projectionist = get_object_or_404(Projectionist, pk=id)
     context = {'msg': "Updating Projectionist %s" % projectionist}
 
@@ -81,6 +84,7 @@ def projection_update(request, id):
 
 
 class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
+    """ Add a new projectionist """
     perms = 'projection.edit_pits'
 
     def get_context_data(self, **kwargs):
@@ -121,6 +125,7 @@ class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
 
 
 class BulkUpdateView(LoginRequiredMixin, HasPermMixin, FormView):
+    """ Update a PIT for multiple projectionists at the same time """
     template_name = "form_crispy_cbv.html"
     form_class = BulkUpdateForm
     perms = 'projection.edit_pits'
@@ -137,6 +142,7 @@ class BulkUpdateView(LoginRequiredMixin, HasPermMixin, FormView):
 
 
 class ProjectionistDelete(LoginRequiredMixin, HasPermMixin, DeleteView):
+    """ Remove a projectionist (does not remove the associated user) """
     model = Projectionist
     template_name = "form_delete_cbv.html"
     msg = "Deleted Projectionist"
@@ -147,6 +153,13 @@ class ProjectionistDelete(LoginRequiredMixin, HasPermMixin, DeleteView):
 
 
 def get_saturdays_for_range(date_1, date_2):
+    """
+    Get a list of Saturdays in a given time frame
+
+    :param date_1: Datetime of the lower bound
+    :param date_2: Datetime of the upper bound
+    :returns: An array of datetime objects
+    """
     # saturdays are used to represent the weeks, for reference
     saturdays = []
     # set to next saturday
@@ -162,6 +175,10 @@ def get_saturdays_for_range(date_1, date_2):
 @login_required
 @permission_required('projection.add_bulk_events', raise_exception=True)
 def bulk_projection(request):
+    """
+    Add new projection events in bulk. This is an internal form and is often used when there are multiple showings
+    over the course of a weekend.
+    """
     context = {}
 
     if not request.GET:  # Step 1: get contact info and date range
@@ -218,6 +235,7 @@ def bulk_projection(request):
 
 
 def send_request_notification(form, update=False):
+    """ Send the head projectionist a PIT request notification """
     name = form.instance.projectionist.user.get_full_name()
     pit = form.instance.level.name_long
     requested_date = form.instance.scheduled_for
@@ -239,6 +257,7 @@ def send_request_notification(form, update=False):
 
 
 class PITRequest(LoginRequiredMixin, HasPermMixin, FormView):
+    """ Create a new PIT request """
     perms = 'projection.view_pits'
     model = PitRequest
     template_name = "projection_pit_request.html"
@@ -268,6 +287,7 @@ class PITRequest(LoginRequiredMixin, HasPermMixin, FormView):
 @login_required
 @permission_required('projection.edit_pits', raise_exception=True)
 def pit_schedule(request):
+    """ List all PIT requests """
     context = {}
 
     approved = PitRequest.objects.filter(approved=True)
@@ -299,6 +319,7 @@ def pit_complete(request, id):
 
 
 class CancelPITRequest(LoginRequiredMixin, HasPermMixin, DeleteView):
+    """ Cancel a PIT request """
     model = PitRequest
     template_name = "form_cancel_request.html"
     msg = "Cancelled PIT Request"
@@ -314,6 +335,7 @@ class CancelPITRequest(LoginRequiredMixin, HasPermMixin, DeleteView):
 @login_required
 @permission_required('projection.view_pits', raise_exception=True)
 def pit_request_update(request, id):
+    """ Edit a PIT request (accessible by trainee) """
     pit_request = get_object_or_404(PitRequest, pk=id)
 
     context = {'title': "Update PIT Request"}
@@ -340,6 +362,7 @@ def pit_request_update(request, id):
 @login_required
 @permission_required('projection.edit_pits', raise_exception=True)
 def manage_pit_request(request, id):
+    """ Edit or approve a PIT request (not accessible by trainee) """
     pit_request = get_object_or_404(PitRequest, pk=id)
 
     context = {'title': "Manage PIT Request"}
