@@ -14,7 +14,6 @@ import os
 
 carrier_choices = (
     ('', 'Opt-out'),
-    ('vtext.com', 'Verizon'),
     ('txt.att.net', 'AT&T'),
     ('myboostmobile.com', 'Boost Mobile'),
     ('mms.cricketwireless.net', 'Cricket'),
@@ -23,6 +22,7 @@ carrier_choices = (
     ('mmst5.tracfone.com', 'Simple Mobile'),
     ('messaging.sprintpcs.com', 'Sprint'),
     ('tmomail.net', 'T-Mobile'),
+    ('vtext.com', 'Verizon'),
     ('vmobl.com', 'Virgin Mobile'),
     ('vmobile.ca', 'Virgin Mobile Canada'),
     ('vtext.com', 'Xfinity Mobile')

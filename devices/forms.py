@@ -1406,6 +1406,7 @@ class NewAppForm(FieldAccessForm):
         )
         super(NewAppForm, self).__init__(*args, **kwargs)
 
+        self.fields['name'].label = "Application Name"
         self.fields['identifier'].help_text = "A list of applications compatible with the MDM can be found " \
                                               "<a href='" + reverse("mdm:app-list") + "' target='_blank'>here</a>. " \
                                               "Please enter the respective identifier above."

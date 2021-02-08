@@ -118,7 +118,7 @@
                     {% endif %}
                     {% permission request.user has 'accounts.change_user' of u %}
                         <tr>
-                            <th><a href="{% url "accounts:officer-photo" u.pk %}">Update Officer Photo</a></th>
+                            <th colspan="2"><a href="{% url "accounts:officer-photo" u.pk %}">Update Officer Photo</a></th>
                             <td>&nbsp;</td>
                         </tr>
                     {% endpermission %}

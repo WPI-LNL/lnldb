@@ -210,6 +210,8 @@ class LimboList(BaseUserList):
 
 class MeDirectView(generic.RedirectView):
     def get_redirect_url(self, *args, **kwargs):
+        if not self.request.user:
+            return HttpResponseRedirect(reverse('home'))
         return super(MeDirectView, self).get_redirect_url(self.request.user.pk, *args, **kwargs)
 
 
