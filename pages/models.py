@@ -15,6 +15,8 @@ class Page(models.Model):
     body = models.TextField(help_text="Accepts raw text and/or HTML input")
     body_in_jumbo = models.BooleanField(default=False)
     noindex = models.BooleanField(default=False, verbose_name="Hide from search engines")
+    sitemap = models.BooleanField(default=False, verbose_name="Include in Sitemap")
+    sitemap_category = models.CharField(max_length=32, blank=True, null=True)
 
     css = models.TextField(blank=True, verbose_name="CSS")
 

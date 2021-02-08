@@ -5,6 +5,7 @@ from django.test.client import RequestFactory
 from django.urls.base import reverse
 from django.conf import settings
 from django.contrib.auth.models import Group
+from django.contrib.sites.shortcuts import get_current_site
 from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework.exceptions import APIException, PermissionDenied
@@ -13,7 +14,8 @@ from . import models, views
 from .templatetags import path_safe
 from events.tests.generators import UserFactory, Event2019Factory, CCInstanceFactory
 from events.models import OfficeHour, HourChange, Building, Location, CrewAttendanceRecord
-from data.models import Notification, Extension
+from data.models import Notification, Extension, ResizedRedirect
+from pages.models import Page
 import pytz
 import logging
 
@@ -474,6 +476,44 @@ class APIViewTest(ViewTestCase):
                                   {'id': 12345, 'event': 1, 'checkin': custom_datetime}), 201)
 
         self.assertEqual(CrewAttendanceRecord.objects.get(user=self.user, active=True).checkin, custom_datetime)
+
+    def test_sitemap_endpoint(self):
+        models.Endpoint.objects.create(name="Sitemap", url="sitemap", example="category=Events", response="[]",
+                                       description="Grab redirects and links to custom pages for sitemap")
+
+        # Check that we get 204 if there are no redirects or page links to return
+        self.assertOk(self.client.get('/api/v1/sitemap'), 204)
+
+        request = RequestFactory()
+        main_site = get_current_site(request)
+        ResizedRedirect.objects.create(site=main_site, old_path='/test/', new_path=reverse('home'))
+        ResizedRedirect.objects.create(name='Welcome Page', site=main_site, old_path='/test2/',
+                                       new_path=reverse('index'), sitemap=True)
+
+        Page.objects.create(title='Test Page', slug='test-page', body='<h1>Hello world</h1>')
+        Page.objects.create(title='Another Test Page', slug='another-test-page', body='<h1>Another page</h1>',
+                            sitemap=True, sitemap_category='Test Pages')
+
+        # Test default response: all public redirects and pages
+        default_response = '[{"title":"Another Test Page","path":"another-test-page","category":"Test Pages"},' \
+                           '{"title":"Welcome Page","path":"test2/","category":"Redirects"}]'
+
+        self.assertEqual(self.client.get('/api/v1/sitemap').content.decode('utf-8'), default_response)
+
+        # Test response with pages only
+        pages_only = '[{"title":"Another Test Page","path":"another-test-page","category":"Test Pages"}]'
+
+        self.assertEqual(self.client.get('/api/v1/sitemap', {'type': 'page'}).content.decode('utf-8'), pages_only)
+
+        # Test response with redirects only
+        redirects_only = '[{"title":"Welcome Page","path":"test2/","category":"Redirects"}]'
+
+        self.assertEqual(self.client.get('/api/v1/sitemap', {'type': 'redirect'}).content.decode('utf-8'),
+                         redirects_only)
+
+        # Test filter by category
+        self.assertOk(self.client.get('/api/v1/sitemap', {'category': 'Events'}), 204)
+        self.assertEqual(self.client.get('/api/v1/sitemap', {'category': 'test'}).content.decode('utf-8'), pages_only)
 
     def test_docs(self):
         # Create a couple endpoints to include in the docs

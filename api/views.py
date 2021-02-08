@@ -21,10 +21,11 @@ from random import randint
 from accounts.forms import SMSOptInForm
 from emails.generators import generate_sms_email
 from events.models import OfficeHour, HourChange, Event2019, Location, CrewAttendanceRecord
-from data.models import Notification, Extension
+from data.models import Notification, Extension, ResizedRedirect
+from pages.models import Page
 from .models import Endpoint, RequestParameter, ResponseKey, TokenRequest
 from .serializers import OfficerSerializer, HourSerializer, ChangeSerializer, NotificationSerializer, EventSerializer, \
-    AttendanceSerializer
+    AttendanceSerializer, RedirectSerializer, CustomPageSerializer
 
 
 # Create your views here.
@@ -271,6 +272,38 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.update(record, serializer.validated_data)
         return Response(status=status.HTTP_201_CREATED)
+
+
+class SitemapViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = []
+
+    def list(self, request):
+        (pages, redirects) = self.get_queryset()
+        if pages.count() is 0 and redirects.count() is 0:
+            content = {'204': 'No data was found for the specified parameters'}
+            return Response(content, status=status.HTTP_204_NO_CONTENT)
+        page_serializer = CustomPageSerializer(pages, many=True)
+        redirect_serializer = RedirectSerializer(redirects, many=True)
+
+        data = page_serializer.data + redirect_serializer.data
+        return Response(data)
+
+    def get_queryset(self):
+        verify_endpoint('Sitemap', self.request)
+        pages = Page.objects.filter(sitemap=True)
+        redirects = ResizedRedirect.objects.filter(sitemap=True)
+
+        link_type = self.request.query_params.get('type', None)
+        category = self.request.query_params.get('category', None)
+
+        if category not in [None, '']:
+            pages = pages.filter(sitemap_category__icontains=category)
+            redirects = ResizedRedirect.objects.none()
+        if link_type == 'page':
+            return pages, ResizedRedirect.objects.none()
+        elif link_type == 'redirect':
+            return Page.objects.none(), redirects
+        return pages, redirects
 
 
 @login_required

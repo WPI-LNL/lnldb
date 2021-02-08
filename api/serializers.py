@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from events.models import OfficeHour, HourChange, Event2019, CrewAttendanceRecord
 from accounts.models import User
+from data.models import ResizedRedirect
+from pages.models import Page
 
 
 # Create your serializers here.
@@ -80,3 +82,35 @@ class AttendanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = CrewAttendanceRecord
         fields = ('user', 'event', 'checkin', 'checkout', 'active')
+
+
+class RedirectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResizedRedirect
+        fields = ('name', 'old_path')
+
+    def to_representation(self, instance):
+        path = instance.old_path
+        if instance.old_path[0] == '/':
+            path = instance.old_path[1:]
+        return {
+            'title': instance.name,
+            'path': path,
+            'category': 'Redirects'
+        }
+
+
+class CustomPageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Page
+        fields = ('title', 'slug', 'sitemap_category')
+
+    def to_representation(self, instance):
+        category = 'Redirects'
+        if instance.sitemap_category is not None:
+            category = instance.sitemap_category
+        return {
+            'title': instance.title,
+            'path': instance.slug,
+            'category': category
+        }

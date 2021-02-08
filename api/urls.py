@@ -8,6 +8,7 @@ router.register(r'office-hours', views.HourViewSet, basename='Hour')
 router.register(r'hours/updates', views.ChangeViewSet, basename='Change')
 router.register(r'notifications', views.NotificationViewSet, basename='Notification')
 router.register(r'events', views.EventViewSet, basename="Event")
+router.register(r'sitemap', views.SitemapViewSet, basename='Sitemap')
 
 write_router = WriteOnlyRouter()
 write_router.register(r'crew', views.AttendanceViewSet, basename="Crew")

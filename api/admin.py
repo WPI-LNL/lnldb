@@ -21,8 +21,8 @@ class OptionAdmin(admin.TabularInline):
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == 'parameter':
             resolved = resolve(request.path_info)
-            if resolved.args:
-                endpoint = self.parent_model.objects.get(pk=resolved.args[0])
+            if resolved.kwargs:
+                endpoint = self.parent_model.objects.get(pk=resolved.kwargs['object_id'])
             else:
                 endpoint = None
             kwargs["queryset"] = Parameter.objects.filter(endpoint=endpoint)

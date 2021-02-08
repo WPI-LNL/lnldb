@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 
+from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
 from django.utils.translation import gettext_lazy as _
@@ -39,6 +40,8 @@ class GlobalPerms(models.Model):
 
 
 class ResizedRedirect(models.Model):
+    """Custom redirect (configured from the admin site)"""
+    name = models.CharField(max_length=64, help_text='User friendly name', blank=True, null=True)
     site = models.ForeignKey(Site, on_delete=models.CASCADE, verbose_name=_('site'))
     old_path = models.CharField(
         _('redirect from'),
@@ -52,6 +55,7 @@ class ResizedRedirect(models.Model):
         blank=True,
         help_text=_("This can be either an absolute path (as above) or a full URL starting with 'http://'."),
     )
+    sitemap = models.BooleanField(default=False, verbose_name='Include in Sitemap')
 
     class Meta:
         verbose_name = _('redirect')
@@ -62,6 +66,10 @@ class ResizedRedirect(models.Model):
 
     def __str__(self):
         return "%s ---> %s" % (self.old_path, self.new_path)
+
+    def clean(self):
+        if not self.name and self.sitemap:
+            raise ValidationError('A name is required to include this redirect in the sitemap')
 
 
 class Notification(models.Model):
