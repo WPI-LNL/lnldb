@@ -113,12 +113,12 @@ class AnnounceSendForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
-        self.helper.field_class = 'col-lg-5'
+        self.helper.field_class = 'col-lg-7'
         self.helper.layout = Layout(
-            Field('events', css_class="col-md-6", size="15"),
             'subject',
             'message',
             'email_to',
+            Field('events', css_class="col-md-6", size="15"),
             FormActions(
                 Submit('save', 'Save Changes'),
             )
