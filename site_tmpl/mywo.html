@@ -19,7 +19,7 @@
         {% for event in events %}
             <tr class="info">
                 <td>{{event.event_name|public_field}}</td>
-                <td title="{{event.datetime_end}}">{{event.datetime_end|timesince}} Ago</td>
+                <td title="{{event.datetime_end}}">{{event.datetime_end|timesince}} ago</td>
                 <td>{{event.location}}</td>
                 <td>{{ event.status }}</td>
                 <td> 

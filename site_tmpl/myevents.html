@@ -18,7 +18,7 @@
                         {% if instance.event.datetime_start > now %}
                             {{ instance.event.datetime_start|timeuntil }} from now
                         {% else %}
-                            {{ instance.event.datetime_start|timesince }} Ago
+                            {{ instance.event.datetime_start|timesince }} ago
                         {% endif %}
                     </td>
                     <td>{{ instance.event.location }}</td>
@@ -62,7 +62,7 @@
                         {% if instance.event.datetime_start > now %}
                             {{instance.event.datetime_start|timeuntil}} from now 
                         {% else %}
-                            {{instance.event.datetime_start|timesince}} Ago 
+                            {{instance.event.datetime_start|timesince}} ago 
                         {% endif %}
                     </td>
                     <td>{{instance.event.location}}</td>
@@ -97,7 +97,7 @@
                             {% if event.datetime_end > now %}
                                 {{event.datetime_end|timeuntil}} from now 
                             {% else %}
-                                {{event.datetime_end|timesince}} Ago 
+                                {{event.datetime_end|timesince}} ago 
                             {% endif %}
                         </td>
                         <td>{{event.location}}</td>
@@ -127,7 +127,7 @@
                             {% if event.datetime_end > now %}
                                 {{ event.datetime_end|timeuntil }} from now
                             {% else %}
-                                {{ event.datetime_end|timesince }} Ago
+                                {{ event.datetime_end|timesince }} ago
                             {% endif %}
                         </td>
                         <td>{{ event.location }}</td>
