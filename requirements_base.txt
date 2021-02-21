@@ -47,7 +47,7 @@ PyPDF2==1.26.0
 python-dateutil==2.8.1
 pytz==2020.4
 raven==6.10.0
-reportlab==3.5.54
+reportlab==3.5.59
 six==1.15.0
 sqlparse==0.4.1
 tolerance==0.1.2
