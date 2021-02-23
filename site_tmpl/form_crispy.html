@@ -3,7 +3,7 @@
 
 {% block content %}
     <div class="row">
-        <form method="post" action="" class="{{ form.helper.form_class }}">
+        <form method="post" action="" class="{{ form.helper.form_class }}" enctype="multipart/form-data">
             <div class="col-md-12 px-3">
                 <h2> {{msg }} </h2>
             {% if helper %}
