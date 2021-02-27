@@ -147,20 +147,15 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = Notification.objects.filter(target__iexact='all')
         project = self.request.query_params.get('project_id', None)
         page = self.request.query_params.get('page_id', None)
-        dir = self.request.query_params.get('directory', None)
+        dirs = self.request.query_params.get('directory', None)
         if project is None or project != "LNL":
             raise NotFound(detail='Invalid project id', code=404)
         if page is None:
             raise ParseError(detail='Page ID is required', code=400)
         queryset |= Notification.objects.filter(target=page)
-        if dir not in [None, '']:
-            query = Q()
-            directories = dir.split('/')
-            directories.pop(0)
-            for directory in directories:
-                if directory is not None:
-                    query |= Q(target__icontains=directory)
-            queryset |= Notification.objects.filter(query)
+        if dirs not in [None, '']:
+            directories = dirs.split('/')
+            queryset |= Notification.objects.filter(target__in=directories)
         return queryset
 
 
