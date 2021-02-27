@@ -5,6 +5,9 @@
 {% endblock %}
 
 {% block unsub %}
+    {% if UNSUB %}
+    <a href="https://lnl.wpi.edu/legal/opt-out/" class="cm-preferences" lang="en">Unsubscribe</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -15,9 +18,9 @@
                 <p align="left" class="article-title">{{ subject }}</p>
                 <div align="left" class="article-content">
                     {% if CUSTOM_URL %}
-                    <p> {{ body|safe|markdown|linebreaksbr }} </p>
+                    <p> {% if mrkdwn %}{{ body|markdown }}{% else %}{{ body|safe|linebreaksbr }}{% endif %} </p>
                     {% else %}
-                    <p> {{  body|safe|markdown|linebreaksbr|urlize }} </p>
+                    <p> {% if mrkdwn %}{{ body|markdown }}{% else %}{{ body|safe|linebreaksbr|urlize }}{% endif %} </p>
                     {% endif %}
                 </div>
             </td>
