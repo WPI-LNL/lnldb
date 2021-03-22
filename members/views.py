@@ -1,11 +1,10 @@
-from datetime import datetime
-
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from .forms import TrainingForm, TraineeNotesForm
@@ -102,6 +101,6 @@ def revoke_training(request, pk):
         return HttpResponseRedirect(reverse('accounts:detail', args=(trainee.person.pk,)))
     trainee.revoked = True
     trainee.revoked_by = request.user
-    trainee.revoked_on = datetime.now()
+    trainee.revoked_on = timezone.now()
     trainee.save()
     return HttpResponseRedirect(reverse('accounts:detail', args=(trainee.person.pk,)))

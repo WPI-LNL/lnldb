@@ -59,6 +59,6 @@ class Trainee(models.Model):
         return not self.revoked and not self.training.is_expired()
 
     def was_valid_on(self, date):
-        return date > self.training.date \
+        return date >= self.training.date \
             and (self.training.expiration_date is None or date <= self.training.expiration_date) \
-            and (not self.revoked or date <= self.revoked_on.date())
+            and (not self.revoked or date < self.revoked_on.date())

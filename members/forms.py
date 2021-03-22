@@ -1,14 +1,14 @@
-from datetime import date
-
 from django import forms
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from ajax_select.fields import AutoCompleteSelectField, AutoCompleteSelectMultipleField
 from crispy_forms.bootstrap import FormActions
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import HTML, Div, Field, Fieldset, Hidden, Layout, Reset, Submit
+from crispy_forms.layout import HTML, Layout, Submit
 
-from .models import TrainingType, Trainee, Training
+from .models import TrainingType, Trainee
+
 
 class TrainingForm(forms.Form):
     def __init__(self, *args, **kwargs):
@@ -28,10 +28,11 @@ class TrainingForm(forms.Form):
         )
         super(TrainingForm, self).__init__(*args, **kwargs)
 
-    def clean_date(self):
-        if self.cleaned_data['date'] > date.today():
+    def clean(self):
+        cleaned_data = super(TrainingForm, self).clean()
+        if cleaned_data['date'] > timezone.now().date():
             raise ValidationError('This date must not be in the future.')
-        return self.cleaned_data['date']
+        return cleaned_data
 
     def clean_trainer(self):
         if not 'training_type' in self.cleaned_data:
@@ -56,6 +57,7 @@ class TrainingForm(forms.Form):
     trainees = AutoCompleteSelectMultipleField('Users')
     expiration_date = forms.DateField(required=False)
     notes = forms.CharField(widget=forms.Textarea(), required=False)
+
 
 class TraineeNotesForm(forms.ModelForm):
     class Meta:
