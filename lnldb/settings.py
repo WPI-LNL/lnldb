@@ -306,6 +306,8 @@ INSTALLED_APPS = (
 
     'bootstrap3',
     'crispy_forms',
+    'formtools',
+    'semanticuiforms',
     'lineage',
     'django_bootstrap_calendar',
     'ajax_select',

@@ -1,0 +1,67 @@
+{% extends "base_semanticui.html" %}
+{% load i18n %}
+{% load semanticui %}
+
+{% block content %}
+    {% if wizard %}
+    <div class="ui text container" style="background-color: white; padding-left: 3%; padding-right: 3%">
+        <form class="ui form" action="" method="POST" id="form">
+            {% csrf_token %}
+            {{ wizard.management_form }}
+            {% if wizard.form.forms %}
+                {{ wizard.form.management_form }}
+                {% for form in wizard.form.forms %}
+                    {% render_form form %}
+                {% endfor %}
+            {% else %}
+                {% render_form wizard.form %}
+            {% endif %}
+            {% if wizard.steps.prev %}
+            <button class="ui animated button" type="button" onclick="window.history.back()">
+                <div class="visible content">Back</div>
+                <div class="hidden content"><i class="left arrow icon"></i></div>
+            </button>
+            {% endif %}
+            <button class="ui animated button" type="submit" value="{% trans "submit" %}">
+                <div class="visible content">Next</div>
+                <div class="hidden content"><i class="right arrow icon"></i></div>
+            </button>
+        </form>
+    <br><br>
+    </div>
+    {% else %}
+    <div class="ui middle aligned center aligned grid" id="page">
+        {% if format == 'title' %}
+            <div class="column">
+                <h1 class="ui {% if page.inverted %}inverted {% endif %}header" style="font-size: 2.5em">{{ page.title|safe }}</h1>
+				<h2 id="subtitle">{{ page.subtitle }}</h2>
+				<br>
+				<br>
+				<button class="ui {% if page.inverted %}inverted {% endif %}animated huge {{ page.btn_color|default_if_none:'yellow' }} button" tabindex="0" onclick="nextPage();" id="start">
+  					<div class="visible content">{{ page.btn_txt|default_if_none:'Get Started' }}</div>
+  					<div class="hidden content"><i class="right arrow icon"></i></div>
+  				</button>
+                {% if page.skip_btn %}
+				<br>
+				<br>
+				<a href="{{ page.skip_href }}" style="padding-top: 3em; color: {{ page.skip_color }}" id="skip">Maybe later</a>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="column" style="max-width: 650px;">
+				<div class="ui container">
+                    {{ page.icon|default_if_none:''|safe }}
+					<h2 style="padding-top: 5%">{{ page.title }}</h2>
+					<p>{{ page.content|safe }}</p>
+                    <br>
+					{% if page.action_title and page.action_href %}
+                        <a href="{{ page.action_href }}" {% if page.new_window %}target="_blank"{% endif %} class="ui {% if page.action_color %}{{ page.action_color|lower }}{% else %}primary{% endif %} button">{{ page.action_title }}</a>
+                    {% endif %}&nbsp;
+                    <a href="{{ next_href }}" class="ui gray button">{{ page.next_btn|default_if_none:'Next' }}</a>
+				</div>
+            </div>
+        {% endif %}
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}

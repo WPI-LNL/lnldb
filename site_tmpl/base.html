@@ -155,11 +155,19 @@
         {% endif %}
 
         {% if request.user.is_authenticated and not request.user.is_complete %}
-            <div class="alert alert-warning">
-                <button type="button" class="close" data-dismiss="alert">&times;</button>
-                <strong>It seems you haven't finished your profile.
-                    <a href="{% url 'accounts:update' request.user.pk %}">Enter contact info.</a></strong>
-            </div>
+            {% if request.user.is_lnl and not request.user.onboarded %}
+                <div class="alert alert-warning">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <strong>It seems you haven't finished your profile.
+                        <a href="{% url 'pages:onboarding-wizard' %}">Get Started.</a></strong>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <strong>It seems you haven't finished your profile.
+                        <a href="{% url 'accounts:update' request.user.pk %}">Enter contact info.</a></strong>
+                </div>
+            {% endif %}
         {% endif %}
 
         <div class="container-fluid">

@@ -10,7 +10,7 @@ import hijack.urls
 import data.views
 from events.views.indices import admin as db_home, index
 from events.views.indices import event_search, survey_dashboard, workshops
-from pages.views import page as view_page, recruitment_page
+from pages.views import page as view_page
 
 admin.autodiscover()
 permission.autodiscover()
@@ -24,7 +24,7 @@ urlpatterns = []
 
 if settings.SAML2_ENABLED:
     urlpatterns += [
-        url(r'^saml2_auth/', include('django_saml2_auth.urls')),
+        url(r'^saml2_auth/', include('django_saml2_auth.urls', namespace='djangosaml2')),
     ]
 
 urlpatterns += [
@@ -51,6 +51,7 @@ urlpatterns += [
     url(r'', include(('members.urls', 'members'), namespace='members')),
     url(r'^api/', include(('api.urls', 'api'), namespace='api')),
     url(r'^mdm/', include(('devices.urls.mdm', 'mdm'), namespace="mdm")),
+    url(r'', include(('pages.urls', 'pages'), namespace='pages')),
 
     # special urls
     url(r'^db/$', db_home, name="home"),
@@ -62,7 +63,6 @@ urlpatterns += [
     url(r'^db/workorderwizard-submit$', data.views.workorderwizard_submit, name="wizard-submit"),
     url(r'^db/workorderwizard-autopopulate$', data.views.workorderwizard_findprevious, name="wizard-findprevious"),
     url(r'^workorder/', RedirectView.as_view(url='/workorder/', permanent=False)),
-    url(r'^join/$', recruitment_page, name='recruitment-page'),
     url(r'^workshops/$', workshops, name='workshops'),
 
     # Download checkin data (hopefully this url can be removed some day)

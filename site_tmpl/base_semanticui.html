@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+		<title>{{ title|default_if_none:'WPI Lens and Lights' }}</title>
+		<script src="https://code.jquery.com/jquery-3.1.1.min.js" crossorigin="anonymous"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.css">
+		<script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js"></script>
+        <link rel="stylesheet" href="/static/css/onboarding.css">
+        <link rel="stylesheet" href="/static/css/dropdown/dropdown.min.css">
+        <script src="/static/js/dropdown/dropdown.min.js"></script>
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+        <link rel="shortcut icon" href="/assets/ico/favicon.ico">
+		<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/ico/apple-touch-icon-144-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="114x114" href="/assets/ico/apple-touch-icon-114-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" sizes="72x72" href="/assets/ico/apple-touch-icon-72-precomposed.png">
+		<link rel="apple-touch-icon-precomposed" href="/assets/ico/apple-touch-icon-57-precomposed.png">
+        {% if noindex %}<meta name="robots" content="noindex">{% endif %}
+	</head>
+	<body class="ui {% if inverted or page.inverted %}inverted segment{% endif %}">
+        {% block content %}
+        {% endblock %}
+	</body>
+	<script>
+        $('.ui.radio.checkbox').checkbox();
+        $('.ui.dropdown').dropdown();
+        function nextPage() {
+            $('#page').toggleClass('viewhidden');
+            $('body').removeClass('segment').removeClass('inverted');
+            setTimeout(function () {
+                window.location.href = '{{ next_href }}';
+            }, 1000);
+        }
+	</script>
+</html>

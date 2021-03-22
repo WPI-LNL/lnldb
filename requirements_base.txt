@@ -60,3 +60,4 @@ fuzzywuzzy==0.18.0
 pysaml2==4.9.0
 -e git+https://github.com/WPI-LNL/django-saml2-auth.git@6348b4efcc7fc99dff5303846c60785026f67116#egg=django_saml2_auth
 django-jchart==0.4.2
+django-semanticui-forms==1.6.5

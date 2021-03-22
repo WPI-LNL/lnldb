@@ -5,13 +5,14 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Avg, Count, Q
-from django.http import HttpResponse
-from django.shortcuts import render
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import render, reverse
 from django.utils import timezone
 
 from events.charts import SurveyVpChart, SurveyCrewChart, SurveyPricelistChart, SurveyLnlChart
 from events.models import BaseEvent, Workshop, CrewAttendanceRecord
 from helpers.challenges import is_officer
+from pages.models import OnboardingScreen, OnboardingRecord
 
 
 # FRONT 3 PAGES
@@ -33,6 +34,30 @@ def admin(request, msg=None):
         delta = settings.LANDING_TIMEDELTA
     else:
         delta = 48
+
+    # Check for onboarding pages (if coming from an onboarding page, mark as viewed)
+    referer = request.META.get('HTTP_REFERER', '')
+    if not request.user.last_login:
+        request.user.last_login = timezone.now()
+        request.user.save()
+    if request.user.is_lnl and not request.user.onboarded and \
+            request.user.last_login > timezone.now() + timezone.timedelta(minutes=-1):
+        request.user.last_login = timezone.now() + timezone.timedelta(minutes=-1)
+        request.user.save()
+        return HttpResponseRedirect(reverse("pages:new-member"))
+    visited, created = OnboardingRecord.objects.get_or_create(user=request.user)
+    prev_page = referer.replace('/', '').split('onboarding')
+    try:
+        prev_screen = OnboardingScreen.objects.filter(slug=prev_page[1]).first()
+        if prev_screen:
+            visited.screens.add(prev_screen)
+    except IndexError:
+        pass
+    screens = OnboardingScreen.objects.filter(Q(users__in=[request.user]) | Q(groups__in=request.user.groups.all()))\
+        .exclude(id__in=visited.screens.all())
+    next_screen = screens.first()
+    if next_screen:
+        return HttpResponseRedirect(reverse('pages:onboarding-screen', args=[next_screen.slug]))
 
     # fuzzy delta
     now = timezone.now()
