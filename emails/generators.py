@@ -47,7 +47,7 @@ def generate_web_service_email(details):
     to_email = details["email_to"]
 
     email = GenericEmailGenerator(subject=subject, to_emails=to_email, bcc=reply_to_email, from_email=from_email,
-                                  reply_to=reply_to_email, body=body)
+                                  reply_to=reply_to_email, body=body, context={'mrkdwn': True})
 
     return email
 
