@@ -141,3 +141,76 @@ class OnboardingTestCase(ViewTestCase):
         # The code's record should be deleted from the database after use
         verification.save()
         self.assertFalse(PhoneVerificationCode.objects.filter(code=verification_code).exists())
+
+    def test_onboarding_flow(self):
+        step1 = {
+            'onboarding_wizard-current_step': ['0'],
+            '0-first_name': ['Sally'],
+            '0-last_name': ['Supervisor'],
+            '0-nickname': ['Chief'],
+            '0-email': ['lnl-w@wpi.edu'],
+            '0-class_year': ['2022'],
+            '0-student_id': [''],
+            '0-wpibox': ['']
+        }
+
+        step2 = {
+            'onboarding_wizard-current_step': ['1'],
+            '1-address': ['123 Main St'],
+            '1-line_2': ['Apt 1'],
+            '1-city': ['Worcester'],
+            '1-state': ['MA'],
+            '1-phone': ['1234567890'],
+            '1-sms': ['False'],
+            '1-carrier': ['txt.att.net']
+        }
+
+        resp = self.client.post(reverse("pages:onboarding-wizard"), step1)
+        self.assertOk(resp)
+        self.assertContains(resp, "Contact Information")
+
+        self.assertRedirects(self.client.post(reverse("pages:onboarding-wizard"), step2), reverse("home"))
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.nickname, 'Chief')
+        self.assertEqual(self.user.phone, '1234567890')
+        self.assertEqual(self.user.carrier, '')  # User did not want to opt in so this field should be blank
+
+        # Test with existing address and SMS opt-in set to true
+        self.user.address = "123 Main St"
+        self.user.save()
+
+        resp = self.client.post(reverse("pages:onboarding-wizard"), step1)
+        self.assertContains(resp, "Already Complete")
+
+        step2_with_sms = {
+            'onboarding_wizard-current_step': ['1'],
+            '1-address': [''],
+            '1-line_2': [''],
+            '1-city': [''],
+            '1-state': [''],
+            '1-phone': ['1234567890'],
+            '1-sms': ['True'],
+            '1-carrier': ['txt.att.net']
+        }
+
+        resp = self.client.post(reverse("pages:onboarding-wizard"), step2_with_sms)
+        self.assertOk(resp)
+        self.assertContains(resp, "SMS Verification")
+
+        # User should still be opted out until after completing the verification
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.carrier, '')
+
+        # Verify that the verification process can be completed successfully
+        verification_code = randint(100000, 999999)
+        code = PhoneVerificationCode.objects.get(user=self.user)
+        code.code = verification_code
+        code.save()
+        step3 = {
+            'onboarding_wizard-current_step': ['2'],
+            '2-code': [str(verification_code)]
+        }
+
+        self.assertRedirects(self.client.post(reverse("pages:onboarding-wizard"), step3), reverse("home"))
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.carrier, 'txt.att.net')
