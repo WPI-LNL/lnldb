@@ -1,8 +1,7 @@
 # noinspection PyProtectedMember
 from django.contrib.auth.models import AbstractUser, _user_has_perm
-from django.db.models import (Model, BooleanField, CharField, IntegerField, PositiveIntegerField,
-                              PositiveSmallIntegerField, Q, TextField, DateField, DateTimeField, OneToOneField,
-                              ImageField, CASCADE, signals)
+from django.db.models import (Model, BooleanField, CharField, IntegerField, BigIntegerField, PositiveIntegerField, Q,
+                              TextField, DateField, DateTimeField, OneToOneField, ImageField, CASCADE, signals)
 from django.conf import settings
 from six import python_2_unicode_compatible
 from django.dispatch import receiver
@@ -204,5 +203,5 @@ def officer_img_cleanup(sender, instance, **kwargs):
 class PhoneVerificationCode(Model):
     """Used for temporarily saving the last code sent to a user to verify their phone number"""
     user = OneToOneField(settings.AUTH_USER_MODEL, on_delete=CASCADE, related_name="verification_codes")
-    code = PositiveSmallIntegerField()
+    code = BigIntegerField()
     timestamp = DateTimeField(auto_now_add=True)
