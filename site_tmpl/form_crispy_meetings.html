@@ -1,0 +1,58 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="row">
+        <form method="post" action="" class="{{ form.helper.form_class }}" enctype="multipart/form-data">
+            <div class="col-md-12 px-3">
+                <h2> {{msg }} </h2>
+                {% if helper %}
+                    {% crispy form helper %}
+                {% else %}
+                    {% crispy form %}
+                {% endif %}
+            </div>
+        </form>
+    </div>
+{% endblock %}
+
+{% block extras %}
+{{ form.media }}
+{% include "js_datetimepick.tmpl" %}
+{% include "js_phonelimit.tmpl" %}
+<script>
+    $(document).ready(function () {
+        $("#samedate1").click(function(){
+            var date = $("#id_datetime_setup_complete_0").val();
+            $("#id_datetime_start_0").data("datepicker").setDate(date);
+            var time = $("#id_datetime_setup_complete_1").val();
+            $("#id_datetime_start_1").data("timepicker").setTime(time);
+        });
+        $("#samedate2").click(function(){
+            var date = $("#id_datetime_start_0").val();
+            $("#id_datetime_end_0").data("datepicker").setDate(date);
+            var time = $("#id_datetime_start_1").val();
+            $("#id_datetime_end_1").data("timepicker").setTime(time);
+        });
+        var readOnly = document.getElementsByClassName("r");
+        for (var i = 0; i < readOnly.length; i++){
+            readOnly[i].readOnly = true;
+        }
+    });
+</script>
+{% if custom_script %}
+    <script>{{ custom_script|safe }}</script>
+{% endif %}
+<style>
+    .padleft {
+    margin-left:65px;
+    }
+    .pushdown {
+    margin-top:5px
+    }
+</style>
+{% endblock %}
+
+{% block finalsay %}
+
+{% endblock %}

@@ -88,7 +88,7 @@ def modify_att(request, mtg_id, att_id):
     else:
         form = MtgAttachmentEditForm(instance=att)
     context['form'] = form
-    return render(request, 'form_crispy.html', context)
+    return render(request, 'form_crispy_meetings.html', context)
 
 
 @login_required
@@ -175,7 +175,7 @@ def editattendance(request, mtg_id):
     else:
         form = MeetingAdditionForm(instance=m)
     context['form'] = form
-    return render(request, 'form_crispy.html', context)
+    return render(request, 'form_crispy_meetings.html', context)
 
 
 @login_required
@@ -222,7 +222,7 @@ def newattendance(request):
         form = MeetingAdditionForm()
     context['form'] = form
     context['msg'] = "New Meeting"
-    return render(request, 'form_crispy.html', context)
+    return render(request, 'form_crispy_meetings.html', context)
 
 
 @login_required
@@ -251,7 +251,7 @@ def mknotice(request, mtg_id):
         form = AnnounceSendForm(meeting)
     context['form'] = form
     context['msg'] = "New Meeting Notice"
-    return render(request, 'form_crispy.html', context)
+    return render(request, 'form_crispy_meetings.html', context)
 
 
 @login_required
@@ -283,4 +283,4 @@ def mkccnotice(request, mtg_id):
         form = AnnounceCCSendForm(meeting)
     context['form'] = form
     context['msg'] = "CC Meeting Notice"
-    return render(request, 'form_crispy.html', context)
+    return render(request, 'form_crispy_meetings.html', context)
