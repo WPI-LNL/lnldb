@@ -400,6 +400,8 @@ def snipe_checkout(request):
     checkout_to_choices = []
     response = requests.request('GET', '{}api/v1/users'.format(settings.SNIPE_URL), headers={
         'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+        'accept': 'application/json',
+        'content-type': 'application/json'
     })
     if response.status_code == 200:
         try:
@@ -428,7 +430,7 @@ def snipe_checkout(request):
                     # This tag represents an accessory
                     response = requests.request('GET', '{}api/v1/accessories/{}'.format(settings.SNIPE_URL, tag),
                                                 headers={'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
-                                                         'accept': 'application/json'})
+                                                         'accept': 'application/json', 'content-type': 'application/json'})
                     if response.status_code == 200:
                         try:
                             data = json.loads(response.text)
@@ -472,7 +474,7 @@ def snipe_checkout(request):
                     # This tag represents an asset
                     response = requests.request('GET', '{}api/v1/hardware/bytag/{}'.format(settings.SNIPE_URL, tag),
                                                 headers={'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
-                                                         'accept': 'application/json'})
+                                                         'accept': 'application/json', 'content-type': 'application/json'})
                     if response.status_code == 200:
                         try:
                             data = json.loads(response.text)
@@ -569,6 +571,8 @@ def snipe_checkin(request):
     checkin_from_choices = []
     response = requests.request('GET', '{}api/v1/users'.format(settings.SNIPE_URL), headers={
         'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
+        'accept': 'application/json',
+        'content-type': 'application/json'
     })
     if response.status_code == 200:
         try:
@@ -602,7 +606,7 @@ def snipe_checkin(request):
                     # This tag represents an accessory
                     response = requests.request('GET', '{}api/v1/accessories/{}'.format(settings.SNIPE_URL, tag), headers={
                         'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
-                        'accept': 'application/json',
+                        'accept': 'application/json', 'content-type': 'application/json'
                     })
                     if response.status_code == 200:
                         try:
@@ -616,7 +620,7 @@ def snipe_checkin(request):
                             # Get the list of checked out instances of the accessory
                             response = requests.request('GET', '{}api/v1/accessories/{}/checkedout'.format(settings.SNIPE_URL, tag), headers={
                                 'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
-                                'accept': 'application/json',
+                                'accept': 'application/json', 'content-type': 'application/json'
                             })
                             if response.status_code == 200:
                                 data = json.loads(response.text)
@@ -668,7 +672,7 @@ def snipe_checkin(request):
                     # This tag represents an asset
                     response = requests.request('GET', '{}api/v1/hardware/bytag/{}'.format(settings.SNIPE_URL, tag), headers={
                         'authorization': 'Bearer {}'.format(settings.SNIPE_API_KEY),
-                        'accept': 'application/json',
+                        'accept': 'application/json', 'content-type': 'application/json'
                     })
                     if response.status_code == 200:
                         try:
