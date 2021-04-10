@@ -1,4 +1,5 @@
 import logging
+from datetime import date, timedelta
 from django.utils import timezone
 from django.contrib.auth.models import Permission
 from data.tests.util import ViewTestCase
@@ -17,7 +18,7 @@ class TrainingTests(ViewTestCase):
         self.user2 = UserFactory.create(password="123")
         self.training_type = models.TrainingType.objects.create(name="Truss Training", description="It's in the name")
         self.training = models.Training.objects.create(
-            training_type=self.training_type, date=timezone.now().date(), trainer=self.user, recorded_by=self.user
+            training_type=self.training_type, date=date.today(), trainer=self.user, recorded_by=self.user
         )
         self.trainee = models.Trainee.objects.create(training=self.training, person=self.user2)
 
@@ -26,13 +27,13 @@ class TrainingTests(ViewTestCase):
         self.assertFalse(self.training.is_expired())
 
         # A training with an expiration in the future (includes today)
-        self.training.expiration_date = timezone.now().date() + timezone.timedelta(days=1)
+        self.training.expiration_date = date.today() + timedelta(days=1)
         self.training.save()
 
         self.assertFalse(self.training.is_expired())
 
         # A training with an expiration in the past
-        self.training.expiration_date = timezone.now().date() + timezone.timedelta(days=-1)
+        self.training.expiration_date = date.today() + timedelta(days=-1)
         self.training.save()
 
         self.assertTrue(self.training.is_expired())
@@ -41,12 +42,12 @@ class TrainingTests(ViewTestCase):
         # Training should be valid if it hasn't been revoked and has not expired
         self.assertTrue(self.trainee.is_valid())
 
-        self.training.expiration_date = timezone.now().date() + timezone.timedelta(days=-1)
+        self.training.expiration_date = date.today() + timedelta(days=-1)
         self.training.save()
 
         self.assertFalse(self.trainee.is_valid())
 
-        self.training.expiration_date = timezone.now()
+        self.training.expiration_date = date.today()
         self.training.save()
         self.trainee.revoked = True
         self.trainee.save()
@@ -55,19 +56,19 @@ class TrainingTests(ViewTestCase):
 
     def test_trainee_was_valid_on(self):
         # Try date before training
-        now = timezone.now()
-        days_past_2 = now + timezone.timedelta(days=-2)
-        days_future_2 = now + timezone.timedelta(days=2)
-        self.assertFalse(self.trainee.was_valid_on(days_past_2.date()))
+        now = date.today()
+        days_past_2 = now + timedelta(days=-2)
+        days_future_2 = now + timedelta(days=2)
+        self.assertFalse(self.trainee.was_valid_on(days_past_2))
 
         # Try date before expiration
-        self.training.expiration_date = days_future_2.date()
+        self.training.expiration_date = days_future_2
         self.training.save()
 
-        self.assertTrue(self.trainee.was_valid_on(timezone.now().date()))
+        self.assertTrue(self.trainee.was_valid_on(date.today()))
 
         # Try date after expiration
-        self.assertFalse(self.trainee.was_valid_on(timezone.now().date() + timezone.timedelta(days=3)))
+        self.assertFalse(self.trainee.was_valid_on(date.today() + timedelta(days=3)))
 
         # Check that if it was revoked it was valid on date before revocation
         self.trainee.revoked = True
@@ -81,8 +82,8 @@ class TrainingTests(ViewTestCase):
         # Create some extra data
         training_type2 = models.TrainingType.objects.create(name="Lift Training", description="Lifts!!!")
         training2 = models.Training.objects.create(
-            training_type=training_type2, date=timezone.now().date() + timezone.timedelta(days=-1),
-            trainer=self.user, recorded_by=self.user
+            training_type=training_type2, date=date.today() + timedelta(days=-1), trainer=self.user,
+            recorded_by=self.user
         )
         models.Trainee.objects.create(training=training2, person=self.user)
         models.Trainee.objects.create(training=training2, person=self.user2)
@@ -113,17 +114,17 @@ class TrainingTests(ViewTestCase):
 
         valid_data = {
             'training_type': str(self.training_type.pk),
-            'date': timezone.now().date(),
+            'date': date.today(),
             'trainer': str(self.user.pk),
             'trainees': [str(self.user2.pk)],
-            'expiration_date': timezone.now().date() + timezone.timedelta(days=365),
+            'expiration_date': date.today() + timedelta(days=365),
             'notes': '',
             'save': 'Save'
         }
 
         valid_data_external = {
             'training_type': str(self.training_type.pk),
-            'date': timezone.now().date(),
+            'date': date.today(),
             'trainer': '',
             'trainees': [str(self.user2.pk)],
             'expiration_date': '',
@@ -133,7 +134,7 @@ class TrainingTests(ViewTestCase):
 
         self_training = {
             'training_type': str(self.training_type.pk),
-            'date': timezone.now().date(),
+            'date': date.today(),
             'trainer': str(self.user.pk),
             'trainees': [str(self.user.pk)],
             'expiration_date': '',
@@ -143,7 +144,7 @@ class TrainingTests(ViewTestCase):
 
         invalid_date = {
             'training_type': str(self.training_type.pk),
-            'date': timezone.now().date() + timezone.timedelta(days=1),
+            'date': date.today() + timedelta(days=1),
             'trainer': str(self.user.pk),
             'trainees': [str(self.user2.pk)],
             'expiration_date': '',
@@ -191,13 +192,13 @@ class TrainingTests(ViewTestCase):
         self.assertOk(self.client.get(reverse("members:training:traineenotes", args=[self.trainee.pk + 1])), 404)
 
         # Redirect back to user profile if training has expired (can't update notes)
-        self.training.expiration_date = timezone.now().date() + timezone.timedelta(days=-1)
+        self.training.expiration_date = date.today() + timedelta(days=-1)
         self.training.save()
 
         self.assertRedirects(self.client.get(reverse("members:training:traineenotes", args=[self.trainee.pk])),
                              reverse("accounts:detail", args=[self.user2.pk]))
 
-        self.training.expiration_date = timezone.now().date() + timezone.timedelta(days=365)
+        self.training.expiration_date = date.today() + timedelta(days=365)
         self.training.save()
 
         valid_data = {
@@ -225,7 +226,7 @@ class TrainingTests(ViewTestCase):
         self.assertOk(self.client.get(reverse("members:training:revoke", args=[self.trainee.pk])), 405)
 
         # Check that we cannot revoke a training that is already invalid or has already been revoked
-        self.training.expiration_date = timezone.now().date() + timezone.timedelta(days=-1)
+        self.training.expiration_date = date.today() + timedelta(days=-1)
         self.training.save()
 
         resp = self.client.post(reverse("members:training:revoke", args=[self.trainee.pk]))
@@ -234,7 +235,7 @@ class TrainingTests(ViewTestCase):
         resp = self.client.post(reverse("members:training:revoke", args=[self.trainee.pk]), follow=True)
         self.assertContains(resp, "not currently valid")
 
-        self.training.expiration_date = timezone.now().date() + timezone.timedelta(days=365)
+        self.training.expiration_date = date.today() + timedelta(days=365)
         self.training.save()
         self.trainee.revoked = True
         self.trainee.save()

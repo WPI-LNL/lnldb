@@ -1,5 +1,5 @@
 from django import forms
-from django.utils import timezone
+from datetime import date
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from ajax_select.fields import AutoCompleteSelectField, AutoCompleteSelectMultipleField
@@ -30,7 +30,7 @@ class TrainingForm(forms.Form):
 
     def clean(self):
         cleaned_data = super(TrainingForm, self).clean()
-        if cleaned_data['date'] > timezone.now().date():
+        if cleaned_data['date'] > date.today():
             raise ValidationError('This date must not be in the future.')
         return cleaned_data
 
