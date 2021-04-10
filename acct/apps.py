@@ -10,13 +10,11 @@ class AcctConfig(AppConfig):
     def ready(self):
         User = django.contrib.auth.get_user_model()
 
-        watson.register(User, UserSearchAdapter, fields=('id', 'email',
-                                                         'profile__fullname',
-                                                         'profile__mdc',
-                                                         'profile__phone',
-                                                         'profile__group_str',
-                                                         'profile__owns',
-                                                         'profile__orgs'))
+        if watson.is_registered(User):
+            watson.unregister(User)
+
+        watson.register(User, UserSearchAdapter, fields=('id', 'email', 'name', 'mdc', 'phone', 'group_str',
+                                                         'owns', 'orgs'))
 
 
 class UserSearchAdapter(watson.SearchAdapter):
