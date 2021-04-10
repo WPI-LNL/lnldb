@@ -8,4 +8,3 @@ Client Name: {{ client_name }}
 Client Email: {{ email }}
 Client Address: {{ address }}
 Client Phone: {{ phone }}
-Client FOI: {{ fund_info }}

@@ -74,8 +74,7 @@ def myorgform(request):
         if form.is_valid():
             email_context = {'client_name': form.cleaned_data['client_name'], 'email': form.cleaned_data['email'],
                              'address': form.cleaned_data['address'], 'phone': form.cleaned_data['phone'],
-                             'fund_info': form.cleaned_data['fund_info'], 'user': request.user,
-                             'submitted_ip': request.META['REMOTE_ADDR']}
+                             'user': request.user, 'submitted_ip': request.META['REMOTE_ADDR']}
             email = generate_selfservice_notice_email(email_context)
             email.send()
             return render(request, 'org.service.html', context)

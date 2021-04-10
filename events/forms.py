@@ -869,7 +869,6 @@ class SelfServiceOrgRequestForm(forms.Form):
             'email',
             'address',
             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
-            'fund_info',
             FormActions(
                 Submit('save', 'Submit Request'),
             )
@@ -880,7 +879,6 @@ class SelfServiceOrgRequestForm(forms.Form):
     email = forms.EmailField(help_text="EX: lnl@wpi.edu (This should be your exec board alias)")
     address = forms.CharField(widget=forms.Textarea, help_text="EX: Campus Center 339")
     phone = forms.CharField(max_length=15, help_text="EX: (508) - 867 - 5309")
-    fund_info = forms.CharField(help_text="EX: 12345-6789-8765")
 
 
 class WorkdayForm(forms.ModelForm):
