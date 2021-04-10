@@ -1,5 +1,5 @@
 import django.contrib.auth
-import watson
+from watson import search as watson
 from django.apps import AppConfig
 
 
