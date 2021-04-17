@@ -6,3 +6,5 @@ factory_boy
 model_mommy
 django-test-without-migrations
 sphinx
+sphinx-rtd-theme
+sphinx-issues

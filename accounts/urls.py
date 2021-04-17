@@ -21,7 +21,7 @@ each_member_pattern = [
 if settings.SAML2_ENABLED:
     best_logout_url = url(r'^logout/$', saml_logout, name="logout")
 else:
-    best_logout_url = url(r'^logout/$', auth_views.LogoutView.as_view(), {'template_name': 'registration/logout.html'},
+    best_logout_url = url(r'^logout/$', auth_views.LogoutView.as_view(template_name='registration/logout.html'),
                           name="logout")
 
 urlpatterns = [
@@ -62,11 +62,10 @@ urlpatterns = [
     # ], 'accounts'), namespace="cas")),
 
     url(r'^local/', include(([
-        url(r'^login/$', auth_views.LoginView.as_view(), {'template_name': 'registration/login.html',
-                                                          'authentication_form': forms.LoginForm}, name="login"),
+        url(r'^login/$', auth_views.LoginView.as_view(template_name='registration/login.html',
+                                                      authentication_form=forms.LoginForm), name="login"),
 
-        url(r'^logout/$', auth_views.LogoutView.as_view(), {'template_name': 'registration/logout.html'},
-            name="logout"),
+        url(r'^logout/$', auth_views.LogoutView.as_view(template_name='registration/logout.html'), name="logout"),
     ], 'accounts'), namespace="local")),
 
     # and keep password resets separate from either (though technically local)

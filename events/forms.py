@@ -10,14 +10,12 @@ from ajax_select.fields import (AutoCompleteSelectField,
                                 AutoCompleteSelectMultipleField)
 from crispy_forms.bootstrap import (FormActions, InlineCheckboxes, InlineRadios, PrependedText, Tab, TabHolder)
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import (HTML, Div, Row, Column, Field, Fieldset, Hidden, Layout, Reset, Submit)
+from crispy_forms.layout import (HTML, Div, Row, Column, Field, Hidden, Layout, Reset, Submit)
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import Model, Q
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget
-from django.forms.models import inlineformset_factory
-from django.urls.base import reverse
 from django.utils import timezone
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
@@ -158,6 +156,7 @@ class CrewChiefAssign(forms.ModelForm):
 
 
 class IOrgForm(FieldAccessForm):
+    """ Internal Organization Details Form """
     def __init__(self, request_user, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -264,6 +263,7 @@ class IOrgForm(FieldAccessForm):
 
 
 class IOrgVerificationForm(forms.ModelForm):
+    """ Internal Client Billing Verification Form """
     def __init__(self, org, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -726,6 +726,7 @@ class EventReviewForm(forms.ModelForm):
 
 
 class InternalReportForm(FieldAccessForm):
+    """ Crew Chief Report Form """
     def __init__(self, event, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()
@@ -789,6 +790,7 @@ class InternalReportForm(FieldAccessForm):
 # External Organization forms
 
 class ExternalOrgUpdateForm(forms.ModelForm):
+    """ Organization Details Form for Client """
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
@@ -813,6 +815,7 @@ class ExternalOrgUpdateForm(forms.ModelForm):
 
 
 class OrgXFerForm(forms.ModelForm):
+    """ Organization Transfer Form """
     def __init__(self, org, user, *args, **kwargs):
         self.user = user
         self.org = org
@@ -866,7 +869,6 @@ class SelfServiceOrgRequestForm(forms.Form):
             'email',
             'address',
             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
-            'fund_info',
             FormActions(
                 Submit('save', 'Submit Request'),
             )
@@ -877,10 +879,10 @@ class SelfServiceOrgRequestForm(forms.Form):
     email = forms.EmailField(help_text="EX: lnl@wpi.edu (This should be your exec board alias)")
     address = forms.CharField(widget=forms.Textarea, help_text="EX: Campus Center 339")
     phone = forms.CharField(max_length=15, help_text="EX: (508) - 867 - 5309")
-    fund_info = forms.CharField(help_text="EX: 12345-6789-8765")
 
 
 class WorkdayForm(forms.ModelForm):
+    """ Workday Bill Pay Form """
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -1191,6 +1193,7 @@ class MultiBillingEmailForm(forms.ModelForm):
 
 # CC Facing Forms
 class MKHoursForm(forms.ModelForm):
+    """ Event Hours Form """
     def __init__(self, event, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()
@@ -1305,6 +1308,7 @@ class ExternalFundEditForm(forms.ModelForm):
 
 
 class CCIForm(forms.ModelForm):
+    """ Crew Chief Instance form """
     def __init__(self, event, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()

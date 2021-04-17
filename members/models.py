@@ -17,6 +17,7 @@ class TrainingType(models.Model):
 
 
 class Training(models.Model):
+    """ A training event """
     training_type = models.ForeignKey(TrainingType, on_delete=models.PROTECT, related_name='trainings')
     date = models.DateField()
     trainer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='trainings_run')
@@ -27,7 +28,6 @@ class Training(models.Model):
 
     class Meta:
         ordering = ['-date', '-recorded_on']
-        permissions = (('view_training_details', 'View a training'),)
 
     def __str__(self):
         return str(self.training_type) + ' on ' + str(self.date)
@@ -37,6 +37,7 @@ class Training(models.Model):
 
 
 class Trainee(models.Model):
+    """ Record of an individual's completion or revocation of training """
     training = models.ForeignKey(Training, on_delete=models.CASCADE, related_name='trainees')
     person = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='trainings')
     revoked = models.BooleanField(default=False)
@@ -58,6 +59,6 @@ class Trainee(models.Model):
         return not self.revoked and not self.training.is_expired()
 
     def was_valid_on(self, date):
-        return date > self.training.date \
+        return date >= self.training.date \
             and (self.training.expiration_date is None or date <= self.training.expiration_date) \
-            and (not self.revoked or date <= self.revoked_on.date())
+            and (not self.revoked or date < self.revoked_on.date())

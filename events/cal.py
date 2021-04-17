@@ -107,7 +107,7 @@ class LightEventFeed(BaseFeed):
 
 
 class BaseCalJsonView(HasPermMixin, View):
-    perms = ['events.view_event']
+    perms = ['events.view_events']
     http_method_names = ['get']
 
     def get(self, request, queryset, *args, **kwargs):

@@ -1,3 +1,4 @@
+{% load lnldb_tags %}
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -119,7 +120,7 @@
                         are at 5pm on Mondays.
 					</p>
                     <p>
-                        All meetings for Fall 2020 will be held online. Navigate to <a href="https://lnl.wpi.edu/meet">lnl.wpi.edu/meet</a>
+                        All meetings for Spring 2020 will be held online. Navigate to <a href="https://lnl.wpi.edu/meet">lnl.wpi.edu/meet</a>
                         for the meeting links.
                     </p>
 					<p>
@@ -143,7 +144,7 @@
 						<div class="col-md-6 col-lg-3 mb-3">
 							<div class="card">
 								<div class="card-body">
-									<h5 class="card-title">{{ event.event_name }}</h5>
+									<h5 class="card-title">{{ event.event_name|public_field }}</h5>
 									<p>{{ event.location }}</p>
 									{% for cci in event.ccinstances.all %}
 										<p>{{ cci.category.name }} setup: {{ cci.setup_start|date:'l n/j Hi' }}</p>

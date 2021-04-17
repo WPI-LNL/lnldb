@@ -1,1 +1,2 @@
-Invoice for LNL Services for {{ billing.event.event_name }}
+{% load lnldb_tags %}
+Invoice for LNL Services for {{ billing.event.event_name|public_field }}

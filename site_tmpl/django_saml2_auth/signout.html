@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block nav %}
+    {% include "my.nav.html" %}
+{% endblock %}
+
+{% block extras %}
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+{% endblock %}
+
+{% block content %}
+<div class="container marketing well" style="text-align:center; max-width: 650px">
+    <div class="col-md-12">
+        <h2 class="h3">You have been logged out successfully</h2>
+        <p class="lead" style="color: green"><br><i class="far fa-check-circle fa-3x"></i><br></p>
+    </div>
+</div>
+
+{% endblock %}

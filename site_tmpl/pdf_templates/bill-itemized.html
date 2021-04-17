@@ -1,6 +1,7 @@
 {% extends "pdf_templates/pdf_base.html" %}
 {% load static %}
 {% load tz %}
+{% load lnldb_tags %}
 {% block body %}
 {% for event_data in events_data %}
 <!-- have mercy on the soul of the following html.
@@ -31,7 +32,7 @@
                 </td>
                 <td class="head">
                     <h1 class="megatext">{% if event_data.event.reviewed %}INVOICE{% else %}QUOTE{% endif %}</h1>
-                    <h2 class="subtext">{{ event_data.event }}</h2>
+                    <h2 class="subtext">{{ event_data.event.event_name|public_field }}</h2>
                     <h2 class="subtext"><b>Generated Date:</b> {% now "M. j, Y" %}</h2>
                 </td>
                 </tr>
@@ -50,7 +51,7 @@
                     <td>{{ event_data.event.datetime_end|localtime|date }}</td>
                 </tr>
             </table>
-            <b class="info">Description:</b> {{ event_data.event.description }}
+            <b class="info">Description:</b> {{ event_data.event.description|public_field }}
             <hr>
             <table class="line-items">
                 <tr>

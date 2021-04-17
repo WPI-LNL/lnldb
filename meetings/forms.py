@@ -21,13 +21,15 @@ class MeetingAdditionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
+        self.helper.form_tag = False
+        self.helper.include_media = False
         self.helper.layout = Layout(
             TabHolder(
                 Tab(
                     'Basic Info',
                     'meeting_type',
                     'location',
-                    'datetime',
+                    Field('datetime', css_class='dtp'),
                     'duration'
                 ),
                 Tab(
@@ -111,12 +113,12 @@ class AnnounceSendForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
-        self.helper.field_class = 'col-lg-5'
+        self.helper.field_class = 'col-lg-7'
         self.helper.layout = Layout(
-            Field('events', css_class="col-md-6", size="15"),
             'subject',
             'message',
             'email_to',
+            Field('events', css_class="col-md-6", size="15"),
             FormActions(
                 Submit('save', 'Save Changes'),
             )

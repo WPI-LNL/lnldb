@@ -1,7 +1,8 @@
 # noinspection PyProtectedMember
 from django.contrib.auth.models import AbstractUser, _user_has_perm
-from django.db.models import (Model, BooleanField, CharField, IntegerField, PositiveIntegerField, Q, TextField,
-                              DateField, OneToOneField, ImageField, CASCADE, signals)
+from django.db.models import (Model, BooleanField, CharField, IntegerField, BigIntegerField, PositiveIntegerField, Q,
+                              TextField, DateField, DateTimeField, OneToOneField, ImageField, CASCADE, signals)
+from django.conf import settings
 from six import python_2_unicode_compatible
 from django.dispatch import receiver
 
@@ -14,7 +15,6 @@ import os
 
 carrier_choices = (
     ('', 'Opt-out'),
-    ('vtext.com', 'Verizon'),
     ('txt.att.net', 'AT&T'),
     ('myboostmobile.com', 'Boost Mobile'),
     ('mms.cricketwireless.net', 'Cricket'),
@@ -23,6 +23,7 @@ carrier_choices = (
     ('mmst5.tracfone.com', 'Simple Mobile'),
     ('messaging.sprintpcs.com', 'Sprint'),
     ('tmomail.net', 'T-Mobile'),
+    ('vtext.com', 'Verizon'),
     ('vmobl.com', 'Virgin Mobile'),
     ('vmobile.ca', 'Virgin Mobile Canada'),
     ('vtext.com', 'Xfinity Mobile')
@@ -31,6 +32,7 @@ carrier_choices = (
 
 @python_2_unicode_compatible
 class User(AbstractUser):
+    """Extended User Class"""
     def save(self, *args, **kwargs):
         # gives an email from the username when first created (ie. via CAS)
         if not self.pk and not self.email:
@@ -50,6 +52,7 @@ class User(AbstractUser):
     class_year = PositiveIntegerField(null=True, blank=True)
     locked = BooleanField(default=False)
     away_exp = DateField(verbose_name="Away Status Expiration", null=True, blank=True)
+    onboarded = BooleanField(default=False, verbose_name="Onboarding Complete")
 
     def __str__(self):
         nick = '"%s" ' % self.nickname if self.nickname else ""
@@ -78,20 +81,27 @@ class User(AbstractUser):
 
     @property
     def name(self):
+        """User's full name"""
         return self.first_name + " " + self.last_name
 
     @property
     def is_lnl(self):
+        """Is an LNL member"""
         return self.groups.filter(Q(name="Alumni") | Q(name="Active") | Q(name="Officer") | Q(name="Associate") | Q(
             name="Away") | Q(name="Inactive")).exists()
 
     @property
     def is_complete(self):
+        """
+        Returns false if the user's profile is incomplete. The user will be constantly reminded to complete their
+        profile.
+        """
         # if this returns false, the user will be constantly reminded to update their profile
         return self.first_name and self.last_name and self.email and (not self.is_lnl or self.class_year)
 
     @property
     def group_str(self):
+        """Groups the user belongs to"""
         groups = [g.name for g in self.groups.all()]
         out_str = ""
         if "Alumni" in groups:
@@ -112,14 +122,17 @@ class User(AbstractUser):
 
     @property
     def owns(self):
+        """Organizations the user owns"""
         return ', '.join(map(str, self.orgowner.all()))
 
     @property
     def orgs(self):
+        """Organizations the user belongs to"""
         return ', '.join(map(str, self.orgusers.all()))
 
     @property
     def all_orgs(self):
+        """All organizations the user is associated with"""
         return Organization.objects.complex_filter(
             Q(user_in_charge=self) | Q(associated_users=self)
         ).distinct()
@@ -148,12 +161,18 @@ class User(AbstractUser):
         permissions = (
             ('change_group', 'Change the group membership of a user'),
             ('edit_mdc', 'Change the MDC of a user'),
-            ('read_user', 'View users'),
             ('view_member', 'View LNL members'),
         )
 
 
 def path_and_rename(instance, filename):
+    """
+    Determine path for storing officer headshots. Will rename with officer's username.
+
+    :param instance: An OfficerImg instance
+    :param filename: The original name of the uploaded file
+    :returns: New path to save file to
+    """
     upload_to = 'officers'
     ext = filename.split('.')[-1]
     if instance.officer.get_username():
@@ -163,6 +182,7 @@ def path_and_rename(instance, filename):
 
 @python_2_unicode_compatible
 class OfficerImg(Model):
+    """Officer headshots"""
     officer = OneToOneField(User, on_delete=CASCADE, related_name="img")
     img = ImageField(upload_to=path_and_rename, storage=OverwriteStorage(), verbose_name="Image")
 
@@ -172,5 +192,16 @@ class OfficerImg(Model):
 
 @receiver(signals.post_delete, sender=OfficerImg)
 def officer_img_cleanup(sender, instance, **kwargs):
-    """ When an instance of OfficerImg is deleted, delete the respective files as well. """
+    """
+    When an instance of OfficerImg is deleted, delete the respective files as well.
+
+    :param instance: An OfficerImg instance
+    """
     instance.img.delete(False)
+
+
+class PhoneVerificationCode(Model):
+    """Used for temporarily saving the last code sent to a user to verify their phone number"""
+    user = OneToOneField(settings.AUTH_USER_MODEL, on_delete=CASCADE, related_name="verification_codes")
+    code = BigIntegerField()
+    timestamp = DateTimeField(auto_now_add=True)

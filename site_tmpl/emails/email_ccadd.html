@@ -14,13 +14,13 @@
             <td class="w960" width="960">
                 <p align="left" class="article-title">{{ subject }}</p>
                 <div align="left" class="article-content">
-                <p>You've been added as a crew chief to the event {{ ccinstance.event }}.<br>
+                <p>You've been added as a crew chief to the event {{ ccinstance.event.event_name }}.<br>
                 You have signed up to be crew chief for {{ ccinstance.category }},
                 with your setup starting on {{ ccinstance.setup_start }} in the {{ ccinstance.setup_location }}.</p>
 
                 <p>Please note that the attached Workorder PDF contains all services relating to the event, not just your assigned service.</p>
 
-                <p><b>{{ ccinstance.event }}</b><br>
+                <p><b>{{ ccinstance.event.event_name }}</b><br>
                 <i>{{ ccinstance.event.location }}</i><br>
                 Start: {{ ccinstance.event.datetime_start }}<br>
                 End: {{ ccinstance.event.datetime_end }}<br>

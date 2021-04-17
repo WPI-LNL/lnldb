@@ -1,0 +1,23 @@
+============
+Updates 2021
+============
+
+March
+=====
+This month we launched our new onboarding system. Aside from that we fixed a few bugs and carried out some small
+improvements to the UI.
+
+- :commit:`a51d990f5e13d405645d79c4b319c851bbf6bfaf` Fixed a bug affecting the layout of the meeting email form
+- :commit:`44ab3c3d1780922ac6dcc04a1da20fcbb479000a` Added a more user friendly login failed page for Microsoft SSO
+
+
+February
+========
+In February we dropped support for python 2 and began updating these docs. Our docs now have a new theme and include
+significantly more helpful information!
+
+- :commit:`79e40f17045c2dfad3bbdb904ab7f46f5271e410` Dropped support for python 2 and added support for Django 2.2 or later
+- :commit:`5d0e1066b827b1c0b1f006989e0bd9d5e851c2db` Added a complete button for PIT requests
+- :commit:`4f983c457528a50164ee5dc92a74b8b38be2b1ee` Added outlook invites to crew chief add notifications
+- :commit:`74056d75791121ef56d0799e9dcb232b061f7ca1` Fixed a timezone bug in the new poke for crew chief feature
+- :commit:`c0786f6c88f770fa99e0ca2fbd978cb5eea62ae0` Added a button in the laptops list for requesting managed software

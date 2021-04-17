@@ -280,9 +280,11 @@ class BaseEvent(PolymorphicModel):
         return self.event_name
 
     def cal_name(self):
+        """ Title to display on calendars """
         return self.event_name.replace('LnL', 'LNL')
     
     def cal_desc(self):
+        """ Event description used by calendars """
         desc = ""
         desc += "Requested by "
         orgs = self.org.all()
@@ -300,22 +302,28 @@ class BaseEvent(PolymorphicModel):
         return desc.replace('LnL', 'LNL')
 
     def cal_location(self):
+        """ Location data to display on calendars """
         return self.location.name
 
     def cal_start(self):
+        """ Start time used by calendars """
         return self.datetime_start
 
     def cal_end(self):
+        """ End time used by calendars """
         return self.datetime_end
 
     def cal_link(self):
+        """ Link to display on calendars """
         return get_host() + reverse('events:detail', args=[self.id])
 
     def cal_guid(self):
+        """ Unique event id for use by calendars """
         return "event" + str(self.id) + "@lnldb"
 
     @property
     def crew_needing_reports(self):
+        """ List of crew chiefs who have not yet submitted a CC report """
         reports = self.ccreport_set.all().values_list('crew_chief', flat=True)
         return self.ccinstances.exclude(crew_chief__in=reports)
 
@@ -325,9 +333,9 @@ class BaseEvent(PolymorphicModel):
 
     @property
     def reports_editable(self):
+        """ Returns false if too much time has elapsed since the end of the event """
         end_plus_time = self.datetime_end + datetime.timedelta(days=CCR_DELTA)
-        now = datetime.datetime.now(timezone.get_current_timezone())
-        return now < end_plus_time
+        return timezone.now() < end_plus_time
     
     @cached_property
     def status(self):
@@ -435,7 +443,7 @@ class BaseEvent(PolymorphicModel):
     class Meta:
         verbose_name = 'Event'
         permissions = (
-            ("view_event", "Show an event that isn't hidden"),
+            ("view_events", "Show an event that isn't hidden"),
             ("add_raw_event", "Use the editor to create an event"),
             ("event_images", "Upload images to an event"),
             ("view_hidden_event", "Show hidden events"),
@@ -796,11 +804,17 @@ class Event2019(BaseEvent):
     ))
     worktag = models.CharField(max_length=10, null=True, blank=True)
     workday_form_comments = models.TextField(null=True, blank=True)
-    workday_entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="workdayentries", null=True, blank=True)
-    entered_into_workday = models.BooleanField(default=False, help_text='Checked when the Treasurer has created an Internal Service Delivery in Workday for this event')
+    workday_entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                                           related_name="workdayentries", null=True, blank=True)
+    entered_into_workday = models.BooleanField(
+        default=False,
+        help_text='Checked when the Treasurer has created an Internal Service Delivery in Workday for this event'
+    )
 
     # Post-event survey
-    send_survey = models.BooleanField(default=False, help_text='Check if the event contact should be emailed the post-event survey after the event')
+    send_survey = models.BooleanField(
+        default=False, help_text='Check if the event contact should be emailed the post-event survey after the event'
+    )
     survey_sent = models.BooleanField(default=False, help_text='The post-event survey has been sent to the client')
 
     # Added during COVID pandemic
@@ -820,6 +834,7 @@ class Event2019(BaseEvent):
 
     @property
     def eventcount(self):
+        """ Number of different `types` of services provided (based on category) """
         return self.serviceinstance_set.aggregate(Count('service__category', distinct=True))['service__category__count']
 
     @property
@@ -852,7 +867,9 @@ class Event2019(BaseEvent):
         if self.discount_applied:
             categories = ['Lighting', 'Sound']
             categories = [Category.objects.get(name=name) for name in categories]
-            discountable_total = decimal.Decimal(self.serviceinstance_set.filter(service__category__in=categories).aggregate(Sum('service__base_cost'))['service__base_cost__sum']) + self.extras_total
+            discountable_total = decimal.Decimal(
+                self.serviceinstance_set.filter(service__category__in=categories).aggregate(Sum('service__base_cost'))[
+                    'service__base_cost__sum']) + self.extras_total
             return discountable_total * decimal.Decimal(".15")
         else:
             return decimal.Decimal("0.0")
@@ -903,7 +920,7 @@ class Location(models.Model):
     holds_equipment = models.BooleanField(default=False)
 
     #
-    building = models.ForeignKey(Building, on_delete=models.PROTECT)
+    building = models.ForeignKey(Building, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name
@@ -930,7 +947,7 @@ class ExtraInstance(models.Model):
 
 @python_2_unicode_compatible
 class Extra(models.Model):
-    """ An additional charge to be added to an event. """
+    """ An additional item or service to be added to an event (i.e. mirror ball) """
     name = models.CharField(max_length=64)
     cost = models.DecimalField(max_digits=8, decimal_places=2)
     desc = models.TextField()
@@ -962,7 +979,7 @@ class Category(models.Model):
 @python_2_unicode_compatible
 class Service(models.Model):
     """
-        Some chargable service that is added to an event,
+        Some chargable service that is added to an event;
         lighting, sound, projection are examples
     """
     shortname = models.CharField(max_length=2)
@@ -1054,6 +1071,7 @@ class MultiBilling(models.Model):
 
 @python_2_unicode_compatible
 class BillingEmail(models.Model):
+    """ Billing information used in an email sent to a client """
     billing = models.ForeignKey('Billing', on_delete=models.CASCADE)
     subject = models.CharField(max_length=128)
     message = models.TextField()
@@ -1068,6 +1086,7 @@ class BillingEmail(models.Model):
 
 @python_2_unicode_compatible
 class MultiBillingEmail(models.Model):
+    """ Billing information used in an email sent to a client (multiple events) """
     multibilling = models.ForeignKey('MultiBilling', on_delete=models.CASCADE)
     subject = models.CharField(max_length=128)
     message = models.TextField()
@@ -1083,6 +1102,7 @@ class MultiBillingEmail(models.Model):
 
 @python_2_unicode_compatible
 class CCReport(models.Model):
+    """ Crew Chief post-event report """
     glyphicon = 'comment'
     crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE)
@@ -1096,6 +1116,7 @@ class CCReport(models.Model):
 
     @property
     def pretty_cat_list(self):
+        """ Generates a nice list of the respective service categories """
         return ", ".join([x.name for x in self.for_service_cat.all()])
 
 
@@ -1111,6 +1132,7 @@ class CCReport(models.Model):
 
 @python_2_unicode_compatible
 class Fund(models.Model):
+    """ Details used by the Treasurer to charge clients for our services """
     glyphicon = 'credit-card'
     fund = models.IntegerField()
     organization = models.IntegerField()
@@ -1139,12 +1161,13 @@ class Fund(models.Model):
 
     class Meta:
         permissions = (
-            ('manage_fund', 'View a fund'),
+            ('manage_fund', 'Manage a fund'),
         )
 
 
 @python_2_unicode_compatible
-class Organization(models.Model):  # AKA Client
+class Organization(models.Model):
+    """ AKA: A Client """
     glyphicon = 'education'
     name = models.CharField(max_length=128, unique=True)
     shortname = models.CharField(max_length=8, null=True, blank=True)
@@ -1212,6 +1235,7 @@ class Organization(models.Model):  # AKA Client
 
 
 class OrganizationTransfer(models.Model):
+    """ Record of a transfer of ownership between two users for a particular organization """
     initiator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="xfer_initiated")
     new_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="xfer_new")
     old_user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="xfer_old")
@@ -1234,7 +1258,8 @@ class OrganizationTransfer(models.Model):
 class OrgBillingVerificationEvent(models.Model):
     org = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="verifications")
     date = models.DateField()
-    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="verification_events")
+    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                    related_name="verification_events")
     note = models.TextField(null=True, blank=True)
 
     class Meta:
@@ -1245,6 +1270,7 @@ class OrgBillingVerificationEvent(models.Model):
 # stats and the like
 @python_2_unicode_compatible
 class Hours(models.Model):
+    """ Number of hours a particular crew member put in working at a particular event """
     event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="hours")
     category = models.ForeignKey(Category, on_delete=models.PROTECT, null=True, blank=True, related_name='hours')
     service = models.ForeignKey('Service', on_delete=models.PROTECT, related_name="hours", null=True, blank=True)
@@ -1258,8 +1284,8 @@ class Hours(models.Model):
         unique_together = ('event', 'user', 'service')
 
 
-# this is the crewchief instance for a particular event
 class EventCCInstance(models.Model):
+    """ This is the crew chief instance for a particular event """
     # the pair
     event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name='ccinstances')
     crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ccinstances')
@@ -1270,9 +1296,11 @@ class EventCCInstance(models.Model):
     setup_start = models.DateTimeField(null=True, blank=True)
 
     def cal_name(self):
+        """ Title used by calendars """
         return self.event.event_name + ' ' + (self.service.shortname if self.service else self.category.name) + ' Setup'
 
     def cal_desc(self):
+        """ Description used by calendars """
         desc = ''
         desc += 'Requested by '
         orgs = self.event.org.all()
@@ -1285,29 +1313,34 @@ class EventCCInstance(models.Model):
         return desc
 
     def cal_location(self):
+        """ Location used by calendars """
         return self.setup_location.name
 
     def cal_start(self):
+        """ Start time used by calendars (setup) """
         return self.setup_start
 
     def cal_end(self):
+        """ End time used by calendars """
         if self.event.datetime_setup_complete:
             return self.event.datetime_setup_complete
         else:
             return self.event.datetime_start
 
     def cal_link(self):
+        """ Link to display on calendars """
         return get_host() + reverse('events:detail', args=[self.event.id])
 
     def cal_guid(self):
+        """ Unique event id used by calendars """
         return 'setup' + str(self.id) + '@lnldb'
 
     class Meta:
         ordering = ('-event__datetime_start',)
 
 
-# A log of CC Report Reminders Sent
 class ReportReminder(models.Model):
+    """ A log of CC Report Reminders sent """
     event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="ccreportreminders")
     crew_chief = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="ccreportreminders")
     sent = models.DateTimeField(auto_now_add=True)
@@ -1328,6 +1361,7 @@ class EventAttachment(models.Model):
 
 @reversion.register()
 class EventArbitrary(models.Model):
+    """ Additional "OneOff" charges (i.e. rentals, additional fees) """
     event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="arbitraryfees")
     key_name = models.CharField(max_length=64)
     key_value = models.DecimalField(max_digits=8, decimal_places=2)
@@ -1350,14 +1384,22 @@ class EventArbitrary(models.Model):
 
 @python_2_unicode_compatible
 class PostEventSurvey(models.Model):
+    """ Survey sent to clients after an event to collect their feedback """
     # metadata
     event = models.ForeignKey(BaseEvent, on_delete=models.PROTECT, related_name="surveys")
     person = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='surveys')
 
     # survey questions
-    services_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='Please rate the overall quality of the services Lens and Lights provided.')
-    lighting_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How satisfied were you with the lighting?')
-    sound_quality = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How satisfied were you with the sound system?')
+    services_quality = models.IntegerField(
+        choices=EXCELLENCE_CHOICES,
+        verbose_name='Please rate the overall quality of the services Lens and Lights provided.'
+    )
+    lighting_quality = models.IntegerField(
+        choices=EXCELLENCE_CHOICES, verbose_name='How satisfied were you with the lighting?'
+    )
+    sound_quality = models.IntegerField(
+        choices=EXCELLENCE_CHOICES, verbose_name='How satisfied were you with the sound system?'
+    )
     work_order_method = models.IntegerField(choices=(
         (None, 'Please select...'),
         (1, 'Via the website at lnl.wpi.edu/workorder'),
@@ -1368,20 +1410,45 @@ class PostEventSurvey(models.Model):
         (0, 'Other'),
         (-1, 'I don\'t know')
     ), verbose_name='How did you submit the workorder?')
-    work_order_experience = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How would you rate your overall experience using the workorder tool?', null=True, blank=True, default=-1)
-    work_order_ease = models.IntegerField(choices=EXCELLENCE_CHOICES, verbose_name='How would you rate the workorder tool\'s clarity and ease of use?', null=True, blank=True, default=-1)
-    work_order_comments = models.TextField(blank=True, verbose_name="Please provide any additional comments you may have regarding your experience with the workorder tool. Is there anything you would like to see us improve?")
+    work_order_experience = models.IntegerField(
+        choices=EXCELLENCE_CHOICES, verbose_name='How would you rate your overall experience using the workorder tool?',
+        null=True, blank=True, default=-1
+    )
+    work_order_ease = models.IntegerField(
+        choices=EXCELLENCE_CHOICES, verbose_name='How would you rate the workorder tool\'s clarity and ease of use?',
+        null=True, blank=True, default=-1
+    )
+    work_order_comments = models.TextField(
+        blank=True,
+        verbose_name="Please provide any additional comments you may have regarding your experience with the workorder "
+                     "tool. Is there anything you would like to see us improve?"
+    )
 
     # survey agreement questions
-    communication_responsiveness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='Lens and Lights was responsive to my communications.')
-    pricelist_ux = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='It was easy to determine which services to request and I had no problem finding what I needed.')
-    setup_on_time = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='My event was set up and the crew was ready on time.')
-    crew_respectfulness = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='When interacting with the crew, they were helpful and respectful.')
-    price_appropriate = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='The price quoted for the event matched my expectations and was appropriate for the services provided.')
-    customer_would_return = models.IntegerField(choices=AGREEMENT_CHOICES, verbose_name='I would use Lens and Lights in the future.')
+    communication_responsiveness = models.IntegerField(
+        choices=AGREEMENT_CHOICES, verbose_name='Lens and Lights was responsive to my communications.'
+    )
+    pricelist_ux = models.IntegerField(
+        choices=AGREEMENT_CHOICES,
+        verbose_name='It was easy to determine which services to request and I had no problem finding what I needed.'
+    )
+    setup_on_time = models.IntegerField(
+        choices=AGREEMENT_CHOICES, verbose_name='My event was set up and the crew was ready on time.'
+    )
+    crew_respectfulness = models.IntegerField(
+        choices=AGREEMENT_CHOICES, verbose_name='When interacting with the crew, they were helpful and respectful.'
+    )
+    price_appropriate = models.IntegerField(
+        choices=AGREEMENT_CHOICES,
+        verbose_name='The price quoted for the event matched my expectations and was appropriate for the services provided.'
+    )
+    customer_would_return = models.IntegerField(
+        choices=AGREEMENT_CHOICES, verbose_name='I would use Lens and Lights in the future.'
+    )
 
     # textarea questions
-    comments = models.TextField(blank=True, verbose_name='Please use this area to provide any additional feedback you may have about your event.')
+    comments = models.TextField(blank=True, verbose_name='Please use this area to provide any additional feedback you '
+                                                         'may have about your event.')
 
     def __str__(self):
         return 'Post-event survey for {} by {}'.format(self.event, self.person)
@@ -1395,6 +1462,7 @@ class PostEventSurvey(models.Model):
 
 @python_2_unicode_compatible
 class Workshop(models.Model):
+    """ A Workshop series hosted by LNL """
     name = models.CharField(max_length=128)
     instructors = models.CharField(max_length=100)
     description = models.TextField()
@@ -1428,6 +1496,7 @@ DAYS_OF_WEEK = (
 
 @python_2_unicode_compatible
 class OfficeHour(models.Model):
+    """ A listing for an officer's Office Hours """
     officer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     day = models.IntegerField(choices=DAYS_OF_WEEK)
     hour_start = models.TimeField(auto_now=False, auto_now_add=False)
@@ -1448,6 +1517,7 @@ class OfficeHour(models.Model):
 
 
 class HourChange(models.Model):
+    """ Notification informing users that an officer has made temporary adjustments to their office hours """
     officer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     date_posted = models.DateTimeField(auto_now=True)
     expires = models.DateTimeField(auto_now=False, auto_now_add=False)
@@ -1461,6 +1531,7 @@ class HourChange(models.Model):
 
 
 class CrewAttendanceRecord(models.Model):
+    """ Checkin and checkout times for a crew member attending an event (used for contact tracing) """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="event_records")
     event = models.ForeignKey(Event2019, on_delete=models.SET_NULL, null=True, related_name="crew_attendance")
     checkin = models.DateTimeField(default=timezone.now)

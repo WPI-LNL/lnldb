@@ -28,6 +28,7 @@ from .models import OfficerImg
 
 
 class UserAddView(mixins.HasPermMixin, generic.CreateView):
+    """Add a new user manually (should rarely be used - LDAP does this for us)"""
     form_class = forms.UserAddForm
     model = get_user_model()
     perms = 'accounts.add_user'
@@ -38,6 +39,7 @@ class UserAddView(mixins.HasPermMixin, generic.CreateView):
 
 
 class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, generic.UpdateView):
+    """Update user profile"""
     slug_field = "username"
     slug_url_kwarg = "username"
     model = get_user_model()
@@ -82,11 +84,12 @@ class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, gen
 
 
 class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
+    """View user profile"""
     slug_field = "username"
     slug_url_kwarg = "username"
     model = get_user_model()
     template_name = "userdetail.html"
-    perms = ['accounts.read_user']
+    perms = ['accounts.view_user']
 
     def user_passes_test(self, request, *args, **kwargs):
         # members looking at other members is fine, and you should always be able to look at yourself.
@@ -96,7 +99,7 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
         if object.is_lnl:
             return request.user.has_perm('accounts.view_member')
         else:
-            return request.user.has_perm('accounts.read_user', object)
+            return request.user.has_perm('accounts.view_user', object)
 
     def get_context_data(self, **kwargs):
         context = super(UserDetailView, self).get_context_data(**kwargs)
@@ -131,11 +134,12 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
 
 
 class BaseUserList(mixins.HasPermMixin, generic.ListView):
+    """Basic structure for user lists"""
     model = get_user_model()
     context_object_name = 'users'
     template_name = 'users.html'
     name = "User List"
-    perms = ['accounts.read_user']
+    perms = ['accounts.view_user']
 
     def get_context_data(self, **kwargs):
         context = super(BaseUserList, self).get_context_data(**kwargs)
@@ -146,6 +150,7 @@ class BaseUserList(mixins.HasPermMixin, generic.ListView):
 
 
 class OfficerList(BaseUserList):
+    """Lists LNL officers"""
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Officer")
     name = "Officer List"
@@ -154,6 +159,7 @@ class OfficerList(BaseUserList):
 
 
 class ActiveList(BaseUserList):
+    """Lists active LNL members"""
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Active")
     name = "Active List"
@@ -162,6 +168,7 @@ class ActiveList(BaseUserList):
 
 
 class AwayList(BaseUserList):
+    """Lists LNL members on away status"""
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Away")
     name = "Away List"
@@ -170,6 +177,7 @@ class AwayList(BaseUserList):
 
 
 class AssociateList(BaseUserList):
+    """Lists associate LNL members"""
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Associate")
     name = "Associate List"
@@ -178,6 +186,7 @@ class AssociateList(BaseUserList):
 
 
 class AlumniList(BaseUserList):
+    """Lists LNL alumni"""
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Alumni")
     name = "Alumni List"
@@ -186,6 +195,7 @@ class AlumniList(BaseUserList):
 
 
 class InactiveList(BaseUserList):
+    """Lists inactive LNL members"""
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__name="Inactive")
     name = "Inactive List"
@@ -194,6 +204,7 @@ class InactiveList(BaseUserList):
 
 
 class AllMembersList(BaseUserList):
+    """Lists all LNL members"""
     perms = ['accounts.view_member']
     queryset = get_user_model().objects.filter(groups__isnull=False).distinct()
     name = "All Members List"
@@ -202,18 +213,26 @@ class AllMembersList(BaseUserList):
 
 
 class LimboList(BaseUserList):
+    """Lists unassociated users"""
     queryset = get_user_model().objects.filter(groups__isnull=True)
     name = "Users without Association"
     accounts_disabled_column = False
     positions = False
 
 
-class MeDirectView(generic.RedirectView):
+class MeDirectView(mixins.LoginRequiredMixin, generic.RedirectView):
+    """Redirects to a user's profile page"""
     def get_redirect_url(self, *args, **kwargs):
         return super(MeDirectView, self).get_redirect_url(self.request.user.pk, *args, **kwargs)
 
 
 def smart_login(request):
+    """
+    Intelligent signin handler. Presents the `Sign in with Microsoft` option if enabled. If already logged in,
+    redirects to the requested page (can be used to check for an active session). Also checks for the `Prefer SAML`
+    cookie and automatically attempts to log in via Microsoft SSO if present. Falls back on Django's native login form
+    otherwise.
+    """
     pref_saml = request.COOKIES.get('prefer_saml', None)
     use_saml = request.GET.get('force_saml', None)
 
@@ -231,6 +250,7 @@ def smart_login(request):
 @login_required
 @permission_required('accounts.view_member', raise_exception=True)
 def mdc(request):
+    """Displays a list of radio MDCs for LNL members"""
     context = {}
     users_with_mdc = get_user_model().objects.exclude(mdc__isnull=True) \
         .exclude(mdc='').order_by('last_name', 'first_name', 'mdc')
@@ -247,6 +267,7 @@ def mdc(request):
 @login_required
 @permission_required('accounts.view_member', raise_exception=True)
 def mdc_raw(request):
+    """Downloads a CSV file containing the radio MDCs of LNL members"""
     context = {}
     users = get_user_model().objects.exclude(mdc__isnull=True) \
         .exclude(mdc='').order_by('last_name')
@@ -262,6 +283,10 @@ def mdc_raw(request):
 @login_required
 @permission_required('accounts.change_group', raise_exception=True)
 def secretary_dashboard(request):
+    """
+    Dashboard for the secretary. Lists important member counts used in voting and suggests users to activate,
+    deactivate, associate, or take off away status.
+    """
     semester_ago = timezone.now() - timedelta(weeks=17)
     term_ago = timezone.now() - timedelta(weeks=8)
 
@@ -299,6 +324,10 @@ def secretary_dashboard(request):
 @login_required
 @permission_required('accounts.view_member', raise_exception=True)
 def shame(request):
+    """
+    The LNL Crew Chief Report Hall of Shame. Tracks members who fail to complete event reports and lists the top 10
+    on a leaderboard.
+    """
     context = {}
     worst_cc_report_forgetters = get_user_model().objects.annotate(Count('ccinstances', distinct=True)).annotate(
         did_ccreport_count=Count(Case(When(ccinstances__event__ccreport__crew_chief=F('pk'), then=F('ccinstances'))),
@@ -313,6 +342,7 @@ def shame(request):
 
 
 class PasswordSetView(generic.FormView):
+    """Set a non-SSO login password"""
     model = get_user_model()
     user = None
     template_name = 'form_crispy.html'
@@ -356,6 +386,7 @@ class PasswordSetView(generic.FormView):
 @login_required
 @permission_required('accounts.change_group', raise_exception=True)
 def officer_photos(request, pk=None):
+    """Update officer headshot (displayed on the main LNL website about page)"""
     context = {}
     if pk is None:
         pk = request.user.pk

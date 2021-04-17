@@ -16,6 +16,11 @@ DEFAULT_TO_ADDR = settings.DEFAULT_TO_ADDR
 
 
 def send_survey_if_necessary(event):
+    """
+    Check to see if a post-event survey should be sent for a particular event. If so, send an email to the client.
+
+    :param event: The event
+    """
     now = timezone.now()
     if now < event.datetime_end or event.datetime_end < (now - datetime.timedelta(days=30)) \
             or not event.approved or event.survey_sent or not event.send_survey or event.contact is None:
@@ -29,6 +34,12 @@ def send_survey_if_necessary(event):
 
 
 def generate_web_service_email(details):
+    """
+    Generate a generic email message with the Webmaster listed as the reply address
+
+    :param details: A dictionary - {'subject': <str>, 'message': <str>, 'email_to': <str>}
+    :returns: A generic LNL email object
+    """
     subject = details["subject"]
     body = details["message"]
     from_email = settings.DEFAULT_FROM_ADDR
@@ -36,12 +47,18 @@ def generate_web_service_email(details):
     to_email = details["email_to"]
 
     email = GenericEmailGenerator(subject=subject, to_emails=to_email, bcc=reply_to_email, from_email=from_email,
-                                  reply_to=reply_to_email, body=body)
+                                  reply_to=reply_to_email, body=body, context={'mrkdwn': True})
 
     return email
 
 
 def generate_sms_email(data):
+    """
+    Generate a plain SMS text message for delivery via email
+
+    :param data: A dictionary - {'message': <str>, 'user': <User>}
+    :returns: A basic (non-HTML) email object
+    """
     body = data["message"]
     user = data["user"]
 
@@ -55,6 +72,12 @@ def generate_sms_email(data):
 
 
 def generate_notice_email(notice):
+    """
+    Generate a meeting notice email
+
+    :param notice: A MeetingNoticeMail object
+    :returns: An email object
+    """
     subject = notice.subject
     from_email = settings.DEFAULT_FROM_ADDR
     reply_to_email = settings.EMAIL_TARGET_S
@@ -72,6 +95,12 @@ def generate_notice_email(notice):
 
 
 def generate_notice_cc_email(notice):
+    """
+    Generate a meeting notice email
+
+    :param notice: A MeetingNoticeMail object
+    :returns: An email object
+    """
     subject = notice.subject
     from_email = settings.DEFAULT_FROM_ADDR
     to_email = notice.email_to.email
@@ -88,6 +117,12 @@ def generate_notice_cc_email(notice):
 
 
 def generate_transfer_email(orgtransfer):
+    """
+    Generate an organization transfer email notification
+
+    :param orgtransfer: An OrganizationTransfer object
+    :returns: An email object
+    """
     subject = "LNL Organization Control Transfer for %s" % orgtransfer.org.name
     from_email = settings.DEFAULT_FROM_ADDR
     to_emails = [orgtransfer.old_user_in_charge.email, orgtransfer.org.exec_email]
@@ -106,6 +141,7 @@ def generate_transfer_email(orgtransfer):
 
 
 def generate_event_start_end_emails():
+    """ Send an email for events starting or ending now """
     subj_start = "Events Starting Now"
     subj_end = "Events Ending Now"
     # get the time
@@ -153,6 +189,12 @@ def generate_event_start_end_emails():
 # Self Service Emails
 # Self service org email
 def generate_selfservice_notice_email(context):
+    """
+    Generate an email notification when a new client submits a self-service request
+
+    :param context: Self-service form data
+    :returns: An email object
+    """
     subject = "Self Service Form Submission"
     from_email = settings.DEFAULT_FROM_ADDR
     to_email = [settings.EMAIL_TARGET_W, settings.EMAIL_TARGET_VP]
@@ -182,6 +224,13 @@ def generate_selfservice_notice_email(context):
 
 
 def generate_poke_cc_email_content(services, message):
+    """
+    Generate the body of a "Poke for CC" email notification
+
+    :param services: An array or queryset of services crew chiefs are needed for
+    :param message: Additional message to display above the event details (Optional, but highly recommended)
+    :returns: HTML formatted string
+    """
     event_details = ""
     events = []
     for service in services:
@@ -200,14 +249,14 @@ def generate_poke_cc_email_content(services, message):
             service_details.append(service.longname)
         ccs_needed = ', '.join(ccs_needed)
         service_details = ', '.join(service_details)
-        link = "https://lnl.wpi.edu" + reverse("events:detail", args=[event.id])
-        start = event.datetime_start
-        end = event.datetime_end
+        link = "http://" + settings.ALLOWED_HOSTS[0] + reverse("events:detail", args=[event.id])
+        start = timezone.localtime(event.datetime_start)
+        end = timezone.localtime(event.datetime_end)
         if start.date() == end.date():
             when = start.strftime("%A (%-m/%-d) %-I:%M %p - ") + end.strftime("%-I:%M %p")
         else:
             when = start.strftime("%A (%-m/%-d) %-I:%M %p to ") + end.strftime("%A (%-m/%-d) %-I:%M %p")
-        setup = event.datetime_setup_complete.strftime("%A (%-m/%-d) %-I:%M %p")
+        setup = timezone.localtime(event.datetime_setup_complete).strftime("%A (%-m/%-d) %-I:%M %p")
         event_details += "<strong>CC's needed:</strong> %s\n<strong>Services:</strong> %s\n<strong>What:</strong> " \
                          "<a href='%s'>%s</a>\n<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n" \
                          "<strong>Where:</strong> %s\n<strong>Description:</strong> %s\n\n" % \
@@ -245,7 +294,10 @@ class DefaultLNLEmailGenerator(object):  # yay classes
         self.email = EmailMultiAlternatives(subject, content_txt, from_email, to_emails, bcc=bcc, cc=cc,
                                             reply_to=reply_to)
         for a in attachments:
-            self.email.attach(a['name'], a['file_handle'], "application/pdf")
+            if a['file_handle']:
+                self.email.attach(a['name'], a['file_handle'], "application/pdf")
+            else:
+                self.email.attach(a)
 
         if build_html:
             template_html = "%s.html" % template_basename
@@ -442,6 +494,7 @@ class GenericEmailGenerator(DefaultLNLEmailGenerator):
 
 
 class BasicEmailGenerator(object):
+    """ Non-HTML email with no LNL branding or formatting. Uses no-reply address by default. """
     def __init__(self, to_emails=settings.DEFAULT_TO_ADDR, from_email=settings.EMAIL_FROM_NOREPLY, reply_to=None,
                  bcc=None, context=None, template_basename="emails/email_basic", body=None):
         if isinstance(to_emails, string_types):

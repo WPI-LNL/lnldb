@@ -70,7 +70,7 @@ class AccountsTestCase(ViewTestCase):
         self.assertOk(self.client.get(reverse("accounts:add")), 403)
 
         change_user = Permission.objects.get(codename="add_user")
-        read_user = Permission.objects.get(codename="read_user")  # Needed to view details on redirect
+        read_user = Permission.objects.get(codename="view_user")  # Needed to view details on redirect
         self.user.user_permissions.add(change_user)
         self.user.user_permissions.add(read_user)
 
@@ -108,7 +108,7 @@ class AccountsTestCase(ViewTestCase):
         self.assertOk(self.client.get(reverse("accounts:update", args=[2])), 403)
 
         change_user = Permission.objects.get(codename="change_user")
-        read_user = Permission.objects.get(codename="read_user")  # Needed to view details on redirect
+        read_user = Permission.objects.get(codename="view_user")  # Needed to view details on redirect
         self.user.user_permissions.add(change_user)
         self.user.user_permissions.add(read_user)
 
@@ -160,10 +160,10 @@ class AccountsTestCase(ViewTestCase):
         # Should be allowed to view own profile
         self.assertOk(self.client.get(reverse("accounts:detail", args=[1])))
 
-        # Should not be allowed to view user profile without read_user permission
+        # Should not be allowed to view user profile without view_user permission
         self.assertOk(self.client.get(reverse("accounts:detail", args=[self.user2.pk])), 403)
 
-        permission = Permission.objects.get(codename="read_user")
+        permission = Permission.objects.get(codename="view_user")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("accounts:detail", args=[self.user2.pk])))
@@ -200,8 +200,8 @@ class AccountsTestCase(ViewTestCase):
     def test_me_direct_view(self):
         self.setup()
 
-        # Will need read_user permission for redirect
-        permission = Permission.objects.get(codename="read_user")
+        # Will need view_user permission for redirect
+        permission = Permission.objects.get(codename="view_user")
         self.user.user_permissions.add(permission)
 
         self.assertRedirects(self.client.get(reverse("accounts:me")), reverse("accounts:detail", args=[1]))
@@ -493,7 +493,7 @@ class OfficerImgViewTestCase(ViewTestCase):
         img = open('static/img/ms_signin_dark.png', 'rb')
         img2 = open('static/img/pdf-lnl-logo.png', 'rb')
         invalid_data = {
-            'img': None,
+            'img': '',
             'save': 'Save Changes'
         }
         valid_data = {
@@ -512,7 +512,7 @@ class OfficerImgViewTestCase(ViewTestCase):
         }
 
         remove_none = {
-            'img': None,
+            'img': '',
             'save': 'Remove'
         }
 

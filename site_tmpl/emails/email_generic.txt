@@ -1,4 +1,5 @@
 {% load tz %}
+{% load markdown_deux_tags %}
 {{ subject }}
 
-{{ body|safe }}
+{{ body|safe|markdown }}

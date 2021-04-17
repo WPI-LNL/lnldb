@@ -16,12 +16,18 @@ from helpers.util import curry_class
 
 @login_required
 def eventnew(request, id=None):
+    """
+    Create or edit an event
+
+    :param id: Defaults to None (create a new event). Otherwise, this is the primary key value of the event you intend \
+    to edit
+    """
     context = {}
     # get instance if id is passed in
     if id:
         instance = get_object_or_404(BaseEvent, pk=id)
         context['new'] = False
-        perms = ['events.view_event']
+        perms = ['events.view_events']
         if not (request.user.has_perms(perms) or
                 request.user.has_perms(perms, instance)):
             raise PermissionDenied
@@ -102,7 +108,9 @@ def eventnew(request, id=None):
                 obj.save()
                 form.save_m2m()
                 if is_event2019:
-                    services_formset.instance = obj
+                    mk_serviceinstance_formset.form = curry_class(ServiceInstanceForm, event=obj)
+                    services_formset = mk_serviceinstance_formset(request.POST, request.FILES, instance=instance)
+                    services_formset.is_valid()
                     services_formset.save()
             return HttpResponseRedirect(reverse('events:detail', args=(obj.id,)))
         else:

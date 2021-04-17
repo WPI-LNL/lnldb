@@ -10,7 +10,8 @@ class ViewTestCase(TestCase):
                             'password': '12345'}
         extra = {'email': 'abc@foo.com',
                  'is_staff': True,
-                 'is_superuser': False}
+                 'is_superuser': False,
+                 'onboarded': True}
         extra.update(self.credentials)
         self.user = get_user_model().objects._create_user(**extra)
         self.user.save()

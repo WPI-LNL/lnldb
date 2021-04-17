@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import os
 from django.db import models
 from django.conf import settings
-from django.utils.encoding import python_2_unicode_compatible
+from six import python_2_unicode_compatible
 
 
 @python_2_unicode_compatible
 class Laptop(models.Model):
+    """Represents one of LNL's laptops"""
     name = models.CharField(max_length=20)
     description = models.TextField(blank=True)
     serial = models.CharField(max_length=12, null=True, blank=True)
@@ -24,7 +26,6 @@ class Laptop(models.Model):
 
     class Meta:
         permissions = (
-            ('view_laptop_details', 'View details of a laptop'),
             ('view_laptop_history', 'View password retrieval history for a laptop'),
             ('retrieve_user_password', 'Retrieve the user password for a laptop'),
             ('retrieve_admin_password', 'Retrieve the admin password for a laptop'),
@@ -36,6 +37,7 @@ class Laptop(models.Model):
 
 
 class LaptopPasswordRetrieval(models.Model):
+    """Used to keep track of when users access the laptop passwords"""
     timestamp = models.DateTimeField(auto_now_add=True)
     laptop = models.ForeignKey(Laptop, on_delete=models.CASCADE, related_name='password_retrievals')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
@@ -43,13 +45,18 @@ class LaptopPasswordRetrieval(models.Model):
 
 
 class LaptopPasswordRotation(models.Model):
+    """Used to keep track of when passwords are rotated on LNL's MacBooks"""
     timestamp = models.DateTimeField(auto_now_add=True)
     laptop = models.ForeignKey(Laptop, on_delete=models.CASCADE, related_name='password_rotations')
 
 
 class ConfigurationProfile(models.Model):
+    """
+    This class defines metadata for a given macOS configuration profile. The core profile data is stored in a separate
+    JSON file.
+    """
     name = models.CharField(max_length=100)
-    profile = models.FilePathField(path=settings.MEDIA_ROOT + "/profiles/", match=".*\.json$")
+    profile = models.FilePathField(path=os.path.join(settings.MEDIA_ROOT, "profiles"), match=".*\.json$")
     scope = models.CharField(choices=(('System', 'System'), ('User', 'User')), max_length=6, default='System')
     created_on = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
@@ -67,6 +74,7 @@ class ConfigurationProfile(models.Model):
 
 
 class MacOSApp(models.Model):
+    """Used to keep track of managed applications for LNL's MacBooks"""
     name = models.CharField(max_length=128)
     identifier = models.CharField(max_length=64, help_text="Homebrew Identifier")
     version = models.CharField(max_length=36, blank=True, null=True)
@@ -91,6 +99,7 @@ class MacOSApp(models.Model):
 
 
 class InstallationRecord(models.Model):
+    """Used to log when managed resources were last installed on a device"""
     profile = models.ForeignKey(ConfigurationProfile, on_delete=models.CASCADE, null=True, blank=True,
                                 related_name="install_records")
     app = models.ForeignKey(MacOSApp, on_delete=models.CASCADE, null=True, blank=True, related_name="install_records")

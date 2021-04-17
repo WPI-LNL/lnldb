@@ -9,4 +9,4 @@ uses:
 ignore-patterns:
   - (^|/)migrations(/|$)
 python-targets:
-  - 2
+  - 3

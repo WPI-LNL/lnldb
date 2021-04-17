@@ -424,7 +424,7 @@ class ProjViewTest(ViewTestCase):
         form = forms.PITRequestForm(data=data)
         self.assertTrue(form.is_valid())
 
-        self.assertOk(self.client.post(reverse("projection:pit-request"), data))
+        self.assertRedirects(self.client.post(reverse("projection:pit-request"), data), reverse("projection:grid"))
 
         # Test that new projectionist has been created
         self.assertTrue(models.Projectionist.objects.filter(user=self.user).exists())
@@ -535,3 +535,26 @@ class ProjViewTest(ViewTestCase):
 
         self.assertRedirects(self.client.post(reverse("projection:cancel-request", args=[2])),
                              reverse("projection:pit-schedule"))
+
+    def test_mark_pit_complete(self):
+        projectionist = models.Projectionist(user=self.user)
+        projectionist.save()
+        level = models.PITLevel.objects.create(name_short="P2", name_long="PIT2", ordering=1)
+        level.save()
+        request = models.PitRequest(projectionist=projectionist, level=level, scheduled_for=timezone.now())
+        request.save()
+
+        # The user should not have permission to mark a PIT as complete by default
+        self.assertOk(self.client.get(reverse("projection:pit-complete", args=[1])), 403)
+
+        permission = Permission.objects.get(codename="edit_pits")
+        self.user.user_permissions.add(permission)
+
+        # Only POST requests are permitted
+        self.assertOk(self.client.get(reverse("projection:pit-complete", args=[1])), 405)
+
+        self.assertRedirects(self.client.post(reverse("projection:pit-complete", args=[1])),
+                             reverse('projection:pit-schedule'))
+
+        self.assertFalse(models.PitRequest.objects.filter(pk=request.pk).exists())
+        self.assertTrue(models.PitInstance.objects.filter(projectionist=projectionist).exists())

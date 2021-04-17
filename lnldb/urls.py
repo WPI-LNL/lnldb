@@ -6,10 +6,11 @@ from django.conf.urls import include, url
 from django.contrib import admin
 from django.views.generic.base import RedirectView
 
+import hijack.urls
 import data.views
 from events.views.indices import admin as db_home, index
 from events.views.indices import event_search, survey_dashboard, workshops
-from pages.views import page as view_page, recruitment_page
+from pages.views import page as view_page
 
 admin.autodiscover()
 permission.autodiscover()
@@ -23,7 +24,7 @@ urlpatterns = []
 
 if settings.SAML2_ENABLED:
     urlpatterns += [
-        url(r'^saml2_auth/', include('django_saml2_auth.urls')),
+        url(r'^saml2_auth/', include('django_saml2_auth.urls', namespace='djangosaml2')),
     ]
 
 urlpatterns += [
@@ -33,23 +34,24 @@ urlpatterns += [
 
     # Include other modules
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
-    url(r'^admin/', include(admin.site.urls)),
-    url(r'^hijack/', include('hijack.urls')),
+    url(r'^admin/', admin.site.urls),
+    url(r'^hijack/', include(hijack.urls)),
     url(r'^__debug__/', include(debug_toolbar.urls)),
     url(r'^db/lookups/', include(ajax_select_urls)),
-    url(r'^db/meetings/', include('meetings.urls', namespace='meetings')),
-    url(r'^db/clients/', include('events.urls.orgs', namespace='orgs')),
-    url(r'^db/equipment/', include('inventory.urls', namespace='equipment')),
-    url(r'^db/laptops/', include('devices.urls.laptops', namespace='laptops')),
-    url(r'^db/projection/', include('projection.urls', namespace='projection')),
-    url(r'^db/events/', include('events.urls.events', namespace='events')),
-    url(r'^my/', include('events.urls.my', namespace='my')),
-    url(r'^list/', include('events.urls.cal', namespace='cal')),
-    url(r'^email/', include('emails.urls', namespace='emails')),
-    url(r'', include('accounts.urls', namespace='accounts')),
-    url(r'', include('members.urls', namespace='members')),
-    url(r'^api/', include('api.urls', namespace='api')),
-    url(r'^mdm/', include('devices.urls.mdm', namespace="mdm")),
+    url(r'^db/meetings/', include(('meetings.urls', 'meetings'), namespace='meetings')),
+    url(r'^db/clients/', include(('events.urls.orgs', 'lnldb'), namespace='orgs')),
+    url(r'^db/equipment/', include(('inventory.urls', 'inventory'), namespace='equipment')),
+    url(r'^db/laptops/', include(('devices.urls.laptops', 'laptops'), namespace='laptops')),
+    url(r'^db/projection/', include(('projection.urls', 'projection'), namespace='projection')),
+    url(r'^db/events/', include(('events.urls.events', 'lnldb'), namespace='events')),
+    url(r'^my/', include(('events.urls.my', 'lnldb'), namespace='my')),
+    url(r'^list/', include(('events.urls.cal', 'lnldb'), namespace='cal')),
+    url(r'^email/', include(('emails.urls', 'emails'), namespace='emails')),
+    url(r'', include(('accounts.urls', 'accounts'), namespace='accounts')),
+    url(r'', include(('members.urls', 'members'), namespace='members')),
+    url(r'^api/', include(('api.urls', 'api'), namespace='api')),
+    url(r'^mdm/', include(('devices.urls.mdm', 'mdm'), namespace="mdm")),
+    url(r'', include(('pages.urls', 'pages'), namespace='pages')),
 
     # special urls
     url(r'^db/$', db_home, name="home"),
@@ -61,7 +63,6 @@ urlpatterns += [
     url(r'^db/workorderwizard-submit$', data.views.workorderwizard_submit, name="wizard-submit"),
     url(r'^db/workorderwizard-autopopulate$', data.views.workorderwizard_findprevious, name="wizard-findprevious"),
     url(r'^workorder/', RedirectView.as_view(url='/workorder/', permanent=False)),
-    url(r'^join/$', recruitment_page, name='recruitment-page'),
     url(r'^workshops/$', workshops, name='workshops'),
 
     # Download checkin data (hopefully this url can be removed some day)

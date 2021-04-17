@@ -1,0 +1,71 @@
+body > .grid {
+    height: 100%;
+}
+
+body {
+    transition: all 1s ease;
+}
+
+label {
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.radio label {
+    font-weight: normal;
+}
+
+input:read-only {
+    cursor: not-allowed;
+}
+
+.grid, .ui.text.container {
+    opacity: 1;
+    transition: all 1s ease;
+}
+
+.ui.container {
+    animation: fadein 2s ease forwards;
+    transition: all 2s ease;
+}
+
+.grid .ui.header, #page5 {
+    opacity: 0;
+    animation: fadein 2s ease 0.5s forwards;
+    transition: all 2s ease;
+}
+
+#subtitle {
+    opacity: 0;
+    animation: fadein 2s ease 2.5s forwards;
+    transition: all 2s ease;
+}
+
+#start, #skip {
+    opacity: 0;
+    animation: fadein 1s ease 4s forwards;
+    transition: all 1s ease;
+}
+
+@keyframes fadein {
+    from {opacity: 0;}
+    to {opacity: 1;}
+}
+
+.viewhidden {
+    opacity: 0;
+    display: none;
+}
+
+div.hidden.field {
+    display: none;
+}
+
+@media(max-width: 400px) {
+    .container.header {
+        font-size: 1.8em !important;
+    }
+    h2 {
+        font-size: 1.2em;
+    }
+}

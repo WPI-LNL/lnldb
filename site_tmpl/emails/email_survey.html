@@ -15,20 +15,24 @@
                 <p align="left" class="article-title">{{ subject }}</p>
                 <div align="left" class="article-content">
                     <p>
-                        Lens and Lights recently provided services for {{ event.event_name }}.
-                        We would appreciate you taking a short survey on how we did.
-                        Your input will help us to improve our services.
-                        Take the survey using the button below or paste this link into your web browser:
+                        Thank you for choosing WPI Lens and Lights! We recently provided services for
+                        {{ event.event_name|public_field }} and would love to hear about your experience working with
+                        us. If you have a moment, please consider taking a short survey to let us know how we did. The
+                        survey should take no more than 5 minutes and your response will help us understand how we can
+                        improve our services in the future.<br><br>
+                        Take the survey here:<br>
                         {% get_base_url %}{% url 'my:post-event-survey' event.pk %}
                     </p>
                     <a id="big-button" href="{% get_base_url %}{% url 'my:post-event-survey' event.pk %}">Take Survey</a>
-                    <p><b>{{ event.event_name }}</b><br>
+                    <br><br>
+                    <hr>
+                    <p><b>{{ event.event_name|public_field }}</b><br>
                     <i>{{ event.location }}</i><br>
                     Start: {{ event.datetime_start }}<br>
                     End: {{ event.datetime_end }}<br>
                     Services: {{ event.short_services }}<br>
                     Organization to be billed: {{ event.org_to_be_billed }}</p>
-                    <p>See full details of this event <a href="{% get_base_url %}{% url 'events:detail' event.id %}">here</a>.</p>
+                    <p>You can find the full details for this event <a href="{% get_base_url %}{% url 'events:detail' event.id %}">here</a>.</p>
                 </div>
             </td>
         </tr>

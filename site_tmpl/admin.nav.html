@@ -158,8 +158,8 @@
                         {% if request.user.is_superuser %}
                             <li><a href="{% url 'mdm:list' %}">MDM Console</a></li>
                         {% endif %}
-                        {% permission request.user has 'devices.view_laptop_details' %}
-                            <li><a href="{% url 'laptops:list' %}">Laptop passwords</a></li>
+                        {% permission request.user has 'devices.view_laptop' %}
+                            <li><a href="{% url 'laptops:list' %}">Laptops</a></li>
                         {% endpermission %}
                         <li><a href="{% url 'inventory:snipe_checkout' %}">Inventory checkout</a></li>
                         <li><a href="{% url 'inventory:snipe_checkin' %}">Inventory checkin</a></li>

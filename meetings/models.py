@@ -56,27 +56,34 @@ class Meeting(models.Model):
         return self.datetime + self.duration
 
     def cal_name(self):
+        """ Title to display on calendars """
         return "Meeting - " + self.meeting_type.name
 
     def cal_desc(self):
+        """ No description will be provided for meetings displayed on calendars """
         return ""
 
     def cal_location(self):
+        """ The location name used by calendars """
         if self.location:
             return self.location.name
         else:
             return ""
 
     def cal_start(self):
+        """ The meeting start time used by calendars """
         return self.datetime
 
     def cal_end(self):
+        """ The meeting end time used by calendars """
         return self.datetime + self.duration
 
     def cal_link(self):
+        """ Link to be displayed on calendars """
         return reverse('meetings:detail', args=[self.id])
 
     def cal_guid(self):
+        """ Unique event id used by calendars """
         return "mtg" + str(self.id) + "@lnldb"
 
     def get_absolute_url(self):
@@ -110,6 +117,7 @@ class MtgAttachment(TimeStampedModel):
 
 
 class MeetingAnnounce(models.Model):
+    """ Contents of an email containing a meeting notice """
     meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE)
     events = models.ManyToManyField(BaseEvent, related_name="meetingannouncements", blank=True)
     subject = models.CharField(max_length=128)
@@ -126,6 +134,7 @@ class MeetingAnnounce(models.Model):
 
 @python_2_unicode_compatible
 class TargetEmailList(models.Model):
+    """ Represents a target email address (i.e. aliases) """
     name = models.CharField(max_length=16)
     email = models.EmailField()
 
@@ -134,6 +143,7 @@ class TargetEmailList(models.Model):
 
 
 class AnnounceSend(models.Model):
+    """ Log of when a meeting notice has been sent out """
     announce = models.ForeignKey(MeetingAnnounce, on_delete=models.CASCADE)
     sent_at = models.DateTimeField(auto_now_add=True)
     sent_success = models.BooleanField(default=False)
@@ -141,6 +151,7 @@ class AnnounceSend(models.Model):
 
 @python_2_unicode_compatible
 class MeetingType(models.Model):
+    """ Used to specify the type of meeting (i.e. Exec Board, General Body, etc.) """
     name = models.CharField(max_length=32)
 
     def __str__(self):
@@ -148,6 +159,7 @@ class MeetingType(models.Model):
 
 
 class CCNoticeSend(models.Model):
+    """ Contents of an email containing a meeting CC notice """
     meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name="meetingccnotices")
     events = models.ManyToManyField(BaseEvent, related_name="meetingccnoticeevents", blank=True)
     sent_at = models.DateTimeField(auto_now_add=True)

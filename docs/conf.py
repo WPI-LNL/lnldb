@@ -25,6 +25,7 @@ django.setup()
 
 
 # -- General configuration ------------------------------------------------
+import sphinx_rtd_theme
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
@@ -34,10 +35,12 @@ django.setup()
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.autodoc',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages']
+              'sphinx.ext.todo',
+              'sphinx.ext.coverage',
+              'sphinx.ext.viewcode',
+              'sphinx.ext.githubpages',
+              'sphinx_rtd_theme',
+              'sphinx_issues']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -53,8 +56,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'LNL Database'
-copyright = u'2017, Jake Merdich, Gabe Morell'
-author = u'Jake Merdich, Gabe Morell'
+copyright = u'2021, Jake Merdich, Gabe Morell, Tom Nurse'
+author = u'Jake Merdich, Gabe Morell, Tom Nurse'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -83,24 +86,26 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
-
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'agogo'
+html_theme = 'sphinx_rtd_theme'
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {'style_nav_header_background': 'black', 'analytics_id': 'G-QC0DJ5D8EP'}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_css_files = ['css/custom.css', 'https://use.fontawesome.com/releases/v5.6.3/css/all.css']
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -114,12 +119,10 @@ html_sidebars = {
     ]
 }
 
-
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'LNLDatabasedoc'
-
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -146,9 +149,8 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'LNLDatabase.tex', u'LNL Database Documentation',
-     u'Jake Merdich, Gabe Morell', 'manual'),
+     u'Jake Merdich, Gabe Morell, Tom Nurse', 'manual'),
 ]
-
 
 # -- Options for manual page output ---------------------------------------
 
@@ -158,7 +160,6 @@ man_pages = [
     (master_doc, 'lnldatabase', u'LNL Database Documentation',
      [author], 1)
 ]
-
 
 # -- Options for Texinfo output -------------------------------------------
 
@@ -171,13 +172,19 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+# -- Third-Party Settings -------------------------------------------------
+
+# Sphinx-issues
+issues_github_path = "WPI-LNL/lnldb"
+
 # -- Special Autoprocessing -----------------------------------------------
 
 # https://djangosnippets.org/snippets/2533/
 import inspect
 from django.utils.html import strip_tags
 from django.utils.encoding import force_text
-from django.utils import six
+import six
+
 
 def get_class_that_defined_method(meth):
     if six.PY2:
@@ -188,7 +195,7 @@ def get_class_that_defined_method(meth):
     else:
         if inspect.ismethod(meth):
             for cls in inspect.getmro(meth.__self__.__class__):
-               if cls.__dict__.get(meth.__name__) is meth:
+                if cls.__dict__.get(meth.__name__) is meth:
                     return cls
             meth = meth.__func__  # fallback to __qualname__ parsing
         if inspect.isfunction(meth):
@@ -197,6 +204,7 @@ def get_class_that_defined_method(meth):
             if isinstance(cls, type):
                 return cls
         return getattr(meth, '__objclass__', None)  # handle special descriptor objects
+
 
 def default_to_parent_docstr(app, what, name, obj, options, lines):
     if inspect.ismethod(obj) and obj.__doc__ is None and len(lines) == 0:
@@ -211,8 +219,9 @@ def default_to_parent_docstr(app, what, name, obj, options, lines):
 
 
 field_formatters = {
-        'to': lambda f,v: " :class:`~%s.%s`" % (f.related_model.__module__, f.related_model.__name__)
-        }
+    'to': lambda f, v: " :class:`~%s.%s`" % (f.related_model.__module__, f.related_model.__name__)
+}
+
 
 # Gives a pretty field description
 def format_field_name(model, field):
@@ -221,16 +230,17 @@ def format_field_name(model, field):
     args = field.deconstruct()[3]
     for arg, val in args.items():
         if arg in field_formatters:
-            args[arg] = field_formatters[arg](field,val)
+            args[arg] = field_formatters[arg](field, val)
         elif inspect.isfunction(val):
             args[arg] = val.__name__ + "()"
         elif isinstance(val, str):
             args[arg] = '"' + str(val) + '"'
-   
-    outargs = ["%s=%s" % (k,v) for k,v in args.items()]
+
+    outargs = ["%s=%s" % (k, v) for k, v in args.items()]
     out = "%s(%s)" % (field_type, ", ".join(outargs))
     return out
-    
+
+
 # Automatically generate a nice overview for each model
 def process_model(app, what, name, obj, options, lines):
     # This causes import errors if left outside the function
@@ -270,13 +280,15 @@ def process_model(app, what, name, obj, options, lines):
 
             # Add the field's type to the docstring
             if isinstance(field, RelatedField):
-                to = field.rel.to
-                lines.append(u':type %s: %s to :class:`~%s.%s`' % (field.name, type(field).__name__, to.__module__, to.__name__))
+                to = field.related_model
+                lines.append(
+                    u':type %s: %s to :class:`~%s.%s`' % (field.name, type(field).__name__, to.__module__, to.__name__))
             else:
                 lines.append(u':type %s: %s' % (field.name, type(field).__name__))
 
     # Return the extended docstring
     return lines
+
 
 # Properly document model fields by refetching from model._meta
 def process_modelfield(app, what, name, obj, options, lines):
@@ -321,10 +333,12 @@ def process_modelfield(app, what, name, obj, options, lines):
         del lines[:]
         field = obj.field
         model = field.model
-        lines.append("Reverse Manager for %s's :py:attr:`~%s.%s.%s`" % (model._meta.label, model.__module__, model.__name__, field.name))
+        lines.append("Reverse Manager for %s's :py:attr:`~%s.%s.%s`" %
+                     (model._meta.label, model.__module__, model.__name__, field.name))
 
     # Return the extended docstring
     return lines
+
 
 def setup(app):
     # Register the docstring processor with sphinx

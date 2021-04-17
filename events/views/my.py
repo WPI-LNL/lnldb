@@ -74,8 +74,7 @@ def myorgform(request):
         if form.is_valid():
             email_context = {'client_name': form.cleaned_data['client_name'], 'email': form.cleaned_data['email'],
                              'address': form.cleaned_data['address'], 'phone': form.cleaned_data['phone'],
-                             'fund_info': form.cleaned_data['fund_info'], 'user': request.user,
-                             'submitted_ip': request.META['REMOTE_ADDR']}
+                             'user': request.user, 'submitted_ip': request.META['REMOTE_ADDR']}
             email = generate_selfservice_notice_email(email_context)
             email.send()
             return render(request, 'org.service.html', context)
@@ -88,7 +87,7 @@ def myorgform(request):
 # LNL facing
 @login_required
 def myevents(request):
-    """ List Events That Have been CC'd / involved """
+    """ Lists events that a user has CC'd or been involved with """
     context = {'user': request.user, 'now': datetime.datetime.now(timezone.get_current_timezone()),
                'ccinstances': request.user.ccinstances.select_related('event__location').all(),
                'orgs': request.user.all_orgs.prefetch_related('events__location'),
@@ -151,7 +150,7 @@ def ccreport(request, eventid):
 
 @login_required
 def hours_list(request, eventid):
-    """ Lists a users' hours """
+    """ Lists a user's work hours """
     context = {}
     user = request.user
 
@@ -334,6 +333,7 @@ class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
 
 
 def survey_success(request):
+    """ Displayed to the user after successfully completing a survey """
     template = loader.get_template('default.html')
     return HttpResponse(template.render({
         'title': "Thank you!",
@@ -347,6 +347,7 @@ def survey_success(request):
 
 @login_required
 def office_hours(request):
+    """ Form for updating a user's office hours (Officers only) """
     context = {}
     user = request.user
 
@@ -371,6 +372,7 @@ def office_hours(request):
 
 @login_required
 def hours_update(request):
+    """ Form for posting an announcement regarding a temporary adjustment to a user's office hours (Officers only) """
     context = {}
     user = request.user
 

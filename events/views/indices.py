@@ -5,13 +5,14 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Avg, Count, Q
-from django.http import HttpResponse
-from django.shortcuts import render
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import render, reverse
 from django.utils import timezone
 
 from events.charts import SurveyVpChart, SurveyCrewChart, SurveyPricelistChart, SurveyLnlChart
 from events.models import BaseEvent, Workshop, CrewAttendanceRecord
 from helpers.challenges import is_officer
+from pages.models import OnboardingScreen, OnboardingRecord
 
 
 # FRONT 3 PAGES
@@ -26,14 +27,37 @@ def index(request):
 
 @login_required
 def admin(request, msg=None):
-    """ admin landing page """
-
+    """ Member landing page """
     context = {'msg': msg}
 
     if settings.LANDING_TIMEDELTA:
         delta = settings.LANDING_TIMEDELTA
     else:
         delta = 48
+
+    # Check for onboarding pages (if coming from an onboarding page, mark as viewed)
+    referer = request.META.get('HTTP_REFERER', '')
+    if not request.user.last_login:
+        request.user.last_login = timezone.now()
+        request.user.save()
+    if request.user.is_lnl and not request.user.onboarded and \
+            request.user.last_login > timezone.now() + timezone.timedelta(minutes=-1):
+        request.user.last_login = timezone.now() + timezone.timedelta(minutes=-1)
+        request.user.save()
+        return HttpResponseRedirect(reverse("pages:new-member"))
+    visited, created = OnboardingRecord.objects.get_or_create(user=request.user)
+    prev_page = referer.replace('/', '').split('onboarding')
+    try:
+        prev_screen = OnboardingScreen.objects.filter(slug=prev_page[1]).first()
+        if prev_screen:
+            visited.screens.add(prev_screen)
+    except IndexError:
+        pass
+    screens = OnboardingScreen.objects.filter(Q(users__in=[request.user]) | Q(groups__in=request.user.groups.all()))\
+        .exclude(id__in=visited.screens.all())
+    next_screen = screens.first()
+    if next_screen:
+        return HttpResponseRedirect(reverse('pages:onboarding-screen', args=[next_screen.slug]))
 
     # fuzzy delta
     now = timezone.now()
@@ -69,7 +93,7 @@ def dbg_land(request):
 
 
 @login_required
-@permission_required('events.view_event', raise_exception=True)
+@permission_required('events.view_events', raise_exception=True)
 def event_search(request):
     context = {}
     if request.GET:
@@ -89,6 +113,7 @@ def event_search(request):
 @login_required
 @permission_required('events.view_posteventsurveyresults', raise_exception=True)
 def survey_dashboard(request):
+    """ Dashboard for post-event survey results """
     now = timezone.now()
     year_ago = now - datetime.timedelta(days=365)
 
@@ -254,6 +279,7 @@ def survey_dashboard(request):
 
 
 def workshops(request):
+    """ Public workshops page """
     context = {
         'workshops': Workshop.objects.all(),
         'title': "Workshops",
@@ -267,6 +293,7 @@ def workshops(request):
 @login_required
 @permission_required('events.view_attendance_records', raise_exception=True)
 def attendance_logs(request):
+    """ View crew attendance logs (events) """
 
     headers = ['User', 'Event', 'Location', 'Checkin', 'Checkout']
 
@@ -283,6 +310,6 @@ def attendance_logs(request):
 
     paginator = Paginator(records, 50)
     page_number = request.GET.get('page', 1)
-    current_page = paginator.page(page_number)  # TODO: Change when switching to py3 (get_page)
+    current_page = paginator.get_page(page_number)
     context = {'records': current_page, 'title': 'Crew Logs', 'headers': headers}
     return render(request, 'access_log.html', context)

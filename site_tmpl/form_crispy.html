@@ -4,7 +4,7 @@
 {% block content %}
     <div class="row">
         <div class="col-md-12">
-                <h2> {{msg }} </h2>
+            <h2> {{msg }} </h2>
             {% if helper %}
                 {% crispy form helper %}
             {% else %}
@@ -15,6 +15,7 @@
 {% endblock %}
 
 {% block extras %}
+{{ form.media }}
 {% include "js_datetimepick.tmpl" %}
 {% include "js_phonelimit.tmpl" %}
 <script>

@@ -14,7 +14,7 @@
             <td class="w960" width="960">
                 <p align="left" class="article-title">{{ subject }}</p>
                 <div align="left" class="article-content">
-                <p> This is a reminder that you have a pending crew chief report for {{ reminder.event }}. </p>
+                <p> This is a reminder that you have a pending crew chief report for {{ reminder.event.event_name }}. </p>
 
                 <p>Submitting a crew chief report and recording crew hours are required parts of being a crew chief.
                 These tasks are expected to be completed shortly after an event while you still have all details of the event fresh in your mind.
@@ -32,7 +32,7 @@
 
                 <p>For your convenience, the Workorder PDF is attached.</p>
 
-                <p><b>{{ reminder.event }}</b><br>
+                <p><b>{{ reminder.event.event_name }}</b><br>
                 <i>{{ reminder.event.location }}</i><br>
                 Start: {{ reminder.event.datetime_start }}<br>
                 End: {{ reminder.event.datetime_end }}<br>

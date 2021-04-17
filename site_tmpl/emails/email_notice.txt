@@ -1,4 +1,5 @@
 {% load tz %}
+{% load lnldb_tags %}
 Meeting Notice for {{ object.meeting.datetime.date }}
 
 {{ object.message }}
@@ -6,5 +7,5 @@ Meeting Notice for {{ object.meeting.datetime.date }}
 Events
 
 {% for e in object.events.all reversed %}
-    {{ e.datetime_start|localtime|date:"m-d D" }}\t {{ e.event_name }}\t {% for s in e.eventservices %}{{ s.shortname }}&nbsp;{% endfor %}\t {{ e.datetime_start|localtime|time:"TIME_FORMAT" }}- {{ e.datetime_end.time }}\t {{ e.location }}\t
+    {{ e.datetime_start|localtime|date:"m-d D" }}\t {{ e.event_name|public_field }}\t {% for s in e.eventservices %}{{ s.shortname }}&nbsp;{% endfor %}\t {{ e.datetime_start|localtime|time:"TIME_FORMAT" }}- {{ e.datetime_end.time }}\t {{ e.location }}\t
 {% endfor %}

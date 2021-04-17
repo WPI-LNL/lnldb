@@ -28,8 +28,9 @@ from emails.generators import GenericEmailGenerator
 
 @login_required
 @require_GET
-@permission_required('devices.view_laptop_details', raise_exception=True)
+@permission_required('devices.view_laptop', raise_exception=True)
 def laptops_list(request):
+    """View a list of LNL's laptops"""
     laptops = Laptop.objects.filter(retired=False)
     return render(request, 'laptops/laptops_list.html', {"laptops": laptops})
 
@@ -38,6 +39,11 @@ def laptops_list(request):
 @require_GET
 @permission_required('devices.view_laptop_history', raise_exception=True)
 def laptop_history(request, id):
+    """
+    View a history of password retrievals and rotations for a given laptop
+
+    :param id: Primary key of laptop
+    """
     laptop = get_object_or_404(Laptop, retired=False, pk=id)
     password_retrievals = laptop.password_retrievals.all()
     password_rotations = laptop.password_rotations.all()
@@ -52,6 +58,11 @@ def laptop_history(request, id):
 @login_required
 @require_GET
 def laptop_user_password(request, id):
+    """
+    Retrieve the LNL user password for one of the laptops
+
+    :param id: Primary key of laptop
+    """
     laptop = get_object_or_404(Laptop, retired=False, pk=id)
     if not request.user.has_perm('devices.retrieve_user_password', laptop):
         raise PermissionDenied
@@ -67,6 +78,11 @@ def laptop_user_password(request, id):
 @login_required
 @require_GET
 def laptop_admin_password(request, id):
+    """
+    Retrieve the admin password for one of the laptops
+
+    :param id: Primary key of laptop
+    """
     laptop = get_object_or_404(Laptop, retired=False, pk=id)
     if not request.user.has_perm('devices.retrieve_admin_password', laptop):
         raise PermissionDenied
@@ -82,6 +98,11 @@ def laptop_admin_password(request, id):
 @require_POST
 @csrf_exempt
 def rotate_passwords(request):
+    """
+    Endpoint for updating the MacBook passwords once they've been rotated.
+
+    :returns: The old passwords so the MacBooks can complete the rotation
+    """
     data = json.loads(request.body)
     laptop = get_object_or_404(Laptop, retired=False, api_key_hash=sha256(data['apiKey'].encode('utf-8')).hexdigest())
     response_data = {"oldUserPassword": laptop.user_password, "oldAdminPassword": laptop.admin_password}
@@ -95,6 +116,7 @@ def rotate_passwords(request):
 @login_required
 @permission_required('devices.manage_mdm', raise_exception=True)
 def mdm_list(request):
+    """MDM Console Homepage"""
     laptops = Laptop.objects.filter(retired=False)
     return render(request, 'mdm/mdm_list.html', {'laptops': laptops})
 
@@ -102,6 +124,7 @@ def mdm_list(request):
 @login_required
 @permission_required('devices.manage_mdm', raise_exception=True)
 def install_client(request):
+    """Displays an agreement that the user must agree to before they can download the MDM Client installer"""
     context = {}
     if request.method == 'POST':
         form = ClientForm(request.POST)
@@ -125,6 +148,11 @@ def install_client(request):
 @require_POST
 @csrf_exempt
 def mdm_enroll(request):
+    """
+    Endpoint for starting the enrollment process. Must be contacted directly by the device being enrolled.
+
+    :returns: Relative path to the link to complete the enrollment process (if client token is valid)
+    """
     data = json.loads(request.body)
     if data['token'] == settings.MDM_TOKEN:
         try:
@@ -144,6 +172,12 @@ def mdm_enroll(request):
 @login_required
 @permission_required('devices.manage_mdm', raise_exception=True)
 def complete_enrollment(request, pk):
+    """
+    Launched once the installation process is completed on a new device. Prompts the user for additional administrative
+    details such as the asset tag number to complete the enrollment process.
+
+    :param pk: Primary key of device
+    """
     context = {}
     if str(pk) == '0':
         raise PermissionDenied
@@ -177,6 +211,12 @@ def complete_enrollment(request, pk):
 @require_POST
 @csrf_exempt
 def mdm_checkin(request):
+    """
+    Endpoint for device check-in. Managed devices will check in each time a new user logs onto the device.
+
+    :returns: JSON - If resources are pending install, includes the identifiers needed for the client to fetch and \
+    install them. Returns {'status': 200} otherwise.
+    """
     data = json.loads(request.body)
     laptop = get_object_or_404(Laptop, api_key_hash=sha256(data['APIKey'].encode('utf-8')).hexdigest(),
                                mdm_enrolled=True)
@@ -231,6 +271,12 @@ def mdm_checkin(request):
 @require_POST
 @csrf_exempt
 def install_confirmation(request):
+    """
+    Endpoint for accepting receipt of install. Managed devices should contact this endpoint anytime new resources are
+    installed. If the installation of a resource fails, the Webmaster will be notified.
+
+    :returns: JSON - {'status': 200}
+    """
     data = json.loads(request.body)
     device = get_object_or_404(Laptop, api_key_hash=sha256(data['APIKey'].encode('utf-8')).hexdigest(),
                                mdm_enrolled=True)
@@ -301,6 +347,13 @@ def install_confirmation(request):
 
 
 def get_profile_metadata(config, timestamp):
+    """
+    Retrieve additional metadata from profile data
+
+    :param config: Configuration Profile object
+    :param timestamp: Timestamp at time of install
+    :returns: Dictionary with profile metadata - {'expires': <datetime>, 'version': <string>}
+    """
     with open(config.profile) as profile:
         context = json.load(profile)
         data = {}
@@ -333,6 +386,13 @@ def get_profile_metadata(config, timestamp):
 
 
 def dock_app_list(data):
+    """
+    Used in generating macOS configuration profiles. Generates a dictionary with details about applications that should
+    be added to the Dock.
+
+    :param data: Form data (Dictionary)
+    :returns: Dictionary - {'name': <string>, 'path': <string>}
+    """
     apps = []
     count = data['extra_dock'] + 1
     for i in range(count):
@@ -344,6 +404,12 @@ def dock_app_list(data):
 
 
 def fw_app_list(data):
+    """
+    Used in generating macOS configuration profiles. Generates a dictionary used in configuring Firewall settings.
+
+    :param data: Form data (Dictionary)
+    :returns: Dictionary - {'bundle_id': <string>, 'allowed': <boolean>}
+    """
     apps = []
     count = data['extra_firewall']
     for i in range(count):
@@ -355,6 +421,13 @@ def fw_app_list(data):
 
 
 def get_payloads(data):
+    """
+    Generates a dictionary which specifies which payloads are active in a given profile and what their current
+    version numbers are.
+
+    :param data: Form data (Dictionary)
+    :returns: Dictionary of payload versions
+    """
     types = ['store', 'siri', 'desktop', 'dock', 'energy', 'finder', 'filevault', 'firewall', 'itunes', 'login',
              'passcode', 'password', 'restrictions', 'safari', 'screensaver', 'setup', 'software', 'diagnostics',
              'policy', 'preferences', 'time_machine']
@@ -366,6 +439,11 @@ def get_payloads(data):
 
 
 def generate_ids():
+    """
+    Generates UUIDs for each of the profile's payloads.
+
+    :returns: Dictionary of payload identifiers
+    """
     payloads = ['info', 'ad_tracking', 'airdrop', 'store', 'siri', 'desktop', 'desktop_services', 'dock', 'energy',
                 'filevault', 'finder', 'firewall', 'itunes', 'login', 'passcode', 'password', 'restrictions', 'safari',
                 'screensaver', 'setup', 'software', 'diagnostics', 'policy', 'policy_2', 'preferences',
@@ -378,6 +456,13 @@ def generate_ids():
 
 
 def load_ids(data):
+    """
+    Reassembles payload identifiers. This is necessary because the MDM does not store the full payload identifiers
+    with the profile data.
+
+    :param data: Dictionary of payload identifiers
+    :returns: Dictionary of payload identifiers
+    """
     identifiers = {}
     base_id = settings.MDM_UUID
     for payload in data:
@@ -389,6 +474,12 @@ def load_ids(data):
 @permission_required('devices.manage_mdm', raise_exception=True)
 @never_cache
 def list_profiles(request, pk=0):
+    """
+    When given a `pk` value, this view will list all the configuration profiles for a given device. When `pk` is not
+    supplied, the view will list all the profiles in the MDM.
+
+    :param pk: Primary key of device (Optional)
+    """
     context = {'items': [], 'resource_type': 'Profile'}
     handle_expired_profiles()
     if pk == 0:
@@ -434,6 +525,14 @@ def list_profiles(request, pk=0):
 @login_required
 @permission_required('devices.manage_mdm', raise_exception=True)
 def link_profiles(request, device=None, profile=None):
+    """
+    Assign configuration profiles to a device. If a primary key value for `device` is supplied, a list of profiles will
+    be displayed. The user can then select which profiles to assign to the respective device. The opposite is true
+    when a primary key value is supplied for `profile`.
+
+    :param device: Primary key of device (Optional)
+    :param profile: Primary key of configuration profile (Optional)
+    """
     context = {}
     if device is not None:
         resource_type = "profiles"
@@ -484,6 +583,11 @@ def link_profiles(request, device=None, profile=None):
 @login_required
 @permission_required('devices.manage_mdm', raise_exception=True)
 def profile_devices(request, pk):
+    """
+    List all devices that are linked to a given profile
+
+    :param pk: Primary key of configuration profile
+    """
     context = {}
     profile = get_object_or_404(ConfigurationProfile, pk=pk)
     to_remove = InstallationRecord.objects.filter(profile=profile, device__pending__in=[profile], active=True,
@@ -507,6 +611,11 @@ def profile_devices(request, pk):
 @login_required
 @permission_required('devices.manage_mdm', raise_exception=True)
 def generate_profile(request, pk=0):
+    """
+    Create or edit a macOS configuration profile
+
+    :param pk: Primary key of configuration profile (Optional)
+    """
     context = {}
     extra_dock = int(request.POST.get('extra_dock', 0))
     extra_firewall = int(request.POST.get('extra_firewall', 0))
@@ -600,6 +709,16 @@ def generate_profile(request, pk=0):
 
 @require_GET
 def mobile_config(request, profile_id, action='Install'):
+    """
+    Endpoint for generating and downloading a macOS configuration profile. The request must include the MDM Client
+    token for authentication purposes.
+
+    If `action` is set to `Uninstall`, the resulting file will cause existing copies of the profile to be removed from
+    the device.
+
+    :param profile_id: Primary key of configuration profile
+    :param action: Either 'Install' or 'Uninstall'
+    """
     config = get_object_or_404(ConfigurationProfile, pk=profile_id)
     if not request.GET or 'token' not in request.GET:
         raise PermissionDenied
@@ -624,6 +743,11 @@ def mobile_config(request, profile_id, action='Install'):
 @login_required
 @permission_required('devices.manage_mdm', raise_exception=True)
 def remove_device(request, pk):
+    """
+    Removes a device from the MDM. Presents warnings and instructions for how to complete the operation correctly.
+
+    :param pk: Primary key of device
+    """
     device = get_object_or_404(Laptop, pk=pk)
     context = {}
     if request.method == 'POST':
@@ -651,6 +775,7 @@ def remove_device(request, pk):
 
 
 def handle_expired_profiles():
+    """Checks for expired profiles and updates listings accordingly"""
     expired_profiles = InstallationRecord.objects.filter(expires__lte=timezone.now(), active=True)
     for record in expired_profiles:
         device = record.device
@@ -663,6 +788,7 @@ def handle_expired_profiles():
 @login_required
 @permission_required('devices.view_removal_password', raise_exception=True)
 def removal_password(request):
+    """Displays the password that can be used to manually remove configuration profiles from managed devices"""
     context = {'title': 'Profile Removal Password', 'password': settings.MDM_PASS, 'now': timezone.now()}
     return render(request, 'laptops/password.html', context)
 
@@ -670,6 +796,19 @@ def removal_password(request):
 @login_required
 @permission_required('devices.manage_mdm', raise_exception=True)
 def remove_profile(request, profile, device=0):
+    """
+    If a primary key value is supplied for both the `device` and `profile`, the user will be able to remove the
+    assignment between the profile and that particular device. If only the `profile` is provided, all device assignments
+    for the profile will be removed and the profile data will be deleted. In both cases, two options will be presented
+    to the user:
+
+        1.) Mark the profile as removed (if the profile had already been removed manually)
+
+        2.) Instruct the MDM to remove the profile automatically at the next checkin
+
+    :param profile: Primary key of configuration profile
+    :param device: Primary key of device (Optional)
+    """
     context = {}
     config = get_object_or_404(ConfigurationProfile, pk=profile)
     if device == 0:
@@ -757,6 +896,10 @@ def remove_profile(request, profile, device=0):
 @login_required
 @permission_required('devices.add_apps', raise_exception=True)
 def add_app(request):
+    """
+    Administrators can use this page to add new managed applications to the MDM. Non-admin users will have the option
+    to request new software. Requests from non-admins will trigger a notification for the Webmaster.
+    """
     context = {}
     title = "New Application"
     if not request.user.has_perm('devices.manage_apps'):
@@ -787,12 +930,19 @@ def add_app(request):
 @login_required
 @permission_required('devices.view_apps', raise_exception=True)
 def app_list(request):
+    """Lists all the managed applications"""
     return render(request, 'mdm/app_list.html', {})
 
 
 @login_required
 @permission_required('devices.manage_apps', raise_exception=True)
 def update_app_info(request, pk):
+    """
+    Update the metadata for a managed application. Including the version number will allow the application to be
+    deployed through the MDM.
+
+    :param pk: Primary key of managed application
+    """
     context = {}
 
     app = get_object_or_404(MacOSApp, pk=pk)
@@ -816,6 +966,12 @@ def update_app_info(request, pk):
 @login_required
 @permission_required('devices.view_apps', raise_exception=True)
 def list_apps(request, pk=0):
+    """
+    If a value is provided for `pk`, this will list all the managed applications assigned to the respective device.
+    Otherwise this will list all the managed apps under the MDM.
+
+    :param pk: Primary key of device (Optional)
+    """
     context = {'items': [], 'resource_type': 'App'}
 
     if pk == 0:
@@ -863,6 +1019,11 @@ def list_apps(request, pk=0):
 @login_required
 @permission_required('devices.manage_apps', raise_exception=True)
 def list_app_devices(request, pk):
+    """
+    List all devices linked to a specific app
+
+    :param pk: Primary key of managed application
+    """
     context = {}
     app = get_object_or_404(MacOSApp, pk=pk)
     to_remove = Laptop.objects.filter(apps_remove__in=[app])
@@ -879,6 +1040,14 @@ def list_app_devices(request, pk):
 @login_required
 @permission_required('devices.manage_apps', raise_exception=True)
 def link_apps(request, device=None, app=None):
+    """
+    Assign managed apps to a device. If a primary key value for `device` is supplied, a list of managed applications
+    will be displayed. The user can then select which applications to assign to the respective device. The opposite is
+    true when a primary key value is supplied for `app`.
+
+    :param device: Primary key of device (Optional)
+    :param app: Primary key of managed application (Optional)
+    """
     context = {}
 
     if device is not None:
@@ -930,6 +1099,19 @@ def link_apps(request, device=None, app=None):
 @login_required
 @permission_required('devices.manage_apps', raise_exception=True)
 def remove_app(request, app, device=0):
+    """
+    If a primary key value is supplied for both the `device` and `app`, the user will be able to remove the
+    assignment between the managed application and that particular device. If only the `app` is provided, all device
+    assignments for the application will be removed and the app will no longer be available to devices under the MDM.
+    In both cases, two options will be presented to the user:
+
+        1.) Mark the application as removed (if the app had already been removed manually)
+
+        2.) Instruct the MDM to uninstall the application automatically at the next checkin
+
+    :param app: Primary key of managed application
+    :param device: Primary key of device (Optional)
+    """
     context = {}
     app = get_object_or_404(MacOSApp, pk=app)
     if device == 0:
@@ -1009,7 +1191,7 @@ def remove_app(request, app, device=0):
 @login_required
 @permission_required('devices.manage_mdm', raise_exception=True)
 def logs(request):
-
+    """Displays logs detailing what was installed on what devices and when"""
     def get_timestamp(data):
         return data.get('timestamp')
 
@@ -1036,6 +1218,6 @@ def logs(request):
 
     paginator = Paginator(events, 50)
     page_number = request.GET.get('page', 1)
-    current_page = paginator.page(page_number)  # TODO: Change when switching to py3 (get_page)
+    current_page = paginator.get_page(page_number)
     context = {'headers': ['Timestamp', 'Event'], 'title': 'Install Log', 'events': current_page}
     return render(request, 'access_log.html', context)

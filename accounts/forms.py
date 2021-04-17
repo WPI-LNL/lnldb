@@ -24,16 +24,13 @@ class UserEditForm(FieldAccessForm):
         self.helper.form_class = "form-horizontal"
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-8'
+        password = None
+        if instance_user == request_user or request_user.is_superuser:
+            password = HTML("""<div class="col-lg-offset-2 col-lg-8">
+            <a href="{% url 'accounts:password' object.pk %}">Set a password for non-SSO login</a></div>""")
         layout = [
-            Fieldset("User Info",
-                     'first_name', 'last_name', 'username', 'email', 'nickname',
-                     HTML("""
-                 <div class="col-lg-offset-2 col-lg-8">
-                     <a href="{% url 'accounts:password' object.pk %}">Set a password for non-SSO login</a>
-                 </div>
-                 """)),
-            Fieldset("Contact Info",
-                     'phone', 'carrier', Field('addr', rows=3)),
+            Fieldset("User Info", 'first_name', 'last_name', 'username', 'email', 'nickname', password),
+            Fieldset("Contact Info", 'phone', 'carrier', Field('addr', rows=3)),
         ]
         if request_user.is_lnl:
             layout.extend([
@@ -68,7 +65,7 @@ class UserEditForm(FieldAccessForm):
         )
         hasperm = FieldAccessLevel(
             lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
-            enable=('username', 'email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year',
+            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year',
                     'student_id')
         )
         edit_groups = FieldAccessLevel(

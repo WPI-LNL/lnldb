@@ -1,6 +1,6 @@
 {% extends 'base_admin.html' %}
 {% load markdown_deux_tags %}
-{% load bootstrap_toolkit %}
+{% load bootstrap3 %}
 {% load permissionif %}
 {% load lnldb_tags %}
 {% block content %}
@@ -124,7 +124,7 @@
                                         {% if announce.events.exists %}
                                             <b>Events:</b> <br/>
                                             {% for event in announce.events.all %}
-                                                {{ event }}<br/>
+                                                {{ event.event_name|public_field }}<br/>
                                             {% endfor %}
                                         {% endif %}
 
@@ -152,7 +152,7 @@
                                         {% if announce.events.exists %}
                                             <b>Events:</b> <br/>
                                             {% for event in announce.events.all %}
-                                                {{ event }}<br/>
+                                                {{ event.event_name|public_field }}<br/>
                                             {% endfor %}
                                         {% endif %}
 
@@ -185,7 +185,7 @@
                         </tr>
                         {% for e in events %}
                             <tr data-toggle="collapse" data-target="#entry{{e.id}}">
-                                <td><a href="{% url "events:detail" e.id %}">{{ e.event_name }}</a></td>
+                                <td><a href="{% url "events:detail" e.id %}">{{ e.event_name|public_field }}</a></td>
                                 <td>
                                     {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
                                     {% if e.sound %} {{ e.sound.shortname }} {% endif %}
@@ -218,7 +218,7 @@
                             <tr>
                                 <td colspan="6">
                                     <div class="collapse" id="entry{{e.id}}">
-                                    {{ e.description|markdown }}
+                                    {{ e.description|public_field|markdown }}
                                     </div>
                                 </td>
                             </tr>
@@ -236,7 +236,7 @@
                         </tr>
                         {% for e in future %}
                             <tr data-toggle="collapse" data-target="#entry{{e.id}}">
-                                <td><a href="{% url "events:detail" e.id %}">{{ e.event_name }}</a></td>
+                                <td><a href="{% url "events:detail" e.id %}">{{ e.event_name|public_field }}</a></td>
                                 <td>
                                     {% if e.lighting %} {{ e.lighting.shortname }} {% endif %}
                                     {% if e.sound %} {{ e.sound.shortname }} {% endif %}
@@ -262,7 +262,7 @@
                             <tr>
                                 <td colspan="6">
                                     <div class="collapse" id="entry{{e.id}}">
-                                    {{ e.description|markdown }}
+                                    {{ e.description|public_field|markdown }}
                                     </div>
                                 </td>
                             </tr>
