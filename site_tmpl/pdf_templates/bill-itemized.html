@@ -15,19 +15,19 @@
                 <tr>
                 <td class="logo"><img id="logo-img" src="{% static 'img/pdf-lnl-logo.png' %}" width="200" height="150"></td>
                 <td class="lnl-contact">
-                <h2 class="contact-name">WPI Lens and Lights</h2>
                 <ul class="list-unstyled">
-                            <li>c/o Student Activities Office</li>
-                            <li>100 Institute Road</li>
-                            <li>Worcester, MA  01609-2280</li>
-                            <br>
-                            <li>Office: 508-831-5595</li>
-                            <!--<li>Fax: 508-831-6045</li>-->
-                            <li><a href="mailto:lnl@wpi.edu" class="unstyled">lnl@wpi.edu</a></li>
-                            {% if request %}
-                            <li><a href="{{ request.scheme }}://{{ request.get_host }}/" class="unstyled">{{ request.scheme }}://{{ request.get_host }}/</a></li>
-                            {% endif %}
-                        </ul>
+                    <h2 class="contact-name">WPI&nbsp;Lens&nbsp;and&nbsp;Lights</h2>
+                    <li>c/o Student Activities Office</li>
+                    <li>100 Institute Road</li>
+                    <li>Worcester, MA  01609-2280</li>
+                    <br>
+                    <li>Office: 508-831-5595</li>
+                    <li><a href="mailto:lnl@wpi.edu" class="unstyled">lnl@wpi.edu</a></li>
+                    {% if request %}
+                    <li><a href="{{ request.scheme }}://{{ request.get_host }}/" class="unstyled">{{ request.scheme }}://{{ request.get_host }}/</a></li>
+                    {% endif %}
+                    <br>
+                </ul>
 
                 </td>
                 <td class="head">
@@ -37,12 +37,12 @@
                 </td>
                 </tr>
             </table>
-            <table class="info">
+            <table class="info" style="font-weight: normal">
                 <tr>
                     <td width="200"><b>Sponsoring Organizations:</b></td>
-                    <td>{{ event_data.event.org.all|join:", " }}</td>
+                    <td width="300">{{ event_data.event.org.all|join:", " }}</td>
                     <td width="100"><b>Event Start:</b></td>
-                    <td>{{ event_data.event.datetime_start|localtime|date }}</td>
+                    <td width="200">{{ event_data.event.datetime_start|localtime|date }}</td>
                 </tr>
                 <tr>
                     <td><b>Billed Account:</b></td>
@@ -51,11 +51,11 @@
                     <td>{{ event_data.event.datetime_end|localtime|date }}</td>
                 </tr>
             </table>
-            <b class="info">Description:</b> {{ event_data.event.description|public_field }}
+            <b class="info">Overview:</b> {{ event_data.event.description|public_field }}
             <hr>
             <table class="line-items">
                 <tr>
-                    <th>Description</th>
+                    <th style="text-align: left">Description</th>
                     <th width="50">Cost</th>
                 </tr>
                 </table><hr>
