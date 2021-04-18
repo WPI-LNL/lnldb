@@ -175,7 +175,7 @@
                     <li><a href="#billing" data-toggle="tab">Billing</a></li>
                 {% endpermission %}
                 <li><a href="#files" data-toggle="tab">Files</a></li>
-                {% permission request.user has 'events.view_posteventsurvey' %}
+                {% permission request.user has 'events.view_posteventsurveyresults' of event.surveys.first %}
                     <li><a href="#survey" data-toggle="tab">Survey</a></li>
                 {% endpermission %}
                 <li><a href="#history" data-toggle="tab">History</a></li>
@@ -294,7 +294,7 @@
                                 <td> {{ event.billed_in_bulk }} </td>
                             </tr>
                         {% endpermission %}
-                        {% permission request.user has 'events.view_posteventsurvey' %}
+                        {% permission request.user has 'events.view_posteventsurveyresults' of event.surveys.first %}
                             <tr>
                                 <th>Survey</th>
                                 <td>
@@ -866,7 +866,7 @@
                         {% endfor %}
                     </table>
                 </div>
-                {% permission request.user has 'events.view_posteventsurvey' %}
+                {% permission request.user has 'events.view_posteventsurveyresults' of event.surveys.first %}
                 <div id="survey" class="tab-pane">
                     <h2>Survey results</h2>
                     {% if survey_results %}

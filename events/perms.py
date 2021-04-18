@@ -7,6 +7,7 @@ from permission.utils.field_lookup import field_lookup
 
 logger = logging.getLogger(__name__)
 
+
 class AssocUsersCustomPermissionLogic(PermissionLogic):
     field_name = 'authorized_users'
     perms = []
@@ -44,7 +45,7 @@ class AssocUsersCustomPermissionLogic(PermissionLogic):
                 if hasattr(user, 'all'):
                     authorized_users.extend(user.all())
                     authorized_users.remove(user)
-            if (user_obj in authorized_users):
+            if user_obj in authorized_users:
                 if perm in self.denied:
                     logger.debug("%s - DENIED for %s in lookup '%s'" % (perm, user_obj, lookup))
                     raise PermissionDenied()
@@ -60,6 +61,11 @@ class CrewChiefPermLogic(AssocUsersCustomPermissionLogic):
              'events.view_hidden_event', 'events.edit_event_fund',
              'events.view_event_billing', 'events.adjust_event_charges',
              'events.edit_event_hours', 'events.event_view_sensitive')
+
+
+class CrewChiefSurveyPerms(AssocUsersCustomPermissionLogic):
+    field_name = 'event__ccinstances__crew_chief'
+    perms = ('events.view_posteventsurveyresults')
 
 
 class EventContactPermLogic(AssocUsersCustomPermissionLogic):
@@ -128,4 +134,5 @@ PERMISSION_LOGICS = (
     ('events.Organization', OrgMemberPermLogic()),
     ('events.Organization', OrgOwnerPermLogic()),
     ('events.CCReport', ReportAuthorPermLogic()),
+    ('events.PostEventSurvey', CrewChiefSurveyPerms()),
 )
