@@ -5,7 +5,7 @@
     <div class="row">
         <form method="post" action="" class="{{ form.helper.form_class }}" enctype="multipart/form-data">
             <div class="col-md-12 px-3">
-                <h2> {{msg }} </h2>
+                <h2> {{ msg }} </h2>
                 {% if helper %}
                     {% crispy form helper %}
                 {% else %}
@@ -35,8 +35,12 @@
             $("#id_datetime_end_1").data("timepicker").setTime(time);
         });
         var readOnly = document.getElementsByClassName("r");
-        for (var i = 0; i < readOnly.length; i++){
+        for (var i = 0; i < readOnly.length; i++) {
             readOnly[i].readOnly = true;
+        }
+        let help_btns = document.querySelectorAll('.wmd-wrapper .row .col-md-6 h4');
+        for (let btn of help_btns) {
+            btn.innerHTML = "Preview";
         }
     });
 </script>
