@@ -91,6 +91,14 @@ SECRET_KEY = env.str("SECRET_KEY", "I am insecure.")
 SNIPE_URL = env.str('SNIPE_URL', '')
 SNIPE_API_KEY = env.str('SNIPE_API_KEY', '')
 
+SLACK_TOKEN = env.str('SLACK_BOT_TOKEN', None)
+
+SLACK_TARGET_GENERAL = env.str('SLACK_TARGET_GENERAL', None)
+SLACK_TARGET_EXEC = env.str('SLACK_TARGET_EXEC', None)
+SLACK_TARGET_ACTIVE = env.str('SLACK_TARGET_ACTIVE', None)
+SLACK_TARGET_WEBDEV = env.str('SLACK_TARGET_WEBDEV', None)
+SLACK_TARGET_TESTING = env.str('SLACK_TARGET_TESTING', None)
+
 SAML2_AUTH = {
     'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://samltest.id/saml/idp'),
     'DEFAULT_NEXT_URL': '/db/',
@@ -305,6 +313,7 @@ INSTALLED_APPS = (
     'mptt',
     'devices',
     'api',
+    'slack',
 
     'bootstrap3',
     'crispy_forms',

@@ -93,6 +93,7 @@ Table of Contents
    reference/pages
    reference/pdfs
    reference/projection
+   reference/slack
 
 .. toctree::
    :maxdepth: 2
