@@ -137,6 +137,8 @@ for key in DATABASES:
             'init_command': 'SET NAMES utf8mb4'
         })  # Now we have a mild degree of confidence :-) Oh, MySQL....
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 # Local time zone for this installation. Choices can be found here:

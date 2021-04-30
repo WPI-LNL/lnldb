@@ -70,7 +70,7 @@ class OfficerViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(first_name__iexact=first_name)
         if last_name is not None:
             queryset = queryset.filter(last_name__iexact=last_name)
-        if queryset.count() is 0:
+        if queryset.count() == 0:
             raise NotFound(detail='Not found', code=404)
         return queryset
 
@@ -81,7 +81,7 @@ class HourViewSet(viewsets.ReadOnlyModelViewSet):
 
     def list(self, request):
         queryset = self.get_queryset()
-        if queryset.count() is 0:
+        if queryset.count() == 0:
             content = {'204': 'No entries were found for the specified parameters'}
             return Response(content, status=status.HTTP_204_NO_CONTENT)
         serializer = HourSerializer(queryset, many=True)
@@ -113,7 +113,7 @@ class ChangeViewSet(viewsets.ReadOnlyModelViewSet):
 
     def list(self, request):
         queryset = self.get_queryset()
-        if queryset.count() is 0:
+        if queryset.count() == 0:
             content = {'204': 'No updates were found for the specified parameters'}
             return Response(content, status=status.HTTP_204_NO_CONTENT)
         serializer = ChangeSerializer(queryset, many=True)
@@ -136,7 +136,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
     def list(self, request):
         queryset = self.get_queryset()
-        if queryset.count() is 0:
+        if queryset.count() == 0:
             content = {'204': 'No alerts were found for the specified parameters'}
             return Response(content, status=status.HTTP_204_NO_CONTENT)
         serializer = NotificationSerializer(queryset, many=True)
@@ -166,7 +166,7 @@ class EventViewSet(viewsets.ReadOnlyModelViewSet):
     # For now, do not accept new event submissions through the API (the workorder tool already does that well)
     def list(self, request):
         queryset = self.get_queryset()
-        if queryset.count() is 0:
+        if queryset.count() == 0:
             content = {'204': 'No events could be found with the specified parameters'}
             return Response(content, status=status.HTTP_204_NO_CONTENT)
         serializer = EventSerializer(queryset, many=True)
@@ -274,7 +274,7 @@ class SitemapViewSet(viewsets.ReadOnlyModelViewSet):
 
     def list(self, request):
         (pages, redirects) = self.get_queryset()
-        if pages.count() is 0 and redirects.count() is 0:
+        if pages.count() == 0 and redirects.count() == 0:
             content = {'204': 'No data was found for the specified parameters'}
             return Response(content, status=status.HTTP_204_NO_CONTENT)
         page_serializer = CustomPageSerializer(pages, many=True)

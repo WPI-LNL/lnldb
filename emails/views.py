@@ -128,7 +128,7 @@ def poke_cc(request):
     context = {}
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False) \
         .filter(datetime_start__gt=timezone.now()).exclude().distinct()
-    if events.count() is 0:
+    if events.count() == 0:
         return render(request, 'default.html',
                       {'title': 'Error 404: No events found', 'NO_FOOT': True,
                        'message': 'It appears there are no events in need of a crew chief'}, status=404)

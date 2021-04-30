@@ -474,7 +474,7 @@ def checkin(request):
     for event in events:
         if event.max_crew and event.crew_attendance.filter(active=True).count() == event.max_crew:
             events = events.exclude(pk=event.pk)
-    if events.count() is 0:
+    if events.count() == 0:
         context['page'] = {"title": "There are currently no events available for checkin",
                            "body": "<a href='" + reverse("events:crew-tracker") + "' class='btn btn-primary'>Back</a>"}
         return render(request, 'static_page.html', context)
@@ -659,7 +659,7 @@ def bulk_checkin(request):
             if event.max_crew and event.crew_attendance.filter(active=True).count() == event.max_crew:
                 events = events.exclude(pk=event.pk)
 
-        if events.count() is 0:
+        if events.count() == 0:
             context['page'] = {"title": "Hmm. We couldn't find any eligible events.",
                                "body": "<p>If you are not a crew chief, please use the standard checkin / checkout "
                                        "tools.<br><br></p><a href='" + reverse("events:crew-tracker") +
