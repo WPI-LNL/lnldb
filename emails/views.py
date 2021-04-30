@@ -4,8 +4,10 @@ from meetings.models import CCNoticeSend, MeetingAnnounce
 from .forms import SrvAnnounceSendForm, TargetedSMSForm, SMSForm, PokeCCForm
 from .generators import generate_web_service_email, generate_sms_email, generate_poke_cc_email_content, \
     BasicEmailGenerator, GenericEmailGenerator
+from slack.api import slack_post
 from events.models import BaseEvent
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
@@ -52,6 +54,16 @@ def mk_srv_announce(request):
             notice = form.cleaned_data
             email = generate_web_service_email(notice)
             email.send()
+            if notice['slack_channel'] not in ['', None]:
+                if not request.user.has_perm('slack.post_officer'):
+                    messages.add_message(request, messages.WARNING, 'Failed to post to Slack: Permission denied')
+                    return HttpResponseRedirect(reverse('home'))
+                message = notice['message'].replace('**', '&&').replace('* ', '*&').replace('*', '_')\
+                    .replace('_&', '- ').replace('&&', '*').replace('~~', '~')
+                response = slack_post(notice['slack_channel'], message, username='LNL Webmaster')
+                if not response['ok']:
+                    messages.add_message(request, messages.WARNING,
+                                         'There was an error posting to Slack: %s' % response['error'])
             return HttpResponseRedirect(reverse('home'))
         else:
             context['form'] = form
@@ -144,6 +156,34 @@ def poke_cc(request):
                     context={'CUSTOM_URL': True, 'UNSUB': True}
                 )
                 email.send()
+                if form.cleaned_data['slack'] is True:
+                    if not request.user.has_perm('slack.post_officer'):
+                        messages.add_message(request, messages.WARNING, 'Failed to post to Slack: Permission denied')
+                        return HttpResponseRedirect(reverse('home'))
+                    body = preview.replace('<strong>', '>*').replace('</strong>', '*').replace("a href='", '')\
+                        .replace("'>", '|').replace('</a', '')
+                    message = body.split('<hr>')[0]
+                    details = body.split('<hr>')[1]
+                    blocks = [
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": message
+                            }
+                        },
+                        {
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": details
+                            }
+                        },
+                    ]
+                    response = slack_post(settings.SLACK_TARGET_ACTIVE, message, blocks, username='LNL Vice President')
+                    if not response['ok']:
+                        messages.add_message(request, messages.WARNING,
+                                             'There was an error posting to Slack: %s' % response['error'])
                 return HttpResponseRedirect(reverse("home"))
     else:
         form = PokeCCForm()

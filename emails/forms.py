@@ -3,16 +3,28 @@ from crispy_forms.bootstrap import FormActions
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Field, Layout, Submit, Div, HTML
 from django import forms
+from django.conf import settings
 from django.utils import timezone
 from pagedown.widgets import PagedownWidget
 
-from .models import ServiceAnnounce, SMSMessage
+from .models import SMSMessage, aliases
 from events.models import BaseEvent, ServiceInstance
 
 
-class SrvAnnounceSendForm(forms.ModelForm):
+class SrvAnnounceSendForm(forms.Form):
+    subject = forms.CharField(max_length=128)
+    message = forms.CharField(widget=PagedownWidget)
+    email_to = forms.ChoiceField(choices=aliases)
+    slack_channel = forms.ChoiceField(choices=(
+        ('', 'No, email only'),
+        (settings.SLACK_TARGET_WEBDEV, '#webdev'),
+        (settings.SLACK_TARGET_EXEC, '#exec'),
+        (settings.SLACK_TARGET_ACTIVE, '#active'),
+        (settings.SLACK_TARGET_GENERAL, '#general'),
+        (settings.SLACK_TARGET_TESTING, '#api-testing')
+    ), label='Post in Slack?', required=False, help_text='Select a channel to post on Slack as well')
+
     def __init__(self, *args, **kwargs):
-        super(SrvAnnounceSendForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal container'
         self.helper.layout = Layout(
@@ -32,26 +44,24 @@ class SrvAnnounceSendForm(forms.ModelForm):
             ),
             Div(
                 'message',
+                css_class="container"
+            ),
+            Div(
+                Div(
+                    'slack_channel',
+                    css_class="col-md-6"
+                ),
+                css_class="col-md-12"
+            ),
+            Div(
+                HTML("<br>"),
                 FormActions(
                     Submit('save', 'Send'),
                 ),
-                css_class="container"
+                css_class="col-md-12"
             ),
         )
-
-    def save(self, commit=True):
-        self.instance = super(SrvAnnounceSendForm, self).save(commit=False)
-        if commit:
-            self.instance.save()
-            self.save_m2m()
-        return self.instance
-
-    class Meta:
-        model = ServiceAnnounce
-        fields = ('subject', 'message', 'email_to')
-        widgets = {
-            'message': PagedownWidget(),
-        }
+        super(SrvAnnounceSendForm, self).__init__(*args, **kwargs)
 
 
 class SMSForm(forms.ModelForm):
@@ -95,6 +105,7 @@ class PokeCCForm(forms.Form):
     message = forms.CharField(widget=forms.Textarea)
     email_to = forms.ChoiceField(choices=(('lnl-active@wpi.edu', 'Active Members'),
                                           ('gr-lnl-needcc@wpi.edu', 'Need CCs')))
+    slack = forms.BooleanField(label='Post in Slack?', required=False)
 
     def __init__(self, *args, **kwargs):
         preview = None
@@ -112,6 +123,7 @@ class PokeCCForm(forms.Form):
                 'events',
                 'message',
                 'email_to',
+                'slack',
                 FormActions(
                     Submit('save', 'Preview'),
                     Submit('save', 'Send')

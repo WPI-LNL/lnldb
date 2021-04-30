@@ -1,6 +1,5 @@
 from django.db import models
 from django.conf import settings
-import uuid
 
 
 class MeetingNoticeMail(models.Model):
@@ -25,14 +24,6 @@ aliases = (
     (settings.EMAIL_TARGET_NEWS, 'LNL News'),
     (settings.EMAIL_TARGET_W, 'Webmaster')
 )
-
-
-class ServiceAnnounce(models.Model):
-    subject = models.CharField(max_length=128)
-    message = models.TextField()
-    email_to = models.CharField(choices=aliases, max_length=24, default='lnl@wpi.edu')
-
-    uuid = models.UUIDField(editable=False, default=uuid.uuid4, blank=True)
 
 
 class SMSMessage(models.Model):
