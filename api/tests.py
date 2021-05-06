@@ -37,7 +37,7 @@ class APIViewTest(ViewTestCase):
         endpoint_get = models.Method.objects.create(endpoint=endpoint, method="GET", auth="token")
 
         # Try with endpoint that is not yet configured
-        with self.assertRaises(APIException, detail="Configuration error. Please contact the webmaster.", code=500):
+        with self.assertRaises(APIException, msg="Configuration error. Please contact the webmaster."):
             views.verify_endpoint("Example2", None)
 
         # Try with endpoint that requires authentication
@@ -47,8 +47,7 @@ class APIViewTest(ViewTestCase):
                 request.user = self.user
                 request.data = {'APIKey': 'ABCDEFG'}
                 request.method = 'GET'
-                with self.assertRaises(PermissionDenied,
-                                       detail="You are not allowed to access this resource.", code=403):
+                with self.assertRaises(PermissionDenied, msg="You are not allowed to access this resource."):
                     views.verify_endpoint("Example", request)
 
         # Try with properly configured endpoint
