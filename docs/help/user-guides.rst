@@ -37,3 +37,15 @@ Accounts
     accounts/local-login
     accounts/member-roles
 
+Events
+^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    events/checkin
+    events/event-details
+    events/bulk-projection
+    events/cc-report
+    events/event-attachments
+    events/create-bill
