@@ -192,7 +192,7 @@ class IOrgForm(FieldAccessForm):
             ),
             Tab(
                 'People',
-                'user_in_charge',
+                Field('user_in_charge', css_class=read_only),
                 'associated_users',
             )
         ])
