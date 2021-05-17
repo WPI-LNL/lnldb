@@ -49,3 +49,12 @@ Events
     events/cc-report
     events/event-attachments
     events/create-bill
+
+Meetings
+^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    meetings/meeting-details
+    meetings/meeting-notice
