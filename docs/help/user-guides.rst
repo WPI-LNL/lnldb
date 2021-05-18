@@ -69,3 +69,12 @@ Equipment
     equipment/laptop-passwords
     equipment/mdm-software
     equipment/checkin
+
+Training
+^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    training/request-pit
+    training/training-records
