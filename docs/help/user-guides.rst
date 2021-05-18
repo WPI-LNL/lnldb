@@ -58,3 +58,14 @@ Meetings
 
     meetings/meeting-details
     meetings/meeting-notice
+
+Equipment
+^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    equipment/snipe
+    equipment/laptop-passwords
+    equipment/mdm-software
+    equipment/checkin
