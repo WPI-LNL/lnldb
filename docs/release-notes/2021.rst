@@ -2,11 +2,31 @@
 Updates 2021
 ============
 
+May
+===
+We finally launched our User Guides! They are now available :doc:`here <../help/user-guides>`. Other than that, our
+focus this month was on bug fixes and other long-awaited improvements.
+
+- :commit:`816a5bdf67840f76211f11f57f4968cd83dc888a` Make Snipe accessible to active members
+
+April
+=====
+In April we began chipping away at a long list of small bug fixes and UI improvements requested by our users. We also
+began laying the groundwork for our new Slack integration (coming soon)!
+
+- :commit:`89fea1a12a6647ac03fde5d7202076830d539713` Allow crew chiefs to view post-event survey results
+- :commit:`072ce308e86ca902106d01aa048ec2e43f9b78f9` Fixed a bug in the formatting of PDF invoices and quotes
+- :commit:`ab29ef55a1814a1b0ae0291d72972bcb3bc7c48c` Removed the old fund field from the client request form
+- :commit:`846ba1471968ef2edcd26a3455ca77e120a98192` Corrected a few errors that prevented the Snipe Checkin/Checkout tools from accessing the API
+
 March
 =====
 This month we launched our new onboarding system. Aside from that we fixed a few bugs and carried out some small
 improvements to the UI.
 
+- :commit:`24a0646e97b76e5b456e3c3525177d5591ef421f` Added an unsubscribe link to some of our automated emails
+- :commit:`a31275a68129328ded3eef4c5f2728326d0be64e` Fixed a bug where HTML tags were visible in PIT request emails
+- :commit:`88b1e751f094fc214cee4a6ef27974e4fe221b9c` Fixed a bug that occurred on the lnl.wpi.edu/me page when a user was not logged in
 - :commit:`a51d990f5e13d405645d79c4b319c851bbf6bfaf` Fixed a bug affecting the layout of the meeting email form
 - :commit:`44ab3c3d1780922ac6dcc04a1da20fcbb479000a` Added a more user friendly login failed page for Microsoft SSO
 
