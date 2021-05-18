@@ -90,6 +90,8 @@ SECRET_KEY = env.str("SECRET_KEY", "I am insecure.")
 
 SNIPE_URL = env.str('SNIPE_URL', '')
 SNIPE_API_KEY = env.str('SNIPE_API_KEY', '')
+SNIPE_GENERAL_USER = env.str('SNIPE_USERNAME', "")
+SNIPE_GENERAL_PASS = env.str('SNIPE_PASSWORD', "")
 
 SAML2_AUTH = {
     'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://samltest.id/saml/idp'),

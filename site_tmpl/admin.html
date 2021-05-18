@@ -1,6 +1,7 @@
 {% extends 'base_admin.html' %}
 {% load tz %}
 {% load lnldb_tags %}
+{% load permissionif %}
 {% block content %}
     <div class="row">
         <div class="col-md-12">
@@ -43,8 +44,10 @@
                         <a class="btn btn-primary" href="https://wpilnl.slack.com/">Slack</a>
                         {% if request.user.group_str == 'Officer' %}
                             <a class="btn btn-primary" href="https://lnl-rt.wpi.edu/rt/">RT</a>
-                            <a class="btn btn-primary" href="https://lnl-rt.wpi.edu/snipe/">Snipe</a>
                         {% endif %}
+                        {% permission request.user has 'inventory.view_equipment' %}
+                            <a class="btn btn-primary" href="https://lnl-rt.wpi.edu/snipe/">Snipe</a>
+                        {% endpermission %}
                         {% if request.user.is_superuser %}
                             <a class="btn btn-danger" href="../admin">Admin</a>
                         {% endif %}
