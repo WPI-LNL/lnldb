@@ -469,6 +469,7 @@ AIRPLANE_MODE = True
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
 PUBLIC_FIELD_FILTERING = env.bool("PUBLIC_FIELD_FILTERING", True)
+SYNC_STUDENT_ID = env.bool("STUDENT_AUTO_ID", False)
 
 # Don't mess with builtins just for the sake of permissions
 PERMISSION_REPLACE_BUILTIN_IF = False

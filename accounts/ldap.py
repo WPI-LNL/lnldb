@@ -1,4 +1,5 @@
 import sys
+import os
 
 import ldap3
 
@@ -96,6 +97,38 @@ def fill_in_user(user):
             if class_year:
                 user.class_year = class_year
     return user
+
+
+def get_student_id(username):
+    """
+    Obtain a user's Student ID number from the server (if tied into the WPI network).
+
+    :param username: The user's username (WPI network username)
+    :return: Student ID number
+    """
+    try:
+        uid = os.popen('id -u ' + username).read().replace('\n', '')
+        if uid not in ['', None]:
+            return uid
+    except:
+        print('Unable to obtain id for ' + username)
+    return None
+
+
+def search_with_id(student_id):
+    """
+    Obtain the username for a user with a given Student ID number (if server is tied into WPI network).
+
+    :param student_id: Student ID number to use in the search
+    :return: The user's network username
+    """
+    try:
+        username = os.popen('id +' + str(student_id) + ' -un').read().replace('\n', '')
+        if username not in ['', None]:
+            return username
+    except:
+        pass
+    return None
 
 
 if __name__ == "__main__":
