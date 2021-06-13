@@ -12,7 +12,7 @@
     <tbody>
         <tr>
             <td class="w960" width="960">
-                <p align="left" class="article-title">Meeting Notice for {{ object.meeting.datetime.date }}{% if object.meeting.location %} at {{ object.meeting.location }} {% endif %}</p>
+                <p align="left" class="article-title">Meeting Notice for {{ object.meeting.datetime|localtime|date:"F d, Y" }}{% if object.meeting.location %} at {{ object.meeting.location }} {% endif %}</p>
                 <div align="left" class="article-content">
                     
                     <p>{{ object.message|markdown }}</p>

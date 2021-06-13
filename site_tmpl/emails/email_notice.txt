@@ -1,6 +1,6 @@
 {% load tz %}
 {% load lnldb_tags %}
-Meeting Notice for {{ object.meeting.datetime.date }}
+Meeting Notice for {{ object.meeting.datetime|localtime|date:"F d, Y" }}
 
 {{ object.message }}
 
