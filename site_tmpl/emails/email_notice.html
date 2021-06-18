@@ -4,7 +4,8 @@
 {% load lnldb_tags %}
 
 {% block perma %}
-<a href="{% get_base_url %}{% url "emails:pre-meeting" object.uuid %}/" class="cm-webversion">View Online</a>
+<a href="{% get_base_url %}{% url "emails:pre-meeting" object.uuid %}" class="cm-webversion">View Online</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+<a href="{% get_base_url %}{% url "meetings:invite" object.meeting.pk %}" class="cm-webversion">Add to Calendar</a>
 {% endblock %}
 
 {% block content %}

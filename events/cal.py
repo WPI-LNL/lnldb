@@ -1,5 +1,6 @@
 import json
 import pytz
+import icalendar
 from time import mktime
 
 from django.conf import settings
@@ -337,3 +338,76 @@ def datetime_to_timestamp(date):
         return '{0}'.format(json_timestamp)
     else:
         return ""
+
+
+class EventAttendee(object):
+    """
+    Used when generating an iCalendar event. The 'attendee' field should be an instance of the default User class.
+    Set 'required' to False to list the attendee as an optional participant.
+    """
+    def __init__(self, event, attendee, required=True):
+        self.event = event
+        self.attendee = attendee
+        self.required = required
+
+    @property
+    def email(self):
+        """ Email address of the user """
+        return self.attendee.email
+
+    @property
+    def cn(self):
+        """ Common name of the user """
+        return self.attendee.name
+
+    @property
+    def role(self):
+        """ iCalendar ROLE parameter """
+        if self.required:
+            return "REQ-PARTICIPANT"
+        else:
+            return "OPT-PARTICIPANT"
+
+
+def generate_ics(events, attendees, request=False):
+    """
+    Generate an iCalendar file (ics) - AKA calendar invite
+
+    Event objects must support the following methods: cal_name(), cal_desc(), cal_guid(), cal_start(), cal_end(),
+    cal_location(), cal_link()
+
+    :param events: List of compatible event objects (i.e. BaseEvent, Meeting, etc.)
+    :param attendees: List of EventAttendee objects
+    :param request: If True, will prompt user to accept invite (replies are not sent back)
+    :return: byte string containing file contents
+    """
+    if not attendees:
+        attendees = []
+
+    cal = icalendar.Calendar()
+    if request:
+        cal['method'] = 'REQUEST'
+    else:
+        cal['method'] = 'PUBLISH'
+    cal['prodid'] = '-//WPI Lens and Lights//LNLDB//EN'
+    cal['version'] = '2.0'
+
+    for event in events:
+        vevent = icalendar.Event()
+        vevent['summary'] = event.cal_name()
+        vevent['description'] = event.cal_desc()
+        vevent['uid'] = event.cal_guid()
+        vevent['dtstart'] = event.cal_start().strftime('%Y%m%dT%H%M%SZ')
+        vevent['dtend'] = event.cal_end().strftime('%Y%m%dT%H%M%SZ')
+        vevent['dtstamp'] = timezone.now().strftime('%Y%m%dT%H%M%SZ')
+        vevent['location'] = event.cal_location()
+        vevent['url'] = event.cal_link()
+        for attendee in attendees:
+            if attendee.event == event:
+                vevent.add(
+                    'attendee', 'MAILTO:%s' % attendee.email,
+                    parameters={'RSVP': 'FALSE', 'CN': attendee.cn, 'ROLE': attendee.role}
+                )
+        cal.add_component(vevent)
+
+    return cal.to_ical()

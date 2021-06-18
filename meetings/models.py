@@ -9,7 +9,7 @@ from six import python_2_unicode_compatible
 
 from django_extensions.db.models import TimeStampedModel
 
-from events.models import BaseEvent
+from events.models import BaseEvent, get_host
 
 
 def get_default_email():
@@ -57,7 +57,7 @@ class Meeting(models.Model):
 
     def cal_name(self):
         """ Title to display on calendars """
-        return "Meeting - " + self.meeting_type.name
+        return "LNL Meeting - " + self.meeting_type.name
 
     def cal_desc(self):
         """ No description will be provided for meetings displayed on calendars """
@@ -80,7 +80,7 @@ class Meeting(models.Model):
 
     def cal_link(self):
         """ Link to be displayed on calendars """
-        return reverse('meetings:detail', args=[self.id])
+        return get_host() + reverse('meetings:detail', args=[self.id])
 
     def cal_guid(self):
         """ Unique event id used by calendars """

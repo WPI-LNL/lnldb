@@ -288,9 +288,10 @@ class BaseEvent(PolymorphicModel):
         desc = ""
         desc += "Requested by "
         orgs = self.org.all()
-        for org in orgs:
-            desc += org.name + ", "
-        desc = desc[:-2] + ".\n"  # removes trailing comma
+        if len(orgs) > 0:
+            for org in orgs:
+                desc += org.name + ", "
+            desc = desc[:-2] + ".\n"  # removes trailing comma
         ccs = self.ccinstances.all()
         if len(ccs) > 0:
             desc += "Crew Chiefs: "

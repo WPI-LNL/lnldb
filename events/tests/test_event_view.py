@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from .generators import CCReportFactory, EventFactory, Event2019Factory, UserFactory, OrgFactory, CCInstanceFactory, \
     ServiceFactory, LocationFactory
-from .. import models, lookups
+from .. import models, lookups, cal
 from ..templatetags import append_get, at_event_linking, gpa_scale_emoji
 
 
@@ -2334,6 +2334,44 @@ class EventListBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:all-cal")))
+
+    def test_ical_generation(self):
+        # Test with no attendees
+        start = timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)).strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
+        end = timezone.make_aware(timezone.datetime(2020, 1, 1)).strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
+        now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
+        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\nMETHOD:PUBLISH\r\n' \
+                   b'BEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART:' + start + b'\r\nDTEND:' + end + b'\r\n' \
+                   b'DTSTAMP:' + now + b'\r\nUID:event1@lnldb\r\nDESCRIPTION:Requested by \r\n' \
+                   b'LOCATION:\r\nURL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
+        output = cal.generate_ics([self.e], None)
+        self.assertEqual(output, expected)
+
+        # Test response when set to generate a request
+        now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
+        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\nMETHOD:REQUEST\r\n' \
+                   b'BEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART:' + start + b'\r\nDTEND:' + end + b'\r\n' \
+                   b'DTSTAMP:' + now + b'\r\nUID:event1@lnldb\r\nDESCRIPTION:Requested by \r\n' \
+                   b'LOCATION:\r\nURL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
+        output = cal.generate_ics([self.e], None, True)
+        self.assertEqual(output, expected)
+
+        # Test with multiple attendees for multiple events (should only add two attendees)
+        self.user.first_name = "Test"
+        self.user.last_name = "User"
+        self.user.save()
+        attendee1 = cal.EventAttendee(self.e, self.user)
+        attendee2 = cal.EventAttendee(self.e, self.user, False)
+        attendee3 = cal.EventAttendee(self.e2, self.user)
+        now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
+        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\nMETHOD:PUBLISH\r' \
+                   b'\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART:' + start + b'\r\nDTEND:' + end + b'\r\n' \
+                   b'DTSTAMP:' + now + b'\r\nUID:event1@lnldb\r\nATTENDEE;CN="Test User";ROLE=REQ-PARTICIPANT;' \
+                   b'RSVP=FALSE:MAILTO:abc@foo.com\r\nATTENDEE;CN="Test User";ROLE=OPT-PARTICIPANT;RSVP=FALSE:' \
+                   b'MAILTO:abc@foo.com\r\nDESCRIPTION:Requested by \r\nLOCATION:\r\n' \
+                   b'URL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
+        output = cal.generate_ics([self.e], [attendee1, attendee2, attendee3])
+        self.assertEqual(output, expected)
 
 
 class WorkshopTests(ViewTestCase):
