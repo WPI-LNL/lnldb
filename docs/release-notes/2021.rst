@@ -2,12 +2,22 @@
 Updates 2021
 ============
 
+June
+====
+This month we introduced some smaller features and several UI improvements.
+
+- :commit:`9dccb7c495ac9514a16022f8b16c4707be6410f9` Updated our email template to include links to our Instagram and YouTube accounts
+- :commit:`efab3e9ae5b8aa33c27f6cff8fa8898d6963f214` Added calendar invites to meeting notice emails
+- :commit:`cf5843d36a9dca629d5592c42c62d2d2523368da` Fixed a bug where the date was sometimes incorrect in the heading of meeting notice emails
+- :commit:`7d8c20c26418a7613b8f54f1b885a66a002c9dd4` Updated welcome email (Upper Perreault Hall is now spelled correctly)
+
 May
 ===
 We finally launched our User Guides! They are now available :doc:`here <../help/user-guides>`. Other than that, our
 focus this month was on bug fixes and other long-awaited improvements.
 
-- :commit:`816a5bdf67840f76211f11f57f4968cd83dc888a` Make Snipe accessible to active members
+- :commit:`b1e84e8aac7c771dbf4c37d043a196c01197a83a` Obtain member Student IDs automatically
+- :commit:`816a5bdf67840f76211f11f57f4968cd83dc888a` Made Snipe accessible to active members
 
 April
 =====
