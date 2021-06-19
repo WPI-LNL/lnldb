@@ -441,7 +441,7 @@ CCR_DAY_DELTA = 14
 # email stuff
 DEFAULT_TO_ADDR = "lnl@wpi.edu"
 DEFAULT_FROM_ADDR = 'WPI Lens and Lights <lnl@wpi.edu>'
-EMAIL_FROM_NOREPLY = "lnl-no-reply@wpi.edu"
+EMAIL_FROM_NOREPLY = "WPI Lens and Lights <lnl-no-reply@wpi.edu>"
 EMAIL_TARGET_P = "lnl-p@wpi.edu"
 EMAIL_TARGET_VP = "lnl-vp@wpi.edu"
 EMAIL_TARGET_S = "lnl-s@wpi.edu"
@@ -451,6 +451,7 @@ EMAIL_TARGET_W = "lnl-w@wpi.edu"
 EMAIL_TARGET_HP = "lnl-hp@wpi.edu"
 EMAIL_TARGET_NEWS = "lnl-news@wpi.edu"
 EMAIL_TARGET_ACTIVE = "lnl-active@wpi.edu"
+EMAIL_TARGET_RENTALS = "lnl-rental@wpi.edu"
 
 SEND_EMAIL_ORG_TRANSFER = True
 SEND_START_END_EMAILS = False

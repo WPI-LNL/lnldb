@@ -533,7 +533,7 @@ def snipe_checkout(request):
             pdf_handle = pdf_file.getvalue()
             filename = 'LNL-checkout-receipt-{}.pdf'.format(timezone.now().isoformat())
             attachments = [{'file_handle': pdf_handle, 'name': filename}]
-            email = DefaultLNLEmailGenerator(subject='LNL Inventory Checkout Receipt', to_emails=(request.user.email, settings.DEFAULT_TO_ADDR), attachments=attachments,
+            email = DefaultLNLEmailGenerator(subject='LNL Inventory Checkout Receipt', to_emails=(request.user.email, settings.EMAIL_TARGET_RENTALS), attachments=attachments,
                 body='A receipt for the rental checkout by {} to {} is attached.'.format(request.user, checkout_to_name))
             email.send()
             # Return the response
@@ -745,7 +745,7 @@ def snipe_checkin(request):
             pdf_handle = pdf_file.getvalue()
             filename = 'LNL-checkin-receipt-{}.pdf'.format(timezone.now().isoformat())
             attachments = [{'file_handle': pdf_handle, 'name': filename}]
-            email = DefaultLNLEmailGenerator(subject='LNL Inventory Checkin Receipt', to_emails=(request.user.email, settings.DEFAULT_TO_ADDR), attachments=attachments,
+            email = DefaultLNLEmailGenerator(subject='LNL Inventory Checkin Receipt', to_emails=(request.user.email, settings.EMAIL_TARGET_RENTALS), attachments=attachments,
                 body='A receipt for the rental checkin by {} from {} is attached.'.format(request.user, checkin_from_name))
             email.send()
             # Return the response
