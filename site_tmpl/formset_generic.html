@@ -1,0 +1,50 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            <h2>{{ msg }}</h2>
+            {% if form.non_field_errors %}
+                <div class="alert alert-warning">
+                    {% for e in form.non_field_errors %}
+                        {{ e }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <form method="post" action="" class="form-inline" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ formset.management_form }}
+                <table class="table table-striped" valign="top">
+                    <tr>
+                    {% for field in formset.forms.0 %}
+                        {% if field.label and not field.is_hidden %}
+                            <th for="{{ field.auto_id }}" class="control-label {% if field.field.required %}requiredField{% endif %}">
+                                {{ field.label|safe }}{% if field.field.required %}
+                                    <span class="asteriskField">*</span>
+                                {% endif %}
+                            </th>
+                        {% endif %}
+                    {% endfor %}
+                    </tr>
+                    {% for form in formset %}
+                        <tr>
+                        {% for field in form %}
+                            {% if field.label and not field.is_hidden %}
+                                <td>{{ field|as_crispy_field }}</td>
+                            {% endif %}
+                        {% endfor %}
+                        </tr>
+                        {% for hidden in form.hidden_fields %}
+                            {{ hidden }}
+                        {% endfor %}
+                    {% endfor %}
+                </table>
+                <div class="form-actions"><input name="save" value="Save Changes" class="btn btn-primary" id="submit-id-save" type="submit"> </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block finalsay %}
+{% endblock %}

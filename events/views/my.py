@@ -15,8 +15,8 @@ from django.template import loader
 
 from emails.generators import generate_selfservice_notice_email
 from events.forms import (EditHoursForm, InternalReportForm, MKHoursForm,
-                          SelfServiceOrgRequestForm, PostEventSurveyForm, OfficeHoursForm, OfficeHourUpdateForm)
-from events.models import CCReport, BaseEvent, Event, Hours, PostEventSurvey, CCR_DELTA, OfficeHour, HourChange
+                          SelfServiceOrgRequestForm, PostEventSurveyForm, OfficeHoursForm)
+from events.models import CCReport, BaseEvent, Event, Hours, PostEventSurvey, CCR_DELTA, OfficeHour
 from helpers.mixins import LoginRequiredMixin
 from helpers.revision import set_revision_comment
 from helpers.util import curry_class
@@ -367,29 +367,4 @@ def office_hours(request):
             return HttpResponseRedirect(reverse("accounts:detail", args=[user.id]))
     context['formset'] = formset
 
-    return render(request, 'formset_office_hours.html', context)
-
-
-@login_required
-def hours_update(request):
-    """ Form for posting an announcement regarding a temporary adjustment to a user's office hours (Officers only) """
-    context = {}
-    user = request.user
-
-    context['msg'] = "Temporary Office Hours Update"
-
-    updates = HourChange.objects.filter(officer=user)
-
-    update_formset = modelformset_factory(HourChange, exclude=[], extra=2, can_delete=True, form=OfficeHourUpdateForm)
-    formset = update_formset(queryset=updates)
-
-    if request.method == "POST":
-        formset = update_formset(request.POST)
-        if formset.is_valid():
-            for form in formset.forms:
-                form.instance.officer = user
-            formset.save()
-            return HttpResponseRedirect(reverse("accounts:detail", args=[user.id]))
-    context['formset'] = formset
-
-    return render(request, 'formset_office_hour_updates.html', context)
+    return render(request, 'formset_generic.html', context)

@@ -13,7 +13,7 @@ from rest_framework.authtoken.models import Token
 from . import models, views
 from .templatetags import path_safe
 from events.tests.generators import UserFactory, Event2019Factory, CCInstanceFactory
-from events.models import OfficeHour, HourChange, Building, Location, CrewAttendanceRecord
+from events.models import OfficeHour, Building, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
 from pages.models import Page
 import pytz
@@ -191,24 +191,34 @@ class APIViewTest(ViewTestCase):
         # Test that we can get all office hours
         start_time = timezone.now()
         end_time = timezone.now() + timezone.timedelta(hours=1)
-        hour1 = OfficeHour.objects.create(officer=self.user, day=1, hour_start=start_time.time(),
+        building = Building.objects.create(name="Campus Center", shortname="CC")
+        location = Location.objects.create(name="CC Office", building=building)
+        location2 = Location.objects.create(name="Mail Room", building=building)
+        hour1 = OfficeHour.objects.create(officer=self.user, day=1, location=location, hour_start=start_time.time(),
                                           hour_end=end_time.time())
-        hour2 = OfficeHour.objects.create(officer=user2, day=3, hour_start=start_time.time(), hour_end=end_time.time())
+        hour2 = OfficeHour.objects.create(officer=user2, day=3, location=location2, hour_start=start_time.time(),
+                                          hour_end=end_time.time())
 
         self.assertEqual(self.client.get("/api/v1/office-hours").content.decode('utf-8'),
-                         '[{"officer":"President","day":1,"hour_start":"' + str(start_time.time()) + '","hour_end":"' +
-                         str(end_time.time()) + '"},{"officer":"Vice President","day":3,"hour_start":"' +
+                         '[{"officer":"President","day":1,"location":"CC Office","hour_start":"' +
+                         str(start_time.time()) + '","hour_end":"' + str(end_time.time()) +
+                         '"},{"officer":"Vice President","day":3,"location":"Mail Room","hour_start":"' +
                          str(start_time.time()) + '","hour_end":"' + str(end_time.time()) + '"}]')
 
         # Test that we can get office hours for a specific officer
         self.assertEqual(self.client.get("/api/v1/office-hours?officer=president").content.decode('utf-8'),
-                         '[{"officer":"President","day":1,"hour_start":"' + str(start_time.time()) +
-                         '","hour_end":"' + str(end_time.time()) + '"}]')
+                         '[{"officer":"President","day":1,"location":"CC Office","hour_start":"' +
+                         str(start_time.time()) + '","hour_end":"' + str(end_time.time()) + '"}]')
 
         # Test that we can filter office hours by the day
         self.assertEqual(self.client.get("/api/v1/office-hours?day=3").content.decode('utf-8'),
-                         '[{"officer":"Vice President","day":3,"hour_start":"' + str(start_time.time()) +
-                         '","hour_end":"' + str(end_time.time()) + '"}]')
+                         '[{"officer":"Vice President","day":3,"location":"Mail Room","hour_start":"' +
+                         str(start_time.time()) + '","hour_end":"' + str(end_time.time()) + '"}]')
+
+        # Test that we can filter office hours by location
+        self.assertEqual(self.client.get("/api/v1/office-hours?location=office").content.decode('utf-8'),
+                         '[{"officer":"President","day":1,"location":"CC Office","hour_start":"' +
+                         str(start_time.time()) + '","hour_end":"' + str(end_time.time()) + '"}]')
 
         # Test that we can get office hours that start at a certain time (exact match)
         start_time = timezone.datetime.strptime('13:30', '%H:%M').replace(tzinfo=pytz.timezone('US/Eastern'))
@@ -222,62 +232,22 @@ class APIViewTest(ViewTestCase):
         hour1.save()
         hour2.save()
 
-        OfficeHour.objects.create(officer=self.user, day=4,
-                                  hour_start=start_time.time(),
+        OfficeHour.objects.create(officer=self.user, day=4, location=location, hour_start=start_time.time(),
                                   hour_end=end_time.time())
 
         self.assertEqual(self.client.get("/api/v1/office-hours?start=13:30:00").content.decode('utf-8'),
-                         '[{"officer":"President","day":4,"hour_start":"13:30:00","hour_end":"15:30:00"}]')
+                         '[{"officer":"President","day":4,"location":"CC Office","hour_start":"13:30:00",'
+                         '"hour_end":"15:30:00"}]')
 
         # Test that we can get office hours that end at a certain time (exact match)
         self.assertEqual(self.client.get("/api/v1/office-hours?end=15:30:00").content.decode('utf-8'),
-                         '[{"officer":"President","day":4,"hour_start":"13:30:00","hour_end":"15:30:00"}]')
+                         '[{"officer":"President","day":4,"location":"CC Office","hour_start":"13:30:00",'
+                         '"hour_end":"15:30:00"}]')
 
         # Test that if both start and end times are provided the result contains entries that overlap with those times
         self.assertEqual(self.client.get("/api/v1/office-hours?start=13:00:00&end=14:00:00").content.decode('utf-8'),
-                         '[{"officer":"President","day":4,"hour_start":"13:30:00","hour_end":"15:30:00"}]')
-
-    def test_hourchange_viewset(self):
-        models.Endpoint.objects.create(name="Office Hour Updates", url="hours/updates",
-                                       description="Office Hour Updates endpoint",
-                                       example="expires=2020-01-01T00:00:00Z", response="[]")
-        self.user.title = "President"
-        self.user.save()
-
-        user2 = UserFactory.create(password="123")
-        user2.title = "Treasurer"
-        user2.save()
-
-        # Test that we get 204 response if no updates exist
-        self.assertOk(self.client.get("/api/v1/hours/updates"), 204)
-
-        post_date = timezone.datetime.strptime("2019-12-01T12:00:00Z", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=pytz.UTC)
-        expires_before = timezone.datetime.strptime("2019-12-31T23:59:00Z", "%Y-%m-%dT%H:%M:%SZ")\
-            .replace(tzinfo=pytz.UTC)
-        expires_match = timezone.datetime.strptime("2020-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ")\
-            .replace(tzinfo=pytz.UTC)
-        expires_after = timezone.datetime.strptime("2020-01-03T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ")\
-            .replace(tzinfo=pytz.UTC)
-        HourChange.objects.create(officer=self.user, expires=expires_before, message="Test Hour Change",
-                                  date_posted=post_date)
-        HourChange.objects.create(officer=user2, expires=expires_match, message="Another test hour change",
-                                  date_posted=post_date)
-        HourChange.objects.create(officer=self.user, expires=expires_after, message="Even more hours will change",
-                                  date_posted=post_date)
-
-        # Test that we get all updates
-        self.assertEqual(len(self.client.get("/api/v1/hours/updates").data), 3)
-
-        # Test that we can get updates by officer
-        resp = self.client.get("/api/v1/hours/updates?officer=treasurer")
-        self.assertEqual(len(resp.data), 1)
-        self.assertEqual(resp.data[0]["message"], "Another test hour change")
-
-        # Test that we can get updates based on when they expire (on or after specified date)
-        resp = self.client.get("/api/v1/hours/updates?expires=2020-01-01T00:00:00Z")
-        self.assertEqual(len(resp.data), 2)
-        self.assertEqual(resp.data[0]["message"], "Another test hour change")
-        self.assertEqual(resp.data[1]["message"], "Even more hours will change")
+                         '[{"officer":"President","day":4,"location":"CC Office","hour_start":"13:30:00",'
+                         '"hour_end":"15:30:00"}]')
 
     def test_notification_viewset(self):
         models.Endpoint.objects.create(name="Notifications", url="notifications", description="Notifications endpoint",

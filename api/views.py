@@ -20,11 +20,11 @@ from random import randint
 
 from accounts.forms import SMSOptInForm
 from emails.generators import generate_sms_email
-from events.models import OfficeHour, HourChange, Event2019, Location, CrewAttendanceRecord
+from events.models import OfficeHour, Event2019, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
 from pages.models import Page
 from .models import Endpoint, RequestParameter, ResponseKey, TokenRequest
-from .serializers import OfficerSerializer, HourSerializer, ChangeSerializer, NotificationSerializer, EventSerializer, \
+from .serializers import OfficerSerializer, HourSerializer, NotificationSerializer, EventSerializer, \
     AttendanceSerializer, RedirectSerializer, CustomPageSerializer
 
 
@@ -92,42 +92,21 @@ class HourViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = OfficeHour.objects.all().order_by('day')
         officer = self.request.query_params.get('officer', None)
         day = self.request.query_params.get('day', None)
+        location = self.request.query_params.get('location', None)
         start = self.request.query_params.get('start', None)
         end = self.request.query_params.get('end', None)
         if officer is not None:
             queryset = queryset.filter(officer__title__iexact=officer)
         if day is not None:
             queryset = queryset.filter(day=day)
+        if location is not None:
+            queryset = queryset.filter(location__name__icontains=location)
         if start is not None and end is not None:
             queryset = queryset.filter(hour_start__lte=end).filter(hour_end__gte=start)
         if start is not None and end is None:
             queryset = queryset.filter(hour_start=start)
         if end is not None and start is None:
             queryset = queryset.filter(hour_end=end)
-        return queryset
-
-
-class ChangeViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = ChangeSerializer
-    authentication_classes = []
-
-    def list(self, request):
-        queryset = self.get_queryset()
-        if queryset.count() == 0:
-            content = {'204': 'No updates were found for the specified parameters'}
-            return Response(content, status=status.HTTP_204_NO_CONTENT)
-        serializer = ChangeSerializer(queryset, many=True)
-        return Response(serializer.data)
-
-    def get_queryset(self):
-        verify_endpoint('Office Hour Updates', self.request)
-        queryset = HourChange.objects.all().order_by('date_posted')
-        officer = self.request.query_params.get('officer', None)
-        expires = self.request.query_params.get('expires', None)
-        if officer is not None:
-            queryset = queryset.filter(officer__title__iexact=officer)
-        if expires is not None:
-            queryset = queryset.filter(expires__gte=expires)
         return queryset
 
 

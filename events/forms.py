@@ -26,7 +26,7 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
                            ExtraInstance, Fund, Hours, Lighting, Location, Organization, OrganizationTransfer,
                            OrgBillingVerificationEvent, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
-                           Sound, PostEventSurvey, OfficeHour, HourChange)
+                           Sound, PostEventSurvey, OfficeHour)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 from helpers.util import curry_class
@@ -1715,8 +1715,10 @@ class OfficeHoursForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "post"
         self.helper.form_action = ""
+        self.helper.form_show_labels = False
         self.helper.layout = Layout(
             Field('day'),
+            Field('location'),
             Field('hour_start'),
             Field('hour_end'),
             FormActions(
@@ -1724,32 +1726,11 @@ class OfficeHoursForm(forms.ModelForm):
             )
         )
         super(OfficeHoursForm, self).__init__(*args, **kwargs)
+        self.fields['location'].queryset = Location.objects.filter(setup_only=True)
 
     class Meta:
         model = OfficeHour
-        fields = ('day', 'hour_start', 'hour_end')
-
-
-class OfficeHourUpdateForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        self.helper = FormHelper()
-        self.helper.form_class = "form"
-        self.helper.form_method = "post"
-        self.helper.form_action = ""
-        self.helper.layout = Layout(
-            Field('message'),
-            Field('expires', css_class="form-control"),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
-        )
-        super(OfficeHourUpdateForm, self).__init__(*args, **kwargs)
-
-    expires = forms.SplitDateTimeField(required=True)
-
-    class Meta:
-        model = HourChange
-        fields = ('message', 'expires')
+        fields = ('day', 'location', 'hour_start', 'hour_end')
 
 
 class WorkshopForm(forms.ModelForm):

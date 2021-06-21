@@ -1500,8 +1500,9 @@ class OfficeHour(models.Model):
     """ A listing for an officer's Office Hours """
     officer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     day = models.IntegerField(choices=DAYS_OF_WEEK)
-    hour_start = models.TimeField(auto_now=False, auto_now_add=False)
-    hour_end = models.TimeField(auto_now=False, auto_now_add=False)
+    hour_start = models.TimeField(auto_now=False, auto_now_add=False, verbose_name="Start Time")
+    hour_end = models.TimeField(auto_now=False, auto_now_add=False, verbose_name="End Time")
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="office_hours")
 
     def __str__(self):
         return self.officer.first_name + " " + self.officer.last_name + " - " + self.get_day_display()
@@ -1515,20 +1516,6 @@ class OfficeHour(models.Model):
             ('manage_hours', 'Manage Office Hours'),
         )
         verbose_name = "Office Hour"
-
-
-class HourChange(models.Model):
-    """ Notification informing users that an officer has made temporary adjustments to their office hours """
-    officer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    date_posted = models.DateTimeField(auto_now=True)
-    expires = models.DateTimeField(auto_now=False, auto_now_add=False)
-    message = models.TextField(max_length=244)
-
-    def __str__(self):
-        return self.officer.name
-
-    class Meta:
-        verbose_name = "Office Hour Update"
 
 
 class CrewAttendanceRecord(models.Model):
