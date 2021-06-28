@@ -1366,6 +1366,7 @@ class AttachmentForm(forms.ModelForm):
         obj.event = self.event
         if commit:
             obj.save()
+            self.save_m2m()
         return obj
 
     class Meta:
