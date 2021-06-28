@@ -409,8 +409,6 @@ AJAX_LOOKUP_CHANNELS = {
     'Officers': ('accounts.lookups', 'OfficerLookup'),
     'Members': ('accounts.lookups', 'MemberLookup'),
     'AssocMembers': ('accounts.lookups', 'AssocMemberLookup'),
-    'Funds': ('events.lookups', 'FundLookup'),
-    'FundsLimited': ('events.lookups', 'FundLookupLimited'),
     'EquipmentClass': ('inventory.lookups', 'ClassLookup'),
     'EquipmentContainer': ('inventory.lookups', 'ContainerLookup')
 }

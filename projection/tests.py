@@ -4,7 +4,7 @@ from data.tests.util import ViewTestCase
 from django.contrib.auth.models import Permission
 from django.forms.formsets import formset_factory
 from events.tests.generators import UserFactory
-from events.models import Organization, Fund, Event2019
+from events.models import Organization, Event2019
 from django.utils import timezone
 from . import models, forms, views
 import datetime
@@ -282,13 +282,10 @@ class ProjViewTest(ViewTestCase):
         }
 
         # Create test organization
-        fund = Fund.objects.create(fund=0, organization=0, account=12345, name="LNL Test",
-                                   last_used=timezone.datetime.today(), last_updated=timezone.datetime.today())
         org = Organization.objects.create(name="LNL", email="test@test.com", phone="1234567890",
                                           user_in_charge=self.user)
         org.save()
         org.associated_users.add(self.user)
-        org.accounts.add(fund)
         org.save()
 
         valid_details = {

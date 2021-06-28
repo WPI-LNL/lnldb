@@ -236,21 +236,6 @@
         "extra"
       ],
       [
-        "add_fund",
-        "events",
-        "fund"
-      ],
-      [
-        "change_fund",
-        "events",
-        "fund"
-      ],
-      [
-        "manage_fund",
-        "events",
-        "fund"
-      ],
-      [
         "add_lighting",
         "events",
         "lighting"

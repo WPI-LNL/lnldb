@@ -24,7 +24,7 @@ from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
 from events.fields import GroupedModelChoiceField
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail,
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
-                           ExtraInstance, Fund, Hours, Lighting, Location, Organization, OrganizationTransfer,
+                           ExtraInstance, Hours, Lighting, Location, Organization, OrganizationTransfer,
                            OrgBillingVerificationEvent, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
                            Sound, PostEventSurvey, OfficeHour)
 from events.widgets import ValueSelectField
@@ -188,7 +188,8 @@ class IOrgForm(FieldAccessForm):
             ),
             Tab(
                 'Money',
-                'accounts'
+                'workday_fund',
+                Field('worktag', placeholder='e.g. 1234-CC'),
             ),
             Tab(
                 'People',
@@ -204,17 +205,24 @@ class IOrgForm(FieldAccessForm):
         )
         super(IOrgForm, self).__init__(request_user, *args, **kwargs)
 
+    def clean_worktag(self):
+        pattern = re.compile('[0-9]+-[A-Z][A-Z]')
+        if pattern.match(self.cleaned_data['worktag']) is None and self.cleaned_data['worktag'] not in [None, '']:
+            raise ValidationError('What you entered is not a valid worktag. Here are some examples of what a worktag '
+                                  'looks like: 1234-CC, 123-AG')
+        return self.cleaned_data['worktag']
+
     class Meta:
         model = Organization
         fields = ('name', 'exec_email', 'address', 'phone', 'associated_orgs', 'personal',
-                  'accounts', 'user_in_charge', 'associated_users', 'notes', 'delinquent')
+                  'workday_fund', 'worktag', 'user_in_charge', 'associated_users', 'notes', 'delinquent')
 
     # associated_orgs = make_ajax_field(Organization,'associated_orgs','Orgs',plugin_options = {'minLength':2})
     # associated_users = make_ajax_field(Organization,'associated_users','Users',plugin_options = {'minLength':3})
     user_in_charge = AutoCompleteSelectField('Users')
     associated_orgs = AutoCompleteSelectMultipleField('Orgs', required=False)
     associated_users = AutoCompleteSelectMultipleField('Users', required=False)
-    accounts = AutoCompleteSelectMultipleField('Funds', required=False)
+    worktag = forms.CharField(required=False, help_text='Ends in -AG, -CC, -GF, -GR, or -DE')
     notes = forms.CharField(widget=PagedownWidget(), label="Internal Notes", required=False)
 
     class FieldAccess:
@@ -233,12 +241,12 @@ class IOrgForm(FieldAccessForm):
 
         billing_view = FieldAccessLevel(
             lambda user, instance: not user.has_perm("events.show_org_billing", instance),
-            exclude=('accounts',)
+            exclude=('workday_fund', 'worktag')
         )
 
         billing_edit = FieldAccessLevel(
             lambda user, instance: user.has_perm("events.edit_org_billing", instance),
-            enable=('accounts',)
+            enable=('workday_fund', 'worktag')
         )
 
         members_view = FieldAccessLevel(
@@ -419,7 +427,6 @@ class InternalEventForm(FieldAccessForm):
                 'contact',
                 'org',
                 DynamicFieldContainer('billing_org'),
-                DynamicFieldContainer('billing_fund'),
             ),
             Tab(
                 'Scheduling',
@@ -507,12 +514,12 @@ class InternalEventForm(FieldAccessForm):
 
         billing_edit = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_fund', instance),
-            enable=('billing_org', 'billing_fund', 'billed_in_bulk')
+            enable=('billing_org', 'billed_in_bulk')
         )
 
         billing_view = FieldAccessLevel(
             lambda user, instance: not user.has_perm('events.view_event_billing', instance),
-            exclude=('billing_org', 'billing_fund', 'billed_in_bulk')
+            exclude=('billing_org', 'billed_in_bulk')
         )
 
         change_flags = FieldAccessLevel(
@@ -522,10 +529,10 @@ class InternalEventForm(FieldAccessForm):
 
     class Meta:
         model = Event
-        fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_fund', 'billing_org',
-                  'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
-                  'datetime_end', 'lighting', 'lighting_reqs', 'sound', 'sound_reqs', 'projection', 'proj_reqs',
-                  'otherservices', 'otherservice_reqs', 'sensitive', 'test_event')
+        fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org', 'billed_in_bulk', 'contact',
+                  'org', 'datetime_setup_complete', 'datetime_start', 'datetime_end', 'lighting', 'lighting_reqs',
+                  'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs', 'sensitive',
+                  'test_event')
         widgets = {
             'description': PagedownWidget(),
             'internal_notes': PagedownWidget,
@@ -543,7 +550,6 @@ class InternalEventForm(FieldAccessForm):
     contact = AutoCompleteSelectField('Users', required=False)
     org = CustomAutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
-    billing_fund = AutoCompleteSelectField('Funds', required=False)
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
     datetime_start = forms.SplitDateTimeField(initial=timezone.now, label="Event Start")
     datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
@@ -575,7 +581,6 @@ class InternalEventForm2019(FieldAccessForm):
                 'contact',
                 'org',
                 DynamicFieldContainer('billing_org'),
-                DynamicFieldContainer('billing_fund'),
             ),
             Tab(
                 'Scheduling',
@@ -801,6 +806,8 @@ class ExternalOrgUpdateForm(forms.ModelForm):
             'address',
             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
             'associated_users',
+            'workday_fund',
+            Field('worktag', placeholder='e.g. 1234-CC'),
             FormActions(
                 Submit('save', 'Save Changes'),
             )
@@ -808,10 +815,18 @@ class ExternalOrgUpdateForm(forms.ModelForm):
         super(ExternalOrgUpdateForm, self).__init__(*args, **kwargs)
 
     associated_users = AutoCompleteSelectMultipleField('Users', required=True)
+    worktag = forms.CharField(required=False, help_text='Ends in -AG, -CC, -GF, -GR, or -DE')
+
+    def clean_worktag(self):
+        pattern = re.compile('[0-9]+-[A-Z][A-Z]')
+        if pattern.match(self.cleaned_data['worktag']) is None and self.cleaned_data['worktag'] not in [None, '']:
+            raise ValidationError('What you entered is not a valid worktag. Here are some examples of what a worktag '
+                                  'looks like: 1234-CC, 123-AG')
+        return self.cleaned_data['worktag']
 
     class Meta:
         model = Organization
-        fields = ('exec_email', 'address', 'phone', 'associated_users')
+        fields = ('exec_email', 'address', 'phone', 'associated_users', 'workday_fund', 'worktag')
 
 
 class OrgXFerForm(forms.ModelForm):
@@ -1262,49 +1277,6 @@ class EditHoursForm(forms.ModelForm):
     class Meta:
         model = Hours
         fields = ('hours',)
-
-
-class FopalForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        self.helper = FormHelper()
-        self.helper.form_class = "form-horizontal"
-        self.helper.form_method = "post"
-        self.helper.form_action = ""
-        self.helper.layout = Layout(
-            Field('name'),
-            Field('notes'),
-            Field('fund'),
-            Field('organization'),
-            Field('account'),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
-        )
-        super(FopalForm, self).__init__(*args, **kwargs)
-
-    class Meta:
-        model = Fund
-        fields = ('name', 'notes', 'fund', 'organization', 'account')
-
-
-class ExternalFundEditForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        self.helper = FormHelper()
-        self.helper.form_class = "form-horizontal"
-        self.helper.form_method = "post"
-        self.helper.form_action = ""
-        self.helper.layout = Layout(
-            Field('name'),
-            Field('notes'),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
-        )
-        super(ExternalFundEditForm, self).__init__(*args, **kwargs)
-
-    class Meta:
-        model = Fund
-        fields = ('name', 'notes')
 
 
 class CCIForm(forms.ModelForm):

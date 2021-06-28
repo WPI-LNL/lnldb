@@ -1672,6 +1672,11 @@ class EventBasicViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("events:worktag-form", args=[self.e3.pk]), valid_data),
                              reverse("events:detail", args=[self.e3.pk]))
 
+        # Check that organization details were updated with worktag info (were initially blank)
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.worktag, "1234-AB")
+        self.assertEqual(self.org.workday_fund, 810)
+
         # Check that user is automatically added to the associated users list for the organization if not already on it
         self.assertIn(self.user, self.org.associated_users.all())
 
@@ -2679,34 +2684,3 @@ class LookupTests(ViewTestCase):
         # Test format_match with default user
         self.assertEqual(lookup.format_match(org), "&nbsp;<strong>Lens &amp; Lights</strong>")
         self.assertEqual(lookup_limited.format_match(org), "&nbsp;<strong>Lens &amp; Lights</strong>")
-
-    def test_fund_lookup(self):
-        org = OrgFactory.create(name="Lens & Lights", shortname="LNL")
-        fund = models.Fund.objects.create(name="Test", account=12345, organization=1, fund=123)
-        org.accounts.add(fund)
-
-        request_factory = RequestFactory()
-        request = request_factory.get("/", {'term': 'test'})
-        request.user = self.user
-        lookup = lookups.FundLookup()
-        lookup_limited = lookups.FundLookupLimited()
-        self.assertTrue(lookup.check_auth(request))
-        self.assertTrue(lookup_limited.check_auth(request))
-
-        # Test get_query with bogus query
-        self.assertEqual(list(lookup.get_query('bla', request)), [])
-        self.assertEqual(list(lookup_limited.get_query('bla', request)), [])
-
-        # Test that if user is not associated with org, it does not appear in limited lookup
-        self.assertEqual(list(lookup_limited.get_query('123', request)), [])
-
-        org.user_in_charge = self.user
-        org.save()
-
-        # Test get_query with valid query
-        self.assertIn(fund, list(lookup.get_query('123', request)))
-        self.assertIn(fund, list(lookup_limited.get_query('123', request)))
-
-        # Test format_match with default user
-        self.assertEqual(lookup.format_match(fund), "&nbsp;<strong>Test (123-1-12345)</strong>")
-        self.assertEqual(lookup_limited.format_match(fund), "&nbsp;<strong>Test (123-1-12345)</strong>")

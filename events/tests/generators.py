@@ -6,7 +6,7 @@ from django.utils import timezone
 from factory import Faker, Sequence, SubFactory
 from factory.django import DjangoModelFactory
 
-from events.models import (Building, CCReport, Event, Event2019, Fund, Location, Category, Organization,
+from events.models import (Building, CCReport, Event, Event2019, Location, Category, Organization,
                            EventCCInstance, Service)
 
 __author__ = 'jmerdich'
@@ -103,13 +103,3 @@ class OrgFactory(DjangoModelFactory):
         model = Organization
     user_in_charge = SubFactory(UserFactory)
     name = Faker('company')
-
-
-class FundFactory(DjangoModelFactory):
-    class Meta:
-        model = Fund
-    organization = Sequence(lambda n: n)
-    fund = Sequence(lambda n: n)
-    account = Sequence(lambda n: n)
-    name = Faker('company')
-    notes = Faker('text')

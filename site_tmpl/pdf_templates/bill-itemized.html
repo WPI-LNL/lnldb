@@ -46,7 +46,7 @@
                 </tr>
                 <tr>
                     <td><b>Billed Account:</b></td>
-                    <td>{% if event_data.event.worktag %}{{ event_data.event.worktag }}{% else %}{{ event_data.event.billing_fund }}{% endif %}</td>
+                    <td>{{ event_data.event.worktag }}</td>
                     <td><b>Event End:</b></td>
                     <td>{{ event_data.event.datetime_end|localtime|date }}</td>
                 </tr>

@@ -118,10 +118,10 @@ fieldsets = (
 
 
 class OrgAdmin(VersionAdmin):
-    list_display = ('name', 'shortname', 'email', 'exec_email', 'user_in_charge', 'archived')
+    list_display = ('name', 'shortname', 'exec_email', 'user_in_charge', 'archived')
     list_filter = ('archived',)
-    filter_horizontal = ('accounts', 'associated_users', 'associated_orgs')
-    search_fields = ['name', 'shortname', 'email', 'exec_email']
+    filter_horizontal = ('associated_users', 'associated_orgs')
+    search_fields = ['name', 'shortname', 'email', 'exec_email', 'worktag']
     actions = [client_archive, client_unarchive]
 
 
@@ -141,10 +141,6 @@ class ExtraAdmin(admin.ModelAdmin):
     list_filter = ('category', 'disappear', 'checkbox')
 
 
-class FundAdmin(admin.ModelAdmin):
-    search_fields = ['name', 'notes', 'fund', 'account', 'organization']
-
-
 class WorkshopDatesAdmin(admin.TabularInline):
     model = models.WorkshopDate
 
@@ -159,7 +155,6 @@ class AttendanceRecordAdmin(admin.ModelAdmin):
     search_fields = ('event', 'user')
 
 
-admin.site.register(models.Fund, FundAdmin)
 admin.site.register(models.Billing)
 admin.site.register(models.Hours)
 admin.site.register(models.Building)

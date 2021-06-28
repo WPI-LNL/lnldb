@@ -281,7 +281,6 @@ class MyViewTest(ViewTestCase):
             "email": "lnl@wpi.edu",
             "address": "Campus Center 339",
             "phone": "5088675309",
-            "fund_info": "12345-6789-8765",
             "save": "Submit Request"
         }
 
@@ -314,11 +313,26 @@ class MyViewTest(ViewTestCase):
 
         self.assertOk(self.client.get(reverse("my:org-edit", args=[self.org.pk])))
 
+        invalid_data = {
+            "exec_email": "lnl@wpi.edu",
+            "address": "142 West Street",
+            "phone": "(123) 456 7890",
+            "associated_users": [str(self.user.pk)],
+            "workday_fund": 810,
+            "worktag": "test",
+            "save": "Save Changes"
+        }
+
+        # Test invalid worktag
+        self.assertOk(self.client.post(reverse("my:org-edit", args=[self.org.pk]), invalid_data))
+
         valid_data = {
             "exec_email": "lnl@wpi.edu",
             "address": "142 West Street",
             "phone": "(123) 456 7890",
             "associated_users": [str(self.user.pk)],
+            "workday_fund": 810,
+            "worktag": "1234-AB",
             "save": "Save Changes"
         }
 

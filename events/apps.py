@@ -15,7 +15,6 @@ class EventsConfig(AppConfig):
     def ready(self):
         Event = self.get_model('Event')
         CCReport = self.get_model('CCReport')
-        Fund = self.get_model('Fund')
         Organization = self.get_model('Organization')
 
         search.register(Event.objects.filter(sensitive=False),
@@ -28,5 +27,4 @@ class EventsConfig(AppConfig):
                    'short_services'))
         search.register(Organization)
         search.register(CCReport)
-        search.register(Fund)
         from . import signals # NOQA
