@@ -4,8 +4,12 @@ Updates 2021
 
 June
 ====
-This month we introduced some smaller features and several UI improvements.
+This month our main focus was on smaller features, UI improvements, and bug fixes. We also finally completed the
+transition to Workday for billing. The old Banner funds are now no longer supported.
 
+- :commit:`dba1d50c7a4c030294c9e535720bf47970581a4a` Fixed a bug where event attachments were not being linked to the selected services
+- :commit:`1441bb70f601726f1711722a30584e394d1bb615` Deprecated Banner funds (completes the transition to Workday for billing)
+- :commit:`aa22a4b6819e6337b40b6dfef052e71dd13d8603` Officers can now specify a location for their office hours
 - :commit:`9dccb7c495ac9514a16022f8b16c4707be6410f9` Updated our email template to include links to our Instagram and YouTube accounts
 - :commit:`efab3e9ae5b8aa33c27f6cff8fa8898d6963f214` Added calendar invites to meeting notice emails
 - :commit:`cf5843d36a9dca629d5592c42c62d2d2523368da` Fixed a bug where the date was sometimes incorrect in the heading of meeting notice emails

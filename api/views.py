@@ -89,7 +89,7 @@ class HourViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         verify_endpoint('Office Hours', self.request)
-        queryset = OfficeHour.objects.all().order_by('day')
+        queryset = OfficeHour.objects.all().order_by('day', 'hour_start')
         officer = self.request.query_params.get('officer', None)
         day = self.request.query_params.get('day', None)
         location = self.request.query_params.get('location', None)

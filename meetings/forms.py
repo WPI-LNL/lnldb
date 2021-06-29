@@ -56,7 +56,7 @@ class MeetingAdditionForm(forms.ModelForm):
             )
         )
         super(MeetingAdditionForm, self).__init__(*args, **kwargs)
-        self.fields['duration'].widget.attrs['placeholder'] = "1 minute"
+        self.fields['duration'].widget.attrs['placeholder'] = "e.g. 1 minute"
 
     duration = NaturalDurationField(
         human_values=True, required=True,

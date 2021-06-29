@@ -1,8 +1,7 @@
 from __future__ import division
 import datetime
 
-from ajax_select.fields import (AutoCompleteSelectField,
-                                AutoCompleteSelectMultipleField)
+from ajax_select.fields import (AutoCompleteSelectField, AutoCompleteSelectMultipleField)
 from crispy_forms.bootstrap import FormActions
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Field, Layout, Submit, Hidden
