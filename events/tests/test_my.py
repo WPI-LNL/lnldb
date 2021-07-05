@@ -6,9 +6,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from model_mommy import mommy
 
 from data.tests.util import ViewTestCase
-from ..models import EventCCInstance, OfficeHour, HourChange, Category, Lighting, Hours, ServiceInstance, \
-    OrganizationTransfer
-from .generators import EventFactory, OrgFactory, CCInstanceFactory, Event2019Factory, ServiceFactory
+from ..models import EventCCInstance, OfficeHour, Category, Lighting, Hours, ServiceInstance, OrganizationTransfer
+from .generators import EventFactory, OrgFactory, CCInstanceFactory, Event2019Factory, ServiceFactory, LocationFactory
 
 logging.disable(logging.WARNING)
 
@@ -282,7 +281,6 @@ class MyViewTest(ViewTestCase):
             "email": "lnl@wpi.edu",
             "address": "Campus Center 339",
             "phone": "5088675309",
-            "fund_info": "12345-6789-8765",
             "save": "Submit Request"
         }
 
@@ -315,11 +313,26 @@ class MyViewTest(ViewTestCase):
 
         self.assertOk(self.client.get(reverse("my:org-edit", args=[self.org.pk])))
 
+        invalid_data = {
+            "exec_email": "lnl@wpi.edu",
+            "address": "142 West Street",
+            "phone": "(123) 456 7890",
+            "associated_users": [str(self.user.pk)],
+            "workday_fund": 810,
+            "worktag": "test",
+            "save": "Save Changes"
+        }
+
+        # Test invalid worktag
+        self.assertOk(self.client.post(reverse("my:org-edit", args=[self.org.pk]), invalid_data))
+
         valid_data = {
             "exec_email": "lnl@wpi.edu",
             "address": "142 West Street",
             "phone": "(123) 456 7890",
             "associated_users": [str(self.user.pk)],
+            "workday_fund": 810,
+            "worktag": "1234-AB",
             "save": "Save Changes"
         }
 
@@ -347,7 +360,8 @@ class MyViewTest(ViewTestCase):
         self.assertIsNotNone(self.e.ccreport_set.get(crew_chief=self.user))
 
     def test_office_hours(self):
-        hour = OfficeHour.objects.create(officer=self.user, day=2, hour_start=timezone.now().time(),
+        location = LocationFactory.create(name="Test Location", setup_only=True)
+        hour = OfficeHour.objects.create(officer=self.user, day=2, location=location, hour_start=timezone.now().time(),
                                          hour_end=timezone.now().time())
         hour.save()
         res = self.client.get(reverse("my:office-hours"))
@@ -364,6 +378,7 @@ class MyViewTest(ViewTestCase):
             "form-MIN_NUM_FORMS": 0,
             "form-MAX_NUM_FORMS": 1000,
             "form-0-day": 1,
+            "form-0-location": location.pk,
             "form-0-hour_start": "08:00 AM",
             "form-0-hour_end": "09:00 AM",
             "form-0-DELETE": False,
@@ -373,34 +388,9 @@ class MyViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("my:office-hours"), valid_data),
                              reverse("accounts:detail", args=[self.user.pk]))
 
-    def test_hours_update(self):
-        update = HourChange.objects.create(officer=self.user, expires=timezone.now(), message="Test")
-        update.save()
-        res = self.client.get(reverse("my:hours-update"))
-        self.assertOk(res)
-
-        formset = res.context['formset']
-        self.assertIsNotNone(formset.queryset)
-        self.assertTrue(formset.queryset.filter(officer=self.user).exists())
-
-        # Test POST
-        valid_data = {
-            "form-TOTAL_FORMS": 1,
-            "form-INITIAL_FORMS": 0,
-            "form-MIN_NUM_FORMS": 0,
-            "form-MAX_NUM_FORMS": 1000,
-            "form-0-message": 1,
-            "form-0-expires_0": "2020-01-01",
-            "form-0-expires_1": "09:00 AM",
-            "form-0-DELETE": False,
-            "save": "Save Changes"
-        }
-
-        self.assertRedirects(self.client.post(reverse("my:hours-update"), valid_data),
-                             reverse("accounts:detail", args=[self.user.pk]))
-
     def test_get_day(self):
-        hour = OfficeHour.objects.create(officer=self.user, day=3, hour_start=timezone.now().time(),
+        location = LocationFactory.create(setup_only=True)
+        hour = OfficeHour.objects.create(officer=self.user, day=3, location=location, hour_start=timezone.now().time(),
                                          hour_end=timezone.now().time())
         hour.save()
         self.assertEqual(hour.get_day, "Wednesday")

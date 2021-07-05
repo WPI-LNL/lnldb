@@ -608,8 +608,6 @@
                     <h2>Price Breakdown</h2>
                     {% if event.worktag %}
                         <h3>Charge from {{ event.worktag }}</h3>
-                    {% elif event.billing_fund %}
-                        <h3>Charge from <a href="{% url 'orgs:fundedit' event.billing_fund.id %}">{{ event.billing_fund }}.</a></h3>
                     {% endif %}
                     {% if event.late %}
                         <div class="alert alert-warning" role="alert">

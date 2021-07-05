@@ -73,34 +73,44 @@
                     <th>Username</th>
                     <td>{{ u.username }}</td>
                 </tr>
-                <tr>
-                    <th>Email</th>
-                    <td>{{ u.email }}</td>
-                </tr>
-                <tr>
-                    <th>WPI Box</th>
-                    <td>{{ u.wpibox }}</td>
-                </tr>
-                <tr>
-                    <th>Phone</th>
-                    <td>{{ u.phone }}</td>
-                </tr>
-                <tr>
-                    <th>Address</th>
-                    <td>{{ u.addr }}</td>
-                </tr>
                 {% if u.is_lnl or u.class_year %}
                     <tr>
                         <th>Class Year</th>
                         <td>{{ u.class_year }}</td>
                     </tr>
                 {% endif %}
+                <tr>
+                    <th>Email</th>
+                    <td>{{ u.email }}</td>
+                </tr>
+                <tr>
+                    <th>Phone</th>
+                    <td>{{ u.phone }}</td>
+                </tr>
+                {% if u.addr %}
+                <tr>
+                    <th>Address</th>
+                    <td>{{ u.addr }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <th>WPI Box</th>
+                    <td>{{ u.wpibox }}</td>
+                </tr>
                 {% if u.is_lnl or u.mdc %}
                     <tr>
                         <th>MDC</th>
                         <td>{{ u.mdc }}</td>
                     </tr>
                 {% endif %}
+                {% permission request.user has 'accounts.change_user' of u %}
+                    {% if u.student_id %}
+                    <tr>
+                        <th>Student ID</th>
+                        <td>{{ u.student_id }}</td>
+                    </tr>
+                    {% endif %}
+                {% endpermission %}
                 {% if u.title %}
                     <tr>
                         <th>Position</th>

@@ -7,9 +7,8 @@ import pytz
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
-from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.db.models import Count
-from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.core.exceptions import PermissionDenied
+from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 from django.utils import timezone
@@ -18,10 +17,8 @@ from reversion.models import Version
 import reversion
 
 from emails.generators import generate_transfer_email
-from events.forms import (ExternalOrgUpdateForm, FopalForm, ExternalFundEditForm,
-                          IOrgForm, IOrgVerificationForm, OrgXFerForm)
-from events.models import (BaseEvent, Fund, Organization, OrganizationTransfer,
-                           OrgBillingVerificationEvent)
+from events.forms import (ExternalOrgUpdateForm, IOrgForm, IOrgVerificationForm, OrgXFerForm)
+from events.models import (BaseEvent, Organization, OrganizationTransfer, OrgBillingVerificationEvent)
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from helpers.revision import set_revision_comment
 
@@ -38,7 +35,6 @@ def vieworgs(request):
 
     orgs = Organization.objects \
         .filter(archived=False) \
-        .annotate(fund_count=Count('accounts')) \
         .select_related('user_in_charge').all()
 
     context['orgs'] = orgs
@@ -93,83 +89,12 @@ def addeditorgs(request, org_id=None):
 
 
 @login_required
-def fund_edit(request, fund_id=None, org=None):
-    """form for adding or editing a fund """
-    # need to fix this
-    context = {}
-    edit_perms = ('events.change_fund',)
-    mk_perms = ('events.add_fund',)
-    if fund_id:
-        instance = get_object_or_404(Fund, pk=fund_id)
-        msg = "Edit Fund"
-        if not (request.user.has_perms(edit_perms) or
-                request.user.has_perms(edit_perms, instance)):
-            raise PermissionDenied
-    else:
-        instance = None
-        msg = "New Fund"
-        if not request.user.has_perms(mk_perms):
-            raise PermissionDenied
-
-    if request.method == 'POST':
-        form = FopalForm(request.POST, instance=instance)
-        if form.is_valid():
-            instance = form.save()
-            messages.add_message(request, messages.SUCCESS, 'Changes saved.')
-            if org:
-                try:
-                    org_instance = Organization.objects.get(pk=org)
-                    org_instance.accounts.add(instance)
-                    return HttpResponseRedirect(reverse('orgs:detail', args=(org,)))
-                except ObjectDoesNotExist:
-                    messages.add_message(request, messages.ERROR, 'Failed to add fund to organization.')
-            # return HttpResponseRedirect(reverse("home", kwargs={'msg':SUCCESS_MSG_ORG}))
-            return HttpResponseRedirect(reverse('orgs:list'))
-        else:
-            context['form'] = form
-            messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
-    else:
-        form = FopalForm(instance=instance)
-        context['form'] = form
-
-    context['msg'] = msg
-
-    return render(request, 'form_crispy.html', context)
-
-
-@login_required
-def fund_edit_external(request, fund_id=None, org=None):
-    """ Form for editing a fund (client view) """
-    context = {}
-    instance = get_object_or_404(Fund, pk=fund_id)
-    msg = "Edit Fund %s" % instance.fopal
-    for org in instance.orgfunds.all():
-        if not request.user.has_perm('events.edit_org_billing', org):
-            raise PermissionDenied
-
-    if request.method == 'POST':
-        form = ExternalFundEditForm(request.POST, instance=instance)
-        if form.is_valid():
-            instance = form.save()
-            messages.add_message(request, messages.SUCCESS, 'Changes saved.')
-            return HttpResponseRedirect(reverse('orgs:list'))
-        messages.add_message(request, messages.WARNING, 'Invalid Data. Please try again.')
-    else:
-        form = ExternalFundEditForm(instance=instance)
-    context['form'] = form
-
-    context['msg'] = msg
-
-    return render(request, 'form_crispy.html', context)
-
-
-@login_required
 def orgdetail(request, org_id):
     """ Organization detail page """
     context = {}
     perms = ('events.view_org',)
     try:
-        org = Organization.objects.prefetch_related('accounts', 'associated_users').get(pk=org_id)
+        org = Organization.objects.prefetch_related('associated_users').get(pk=org_id)
     except (Organization.DoesNotExist, Organization.MultipleObjectsReturned):
         raise Http404('No Organization matches the given query.')
     if not (request.user.has_perms(perms) or

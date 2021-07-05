@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from events.models import OfficeHour, HourChange, Event2019, CrewAttendanceRecord
+from events.models import OfficeHour, Event2019, CrewAttendanceRecord
 from accounts.models import User
 from data.models import ResizedRedirect
 from pages.models import Page
@@ -32,18 +32,11 @@ class OfficerSerializer(serializers.ModelSerializer):
 
 class HourSerializer(serializers.ModelSerializer):
     officer = serializers.CharField(source='officer.title')
+    location = serializers.CharField(source='location.name')
 
     class Meta:
         model = OfficeHour
-        fields = ('officer', 'day', 'hour_start', 'hour_end')
-
-
-class ChangeSerializer(serializers.ModelSerializer):
-    officer = serializers.CharField(source='officer.title')
-
-    class Meta:
-        model = HourChange
-        fields = ('officer', 'date_posted', 'expires', 'message')
+        fields = ('officer', 'day', 'location', 'hour_start', 'hour_end')
 
 
 class NotificationSerializer(serializers.BaseSerializer):

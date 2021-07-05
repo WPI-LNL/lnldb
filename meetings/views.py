@@ -5,17 +5,20 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import InvalidPage, Paginator
 from django.db.models.aggregates import Count
 from django.forms.models import inlineformset_factory
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.http.response import Http404
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 from django.utils import timezone
+from email.mime.base import MIMEBase
+from email.encoders import encode_base64
 from helpers.util import curry_class
 
 from data.views import serve_file
 from emails.generators import generate_notice_cc_email, generate_notice_email
 from events.forms import CCIForm
 from events.models import Event, EventCCInstance
+from events.cal import generate_ics
 
 from .forms import (AnnounceCCSendForm, AnnounceSendForm, MeetingAdditionForm,
                     MtgAttachmentEditForm)
@@ -239,6 +242,18 @@ def mknotice(request, mtg_id):
         if form.is_valid():
             notice = form.save()
             email = generate_notice_email(notice)
+
+            # Generate calendar invite
+            invite_filename = 'meeting.ics'
+            invite = MIMEBase('text', "calendar", method="PUBLISH", name=invite_filename)
+            invite.set_payload(generate_ics([meeting], None))
+            encode_base64(invite)
+            invite.add_header('Content-Description', 'Add to Calendar')
+            invite.add_header('Content-Class', "urn:content-classes:calendarmessage")
+            invite.add_header('Filename', invite_filename)
+            invite.add_header('Path', invite_filename)
+            email.attach(invite)
+
             res = email.send()
             if res == 1:
                 success = True
@@ -284,3 +299,14 @@ def mkccnotice(request, mtg_id):
     context['form'] = form
     context['msg'] = "CC Meeting Notice"
     return render(request, 'form_crispy_meetings.html', context)
+
+
+@login_required
+def download_invite(request, mtg_id):
+    """ Generate and download an ics file """
+    meeting = get_object_or_404(Meeting, pk=mtg_id)
+    invite = generate_ics([meeting], None)
+
+    response = HttpResponse(invite, content_type="text/calendar")
+    response['Content-Disposition'] = "attachment; filename=invite.ics"
+    return response

@@ -18,9 +18,6 @@ from xhtml2pdf import pisa
 from events.models import Category, BaseEvent, Event2019, ExtraInstance, MultiBilling
 from projection.models import PITLevel, Projectionist
 
-from .overlay import make_idt_single, make_idt_bulk
-from .utils import concat_pdf
-
 
 def link_callback(uri, rel):
     """ Convert HTML URIs to absolute system paths so xhtml2pdf can access those resources """
@@ -179,12 +176,6 @@ def generate_event_bill_pdf(request, event):
 
     resp = generate_pdf(data, 'pdf_templates/bill-itemized.html', request)
 
-# Commented out to remove IDT from invoices due to Workday transition
-#    # if it's actually an invoice, attach an idt, eh?
-#    if event.reviewed and "invoiceonly" not in request.GET:
-#        idt = make_idt_single(event, request.user)
-#        pdf_file = concat_pdf(pdf_file, idt)
-
     resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
     return resp
 
@@ -205,12 +196,6 @@ def generate_event_bill_pdf_standalone(event, request=None):
     pdf_file = BytesIO()
     pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
-# Commented out to remove IDT from invoices due to Workday transition
-#    # if it's actually an invoice, attach an idt, eh?
-#    if event.reviewed:
-#        idt = make_idt_single(event, idt_originator)
-#        pdf_file = concat_pdf(pdf_file, idt)
-
     return pdf_file.getvalue()
 
 
@@ -224,11 +209,6 @@ def generate_multibill_pdf(request, multibilling):
 
     # Render html content through html template with context
     resp = generate_pdf(data, 'pdf_templates/bill-multi.html', request)
-
-# Commented out to remove IDT from invoices due to Workday transition
-#    if "invoiceonly" not in request.GET:
-#        idt = make_idt_bulk(events, request.user, billing_org)
-#        pdf_file = concat_pdf(pdf_file, idt)
 
     resp['Content-Disposition'] = 'inline; filename="bill.pdf"'
     return resp
@@ -250,10 +230,6 @@ def generate_multibill_pdf_standalone(multibilling, request=None):
     # Write PDF to file
     pdf_file = BytesIO()
     pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
-
-# Commented out to remove IDT from invoices due to Workday transition
-#    idt = make_idt_bulk(events, idt_originator, billing_org)
-#    pdf_file = concat_pdf(pdf_file, idt)
 
     return pdf_file.getvalue()
 

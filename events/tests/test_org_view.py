@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.contrib.auth.models import Permission
 
 from .. import models
-from .generators import FundFactory, OrgFactory
+from .generators import OrgFactory
 from data.tests.util import ViewTestCase
 import logging
 
@@ -53,15 +53,27 @@ class OrgViewTest(ViewTestCase):
         permission = Permission.objects.get(codename="edit_org")
         self.user.user_permissions.add(permission)
 
+        # Show and edit org billing permissions are required to update workday info
+        permission = Permission.objects.get(codename="edit_org_billing")
+        self.user.user_permissions.add(permission)
+
+        permission = Permission.objects.get(codename="show_org_billing")
+        self.user.user_permissions.add(permission)
+
         self.assertOk(self.client.get(reverse("orgs:add")))
 
         self.assertOk(self.client.post(reverse("orgs:add")))
         # ie. with invalid data, it still reports the errors back with a valid page.
 
+        # Test invalid worktag
         sample_data = {'name': "SAMPLE",
                        "user_in_charge": str(self.user.pk),
                        "phone": "(800) 123 4567",
-                       'exec_email': 'lnl-w@wpi.edu'}
+                       'exec_email': 'lnl-w@wpi.edu',
+                       "worktag": "test"}
+        self.assertOk(self.client.post(reverse("orgs:add"), sample_data))
+
+        sample_data['worktag'] = "1234-AB"
         self.assertRedirects(self.client.post(reverse("orgs:add"), sample_data), reverse("orgs:detail", args=[2]))
         # ie. it is valid and redirects to the detail page
 
@@ -86,17 +98,36 @@ class OrgViewTest(ViewTestCase):
 
         invalid_data = {
             "name": "",
-            "user_in_charge": self.user.pk,
+            "user_in_charge": str(self.user.pk),
             "phone": "(800) 123 4567",
             "exec_email": "",
         }
         self.assertOk(self.client.post(reverse("orgs:edit", args=[self.o1.pk]), invalid_data))
         # ie. with invalid data, it still reports the errors back with a valid page.
 
+        # Show and edit org billing permissions are required to update workday info
+        permission = Permission.objects.get(codename="edit_org_billing")
+        self.user.user_permissions.add(permission)
+
+        permission = Permission.objects.get(codename="show_org_billing")
+        self.user.user_permissions.add(permission)
+
+        # Test with invalid worktag
+        invalid_data = {
+            "name": "SAMPLE",
+            "user_in_charge": str(self.user.pk),
+            "phone": "(800) 123 4567",
+            "exec_email": "lnl-w@wpi.edu",
+            "worktag": "test"
+        }
+
+        self.assertOk(self.client.post(reverse("orgs:edit", args=[self.o1.pk]), invalid_data))
+
         sample_data = {'name': "SAMPLE",
                        "user_in_charge": str(self.user.pk),
                        "phone": "(800) 123 4567",
-                       'exec_email': 'lnl-w@wpi.edu'}
+                       'exec_email': 'lnl-w@wpi.edu',
+                       "worktag": "1234-AB"}
         self.assertRedirects(self.client.post(reverse("orgs:edit", args=[self.o1.pk]), sample_data),
                              reverse("orgs:detail", args=[self.o1.pk]))
         # ie. it is valid and redirects to the detail page
@@ -144,102 +175,3 @@ class OrgViewTest(ViewTestCase):
 
         self.assertRedirects(self.client.post(reverse("my:org-transfer", args=[self.o1.pk]), valid_data),
                              reverse("orgs:detail", args=[self.o1.pk]))
-
-
-class FundViewTest(ViewTestCase):
-    sample_form = {
-        'name': "Foo",
-        'fund': "123",
-        'organization': "456",
-        'account': "789",
-    }
-
-    def setUp(self):
-        super(FundViewTest, self).setUp()
-        self.o1 = OrgFactory.create(name="ababab")
-        self.fund = FundFactory.create()
-
-    def test_add_form(self):
-        # Should not have permission by default
-        self.assertOk(self.client.get(reverse("orgs:fundadd", args=(self.o1.pk,))), 403)
-
-        permission = Permission.objects.get(codename="add_fund")
-        self.user.user_permissions.add(permission)
-
-        # Will also need view_org permission for redirect
-        permission = Permission.objects.get(codename="view_org")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("orgs:fundadd", args=(self.o1.pk,))))
-
-        self.assertOk(self.client.post(reverse("orgs:fundadd", args=(self.o1.pk,))))
-
-        self.assertRedirects(self.client.post(reverse("orgs:fundadd", args=(self.o1.pk,)), data=self.sample_form),
-                             reverse("orgs:detail", args=(self.o1.pk,)))
-
-        fund = models.Fund.objects.get(**self.sample_form)
-        self.assertTrue(self.o1 in fund.orgfunds.all())
-
-    def test_add_raw_form(self):
-        # Should not have permission by default
-        self.assertOk(self.client.get(reverse("orgs:fundaddraw")), 403)
-
-        permission = Permission.objects.get(codename="add_fund")
-        self.user.user_permissions.add(permission)
-
-        # Will also need view_org permissions for redirect
-        permission = Permission.objects.get(codename="view_org")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("orgs:fundaddraw")))
-
-        self.assertOk(self.client.post(reverse("orgs:fundaddraw")))
-
-        self.assertRedirects(self.client.post(reverse("orgs:fundaddraw"), data=self.sample_form), reverse("orgs:list"))
-
-        models.Fund.objects.get(**self.sample_form)
-
-    def test_blank_edit_form(self):
-        # Should not have permission by default
-        self.assertOk(self.client.get(reverse("orgs:fundedit", args=(self.fund.pk,))), 403)
-
-        permission = Permission.objects.get(codename="change_fund")
-        self.user.user_permissions.add(permission)
-
-        # Will also need view_org permission for redirect
-        permission = Permission.objects.get(codename="view_org")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("orgs:fundedit", args=(self.fund.pk,))))
-
-        self.assertOk(self.client.post(reverse("orgs:fundedit", args=(self.fund.pk,))))
-        # redisplays form w/ errors
-
-        self.assertRedirects(self.client.post(reverse("orgs:fundedit", args=(self.fund.pk,)), data=self.sample_form),
-                             reverse("orgs:list"))
-
-        models.Fund.objects.get(**self.sample_form)
-
-    def test_fund_edit_external(self):
-        self.fund.orgfunds.add(self.o1)
-
-        # By default should not have permission to edit fund
-        self.assertOk(self.client.get(reverse("orgs:fundedit_external", args=(self.fund.pk,))), 403)
-
-        self.o1.user_in_charge = self.user
-        self.o1.save()
-
-        self.assertOk(self.client.get(reverse("orgs:fundedit_external", args=(self.fund.pk,))))
-
-        valid_data = {
-            "name": "LNL Default",
-            "notes": "",
-            "save": "Save Changes"
-        }
-
-        # Will need view_org permission to redirect
-        permission = Permission.objects.get(codename="view_org")
-        self.user.user_permissions.add(permission)
-
-        self.assertRedirects(self.client.post(reverse("orgs:fundedit_external", args=(self.fund.pk,)), valid_data),
-                             reverse("orgs:list"))

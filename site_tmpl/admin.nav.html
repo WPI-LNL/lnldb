@@ -166,17 +166,8 @@
                         {% permission request.user has 'inventory.view_access_logs' %}
                         <li><a href="{% url 'inventory:view_logs' %}">Access Logs</a></li>
                         {% endpermission %}
-                        <li><a target="_blank" href="https://lnl-rt.wpi.edu/snipe/">View inventory - Snipe <i class="glyphicon glyphicon-new-window"></i></a></li>
+                        <li><a href="{% url 'inventory:snipe_password' %}">View inventory - Snipe</a></li>
                         <li><a target="_blank" href="https://lnl-rt.wpi.edu/rt/">Repairs ticket system - RT <i class="glyphicon glyphicon-new-window"></i></a></li>
-                        {% comment %}<!--<li class="divider"></li>
-                        <li class="dropdown-header">Old soon-to-be-removed</li>
-                        <li><a href="{% url "inventory:view_all" %}">View Inventory</a></li>
-                        {% permission request.user has 'inventory.add_equipmentclass' %}
-                            <li><a href="{% url "inventory:type_mk" %}">Add Item Type</a></li>
-                        {% endpermission %}
-                        {% permission request.user has 'inventory.add_equipmentitem' %}
-                            <li><a href="{% url "inventory:fast_mk" %}">Quick Add Items</a></li>
-                        {% endpermission %}-->{% endcomment %}
                     </ul>
                 </li>
                 {% endpermission %}

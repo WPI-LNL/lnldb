@@ -1395,6 +1395,16 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
         obj = self.get_object()
         return request.user.has_perm(self.perms, obj.org_to_be_billed) or request.GET.get('verification') == obj.workday_form_hash
 
+    def get_initial(self):
+        initial = self.initial
+        obj = self.get_object()
+        org = obj.org_to_be_billed
+        if obj.workday_fund is None:
+            initial['workday_fund'] = org.workday_fund
+        if obj.worktag is None:
+            initial['worktag'] = org.worktag
+        return initial
+
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
         is_update = self.object.workday_fund is not None or self.object.worktag is not None
@@ -1429,6 +1439,11 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
             org.associated_users.add(self.request.user)
         else:
             set_revision_comment("Entered Workday billing info", form)
+        # Add workday info to organization info if not already saved
+        if org.workday_fund is None or org.worktag is None:
+            org.workday_fund = self.object.workday_fund
+            org.worktag = self.object.worktag
+            org.save()
         # If the workday info is being updated as opposed to entered for the first time, send an email to the Treasurer
         if self.object.workday_fund is not None or self.object.worktag is not None:
             email_body = "The workday billing info for the following event was updated by {}. The previous version " \

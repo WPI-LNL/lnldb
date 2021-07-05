@@ -30,9 +30,11 @@
                     {% elpermission user has 'events.edit_org' of org %}
                         <a class="btn btn-lg btn-primary" href="{% url "my:org-edit" org.id %}">Edit</a>
                     {% endpermission %}
+                    {% if not org.locked %}
                     {% permission user has 'events.transfer_org_ownership' of org %}
                         <a class="btn btn-lg btn-success" href="{% url "my:org-transfer" org.id %}">Transfer</a>
                     {% endpermission %}
+                    {% endif %}
                 </div>
             </div>
         </div>

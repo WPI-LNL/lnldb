@@ -3,10 +3,12 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Div, Field, Fieldset, Layout, Row, Submit, Hidden
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.conf import settings
 from django import forms
 
 from data.forms import FieldAccessForm, FieldAccessLevel
 from .models import OfficerImg, carrier_choices
+from .ldap import get_student_id
 
 
 class LoginForm(AuthenticationForm):
@@ -49,6 +51,14 @@ class UserEditForm(FieldAccessForm):
         if request_user.is_lnl and instance_user.is_lnl:
             self.fields['class_year'].required = True
 
+    def clean_student_id(self):
+        student_id = self.cleaned_data.get('student_id', None)
+        if not student_id and self.instance.is_lnl and settings.SYNC_STUDENT_ID:
+            uid = get_student_id(self.instance.username)
+            if uid:
+                return int(uid)
+        return student_id
+
     class Meta:
         model = get_user_model()
         fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'groups', 'addr',
@@ -60,13 +70,11 @@ class UserEditForm(FieldAccessForm):
 
         thisisme = FieldAccessLevel(
             lambda user, instance: (user == instance) and not user.locked,
-            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'student_id',
-                    'nickname', 'carrier')
+            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'nickname', 'carrier')
         )
         hasperm = FieldAccessLevel(
             lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
-            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year',
-                    'student_id')
+            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year')
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.change_group', instance),
@@ -75,6 +83,10 @@ class UserEditForm(FieldAccessForm):
         edit_mdc = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.edit_mdc', instance),
             enable=('mdc',)
+        )
+        edit_student_id = FieldAccessLevel(
+            lambda user, instance: (user == instance) and (not instance.student_id or not settings.SYNC_STUDENT_ID),
+            enable=('student_id',)
         )
         unaffiliated = FieldAccessLevel(
             lambda user, instance: not user.is_lnl,

@@ -3,9 +3,11 @@ from django.forms.widgets import RadioSelect
 from django.core.validators import MinLengthValidator, MaxLengthValidator
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.utils import timezone
 
 from accounts.models import carrier_choices, PhoneVerificationCode
+from accounts.ldap import get_student_id
 
 
 class OnboardingUserInfoForm(forms.ModelForm):
@@ -24,10 +26,13 @@ class OnboardingUserInfoForm(forms.ModelForm):
                                                                                 'placeholder': 'WPI Box Number'}))
 
     def clean_student_id(self):
-        try:
-            return int(self.cleaned_data['student_id'])
-        except ValueError:
-            return None
+        if settings.SYNC_STUDENT_ID:
+            uid = get_student_id(self.instance.username)
+            if uid and (self.cleaned_data['student_id'] == uid or not self.cleaned_data['student_id']):
+                return int(uid)
+        if self.cleaned_data['student_id'] not in ['', None]:
+            return self.cleaned_data['student_id']
+        return None
 
     class Meta:
         model = get_user_model()

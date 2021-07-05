@@ -22,7 +22,7 @@ class MeetingsModelTest(TestCase):
         self.assertEqual(self.meeting.name, "Exec Meeting on %s" % timezone.now().date())
 
     def test_cal_name(self):
-        self.assertEqual("Meeting - %s" % self.meeting_type1.name, self.meeting.cal_name())
+        self.assertEqual("LNL Meeting - %s" % self.meeting_type1.name, self.meeting.cal_name())
 
     def test_cal_location(self):
         self.assertEqual("", self.meeting.cal_location())
@@ -32,7 +32,7 @@ class MeetingsModelTest(TestCase):
         self.assertEqual(test_location.name, self.meeting.cal_location())
 
     def test_cal_link(self):
-        path = reverse('meetings:detail', args=[self.meeting.pk])
+        path = "http://lnl.wpi.edu" + reverse('meetings:detail', args=[self.meeting.pk])
         self.assertEqual(path, self.meeting.cal_link())
 
     def test_cal_guid(self):

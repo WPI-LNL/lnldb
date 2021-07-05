@@ -2,11 +2,45 @@
 Updates 2021
 ============
 
+June
+====
+This month our main focus was on smaller features, UI improvements, and bug fixes. We also finally completed the
+transition to Workday for billing. The old Banner funds are now no longer supported.
+
+- :commit:`dba1d50c7a4c030294c9e535720bf47970581a4a` Fixed a bug where event attachments were not being linked to the selected services
+- :commit:`1441bb70f601726f1711722a30584e394d1bb615` Deprecated Banner funds (completes the transition to Workday for billing)
+- :commit:`aa22a4b6819e6337b40b6dfef052e71dd13d8603` Officers can now specify a location for their office hours
+- :commit:`9dccb7c495ac9514a16022f8b16c4707be6410f9` Updated our email template to include links to our Instagram and YouTube accounts
+- :commit:`efab3e9ae5b8aa33c27f6cff8fa8898d6963f214` Added calendar invites to meeting notice emails
+- :commit:`cf5843d36a9dca629d5592c42c62d2d2523368da` Fixed a bug where the date was sometimes incorrect in the heading of meeting notice emails
+- :commit:`7d8c20c26418a7613b8f54f1b885a66a002c9dd4` Updated welcome email (Upper Perreault Hall is now spelled correctly)
+
+May
+===
+We finally launched our User Guides! They are now available :doc:`here <../help/user-guides>`. Other than that, our
+focus this month was on bug fixes and other long-awaited improvements.
+
+- :commit:`b1e84e8aac7c771dbf4c37d043a196c01197a83a` Obtain member Student IDs automatically
+- :commit:`816a5bdf67840f76211f11f57f4968cd83dc888a` Made Snipe accessible to active members
+
+April
+=====
+In April we began chipping away at a long list of small bug fixes and UI improvements requested by our users. We also
+began laying the groundwork for our new Slack integration (coming soon)!
+
+- :commit:`89fea1a12a6647ac03fde5d7202076830d539713` Allow crew chiefs to view post-event survey results
+- :commit:`072ce308e86ca902106d01aa048ec2e43f9b78f9` Fixed a bug in the formatting of PDF invoices and quotes
+- :commit:`ab29ef55a1814a1b0ae0291d72972bcb3bc7c48c` Removed the old fund field from the client request form
+- :commit:`846ba1471968ef2edcd26a3455ca77e120a98192` Corrected a few errors that prevented the Snipe Checkin/Checkout tools from accessing the API
+
 March
 =====
 This month we launched our new onboarding system. Aside from that we fixed a few bugs and carried out some small
 improvements to the UI.
 
+- :commit:`24a0646e97b76e5b456e3c3525177d5591ef421f` Added an unsubscribe link to some of our automated emails
+- :commit:`a31275a68129328ded3eef4c5f2728326d0be64e` Fixed a bug where HTML tags were visible in PIT request emails
+- :commit:`88b1e751f094fc214cee4a6ef27974e4fe221b9c` Fixed a bug that occurred on the lnl.wpi.edu/me page when a user was not logged in
 - :commit:`a51d990f5e13d405645d79c4b319c851bbf6bfaf` Fixed a bug affecting the layout of the meeting email form
 - :commit:`44ab3c3d1780922ac6dcc04a1da20fcbb479000a` Added a more user friendly login failed page for Microsoft SSO
 

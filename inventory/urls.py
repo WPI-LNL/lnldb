@@ -45,6 +45,7 @@ urlpatterns = [
 
     url(r'^checkout/$', views.snipe_checkout, name="snipe_checkout"),
     url(r'^checkin/$', views.snipe_checkin, name="snipe_checkin"),
+    url(r'^snipe/$', views.snipe_credentials, name="snipe_password"),
 
     url(r'^locations/(?P<location>[-\w]+)/checkin/$', views.log_access, name="log_access"),
     url(r'^locations/(?P<location>[-\w]+)/checkout/$', views.log_access, {'reason': 'OUT'}, name="log_exit"),

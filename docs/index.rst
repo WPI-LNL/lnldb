@@ -25,7 +25,7 @@ Lights website is available to all WPI community members.
             <div style="display:inline-block;">
                <h2 style="width:auto;">Help</h2>
                <ul>
-               <li><a href="help/getting-started.html">User Guides</a></li>
+               <li><a href="help/user-guides.html">User Guides</a></li>
                </ul>
             </div>
          </td>
@@ -56,8 +56,9 @@ Lights website is available to all WPI community members.
    <br>
    <br>
 
-.. note::
-   We are currently in the process of developing new User Guides for this project and could use all the help we can get! If you'd like to help out, you can find more details on LNL's Sharepoint.
+.. seealso::
+   Have any questions, comments, or suggestions to share with us?
+   `Join the discussion on GitHub! <https://github.com/WPI-LNL/lnldb/discussions>`_
 
 Table of Contents
 -----------------
@@ -93,6 +94,7 @@ Table of Contents
    reference/pages
    reference/pdfs
    reference/projection
+   reference/rt
    reference/slack
 
 .. toctree::

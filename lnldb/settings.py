@@ -46,6 +46,13 @@ if sentry_uri is not None:
         'release': GIT_RELEASE,
     }
 
+SNIPE_URL = env.str('SNIPE_URL', '')
+SNIPE_API_KEY = env.str('SNIPE_API_KEY', '')
+SNIPE_GENERAL_USER = env.str('SNIPE_USERNAME', "")
+SNIPE_GENERAL_PASS = env.str('SNIPE_PASSWORD', "")
+
+RT_TOKEN = env.str('RT_API_KEY', '')
+
 TESTING = sys.argv[1:2] == ['test']
 
 DEBUG = env.bool("DEBUG", default=True)
@@ -87,9 +94,6 @@ DATABASES = {
 }
 CCC_PASS = env.str("CCC_PASS", "")
 SECRET_KEY = env.str("SECRET_KEY", "I am insecure.")
-
-SNIPE_URL = env.str('SNIPE_URL', '')
-SNIPE_API_KEY = env.str('SNIPE_API_KEY', '')
 
 SLACK_TOKEN = env.str('SLACK_BOT_TOKEN', None)
 
@@ -313,6 +317,7 @@ INSTALLED_APPS = (
     'mptt',
     'devices',
     'api',
+    'rt',
     'slack',
 
     'bootstrap3',
@@ -416,8 +421,6 @@ AJAX_LOOKUP_CHANNELS = {
     'Officers': ('accounts.lookups', 'OfficerLookup'),
     'Members': ('accounts.lookups', 'MemberLookup'),
     'AssocMembers': ('accounts.lookups', 'AssocMemberLookup'),
-    'Funds': ('events.lookups', 'FundLookup'),
-    'FundsLimited': ('events.lookups', 'FundLookupLimited'),
     'EquipmentClass': ('inventory.lookups', 'ClassLookup'),
     'EquipmentContainer': ('inventory.lookups', 'ContainerLookup')
 }
@@ -448,7 +451,7 @@ CCR_DAY_DELTA = 14
 # email stuff
 DEFAULT_TO_ADDR = "lnl@wpi.edu"
 DEFAULT_FROM_ADDR = 'WPI Lens and Lights <lnl@wpi.edu>'
-EMAIL_FROM_NOREPLY = "lnl-no-reply@wpi.edu"
+EMAIL_FROM_NOREPLY = "WPI Lens and Lights <lnl-no-reply@wpi.edu>"
 EMAIL_TARGET_P = "lnl-p@wpi.edu"
 EMAIL_TARGET_VP = "lnl-vp@wpi.edu"
 EMAIL_TARGET_S = "lnl-s@wpi.edu"
@@ -458,6 +461,7 @@ EMAIL_TARGET_W = "lnl-w@wpi.edu"
 EMAIL_TARGET_HP = "lnl-hp@wpi.edu"
 EMAIL_TARGET_NEWS = "lnl-news@wpi.edu"
 EMAIL_TARGET_ACTIVE = "lnl-active@wpi.edu"
+EMAIL_TARGET_RENTALS = "lnl-rental@wpi.edu"
 
 SEND_EMAIL_ORG_TRANSFER = True
 SEND_START_END_EMAILS = False
@@ -476,6 +480,7 @@ AIRPLANE_MODE = True
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
 PUBLIC_FIELD_FILTERING = env.bool("PUBLIC_FIELD_FILTERING", True)
+SYNC_STUDENT_ID = env.bool("STUDENT_AUTO_ID", False)
 
 # Don't mess with builtins just for the sake of permissions
 PERMISSION_REPLACE_BUILTIN_IF = False

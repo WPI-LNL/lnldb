@@ -51,6 +51,7 @@ urlpatterns += [
     url(r'', include(('members.urls', 'members'), namespace='members')),
     url(r'^api/', include(('api.urls', 'api'), namespace='api')),
     url(r'^mdm/', include(('devices.urls.mdm', 'mdm'), namespace="mdm")),
+    url(r'^support/', include(('rt.urls', 'support'), namespace='support')),
     url(r'', include(('pages.urls', 'pages'), namespace='pages')),
 
     # special urls

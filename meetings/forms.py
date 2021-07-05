@@ -56,8 +56,13 @@ class MeetingAdditionForm(forms.ModelForm):
             )
         )
         super(MeetingAdditionForm, self).__init__(*args, **kwargs)
+        self.fields['duration'].widget.attrs['placeholder'] = "e.g. 1 minute"
 
-    duration = NaturalDurationField(human_values=True, required=True)
+    duration = NaturalDurationField(
+        human_values=True, required=True,
+        help_text='<span class="small">This field accepts a quantifier followed by a unit of time. '
+                  '<a href="https://lnldb.readthedocs.io/en/latest/help/meetings/meeting-details.html">Learn more</a>'
+    )
     attendance = AutoCompleteSelectMultipleField('Users', required=False)
     datetime = SplitDateTimeField(required=True, initial=datetime.datetime.today())
     location = forms.ModelChoiceField(queryset=Location.objects.filter(available_for_meetings=True), label="Location",
@@ -71,9 +76,7 @@ class MeetingAdditionForm(forms.ModelForm):
                               required=False)
     agenda = forms.CharField(widget=PagedownWidget(),
                              required=False)
-    minutes_private = forms.CharField(widget=PagedownWidget(),
-                                      label="Closed Minutes",
-                                      required=False)
+    minutes_private = forms.CharField(widget=PagedownWidget(), label="Closed Minutes", required=False)
 
     class Meta:
         model = Meeting

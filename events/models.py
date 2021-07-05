@@ -125,7 +125,6 @@ class EventManager(models.Manager):
         event_name = event_details['eventname']
         location = event_details['location']
         general_description = event_details['general_description']
-        event_fund = event_details.get('fund', None)
         event_location = location
 
         # event_methods
@@ -182,7 +181,6 @@ class EventManager(models.Manager):
 
             location=event_location,
             description=general_description,
-            billing_fund=event_fund,
 
             lighting=lighting,
             sound=sound,
@@ -288,9 +286,10 @@ class BaseEvent(PolymorphicModel):
         desc = ""
         desc += "Requested by "
         orgs = self.org.all()
-        for org in orgs:
-            desc += org.name + ", "
-        desc = desc[:-2] + ".\n"  # removes trailing comma
+        if len(orgs) > 0:
+            for org in orgs:
+                desc += org.name + ", "
+            desc = desc[:-2] + ".\n"  # removes trailing comma
         ccs = self.ccinstances.all()
         if len(ccs) > 0:
             desc += "Crew Chiefs: "
@@ -487,8 +486,6 @@ class Event(BaseEvent):
     event_mg = EventManager()
 
     person_name = models.CharField(max_length=128, null=True, blank=True, verbose_name="Contact_name")  # DEPRECATED
-    billing_fund = models.ForeignKey('Fund', null=True, blank=True, on_delete=models.SET_NULL,
-                                     related_name="event_accounts")
     contact_email = models.CharField(max_length=180, null=True, blank=True)  # DEPRECATED
     contact_addr = models.TextField(null=True, blank=True)  # DEPRECATED
     contact_phone = models.CharField(max_length=32, null=True, blank=True)  # DEPRECATED
@@ -1120,51 +1117,6 @@ class CCReport(models.Model):
         return ", ".join([x.name for x in self.for_service_cat.all()])
 
 
-# class OrgFund(models.Model):
-# fund = models.IntegerField()
-# organization = models.IntegerField()
-# account = models.IntegerField(default=71973)
-
-# class OrgFund(models.Model):
-# fund = models.IntegerField()
-# organization = models.IntegerField()
-# account = models.IntegerField(default=71973)
-
-@python_2_unicode_compatible
-class Fund(models.Model):
-    """ Details used by the Treasurer to charge clients for our services """
-    glyphicon = 'credit-card'
-    fund = models.IntegerField()
-    organization = models.IntegerField()
-    account = models.IntegerField(default=71973)
-
-    name = models.CharField(max_length=128)
-    notes = models.TextField(null=True, blank=True)
-
-    # For future use. Dunno what to do with it yet.
-    last_used = models.DateField(null=True)
-
-    last_updated = models.DateField(null=True)
-
-    @property
-    def fopal(self):
-        return "%s-%s-%s" % self.as_tuple()
-
-    def as_tuple(self):
-        return (self.fund, self.organization, self.account)
-
-    def get_absolute_url(self):
-        return reverse('orgs:fundedit', args=[self.id])
-
-    def __str__(self):
-        return u"%s (%s)" % (self.name, self.fopal)
-
-    class Meta:
-        permissions = (
-            ('manage_fund', 'Manage a fund'),
-        )
-
-
 @python_2_unicode_compatible
 class Organization(models.Model):
     """ AKA: A Client """
@@ -1179,7 +1131,17 @@ class Organization(models.Model):
     address = models.TextField(null=True, blank=True)
     phone = models.CharField(max_length=32)
 
-    accounts = models.ManyToManyField(Fund, related_name='orgfunds')
+    workday_fund = models.IntegerField(null=True, blank=True, choices=(
+        (810, 'Student Organization (810-FD)'),
+        (110, 'Operating (110-FD)'),
+        (220, 'Gift (220-FD)'),
+        (250, 'Gift (250-FD)'),
+        (500, 'Gift (500-FD)'),
+        (210, 'Grant (210-FD)'),
+        (900, 'Project (900-FD)'),
+        (120, 'Designated (120-FD)'),
+    ))
+    worktag = models.CharField(max_length=10, null=True, blank=True)
 
     user_in_charge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='orgowner')
     associated_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='orgusers')
@@ -1194,10 +1156,6 @@ class Organization(models.Model):
     archived = models.BooleanField(default=False)
 
     locked = models.BooleanField(default=False, blank=True)
-
-    @property
-    def fopals(self):
-        return ", ".join([f.fopal for f in self.accounts.all()])
 
     def __str__(self):
         return self.name
@@ -1499,8 +1457,9 @@ class OfficeHour(models.Model):
     """ A listing for an officer's Office Hours """
     officer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     day = models.IntegerField(choices=DAYS_OF_WEEK)
-    hour_start = models.TimeField(auto_now=False, auto_now_add=False)
-    hour_end = models.TimeField(auto_now=False, auto_now_add=False)
+    hour_start = models.TimeField(auto_now=False, auto_now_add=False, verbose_name="Start Time")
+    hour_end = models.TimeField(auto_now=False, auto_now_add=False, verbose_name="End Time")
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="office_hours")
 
     def __str__(self):
         return self.officer.first_name + " " + self.officer.last_name + " - " + self.get_day_display()
@@ -1514,20 +1473,6 @@ class OfficeHour(models.Model):
             ('manage_hours', 'Manage Office Hours'),
         )
         verbose_name = "Office Hour"
-
-
-class HourChange(models.Model):
-    """ Notification informing users that an officer has made temporary adjustments to their office hours """
-    officer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    date_posted = models.DateTimeField(auto_now=True)
-    expires = models.DateTimeField(auto_now=False, auto_now_add=False)
-    message = models.TextField(max_length=244)
-
-    def __str__(self):
-        return self.officer.name
-
-    class Meta:
-        verbose_name = "Office Hour Update"
 
 
 class CrewAttendanceRecord(models.Model):

@@ -1,57 +1,63 @@
 {% extends "emails/email_base.html" %}
 
+{% block unsub %}
+{% endblock %}
+
 {% block content %}
-<p>
+<h4>
     Hi {{ new_member }},
+</h4>
+<p>
+    I hope you had a good time at your first LNL meeting or event! I want to let you know about a few helpful resources
+    available to you as you begin your journey with us.
 </p>
 <p>
-    I hope you had a good time at your first LNL meeting or event!
-    I want to let you know about a few resources available to you.
+    You can find some basic information for new members at <a href="https://lnl.wpi.edu/join">lnl.wpi.edu/join</a>.
+    Additionally, our upcoming event calendar can be found at <a href="http://when2lnl.com">when2lnl.com</a>. This has
+    the setup times and locations for each of our events. You can add this calendar to your favorite calendar app, such
+    as Outlook or Google Calendar, by pressing the "Subscribe" button at the top of the page.
 </p>
 <p>
-    <a href="http://when2lnl.com">when2lnl.com</a> is the link to the calendar where all of our upcoming events are posted.
-    It has the setup times and locations for every event.
-    You can add the calendar to your favorite calendar system such as Outlook or Google Calendar by
-    pressing the Subscribe button on that page.
+    Our mailing lists and our Slack workspace are our primary means of communication.
+    <a href="https://join.slack.com/t/wpilnl/signup">Click here</a> to join our Slack workspace. You will be added to
+    the mailing list around the time you are receiving this email. Before each event you will usually get an email from
+    the person in charge of setup (the crew chief) with more details about the when, where, and what of setup for that
+    event. Feel free to show up to any event to help.
 </p>
 <p>
-    Our mailing list and our Slack workspace are our primary means of communication.
-    You should be added to the mailing list around the time you are receiving this email.
-    Before each event you will usually get an email from the person in charge of setup (the crew chief)
-    with more detail about the when, where, and what of setup for that event.
+    While most of the tasks you might perform in LNL don’t require training, there are a few that do. If you ever have
+    questions about whether or not you need training to do something, don’t be afraid to ask!
 </p>
 <p>
-    Feel free to show up to any event to help. There is no sign-up for helping at an event.
+    You can access our member website and database by visiting <a href="https://lnl.wpi.edu/db">lnl.wpi.edu/db</a>.
+    This website serves as your home base for everything LNL related and is where you will find event details and
+    meeting information. It takes 3 meetings and 5 events to become an active member, and once that happens you can
+    serve as the crew chief for an event - if you want to. The 5 events must include one from each of our service
+    categories: sound, lighting and projection.
 </p>
 <p>
-    Most things in LNL don’t require training, but there are a certain tasks that you must be trained to perform.
-    If you ever have any questions about whether or not you need training to do something, don’t be afraid to ask!
-</p>
-<p>
-    <a href="http://lnl.wpi.edu/db">lnl.wpi.edu/db</a> is our database.
-    This also has when events are, and it keeps track of when you go to meetings and events.
-    It takes 3 meetings and 5 events to become an active member, and once that happens you can crew chief events if you want.
-    Minutes are also found here if you miss a meeting and want to check them out.
-</p>
-<p>
-    Our general body meetings are Wednesdays at 5pm in AK233 and our Executive Board meetings are Mondays at 5pm in the
-    Morgan room of the Campus Center. Attending either counts towards the activation requirements.
+    Our general body meetings are <strong>Wednesdays at 5 PM</strong> in AK233 and our Executive Board meetings are
+    <strong>Mondays at 5 PM</strong> in the Morgan room of the Campus Center. Attending either of these meetings counts
+    towards the activation requirements.
 </p>
 <p>
     We often refer to the following locations in work announcements:
     <ul>
-        <li>Alden Sub(basement): Take the elevator in Alden down to the "SB" floor. We keep all our lighting equipment down there.</li>
-        <li>CC Office: On the third floor of the CC, if you walk all the way towards the elevator it is on your right. Our sound equipment is in there.</li>
-        <li>The Projection Booth: in Fuller Labs near the Upper Perrault Hall door</li>
+        <li><strong>Alden Sub(basement)</strong>: Take the elevator in Alden down to the "SB" floor. We keep all our lighting equipment down there.</li>
+        <li><strong>CC Office</strong>: On the third floor of the CC, if you walk all the way towards the elevator it is on your right. Our sound equipment is in there.</li>
+        <li><strong>The Projection Booth</strong>: In Fuller Labs near the Upper Perreault Hall door. This is where our projectors live.</li>
     </ul>
 </p>
 <p>
-    If you have any other questions about anything, please email the Secretary at lnl-s@wpi.edu!
+    If you have any other questions about anything, please email our Secretary at <a href="mailto:lnl-s@wpi.edu">lnl-s@wpi.edu</a>!
 </p>
 <p>
-    We hope to see you soon!
+    We hope to see you again soon!
 </p>
+<hr>
 <p>
-    Secretary
+    Secretary<br>
+    WPI Lens and Lights
+    <br><br>
 </p>
 {% endblock %}

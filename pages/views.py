@@ -7,6 +7,7 @@ from django.http import HttpResponseRedirect
 from django.core.exceptions import PermissionDenied
 from django.views.decorators.http import require_GET
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.contrib import messages
 from formtools.wizard.views import SessionWizardView
 
@@ -15,6 +16,7 @@ from emails.generators import generate_sms_email
 from pages.models import Page, OnboardingScreen
 from pages.forms import OnboardingContactInfoForm, OnboardingUserInfoForm, SMSVerificationForm
 from accounts.models import PhoneVerificationCode
+from accounts.ldap import get_student_id
 from processors import navs
 from helpers.mixins import LoginRequiredMixin
 
@@ -81,7 +83,13 @@ class OnboardingWizard(SessionWizardView, LoginRequiredMixin):
         return super().get_form_instance(step)
 
     def get_form_initial(self, step):
-        self.initial_dict = {'1': {'phone': self.request.user.phone}}
+        if settings.SYNC_STUDENT_ID:
+            self.initial_dict = {
+                '0': {'student_id': get_student_id(self.request.user.username)},
+                '1': {'phone': self.request.user.phone}
+            }
+        else:
+            self.initial_dict = {'1': {'phone': self.request.user.phone}}
         return super().get_form_initial(step)
 
     def get_form_kwargs(self, step=None):

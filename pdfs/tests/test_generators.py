@@ -3,7 +3,6 @@ from django.test import TestCase
 
 from events.tests.generators import EventFactory, UserFactory, Event2019Factory
 
-from ..overlay import make_idt_bulk, make_idt_single
 from ..views import generate_pdfs_standalone
 
 
@@ -27,11 +26,3 @@ class PdfViewTest(TestCase):
 
         # Ensure that providing ids does not return an empty pdf
         self.assertNotEqual(generate_pdfs_standalone(), generate_pdfs_standalone([self.e.pk]))
-
-    def test_pdf_idt(self):
-        pdf = make_idt_single(self.e, self.user)
-        self.assertIsNotNone(pdf)
-
-    def test_pdf_bulk_idt(self):
-        pdf = make_idt_bulk([self.e, self.e2], self.user)
-        self.assertIsNotNone(pdf)

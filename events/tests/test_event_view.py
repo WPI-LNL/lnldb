@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from .generators import CCReportFactory, EventFactory, Event2019Factory, UserFactory, OrgFactory, CCInstanceFactory, \
     ServiceFactory, LocationFactory
-from .. import models, lookups
+from .. import models, lookups, cal
 from ..templatetags import append_get, at_event_linking, gpa_scale_emoji
 
 
@@ -1672,6 +1672,11 @@ class EventBasicViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("events:worktag-form", args=[self.e3.pk]), valid_data),
                              reverse("events:detail", args=[self.e3.pk]))
 
+        # Check that organization details were updated with worktag info (were initially blank)
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.worktag, "1234-AB")
+        self.assertEqual(self.org.workday_fund, 810)
+
         # Check that user is automatically added to the associated users list for the organization if not already on it
         self.assertIn(self.user, self.org.associated_users.all())
 
@@ -2335,6 +2340,44 @@ class EventListBasicViewTest(ViewTestCase):
 
         self.assertOk(self.client.get(reverse("events:all-cal")))
 
+    def test_ical_generation(self):
+        # Test with no attendees
+        start = timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)).strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
+        end = timezone.make_aware(timezone.datetime(2020, 1, 1)).strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
+        now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
+        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\nMETHOD:PUBLISH\r\n' \
+                   b'BEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART:' + start + b'\r\nDTEND:' + end + b'\r\n' \
+                   b'DTSTAMP:' + now + b'\r\nUID:event1@lnldb\r\nDESCRIPTION:Requested by \r\n' \
+                   b'LOCATION:\r\nURL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
+        output = cal.generate_ics([self.e], None)
+        self.assertEqual(output, expected)
+
+        # Test response when set to generate a request
+        now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
+        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\nMETHOD:REQUEST\r\n' \
+                   b'BEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART:' + start + b'\r\nDTEND:' + end + b'\r\n' \
+                   b'DTSTAMP:' + now + b'\r\nUID:event1@lnldb\r\nDESCRIPTION:Requested by \r\n' \
+                   b'LOCATION:\r\nURL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
+        output = cal.generate_ics([self.e], None, True)
+        self.assertEqual(output, expected)
+
+        # Test with multiple attendees for multiple events (should only add two attendees)
+        self.user.first_name = "Test"
+        self.user.last_name = "User"
+        self.user.save()
+        attendee1 = cal.EventAttendee(self.e, self.user)
+        attendee2 = cal.EventAttendee(self.e, self.user, False)
+        attendee3 = cal.EventAttendee(self.e2, self.user)
+        now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
+        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\nMETHOD:PUBLISH\r' \
+                   b'\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART:' + start + b'\r\nDTEND:' + end + b'\r\n' \
+                   b'DTSTAMP:' + now + b'\r\nUID:event1@lnldb\r\nATTENDEE;CN="Test User";ROLE=REQ-PARTICIPANT;' \
+                   b'RSVP=FALSE:MAILTO:abc@foo.com\r\nATTENDEE;CN="Test User";ROLE=OPT-PARTICIPANT;RSVP=FALSE:' \
+                   b'MAILTO:abc@foo.com\r\nDESCRIPTION:Requested by \r\nLOCATION:\r\n' \
+                   b'URL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
+        output = cal.generate_ics([self.e], [attendee1, attendee2, attendee3])
+        self.assertEqual(output, expected)
+
 
 class WorkshopTests(ViewTestCase):
     def test_workshops_list(self):
@@ -2641,34 +2684,3 @@ class LookupTests(ViewTestCase):
         # Test format_match with default user
         self.assertEqual(lookup.format_match(org), "&nbsp;<strong>Lens &amp; Lights</strong>")
         self.assertEqual(lookup_limited.format_match(org), "&nbsp;<strong>Lens &amp; Lights</strong>")
-
-    def test_fund_lookup(self):
-        org = OrgFactory.create(name="Lens & Lights", shortname="LNL")
-        fund = models.Fund.objects.create(name="Test", account=12345, organization=1, fund=123)
-        org.accounts.add(fund)
-
-        request_factory = RequestFactory()
-        request = request_factory.get("/", {'term': 'test'})
-        request.user = self.user
-        lookup = lookups.FundLookup()
-        lookup_limited = lookups.FundLookupLimited()
-        self.assertTrue(lookup.check_auth(request))
-        self.assertTrue(lookup_limited.check_auth(request))
-
-        # Test get_query with bogus query
-        self.assertEqual(list(lookup.get_query('bla', request)), [])
-        self.assertEqual(list(lookup_limited.get_query('bla', request)), [])
-
-        # Test that if user is not associated with org, it does not appear in limited lookup
-        self.assertEqual(list(lookup_limited.get_query('123', request)), [])
-
-        org.user_in_charge = self.user
-        org.save()
-
-        # Test get_query with valid query
-        self.assertIn(fund, list(lookup.get_query('123', request)))
-        self.assertIn(fund, list(lookup_limited.get_query('123', request)))
-
-        # Test format_match with default user
-        self.assertEqual(lookup.format_match(fund), "&nbsp;<strong>Test (123-1-12345)</strong>")
-        self.assertEqual(lookup_limited.format_match(fund), "&nbsp;<strong>Test (123-1-12345)</strong>")

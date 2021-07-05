@@ -11,7 +11,6 @@ urlpatterns = [
     url(r'^workorders/attach/(?P<id>[0-9]+)/$', views.flow.assignattach_external, name="event-attach"),
 
     url(r'^office-hours/$', views.my.office_hours, name="office-hours"),
-    url(r'^office-hours/update/$', views.my.hours_update, name="hours-update"),
 
     url(r'^orgs/', include([
         url(r'^$', views.my.myorgs, name="orgs"),

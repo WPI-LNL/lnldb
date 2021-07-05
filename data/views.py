@@ -1,4 +1,3 @@
-import datetime
 import json
 import mimetypes
 import os
@@ -11,6 +10,7 @@ from django.db import transaction
 from django.http import FileResponse, HttpResponse, HttpResponseNotModified
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.datastructures import MultiValueDictKeyError
 from django.utils.dateparse import parse_datetime
 from django.utils.http import http_date, urlquote_plus
@@ -239,7 +239,7 @@ def workorderwizard_findprevious(request):
     events_past_18_months = events_models.Event2019.objects.filter(
         org=org,
         test_event=False,
-        datetime_start__gte=(datetime.datetime.now() - datetime.timedelta(days=548))
+        datetime_start__gte=(timezone.now() - timezone.timedelta(days=548))
     )
     if not request.user.has_perm('events.list_org_events', org):
         events_past_18_months = events_past_18_months.exclude(approved=False)
@@ -252,7 +252,7 @@ def workorderwizard_findprevious(request):
         return HttpResponse(status=204)
     # match found
     closest_match = events_past_18_months.filter(event_name=name_closest_match[0]).order_by('-datetime_start').first()
-    if (not closest_match.approved and not request.user.has_perm('events.view_event', closest_match)
+    if (not closest_match.approved and not request.user.has_perm('events.view_events', closest_match)
             or closest_match.sensitive and not request.user.has_perm('events.view_hidden_event', closest_match)):
         # match blocked by lack of user permission
         return HttpResponse(status=204)
