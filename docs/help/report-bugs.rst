@@ -9,8 +9,9 @@ server error, but it often helps to have a bit more context, so please don't hes
 
 You can submit a bug report by doing any of the following:
 
-#. `Submit a new issue on GitHub <https://github.com/WPI-LNL/lnldb>`_
+#. `Submit a ticket online <https://lnl.wpi.edu/support/tickets/new>`_ or through Slack
 #. Email tfed-db@wpi.edu
+#. `Submit a new issue on GitHub <https://github.com/WPI-LNL/lnldb>`_
 
 In your message, be sure to tell us where you were on the site, what you were doing, and what went wrong. The more
 details you can provide, the better.

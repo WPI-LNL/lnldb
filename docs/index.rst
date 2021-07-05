@@ -94,6 +94,7 @@ Table of Contents
    reference/pages
    reference/pdfs
    reference/projection
+   reference/rt
 
 .. toctree::
    :maxdepth: 2

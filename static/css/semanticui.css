@@ -19,6 +19,11 @@ input:read-only {
     cursor: not-allowed;
 }
 
+.inverted .field input, .inverted .field textarea {
+    background-color: #333 !important;
+    color: white !important;
+}
+
 .grid, .ui.text.container {
     opacity: 1;
     transition: all 1s ease;
@@ -45,6 +50,15 @@ input:read-only {
     opacity: 0;
     animation: fadein 1s ease 4s forwards;
     transition: all 1s ease;
+}
+
+#id_attachments {
+    cursor: pointer;
+    border-radius: unset;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    padding-bottom: 2%;
 }
 
 @keyframes fadein {

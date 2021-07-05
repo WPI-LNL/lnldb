@@ -1,0 +1,21 @@
+{% extends 'base_semanticui.html' %}
+{% load i18n %}
+{% load semanticui %}
+
+{% block content %}
+    <div class="ui middle aligned centered grid container">
+        <div class="twelve wide column">
+            <h3 class="ui {% if inverted %}inverted {% endif %}dividing header">Submit a Ticket</h3>
+            <form class="ui {% if inverted %}inverted {% endif %}form" action="" method="POST" id="form" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.management_form }}
+            {% render_form form %}
+            <br>
+            <button class="ui animated {% if inverted %}inverted {% else %}secondary {% endif %}button" type="submit" value="{% trans "submit" %}">
+                <div class="visible content">Submit</div>
+                <div class="hidden content"><i class="check icon"></i></div>
+            </button>
+        </form>
+        </div>
+    </div>
+{% endblock %}
