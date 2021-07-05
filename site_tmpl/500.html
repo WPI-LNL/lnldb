@@ -1,8 +1,15 @@
-{% extends 'base_admin.html' %}
+{% extends 'base_semanticui.html' %}
 
 {% block content %}
-    <h1>I don't know what went wrong!</h1>
-    <p>Our web code has goofed. Rest assured, our <a href="mailto:lnl-w@wpi.edu">Webmaster</a>
-        has been informed. In the meantime, some of your data may have gotten through, so go back
-        and check again, or just contact us in person.</p>
+    <div class="ui middle aligned centered grid container">
+        <div class="twelve wide column">
+            <h1><i class="red times circle outline icon"></i> I don't know what went wrong!</h1>
+            <p>Our web code has goofed. Rest assured, our Webmaster has been informed. In the meantime, some of your
+                data may have gotten through, so please go back and check again. If the problem persists, please submit
+                a ticket.</p>
+            <br>
+            <a class="ui {% if inverted %}inverted{% else %}secondary{% endif %} button" onclick="window.history.back();">Back</a>
+            <a class="ui {% if inverted %}inverted {% endif %}button" href="{% url 'support:new-ticket' %}">Open a Ticket</a>
+        </div>
+    </div>
 {% endblock %}
