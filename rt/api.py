@@ -43,6 +43,22 @@ def api_request(method, endpoint, data=None, token=None):
         return {"message": "Bad request"}
 
 
+def permission_error(response):
+    """
+    Check if a request to RT was rejected due to a lack of permissions
+
+    :param response: The response from RT
+    :return: True if the request was rejected
+    """
+
+    if any(message in "Permission Denied" for message in response):
+        return True
+    if type(response) is not list:
+        if response.get('message', '') == 'Unauthorized':
+            return True
+    return False
+
+
 def create_ticket(queue, reporter, subject, content, html=False, cc=None, attachments=None):
     """
     Create a new ticket in RT

@@ -60,7 +60,7 @@ def mk_srv_announce(request):
                     return HttpResponseRedirect(reverse('home'))
                 message = notice['message'].replace('**', '&&').replace('* ', '*&').replace('*', '_')\
                     .replace('_&', '- ').replace('&&', '*').replace('~~', '~')
-                response = slack_post(notice['slack_channel'], message, username='LNL Webmaster')
+                response = slack_post(notice['slack_channel'], text=message, username='LNL Webmaster')
                 if not response['ok']:
                     messages.add_message(request, messages.WARNING,
                                          'There was an error posting to Slack: %s' % response['error'])
@@ -180,7 +180,8 @@ def poke_cc(request):
                             }
                         },
                     ]
-                    response = slack_post(settings.SLACK_TARGET_ACTIVE, message, blocks, username='LNL Vice President')
+                    response = slack_post(settings.SLACK_TARGET_ACTIVE, text=message, content=blocks,
+                                          username='LNL Vice President')
                     if not response['ok']:
                         messages.add_message(request, messages.WARNING,
                                              'There was an error posting to Slack: %s' % response['error'])
