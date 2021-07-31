@@ -52,6 +52,7 @@ SNIPE_GENERAL_USER = env.str('SNIPE_USERNAME', "")
 SNIPE_GENERAL_PASS = env.str('SNIPE_PASSWORD', "")
 
 RT_TOKEN = env.str('RT_API_KEY', '')
+RT_CRYPTO_KEY = env.str('RT_CRYPTO_KEY', '')
 
 TESTING = sys.argv[1:2] == ['test']
 

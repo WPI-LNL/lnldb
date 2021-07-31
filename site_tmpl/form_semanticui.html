@@ -5,7 +5,7 @@
 {% block content %}
     <div class="ui middle aligned centered grid container">
         <div class="twelve wide column">
-            <h3 class="ui {% if inverted %}inverted {% endif %}dividing header">Submit a Ticket</h3>
+            <h3 class="ui {% if inverted %}inverted {% endif %}dividing header">{{ title }}</h3>
             <form class="ui {% if inverted %}inverted {% endif %}form" action="" method="POST" id="form" enctype="multipart/form-data">
             {% csrf_token %}
             {{ form.management_form }}
