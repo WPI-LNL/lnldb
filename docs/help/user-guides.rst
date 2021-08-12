@@ -36,6 +36,7 @@ Accounts
     accounts/update-profile
     accounts/local-login
     accounts/member-roles
+    accounts/linking-rt
 
 Events
 ^^^^^^

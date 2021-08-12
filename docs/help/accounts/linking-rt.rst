@@ -55,9 +55,4 @@ And that's it! Your accounts are now linked.
     Changing your password does not invalidate your auth token. If you wish to unlink your accounts, log into RT and
     revoke the token.
 
-.. caution::
-    Keep in mind that this feature is still in beta, so the scopes and permissions page will not be displayed during the
-    setup process. For more information about what the RT integration will be able to do, please contact our
-    `Webmaster <mailto:lnl-w@wpi.edu>`_.
-
-`Last Updated: July 29, 2021`
+`Last Updated: August 11, 2021`
