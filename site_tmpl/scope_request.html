@@ -1,0 +1,44 @@
+{% extends "onboarding.html" %}
+
+{% block page_content %}
+    {% if icon %}
+        <img src="{{ icon }}" draggable="false" style="max-width: 35%; border-radius: 5px">
+    {% endif %}
+	<h2 style="padding-top: 5%">{{ app }} is requesting access to {{ resource }}</h2>
+    {% if inverted %}
+    <table class="ui celled inverted table">
+        <thead>
+            <tr>
+                <th>Here's what {{ app }} will be able to do:</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <ul style="margin-top: 0px">
+                        {% for scope in scopes %}
+                            <li>{{ scope }}</li>
+                        {% endfor %}
+                    </ul>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    {% else %}
+    <div class="ui styled left accordion ">
+        <div class="title active">
+            <i class="dropdown icon"></i> Here's what {{ app }} will be able to do:
+        </div>
+        <div class="content active">
+            <ul style="margin-top: 0px">
+                {% for scope in scopes %}
+                    <li>{{ scope }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+    <br>
+    <a href="{% url "home" %}" class="ui gray button">Cancel</a>
+    <a href="{% url callback_uri %}" class="ui green button">Accept</a>
+{% endblock %}

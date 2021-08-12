@@ -35,8 +35,11 @@ class RTAPITests(ViewTestCase):
             self.assertRedirects(self.client.post(reverse("support:new-ticket"), valid_data), reverse("home"))
 
     def test_account_setup(self):
-        # Check that form loads ok
-        self.assertOk(self.client.get(reverse("support:link-account")))
+        # Check that form loads ok if coming from scopes page
+        self.assertRedirects(self.client.get(reverse("support:link-account")), reverse("accounts:scope-request"))
+
+        self.assertOk(self.client.get(reverse("support:link-account"),
+                                      HTTP_REFERER="https://lnl.wpi.edu" + reverse("accounts:scope-request")))
 
         # Test valid entry
         data = {

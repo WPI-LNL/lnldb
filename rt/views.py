@@ -40,7 +40,8 @@ def new_ticket(request):
 
 @login_required
 def link_account(request):
-    """ Page to use for linking RT account - TODO: Convert this to a POST only url? """
+    """ Walks the user through connecting their RT account to their LNLDB account """
+
     context = {'title': 'Connect to your RT account'}
     if request.method == 'POST':
         form = forms.AuthTokenForm(request.POST)
@@ -56,8 +57,16 @@ def link_account(request):
                                      "Security Error: Could not save token. Please contact the Webmaster.")
             return HttpResponseRedirect(reverse("accounts:me"))
     else:
+        # If the user hasn't yet agreed to the requested scopes, send them there first
+        if reverse("accounts:scope-request") not in request.META.get('HTTP_REFERER', ''):
+            request.session["app"] = "LNLDB"
+            request.session["resource"] = "RT"
+            request.session["icon"] = "https://lnl-rt.wpi.edu/rt/NoAuth/Helpers/CustomLogo/dd63008602de45a7b45597a4d43a7aad"
+            request.session["scopes"] = ["View your profile", "Manage tickets on your behalf"]
+            request.session["callback_uri"] = "support:link-account"
+            request.session["inverted"] = True
+            return HttpResponseRedirect(reverse("accounts:scope-request"))
+
         form = forms.AuthTokenForm()
     context['form'] = form
     return render(request, 'form_semanticui.html', context)
-
-# TODO: Add a permissions page that shows what the RT integration will be able to do
