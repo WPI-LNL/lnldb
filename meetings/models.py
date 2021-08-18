@@ -49,7 +49,7 @@ class Meeting(models.Model):
 
     @property
     def name(self):
-        return "%s Meeting on %s" % (self.meeting_type.name, self.datetime.date())
+        return "%s Meeting on %s" % (self.meeting_type.name, self.datetime.astimezone(timezone.get_current_timezone()).date())
 
     @property
     def endtime(self):

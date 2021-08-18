@@ -2,6 +2,13 @@
 Updates 2021
 ============
 
+July
+====
+This month we introduced the initial version of the RT integration for the LNLDB. Users can now submit TFed tickets from
+our error page.
+
+- :commit:`fdb146f173383182b04f5ae2b084376f44452eb0` Add form for submitting tfed tickets (`#525 <https://github.com/WPI-LNL/lnldb/issues/525>`_)
+
 June
 ====
 This month our main focus was on smaller features, UI improvements, and bug fixes. We also finally completed the

@@ -205,3 +205,11 @@ class PhoneVerificationCode(Model):
     user = OneToOneField(settings.AUTH_USER_MODEL, on_delete=CASCADE, related_name="verification_codes")
     code = BigIntegerField()
     timestamp = DateTimeField(auto_now_add=True)
+
+
+class UserPreferences(Model):
+    """ User-specific settings """
+    user = OneToOneField(settings.AUTH_USER_MODEL, on_delete=CASCADE, related_name="preferences")
+    theme = CharField(choices=(("default", "Default"),), default="default", max_length=12)
+
+    rt_token = CharField(blank=True, null=True, verbose_name="RT Auth Token", max_length=256)

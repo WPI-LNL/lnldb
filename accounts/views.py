@@ -24,7 +24,7 @@ from events.models import Event2019, OfficeHour, CCReport
 from helpers import mixins, challenges
 
 from . import forms
-from .models import OfficerImg
+from .models import OfficerImg, UserPreferences
 
 
 class UserAddView(mixins.HasPermMixin, generic.CreateView):
@@ -417,3 +417,39 @@ def officer_photos(request, pk=None):
     else:
         context['form'] = form
     return render(request, 'form_crispy.html', context)
+
+
+@login_required
+def application_scope_request(request):
+    """
+    Prompt the user to allow applications connected to the LNLDB to interact with one another. Redirects to the
+    application's callback uri.
+    """
+
+    context = {}
+    app_parameters = request.session
+    try:
+        context['app'] = app_parameters['app']
+        context['resource'] = app_parameters['resource']
+        context['icon'] = app_parameters['icon']
+        context['scopes'] = app_parameters['scopes']
+        context['callback_uri'] = app_parameters['callback_uri']
+        inverted = app_parameters['inverted']
+    except KeyError:
+        return HttpResponseRedirect(reverse("home"))
+
+    del request.session['app']
+    del request.session['resource']
+    del request.session['icon']
+    del request.session['scopes']
+    del request.session['callback_uri']
+    del request.session['inverted']
+
+    invert = False
+    prefs = UserPreferences.objects.get_or_create(user=request.user)
+    if inverted:
+        invert = True
+    elif inverted is None:
+        invert = prefs.theme == "dark"
+    context['inverted'] = invert
+    return render(request, 'scope_request.html', context)

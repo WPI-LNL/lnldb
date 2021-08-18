@@ -13,3 +13,14 @@ class TicketSubmissionForm(forms.Form):
             ("Field", "description"),
             ("Field", "attachments")
         ]
+
+
+class AuthTokenForm(forms.Form):
+    token = forms.CharField()
+
+    class Meta:
+        layout = [
+            ("Text", "To continue, you'll need to create an Auth Token in RT. For instructions on how to do this, "
+                     "<a href='https://lnldb.readthedocs.io/en/latest/help/accounts/linking-rt.html'>click here</a>.<br><br>"),
+            ("Field", "token")
+        ]

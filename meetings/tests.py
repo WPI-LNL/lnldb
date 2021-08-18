@@ -19,7 +19,7 @@ class MeetingsModelTest(TestCase):
         self.meeting = models.Meeting.objects.create(datetime=timezone.now(), meeting_type=self.meeting_type1)
 
     def test_name(self):
-        self.assertEqual(self.meeting.name, "Exec Meeting on %s" % timezone.now().date())
+        self.assertEqual(self.meeting.name, "Exec Meeting on %s" % timezone.localtime(timezone.now()).date())
 
     def test_cal_name(self):
         self.assertEqual("LNL Meeting - %s" % self.meeting_type1.name, self.meeting.cal_name())

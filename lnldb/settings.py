@@ -52,6 +52,7 @@ SNIPE_GENERAL_USER = env.str('SNIPE_USERNAME', "")
 SNIPE_GENERAL_PASS = env.str('SNIPE_PASSWORD', "")
 
 RT_TOKEN = env.str('RT_API_KEY', '')
+RT_CRYPTO_KEY = env.str('RT_CRYPTO_KEY', '')
 
 TESTING = sys.argv[1:2] == ['test']
 
@@ -94,6 +95,16 @@ DATABASES = {
 }
 CCC_PASS = env.str("CCC_PASS", "")
 SECRET_KEY = env.str("SECRET_KEY", "I am insecure.")
+
+SLACK_TOKEN = env.str('SLACK_BOT_TOKEN', None)
+
+SLACK_TARGET_GENERAL = env.str('SLACK_TARGET_GENERAL', None)
+SLACK_TARGET_EXEC = env.str('SLACK_TARGET_EXEC', None)
+SLACK_TARGET_ACTIVE = env.str('SLACK_TARGET_ACTIVE', None)
+SLACK_TARGET_WEBDEV = env.str('SLACK_TARGET_WEBDEV', None)
+SLACK_TARGET_TESTING = env.str('SLACK_TARGET_TESTING', None)
+SLACK_TARGET_TFED = env.str('SLACK_TARGET_TFED', '')
+SLACK_TARGET_TFED_DB = env.str('SLACK_TARGET_TFED_DB', '')
 
 SAML2_AUTH = {
     'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://samltest.id/saml/idp'),
@@ -310,6 +321,7 @@ INSTALLED_APPS = (
     'devices',
     'api',
     'rt',
+    'slack',
 
     'bootstrap3',
     'crispy_forms',

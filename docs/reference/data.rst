@@ -24,3 +24,11 @@ Forms
 .. automodule:: data.forms
     :members:
     :undoc-members:
+
+-----
+
+Decorators
+----------
+.. automodule:: data.decorators
+    :members:
+    :undoc-members:

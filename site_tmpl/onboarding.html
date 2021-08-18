@@ -48,8 +48,9 @@
                 {% endif %}
             </div>
         {% else %}
-            <div class="column" style="max-width: 650px;">
+            <div class="column{% if page.left_align %} left{% endif %}" style="max-width: 650px;">
 				<div class="ui container">
+                    {% block page_content %}
                     {{ page.icon|default_if_none:''|safe }}
 					<h2 style="padding-top: 5%">{{ page.title }}</h2>
 					<p>{{ page.content|safe }}</p>
@@ -58,6 +59,7 @@
                         <a href="{{ page.action_href }}" {% if page.new_window %}target="_blank"{% endif %} class="ui {% if page.action_color %}{{ page.action_color|lower }}{% else %}primary{% endif %} button">{{ page.action_title }}</a>
                     {% endif %}&nbsp;
                     <a href="{{ next_href }}" class="ui gray button">{{ page.next_btn|default_if_none:'Next' }}</a>
+                    {% endblock %}
 				</div>
             </div>
         {% endif %}
