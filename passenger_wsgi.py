@@ -12,11 +12,11 @@ INTERP = VENV_DIR + "/bin/python3"
 if sys.executable != INTERP:
     os.execl(INTERP, INTERP, *sys.argv)
 
-sys.path.append(APP_DIR)
 sys.path.append(APP_DIR + '/lnldb')
 
 sys.path.insert(0, VENV_DIR + '/bin')
 sys.path.insert(0, VENV_DIR + '/lib/python3.6/site-packages')
+sys.path.insert(0, APP_DIR)
 
 os.environ['LD_LIBRARY_PATH'] = VENV_DIR + '/lib'
 os.environ['DJANGO_SETTINGS_MODULE'] = "lnldb.settings"

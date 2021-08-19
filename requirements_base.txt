@@ -62,4 +62,4 @@ pysaml2==6.1.0
 django-jchart==0.4.2
 django-semanticui-forms==1.6.5
 filetype==1.0.7
-slack-sdk==3.3.0
+slack-sdk==3.9.1
