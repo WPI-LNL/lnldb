@@ -3,7 +3,7 @@ import logging
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.shortcuts import reverse
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseServerError, JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
@@ -379,6 +379,25 @@ def open_modal(trigger_id, blocks):
     except SlackApiError as e:
         assert e.response['ok'] is False
         return None
+
+
+# Event Handlers
+@csrf_exempt
+@require_POST
+def handle_event(request):
+    """
+    Event endpoint for the Slack API. Slack will send POST requests here whenever certain events have been triggered.
+    """
+
+    payload = json.loads(request.body)
+    if payload['type'] == "url_verification":
+        return JsonResponse({"challenge": payload['challenge']})
+    elif payload['type'] == "event_callback":
+        event = payload['event']
+        if event['type'] == "team_join":
+            slack_post(event['user']['id'], text="Welcome to LNL!", content=views.welcome_message())
+        return HttpResponse()
+    return HttpResponse("Not implemented")
 
 
 # Interaction handlers
