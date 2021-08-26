@@ -224,3 +224,36 @@ class SlackAPITests(ViewTestCase):
             "reporter": "testuser"
         }
         self.assertEqual(expected, views.tfed_ticket(ticket_info))
+
+    def test_event_url_verification(self):
+        # Slack may conduct a URL verification handshake to validate our server's identity
+        validation_info = {
+            "type": "url_verification",
+            "token": "Abc1dEfGhI2JkLMnOpQRstUv",
+            "challenge": "3wXyza4bCd5eFgHIJklM6789N0OP1qrsTUVWxYzaBC23dEFGHI4J"
+        }
+
+        # GET requests should not be permitted
+        self.assertOk(self.client.get(reverse("slack:event-endpoint")), 405)
+
+        resp = self.client.post(reverse("slack:event-endpoint"), validation_info, content_type="application/json")
+        self.assertOk(resp)
+        self.assertJSONEqual(
+            str(resp.content, 'utf-8'),
+            {"challenge": "3wXyza4bCd5eFgHIJklM6789N0OP1qrsTUVWxYzaBC23dEFGHI4J"}
+        )
+
+    def test_welcome_message(self):
+        # If you wish to actually test this, replace "id" with your user id
+        event_info = {
+            "type": "event_callback",
+            "event": {
+                "type": "team_join",
+                "user": {
+                    "id": "UABCD1234",
+                    "username": "lnl"
+                }
+            }
+        }
+
+        self.assertOk(self.client.post(reverse("slack:event-endpoint"), event_info, content_type="application/json"))

@@ -346,3 +346,76 @@ def ticket_update_modal(ticket_id, channel, timestamp, action):
         blocks[0]["accessory"]["initial_option"]["text"]["text"] = "Resolve"
         blocks[0]["accessory"]["initial_option"]["value"] = "resolved"
     return generate_modal("Update Ticket", "ticket-update-modal", blocks)
+
+
+def welcome_message():
+    """
+    Blocks for the Welcome Message. This message will be displayed to new users joining the Slack workspace.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+    """
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "Welcome to the LNL Slack!",
+                "emoji": False
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "We use Slack pretty heavily to communicate with one another (typically for more informal "
+                        "communications). Here are some helpful tips and reminders to help you get started:"
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Default Channels*\n\n• #general - Used to announce general *LNL-related* information to the "
+                        "entire club.\n\n• #random - If you would like to share anything that is not directly relevant "
+                        "to our normal business, post it here.\n\n• #work-announcements - This is, as you may have "
+                        "guessed, where we post work announcements for setups and strikes."
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Tips and Tricks*\n\n>*Please use threads when replying to messages!* This helps us keep the "
+                        "number of notifications we all receive to a respectable level.\n\n>You can mention particular "
+                        "users in your messages to get their attention. For instance, you could mention @lnl to notify "
+                        "the LNL Laptop.\n\n>If your message is really important, you can get the attention of "
+                        "everyone in a channel using @channel; however when possible, we recommend using @here instead."
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Need Help?",
+                        "emoji": False
+                    },
+                    "style": "primary",
+                    "url": "https://lnl.wpi.edu/help",
+                    "action_id": "welcome-help"
+                }
+            ]
+        }
+    ]
+    return blocks
