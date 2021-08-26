@@ -183,6 +183,7 @@ class DateEntryFormSetBase(forms.Form):
             'location': Location.objects.get_or_create(name="Perreault Hall Upper", defaults={'building': building})[0],
             'billed_in_bulk': True,
             'billing_org': org,
+            'send_survey': False
         }
         # if it's possible to approve the event, do so (since there is no bulk approve)
         if user.has_perm('events.approve_event'):

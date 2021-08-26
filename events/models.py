@@ -810,7 +810,7 @@ class Event2019(BaseEvent):
 
     # Post-event survey
     send_survey = models.BooleanField(
-        default=False, help_text='Check if the event contact should be emailed the post-event survey after the event'
+        default=True, help_text='Check if the event contact should be emailed the post-event survey after the event'
     )
     survey_sent = models.BooleanField(default=False, help_text='The post-event survey has been sent to the client')
 
