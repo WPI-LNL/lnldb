@@ -22,8 +22,8 @@ def send_survey_if_necessary(event):
     :param event: The event
     """
     now = timezone.now()
-    if now < event.datetime_end or event.datetime_end < (now - datetime.timedelta(days=30)) \
-            or not event.approved or event.survey_sent or not event.send_survey or event.contact is None:
+    if now < event.datetime_end or event.datetime_end < (now - datetime.timedelta(days=30)) or not event.approved \
+            or event.cancelled or event.survey_sent or not event.send_survey or event.contact is None:
         return
     email = SurveyEmailGenerator(event=event, subject='Post-event survey for {}'.format(event.event_name),
                                  to_emails=event.contact.email)
