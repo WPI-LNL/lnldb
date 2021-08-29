@@ -419,3 +419,59 @@ def welcome_message():
         }
     ]
     return blocks
+
+
+def app_home(tickets):
+    """
+    Blocks for the App's Home tab.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param tickets: A list of ticket ids
+    """
+
+    title = "*My Recent Tickets*"
+    if tickets.count() == 0:
+        title = "*You haven't submitted any tickets yet*"
+    blocks = [
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": title
+                }
+            ]
+        },
+        {
+            "type": "divider"
+        }
+    ]
+
+    for ticket in tickets:
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "\n*Ticket #" + str(ticket['id']) + ": " + ticket['Subject'] + "*\nStatus » " + ticket['Status']
+                },
+                "accessory": {
+                    "type": "overflow",
+                    "block_id": str(ticket['id']),
+                    "options": [
+                        {
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Comment",
+                                "emoji": False
+                            },
+                            "value": "Comment"
+                        }
+                    ],
+                    "action_id": "home-ticket-update"
+                }
+            }
+        )
+        blocks.append({"type": "divider"})
+
+    return blocks

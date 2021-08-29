@@ -397,7 +397,45 @@ def handle_event(request):
         if event['type'] == "team_join":
             slack_post(event['user']['id'], text="Welcome to LNL!", content=views.welcome_message())
         return HttpResponse()
+    elif payload['type'] == "app_home_opened":
+        load_app_home(payload['user'])
+        return HttpResponse()
     return HttpResponse("Not implemented")
+
+
+@process_in_thread
+def load_app_home(user_id):
+    """
+    Load the App's Home tab.
+
+    :param user_id: The identifier for the user in Slack
+    :return: Response object (Dictionary)
+    """
+
+    ticket_ids = []
+    tickets = []
+    user = user_profile(user_id)
+    if user['ok']:
+        ticket_ids = rt_api.get_tickets_for_user(user['user']['profile']['email'])
+    for ticket_id in ticket_ids:
+        ticket = rt_api.fetch_ticket(ticket_id)
+        if ticket.get('message'):
+            continue
+        tickets.append(ticket)
+    blocks = views.app_home(tickets)
+
+    if not settings.SLACK_TOKEN:
+        return {'ok': False, 'error': 'config_error'}
+
+    client = WebClient(token=settings.SLACK_TOKEN)
+
+    try:
+        response = client.views_publish(user_id=user_id, view={"type": "home", "blocks": blocks})
+        assert response['ok'] is True
+        return response
+    except SlackApiError as e:
+        assert e.response['ok'] is False
+        return e.response
 
 
 # Interaction handlers

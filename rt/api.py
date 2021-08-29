@@ -177,3 +177,18 @@ def get_user(username, token):
         return None
 
     return api_request('GET', url, token=token)
+
+
+def get_tickets_for_user(user):
+    """
+    Obtain a list of RT tickets submitted by a user
+
+    :param user: Email address of the user
+    :return: A list of ticket ids
+    """
+
+    ids = []
+    results = api_request('GET', host + "tickets?query=Requestor.EmailAddress%20=%20'" + user.replace('@', '%40') + "'")
+    for item in results['items']:
+        ids.append(int(item['id']))
+    return sorted(ids, reverse=True)
