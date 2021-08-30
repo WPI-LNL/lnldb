@@ -502,6 +502,13 @@ def handle_interaction(request):
 
             __update_ticket(ticket_id, status, owner_id, comments, notify_requestor, token, user_id, channel, ts)
             return HttpResponse()
+        elif callback_id == "ticket-comment-modal":
+            ticket_id = payload['view']['blocks'][0]['block_id']
+            comments = values['comments']['comment-action']['value']
+            user_id = payload['user']['id']
+            token = __retrieve_rt_token(user_id)
+            __post_ticket_comment(ticket_id, user_id, comments, token)
+            return HttpResponse()
         return HttpResponseNotFound()
 
     # Handle block interaction event
@@ -537,6 +544,16 @@ def handle_interaction(request):
             if modal_id:
                 return HttpResponse()
             return HttpResponseServerError("Failed to open modal")
+
+        # Home tab menu options
+        if action == "home-ticket-update":
+            ticket_id = payload['actions'][0]['block_id']
+            option = payload['actions'][0]['selected_option']['value']
+            if option == 'Comment':
+                blocks = views.ticket_comment_modal(ticket_id)
+                modal_id = open_modal(payload.get('trigger_id', None), blocks)
+                if not modal_id:
+                    return HttpResponseServerError("Failed to open modal")
         return HttpResponse()
     return HttpResponseNotFound()
 
@@ -556,6 +573,7 @@ def __create_ticket(user, subject, description, topic):
     if topic == 'Database':
         target = settings.SLACK_TARGET_TFED_DB
     user_email = user['user']['profile'].get('email', 'lnl-no-reply@wpi.edu')
+    display_name = user['user']['profile']['real_name']
     resp = rt_api.create_ticket(topic, user_email, subject, description)
     ticket_id = resp.get('id', None)
     if ticket_id:
@@ -563,7 +581,7 @@ def __create_ticket(user, subject, description, topic):
             "url": 'https://lnl-rt.wpi.edu/rt/Ticket/Display.html?id=' + ticket_id,
             "id": ticket_id,
             "subject": subject,
-            "description": description,
+            "description": description + "\n\n- " + display_name,
             "status": "New",
             "assignee": None,
             "reporter": user['user']['name']
@@ -626,6 +644,22 @@ def __update_ticket(ticket_id, status, owner_id, comments, notify_requestor, tok
 
         profile_photo = slack_user['user']['profile']['image_original']
         slack_post(channel, ts, comments, username=display_name, icon_url=profile_photo)
+
+
+@process_in_thread
+def __post_ticket_comment(ticket_id, user_id, comments, token):
+    """
+    Comment on a TFed ticket (background process).
+
+    :param ticket_id: The ticket number
+    :param user_id: The Slack user ID for the user that triggered the action
+    :param comments: The comments to be added to the ticket
+    :param token: The RT auth token for the user that triggered the action (if applicable)
+    """
+
+    user = user_profile(user_id)
+    display_name = user['user']['profile']['real_name']
+    rt_api.ticket_comment(ticket_id, comments + "\n\n- " + display_name, True, token=token)
 
 
 def refresh_ticket_message(channel, message):

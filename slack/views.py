@@ -475,3 +475,29 @@ def app_home(tickets):
         blocks.append({"type": "divider"})
 
     return blocks
+
+
+def ticket_comment_modal(ticket_id):
+    """
+    Blocks for the TFed ticket comment modal. Can be launched in the App Home tab.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+    """
+
+    blocks = [
+        {
+            "type": "input",
+            "block_id": str(ticket_id),
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "comment-action",
+                "multiline": True
+            },
+            "label": {
+                "type": "plain_text",
+                "text": "Comment on this ticket",
+                "emoji": False
+            }
+        }
+    ]
+
+    return generate_modal("Comments", "ticket-comment-modal", blocks)
