@@ -430,7 +430,7 @@ def app_home(tickets):
     """
 
     title = "*My Recent Tickets*"
-    if tickets.count() == 0:
+    if len(tickets) == 0:
         title = "*You haven't submitted any tickets yet*"
     blocks = [
         {
@@ -451,13 +451,13 @@ def app_home(tickets):
         blocks.append(
             {
                 "type": "section",
+                "block_id": str(ticket['id']),
                 "text": {
                     "type": "mrkdwn",
                     "text": "\n*Ticket #" + str(ticket['id']) + ": " + ticket['Subject'] + "*\nStatus » " + ticket['Status']
                 },
                 "accessory": {
                     "type": "overflow",
-                    "block_id": str(ticket['id']),
                     "options": [
                         {
                             "text": {

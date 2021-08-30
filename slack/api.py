@@ -396,9 +396,8 @@ def handle_event(request):
         event = payload['event']
         if event['type'] == "team_join":
             slack_post(event['user']['id'], text="Welcome to LNL!", content=views.welcome_message())
-        return HttpResponse()
-    elif payload['type'] == "app_home_opened":
-        load_app_home(payload['user'])
+        elif event['type'] == "app_home_opened":
+            load_app_home(payload['user'])
         return HttpResponse()
     return HttpResponse("Not implemented")
 
