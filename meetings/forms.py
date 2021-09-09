@@ -12,7 +12,7 @@ from multiupload.fields import MultiFileField
 from natural_duration import NaturalDurationField
 from pagedown.widgets import PagedownWidget
 
-from events.models import Event, Location
+from events.models import Event2019, Location
 from meetings.models import (CCNoticeSend, Meeting, MeetingAnnounce,
                              MtgAttachment)
 
@@ -117,9 +117,10 @@ class AnnounceSendForm(forms.ModelForm):
         twodaysago = now + datetime.timedelta(days=-4)
         aweekfromnow = now + datetime.timedelta(days=9)
         self.meeting = meeting
-        self.fields["events"].queryset = Event.objects.filter(datetime_setup_complete__gte=twodaysago, approved=True,
-                                                              datetime_setup_complete__lte=aweekfromnow).exclude(
-            Q(closed=True) | Q(cancelled=True))
+        self.fields["events"].queryset = Event2019.objects.filter(
+            datetime_setup_complete__gte=twodaysago, approved=True,
+            datetime_setup_complete__lte=aweekfromnow
+        ).exclude(Q(closed=True) | Q(cancelled=True))
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
@@ -149,7 +150,7 @@ class AnnounceSendForm(forms.ModelForm):
             'message': PagedownWidget(),
         }
 
-    events = forms.ModelMultipleChoiceField(queryset=Event.objects.all(), required=False)
+    events = forms.ModelMultipleChoiceField(queryset=Event2019.objects.all(), required=False)
 
 
 class AnnounceCCSendForm(forms.ModelForm):
@@ -173,9 +174,10 @@ class AnnounceCCSendForm(forms.ModelForm):
         )
         super(AnnounceCCSendForm, self).__init__(*args, **kwargs)
 
-        self.fields["events"].queryset = Event.objects.filter(datetime_setup_complete__gte=twodaysago, approved=True,
-                                                              datetime_setup_complete__lte=aweekfromnow).exclude(
-            Q(closed=True) | Q(cancelled=True))
+        self.fields["events"].queryset = Event2019.objects.filter(
+            datetime_setup_complete__gte=twodaysago, approved=True,
+            datetime_setup_complete__lte=aweekfromnow
+        ).exclude(Q(closed=True) | Q(cancelled=True))
 
     def save(self, commit=True):
         self.instance = super(AnnounceCCSendForm, self).save(commit=False)
