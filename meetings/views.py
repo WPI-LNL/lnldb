@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import InvalidPage, Paginator
 from django.db.models.aggregates import Count
+from django.views.generic.edit import DeleteView
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect, HttpResponse
 from django.http.response import Http404
@@ -14,6 +15,7 @@ from email.mime.base import MIMEBase
 from email.encoders import encode_base64
 from helpers.util import curry_class
 
+from helpers.mixins import HasPermMixin, LoginRequiredMixin
 from data.views import serve_file
 from emails.generators import generate_notice_cc_email, generate_notice_email
 from events.forms import CCIForm
@@ -226,6 +228,18 @@ def newattendance(request):
     context['form'] = form
     context['msg'] = "New Meeting"
     return render(request, 'form_crispy_meetings.html', context)
+
+
+class DeleteMeeting(LoginRequiredMixin, HasPermMixin, DeleteView):
+    """ Delete a meeting """
+    model = Meeting
+    template_name = "form_delete_cbv.html"
+    msg = "Delete Meeting"
+    perms = 'meetings.edit_mtg'
+    pk_url_kwarg = "mtg_id"
+
+    def get_success_url(self):
+        return reverse("meetings:list")
 
 
 @login_required

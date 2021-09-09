@@ -3,7 +3,7 @@ import datetime
 from ajax_select.fields import AutoCompleteSelectMultipleField
 from crispy_forms.bootstrap import FormActions, Tab, TabHolder
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Button, Field, Layout, Submit
+from crispy_forms.layout import Button, Field, Layout, Submit, HTML
 from django import forms
 from django.db.models import Q
 from django.forms.fields import SplitDateTimeField
@@ -23,6 +23,15 @@ class MeetingAdditionForm(forms.ModelForm):
         self.helper.form_class = 'form-horizontal'
         self.helper.form_tag = False
         self.helper.include_media = False
+        actions = FormActions(
+            Submit('save', 'Save Changes')
+        )
+        if kwargs.get("instance", None):
+            actions = FormActions(
+                Submit('save', 'Save Changes'),
+                HTML('<a class="btn btn-danger" href="{%% url "meetings:delete" %s %%}"> Delete </a>'
+                     % kwargs.get("instance").pk),
+            )
         self.helper.layout = Layout(
             TabHolder(
                 Tab(
@@ -51,9 +60,7 @@ class MeetingAdditionForm(forms.ModelForm):
                     'attachments_private'
                 ),
             ),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            actions
         )
         super(MeetingAdditionForm, self).__init__(*args, **kwargs)
         self.fields['duration'].widget.attrs['placeholder'] = "e.g. 1 minute"
