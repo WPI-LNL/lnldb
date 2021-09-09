@@ -7,7 +7,6 @@ from django.http import HttpResponse, HttpResponseNotFound, HttpResponseServerEr
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import permission_required
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
@@ -241,7 +240,6 @@ def replace_message(channel, message_id, text=None, content=None):
         return {'ok': False, 'error': 'no_text'}
 
 
-@permission_required('slack.manage_channel', raise_exception=True)
 def user_add(channel, users):
     """
     Invite users to join a slack channel. The bot must be a member of the channel.
@@ -265,7 +263,6 @@ def user_add(channel, users):
         return e.response
 
 
-@permission_required('slack.manage_channel', raise_exception=True)
 def user_kick(channel, user):
     """
     Remove a user from a slack channel. The bot must be a member of the channel.
@@ -420,7 +417,8 @@ def load_app_home(user_id):
         ticket = rt_api.fetch_ticket(ticket_id)
         if ticket.get('message'):
             continue
-        tickets.append(ticket)
+        if ticket['Status'] in ['open', 'new', 'stalled']:
+            tickets.append(ticket)
     blocks = views.app_home(tickets)
 
     if not settings.SLACK_TOKEN:
@@ -573,14 +571,14 @@ def __create_ticket(user, subject, description, topic):
         target = settings.SLACK_TARGET_TFED_DB
     user_email = user['user']['profile'].get('email', 'lnl-no-reply@wpi.edu')
     display_name = user['user']['profile']['real_name']
-    resp = rt_api.create_ticket(topic, user_email, subject, description)
+    resp = rt_api.create_ticket(topic, user_email, subject, description + "\n\n- " + display_name)
     ticket_id = resp.get('id', None)
     if ticket_id:
         ticket_info = {
             "url": 'https://lnl-rt.wpi.edu/rt/Ticket/Display.html?id=' + ticket_id,
             "id": ticket_id,
             "subject": subject,
-            "description": description + "\n\n- " + display_name,
+            "description": description,
             "status": "New",
             "assignee": None,
             "reporter": user['user']['name']

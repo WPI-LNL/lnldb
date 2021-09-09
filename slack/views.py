@@ -454,7 +454,8 @@ def app_home(tickets):
                 "block_id": str(ticket['id']),
                 "text": {
                     "type": "mrkdwn",
-                    "text": "\n*Ticket #" + str(ticket['id']) + ": " + ticket['Subject'] + "*\nStatus » " + ticket['Status']
+                    "text": "\n*Ticket #" + str(ticket['id']) + ": " + ticket['Subject'] + "*\nStatus » " +
+                            ticket['Status'].capitalize()
                 },
                 "accessory": {
                     "type": "overflow",
