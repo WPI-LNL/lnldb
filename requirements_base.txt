@@ -35,7 +35,7 @@ docutils==0.16
 html5lib==1.0.1
 icalendar==4.0.7
 #jsmin==2.2.2
-git+https://github.com/serenecloud/jsmin@python3-only#egg=jsmin
+-e git+https://github.com/serenecloud/jsmin@python3-only#egg=jsmin
 line-profiler==3.1.0
 Markdown==3.3.3
 markdown2==2.4.0
@@ -51,7 +51,8 @@ raven==6.10.0
 reportlab==3.6.1
 six==1.15.0
 sqlparse==0.4.1
-tolerance==0.1.2
+#tolerance==0.1.2
+-e git+https://github.com/WPI-LNL/tolerance@335211c974e5e1d85289e1a8745ce01794b05225#egg=tolerance
 xhtml2pdf==0.2.5
 django-cas-ng==4.1.1
 ldap3==2.8.1
