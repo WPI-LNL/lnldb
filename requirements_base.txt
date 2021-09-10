@@ -49,7 +49,7 @@ pytz==2020.4
 raven==6.10.0
 reportlab==3.5.68
 six==1.15.0
-sqlparse==0.4.1
+sqlparse==0.4.2
 tolerance==0.1.2
 xhtml2pdf==0.2.5
 django-cas-ng==4.1.1
