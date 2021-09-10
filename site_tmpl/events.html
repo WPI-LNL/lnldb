@@ -116,7 +116,8 @@
                     {% for field in cols %}
                         {% if field.name == 'event_name' %}
                             <td class="event-name"><a
-                                    href="{% url "events:detail" event.id %}">{{ event.event_name|public_field }}</a>
+                                    href="{% url "events:detail" event.id %}">{{ event.event_name|public_field }}
+                                {% if event.test_event %} [TEST EVENT] {% endif %}</a>
                             </td>
 
                         {% elif field.name == 'org' %}
