@@ -124,7 +124,7 @@ def update_ticket(ticket_id, token, status=None, owner=None):
     """
 
     if not status and not owner:
-        return None
+        return ['No change']
 
     endpoint = host + 'ticket/' + str(ticket_id)
     payload = {
