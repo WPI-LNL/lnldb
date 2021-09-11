@@ -117,7 +117,7 @@
                         {% if field.name == 'event_name' %}
                             <td class="event-name"><a
                                     href="{% url "events:detail" event.id %}">{{ event.event_name|public_field }}
-                                {% if event.test_event %} [TEST EVENT] {% endif %}</a>
+                                {% if event.test_event %} <span class="label label-info">Test Event</span> {% endif %}</a>
                             </td>
 
                         {% elif field.name == 'org' %}
