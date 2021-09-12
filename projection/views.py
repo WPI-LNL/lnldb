@@ -47,7 +47,7 @@ def plist_detail(request):
     licensed = Q(pitinstances__pit_level__name_short__in=['PP', 'L'])
     alumni = Q(user__groups__name="Alumni")
 
-    context['unlicensed_users'] = users.exclude(licensed)
+    context['current_users'] = users.exclude(alumni)
     context['licensed_users'] = users.filter(licensed).exclude(alumni)
     context['alumni_users'] = users.filter(licensed).filter(alumni)
     context['levels'] = levels

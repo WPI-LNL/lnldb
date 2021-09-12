@@ -14,8 +14,6 @@
     <tr> 
         <th> User Name </th>
         <th> Class </th>
-        <th> License Expiry </th>
-        <th> License Number </th>
     </tr>
     {% for user in users %}
         {% if user.expired %}
@@ -36,12 +34,6 @@
                 </td>
                 <td>
                     {{ user.level.pit_level }}
-                </td>
-                <td>
-                    {{ user.license_expiry }}
-                </td>
-                <td>
-                    {{ user.license_number }}
                 </td>
             </tr>
     {% endfor %}

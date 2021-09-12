@@ -10,7 +10,6 @@
     <a class="btn btn-info btn-lg" href="{% url "projection:pdf" %}"><i class="glyphicon glyphicon-print icon-white"></i>&nbsp;PDF</a>
 </div>
 <h2> {{ h2 }} </h2>
-<h3> Projectionists In Training </h3>
 <table class="table table-striped table-bordered table-condensed">
     <tr> 
         <th> User Name </th>
@@ -18,7 +17,7 @@
         <th> {{ level }} </th>
         {% endfor %}
     </tr>
-    {% for user in unlicensed_users %}
+    {% for user in current_users %}
         {% if user.expired %}
             <tr class="error" title="Expired"> 
         {% elif user.expiring %}
@@ -30,8 +29,14 @@
                 <td>
                     {% permission request.user has 'projection.edit_pits' %}
                         <a href="{% url "projection:edit" user.id %}">{{ user }}</a>
+                        {% if user in licensed_users %}
+                        <span class="label label-info">Licensed</span>
+                        {% endif %}
                     {% else %}
-                        {{ user }}
+                        {{ user }} 
+                        {% if user in licensed_users %}
+                        <span class="label label-info">Licensed</span>
+                        {% endif %}
                     {% endpermission %}
                 </td>
                 {% for level in levels %}
@@ -46,29 +51,7 @@
     {% endfor %}
     
 </table>
-<h3> Licensed Projectionists </h3>
-<ul>
-{% for user in licensed_users %}
-    <li>
-        {% permission request.user has 'projection.edit_pits' %}
-            <a href="{% url "projection:edit" user.id %}">{{ user }}</a>
-        {% else %}
-            {{ user }}
-        {% endpermission %}
 
-        {% if user.expired %}
-            <span class="badge badge-important" title="Expired">Expired</span>
-        {% elif user.expiring %}
-            <span class="badge badge-warning" title="Expiring Soon">Expiring Soon</span>
-        {% else %}
-            <span></span>
-        {% endif %}
-
-    
-    
-    </li>
-    {% endfor %}
-</ul>
 
 <h3> Alumni Projectionists </h3>
 <ul>
