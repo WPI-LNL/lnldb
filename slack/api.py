@@ -501,7 +501,7 @@ def handle_interaction(request):
             return HttpResponse()
         elif callback_id == "ticket-comment-modal":
             ticket_id = payload['view']['blocks'][0]['block_id']
-            comments = values['comments']['comment-action']['value']
+            comments = values[ticket_id]['comment-action']['value']
             user_id = payload['user']['id']
             token = __retrieve_rt_token(user_id)
             __post_ticket_comment(ticket_id, user_id, comments, token)
