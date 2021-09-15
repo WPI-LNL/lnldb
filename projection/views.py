@@ -44,7 +44,7 @@ def plist_detail(request):
     users = Projectionist.objects \
         .select_related('user')
 
-    licensed = Q(pitinstances__pit_level__name_short__in=['PP', 'L'])
+    licensed = Q(pitinstances__pit_level__name_short__in=['L'])
     alumni = Q(user__groups__name="Alumni")
 
     context['current_users'] = users.exclude(alumni)
