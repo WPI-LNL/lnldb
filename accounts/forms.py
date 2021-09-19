@@ -10,6 +10,8 @@ from data.forms import FieldAccessForm, FieldAccessLevel
 from .models import OfficerImg, carrier_choices
 from .ldap import get_student_id
 
+from PIL import Image
+
 
 class LoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
@@ -164,6 +166,17 @@ class OfficerPhotoForm(forms.ModelForm):
                 HTML('<input type="submit" name="save" value="Remove" class="btn btn-danger"></input>'))
         )
         super(OfficerPhotoForm, self).__init__(*args, **kwargs)
+
+    def save(self):
+        photo = super(OfficerPhotoForm, self).save()
+        
+        image = Image.open(photo.img)
+
+        resized_image = image.resize((1024, 684), Image.ANTIALIAS)
+        resized_image.save(photo.img.path)
+
+        return photo
+
 
     class Meta:
         model = OfficerImg
