@@ -8,7 +8,7 @@ from .models import User
 class MemberAdmin(UserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name', 'nickname', 'email')}),
+        (_('Personal info'), {'fields': ('first_name', 'last_name', 'nickname', 'email', 'pronouns')}),
         (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser',
                                        'groups', 'title', 'user_permissions')}),
         (_('Important dates'), {'fields': ('last_login', 'date_joined', 'away_exp')}),

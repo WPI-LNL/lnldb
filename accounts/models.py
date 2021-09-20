@@ -54,10 +54,13 @@ class User(AbstractUser):
     away_exp = DateField(verbose_name="Away Status Expiration", null=True, blank=True)
     onboarded = BooleanField(default=False, verbose_name="Onboarding Complete")
 
+    pronouns = CharField(max_length=13, null=True, blank=True, verbose_name="Pronouns")
+
     def __str__(self):
         nick = '"%s" ' % self.nickname if self.nickname else ""
+        pronouns = f" ({self.pronouns})" if self.pronouns else ""
         if self.first_name or self.last_name:
-            return self.first_name + " " + nick + self.last_name
+            return self.first_name + " " + nick + self.last_name + pronouns
         return "[%s]" % self.username
 
     def has_perm(self, perm, obj=None):
