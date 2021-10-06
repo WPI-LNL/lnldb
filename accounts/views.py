@@ -281,7 +281,7 @@ def mdc_raw(request):
 
 
 @login_required
-@permission_required('accounts.change_group', raise_exception=True)
+@permission_required('accounts.change_membership', raise_exception=True)
 def secretary_dashboard(request):
     """
     Dashboard for the secretary. Lists important member counts used in voting and suggests users to activate,
@@ -384,7 +384,7 @@ class PasswordSetView(generic.FormView):
 
 
 @login_required
-@permission_required('accounts.change_group', raise_exception=True)
+@permission_required('accounts.change_membership', raise_exception=True)
 def officer_photos(request, pk=None):
     """Update officer headshot (displayed on the main LNL website about page)"""
     context = {}

@@ -242,7 +242,7 @@ class AccountsTestCase(ViewTestCase):
         # By default should not have permission
         self.assertOk(self.client.get(reverse("accounts:secretary_dashboard")), 403)
 
-        permission = Permission.objects.get(codename="change_group", name="Change the group membership of a user")
+        permission = Permission.objects.get(codename="change_membership")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("accounts:secretary_dashboard")))
@@ -477,7 +477,7 @@ class OfficerImgViewTestCase(ViewTestCase):
         # General members should not have access to these pages
         self.assertOk(self.client.get(reverse("accounts:officer-photo", args=[self.user.pk])), 403)
 
-        permission = Permission.objects.get(codename="change_group", name="Change the group membership of a user")
+        permission = Permission.objects.get(codename="change_membership")
         self.user.user_permissions.add(permission)
 
         # Not an officer, should redirect
