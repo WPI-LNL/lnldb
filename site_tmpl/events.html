@@ -1,7 +1,6 @@
 {% extends 'base_admin.html' %}
 {% load get_attribute %}
 {% load append_get %}
-{% load lnldb_tags %}
 {% load permissionif %}
 {% block extras %}
 {% include 'js_event_checkboxes.tmpl' %}
@@ -110,13 +109,13 @@
             {% for event in events %}
                 <tr class="event-status-{{ event.status | slugify }}">
                         <td class="hide eventselect">
-                            <input type="checkbox" class="hide eventselect" title="Select {{ event.event_name|public_field }}"
+                            <input type="checkbox" class="hide eventselect" title="Select {{ event.event_name }}"
                                    value="{{ event.id }}">
                         </td>
                     {% for field in cols %}
                         {% if field.name == 'event_name' %}
                             <td class="event-name"><a
-                                    href="{% url "events:detail" event.id %}">{{ event.event_name|public_field }}
+                                    href="{% url "events:detail" event.id %}">{{ event.event_name }}
                                 {% if event.test_event %} <span class="label label-info">Test Event</span> {% endif %}</a>
                             </td>
 
