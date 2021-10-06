@@ -523,9 +523,7 @@ def handle_interaction(request):
             blocks = views.ticket_update_modal(ticket_id, channel, message['ts'], action)
 
             # Get current ticket from RT
-            resp = refresh_ticket_message(channel, message)
-            if not resp['ok']:
-                logger.warning("Failed to update ticket in Slack. Please check RT to see if your changes were applied.")
+            __refresh_ticket_async(channel, message)
 
             # Check that user has token, if not display a warning
             user_id = payload['user']['id']
@@ -688,6 +686,21 @@ def refresh_ticket_message(channel, message):
     }
     new_message = views.tfed_ticket(ticket_info)
     return replace_message(channel, message['ts'], ticket_description, new_message)
+
+
+@process_in_thread
+def __refresh_ticket_async(channel, message):
+    """
+    Update a TFed ticket message with the latest information in the background
+
+    :param channel: The channel the ticket was posted to
+    :param message: The original message object
+    :return: Response from Slack API after attempting to update the message
+    """
+
+    resp = refresh_ticket_message(channel, message)
+    if not resp['ok']:
+        logger.warning("Failed to update ticket in Slack. Please check RT to see if your changes were applied.")
 
 
 def __retrieve_rt_token(user_id):

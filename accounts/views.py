@@ -22,6 +22,7 @@ from data.forms import form_footer
 from emails.generators import DefaultLNLEmailGenerator
 from events.models import Event2019, OfficeHour, CCReport
 from helpers import mixins, challenges
+from slack.api import lookup_user, user_add, user_kick
 
 from . import forms
 from .models import OfficerImg, UserPreferences
@@ -71,10 +72,24 @@ class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, gen
                 )
                 email.send()
                 messages.success(self.request, "Welcome email sent")
-            # Ensure that title is stripped when no longer an officer
-            if Group.objects.get(name="Officer") not in newgroups:
+
+            exec_group = Group.objects.get(name="Officer")
+            if exec_group not in newgroups:
+                # Ensure that title is stripped when no longer an officer
                 self.object.title = None
                 self.object.save()
+
+                # Kick user from exec chat in Slack (if applicable)
+                slack_user = lookup_user(self.object.email)
+                if slack_user and exec_group in oldgroups:
+                    user_kick(settings.SLACK_TARGET_EXEC, slack_user)
+            elif exec_group not in oldgroups:
+                # Attempt to add user to exec chat in Slack
+                slack_user = lookup_user(self.object.email)
+                if slack_user:
+                    user_add(settings.SLACK_TARGET_EXEC, slack_user)
+
+            # TODO: Add new active members to the active channel in Slack (and remove inactive / alumni etc.)
 
         messages.success(self.request, "Account Info Saved!", extra_tags='success')
         return super(UserUpdateView, self).form_valid(form)
