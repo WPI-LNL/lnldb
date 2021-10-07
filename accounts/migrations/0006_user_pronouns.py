@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0004_userpreferences'),
+        ('accounts', '0005_remove_duplicate_perms'),
     ]
 
     operations = [
