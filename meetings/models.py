@@ -90,7 +90,7 @@ class Meeting(models.Model):
         return reverse('meetings:detail', args=[self.id])
 
     def __str__(self):
-        return "Meeting For %s" % self.datetime.astimezone(timezone.get_current_timezone()).date()
+        return "Meeting for %s" % self.datetime.astimezone(timezone.get_current_timezone()).date()
 
     class Meta:
         ordering = ('-datetime',)

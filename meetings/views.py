@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import InvalidPage, Paginator
 from django.db.models.aggregates import Count
+from django.views.generic.edit import DeleteView
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect, HttpResponse
 from django.http.response import Http404
@@ -14,10 +15,11 @@ from email.mime.base import MIMEBase
 from email.encoders import encode_base64
 from helpers.util import curry_class
 
+from helpers.mixins import HasPermMixin, LoginRequiredMixin
 from data.views import serve_file
 from emails.generators import generate_notice_cc_email, generate_notice_email
 from events.forms import CCIForm
-from events.models import Event, EventCCInstance
+from events.models import BaseEvent, EventCCInstance
 from events.cal import generate_ics
 
 from .forms import (AnnounceCCSendForm, AnnounceSendForm, MeetingAdditionForm,
@@ -112,12 +114,12 @@ def viewattendance(request, mtg_id):
     yest = now + datetime.timedelta(days=-1)
     morethanaweek = now + datetime.timedelta(days=7, hours=12)
 
-    upcoming = Event.objects.filter(datetime_start__gte=yest, datetime_start__lte=morethanaweek)
+    upcoming = BaseEvent.objects.filter(datetime_start__gte=yest, datetime_start__lte=morethanaweek)
     context['events'] = upcoming.prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('ccinstances__service')
 
     lessthantwoweeks = morethanaweek + datetime.timedelta(days=7)
-    future = Event.objects.filter(datetime_start__gte=morethanaweek, datetime_start__lte=lessthantwoweeks).order_by(
+    future = BaseEvent.objects.filter(datetime_start__gte=morethanaweek, datetime_start__lte=lessthantwoweeks).order_by(
         'datetime_start').prefetch_related('ccinstances__crew_chief') \
         .prefetch_related('ccinstances__service')
     context['future'] = future
@@ -134,13 +136,12 @@ def updateevent(request, mtg_id, event_id):
     """
     context = {}
     perms = ('meetings.edit_mtg',)
-    event = get_object_or_404(Event, pk=event_id)
-    if not (request.user.has_perms(perms) or
-            request.user.has_perms(perms, event)):
+    event = get_object_or_404(BaseEvent, pk=event_id)
+    if not (request.user.has_perms(perms) or request.user.has_perms(perms, event)):
         raise PermissionDenied
     context['event'] = event.event_name
 
-    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
+    cc_formset = inlineformset_factory(BaseEvent, EventCCInstance, extra=3, exclude=[])
     cc_formset.form = curry_class(CCIForm, event=event)
 
     if request.method == 'POST':
@@ -226,6 +227,18 @@ def newattendance(request):
     context['form'] = form
     context['msg'] = "New Meeting"
     return render(request, 'form_crispy_meetings.html', context)
+
+
+class DeleteMeeting(LoginRequiredMixin, HasPermMixin, DeleteView):
+    """ Delete a meeting """
+    model = Meeting
+    template_name = "form_delete_cbv.html"
+    msg = "Delete Meeting"
+    perms = 'meetings.edit_mtg'
+    pk_url_kwarg = "mtg_id"
+
+    def get_success_url(self):
+        return reverse("meetings:list")
 
 
 @login_required

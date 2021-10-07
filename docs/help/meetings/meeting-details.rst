@@ -35,6 +35,13 @@ attendance records, and related files.
 #. Finally, click `Save Changes`
 
 
+**To delete a meeting:**
+
+#. Follow the process above as if you were to edit the meeting.
+#. Scroll down to the bottom of the page and click `Delete`.
+#. Finally, click `Yes!` to confirm the action.
+
+
 .. _Update Attendance:
 
 Update Attendance
@@ -47,4 +54,4 @@ select the listing to add their name to the list.
 
 To remove someone from the attendance list, click the trash can icon next to their name.
 
-`Last Modified: May 17, 2021`
+`Last Modified: September 9, 2021`

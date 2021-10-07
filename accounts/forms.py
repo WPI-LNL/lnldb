@@ -79,7 +79,7 @@ class UserEditForm(FieldAccessForm):
                 'phone', 'class_year', 'pronouns')
         )
         edit_groups = FieldAccessLevel(
-            lambda user, instance: user.has_perm('accounts.change_group', instance),
+            lambda user, instance: user.has_perm('accounts.change_membership', instance),
             enable=('groups', 'away_exp', 'title')
         )
         edit_mdc = FieldAccessLevel(
@@ -117,7 +117,7 @@ class UserAddForm(UserCreationForm):
             HTML('<div class="alert alert-warning">\
                 This form should not be used under normal circumstances. \
                 When everything is working properly, an account will be created \
-                automatically when someone logs into the DB with CAS for the first time \
+                automatically when someone logs into the DB with Microsoft SSO for the first time \
                 or when crew hours or attendance are entered for the person. \
                 This form should only be used when the automatic \
                 account creation is broken (which has happened before).</div>'),

@@ -1,4 +1,3 @@
-{% load lnldb_tags %}
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -140,7 +139,7 @@
 						<div class="col-md-6 col-lg-3 mb-3">
 							<div class="card">
 								<div class="card-body">
-									<h5 class="card-title">{{ event.event_name|public_field }}</h5>
+									<h5 class="card-title">{{ event.event_name }}</h5>
 									<p>{{ event.location }}</p>
 									{% for cci in event.ccinstances.all %}
 										<p>{{ cci.category.name }} setup: {{ cci.setup_start|date:'l n/j Hi' }}</p>

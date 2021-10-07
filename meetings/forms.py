@@ -3,7 +3,7 @@ import datetime
 from ajax_select.fields import AutoCompleteSelectMultipleField
 from crispy_forms.bootstrap import FormActions, Tab, TabHolder
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Button, Field, Layout, Submit
+from crispy_forms.layout import Button, Field, Layout, Submit, HTML
 from django import forms
 from django.db.models import Q
 from django.forms.fields import SplitDateTimeField
@@ -12,7 +12,7 @@ from multiupload.fields import MultiFileField
 from natural_duration import NaturalDurationField
 from pagedown.widgets import PagedownWidget
 
-from events.models import Event, Location
+from events.models import Event2019, Location
 from meetings.models import (CCNoticeSend, Meeting, MeetingAnnounce,
                              MtgAttachment)
 
@@ -23,6 +23,15 @@ class MeetingAdditionForm(forms.ModelForm):
         self.helper.form_class = 'form-horizontal'
         self.helper.form_tag = False
         self.helper.include_media = False
+        actions = FormActions(
+            Submit('save', 'Save Changes')
+        )
+        if kwargs.get("instance", None):
+            actions = FormActions(
+                Submit('save', 'Save Changes'),
+                HTML('<a class="btn btn-danger" href="{%% url "meetings:delete" %s %%}"> Delete </a>'
+                     % kwargs.get("instance").pk),
+            )
         self.helper.layout = Layout(
             TabHolder(
                 Tab(
@@ -51,9 +60,7 @@ class MeetingAdditionForm(forms.ModelForm):
                     'attachments_private'
                 ),
             ),
-            FormActions(
-                Submit('save', 'Save Changes'),
-            )
+            actions
         )
         super(MeetingAdditionForm, self).__init__(*args, **kwargs)
         self.fields['duration'].widget.attrs['placeholder'] = "e.g. 1 minute"
@@ -110,9 +117,10 @@ class AnnounceSendForm(forms.ModelForm):
         twodaysago = now + datetime.timedelta(days=-4)
         aweekfromnow = now + datetime.timedelta(days=9)
         self.meeting = meeting
-        self.fields["events"].queryset = Event.objects.filter(datetime_setup_complete__gte=twodaysago, approved=True,
-                                                              datetime_setup_complete__lte=aweekfromnow).exclude(
-            Q(closed=True) | Q(cancelled=True))
+        self.fields["events"].queryset = Event2019.objects.filter(
+            datetime_setup_complete__gte=twodaysago, approved=True,
+            datetime_setup_complete__lte=aweekfromnow
+        ).exclude(Q(closed=True) | Q(cancelled=True))
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
@@ -142,7 +150,7 @@ class AnnounceSendForm(forms.ModelForm):
             'message': PagedownWidget(),
         }
 
-    events = forms.ModelMultipleChoiceField(queryset=Event.objects.all(), required=False)
+    events = forms.ModelMultipleChoiceField(queryset=Event2019.objects.all(), required=False)
 
 
 class AnnounceCCSendForm(forms.ModelForm):
@@ -166,9 +174,10 @@ class AnnounceCCSendForm(forms.ModelForm):
         )
         super(AnnounceCCSendForm, self).__init__(*args, **kwargs)
 
-        self.fields["events"].queryset = Event.objects.filter(datetime_setup_complete__gte=twodaysago, approved=True,
-                                                              datetime_setup_complete__lte=aweekfromnow).exclude(
-            Q(closed=True) | Q(cancelled=True))
+        self.fields["events"].queryset = Event2019.objects.filter(
+            datetime_setup_complete__gte=twodaysago, approved=True,
+            datetime_setup_complete__lte=aweekfromnow
+        ).exclude(Q(closed=True) | Q(cancelled=True))
 
     def save(self, commit=True):
         self.instance = super(AnnounceCCSendForm, self).save(commit=False)

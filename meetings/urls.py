@@ -18,5 +18,6 @@ urlpatterns = [
         url(r'^download/(?P<att_id>\d+)/$', views.download_att, name="att-dl"),
         url(r'^file/(?P<att_id>\d+)/$', views.modify_att, name="att-edit"),
         url(r'^rm/(?P<att_id>\d+)/$', views.rm_att, name="att-rm"),
+        url(r'^delete/$', views.DeleteMeeting.as_view(), name="delete")
     ]))
 ]

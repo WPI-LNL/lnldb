@@ -162,7 +162,7 @@ class User(AbstractUser):
     class Meta:
         ordering = 'last_name', 'first_name', 'class_year'
         permissions = (
-            ('change_group', 'Change the group membership of a user'),
+            ('change_membership', 'Change the group membership of a user'),
             ('edit_mdc', 'Change the MDC of a user'),
             ('view_member', 'View LNL members'),
         )

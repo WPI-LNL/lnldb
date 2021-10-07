@@ -279,7 +279,7 @@ class BaseEvent(PolymorphicModel):
 
     def cal_name(self):
         """ Title to display on calendars """
-        return self.event_name.replace('LnL', 'LNL')
+        return self.event_name
     
     def cal_desc(self):
         """ Event description used by calendars """
@@ -298,7 +298,7 @@ class BaseEvent(PolymorphicModel):
             desc = desc[:-2] + ".\n"  # removes trailing comma
         if self.description:
             desc += self.description + "\n"
-        return desc.replace('LnL', 'LNL')
+        return desc
 
     def cal_location(self):
         """ Location data to display on calendars """
