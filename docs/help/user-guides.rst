@@ -37,6 +37,7 @@ Accounts
     accounts/local-login
     accounts/member-roles
     accounts/linking-rt
+    accounts/add-pronouns
 
 Events
 ^^^^^^
