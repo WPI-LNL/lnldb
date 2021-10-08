@@ -31,7 +31,7 @@ class UserEditForm(FieldAccessForm):
             password = HTML("""<div class="col-lg-offset-2 col-lg-8">
             <a href="{% url 'accounts:password' object.pk %}">Set a password for non-SSO login</a></div>""")
         layout = [
-            Fieldset("User Info", 'first_name', 'last_name', 'username', 'email', 'nickname', password),
+            Fieldset("User Info", 'first_name', 'last_name', 'username', 'email', 'nickname', 'pronouns', password),
             Fieldset("Contact Info", 'phone', 'carrier', Field('addr', rows=3)),
         ]
         if request_user.is_lnl:
@@ -61,7 +61,7 @@ class UserEditForm(FieldAccessForm):
 
     class Meta:
         model = get_user_model()
-        fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'groups', 'addr',
+        fields = ['username', 'email', 'first_name', 'last_name', 'nickname', 'pronouns', 'groups', 'addr',
                   'wpibox', 'mdc', 'phone', 'class_year', 'student_id', 'away_exp', 'carrier', 'title']
 
     class FieldAccess:
@@ -70,11 +70,13 @@ class UserEditForm(FieldAccessForm):
 
         thisisme = FieldAccessLevel(
             lambda user, instance: (user == instance) and not user.locked,
-            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'nickname', 'carrier')
+            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox',
+                'phone', 'class_year', 'nickname', 'carrier', 'pronouns')
         )
         hasperm = FieldAccessLevel(
             lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
-            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year')
+            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox',
+                'phone', 'class_year')
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.change_membership', instance),
