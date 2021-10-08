@@ -76,7 +76,7 @@ class UserEditForm(FieldAccessForm):
         hasperm = FieldAccessLevel(
             lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
             enable=('email', 'first_name', 'last_name', 'addr', 'wpibox',
-                'phone', 'class_year', 'pronouns')
+                'phone', 'class_year')
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.change_membership', instance),
