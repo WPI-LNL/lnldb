@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='user',
             name='pronouns',
-            field=models.CharField(blank=True, max_length=13, null=True, verbose_name='Pronouns'),
+            field=models.CharField(blank=True, max_length=32, null=True, verbose_name='Pronouns'),
         ),
     ]
