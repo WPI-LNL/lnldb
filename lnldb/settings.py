@@ -512,8 +512,6 @@ MARKDOWN_DEUX_STYLES = {
              ),
         ],
         "extras": {
-            "code-friendly": None,
-            "break-on-newline": None,
             "strike": None,
             "smarty-pants": None,
             "tables": None,
