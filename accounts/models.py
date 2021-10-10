@@ -184,7 +184,10 @@ def path_and_rename(instance, filename):
 class OfficerImg(Model):
     """Officer headshots"""
     officer = OneToOneField(User, on_delete=CASCADE, related_name="img")
-    img = ImageField(upload_to=path_and_rename, storage=OverwriteStorage(), verbose_name="Image")
+    img = ImageField(upload_to=path_and_rename, storage=OverwriteStorage(),
+            verbose_name="Image", help_text="""Please upload a square image
+            that's 300x300 pixels. Anything rectangular will be cropped, and
+            anything larger will be scaled down.""")
 
     def __str__(self):
         return self.officer.name
