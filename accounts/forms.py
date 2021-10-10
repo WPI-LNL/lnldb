@@ -172,9 +172,33 @@ class OfficerPhotoForm(forms.ModelForm):
         
         image = Image.open(photo.img)
 
-        resized_image = image.resize((1024, 684), Image.ANTIALIAS)
-        resized_image.save(photo.img.path)
+        # Crop image to be 320x320
+        width, height = image.size
 
+        if width > 300 and height > 300:
+            # Shrink
+            image.thumbnail((width, height))
+
+        # Make square
+        if height < width:
+            # Equal amounts left and right
+            left = (width - height) / 2
+            right = (width + height) / 2
+            top = 0
+            bottom = height
+            image = image.crop((left, top, right, bottom))
+        elif width < height:
+            # Cut off bottom
+            left = 0
+            right = width
+            top = 0
+            bottom = width
+            image = image.crop((left, top, right, bottom))
+
+        if width > 300 and height > 300:
+            image.thumbnail((300, 300))
+
+        image.save(photo.img.path)
         return photo
 
 
