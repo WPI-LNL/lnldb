@@ -515,7 +515,8 @@ MARKDOWN_DEUX_STYLES = {
             "strike": None,
             "smarty-pants": None,
             "tables": None,
-            "link-patterns": None
+            "link-patterns": None,
+            "cuddled-lists": None,
         },
         "safe_mode": "escape",
     },
