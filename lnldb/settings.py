@@ -512,12 +512,11 @@ MARKDOWN_DEUX_STYLES = {
              ),
         ],
         "extras": {
-            "code-friendly": None,
-            "break-on-newline": None,
             "strike": None,
             "smarty-pants": None,
             "tables": None,
-            "link-patterns": None
+            "link-patterns": None,
+            "cuddled-lists": None,
         },
         "safe_mode": "escape",
     },
