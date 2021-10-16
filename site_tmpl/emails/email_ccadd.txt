@@ -20,4 +20,13 @@ Submit your crew chief report at {% get_base_url %}{% url 'my:report' ccinstance
 
 Submit crew hours at {% get_base_url %}{% url 'my:hours-list' ccinstance.event.id %}.
 
-If you have any questions or concerns about the above information, contact the Vice President at lnl-vp@wpi.edu.
+{% if is_new_cc %}
+By the way, congratualtions on your first event asCrew Chief! Since this is your first time as a CC, here are some helpful resources. 
+• Tech Bible - https://lnl.wpi.edu/tech-bible
+• Technical Directior - mailto:lnl-td@wpi.edu
+• Vice President - mailto:lnl-vp@wpi.edu
+• Events Office - 2nd floor of the Campus Center, next to the bookstore
+• 25live - https://scheduling.wpi.edu
+{% else %}
+If you have any questions or concerns about the above information, contact the Vice President at mailto:lnl-vp@wpi.edu.
+{% endif %}
