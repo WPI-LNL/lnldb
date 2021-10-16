@@ -167,6 +167,7 @@
                 <li class="active"><a href="#home" data-toggle="tab">Detail</a></li>
                 <li><a href="#schedule" data-toggle="tab">Schedule</a></li>
                 <li><a href="#services" data-toggle="tab">Services</a></li>
+                <li><a href="#pull_list" data-toggle="tab">Pull List</a></li>
                 <li><a href="#crew" data-toggle="tab">Crew</a></li>
                 {% permission request.user has 'events.view_event_reports' of event %}
                     <li><a href="#reports" data-toggle="tab">Reports</a></li>
@@ -466,6 +467,41 @@
                         {% endfor %}
                     {% endif %}
                     
+                </div>
+                <div id="pull_list" class="tab-pane">
+                    {% if categorized_services_and_extras %}
+                        {% for category_name, services_and_extras in categorized_services_and_extras.items %}
+                            <h3>{{ category_name }}</h3>
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Service</th>
+                                        <th>Requirements</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for service_instance in services_and_extras.0 %}
+                                        <tr>
+                                            <td>{{ service_instance.service }}</td>
+                                            <td>
+                                                {% if service_instance.detail %}
+                                                    {{ service_instance.detail | markdown }}
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% if services_and_extras.1 %}
+                                <h4>Extras</h4>
+                                <ul>
+                                {% for extra_instance in services_and_extras.1 %}
+                                    <li>{{ extra_instance.extra }} x{{ extra_instance.quant }}</li>
+                                {% endfor %}
+                                </ul>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
                 </div>
                 <div id="crew" class="tab-pane">
                     {% if not event.closed %}
