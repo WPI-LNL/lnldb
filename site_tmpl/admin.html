@@ -1,6 +1,5 @@
 {% extends 'base_admin.html' %}
 {% load tz %}
-{% load lnldb_tags %}
 {% load permissionif %}
 {% block content %}
     <div class="row">
@@ -78,7 +77,7 @@
                 </tr>
                 {% for event in events %}
                         <tr>
-                            <td><a href="{% url "events:detail" event.id %}">{{event.event_name|public_field}}</a></td>
+                            <td><a href="{% url "events:detail" event.id %}">{{event.event_name}}</a></td>
                             <td>{{event.datetime_start}}</td>
                             <td>{{event.datetime_end}}</td>
                             <td>

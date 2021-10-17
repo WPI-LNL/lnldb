@@ -2,11 +2,30 @@
 Updates 2021
 ============
 
+September
+=========
+We took care of several minor dependency updates and bug fixes. A few languishing feature requests were also completed.
+
+- :commit:`812ed05378292cc687d1534d69bacd2bb98d15ba` Added a badge to event lists to indicate test events (`#432 <https://github.com/WPI-LNL/lnldb/issues/432>`_)
+- :commit:`b084af20b1957cccddbc01d7a673af712255536d` Corrects the issue that prevented upcoming events from appearing in the form for meeting notices (`#479 <https://github.com/WPI-LNL/lnldb/issues/479>`_)
+- :commit:`09841daf6178269a69b1f7e4b4dbc44057f2d678` Adds a delete button to the meeting edit form (`#434 <https://github.com/WPI-LNL/lnldb/issues/434>`_)
+
+August
+======
+In August we released the beta of our new Slack integration. Users can now view and submit TFed tickets through Slack.
+Privileged RT users can also link their accounts to manage those tickets.
+
+- :commit:`b5e10daf377743c1f7fb852e0089ef744bee678b` Added support for the integration's Home tab in Slack
+- :commit:`c4a682a3a8d9100d88285b5e60c91c6469da1baa` Fixed a bug where post-event surveys could be sent for cancelled events
+- :commit:`dca9d1164197833d11bccabb99c464f641e6a5e7` Post-Event surveys are now sent by default
+- :commit:`b1f69008ed3379cb9aacad35c4c9ba1f98a03548` Added a welcome message for new Slack users
+
 July
 ====
 This month we introduced the initial version of the RT integration for the LNLDB. Users can now submit TFed tickets from
 our error page.
 
+- :commit:`7eaab31e1a18e2f250da058719fe7610897eda0b` Fixed a bug where meeting titles occasionally displayed the wrong date
 - :commit:`fdb146f173383182b04f5ae2b084376f44452eb0` Add form for submitting tfed tickets (`#525 <https://github.com/WPI-LNL/lnldb/issues/525>`_)
 
 June

@@ -1,5 +1,4 @@
 {% load tz %}
-{% load lnldb_tags %}
 {% load markdown_deux_tags %}
 <div class="heading">
                 <center>WPI Lens and Lights Workorder</center>
@@ -43,12 +42,12 @@
                         Event Name
                     </th>
                     <td class="tdl42" width="20%">
-                        {{ event.event_name|public_field }}
+                        {{ event.event_name }}
                     </td>
                     <td class="tdright" rowspan="11" valign="top" width="65%">
                         <h5>Event Description</h5>
                         {% if event.description %}
-                            {{ event.description | public_field | markdown }}
+                            {{ event.description | markdown }}
                         {% else %}
                             No event description given. Please talk with the VP and contact to find out about this event.
                         {% endif %}

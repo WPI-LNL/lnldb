@@ -124,7 +124,7 @@
                         <li><a href="{% url "events:crew-logs" %}">Crew Logs</a></li>
                         {% endpermission %}
                         <li><a href="{% url "members:training:list" %}">Training</a></li>
-                        {% permission request.user has 'accounts.change_group' %}
+                        {% permission request.user has 'accounts.change_membership' %}
                             <li><a href="{% url "accounts:secretary_dashboard" %}">Secretary</a></li>
                         {% endpermission %}
                         {% permission request.user has 'accounts.add_user' %}

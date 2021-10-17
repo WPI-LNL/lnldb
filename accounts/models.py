@@ -54,6 +54,8 @@ class User(AbstractUser):
     away_exp = DateField(verbose_name="Away Status Expiration", null=True, blank=True)
     onboarded = BooleanField(default=False, verbose_name="Onboarding Complete")
 
+    pronouns = CharField(max_length=32, null=True, blank=True, verbose_name="Pronouns")
+
     def __str__(self):
         nick = '"%s" ' % self.nickname if self.nickname else ""
         if self.first_name or self.last_name:
@@ -159,7 +161,7 @@ class User(AbstractUser):
     class Meta:
         ordering = 'last_name', 'first_name', 'class_year'
         permissions = (
-            ('change_group', 'Change the group membership of a user'),
+            ('change_membership', 'Change the group membership of a user'),
             ('edit_mdc', 'Change the MDC of a user'),
             ('view_member', 'View LNL members'),
         )

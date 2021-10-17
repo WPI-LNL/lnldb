@@ -26,7 +26,7 @@
                     {% for e in object.reverse_ordered_events %}
                     <tr>
                         <td>{{ e.datetime_start|localtime|date:"m-d D" }}</td>
-                        <td><a href="{% get_base_url %}{% url 'events:detail' e.pk %}">{{ e.event_name|public_field }}</a></td>
+                        <td><a href="{% get_base_url %}{% url 'events:detail' e.pk %}">{{ e.event_name }}</a></td>
                         <td>{% for s in e.eventservices %}{{ s.shortname }}&nbsp;{% endfor %}</td>
                         <td>{{ e.datetime_start|localtime|time:"TIME_FORMAT" }} - {{ e.datetime_end|localtime|time:"TIME_FORMAT" }}</td>
                         <td>{{ e.location }}</td>

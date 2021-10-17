@@ -16,7 +16,7 @@
                 <div align="left" class="article-content">
                     <p>
                         Thank you for choosing WPI Lens and Lights! We recently provided services for
-                        {{ event.event_name|public_field }} and would love to hear about your experience working with
+                        {{ event.event_name }} and would love to hear about your experience working with
                         us. If you have a moment, please consider taking a short survey to let us know how we did. The
                         survey should take no more than 5 minutes and your response will help us understand how we can
                         improve our services in the future.<br><br>
@@ -26,7 +26,7 @@
                     <a id="big-button" href="{% get_base_url %}{% url 'my:post-event-survey' event.pk %}">Take Survey</a>
                     <br><br>
                     <hr>
-                    <p><b>{{ event.event_name|public_field }}</b><br>
+                    <p><b>{{ event.event_name }}</b><br>
                     <i>{{ event.location }}</i><br>
                     Start: {{ event.datetime_start }}<br>
                     End: {{ event.datetime_end }}<br>

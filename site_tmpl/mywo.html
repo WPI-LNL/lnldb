@@ -1,5 +1,4 @@
 {% extends 'base_admin.html' %}
-{% load lnldb_tags %}
 
 {% block content %}    
 <h1> <a href="{% url "accounts:me" %}">My</a> Previous Work Orders </h1>
@@ -18,7 +17,7 @@
         <thead><tr ><th colspan="5">{{ org }}</th></tr></thead>
         {% for event in events %}
             <tr class="info">
-                <td>{{event.event_name|public_field}}
+                <td>{{event.event_name}}
                     {% if event.test_event %}<span class="label label-info">Test Event</span>{% endif %}
                 </td>
                 <td title="{{event.datetime_end}}">{{event.datetime_end|timesince}} ago</td>
