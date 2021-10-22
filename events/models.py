@@ -469,6 +469,7 @@ class BaseEvent(PolymorphicModel):
             ("event_view_granular", "See debug data like ip addresses"),
             ("event_view_debug", "See debug events"),
             ("reopen_event", "Reopen a closed, declined, or cancelled event"),
+            ("edit_pull_list", "Edit the event pull list")
         )
         ordering = ['-datetime_start']
 
@@ -940,6 +941,17 @@ class ExtraInstance(models.Model):
     @property
     def cost(self):
         return self.extra.cost
+
+@reversion.register()
+class PullListEquipmentInstance(models.Model):
+    """ An instance of a given extra attached to an event """
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE)
+    category = models.ForeignKey('Category', on_delete=models.PROTECT)
+    name = models.TextField()
+    snipe_id = models.PositiveIntegerField(blank=True, null=True) # ID from Snipe
+    quant = models.PositiveIntegerField(blank=True, null=True)
+    checked_out = models.BooleanField(default=False)
+    checked_in = models.BooleanField(default=False)
 
 
 @python_2_unicode_compatible

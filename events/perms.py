@@ -60,7 +60,8 @@ class CrewChiefPermLogic(AssocUsersCustomPermissionLogic):
              'events.add_event_report', 'events.edit_event_text',
              'events.view_hidden_event', 'events.edit_event_fund',
              'events.view_event_billing', 'events.adjust_event_charges',
-             'events.edit_event_hours', 'events.event_view_sensitive')
+             'events.edit_event_hours', 'events.event_view_sensitive',
+             'events.edit_pull_list')
 
 
 class CrewChiefSurveyPerms(AssocUsersCustomPermissionLogic):
