@@ -15,7 +15,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import Model, Q
-from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget
+from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget, CharField
 from django.utils import timezone
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
@@ -25,7 +25,7 @@ from events.fields import GroupedModelChoiceField
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail,
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
                            ExtraInstance, Hours, Lighting, Location, Organization, OrganizationTransfer,
-                           OrgBillingVerificationEvent, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
+                           OrgBillingVerificationEvent, PullListEquipmentInstance, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
                            Sound, PostEventSurvey, OfficeHour)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
@@ -1385,6 +1385,16 @@ class ExtraForm(forms.ModelForm):
         group_label=lambda group: group.name,
     )
 
+class PullListForm(forms.ModelForm):
+
+    class Meta:
+        model = PullListEquipmentInstance
+        fields = ('category', 'name', 'quant', 'snipe_id')
+
+    category = ModelChoiceField(queryset=Category.objects.all())
+    name = CharField(max_length = 512)
+    quant = forms.IntegerField(required=False)
+    snipe_id = forms.IntegerField(widget=forms.HiddenInput(), initial=-1, required=False)
 
 class ServiceInstanceForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):

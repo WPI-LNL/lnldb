@@ -46,6 +46,7 @@ urlpatterns = [
     # Actual event pages
 
     url(r'^view/(?P<id>[0-9a-f]+)/$', flow_views.viewevent, name="detail"),
+    url(r'^update/(?P<id>[0-9a-f]+)/$', flow_views.updateevent, name="update"),
     url(r'^pdf/(?P<ids>\d+(,\d+)*)?/?$', pdf_views.generate_event_pdf_multi,
         name="pdf-multi"),
     url(r'^bills-pdf/(?P<ids>\d+(,\d+)*)?/?$', pdf_views.generate_event_bill_pdf_multi,
@@ -74,6 +75,7 @@ urlpatterns = [
     url(r'^attachments/(?P<id>[0-9a-f]+)/$', flow_views.assignattach,
         name="files"),
     url(r'^extras/(?P<id>[0-9a-f]+)/$', flow_views.extras, name="extras"),
+    url(r'^pull_list/(?P<id>[0-9a-f]+)/$', flow_views.pull_list, name="pull_list"),
     url(r'^oneoff/(?P<id>[0-9a-f]+)/$', flow_views.oneoff, name="oneoffs"),
     url(r'^enter-worktag/(?P<pk>[0-9a-f]+)/$', flow_views.WorkdayEntry.as_view(), name="worktag-form"),
     url(r'^workday-entered/(?P<id>[0-9a-f]+)/$', flow_views.mark_entered_into_workday, name="workday-entered"),

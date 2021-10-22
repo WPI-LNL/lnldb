@@ -469,9 +469,15 @@
                     
                 </div>
                 <div id="pull_list" class="tab-pane">
+                    {% permission request.user has 'events.edit_pull_list' of event %}
+                            <div class="pull-right">
+                                <a class="btn btn-lg btn-info" href="{% url "events:pull_list" event.id %}">Modify Pull List</a>
+                            </div>
+                        {% endpermission %}
                     {% if categorized_services_and_extras %}
                         {% for category_name, services_and_extras in categorized_services_and_extras.items %}
                             <h3>{{ category_name }}</h3>
+                            {% if services_and_extras.0 %}
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
@@ -492,6 +498,10 @@
                                     {% endfor %}
                                 </tbody>
                             </table>
+                            {% endif %}
+                            {% if not services_and_extras.0 %}
+                            <h5>(No services requested)</h5>
+                            {% endif %}
                             {% if services_and_extras.1 %}
                                 <h4>Extras</h4>
                                 <ul>
@@ -500,7 +510,62 @@
                                 {% endfor %}
                                 </ul>
                             {% endif %}
+                            {% if services_and_extras.2 %}
+                                <h4>Equipment</h4>
+                                <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Out</th>
+                                        <th>In </th>
+                                        <th>Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for equipment_instance in services_and_extras.2 %}
+                                        <tr>
+                                            <form method="POST">
+                                            {% csrf_token %}
+                                            <td style="width:0"> <input type="checkbox" class="equipment_out" name="{{equipment_instance.id}}" 
+                                                {% if equipment_instance.checked_out %} checked="true"{% endif %} 
+                                                {% permission not request.user has 'events.edit_pull_list' of event %} disabled{% endpermission %}> </td>
+                                            <td style="width:0"> <input type="checkbox" class="equipment_in" name="{{equipment_instance.id}}" 
+                                                {% if equipment_instance.checked_in %} checked="true"{% endif %} 
+                                                {% permission not request.user has 'events.edit_pull_list' of event %} disabled{% endpermission %}> </td>
+                                            <td>{{ equipment_instance.name}} {% if equipment_instance.quant %}x<strong>{{ equipment_instance.quant }}</strong>{% endif %}</td>
+                                            </form>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% endif %}
                         {% endfor %}
+                        {% permission request.user has 'events.edit_pull_list' of event %}
+                        <script type="text/javascript">
+                            $(document).ready(function() {           
+                                $('.equipment_in,.equipment_out').click(function() {                          
+                                        $.ajax({ 
+                                            data: {
+                                                'model_type':"PullListEquipmentInstance",
+                                                'id':$(this).prop('name'),
+                                                'field':$(this).prop('class'),
+                                                'checked':$(this).prop("checked"),
+                                                'csrfmiddlewaretoken': '{{ csrf_token }}',
+                                            }, 
+                                            type: "POST", 
+                                            url: '{% url "events:update" event.id %}', 
+                                            success: function(response) { 
+                                                $(this).checked = !$(this).checked; 
+                                                //console.log(response);
+                                            },
+                                            error: function(e, x, r) { 
+                                                //console.log(e,x,r);                      
+                                            }
+                                        }); 
+                                    //return false
+                                }); 
+                            });
+                        </script>
+                        {% endpermission %}
                     {% endif %}
                 </div>
                 <div id="crew" class="tab-pane">

@@ -9,6 +9,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Avg, Count
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
+from django.http.response import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 from django.urls.base import reverse
@@ -24,10 +25,11 @@ from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiB
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
                           BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
-                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm)
+                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm, PullListForm)
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
-                           ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord)
+                           ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord,
+                           PullListEquipmentInstance)
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
 from helpers.challenges import is_officer
@@ -846,6 +848,51 @@ def extras(request, id):
 
 
 @login_required
+def pull_list(request, id):
+    """ This form is for adding equipment to the pull list of an event """
+    context = {'msg': "Pull List"}
+
+    event = get_object_or_404(BaseEvent, pk=id)
+
+    if not (request.user.has_perm('events.edit_pull_list') or
+            request.user.has_perm('events.edit_pull_list', event)):
+        raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    
+    context['event'] = event
+    """
+    context['categories_not_requested'] = []
+    for category in Category.objects.all():
+            # do not add category if it is empty
+            if thisServiceInstances := event.serviceinstance_set.filter(service__category=category):
+                context['categories_requested'][category.name] = thisServiceInstances
+            else:
+                context['categories_not_requested'].append(category.name)
+    """
+
+    mk_pull_list_formset = inlineformset_factory(BaseEvent, PullListEquipmentInstance, extra=3, exclude=[])
+    mk_pull_list_formset.form = PullListForm
+
+    if request.method == 'POST':
+        set_revision_comment("Edited pull list", None)
+        formset = mk_pull_list_formset(request.POST, request.FILES, instance=event)
+        formset.full_clean()
+        #for form in formset:
+            #if form.cleaned_data.get('name') == None or form.cleaned_data.get('category') == None:
+            #    form.instance.delete()
+        if formset.is_valid():
+            formset.save()
+            event.save()  # for revision to be created
+            return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#pull_list")
+    else:
+        formset = mk_pull_list_formset(instance=event)
+
+    context['formset'] = formset
+    return render(request, 'formset_crispy_pull_list.html', context)
+
+@login_required
 def oneoff(request, id):
     """ This form is for adding oneoff fees to an event """
     context = {'msg': "One-Off Charges"}
@@ -900,10 +947,11 @@ def viewevent(request, id):
             # tuple (serviceinstances, extrainstances)
             services_and_extras = (
                 list(event.serviceinstance_set.filter(service__category=category)),
-                list(event.extrainstance_set.filter(extra__category=category))
+                list(event.extrainstance_set.filter(extra__category=category)),
+                list(event.pulllistequipmentinstance_set.filter(category=category))
             )
             # do not add category if it is empty
-            if services_and_extras[0] or services_and_extras[1]:
+            if services_and_extras[0] or services_and_extras[1] or services_and_extras[2]:
                 context['categorized_services_and_extras'][category.name] = services_and_extras
     if event.surveys.exists() and request.user.has_perm('events.view_posteventsurveyresults', event.surveys.all().first()):
         context['survey_takers'] = get_user_model().objects.filter(pk__in=event.surveys.values_list('person', flat=True))
@@ -1028,6 +1076,20 @@ def viewevent(request, id):
 
     return render(request, 'uglydetail.html', context)
 
+@login_required
+def updateevent(request, id):
+    if request.is_ajax() and request.method == 'POST':
+        if request.POST.get('model_type') == 'PullListEquipmentInstance':
+            model_instance = PullListEquipmentInstance.objects.get(id=request.POST.get('id'))
+            if request.POST.get('field') == 'equipment_in':
+                model_instance.checked_in = request.POST.get('checked') == "true"
+                model_instance.save(update_fields=['checked_in'])
+            elif request.POST.get('field') == 'equipment_out':
+                model_instance.checked_out = request.POST.get('checked') == "true"
+                model_instance.save(update_fields=['checked_out'])
+            return JsonResponse({'success': True, 'value': request.POST, 'in':model_instance.checked_in, 'out':model_instance.checked_out}, status=200)
+        else:
+            return JsonResponse({'success': False, 'errors': [], 'value': request.POST}, status=400)
 
 class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, LoginRequiredMixin, CreateView):
     """ Create a new crew chief report """
