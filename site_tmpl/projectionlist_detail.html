@@ -33,7 +33,7 @@
                         <span class="label label-info">Licensed</span>
                         {% endif %}
                     {% else %}
-                        <a href="{% url "accounts:detail" user.id %}">{{ user }} </a>
+                        <a href="{% url "accounts:detail" user.user.id %}">{{ user }} </a>
                         {% if user in licensed_users %}
                         <span class="label label-info">Licensed</span>
                         {% endif %}
