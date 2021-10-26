@@ -1389,12 +1389,12 @@ class PullListForm(forms.ModelForm):
 
     class Meta:
         model = PullListEquipmentInstance
-        fields = ('category', 'name', 'quant', 'snipe_id')
+        fields = ('category', 'name', 'details', 'quant')
 
     category = ModelChoiceField(queryset=Category.objects.all())
-    name = CharField(max_length = 512)
+    name = CharField(max_length = 256)
+    details = CharField(max_length = 2048, required=False)
     quant = forms.IntegerField(required=False)
-    snipe_id = forms.IntegerField(widget=forms.HiddenInput(), initial=-1, required=False)
 
 class ServiceInstanceForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):

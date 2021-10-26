@@ -518,6 +518,7 @@
                                         <th>Out</th>
                                         <th>In </th>
                                         <th>Name</th>
+                                        <th>Details</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -532,6 +533,7 @@
                                                 {% if equipment_instance.checked_in %} checked="true"{% endif %} 
                                                 {% permission not request.user has 'events.edit_pull_list' of event %} disabled{% endpermission %}> </td>
                                             <td>{{ equipment_instance.name}} {% if equipment_instance.quant %}x<strong>{{ equipment_instance.quant }}</strong>{% endif %}</td>
+                                            <td>{{equipment_instance.details | markdown}}</td>
                                             </form>
                                         </tr>
                                     {% endfor %}
@@ -555,13 +557,11 @@
                                             url: '{% url "events:update" event.id %}', 
                                             success: function(response) { 
                                                 $(this).checked = !$(this).checked; 
-                                                //console.log(response);
                                             },
                                             error: function(e, x, r) { 
-                                                //console.log(e,x,r);                      
+                                                console.log(e,x,r);                      
                                             }
                                         }); 
-                                    //return false
                                 }); 
                             });
                         </script>

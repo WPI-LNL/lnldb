@@ -962,6 +962,7 @@ class PullListEquipmentInstance(models.Model):
     event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE)
     category = models.ForeignKey('Category', on_delete=models.PROTECT)
     name = models.TextField()
+    details = models.TextField(blank=True, null=True)
     snipe_id = models.PositiveIntegerField(blank=True, null=True) # ID from Snipe
     quant = models.PositiveIntegerField(blank=True, null=True)
     checked_out = models.BooleanField(default=False)
