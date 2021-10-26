@@ -478,31 +478,14 @@
                     {% if categorized_services_and_extras %}
                         {% for category_name, services_and_extras in categorized_services_and_extras.items %}
                             <h3>{{ category_name }}</h3>
+                            <h5>
                             {% if services_and_extras.0 %}
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Service</th>
-                                        <th>Requirements</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for service_instance in services_and_extras.0 %}
-                                        <tr>
-                                            <td>{{ service_instance.service }}</td>
-                                            <td>
-                                                {% if service_instance.detail %}
-                                                    {{ service_instance.detail | markdown }}
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                            {% endif %}
-                            {% if not services_and_extras.0 %}
-                            <h5>(No services requested)</h5>
-                            {% endif %}
+                                {% for service_instance in services_and_extras.0 %}
+                                    {{service_instance.service}}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                (No services requested)
+                            {% endif %}</h5>
                             {% if services_and_extras.1 %}
                                 <h4>Extras</h4>
                                 <ul>
@@ -512,7 +495,6 @@
                                 </ul>
                             {% endif %}
                             {% if services_and_extras.2 %}
-                                <h4>Equipment</h4>
                                 <table class="table table-striped">
                                 <thead>
                                     <tr>
