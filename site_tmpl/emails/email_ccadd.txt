@@ -21,7 +21,7 @@ Submit your crew chief report at {% get_base_url %}{% url 'my:report' ccinstance
 Submit crew hours at {% get_base_url %}{% url 'my:hours-list' ccinstance.event.id %}.
 
 {% if is_new_cc %}
-By the way, congratualtions on your first event asCrew Chief! Since this is your first time as a CC, here are some helpful resources. 
+By the way, congratulations on taking your first event as Crew Chief! Since this is your first time as a CC, here are some helpful resources. 
 • Tech Bible - https://lnl.wpi.edu/tech-bible
 • Technical Directior - mailto:lnl-td@wpi.edu
 • Vice President - mailto:lnl-vp@wpi.edu
