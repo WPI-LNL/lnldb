@@ -507,10 +507,10 @@
                                             {% csrf_token %}
                                             <td style="width:0"> <input type="checkbox" class="equipment_out" name="{{equipment_instance.id}}" 
                                                 {% if equipment_instance.checked_out %} checked="true"{% endif %} 
-                                                {% permission not request.user has 'events.edit_pull_list' of event %} disabled{% endpermission %}> </td>
+                                                {% permission not request.user has 'events.check_in_out_pull_list' of event %} disabled{% endpermission %}> </td>
                                             <td style="width:0"> <input type="checkbox" class="equipment_in" name="{{equipment_instance.id}}" 
                                                 {% if equipment_instance.checked_in %} checked="true"{% endif %} 
-                                                {% permission not request.user has 'events.edit_pull_list' of event %} disabled{% endpermission %}> </td>
+                                                {% permission not request.user has 'events.check_in_out_pull_list' of event %} disabled{% endpermission %}> </td>
                                             <td>{{ equipment_instance.name}} {% if equipment_instance.quant %}x<strong>{{ equipment_instance.quant }}</strong>{% endif %}</td>
                                             <td>{{equipment_instance.details | markdown}}</td>
                                             </form>
@@ -522,7 +522,7 @@
                             (No equipment entries)
                             {% endif %}
                         {% endfor %}
-                        {% permission request.user has 'events.edit_pull_list' of event %}
+                        {% permission request.user has 'events.check_in_out_pull_list' of event %}
                         <script type="text/javascript">
                             $(document).ready(function() {           
                                 $('.equipment_in,.equipment_out').click(function() {                          
