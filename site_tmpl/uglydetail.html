@@ -470,13 +470,11 @@
                     
                 </div>
                 <div id="pull_list" class="tab-pane">
-                    {% permission request.user has 'events.edit_pull_list' of event %}
-                            <div class="pull-right">
-                                <a class="btn btn-lg btn-info" href="{% url "events:pull_list" event.id %}">Modify Pull List</a>
-                            </div>
-                        {% endpermission %}
                     {% if categorized_services_and_extras %}
                         {% for category_name, services_and_extras in categorized_services_and_extras.items %}
+                            {% permission request.user has 'events.edit_pull_list' of event %}
+                                <a class="btn btn-lg btn-info pull-right" href="{% url "events:pull_list" event.id category_name%}">Modify {{ category_name }} Pull List</a>
+                            {% endpermission %}
                             <h3>{{ category_name }}</h3>
                             <h5>
                             {% if services_and_extras.0 %}
@@ -487,12 +485,11 @@
                                 (No services requested)
                             {% endif %}</h5>
                             {% if services_and_extras.1 %}
-                                <h4>Extras</h4>
-                                <ul>
-                                {% for extra_instance in services_and_extras.1 %}
-                                    <li>{{ extra_instance.extra }} x{{ extra_instance.quant }}</li>
-                                {% endfor %}
-                                </ul>
+                                <h5>Extras: 
+                                    {% for extra_instance in services_and_extras.1 %}
+                                        {{extra_instance.extra}} x{{ extra_instance.quant }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </h5>
                             {% endif %}
                             {% if services_and_extras.2 %}
                                 <table class="table table-striped">
@@ -522,6 +519,8 @@
                                     {% endfor %}
                                 </tbody>
                             </table>
+                            {% else %}
+                            (No equipment entries)
                             {% endif %}
                         {% endfor %}
                         {% permission request.user has 'events.edit_pull_list' of event %}
@@ -532,6 +531,7 @@
                                             data: {
                                                 'model_type':"PullListEquipmentInstance",
                                                 'id':$(this).prop('name'),
+                                                'event_id':{{ event.id }},
                                                 'field':$(this).prop('class'),
                                                 'checked':$(this).prop("checked"),
                                                 'csrfmiddlewaretoken': '{{ csrf_token }}',
