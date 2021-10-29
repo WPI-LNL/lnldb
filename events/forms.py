@@ -1387,11 +1387,21 @@ class ExtraForm(forms.ModelForm):
 
 class PullListForm(forms.ModelForm):
 
+    def __init__(self, category, *args, **kwargs):
+        self.category = category
+        super(PullListForm, self).__init__(*args, **kwargs)
+    
+    def save(self, commit=True):
+        obj = super(PullListForm, self).save(commit=False)
+        obj.category = Category.objects.get(name__iexact=self.category)
+        if commit:
+            obj.save()
+        return obj
+
     class Meta:
         model = PullListEquipmentInstance
-        fields = ('category', 'name', 'details', 'quant')
+        fields = ('name', 'details', 'quant')
 
-    category = ModelChoiceField(queryset=Category.objects.all())
     name = CharField(max_length = 256)
     details = CharField(max_length = 2048, required=False)
     quant = forms.IntegerField(required=False)

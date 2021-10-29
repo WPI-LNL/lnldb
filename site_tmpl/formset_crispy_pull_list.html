@@ -4,13 +4,12 @@
 {% block content %}
     <div class="row">
         <div class="col-md-12">
-                <h2> {{msg }} for "<em>{{ event }}</em>"</h2>
+                <h2> {{category}} {{msg }} for "<em>{{ event }}</em>"</h2>
                 <form method="post" action="" class="form-inline" enctype="multipart/form-data">
                 {% csrf_token %}
                 {{ formset.management_form }}
-                <table class="table table-striped" valign="top">
+                <table class="table table-striped" valign="top"> <tbody id="form_data">
                     <tr>
-                        <th>Category</th>
                         <th>Equipment Name</th>
                         <th>Details</th>
                         <th>Quantity </th>
@@ -19,7 +18,6 @@
                 {% for form in formset %}
                     {% if form.errors %}
                     <tr class="warning">
-                        <td>{% for e in form.category.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                         <td>{% for e in form.name.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                         <td>{% for e in form.details.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                         <td>{% for e in form.quant.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
@@ -27,19 +25,45 @@
                     </tr>
                 {% endif %}
                     <tr>
-                        <td>{{ form.category }} </td>
                         <td>{{ form.id }}{{ form.name }} </td>
                         <td>{{ form.details }} </td>
                         <td>{{ form.quant }} </td>
                         <td>{{ form.DELETE }} </td>
                     </tr>
                 {% endfor %}
-                </table>
-                
-                <div class="form-actions"><input name="save" value="Save Changes" class="btn btn-primary" id="submit-id-save" type="submit"> </div>
+                </tbody></table>
+                <div class="form-actions btn-group">
+                <input type="button" class="btn btn-success btn-group" value="Add New" id="add_form">
+                <input name="save" value="Save Changes" class="btn btn-primary btn-group" id="submit-id-save" type="submit"> </div>
                 </form>
                 
         </div>
+        {% with formset.empty_form as form %}
+        <table style="display:none;"> <tbody id="empty_form">
+                <tr>
+                    <td>{{ form.id }}{{ form.name }} </td>
+                    <td>{{ form.details }} </td>
+                    <td>{{ form.quant }} </td>
+                    <td>{{ form.DELETE }} </td>
+                </tr>
+            </tbody>
+            </table>
+        {% endwith %}
+        <script>
+            function add_form(){
+                var form_idx = $('#id_pulllistequipmentinstance_set-TOTAL_FORMS').val();
+                $('#form_data').append($('#empty_form').html().replace(/__prefix__/g, form_idx));
+                console.log('Adding field ' + form_idx);
+                $('#id_pulllistequipmentinstance_set-TOTAL_FORMS').val(parseInt(form_idx) + 1);
+                $('#form_data>tr:last-child>td:first').find('input[type=text]').focus();
+            }
+            $('#add_form').click(function() {
+                add_form();
+            });
+            $('.table').keypress(function(e) {
+                if (e.which == 13) { add_form();}
+            });
+        </script>
     </div>
 {% endblock %}
 
