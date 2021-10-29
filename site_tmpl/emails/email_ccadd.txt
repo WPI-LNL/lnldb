@@ -25,8 +25,9 @@ By the way, congratulations on taking your first event as Crew Chief! Since this
 • Tech Bible - https://lnl.wpi.edu/tech-bible
 • Technical Directior - mailto:lnl-td@wpi.edu
 • Vice President - mailto:lnl-vp@wpi.edu
+• Head Projectionist - mailto:lnl-hp@wpi.edu for a projection event
 • Events Office - 2nd floor of the Campus Center, next to the bookstore
-• 25live - https://scheduling.wpi.edu
+• 25live - https://scheduling.wpi.edu (Please reach out to an officer if you need to schedule an event with 25Live).
 {% else %}
 If you have any questions or concerns about the above information, contact the Vice President at mailto:lnl-vp@wpi.edu.
 {% endif %}
