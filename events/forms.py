@@ -574,6 +574,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'test_event',
                 'entered_into_workday',
                 'send_survey',
+                'allow_crew_to_check_equipment',
                 active=True
             ),
             Tab(
@@ -680,7 +681,7 @@ class InternalEventForm2019(FieldAccessForm):
         model = Event2019
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org',
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
-                  'datetime_end', 'sensitive', 'test_event', 'entered_into_workday', 'send_survey', 'max_crew')
+                  'datetime_end', 'sensitive', 'test_event', 'entered_into_workday', 'send_survey', 'allow_crew_to_check_equipment', 'max_crew')
         widgets = {
             'description': PagedownWidget(),
             'internal_notes': PagedownWidget(),

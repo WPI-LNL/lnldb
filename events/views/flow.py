@@ -1081,6 +1081,9 @@ def viewevent(request, id):
 def updateevent(request, id):
     if request.is_ajax() and request.method == 'POST':
         if request.POST.get('model_type') == 'PullListEquipmentInstance':
+            if not (request.user.has_perm('events.check_in_out_pull_list') or
+                request.user.has_perm('events.check_in_out_pull_list', BaseEvent.objects.get(id=request.POST.get('event_id')))):
+                return JsonResponse({'success': False, 'errors': ['PermissionError: User does not have permission to update.'], 'value': request.POST}, status=403)
             model_instance = PullListEquipmentInstance.objects.get(id=request.POST.get('id'))
             if request.POST.get('field') == 'equipment_in':
                 model_instance.checked_in = request.POST.get('checked') == "true"

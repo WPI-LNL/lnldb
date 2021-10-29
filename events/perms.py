@@ -61,7 +61,7 @@ class CrewChiefPermLogic(AssocUsersCustomPermissionLogic):
              'events.view_hidden_event', 'events.edit_event_fund',
              'events.view_event_billing', 'events.adjust_event_charges',
              'events.edit_event_hours', 'events.event_view_sensitive',
-             'events.edit_pull_list')
+             'events.edit_pull_list', 'events.check_in_out_pull_list')
 
 
 class CrewChiefSurveyPerms(AssocUsersCustomPermissionLogic):
@@ -105,7 +105,7 @@ class EventOrgOwnerPermLogic(AssocUsersCustomPermissionLogic):
 
 class WorkedAtEventPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'hours__user'
-    perms = ('events.view_events', 'events.add_event_report', 'events.event_images')
+    perms = ('events.view_events', 'events.add_event_report', 'events.event_images', 'events.check_in_out_pull_list')
 
 
 class OrgMemberPermLogic(AssocUsersCustomPermissionLogic):

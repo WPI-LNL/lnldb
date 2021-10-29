@@ -469,7 +469,8 @@ class BaseEvent(PolymorphicModel):
             ("event_view_granular", "See debug data like ip addresses"),
             ("event_view_debug", "See debug events"),
             ("reopen_event", "Reopen a closed, declined, or cancelled event"),
-            ("edit_pull_list", "Edit the event pull list")
+            ("edit_pull_list", "Edit the event pull list"),
+            ("check_in_out_pull_list", "Check equipment in and out of the event pull list"),
         )
         ordering = ['-datetime_start']
 
@@ -814,6 +815,8 @@ class Event2019(BaseEvent):
         default=True, help_text='Check if the event contact should be emailed the post-event survey after the event'
     )
     survey_sent = models.BooleanField(default=False, help_text='The post-event survey has been sent to the client')
+
+    allow_crew_to_check_equipment = models.BooleanField(default=True, help_text='Allow checked-in crew to check in or out equipment on the Pull List.')
 
     # Added during COVID pandemic
     max_crew = models.PositiveIntegerField(null=True, blank=True)
