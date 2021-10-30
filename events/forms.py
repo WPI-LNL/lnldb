@@ -1394,7 +1394,7 @@ class PullListForm(forms.ModelForm):
     
     def save(self, commit=True):
         obj = super(PullListForm, self).save(commit=False)
-        obj.category = Category.objects.get(name__iexact=self.category)
+        obj.category = self.category
         if commit:
             obj.save()
         return obj

@@ -851,6 +851,7 @@ def extras(request, id):
 def pull_list(request, id, category):
     """ This form is for adding equipment to the pull list of an event """
     context = {'msg': "Pull List"}
+    category = Category.objects.get(name__iexact=category)
 
     event = get_object_or_404(BaseEvent, pk=id)
 
@@ -863,15 +864,6 @@ def pull_list(request, id, category):
     
     context['event'] = event
     context['category'] = category
-    """
-    context['categories_not_requested'] = []
-    for category in Category.objects.all():
-            # do not add category if it is empty
-            if thisServiceInstances := event.serviceinstance_set.filter(service__category=category):
-                context['categories_requested'][category.name] = thisServiceInstances
-            else:
-                context['categories_not_requested'].append(category.name)
-    """
 
     mk_pull_list_formset = inlineformset_factory(BaseEvent, PullListEquipmentInstance, extra=3, exclude=[])
     mk_pull_list_formset.form = curry_class(PullListForm, category)
@@ -880,15 +872,12 @@ def pull_list(request, id, category):
         set_revision_comment("Edited pull list", None)
         formset = mk_pull_list_formset(request.POST, request.FILES, instance=event)
         formset.full_clean()
-        #for form in formset:
-            #if form.cleaned_data.get('name') == None or form.cleaned_data.get('category') == None:
-            #    form.instance.delete()
         if formset.is_valid():
             formset.save()
             event.save()  # for revision to be created
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#pull_list")
     else:
-        formset = mk_pull_list_formset(instance=event)
+        formset = mk_pull_list_formset(instance=event, queryset=PullListEquipmentInstance.objects.filter(category=category))
 
     context['formset'] = formset
     return render(request, 'formset_crispy_pull_list.html', context)
