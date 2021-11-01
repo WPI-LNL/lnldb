@@ -26,5 +26,19 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements_debug.txt
     - name: Run Tests
-      run: |
-        python manage.py test
+      run: coverage run --omit="*/migrations/*","slack/api.py","inventory/*" manage.py test
+    - name: Upload Coverage
+      run: coveralls --service=github
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
+        COVERALLS_PARALLEL: true
+  coveralls:
+    name: Indicate completion to coveralls.io
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Finished
+      run: coveralls --service=github --finish
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
