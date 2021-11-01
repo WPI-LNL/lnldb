@@ -39,6 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Finished
-      run: coveralls --service=github --finish
+      run: |
+        pip install --update coveralls
+        coveralls --service=github --finish
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
