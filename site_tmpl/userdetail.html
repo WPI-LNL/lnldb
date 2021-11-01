@@ -171,7 +171,7 @@
             <h3>Events Participated</h3>
             <ul class="list-unstyled">
                 {% for h in hours|dictsortreversed:"event.datetime_start" %}
-                    <li><a href="{% url "events:detail" h.event.id %}">{{ h.event }} {% if h.service %}({{ h.service.shortname }}){% elif h.category%}({{ h.category | lower}}){% endif %}</a> : {{ h.hours }}h ({{ h.event.datetime_start|date:'N d, Y' }})</li>
+                    <li><a href="{% url "events:detail" h.event.id %}">{{ h.event }} {% if h.service %}({{ h.service.shortname }}){% elif h.category%}({{ h.category }}){% endif %}</a> : {{ h.hours }}h ({{ h.event.datetime_start|date:'N d, Y' }})</li>
                 {% endfor %}
             </ul>
         </div>
