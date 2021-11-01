@@ -303,3 +303,24 @@ class MeetingsViewTest(ViewTestCase):
 
         self.assertRedirects(self.client.post(reverse("meetings:cc-email", args=[self.meeting.pk]), valid_data),
                              reverse("meetings:detail", args=[self.meeting.pk]) + "#emails")
+
+    def test_delete_event(self):
+        # By default, user should not have permission to delete an event
+        self.assertOk(self.client.get(reverse("meetings:delete", args=[self.meeting.pk])), 403)
+
+        permission = Permission.objects.get(codename="edit_mtg")
+        self.user.user_permissions.add(permission)
+
+        # Will also need list_mtgs permission for redirect
+        permission = Permission.objects.get(codename="list_mtgs")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("meetings:delete", args=[self.meeting.pk])))
+
+        pk = self.meeting.pk
+        # Confirm that the user wants to delete the meeting, then redirect to the meeting list
+        self.assertRedirects(self.client.post(reverse("meetings:delete", args=[self.meeting.pk])),
+                             reverse("meetings:list"))
+
+        # Check that the meeting was actually deleted
+        self.assertFalse(models.Meeting.objects.filter(pk=pk).exists())

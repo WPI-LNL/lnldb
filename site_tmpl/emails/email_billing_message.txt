@@ -1,6 +1,6 @@
 {% load lnldb_tags %}Dear {{ billing.event.org_to_be_billed }},
 
-Lens and Lights recently provided services for {{ billing.event.event_name|public_field }}. Attached is an invoice for this event. Please click the button below or visit {% get_base_url %}{% url 'events:worktag-form' billing.event.pk %} to submit a payment through Workday. We also accept cash or check. If you would like to pay this way please reply to this email. Unfortunately we can not accept credit cards.
+Lens and Lights recently provided services for {{ billing.event.event_name }}. Attached is an invoice for this event. Please click the button below or visit {% get_base_url %}{% url 'events:worktag-form' billing.event.pk %} to submit a payment through Workday. We also accept cash or check. If you would like to pay this way please reply to this email. Unfortunately we can not accept credit cards.
 
 If you have any questions, please just reply to this email.
 

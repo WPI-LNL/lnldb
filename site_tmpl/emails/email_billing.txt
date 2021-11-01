@@ -6,7 +6,7 @@
 
 PAY HERE --> {% get_base_url %}{% url 'events:worktag-form' event.pk %}
 
-{{ event.event_name|public_field }}
+{{ event.event_name }}
 Location: {{ event.location }}
 Start: {{ event.datetime_start }}
 End: {{ event.datetime_end }}

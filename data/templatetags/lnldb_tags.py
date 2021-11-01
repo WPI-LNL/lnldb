@@ -37,11 +37,3 @@ def get_base_url(context):
             or settings.SECURE_HSTS_SECONDS
     scheme = 'https' if is_secure else 'http'
     return '%s://%s' % (scheme, settings.ALLOWED_HOSTS[0])
-
-
-@register.filter()
-def public_field(string):
-    output = string
-    if settings.PUBLIC_FIELD_FILTERING and string:
-        output = string.replace('LnL', 'LNL')
-    return output

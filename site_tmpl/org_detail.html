@@ -1,7 +1,6 @@
 {% extends 'base_admin.html' %}
 {% load markdown_deux_tags %}
 {% load permissionif %}
-{% load lnldb_tags %}
 {% block extrajs %}
     $(document).ready(function () {
         $('.collapse').collapse('hide');
@@ -139,7 +138,7 @@
                         {% permission user has 'events.view_event' of e %}
                     <tr>
                         <td>
-                            <a href="{% url "events:detail" e.id %}">{{ e.event_name|public_field }}</a>
+                            <a href="{% url "events:detail" e.id %}">{{ e.event_name }}</a>
                         </td>
                         <td>
                             {{ e.datetime_end }}

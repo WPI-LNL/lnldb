@@ -138,7 +138,7 @@ class AccountsTestCase(ViewTestCase):
             'first_name': 'Example',
             'last_name': 'User',
             'nickname': '',
-            'groups': Group.objects.filter(name="Associate"),
+            'groups': [self.associate.pk],
             'addr': '',
             'wpibox': 123,
             'mdc': 'CALLSGN',
@@ -147,13 +147,31 @@ class AccountsTestCase(ViewTestCase):
             'student_id': '123456789',
             'away_exp': '',
             'carrier': '',  # Opt out of SMS communications
-            'title': 'President',
             'save': 'Update Member and Return'
         }
 
         self.assertOk(self.client.get(reverse("accounts:update", args=[2])))
         # Should not redirect as class year is required
         self.assertOk(self.client.post(reverse("accounts:update", args=[2]), member_data))
+
+        member_data['class_year'] = '1962'
+
+        self.assertRedirects(self.client.post(reverse("accounts:update", args=[2]), member_data),
+                             reverse("accounts:detail", args=[2]))
+
+        # Test with officer group change (this test should be skipped in production)
+        change_group = Permission.objects.get(codename="change_membership")
+        self.user.user_permissions.add(change_group)
+
+        self.officer.user_set.add(self.user2)
+        self.user2.title = "President"
+        self.user2.save()
+
+        if settings.SLACK_TOKEN in [None, '']:
+            self.assertRedirects(self.client.post(reverse("accounts:update", args=[2]), member_data),
+                                 reverse("accounts:detail", args=[2]))
+            self.user2.refresh_from_db()
+            self.assertIsNone(self.user2.title)
 
     def test_user_detail_view(self):
         self.setup()
@@ -242,7 +260,7 @@ class AccountsTestCase(ViewTestCase):
         # By default should not have permission
         self.assertOk(self.client.get(reverse("accounts:secretary_dashboard")), 403)
 
-        permission = Permission.objects.get(codename="change_group", name="Change the group membership of a user")
+        permission = Permission.objects.get(codename="change_membership")
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("accounts:secretary_dashboard")))
@@ -477,7 +495,7 @@ class OfficerImgViewTestCase(ViewTestCase):
         # General members should not have access to these pages
         self.assertOk(self.client.get(reverse("accounts:officer-photo", args=[self.user.pk])), 403)
 
-        permission = Permission.objects.get(codename="change_group", name="Change the group membership of a user")
+        permission = Permission.objects.get(codename="change_membership")
         self.user.user_permissions.add(permission)
 
         # Not an officer, should redirect
