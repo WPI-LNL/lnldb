@@ -40,7 +40,7 @@ jobs:
     steps:
     - name: Finished
       run: |
-        pip install --update coveralls
+        pip install --upgrade coveralls
         coveralls --service=github --finish
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
