@@ -206,6 +206,31 @@ class OfficerPhotoForm(forms.ModelForm):
         model = OfficerImg
         fields = ['img']
 
+class OfficerPhotoCropForm(forms.ModelForm):
+    x = forms.FloatField(widget=forms.HiddenInput)
+    y = forms.FloatField(widget=forms.HiddenInput)
+    width = forms.FloatField(widget=forms.HiddenInput)
+    height = forms.FloatField(widget=forms.HiddenInput)
+
+    class Meta:
+        model = OfficerImg
+        fields = ["img", "x", "y", "width", "height"]
+
+    def save(self):
+        photo = super(OfficerPhotoCropForm, self).save()
+
+        x = self.cleaned_data.get('x')
+        y = self.cleaned_data.get('y')
+        width = self.cleaned_data.get('width')
+        height = self.cleaned_data.get('height')
+
+        image = Image.open(photo.img)
+        cropped_image = image.crop((x, y, width+x, height+y))
+        resized_image = cropped_image.resize((200, 200), Image.ANTIALIAS)
+        resized_image.save(photo.img.path)
+
+        return photo
+
 
 class SMSOptInForm(forms.ModelForm):
     phone = forms.CharField(required=True, min_length=10, max_length=10)

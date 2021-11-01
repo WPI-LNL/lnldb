@@ -382,11 +382,11 @@ class PasswordSetView(generic.FormView):
         self.user = get_object_or_404(get_user_model(), pk=int(pk))
         return super(PasswordSetView, self).dispatch(request, pk, *args, **kwargs)
 
-
+"""
 @login_required
 @permission_required('accounts.change_group', raise_exception=True)
 def officer_photos(request, pk=None):
-    """Update officer headshot (displayed on the main LNL website about page)"""
+    Update officer headshot (displayed on the main LNL website about page)
     context = {}
     if pk is None:
         pk = request.user.pk
@@ -417,6 +417,41 @@ def officer_photos(request, pk=None):
     else:
         context['form'] = form
     return render(request, 'form_crispy.html', context)
+"""
+@login_required
+@permission_required('accounts.change_group', raise_exception=True)
+def officer_photos(request, pk=None):
+    """Update officer headshot (displayed on the main LNL website about page)"""
+    context = {}
+    if pk is None:
+        pk = request.user.pk
+    officer = get_object_or_404(get_user_model(), pk=pk)
+    if not challenges.is_officer(officer):
+        messages.add_message(request, messages.ERROR, 'This feature is not available for this user.')
+        return HttpResponseRedirect(reverse("home"))
+
+    context['officer'] = officer
+    img = OfficerImg.objects.filter(officer=officer).first()
+    form = forms.OfficerPhotoCropForm(instance=img)
+
+    if request.method == "POST":
+        form = forms.OfficerPhotoCropForm(request.POST, request.FILES, instance=img)
+        if request.POST['save'] == "Remove":
+            img = OfficerImg.objects.filter(officer=officer).first()
+            if img is not None:
+                img.delete()
+                messages.success(request, "Your profile photo was removed successfully!", extra_tags='success')
+            return HttpResponseRedirect(reverse("accounts:detail", args=[officer.pk]))
+        if form.is_valid():
+            form.instance.officer = officer
+            form.save()
+            messages.success(request, "Your profile photo was updated successfully!", extra_tags="success")
+            return HttpResponseRedirect(reverse("accounts:detail", args=[officer.pk]))
+        else:
+            context['form'] = form
+    else:
+        context['form'] = form
+    return render(request, 'form_officer_img.html', context)
 
 
 @login_required
