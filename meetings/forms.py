@@ -102,11 +102,15 @@ class MeetingAdditionForm(FieldAccessForm):
             lambda user, instance: user.has_perm('meetings.edit_mtg', instance) or
                                    user.has_perm('meetings.create_mtg', instance),
             enable=('meeting_type', 'location', 'datetime', 'attendance', 'duration', 'agenda', 'minutes',
-                    'attachments'), exclude=('minutes_private',)
+                    'attachments')
         )
         edit_closed = FieldAccessLevel(
             lambda user, instance: user.has_perm('meetings.view_mtg_closed', instance),
             enable=('minutes_private', 'attachments_private')
+        )
+        no_closed = FieldAccessLevel(
+            lambda user, instance: not user.has_perm('meetings.view_mtg_closed', instance),
+            exclude=('minutes_private',)
         )
 
 
