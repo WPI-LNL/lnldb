@@ -1,0 +1,37 @@
+from django.db import models
+from django.contrib.auth import get_user_model
+
+import datetime
+
+# Create your models here.
+
+class Position(models.Model):
+    """
+    Describes a leadership position for a specific time. A new position instance
+    should be created every time one needs to be filled.
+    """
+    name = models.CharField(verbose_name="Position Name", max_length=32,
+            null=False, blank=False)
+    description = models.TextField(verbose_name="Position Description",
+            null=False, blank=False)
+    position_start = models.DateField(verbose_name="Term Start", null=False,
+            blank=False)
+    position_end = models.DateField(verbose_name="Term End", null=False,
+            blank=False)
+    reports_to = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    closes = models.DateTimeField(verbose_name="Applications Close", null=False,
+            blank=False)
+    application_form = models.CharField(verbose_name="Link to external application form", null=False, blank=False, max_length=128)
+
+    def __str__(self):
+        return f"{self.name}"
+
+    def is_open(self):
+        return self.closes >= datetime.datetime.now()
+    
+class ApplicationInstance(models.Model):
+    """
+    Defines a specific application instance for a user and position.
+    """
+    applicant = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    position = models.ForeignKey(Position, on_delete=models.CASCADE)
