@@ -32,27 +32,20 @@
                 <p>Submit your crew chief report <a href="{% get_base_url %}{% url 'my:report' ccinstance.event.id %}">here</a>.</p>
 
                 <p>Submit crew hours <a href="{% get_base_url %}{% url 'my:hours-list' ccinstance.event.id %}">here</a>.</p>
-		{% if is_new_cc %}
-			<p>By the way, congratulations on taking your first event as
-			Crew Chief! Since this is your first time as a CC, here
-			are some helpful resources. 
-			<ul>
-					<li>Tech Bible -
-						<a
-								href="https://lnl.wpi.edu/bible">lnl.wpi.edu/bible</a></li>
-					<li>Technical Director -
-						<a href="mailto:lnl-td@wpi.edu">lnl-td@wpi.edu</a></li>
-					<li>Vice President - <a href="mailto:lnl-vp@wpi.edu">lnl-vp@wpi.edu</a></li>
-                    <li>Head Projectionist - <a href="mailto:lnl-hp@wpi.edu">lnl-hp@wpi.edu</a> (for a projection event)</li>
-					<li>Events Office - 2nd floor of the
-						Campus Center, next to the
-						bookstore</li>
-					<li>25Live - <a
-								     href="https://scheduling.wpi.edu">scheduling.wpi.edu</a> (Please reach out to an officer if you need to schedule an event with 25Live).
-		{% else %}
-                <p>If you have any questions or concerns about the above information, contact the Vice President at
-                <a href="mailto:lnl-vp@wpi.edu">lnl-vp@wpi.edu</a>.</p>
-		{% endif %}
+                {% if is_new_cc %}
+                    <p>By the way, congratulations on taking your first event as Crew Chief! Since this is your first
+                        time as a CC, here are some helpful resources.
+                    <ul>
+                        <li>Tech Bible - <a href="https://lnl.wpi.edu/bible">lnl.wpi.edu/bible</a></li>
+                        <li>Technical Director - <a href="mailto:lnl-td@wpi.edu">lnl-td@wpi.edu</a></li>
+                        <li>Vice President - <a href="mailto:lnl-vp@wpi.edu">lnl-vp@wpi.edu</a></li>
+                        <li>Head Projectionist - <a href="mailto:lnl-hp@wpi.edu">lnl-hp@wpi.edu</a> (for a projection event)</li>
+                        <li>Events Office - 2nd floor of the Campus Center, next to the bookstore</li>
+                        <li>25Live - <a href="https://scheduling.wpi.edu">scheduling.wpi.edu</a> (Please reach out to an officer if you need to schedule an event with 25Live).</li>
+                    </ul>
+                {% else %}
+                    <p>If you have any questions or concerns about the above information, contact the Vice President at <a href="mailto:lnl-vp@wpi.edu">lnl-vp@wpi.edu</a>.</p>
+                {% endif %}
                 </div>
             </td>
         </tr>
