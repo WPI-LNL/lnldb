@@ -13,6 +13,7 @@ from natural_duration import NaturalDurationField
 from pagedown.widgets import PagedownWidget
 
 from data.forms import FieldAccessForm, FieldAccessLevel
+from helpers.form_text import slack_channel_msgs
 from events.models import Event2019, Location
 from meetings.models import (CCNoticeSend, Meeting, MeetingAnnounce, MeetingType, MtgAttachment)
 
@@ -53,11 +54,13 @@ class MeetingAdditionForm(FieldAccessForm):
                 Tab(
                     'Open Minutes',
                     'minutes',
+                    slack_channel_msgs,
                     'attachments'
                 ),
                 Tab(
                     'Closed Minutes',
                     'minutes_private',
+                    slack_channel_msgs,
                     'attachments_private'
                 ),
             ),

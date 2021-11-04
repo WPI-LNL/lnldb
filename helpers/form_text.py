@@ -10,3 +10,6 @@ markdown_at_msgs = HTML(
 at_msgs = HTML(
     '<div class="help-block muted offset2"><i class="icon-chevron-up"></i>'
     ' This field support Twitter style @username @eventid linking</div>')
+slack_channel_msgs = HTML(
+    '<div class="help-block muted offset2"><i class="icon-chevron-up"></i>'
+    ' This field supports automatic Slack channel linking (i.e. #general)</div>')
