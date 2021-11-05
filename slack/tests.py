@@ -1,9 +1,11 @@
 import json
 from urllib.parse import urlencode
+from django.test import TestCase
 from data.tests.util import ViewTestCase
 from django.conf import settings
 from django.shortcuts import reverse
 from . import views
+from .templatetags import slack
 
 
 class SlackAPITests(ViewTestCase):
@@ -257,3 +259,14 @@ class SlackAPITests(ViewTestCase):
         }
 
         self.assertOk(self.client.post(reverse("slack:event-endpoint"), event_info, content_type="application/json"))
+
+
+class SlackTemplateTags(TestCase):
+    def test_slack_channel_tag(self):
+        test_with_channel = "You should totally go join #webdev on Slack!"
+        test_without_channel = "Priority #1: Safety"
+        self.assertEqual(
+            slack.slack(test_with_channel),
+            "You should totally go join [#webdev](https://wpilnl.slack.com/app_redirect?channel=webdev) on Slack!"
+        )
+        self.assertEqual(slack.slack(test_without_channel), test_without_channel)

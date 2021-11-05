@@ -13,9 +13,9 @@ from natural_duration import NaturalDurationField
 from pagedown.widgets import PagedownWidget
 
 from data.forms import FieldAccessForm, FieldAccessLevel
+from helpers.form_text import slack_channel_msgs
 from events.models import Event2019, Location
-from meetings.models import (CCNoticeSend, Meeting, MeetingAnnounce,
-                             MtgAttachment)
+from meetings.models import (CCNoticeSend, Meeting, MeetingAnnounce, MeetingType, MtgAttachment)
 
 
 class MeetingAdditionForm(FieldAccessForm):
@@ -54,11 +54,13 @@ class MeetingAdditionForm(FieldAccessForm):
                 Tab(
                     'Open Minutes',
                     'minutes',
+                    slack_channel_msgs,
                     'attachments'
                 ),
                 Tab(
                     'Closed Minutes',
                     'minutes_private',
+                    slack_channel_msgs,
                     'attachments_private'
                 ),
             ),
@@ -75,6 +77,7 @@ class MeetingAdditionForm(FieldAccessForm):
     datetime = SplitDateTimeField(required=True, initial=datetime.datetime.today())
     location = forms.ModelChoiceField(queryset=Location.objects.filter(available_for_meetings=True), label="Location",
                                       required=False)
+    meeting_type = forms.ModelChoiceField(queryset=MeetingType.objects.filter(archived=False), required=True)
     attachments = MultiFileField(max_file_size=1024 * 1024 * 20,  # 20 MB
                                  required=False)
     attachments_private = MultiFileField(max_file_size=1024 * 1024 * 20,  # 20 MB
@@ -102,11 +105,15 @@ class MeetingAdditionForm(FieldAccessForm):
             lambda user, instance: user.has_perm('meetings.edit_mtg', instance) or
                                    user.has_perm('meetings.create_mtg', instance),
             enable=('meeting_type', 'location', 'datetime', 'attendance', 'duration', 'agenda', 'minutes',
-                    'attachments'), exclude=('minutes_private',)
+                    'attachments')
         )
         edit_closed = FieldAccessLevel(
             lambda user, instance: user.has_perm('meetings.view_mtg_closed', instance),
             enable=('minutes_private', 'attachments_private')
+        )
+        no_closed = FieldAccessLevel(
+            lambda user, instance: not user.has_perm('meetings.view_mtg_closed', instance),
+            exclude=('minutes_private',)
         )
 
 

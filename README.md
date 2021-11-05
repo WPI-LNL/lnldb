@@ -1,5 +1,5 @@
 # LNLDB
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy) [![Build Status](https://travis-ci.org/WPI-LNL/lnldb.svg)](https://travis-ci.org/WPI-LNL/lnldb) [![Coverage Status](https://coveralls.io/repos/WPI-LNL/lnldb/badge.svg?branch=master&service=github)](https://coveralls.io/github/WPI-LNL/lnldb?branch=master) [![Documentation](https://readthedocs.org/projects/lnldb/badge/?version=latest&style=flat)](https://lnldb.readthedocs.io/en/latest/)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy) [![Django CI](https://github.com/WPI-LNL/lnldb/actions/workflows/django-ci.yml/badge.svg)](https://github.com/WPI-LNL/lnldb/actions/workflows/django-ci.yml) [![Coverage Status](https://coveralls.io/repos/WPI-LNL/lnldb/badge.svg?branch=master&service=github)](https://coveralls.io/github/WPI-LNL/lnldb?branch=master) [![Documentation](https://readthedocs.org/projects/lnldb/badge/?version=latest&style=flat)](https://lnldb.readthedocs.io/en/latest/)
 
 ## Intro
 LNLDB now runs under Python3.x and Django 2.2 or later.
