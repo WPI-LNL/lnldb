@@ -5,7 +5,7 @@ from django.template.defaultfilters import stringfilter
 
 register = template.Library()
 
-regex = re.compile(r'#(?P<channel_id>[\w]{3,})')
+regex = re.compile(r'#(?P<channel_id>[\w-]{3,})')
 
 
 @register.filter
