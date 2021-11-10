@@ -2,6 +2,27 @@
 Updates 2021
 ============
 
+November
+========
+In November we switched from Travis CI to GitHub Actions and deployed several bug fixes, UI improvements, and new
+features. Later this month, we plan to start working on the new Snipe integration as well.
+
+- :commit:`d9995685c69b4990893139d9b1d3fc55a85c5ac0` Added automatic Slack channel linking
+- :commit:`9ac61acb6a0038d323d7590af9eb19252bdd387c` Added new crew chief resources to 'CC Add' email (`#544 <https://github.com/WPI-LNL/lnldb/issues/544>`_)
+- :commit:`d3d8e89856467b6b4c22906dcb48fd31c3f9f53e` Added the ability to archive old meeting types
+- :commit:`416c2862e0ef33c7bbd1ba3c68eed227e4749b29` Added category labels to hour listings on member profiles (`#563 <https://github.com/WPI-LNL/lnldb/issues/563>`_)
+- :commit:`c3da3688a021d787a90dc9fdcfb8196cad81c995` Fixes a bug where event classification icons were not supported for 2019 Events (`#509 <https://github.com/WPI-LNL/lnldb/issues/509>`_)
+- :commit:`940f7f927d3174adcd25d5c49970f74ccf53c0b0` Switch from Travis CI to GitHub Actions
+
+October
+=======
+This month was spent working on several small bug fixes and UI improvements. We also added the ability for users to add
+their pronouns to their profiles.
+
+- :commit:`687e2d836767297b54050658ad6eadc20c5cb955` Resolves an issue where Committee Leaders could access closed meeting minutes
+- :commit:`136ed7f7d619746f691de8c9726c5e44221e2b60` Updated markdown format settings (`#547 <https://github.com/WPI-LNL/lnldb/issues/547>`_, `#551 <https://github.com/WPI-LNL/lnldb/issues/551>`_)
+- :commit:`6bd78e5b2a5c85d0d0863596a8e740e1032429df` Fixed the events list on the meeting details page to work with 2019 Events
+
 September
 =========
 We took care of several minor dependency updates and bug fixes. A few languishing feature requests were also completed.

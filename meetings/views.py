@@ -167,17 +167,17 @@ def editattendance(request, mtg_id):
             request.user.has_perms(perms, m)):
         raise PermissionDenied
     if request.method == 'POST':
-        form = MeetingAdditionForm(request.POST, request.FILES, instance=m)
+        form = MeetingAdditionForm(data=request.POST, files=request.FILES, instance=m, request_user=request.user)
         if form.is_valid():
-            for each in form.cleaned_data['attachments']:
+            for each in form.cleaned_data.get('attachments', []):
                 MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m, private=False)
-            for each in form.cleaned_data['attachments_private']:
+            for each in form.cleaned_data.get('attachments_private', []):
                 MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m, private=True)
             m = form.save()
             url = reverse('meetings:detail', args=(m.id,)) + "#attendance"
             return HttpResponseRedirect(url)
     else:
-        form = MeetingAdditionForm(instance=m)
+        form = MeetingAdditionForm(instance=m, request_user=request.user)
     context['form'] = form
     return render(request, 'form_crispy_meetings.html', context)
 
@@ -218,12 +218,18 @@ def newattendance(request):
     """ Create a new meeting """
     context = {}
     if request.method == 'POST':
-        form = MeetingAdditionForm(request.POST)
+        form = MeetingAdditionForm(request.user, request.POST, request.FILES)
         if form.is_valid():
-            m = form.save()
-            return HttpResponseRedirect(reverse('meetings:detail', args=(m.id,)))
+            mtg = form.save()
+            for attachment in form.cleaned_data.get('attachments', []):
+                MtgAttachment.objects.create(file=attachment, name=attachment.name, author=request.user, private=False,
+                                             meeting=mtg)
+            for attachment in form.cleaned_data.get('attachments_private', []):
+                MtgAttachment.objects.create(file=attachment, name=attachment.name, author=request.user, private=True,
+                                             meeting=mtg)
+            return HttpResponseRedirect(reverse('meetings:detail', args=(mtg.id,)))
     else:
-        form = MeetingAdditionForm()
+        form = MeetingAdditionForm(request.user)
     context['form'] = form
     context['msg'] = "New Meeting"
     return render(request, 'form_crispy_meetings.html', context)

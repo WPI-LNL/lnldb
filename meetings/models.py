@@ -153,6 +153,7 @@ class AnnounceSend(models.Model):
 class MeetingType(models.Model):
     """ Used to specify the type of meeting (i.e. Exec Board, General Body, etc.) """
     name = models.CharField(max_length=32)
+    archived = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name

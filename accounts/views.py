@@ -119,7 +119,7 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super(UserDetailView, self).get_context_data(**kwargs)
         context['u'] = u = self.object
-        context['hours'] = u.hours.filter(hours__isnull=False).select_related('event', 'service')
+        context['hours'] = u.hours.filter(hours__isnull=False).select_related('event', 'service','category')
         context['hour_total'] = u.hours.aggregate(hours=Sum('hours'))
         context['ccs'] = u.ccinstances.select_related('event').all()
 

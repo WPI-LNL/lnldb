@@ -45,7 +45,11 @@ def email_cc_notification(sender, instance, created, raw=False, **kwargs):
         else:
             local_formatted = "a time of your choice "
 
-        e = CcAddEmailGenerator(ccinstance=i, attachments=attachments)
+        context = {
+                "is_new_cc": True if i.crew_chief.ccinstances == 1 else False
+                }
+
+        e = CcAddEmailGenerator(ccinstance=i, attachments=attachments, context=context)
         e.send()
 
 

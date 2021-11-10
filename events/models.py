@@ -891,6 +891,20 @@ class Event2019(BaseEvent):
             str(self.worktag)
             ).encode('utf-8')).hexdigest()
 
+    # Service glyphicon for templates
+    @property
+    def allservices(self):
+        foo = []
+        if self.serviceinstance_set.filter(service__category=Category.objects.get(name="Lighting")).exists():
+            foo.append({"i": "glyphicon glyphicon-fire", "title": "lighting"})
+        if self.serviceinstance_set.filter(service__category=Category.objects.get(name="Sound")).exists():
+            foo.append({"i": "glyphicon glyphicon-volume-up", "title": "sound"})
+        if self.serviceinstance_set.filter(service__category=Category.objects.get(name="Projection")).exists():
+            foo.append({"i": "glyphicon glyphicon-film", "title": "projection"})
+        if self.serviceinstance_set.filter(service__category=Category.objects.get(name="Misc")).exists():
+            foo.append({"i": "glyphicon glyphicon-tasks", "title": "misc services"})
+        return foo
+
     class Meta:
         verbose_name = '2019 Event'
 
