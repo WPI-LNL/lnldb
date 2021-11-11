@@ -18,7 +18,8 @@ class Position(models.Model):
             blank=False)
     position_end = models.DateField(verbose_name="Term End", null=False,
             blank=False)
-    reports_to = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    reports_to = models.ForeignKey(get_user_model(), on_delete=models.CASCADE,
+            blank=True, null=True)
     closes = models.DateField(verbose_name="Applications Close", null=True,
             blank=True)
     application_form = models.CharField(verbose_name="Link to external application form", null=False, blank=False, max_length=128)
