@@ -13,7 +13,9 @@
             {% if device_view %}
                 <th>Status</th>
             {% else %}
-                <th>Assigned to</th>
+                {% permission request.user has 'devices.manage_apps' %}
+                    <th>Assigned to</th>
+                {% endpermission %}
                 <th>Installed on</th>
             {% endif %}
             <th>Actions</th>
@@ -57,14 +59,14 @@
         {% elif resource_type == 'App' %}
             {% for app in items %}
                 <tr>
-                    <td>{{ app.meta.name }}</td>
+                    <td><a href="{% url "mdm:app-detail" app.meta.pk %}">{{ app.meta.name }}</a></td>
                     <td>{{ app.meta.developer }}</td>
                     <td>{{ app.meta.version }}</td>
                     {% if device_view %}
                         <td>{{ app.status }}</td>
                     {% else %}
-                        <td>{{ app.assignment_count }} device{{ app.assignment_count|pluralize }}</td>
-                        <td>{{ app.install_count }} device{{ app.install_count|pluralize }}</td>
+                        {% permission request.user has 'devices.manage_apps' %}<td>{{ app.assignment_count }} device{{ app.assignment_count|pluralize }}</td>{% endpermission %}
+                        <td>{{ app.installed|join:', ' }}</td>
                     {% endif %}
                     <td>{% if device_view %}
                         <a class="btn btn-danger" href="{% url "mdm:uninstall-app" device_id app.meta.pk %}">
