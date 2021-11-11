@@ -471,10 +471,11 @@
                 <div id="pull_list" class="tab-pane">
                     {% if categorized_services_and_extras %}
                         {% for category_name, services_and_extras in categorized_services_and_extras.items %}
+                            <h3>
                             {% permission request.user has 'events.edit_pull_list' of event %}
                                 <a class="btn btn-lg btn-info pull-right" href="{% url "events:pull_list" event.id category_name%}">Modify {{ category_name }} Pull List</a>
                             {% endpermission %}
-                            <h3>{{ category_name }}</h3>
+                            {{ category_name }}</h3>
                             <h5>
                             {% if services_and_extras.0 %}
                                 {% for service_instance in services_and_extras.0 %}
