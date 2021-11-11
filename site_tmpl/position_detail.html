@@ -1,0 +1,40 @@
+{% extends 'base_admin.html' %}
+{% load permissionif %}
+
+{% block content %}
+<div class="jumbotron">
+	<div class="clearfix">
+		<h1>{{ object }}</h1>
+		<h2>Term: {{ object.position_start}} through {{object.position_end}}</h2>
+	</div>
+	{% permission user has 'positions.change_position' %}
+	<a class="btn btn-lg btn-primary" href="#">Edit</a>
+	{% endpermission %}
+	<a class="btn btn-lg btn-success" href="{{ object.application_form }}">Apply</a>
+</div>
+
+<table class="table">
+	<tr>
+		<th>Description</th>
+		<td>{{ object.description }}</td>
+	</tr>
+	<tr>
+		<th>Term Start</th>
+		<td>{{ object.position_start }}</td>
+	</tr>
+	<tr>
+		<th>Term End</th>
+		<td>{{ object.position_end }}</td>
+	</tr>
+	<tr>
+		<th>Reports To</th>
+		<td><a href="{% url 'accounts:detail' object.reports_to.id %}">{{ object.reports_to }}</a></td>
+	</tr>
+	<tr>
+		<th>Applications Close</th>
+		<td>{% if object.closes %}{{ object.closes }}{% else %}Doesn't
+			close{% endif %}</td>
+	</tr>
+</table>
+
+{% endblock %}

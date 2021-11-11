@@ -54,6 +54,7 @@ urlpatterns += [
     url(r'^mdm/', include(('devices.urls.mdm', 'mdm'), namespace="mdm")),
     url(r'^support/', include(('rt.urls', 'support'), namespace='support')),
     url(r'', include(('pages.urls', 'pages'), namespace='pages')),
+    url(r'^db/positions/', include('positions.urls', 'positions')),
 
     # special urls
     url(r'^db/$', db_home, name="home"),

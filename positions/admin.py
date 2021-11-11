@@ -4,10 +4,4 @@ from .models import Position
 
 # Register your models here.
 
-class PositionAdmin(admin.ModelAdmin):
-   fields = (
-           'name',
-           'description'
-           )
-
-admin.site.register(Position, PositionAdmin)
+admin.site.register(Position)

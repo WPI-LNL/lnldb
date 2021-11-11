@@ -1,0 +1,29 @@
+{% extends 'base_admin.html' %}
+{% load bootstrap3 %}
+
+{% block content %}
+<h1>Open positions</h1>
+<p>These are positions that the executive board is seeking applications for.
+Click on a position name to view more details.</p>
+<table class="table table-condensed">
+	<thead>
+		<tr>
+		<th>Name</th>
+		<th>Start date</th>
+		<th>End Date</th>
+		<th>Application Closes</th>
+		</tr>
+	</thead>
+	<tbody>
+	{% for pos in object_list %}
+	<tr>
+		<td><a href="{% url 'positions:detail' pos.id %}">{{ pos }}</a></td>
+		<td>{{ pos.position_start }}</td>
+		<td>{{ pos.position_end }}</td>
+		<td>{% if pos.closes %}{{ pos.closes }}{% else %}Does not
+			close{% endif %}</td>
+	</tr>
+{% endfor %}
+	</tbody>
+</table>
+{% endblock %}
