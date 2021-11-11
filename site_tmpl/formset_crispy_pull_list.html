@@ -2,6 +2,7 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
+    <style> input[type='text' i]{min-width:70%;} </style>
     <div class="row">
         <div class="col-md-12">
                 <h2> {{category}} {{msg }} for "<em>{{ event }}</em>"</h2>
@@ -32,9 +33,8 @@
                     </tr>
                 {% endfor %}
                 </tbody></table>
-                <div class="form-actions btn-group">
-                <input type="button" class="btn btn-success btn-group" value="Add New" id="add_form">
-                <input name="save" value="Save Changes" class="btn btn-primary btn-group" id="submit-id-save" type="submit"> </div>
+                    <input name="save" value="Save Changes" class="btn btn-primary" id="submit-id-save" type="submit">
+                    <input type="button" class="btn btn-success" value="Add Row" id="add_form">
                 </form>
                 
         </div>
