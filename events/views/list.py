@@ -952,7 +952,7 @@ def workshop_dates(request, pk):
     context = {}
     workshop = Workshop.objects.get(pk=pk)
     dates = WorkshopDate.objects.filter(workshop=workshop)
-    dates_formset = modelformset_factory(WorkshopDate, exclude=['workshop'], extra=5, can_delete=True,
+    dates_formset = modelformset_factory(WorkshopDate, exclude=['workshop'], extra=3, can_delete=True,
                                          form=WorkshopDatesForm)
     formset = dates_formset(queryset=dates)
 

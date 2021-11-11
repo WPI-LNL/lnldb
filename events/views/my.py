@@ -249,7 +249,7 @@ def hours_bulk(request, eventid):
 
     context['event'] = event
 
-    mk_event_formset = inlineformset_factory(Event, Hours, extra=15, exclude=[])
+    mk_event_formset = inlineformset_factory(Event, Hours, extra=3, exclude=[])
     mk_event_formset.form = curry_class(MKHoursForm, event=event)
 
     if request.method == 'POST':

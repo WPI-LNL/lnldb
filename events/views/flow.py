@@ -413,7 +413,7 @@ def hours_bulk_admin(request, id):
     context['event'] = event
     context['oldevent'] = isinstance(event, Event)
 
-    mk_hours_formset = inlineformset_factory(BaseEvent, Hours, extra=15, exclude=[])
+    mk_hours_formset = inlineformset_factory(BaseEvent, Hours, extra=3, exclude=[])
     mk_hours_formset.form = curry_class(MKHoursForm, event=event)
 
     if request.method == 'POST':
@@ -712,7 +712,7 @@ def assigncc(request, id):
     context['event'] = event
     context['oldevent'] = isinstance(event, Event)
 
-    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=5, exclude=[])
+    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
     cc_formset.form = curry_class(CCIForm, event=event)
 
     if request.method == 'POST':
