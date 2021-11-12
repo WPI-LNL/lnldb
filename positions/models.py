@@ -27,6 +27,11 @@ class Position(models.Model):
     def __str__(self):
         return f"{self.name}"
 
+    class Meta:
+        permissions = [
+                ('apply', 'Can apply for positions')
+                ]
+
     def is_open(self):
         return self.closes >= datetime.datetime.now()
     
