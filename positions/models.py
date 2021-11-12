@@ -35,9 +35,3 @@ class Position(models.Model):
     def is_open(self):
         return self.closes >= datetime.datetime.now()
     
-class ApplicationInstance(models.Model):
-    """
-    Defines a specific application instance for a user and position.
-    """
-    applicant = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
-    position = models.ForeignKey(Position, on_delete=models.CASCADE)
