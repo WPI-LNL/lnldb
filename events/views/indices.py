@@ -13,6 +13,7 @@ from events.charts import SurveyVpChart, SurveyCrewChart, SurveyPricelistChart, 
 from events.models import BaseEvent, Workshop, CrewAttendanceRecord
 from helpers.challenges import is_officer
 from pages.models import OnboardingScreen, OnboardingRecord
+from positions.models import Position
 
 
 # FRONT 3 PAGES
@@ -79,6 +80,9 @@ def admin(request, msg=None):
         Q(closed=False) & Q(cancelled=False), ccinstances__setup_start__lte=now,
         datetime_end__gte=(now - datetime.timedelta(hours=3))).distinct()
     context['selfcrew_events'] = selfcrew_events
+
+    open_positions = Position.objects.filter(closes__gte=datetime.datetime.now()).count()
+    context['open_positions'] = open_positions
 
     return render(request, 'admin.html', context)
 
