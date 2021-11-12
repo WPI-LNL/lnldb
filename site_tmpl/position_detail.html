@@ -8,7 +8,7 @@
 		<h2>Term: {{ object.position_start}} through {{object.position_end}}</h2>
 	</div>
 	{% permission user has 'positions.change_position' %}
-	<a class="btn btn-lg btn-primary" href="#">Edit</a>
+	<a class="btn btn-lg btn-primary" href="{% url 'positions:update' object.id %}">Edit</a>
 	{% endpermission %}
 	<a class="btn btn-lg btn-success" href="{{ object.application_form }}">Apply</a>
 </div>
