@@ -243,7 +243,7 @@ class BaseEvent(PolymorphicModel):
     event_name = models.CharField(max_length=128, db_index=True)
     description = models.TextField(null=True, blank=True)
     location = models.ForeignKey('Location', on_delete=models.PROTECT)
-    contact = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Contact")
+    contact = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Contact", related_name="contact")
     org = models.ManyToManyField('Organization', blank=True, verbose_name="Client", related_name='events')
     billing_org = models.ForeignKey('Organization', on_delete=models.PROTECT, null=True, blank=True, related_name="billedevents")
 

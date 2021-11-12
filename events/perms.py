@@ -3,9 +3,31 @@ from six import string_types
 
 from django.core.exceptions import PermissionDenied
 from permission.logics import PermissionLogic
-from permission.utils.field_lookup import field_lookup
+from collections import Iterable
 
 logger = logging.getLogger(__name__)
+
+
+def field_lookup(obj, field_path):
+    """
+    Lookup django model field in similar way of django query lookup. (This is a custom implementation that resolves an
+    issue we were having with some of our object-based permissions)
+
+    Args:
+        obj (instance): Django Model instance
+        field_path (str): '__' separated field path
+    """
+    if hasattr(obj, 'iterator'):
+        for x in obj.iterator():
+            return field_lookup(x, field_path)
+    elif isinstance(obj, Iterable):
+        for x in iter(obj):
+            return field_lookup(x, field_path)
+    # split the path
+    field_path = field_path.split('__', 1)
+    if len(field_path) == 1:
+        return getattr(obj, field_path[0], None)
+    return field_lookup(field_lookup(obj, field_path[0]), field_path[1])
 
 
 class AssocUsersCustomPermissionLogic(PermissionLogic):

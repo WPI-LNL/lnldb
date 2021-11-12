@@ -1,0 +1,57 @@
+{% extends 'base_admin.html' %}
+{% load permissionif %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-10 col-md-offset-1 jumbotron" style="padding-top: 2%; padding-bottom: 2%">
+            <h2 style="font-size: 40px">{{ app.name }}</h2>
+            <div class="row">
+                <div class="col-sm-6">
+                    {% if app.version %}<p>Version {{ app.version }}</p>{% endif %}
+                </div>
+                <div class="col-sm-6 text-right" style="margin: auto">
+                    {% if app.developer_website %}<a href="{{ app.developer_website }}" class="btn btn-primary">Visit Website</a>{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-md-offset-1">
+            <h3> General Information </h3>
+            <table class="table">
+                {% if app.developer %}
+                    <tr>
+                        <th>Developer:</th>
+                        <td>{{ app.developer }}</td>
+                    </tr>
+                {% endif %}
+
+                <tr>
+                    <th>Available in MSC:</th>
+                    <td>{{ app.managed|yesno|capfirst }}</td>
+                </tr>
+
+                {% if app.installed.all.count > 0 %}
+                <tr>
+                    <th>Installed on:</th>
+                    <td>{{ app.installed.all|join:", " }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <th>Requires License:</th>
+                    <td>{{ app.requires_license|yesno|capfirst }}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="col-md-6">
+            {% if app.description %}
+                <h3>Description</h3>
+                <p style="padding-top: 1%; padding-bottom: 2%">{{ app.description }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% permission request.user has 'devices.manage_apps' %}
+    <div class="col-md-offset-1">
+        <a href="{% url "mdm:edit-app" app.pk %}" class="btn btn-primary">Edit</a>
+        <a href="{% url "mdm:app-refresh" app.pk %}" class="btn btn-default">Refresh from MSC</a>
+    </div>
+    {% endpermission %}
+{% endblock %}

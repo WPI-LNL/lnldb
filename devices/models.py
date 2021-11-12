@@ -76,14 +76,19 @@ class ConfigurationProfile(models.Model):
 class MacOSApp(models.Model):
     """Used to keep track of managed applications for LNL's MacBooks"""
     name = models.CharField(max_length=128)
-    identifier = models.CharField(max_length=64, help_text="Homebrew Identifier")
+    identifier = models.CharField(max_length=64, blank=True, null=True, help_text="Homebrew Identifier")
     version = models.CharField(max_length=36, blank=True, null=True)
-    developer = models.CharField(max_length=64, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+    developer = models.CharField(max_length=64, blank=True, null=True)
+    developer_website = models.URLField(blank=True, null=True)
+    requires_license = models.BooleanField(default=False)
+    managed = models.BooleanField(default=False, verbose_name="Available in MSC")
+
     pending_install = models.ManyToManyField(Laptop, related_name="apps_pending", blank=True)
     pending_removal = models.ManyToManyField(Laptop, related_name="apps_remove", blank=True)
     installed = models.ManyToManyField(Laptop, related_name="apps_installed", blank=True)
-    update_available = models.BooleanField(blank=True, default=False)
+
+    merged_into = models.ForeignKey("self", on_delete=models.SET_NULL, blank=True, null=True, verbose_name="mergedapps")
 
     def __str__(self):
         return self.name
