@@ -81,7 +81,7 @@ def admin(request, msg=None):
         datetime_end__gte=(now - datetime.timedelta(hours=3))).distinct()
     context['selfcrew_events'] = selfcrew_events
 
-    open_positions = Position.objects.filter(closes__gte=datetime.datetime.now()).count()
+    open_positions = Position.objects.filter(closes__gte=timezone.now()).count()
     context['open_positions'] = open_positions
 
     return render(request, 'admin.html', context)

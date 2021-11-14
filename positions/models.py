@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 import datetime
 
@@ -20,7 +21,7 @@ class Position(models.Model):
             blank=False)
     reports_to = models.ForeignKey(get_user_model(), on_delete=models.CASCADE,
             blank=True, null=True)
-    closes = models.DateField(verbose_name="Applications Close", null=True,
+    closes = models.DateTimeField(verbose_name="Applications Close", null=True,
             blank=True)
     application_form = models.CharField(verbose_name="Link to external application form", null=False, blank=False, max_length=128)
 
@@ -33,5 +34,5 @@ class Position(models.Model):
                 ]
 
     def is_open(self):
-        return self.closes >= datetime.datetime.now()
+        return self.closes >= timezone.now()
     
