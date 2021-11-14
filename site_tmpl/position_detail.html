@@ -28,7 +28,10 @@
 	</tr>
 	<tr>
 		<th>Reports To</th>
-		<td><a href="{% url 'accounts:detail' object.reports_to.id %}">{{ object.reports_to }}</a></td>
+		<td>
+			{% if object.reports_to %}<a href="{% url 'accounts:detail' object.reports_to.id %}">{{ object.reports_to }}</a>
+			{% else %}Exec Board{% endif %}
+		</td>
 	</tr>
 	<tr>
 		<th>Applications Close</th>
