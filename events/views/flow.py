@@ -848,10 +848,10 @@ def extras(request, id):
 
 
 @login_required
-def pull_list(request, id, category):
+def pull_list(request, id, category_name):
     """ This form is for adding equipment to the pull list of an event """
     context = {'msg': "Pull List"}
-    category = Category.objects.get(name__iexact=category)
+    category = Category.objects.get(name__iexact=category_name)
 
     event = get_object_or_404(BaseEvent, pk=id)
 
@@ -869,7 +869,7 @@ def pull_list(request, id, category):
     mk_pull_list_formset.form = curry_class(PullListForm, category)
 
     if request.method == 'POST':
-        set_revision_comment("Edited pull list", None)
+        set_revision_comment("Edited "+ category_name.lower() +" pull list", None)
         formset = mk_pull_list_formset(request.POST, request.FILES, instance=event)
         formset.full_clean()
         if formset.is_valid():

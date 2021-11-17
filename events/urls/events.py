@@ -75,7 +75,7 @@ urlpatterns = [
     url(r'^attachments/(?P<id>[0-9a-f]+)/$', flow_views.assignattach,
         name="files"),
     url(r'^extras/(?P<id>[0-9a-f]+)/$', flow_views.extras, name="extras"),
-    url(r'^pull_list/(?P<id>[0-9a-f]+)/(?P<category>[a-zA-Z]+)/$', flow_views.pull_list, name="pull_list"),
+    url(r'^pull_list/(?P<id>[0-9a-f]+)/(?P<category_name>[a-zA-Z]+)/$', flow_views.pull_list, name="pull_list"),
     url(r'^oneoff/(?P<id>[0-9a-f]+)/$', flow_views.oneoff, name="oneoffs"),
     url(r'^enter-worktag/(?P<pk>[0-9a-f]+)/$', flow_views.WorkdayEntry.as_view(), name="worktag-form"),
     url(r'^workday-entered/(?P<id>[0-9a-f]+)/$', flow_views.mark_entered_into_workday, name="workday-entered"),
