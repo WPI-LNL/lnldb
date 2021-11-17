@@ -18,11 +18,9 @@ def field_lookup(obj, field_path):
         field_path (str): '__' separated field path
     """
     if hasattr(obj, 'iterator'):
-        for x in obj.iterator():
-            return field_lookup(x, field_path)
+        return (field_lookup(x, field_path) for x in obj.iterator())
     elif isinstance(obj, Iterable):
-        for x in iter(obj):
-            return field_lookup(x, field_path)
+        return (field_lookup(x, field_path) for x in iter(obj))
     # split the path
     field_path = field_path.split('__', 1)
     if len(field_path) == 1:
