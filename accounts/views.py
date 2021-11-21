@@ -22,7 +22,7 @@ from data.forms import form_footer
 from emails.generators import DefaultLNLEmailGenerator
 from events.models import Event2019, OfficeHour, CCReport
 from helpers import mixins, challenges
-from slack.api import lookup_user, user_add, user_kick
+from slack.api import lookup_user, user_profile, check_presence, user_add, user_kick
 
 from . import forms
 from .models import OfficerImg, UserPreferences
@@ -122,6 +122,13 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
         context['hours'] = u.hours.filter(hours__isnull=False).select_related('event', 'service', 'category')
         context['hour_total'] = u.hours.aggregate(hours=Sum('hours'))
         context['ccs'] = u.ccinstances.select_related('event').all()
+
+        slack_id = lookup_user(u.email)
+        slack_profile = user_profile(slack_id)
+        if slack_profile['ok']:
+            context['slack_id'] = slack_id
+            context['slack_username'] = slack_profile['user']['name']
+            context['slack_active'] = check_presence(slack_id)
 
         pending_reports = []
         for instance in context['ccs']:

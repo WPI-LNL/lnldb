@@ -89,6 +89,16 @@
                         <td>{{ u.class_year }}</td>
                     </tr>
                 {% endif %}
+                {% if slack_username %}
+                <tr>
+                    <th>Slack</th>
+                    <td>
+                        <a href="https://slack.com/app_redirect?channel={{ slack_id }}" target="_blank" {% if slack_active %}style="color: green; text-decoration: none"{% endif %}>
+                            {{ slack_username }} {% if slack_active %}<i class="glyphicon glyphicon-signal" style="color: green"></i>{% endif %}
+                        </a>
+                    </td>
+                </tr>
+                {% endif %}
                 <tr>
                     <th>Email</th>
                     <td>{{ u.email }}</td>
@@ -138,7 +148,7 @@
                     {% endif %}
                     {% permission request.user has 'accounts.change_user' of u %}
                         <tr>
-                            <th colspan="2"><a href="{% url "accounts:officer-photo" u.pk %}">Update Officer Photo</a></th>
+                            <th colspan="2"><a class="btn btn-primary" href="{% url "accounts:officer-photo" u.pk %}">Update Officer Photo</a></th>
                             <td>&nbsp;</td>
                         </tr>
                     {% endpermission %}
