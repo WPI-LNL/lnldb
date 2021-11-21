@@ -190,7 +190,10 @@ def listattendance(request, page=1):
     mtgs = Meeting.objects \
         .select_related('meeting_type') \
         .annotate(num_attendsees=Count('attendance'))
-    past_mtgs = mtgs.filter(datetime__lte=timezone.now()) \
+    inprogress_mtgs = mtgs.filter(datetime__gte=datetime.datetime.now() - datetime.timedelta(minutes=65)) \
+        .filter(datetime__lte=datetime.datetime.now() + datetime.timedelta(minutes=65)) \
+        .order_by('-datetime')
+    past_mtgs = mtgs.filter(datetime__lte=datetime.datetime.now()) \
         .order_by('-datetime')
     future_mtgs = mtgs.filter(datetime__gte=timezone.now()) \
         .order_by('datetime')
@@ -207,7 +210,8 @@ def listattendance(request, page=1):
     except InvalidPage:
         future_mtgs = paginated.page(1)
 
-    context['lists'] = [("Past Meetings", past_mtgs),
+    context['lists'] = [("Meetings In Progress", inprogress_mtgs),
+                        ("Past Meetings", past_mtgs),
                         ("Future Meetings", future_mtgs)]
     return render(request, 'meeting_list.html', context)
 
