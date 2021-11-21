@@ -119,7 +119,7 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super(UserDetailView, self).get_context_data(**kwargs)
         context['u'] = u = self.object
-        context['hours'] = u.hours.filter(hours__isnull=False).select_related('event', 'service','category')
+        context['hours'] = u.hours.filter(hours__isnull=False).select_related('event', 'service', 'category')
         context['hour_total'] = u.hours.aggregate(hours=Sum('hours'))
         context['ccs'] = u.ccinstances.select_related('event').all()
 
@@ -396,6 +396,40 @@ class PasswordSetView(generic.FormView):
     def dispatch(self, request, pk, *args, **kwargs):
         self.user = get_object_or_404(get_user_model(), pk=int(pk))
         return super(PasswordSetView, self).dispatch(request, pk, *args, **kwargs)
+
+
+@login_required
+def user_preferences(request):
+    """Update a user's account preferences (only visible to the user)"""
+    context = {'title': 'My Preferences', 'submit_btn': {'text': 'Save'}}
+    user = request.user
+    user_inactive = 'Inactive' in user.group_str or 'Unclassified' in user.group_str
+
+    context['user'] = user
+    prefs, created = UserPreferences.objects.get_or_create(user=request.user)
+    form = forms.UserPreferencesForm(instance=prefs)
+    if request.POST:
+        form = forms.UserPreferencesForm(request.POST, instance=prefs)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.event_edited_field_subscriptions += ['location', 'datetime_setup_complete', 'datetime_start', 'datetime_end']
+            if not user_inactive:
+                obj.cc_needed_subscriptions = ['email', 'slack']
+            if request.POST.get('submit', None) == 'rt-delete':
+                obj.rt_token = None
+                obj.save()
+                return HttpResponseRedirect(reverse("accounts:preferences"))
+            obj.save()
+            messages.success(request, "Your preferences have been updated successfully!")
+            return HttpResponseRedirect(reverse("accounts:detail", args=[user.pk]))
+        else:
+            form_data = form.cleaned_data
+            form_data['srv'] = ['email', 'slack', 'sms']
+            if not user_inactive:
+                form_data['cc_needed_subscriptions'] = ['email', 'slack']
+            form.data = form_data
+    context['form'] = form
+    return render(request, 'form_semanticui.html', context)
 
 
 @login_required
