@@ -35,6 +35,7 @@ from helpers.revision import set_revision_comment
 from helpers.util import curry_class
 from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standalone,
                         generate_multibill_pdf_standalone)
+from ..cal import generate_ics
 
 
 @login_required
@@ -806,6 +807,18 @@ def assignattach_external(request, id):
     context['formset'] = formset
 
     return render(request, 'formset_crispy_attachments.html', context)
+
+
+@login_required
+def download_ics(request, pk):
+    """ Generate and download an ics file """
+
+    event = get_object_or_404(BaseEvent, pk=pk)
+    invite = generate_ics([event], None)
+
+    response = HttpResponse(invite, content_type="text/calendar")
+    response['Content-Disposition'] = "attachment; filename=event.ics"
+    return response
 
 
 @login_required
