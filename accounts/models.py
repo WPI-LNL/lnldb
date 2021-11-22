@@ -239,9 +239,6 @@ class UserPreferences(Model):
     cc_report_reminders = CharField(choices=(('email', 'Email'), ('slack', 'Slack Notification'), ('all', 'Both')),
                                     default='email', max_length=12)
 
-    cc_needed_subscriptions = MultiSelectField(choices=(('email', 'Email'), ('slack', 'Slack Notification')),
-                                               default=['email', 'slack'], blank=True, null=True)
-
     event_edited_notification_methods = CharField(
         choices=(('email', 'Email'), ('slack', 'Slack Notification'), ('all', 'Both')),
         default='email',

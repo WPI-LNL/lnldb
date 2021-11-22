@@ -168,10 +168,21 @@ class UserPreferencesForm(forms.ModelForm):
             ))
 
         if 'Inactive' in self.instance.user.group_str or 'Unclassified' in self.instance.user.group_str:
-            self.fields['cc_needed_subscriptions'].widget.attrs['disabled'] = False
-            self.fields['cc_needed_subscriptions'].choices = (('email', 'Email'),)
-            self.fields['cc_needed_subscriptions'].initial = self.instance.cc_needed_subscriptions
+            self.Meta.layout[8] = ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>"
+                                           "Crew Chief Needed Notifications</div><div class=\"content\">"
+                                           "<p class=\"ui help\">Receive an alert whenever the VP needs crew chiefs "
+                                           "to run an event. These messages may be sent to either "
+                                           "<em>gr-lnl-needcc@wpi.edu</em> or <em>lnl-active@wpi.edu</em>. You may "
+                                           "unsubscribe from these messages at any time through Outlook.</p>")
+            self.Meta.layout[9] = (
+                "Text", "<a href=\"https://lnl.wpi.edu/legal/opt-out/\" class=\"ui blue basic button\">Opt out</a>"
+            )
         else:
+            self.Meta.layout[8] = ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>"
+                                           "Crew Chief Needed Notifications</div><div class=\"content\">"
+                                           "<p class=\"ui help\">Receive an alert whenever the VP needs crew chiefs "
+                                           "to run an event.</p>")
+            self.Meta.layout[9] = ("Field", "cc_needed_subscriptions")
             self.fields['cc_needed_subscriptions'].initial = ['email', 'slack']
 
         event_fields_required = [
@@ -227,7 +238,7 @@ class UserPreferencesForm(forms.ModelForm):
     )
 
     ignore_user_action = forms.BooleanField(label="Ignore my actions", required=False,
-                                            help_text="Do not send me notifications for actions that I initiate")
+                                            help_text="Avoid sending me notifications for actions that I initiate")
 
     srv = forms.MultipleChoiceField(
         choices=(('email', 'Email'), ('slack', 'Slack Notification'), ('sms', 'SMS (Text Message)')),
@@ -240,8 +251,8 @@ class UserPreferencesForm(forms.ModelForm):
 
     class Meta:
         model = UserPreferences
-        fields = ('theme', 'cc_add_subscriptions', 'cc_report_reminders', 'cc_needed_subscriptions',
-                  'event_edited_notification_methods', 'event_edited_field_subscriptions', 'ignore_user_action')
+        fields = ('theme', 'cc_add_subscriptions', 'cc_report_reminders', 'event_edited_notification_methods',
+                  'event_edited_field_subscriptions', 'ignore_user_action')
         layout = [
             ("Text", "<div class=\"ui secondary segment\"><h4 class=\"ui dividing header\">Appearance</h4>"),
             ("Field", "theme"),
@@ -249,9 +260,9 @@ class UserPreferencesForm(forms.ModelForm):
             ("Text", "</div><div class=\"ui secondary segment nobullet\"><h4 class=\"ui dividing header\">"
                      "Communications</h4><div class=\"ui styled accordion\" style=\"width: 100%\"><div class=\"title\">"
                      "<i class=\"dropdown icon\"></i>LNL News</div><div class=\"content\"><p class=\"ui help\">"
-                     "General club information, advertisements and meeting notices. This content will be sent to the "
-                     "<em>lnl-news@wpi.edu</em> email alias. You may opt out of receiving these messages at any time "
-                     "through Outlook.</p>"),
+                     "General club information, advertisements and meeting notices. This content will typically be "
+                     "sent to the <em>lnl-news@wpi.edu</em> email alias. You may opt out of receiving these messages "
+                     "at any time through Outlook.</p>"),
             ("Text", "<a href=\"https://lnl.wpi.edu/legal/opt-out/\" class=\"ui blue basic button\">Opt out</a>"),
 
             ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>Crew Chief Add Notifications</div>"
@@ -260,7 +271,7 @@ class UserPreferencesForm(forms.ModelForm):
             ("Field", "cc_add_subscriptions"),
 
             ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>Crew Chief Report Reminders</div>"
-                     "<div class=\"content\"><p class=\"ui help\">Receive reminders for pending crew chief reports.</p>"),
+                     "<div class=\"content\"><p class=\"ui help\">Receive reminders for missing crew chief reports.</p>"),
             ("Field", "cc_report_reminders"),
 
             ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>Crew Chief Needed Notifications</div>"

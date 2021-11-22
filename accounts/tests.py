@@ -323,7 +323,7 @@ class AccountsTestCase(ViewTestCase):
             'ignore_user_action': 'on'
         }
 
-        active_user_data = {
+        valid_user_data = {
             'theme': 'default',
             'cc_add_subscriptions': ['email', 'slack'],
             'cc_report_reminders': 'slack',
@@ -332,41 +332,19 @@ class AccountsTestCase(ViewTestCase):
             'ignore_user_action': 'on'
         }
 
-        inactive_user_data = {
-            'theme': 'default',
-            'cc_add_subscriptions': ['email', 'slack'],
-            'cc_report_reminders': 'slack',
-            'event_edited_notification_methods': 'email',
-            'event_edited_field_subscriptions': [],
-            'ignore_user_action': 'on'
-        }
-
         prefs = models.UserPreferences.objects.get(user=self.user)
-        prefs.cc_needed_subscriptions = ['email']
-        prefs.save()
-
-        # Inactive user submission
-        self.assertRedirects(self.client.post(reverse("accounts:preferences"), inactive_user_data),
-                             reverse("accounts:detail", args=[self.user.pk]))
-
-        # Check that inactive user can unsubscribe from poke_cc notifications
-        prefs.refresh_from_db()
-        self.assertEqual(prefs.cc_needed_subscriptions, [])
 
         self.associate.user_set.add(self.user)
 
-        # Active user invalid submission
+        # Invalid submission
         self.assertOk(self.client.post(reverse("accounts:preferences"), invalid_user_data))
 
         # Active user valid submission
-        self.assertRedirects(self.client.post(reverse("accounts:preferences"), active_user_data),
+        self.assertRedirects(self.client.post(reverse("accounts:preferences"), valid_user_data),
                              reverse("accounts:detail", args=[self.user.pk]))
 
-        # Check that user is still subscribed to poke_cc notifications
-        prefs.refresh_from_db()
-        self.assertEqual(prefs.cc_needed_subscriptions, ['email', 'slack'])
-
         # Check that all required event edit fields are included
+        prefs.refresh_from_db()
         self.assertEqual(
             prefs.event_edited_field_subscriptions,
             ['event_name', 'location', 'datetime_setup_complete', 'datetime_start', 'datetime_end']

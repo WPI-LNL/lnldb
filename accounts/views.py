@@ -410,7 +410,6 @@ def user_preferences(request):
     """Update a user's account preferences (only visible to the user)"""
     context = {'title': 'My Preferences', 'submit_btn': {'text': 'Save'}}
     user = request.user
-    user_inactive = 'Inactive' in user.group_str or 'Unclassified' in user.group_str
 
     context['user'] = user
     prefs, created = UserPreferences.objects.get_or_create(user=request.user)
@@ -420,8 +419,6 @@ def user_preferences(request):
         if form.is_valid():
             obj = form.save(commit=False)
             obj.event_edited_field_subscriptions += ['location', 'datetime_setup_complete', 'datetime_start', 'datetime_end']
-            if not user_inactive:
-                obj.cc_needed_subscriptions = ['email', 'slack']
             if request.POST.get('submit', None) == 'rt-delete':
                 obj.rt_token = None
                 obj.save()
@@ -432,8 +429,6 @@ def user_preferences(request):
         else:
             form_data = form.cleaned_data
             form_data['srv'] = ['email', 'slack', 'sms']
-            if not user_inactive:
-                form_data['cc_needed_subscriptions'] = ['email', 'slack']
             form.data = form_data
     context['form'] = form
     return render(request, 'form_semanticui.html', context)
