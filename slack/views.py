@@ -1,4 +1,5 @@
 from django.shortcuts import reverse
+from .api import lookup_user, user_profile
 
 
 # Block Kit Views
@@ -610,6 +611,61 @@ def cc_report_reminder(cci):
                     "style": "primary",
                     "url": "https://lnl.wpi.edu" + reverse("my:report", args=[cci.event.pk]),
                     "action_id": "cc-report-%s" % cci.event.pk
+                }
+            ]
+        }
+    ]
+
+    return blocks
+
+
+def event_edited_notification(event, triggered_by, fields_changed):
+    """
+    Blocks for an event edited Slack notification.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param event: The event object
+    :param triggered_by: The user that edited the event
+    :param fields_changed: A list of fields that have changed
+    """
+
+    user = triggered_by.get_full_name()
+    slack_user = user_profile(lookup_user(triggered_by.email))
+    if slack_user['ok']:
+        user = "@" + slack_user['user']['name']
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "The following event was just edited by %s" % user
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Fields changed*: %s\n\n> *%s*\n> _%s_\n> *Start*: %s\n> *End*: %s\n> *Services*: %s\n"
+                        "> *Client*: %s" % (', '.join(fields_changed), event.event_name, event.location,
+                                            event.datetime_start.strftime('%b %-d, %Y, %-I:%M %p'),
+                                            event.datetime_end.strftime('%b %-d, %Y, %-I:%M %p'), event.short_services,
+                                            event.org_to_be_billed)
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Event",
+                        "emoji": False
+                    },
+                    "style": "primary",
+                    "url": "https://lnl.wpi.edu" + reverse('events:detail', args=[event.pk]),
+                    "action_id": "edited-event-%s" % str(event.pk)
                 }
             ]
         }

@@ -7,7 +7,10 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 
+from accounts.models import UserPreferences
 from emails.generators import EventEmailGenerator
+from slack.views import event_edited_notification
+from slack.api import slack_post, lookup_user
 from events.forms import InternalEventForm, InternalEventForm2019, ServiceInstanceForm
 from events.models import BaseEvent, Event2019, ServiceInstance
 from helpers.revision import set_revision_comment
@@ -47,8 +50,8 @@ def eventnew(request, id=None):
     if request.method == 'POST':
         if instance:
             # calculate whether an email should be sent based on the event information *before* saving the form.
-            should_send_email = not instance.test_event
-            if should_send_email:
+            should_send_notification = not instance.test_event
+            if should_send_notification:
                 bcc = [settings.EMAIL_TARGET_VP]
                 if instance.has_projection:
                     bcc.append(settings.EMAIL_TARGET_HP)
@@ -69,11 +72,17 @@ def eventnew(request, id=None):
                 obj = form.save()
                 if is_event2019:
                     services_formset.save()
-                if should_send_email:
+                if should_send_notification:
                     # BCC the crew chiefs
                     for ccinstance in obj.ccinstances.all():
-                        if ccinstance.crew_chief.email:
+                        methods = clear_to_send(ccinstance.crew_chief, request.user, form.changed_data)
+                        if ccinstance.crew_chief.email and 'email' in methods:
                             bcc.append(ccinstance.crew_chief.email)
+                        if 'slack' in methods:
+                            blocks = event_edited_notification(obj, request.user, form.changed_data)
+                            slack_user = lookup_user(ccinstance.crew_chief.email)
+                            if slack_user:
+                                slack_post(slack_user, text="%s was just edited" % obj.event_name, content=blocks)
                     if obj.reviewed:
                         subject = "Reviewed Event Edited"
                         email_body = "The following event was edited by %s after the event was reviewed for billing." \
@@ -96,7 +105,7 @@ def eventnew(request, id=None):
                     if obj.has_projection and settings.EMAIL_TARGET_HP not in bcc:
                         bcc.append(settings.EMAIL_TARGET_HP)
                     to_emails = []
-                    if request.user.email:
+                    if request.user.email and 'email' in clear_to_send(request.user, request.user, form.changed_data):
                         to_emails.append(request.user.email)
                     email = EventEmailGenerator(event=obj, subject=subject, to_emails=to_emails, body=email_body, bcc=bcc)
                     email.send()
@@ -133,3 +142,31 @@ def eventnew(request, id=None):
             context['msg'] = "New Event"
 
     return render(request, 'form_crispy_event.html', context)
+
+
+def clear_to_send(to, triggered_by, fields_edited):
+    """
+    Helper function to determine if a user should receive an Event Edited notification
+
+    :param to: The user the message would be sent to
+    :param triggered_by: The user that edited the event
+    :param fields_edited: A list of edited fields
+    :returns: A list of approved communication methods
+    """
+
+    prefs, created = UserPreferences.objects.get_or_create(user=to)
+    if to == triggered_by and prefs.ignore_user_action:
+        return []
+
+    subscribed = False
+    for field in fields_edited:
+        if field in prefs.event_edited_field_subscriptions:
+            subscribed = True
+
+    methods = []
+    if subscribed and prefs.event_edited_notification_methods in ['email', 'all']:
+        methods.append('email')
+    if subscribed and prefs.event_edited_notification_methods in ['slack', 'all']:
+        methods.append('slack')
+
+    return methods
