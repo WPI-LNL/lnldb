@@ -1,3 +1,6 @@
+from django.shortcuts import reverse
+
+
 # Block Kit Views
 def generate_modal(title, callback_id, blocks):
     """
@@ -502,3 +505,62 @@ def ticket_comment_modal(ticket_id):
     ]
 
     return generate_modal("Comments", "ticket-comment-modal", blocks)
+
+
+def cc_add_notification(cci):
+    """
+    Blocks for a Crew Chief add notification.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param cci: EventCCInstance object
+    """
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "You've been added as a crew chief to the event *%s*. Your setup is currently scheduled for "
+                        "*%s* in the *%s*." % (cci.event.event_name, cci.setup_start.strftime('%b %-d, %Y at %-I:%M %p'),
+                                               cci.setup_location.name.strip())
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Event Details",
+                        "emoji": False
+                    },
+                    "style": "primary",
+                    "url": "https://lnl.wpi.edu" + reverse("events:detail", args=[cci.event.pk]),
+                    "action_id": "cc-add-%s" % cci.event.pk
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":calendar:  Add to calendar",
+                        "emoji": True
+                    },
+                    "url": "https://lnl.wpi.edu" + reverse("events:ics", args=[cci.event.pk]),
+                    "action_id": "ics-download-%s" % cci.event.pk
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":page_facing_up:  Submit CC Report",
+                        "emoji": True
+                    },
+                    "url": "https://lnl.wpi.edu" + reverse("my:report", args=[cci.event.pk]),
+                    "action_id": "cc-report-%s" % cci.event.pk
+                }
+            ]
+        }
+    ]
+
+    return blocks
