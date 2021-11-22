@@ -564,3 +564,55 @@ def cc_add_notification(cci):
     ]
 
     return blocks
+
+
+def cc_report_reminder(cci):
+    """
+    Blocks for a missing crew chief report reminder
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param cci: EventCCInstance object
+    """
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "CC Report Reminder",
+                "emoji": False
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "This is a reminder that you have a pending crew chief report for *%s*.\n\n\n"
+                        "Submitting a crew chief report and recording crew hours are required parts of being a crew "
+                        "chief. These tasks are expected to be completed shortly after an event while you still have "
+                        "all the details of the event fresh in your mind. Delaying submitting your crew chief report "
+                        "directly delays the billing of this event." % cci.event.event_name
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":page_facing_up:  Submit Report",
+                        "emoji": True
+                    },
+                    "style": "primary",
+                    "url": "https://lnl.wpi.edu" + reverse("my:report", args=[cci.event.pk]),
+                    "action_id": "cc-report-%s" % cci.event.pk
+                }
+            ]
+        }
+    ]
+
+    return blocks
