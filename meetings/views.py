@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import InvalidPage, Paginator
 from django.db.models.aggregates import Count
+from django.db.models import F
 from django.views.generic.edit import DeleteView
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect, HttpResponse
@@ -190,10 +191,10 @@ def listattendance(request, page=1):
     mtgs = Meeting.objects \
         .select_related('meeting_type') \
         .annotate(num_attendsees=Count('attendance'))
-    inprogress_mtgs = mtgs.filter(datetime__gte=datetime.datetime.now() - datetime.timedelta(minutes=65)) \
-        .filter(datetime__lte=datetime.datetime.now() + datetime.timedelta(minutes=65)) \
+    inprogress_mtgs = mtgs.filter(datetime__lte=timezone.now()) \
+        .filter(datetime__gte=timezone.now() - F('duration') - datetime.timedelta(minutes=5)) \
         .order_by('-datetime')
-    past_mtgs = mtgs.filter(datetime__lte=datetime.datetime.now()) \
+    past_mtgs = mtgs.filter(datetime__lte=timezone.now() - F('duration') - datetime.timedelta(minutes=5)) \
         .order_by('-datetime')
     future_mtgs = mtgs.filter(datetime__gte=timezone.now()) \
         .order_by('datetime')
