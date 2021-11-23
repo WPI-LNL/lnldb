@@ -211,9 +211,10 @@ def listattendance(request, page=1):
     except InvalidPage:
         future_mtgs = paginated.page(1)
 
-    context['lists'] = [("Meetings In Progress", inprogress_mtgs),
-                        ("Past Meetings", past_mtgs),
+    context['lists'] = [("Past Meetings", past_mtgs),
                         ("Future Meetings", future_mtgs)]
+    if len(inprogress_mtgs) > 0:
+        context['lists'].insert(0, ("In Progress Meetings", inprogress_mtgs))
     return render(request, 'meeting_list.html', context)
 
 
