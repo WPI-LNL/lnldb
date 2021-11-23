@@ -816,7 +816,7 @@ class Event2019(BaseEvent):
     )
     survey_sent = models.BooleanField(default=False, help_text='The post-event survey has been sent to the client')
 
-    allow_crew_to_check_equipment = models.BooleanField(default=True, help_text='Allow checked-in crew to check in or out equipment on the Pull List.')
+    allow_crew_to_check_equipment = models.BooleanField(default=True, help_text='Allow checked-in crew to check in or out equipment on the Pull List.', blank=True)
 
     # Added during COVID pandemic
     max_crew = models.PositiveIntegerField(null=True, blank=True)
