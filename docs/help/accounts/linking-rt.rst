@@ -46,8 +46,9 @@ Activate the RT Integration
     <a class="btn btn-primary" href="https://lnl.wpi.edu/support/connect/rt/">Activate</a>
     <br><br>
 
-Once you've generated an auth token, click the button above to start the setup process. When prompted, enter your token
-then click `Submit`.
+Once you've generated an auth token, click the button above to start the setup process. You can also get there through
+your profile page by clicking the `Preferences` button, then scrolling down to the `Request Tracker` section and
+clicking `Connect Account`. When prompted, enter your token then click `Submit`.
 
 And that's it! Your accounts are now linked.
 
