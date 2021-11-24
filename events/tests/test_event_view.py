@@ -1065,6 +1065,12 @@ class EventBasicViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("events:files", args=[self.e.pk]), valid_data),
                              reverse("events:detail", args=[self.e.pk]))
 
+    def test_ics_download(self):
+        self.setup()
+
+        resp = self.client.get(reverse('events:ics', args=[self.e.pk]))
+        self.assertEqual(resp.get('Content-Disposition'), "attachment; filename=event.ics")
+
     def test_extras(self):
         self.setup()
 
