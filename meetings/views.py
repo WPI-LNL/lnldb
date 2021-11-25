@@ -214,7 +214,7 @@ def listattendance(request, page=1):
     context['lists'] = [("Past Meetings", past_mtgs),
                         ("Future Meetings", future_mtgs)]
     if len(inprogress_mtgs) > 0:
-        context['lists'].insert(0, ("In Progress Meetings", inprogress_mtgs))
+        context['lists'].insert(0, ("Meetings In Progress", inprogress_mtgs))
     return render(request, 'meeting_list.html', context)
 
 
