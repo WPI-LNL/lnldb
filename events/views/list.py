@@ -265,7 +265,7 @@ def upcoming(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = BaseEvent.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)).distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_cc=True)
+    events, context = filter_events(request, context, events, start, end, prefetch_cc=True, sort='datetime_start')
 
     context['h2'] = "Upcoming Events"
     context['events'] = events
@@ -308,7 +308,7 @@ def incoming(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = BaseEvent.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
-    events, context = filter_events(request, context, events, start, end)
+    events, context = filter_events(request, context, events, start, end, sort='datetime_start')
 
     context['h2'] = "Incoming Events"
     context['events'] = events
@@ -356,7 +356,7 @@ def openworkorders(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, sort='datetime_start')
 
     context['h2'] = "Open Events"
     context['events'] = events
@@ -711,7 +711,7 @@ def awaitingworkday(request, start=None, end=None):
         .filter(reviewed=True, billings__isnull=False, workday_fund__isnull=False, worktag__isnull=False,
                 entered_into_workday=False) \
         .exclude(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)).distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, event2019=True)
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, event2019=True, sort='datetime_start')
 
     context['h2'] = "Events to Enter Into Workday"
     context['events'] = events
