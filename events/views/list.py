@@ -411,7 +411,7 @@ def findchief(request, start=None, end=None):
         .filter(Q(Event___ccs_needed__gt=F('num_ccs')) |
                 Q(num_ccs__lt=Count('serviceinstance__service__category', distinct=True))).distinct()
 
-    events, context = filter_events(request, context, events, start, end, prefetch_cc=True)
+    events, context = filter_events(request, context, events, start, end, prefetch_cc=True, sort='datetime_start')
 
     context['h2'] = "Needs a Crew Chief"
     context['takes_param_projection'] = True
