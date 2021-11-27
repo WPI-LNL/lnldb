@@ -464,8 +464,8 @@ def unreviewed(request, start=None, end=None):
 
     now = datetime.datetime.now(pytz.utc)
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).filter(reviewed=False)\
-        .filter(datetime_end__lte=now).order_by('datetime_start').distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_cc=True)
+        .filter(datetime_end__lte=now).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_cc=True, sort='datetime_start')
 
     context['h2'] = "Events Pending Billing Review"
     context['events'] = events
@@ -514,10 +514,8 @@ def unbilled(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = BaseEvent.objects.filter(closed=False).filter(reviewed=True)\
-        .filter(billings__isnull=True, multibillings__isnull=True).filter(billed_in_bulk=False)\
-        .order_by('datetime_start').distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
-
+        .filter(billings__isnull=True, multibillings__isnull=True).filter(billed_in_bulk=False).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, sort='datetime_start')
     context['h2'] = "Events to be Billed"
     context['events'] = events
     context['baseurl'] = reverse("events:unbilled")
@@ -564,9 +562,8 @@ def unbilled_semester(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = BaseEvent.objects.filter(closed=False).filter(reviewed=True)\
-        .filter(billings__isnull=True, multibillings__isnull=True).filter(billed_in_bulk=True)\
-        .order_by('datetime_start').distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
+        .filter(billings__isnull=True, multibillings__isnull=True).filter(billed_in_bulk=True).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, sort='datetime_start')
 
     context['h2'] = "Events to be Billed in Bulk"
     context['events'] = events
@@ -664,8 +661,8 @@ def unpaid(request, start=None, end=None):
         .filter(Q(billings__isnull=False) | Q(multibillings__isnull=False)).exclude(closed=True)\
         .exclude(numpaid__gt=0).filter(reviewed=True) \
         .exclude(billings__isnull=False, Event2019___workday_fund__isnull=False, Event2019___worktag__isnull=False) \
-        .exclude(billings__isnull=False, Event2019___entered_into_workday=True).order_by('datetime_start').distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
+        .exclude(billings__isnull=False, Event2019___entered_into_workday=True).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, sort='datetime_start')
 
     context['h2'] = "Pending Payments"
     context['events'] = events
@@ -752,9 +749,8 @@ def unpaid_workday(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = Event2019.objects.annotate(numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
-        .filter(closed=False, reviewed=True, entered_into_workday=True).exclude(numpaid__gt=0)\
-        .order_by('datetime_start').distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_org=True, event2019=True)
+        .filter(closed=False, reviewed=True, entered_into_workday=True).exclude(numpaid__gt=0).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_org=True, event2019=True, sort='datetime_start')
 
     context['h2'] = "Pending Workday ISDs"
     context['events'] = events
