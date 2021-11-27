@@ -151,7 +151,7 @@ def build_redirect(request, **kwargs):
 
 
 def filter_events(request, context, events, start, end, prefetch_org=False, prefetch_cc=False, prefetch_billing=False,
-                  hide_unapproved=False, event2019=False):
+                  hide_unapproved=False, event2019=False, sort='-datetime_start'):
     """
     Filter a queryset of events based on specified criteria
 
@@ -167,6 +167,7 @@ def filter_events(request, context, events, start, end, prefetch_org=False, pref
     related items based on building
     :param hide_unapproved: Boolean - If true, exclude events that have not been approved
     :param event2019: Boolean - If true, queryset only contains Event2019 objects
+    :param sort: String - Default field to sort by (prepend "-" for reverse)
     :returns: Queryset of events and updated context dictionary
     """
     if not request.user.has_perm('events.view_hidden_event'):
@@ -205,7 +206,7 @@ def filter_events(request, context, events, start, end, prefetch_org=False, pref
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
-    sort = request.GET.get('sort') or '-datetime_start'
+    sort = request.GET.get('sort') or sort
     events = paginate_helper(events, page, sort)
     return events, context
 
