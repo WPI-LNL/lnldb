@@ -1,3 +1,7 @@
+from django.shortcuts import reverse
+from .api import lookup_user, user_profile
+
+
 # Block Kit Views
 def generate_modal(title, callback_id, blocks):
     """
@@ -502,3 +506,169 @@ def ticket_comment_modal(ticket_id):
     ]
 
     return generate_modal("Comments", "ticket-comment-modal", blocks)
+
+
+def cc_add_notification(cci):
+    """
+    Blocks for a Crew Chief add notification.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param cci: EventCCInstance object
+    """
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "You've been added as a crew chief to the event *%s*. Your setup is currently scheduled for "
+                        "*%s* in the *%s*." % (cci.event.event_name, cci.setup_start.strftime('%b %-d, %Y at %-I:%M %p'),
+                                               cci.setup_location.name.strip())
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Event Details",
+                        "emoji": False
+                    },
+                    "style": "primary",
+                    "url": "https://lnl.wpi.edu" + reverse("events:detail", args=[cci.event.pk]),
+                    "action_id": "cc-add-%s" % cci.event.pk
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":calendar:  Add to calendar",
+                        "emoji": True
+                    },
+                    "url": "https://lnl.wpi.edu" + reverse("events:ics", args=[cci.event.pk]),
+                    "action_id": "ics-download-%s" % cci.event.pk
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":page_facing_up:  Submit CC Report",
+                        "emoji": True
+                    },
+                    "url": "https://lnl.wpi.edu" + reverse("my:report", args=[cci.event.pk]),
+                    "action_id": "cc-report-%s" % cci.event.pk
+                }
+            ]
+        }
+    ]
+
+    return blocks
+
+
+def cc_report_reminder(cci):
+    """
+    Blocks for a missing crew chief report reminder
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param cci: EventCCInstance object
+    """
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "CC Report Reminder",
+                "emoji": False
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "This is a reminder that you have a pending crew chief report for *%s*.\n\n\n"
+                        "Submitting a crew chief report and recording crew hours are required parts of being a crew "
+                        "chief. These tasks are expected to be completed shortly after an event while you still have "
+                        "all the details of the event fresh in your mind. Delaying submitting your crew chief report "
+                        "directly delays the billing of this event." % cci.event.event_name
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":page_facing_up:  Submit Report",
+                        "emoji": True
+                    },
+                    "style": "primary",
+                    "url": "https://lnl.wpi.edu" + reverse("my:report", args=[cci.event.pk]),
+                    "action_id": "cc-report-%s" % cci.event.pk
+                }
+            ]
+        }
+    ]
+
+    return blocks
+
+
+def event_edited_notification(event, triggered_by, fields_changed):
+    """
+    Blocks for an event edited Slack notification.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param event: The event object
+    :param triggered_by: The user that edited the event
+    :param fields_changed: A list of fields that have changed
+    """
+
+    user = triggered_by.get_full_name()
+    slack_user = user_profile(lookup_user(triggered_by.email))
+    if slack_user['ok']:
+        user = "@" + slack_user['user']['name']
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "The following event was just edited by %s" % user
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Fields changed*: %s\n\n> *%s*\n> _%s_\n> *Start*: %s\n> *End*: %s\n> *Services*: %s\n"
+                        "> *Client*: %s" % (', '.join(fields_changed), event.event_name, event.location,
+                                            event.datetime_start.strftime('%b %-d, %Y, %-I:%M %p'),
+                                            event.datetime_end.strftime('%b %-d, %Y, %-I:%M %p'), event.short_services,
+                                            event.org_to_be_billed)
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Event",
+                        "emoji": False
+                    },
+                    "style": "primary",
+                    "url": "https://lnl.wpi.edu" + reverse('events:detail', args=[event.pk]),
+                    "action_id": "edited-event-%s" % str(event.pk)
+                }
+            ]
+        }
+    ]
+
+    return blocks

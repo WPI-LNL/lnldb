@@ -2,6 +2,7 @@
 from django.contrib.auth.models import AbstractUser, _user_has_perm
 from django.db.models import (Model, BooleanField, CharField, IntegerField, BigIntegerField, PositiveIntegerField, Q,
                               TextField, DateField, DateTimeField, OneToOneField, ImageField, CASCADE, signals)
+from multiselectfield import MultiSelectField
 from django.conf import settings
 from six import python_2_unicode_compatible
 from django.dispatch import receiver
@@ -209,9 +210,46 @@ class PhoneVerificationCode(Model):
     timestamp = DateTimeField(auto_now_add=True)
 
 
+event_fields = [
+    ('event_name', 'Event name'),
+    ('description', 'Description'),
+    ('location', 'Location'),
+    ('contact', 'Contact'),
+    ('billing_org', 'Billing org'),
+    ('datetime_setup_complete', 'Datetime setup complete'),
+    ('datetime_start', 'Datetime start'),
+    ('datetime_end', 'Datetime end'),
+    ('internal_notes', 'Internal notes'),
+    ('billed_in_bulk', 'Billed in bulk'),
+    ('org', 'Client')
+]
+
+
 class UserPreferences(Model):
     """ User-specific settings """
     user = OneToOneField(settings.AUTH_USER_MODEL, on_delete=CASCADE, related_name="preferences")
     theme = CharField(choices=(("default", "Default"),), default="default", max_length=12)
 
     rt_token = CharField(blank=True, null=True, verbose_name="RT Auth Token", max_length=256)
+
+    # Communication Preferences
+    cc_add_subscriptions = MultiSelectField(choices=(('email', 'Email'), ('slack', 'Slack Notification')),
+                                            default='email', blank=True, null=True)
+
+    cc_report_reminders = CharField(choices=(('email', 'Email'), ('slack', 'Slack Notification'), ('all', 'Both')),
+                                    default='email', max_length=12)
+
+    event_edited_notification_methods = CharField(
+        choices=(('email', 'Email'), ('slack', 'Slack Notification'), ('all', 'Both')),
+        default='email',
+        max_length=12
+    )
+
+    event_edited_field_subscriptions = MultiSelectField(
+        choices=event_fields,
+        default=['location', 'datetime_setup_complete', 'datetime_start', 'datetime_end']
+    )
+
+    ignore_user_action = BooleanField(
+        default=False, help_text="Uncheck this to ignore notifications for actions triggered by the user"
+    )

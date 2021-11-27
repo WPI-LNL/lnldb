@@ -304,6 +304,10 @@ class MeetingsViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("meetings:cc-email", args=[self.meeting.pk]), valid_data),
                              reverse("meetings:detail", args=[self.meeting.pk]) + "#emails")
 
+    def test_download_invite(self):
+        resp = self.client.get(reverse("meetings:invite", args=[self.meeting.pk]))
+        self.assertEqual(resp.get('Content-Disposition'), "attachment; filename=invite.ics")
+
     def test_delete_event(self):
         # By default, user should not have permission to delete an event
         self.assertOk(self.client.get(reverse("meetings:delete", args=[self.meeting.pk])), 403)

@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.contrib.auth.models import Permission
 
 from .. import models
-from .generators import OrgFactory
+from .generators import OrgFactory, Event2019Factory
 from data.tests.util import ViewTestCase
 import logging
 
@@ -27,14 +27,26 @@ class OrgViewTest(ViewTestCase):
         self.assertContains(response, self.o1.name)
 
     def test_detail(self):
+        # Set up an event to be displayed on the detail page
+        event = Event2019Factory(event_name="Test Event")
+        self.o1.events.add(event)
+
         # Should not have permission by default
         self.assertOk(self.client.get(reverse("orgs:detail", args=[self.o1.pk])), 403)
 
         permission = Permission.objects.get(codename="view_org")
         self.user.user_permissions.add(permission)
 
+        # Make sure everything loads ok
         response = self.client.get(reverse("orgs:detail", args=[self.o1.pk]))
         self.assertContains(response, self.o1.name)
+        self.assertNotContains(response, "Test Event")
+
+        # Will need permission to view events
+        self.o1.associated_users.add(self.user)
+
+        response = self.client.get(reverse("orgs:detail", args=[self.o1.pk]))
+        self.assertContains(response, "Test Event")
 
     def test_add_org(self):
         # Should not have permission by default

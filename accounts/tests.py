@@ -304,6 +304,68 @@ class AccountsTestCase(ViewTestCase):
         another_user = UserFactory.create(password="789")
         self.assertOk(self.client.get(reverse("accounts:password", args=[another_user.pk])), 403)
 
+    def test_user_preferences(self):
+        self.setup()
+
+        # Check that settings load ok
+        self.assertOk(self.client.get(reverse("accounts:preferences")))
+
+        # Check that user preferences object exists (if it didn't already)
+        self.assertTrue(models.UserPreferences.objects.filter(user=self.user).exists())
+
+        # Check form submissions (including required subscriptions)
+        invalid_user_data = {
+            'theme': '',
+            'cc_add_subscriptions': ['email', 'slack'],
+            'cc_report_reminders': 'slack',
+            'event_edited_notification_methods': 'email',
+            'event_edited_field_subscriptions': [],
+            'ignore_user_action': 'on'
+        }
+
+        valid_user_data = {
+            'theme': 'default',
+            'cc_add_subscriptions': ['email', 'slack'],
+            'cc_report_reminders': 'slack',
+            'event_edited_notification_methods': 'all',
+            'event_edited_field_subscriptions': ['event_name'],
+            'ignore_user_action': 'on'
+        }
+
+        prefs = models.UserPreferences.objects.get(user=self.user)
+
+        self.associate.user_set.add(self.user)
+
+        # Invalid submission
+        self.assertOk(self.client.post(reverse("accounts:preferences"), invalid_user_data))
+
+        # Active user valid submission
+        self.assertRedirects(self.client.post(reverse("accounts:preferences"), valid_user_data),
+                             reverse("accounts:detail", args=[self.user.pk]))
+
+        # Check that all required event edit fields are included
+        prefs.refresh_from_db()
+        self.assertEqual(
+            prefs.event_edited_field_subscriptions,
+            ['event_name', 'location', 'datetime_setup_complete', 'datetime_start', 'datetime_end']
+        )
+
+        # Test delete RT token
+        rt_delete_data = {
+            'theme': 'default',
+            'cc_add_subscriptions': ['email', 'slack'],
+            'cc_report_reminders': 'slack',
+            'event_edited_notification_methods': 'all',
+            'event_edited_field_subscriptions': ['event_name'],
+            'ignore_user_action': 'on',
+            'submit': 'rt-delete'
+        }
+
+        self.assertRedirects(self.client.post(reverse("accounts:preferences"), rt_delete_data),
+                             reverse("accounts:preferences"))
+
+        self.assertIsNone(models.UserPreferences.objects.get(user=self.user).rt_token)
+
     def test_user_lookup(self):
         self.setup()
         self.officer.user_set.add(self.user)

@@ -44,6 +44,10 @@ input:read-only {
     text-align: left !important;
 }
 
+.nobullet ul {
+    list-style: none;
+}
+
 #subtitle {
     opacity: 0;
     animation: fadein 2s ease 2.5s forwards;

@@ -5,32 +5,34 @@
         <div class="col-md-12">
             <div class="jumbotron" style="padding-bottom: 2%">
                 <h1> {{u}} </h1>
-		<div class="row">
-			<div class="col-md-8 col-lg-9">
-				<h3>{{ u.groups.all|join:", " }}</h3>
-				{% if u.pronouns %}
-					<p><em>{{ u.pronouns }}</em></p>
-				{% endif %}
-			</div>
-                <div class="col-md-4 col-lg-3 text-right" style="margin-top:
-			    2.5%">
-                    {% if active == False %}
-                        <a class="btn btn-danger btn-lg" href="" disabled>Account Disabled</a>
-                    {% else %}
-                        {% if request.user.is_superuser %}
-                            <a class="btn btn-danger btn-lg" href="{% url "hijack:login_with_id" u.id %}">Impersonate</a>
+		        <div class="row">
+			        <div class="col-md-8 col-lg-9">
+				        <h3>{{ u.groups.all|join:", " }}</h3>
+                        {% if u.pronouns %}
+                            <p><em>{{ u.pronouns }}</em></p>
                         {% endif %}
-                        {% permission request.user has 'accounts.change_user' of u %}
-                            <a class="btn btn-info btn-lg" href="{% url "accounts:update" u.id %}">Modify</a>
-                        <!-- TODO make a perm logic so that users have accounts.change_user permission on themselves,
-                             and then remove the below -->
-                        {% elpermission request.user == u %}
-                            <a class="btn btn-info btn-lg" href="{% url "accounts:update" u.id %}">Modify</a>
-                        {% endpermission %}
-                    {% endif %}
+			        </div>
+                    <div class="col-md-4 col-lg-3 text-right" style="margin-top: 2.5%">
+                        {% if active == False %}
+                            <a class="btn btn-danger btn-lg" href="" disabled>Account Disabled</a>
+                        {% else %}
+                            {% if request.user.is_superuser and request.user != u %}
+                                <a class="btn btn-danger btn-lg" href="{% url "hijack:login_with_id" u.id %}">Impersonate</a>
+                            {% endif %}
+                            {% permission request.user has 'accounts.change_user' of u %}
+                                <a class="btn btn-info btn-lg" href="{% url "accounts:update" u.id %}">Modify</a>
+                            <!-- TODO make a perm logic so that users have accounts.change_user permission on themselves,
+                                 and then remove the below -->
+                            {% elpermission request.user == u %}
+                                <a class="btn btn-info btn-lg" href="{% url "accounts:update" u.id %}">Modify</a>
+                            {% endpermission %}
+                            {% if request.user == u and request.user.is_lnl %}
+                                <a class="btn btn-default btn-lg" href="{% url "accounts:preferences" %}">Preferences</a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-	    </div>
         </div>
     </div>
     {% if pending_reports and request.user == u %}
@@ -87,6 +89,16 @@
                         <td>{{ u.class_year }}</td>
                     </tr>
                 {% endif %}
+                {% if slack_username %}
+                <tr>
+                    <th>Slack</th>
+                    <td>
+                        <a href="https://slack.com/app_redirect?channel={{ slack_id }}" target="_blank" {% if slack_active %}style="color: green; text-decoration: none"{% endif %}>
+                            {{ slack_username }} {% if slack_active %}<i class="glyphicon glyphicon-signal" style="color: green"></i>{% endif %}
+                        </a>
+                    </td>
+                </tr>
+                {% endif %}
                 <tr>
                     <th>Email</th>
                     <td>{{ u.email }}</td>
@@ -136,7 +148,7 @@
                     {% endif %}
                     {% permission request.user has 'accounts.change_user' of u %}
                         <tr>
-                            <th colspan="2"><a href="{% url "accounts:officer-photo" u.pk %}">Update Officer Photo</a></th>
+                            <th colspan="2"><a class="btn btn-primary" href="{% url "accounts:officer-photo" u.pk %}">Update Officer Photo</a></th>
                             <td>&nbsp;</td>
                         </tr>
                     {% endpermission %}
@@ -256,7 +268,6 @@
             {% endif %}
         {% endpermission %}
     </div>
-     
     <div id="statusmodal" class="modal hide fade">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -271,19 +282,16 @@
                             <th> Changed On </th>
                         </tr>
                         {% for sc in u.statuschange.all %}
-                    
                         <tr>
-                            <td> 
+                            <td>
                                 {% for g in  sc.groups.all %}
                                     {{ g }}
                                     {% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                             </td>
-                            
+
                             <td> {{ sc.date }}
                         </tr>
-                    
-                    
                         {% endfor %}
                     </table>
                 </div>

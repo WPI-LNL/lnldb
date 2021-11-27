@@ -80,6 +80,8 @@ urlpatterns = [
     url(r'^enter-worktag/(?P<pk>[0-9a-f]+)/$', flow_views.WorkdayEntry.as_view(), name="worktag-form"),
     url(r'^workday-entered/(?P<id>[0-9a-f]+)/$', flow_views.mark_entered_into_workday, name="workday-entered"),
 
+    url(r'^(?P<pk>[0-9a-f]+)/download/ics/$', flow_views.download_ics, name="ics"),
+
     # The nice url structure. TODO: fit the rest in here (with deprecation, of course)
     url(r'^view/(?P<event>[0-9]+)/', include([
         url(r'^billing/', view=include(([
