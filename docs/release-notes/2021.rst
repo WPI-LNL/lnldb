@@ -5,8 +5,11 @@ Updates 2021
 November
 ========
 In November we switched from Travis CI to GitHub Actions and deployed several bug fixes, UI improvements, and new
-features. Later this month, we plan to start working on the new Snipe integration as well.
+features. Among these new features was a user preferences page for LNL members. This gives our members more control
+over what types of communications they receive from us.
 
+- :commit:`ccbeab8dac66177944b09959d1782020cb976226` Added a Slack DM link to user profiles
+- :commit:`7d8990216c1a72db35dbd49bee16c01b51bdcce7` Improved MDM software management features
 - :commit:`d9995685c69b4990893139d9b1d3fc55a85c5ac0` Added automatic Slack channel linking
 - :commit:`9ac61acb6a0038d323d7590af9eb19252bdd387c` Added new crew chief resources to 'CC Add' email (`#544 <https://github.com/WPI-LNL/lnldb/issues/544>`_)
 - :commit:`d3d8e89856467b6b4c22906dcb48fd31c3f9f53e` Added the ability to archive old meeting types

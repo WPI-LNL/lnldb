@@ -27,6 +27,7 @@ else:
 urlpatterns = [
     url(r'^me/$', views.MeDirectView.as_view(permanent=False, pattern_name='accounts:detail'), name="me"),
     url(r'^my/$', views.MeDirectView.as_view(permanent=False, pattern_name='accounts:detail')),
+    url(r'^my/preferences/$', views.user_preferences, name='preferences'),
     url(r'^my/profile/photo/$', views.officer_photos, name='photo'),
     url(r'^auth/scopes/$', views.application_scope_request, name='scope-request'),
 

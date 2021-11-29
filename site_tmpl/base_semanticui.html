@@ -10,6 +10,7 @@
         <link rel="stylesheet" href="/static/css/semanticui.css">
         <link rel="stylesheet" href="/static/css/dropdown/dropdown.min.css">
         <script src="/static/js/dropdown/dropdown.min.js"></script>
+        <script src="/static/js/checkbox/checkbox.min.js"></script>
 		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
         <link rel="shortcut icon" href="/assets/ico/favicon.ico">
 		<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/assets/ico/apple-touch-icon-144-precomposed.png">
@@ -24,6 +25,7 @@
 	</body>
 	<script>
         $('.ui.radio.checkbox').checkbox();
+        $('.ui.toggle.checkbox').checkbox('attach events', '.toggle.button');
         $('.ui.dropdown').dropdown();
         $('.ui.accordion').accordion();
         function nextPage() {
