@@ -1,16 +1,21 @@
 import json
 import pytz
+import logging
 from urllib.parse import urlencode
 from django.test import TestCase
 from data.tests.util import ViewTestCase
+from django.contrib.auth.models import Permission
 from django.utils import timezone
 from django.conf import settings
 from django.shortcuts import reverse
 
 from events.tests.generators import CCInstanceFactory, Event2019Factory, LocationFactory, CategoryFactory, ServiceFactory
 from events.models import ServiceInstance
-from . import views
+from . import views, models
 from .templatetags import slack
+
+
+logging.disable(logging.WARNING)
 
 
 class SlackAPITests(ViewTestCase):
@@ -234,6 +239,45 @@ class SlackViews(ViewTestCase):
         setup_location = LocationFactory.create(name="Office", setup_only=True)
         self.cci = CCInstanceFactory.create(event=self.event, crew_chief=self.user, setup_start=setup_start,
                                             setup_location=setup_location)
+
+        self.slack_message = models.SlackMessage.objects.create(posted_to='ABC123', posted_by='U123456789',
+                                                                ts='1516229207.000133', content="A bad message")
+        self.report = models.ReportedMessage.objects.create(message=self.slack_message, reported_by="U987654321")
+
+    def test_reports_list(self):
+        # By default, users should not have permission to view these reports
+        self.assertOk(self.client.get(reverse('slack:moderate')), 403)
+
+        permission = Permission.objects.get(codename="view_reportedmessage")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse('slack:moderate')))
+
+        # On POST, mark a task as complete
+        data = {
+            "report_id": 1
+        }
+
+        self.assertRedirects(self.client.post(reverse('slack:moderate'), data), reverse('slack:moderate'))
+
+        self.report.refresh_from_db()
+        self.assertTrue(self.report.resolved)
+
+    def test_report_view(self):
+        # By default, user should not have permission to view the report
+        self.assertOk(self.client.get(reverse('slack:report', args=[self.report.pk])), 403)
+
+        permission = Permission.objects.get(codename="view_reportedmessage")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse('slack:report', args=[self.report.pk])))
+
+        # On POST, mark a task as complete
+        self.assertRedirects(self.client.post(reverse('slack:report', args=[self.report.pk])),
+                             reverse('slack:moderate'))
+
+        self.report.refresh_from_db()
+        self.assertTrue(self.report.resolved)
 
     def test_ticket_message_generator(self):
         expected_new = [
@@ -606,3 +650,80 @@ class SlackViews(ViewTestCase):
         ]
 
         self.assertEqual(expected, views.event_edited_notification(self.event, self.user, ['location', 'description']))
+
+    def test_report_message_modal(self):
+        expected = {
+            "type": "modal",
+            "callback_id": "report-modal",
+            "title": {
+                "type": "plain_text",
+                "text": "Report a message",
+                "emoji": False
+            },
+            "submit": {
+                "type": "plain_text",
+                "text": "Submit",
+                "emoji": False
+            },
+            "close": {
+                "type": "plain_text",
+                "text": "Cancel",
+                "emoji": False
+            },
+            "blocks": [
+                {
+                    "type": "section",
+                    "block_id": "1",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "This message will be flagged and sent to a moderator for review.",
+                        "emoji": False
+                    }
+                },
+                {
+                    "type": "input",
+                    "block_id": "report-comment",
+                    "element": {
+                        "type": "plain_text_input",
+                        "multiline": True,
+                        "action_id": "comment-action"
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Comments",
+                        "emoji": False
+                    },
+                    "optional": True
+                }
+            ]
+        }
+
+        self.assertEqual(expected, views.report_message_modal(self.slack_message))
+
+    def test_reported_message_notification(self):
+        expected = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "Someone has flagged a new message for review by a moderator."
+                }
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "View Report",
+                            "emoji": False
+                        },
+                        "url": "https://lnl.wpi.edu" + reverse("slack:report", args=[self.slack_message.pk]),
+                        "action_id": "reported-message-report"
+                    }
+                ]
+            }
+        ]
+
+        self.assertEqual(expected, views.reported_message_notification('U987654321', self.slack_message))
