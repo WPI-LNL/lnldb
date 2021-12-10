@@ -441,12 +441,3 @@ class APIViewTest(ViewTestCase):
         # Test filter by category
         self.assertOk(self.client.get('/api/v1/sitemap', {'category': 'Events'}), 204)
         self.assertEqual(self.client.get('/api/v1/sitemap', {'category': 'test'}).content.decode('utf-8'), pages_only)
-
-    def test_docs(self):
-        # Create a couple endpoints to include in the docs
-        models.Endpoint.objects.create(name="Endpoint 1", url="first", description="First endpoint",
-                                       example="id=example", response="[]")
-        models.Endpoint.objects.create(name="Endpoint 2", url="second", description="Second endpoint",
-                                       example="id=example", response="[]")
-
-        self.assertOk(self.client.get(reverse("api:documentation")))

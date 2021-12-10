@@ -27,7 +27,7 @@ from emails.generators import generate_sms_email
 from events.models import OfficeHour, Event2019, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
 from pages.models import Page
-from .models import Endpoint, RequestParameter, ResponseKey, TokenRequest
+from .models import TokenRequest
 from .serializers import OfficerSerializer, HourSerializer, NotificationSerializer, EventSerializer, \
     AttendanceSerializer, RedirectSerializer, CustomPageSerializer, TokenRequestSerializer
 
@@ -560,22 +560,3 @@ def fetch_token(request):
     token = {"token": token.key}
 
     return Response(token, status=status.HTTP_200_OK)
-
-
-@login_required
-def docs(request):
-    endpoints = Endpoint.objects.all()
-
-    # Obtain the most recent last_modified date
-    last_modified = None
-    for endpoint in endpoints:
-        if last_modified is None or endpoint.last_modified > last_modified:
-            last_modified = endpoint.last_modified
-
-    context = {
-        'endpoints': endpoints,
-        'requestParameters': RequestParameter.objects.all(),
-        'responseKeys': ResponseKey.objects.all(),
-        'last_modified': last_modified
-    }
-    return render(request, 'api_docs.html', context)
