@@ -344,6 +344,7 @@ INSTALLED_APPS = (
     'jchart',
     'rest_framework',
     'rest_framework.authtoken',
+    'drf_spectacular'
 )
 if SAML2_ENABLED:
     INSTALLED_APPS += ('django_saml2_auth',)
@@ -442,7 +443,20 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-    ]
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'WPI Lens and Lights API',
+    'DESCRIPTION': 'The LNL API is a simple REST API which can be used to connect apps and services with the LNL '
+                   'Database (LNLDB). This guide provides some basic documentation for most of our endpoints.',
+    'VERSION': '1.0.0',
+    'CONTACT': {
+        'name': 'LNL Webmaster',
+        'email': 'lnl-w@wpi.edu'
+    },
+    'SERVE_INCLUDE_SCHEMA': False
 }
 
 # Various Other Settings

@@ -1,4 +1,5 @@
 from django.conf.urls import include, url
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from . import views
 from .routers import ReadOnlyRouter, WriteOnlyRouter
 
@@ -18,4 +19,6 @@ urlpatterns = [
     url(r'^docs/$', views.docs, name="documentation"),
     url(r'^token/request/$', views.request_token, name="request-token"),
     url(r'^token/fetch/$', views.fetch_token, name="fetch-token"),
+    url(r'^schema/$', SpectacularAPIView.as_view(), name="schema"),
+    url(r'^schema/swagger/$', SpectacularSwaggerView.as_view(url_name='api:schema'), name='swagger')
 ]

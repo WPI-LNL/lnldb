@@ -1,0 +1,54 @@
+<table>
+    <thead>
+        <tr>
+            <td><strong>Parameter</strong></td>
+            <td><strong>Value</strong></td>
+            <td><strong>Description</strong></td>
+        </tr>
+    </thead>
+    <tbody>
+        <tr style='border-bottom: 1px dashed gray'>
+            <td>id</td>
+            <td>string</td>
+            <td>Unique reference id for the specific notification</td>
+        </tr>
+        <tr style='border-bottom: 1px dashed gray'>
+            <td>format</td>
+            <td>string</td>
+            <td>Defines how the notification should be displayed in the view<br>
+                <strong>Options: </strong><code>alert</code>, <code>notification</code>
+            </td>
+        </tr>
+        <tr style='border-bottom: 1px dashed gray'>
+            <td>type</td>
+            <td>string</td>
+            <td>Defines the type/purpose of the message<br>
+                <strong>Options: </strong><code>info</code>, <code>advisory</code>, <code>warning</code>
+            </td>
+        </tr>
+        <tr style='border-bottom: 1px dashed gray'>
+            <td>class</td>
+            <td>int</td>
+            <td>Defines the level of control the user has over the notification and may determine how it is rendered<br><br>
+                <strong>Class I: </strong>Notification/alert cannot be silenced. <em>Reserved for site-wide notifications only.</em><br>
+                <strong>Class II: </strong>Alerts are automatically silenced once viewed. Notifications cannot be silenced by user. Default.<br>
+                <strong>Class III: </strong>User can manually silence notification/alert.
+            </td>
+        </tr>
+        <tr style='border-bottom: 1px dashed gray'>
+            <td>title</td>
+            <td>string</td>
+            <td>Title to be displayed with alert (for alerts only)</td>
+        </tr>
+        <tr style='border-bottom: 1px dashed gray'>
+            <td>message</td>
+            <td>string</td>
+            <td>The notification message</td>
+        </tr>
+        <tr style='border-bottom: 1px dashed gray'>
+            <td>expires</td>
+            <td>datetime</td>
+            <td>The notification's expiration date</td>
+        </tr>
+    </tbody>
+</table>
