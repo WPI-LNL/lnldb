@@ -554,7 +554,9 @@ def handle_interaction(request):
         callback_id = payload.get('callback_id', None)
         if callback_id == "report":
             channel = payload.get('channel', {'id': None})['id']
-            sender = payload['message']['user']
+            sender = payload['message'].get('user', None)
+            if not sender:
+                sender = payload['message']['username']
             ts = payload['message']['ts']
             text = payload['message']['text']
             message, created = models.SlackMessage.objects.get_or_create(posted_to=channel, posted_by=sender, ts=ts,
@@ -849,10 +851,10 @@ def __save_report(message_id, reporter, comments):
     """
 
     message = models.SlackMessage.objects.get(pk=message_id)
-    models.ReportedMessage.objects.create(message=message, comments=comments, reported_by=reporter)
+    report = models.ReportedMessage.objects.create(message=message, comments=comments, reported_by=reporter)
 
     # Send Webmaster a notification
-    blocks = views.reported_message_notification(reporter, message)
+    blocks = views.reported_message_notification(reporter, report)
     slack_post(settings.SLACK_TARGET_WEBMASTER, text="You have a new flagged message to review", content=blocks,
                username="Admin Console")
 

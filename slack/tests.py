@@ -726,4 +726,4 @@ class SlackViews(ViewTestCase):
             }
         ]
 
-        self.assertEqual(expected, views.reported_message_notification('U987654321', self.slack_message))
+        self.assertEqual(expected, views.reported_message_notification('U987654321', self.report))

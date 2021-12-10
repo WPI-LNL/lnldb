@@ -606,13 +606,13 @@ def report_message_modal(message):
     return generate_modal('Report a message', 'report-modal', blocks)
 
 
-def reported_message_notification(sender, message):
+def reported_message_notification(sender, report):
     """
     Blocks for the notification sent to the Webmaster whenever a new report is submitted.
     Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
 
     :param sender: The Slack ID for the user that sent the report
-    :param message: The SlackMessage object representing the reported message
+    :param report: The corresponding ReportedMessage object
     """
 
     reporter = "Someone"
@@ -620,7 +620,7 @@ def reported_message_notification(sender, message):
     if slack_user['ok']:
         reporter = "@" + slack_user['user']['name']
 
-    link = message_link(message.posted_to, message.ts)
+    link = message_link(report.message.posted_to, report.message.ts)
 
     blocks = [
         {
@@ -651,7 +651,7 @@ def reported_message_notification(sender, message):
                         "text": "View Report",
                         "emoji": False
                     },
-                    "url": "https://lnl.wpi.edu" + reverse("slack:report", args=[message.pk]),
+                    "url": "https://lnl.wpi.edu" + reverse("slack:report", args=[report.pk]),
                     "action_id": "reported-message-report"
                 }
             ]
