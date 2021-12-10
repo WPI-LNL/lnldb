@@ -26,7 +26,8 @@ class SurveyVpChart(Chart):
             data = event.surveys.aggregate(
                 Avg('communication_responsiveness'),
             )
-            data_communication_responsiveness.append({'x': event.datetime_start.isoformat(), 'y': data['communication_responsiveness__avg']})
+            if data['communication_responsiveness__avg'] >= 0:
+                data_communication_responsiveness.append({'x': event.datetime_start.isoformat(), 'y': data['communication_responsiveness__avg']})
         options = {'type': 'line', 'fill': False, 'lineTension': 0}
         return [
             DataSet(label='Communication responsiveness', data=data_communication_responsiveness, color=(193, 37, 82), **options),
@@ -62,10 +63,14 @@ class SurveyCrewChart(Chart):
                 # Avg('crew_preparedness'),
                 # Avg('crew_knowledgeability'),
             )
-            data_lighting_quality.append({'x': event.datetime_start.isoformat(), 'y': data['lighting_quality__avg']})
-            data_sound_quality.append({'x': event.datetime_start.isoformat(), 'y': data['sound_quality__avg']})
-            data_setup_on_time.append({'x': event.datetime_start.isoformat(), 'y': data['setup_on_time__avg']})
-            data_crew_respectfulness.append({'x': event.datetime_start.isoformat(), 'y': data['crew_respectfulness__avg']})
+            if data['lighting_quality__avg'] >= 0:
+                data_lighting_quality.append({'x': event.datetime_start.isoformat(), 'y': data['lighting_quality__avg']})
+            if data['sound_quality__avg'] >= 0:
+                data_sound_quality.append({'x': event.datetime_start.isoformat(), 'y': data['sound_quality__avg']})
+            if data['setup_on_time__avg'] >= 0:
+                data_setup_on_time.append({'x': event.datetime_start.isoformat(), 'y': data['setup_on_time__avg']})
+            if data['crew_respectfulness__avg'] >= 0:
+                data_crew_respectfulness.append({'x': event.datetime_start.isoformat(), 'y': data['crew_respectfulness__avg']})
             # data_crew_preparedness.append({'x': event.datetime_start.isoformat(), 'y': data['crew_preparedness__avg']})
             # data_crew_knowledgeability.append({'x': event.datetime_start.isoformat(), 'y': data['crew_knowledgeability__avg']})
         options = {'type': 'line', 'fill': False, 'lineTension': 0}
@@ -102,9 +107,11 @@ class SurveyPricelistChart(Chart):
                 # Avg('quote_as_expected'),
                 Avg('price_appropriate'),
             )
-            data_pricelist_ux.append({'x': event.datetime_start.isoformat(), 'y': data['pricelist_ux__avg']})
+            if data['pricelist_ux__avg'] >= 0:
+                data_pricelist_ux.append({'x': event.datetime_start.isoformat(), 'y': data['pricelist_ux__avg']})
             # data_quote_as_expected.append({'x': event.datetime_start.isoformat(), 'y': data['quote_as_expected__avg']})
-            data_price_appropriate.append({'x': event.datetime_start.isoformat(), 'y': data['price_appropriate__avg']})
+            if data['price_appropriate__avg'] >= 0:
+                data_price_appropriate.append({'x': event.datetime_start.isoformat(), 'y': data['price_appropriate__avg']})
         options = {'type': 'line', 'fill': False, 'lineTension': 0}
         return [
             DataSet(label='Pricelist UX', data=data_pricelist_ux, color=(193, 37, 82), **options),
@@ -134,8 +141,10 @@ class SurveyLnlChart(Chart):
                 Avg('services_quality'),
                 Avg('customer_would_return'),
             )
-            data_services_quality.append({'x': event.datetime_start.isoformat(), 'y': data['services_quality__avg']})
-            data_customer_would_return.append({'x': event.datetime_start.isoformat(), 'y': data['customer_would_return__avg']})
+            if data['services_quality__avg'] >= 0:
+                data_services_quality.append({'x': event.datetime_start.isoformat(), 'y': data['services_quality__avg']})
+            if data['customer_would_return__avg'] >= 0:
+                data_customer_would_return.append({'x': event.datetime_start.isoformat(), 'y': data['customer_would_return__avg']})
         options = {'type': 'line', 'fill': False, 'lineTension': 0}
         return [
             DataSet(label='Services quality', data=data_services_quality, color=(193, 37, 82), **options),
