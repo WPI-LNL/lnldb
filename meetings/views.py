@@ -4,7 +4,6 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import InvalidPage, Paginator
 from django.db.models.aggregates import Count
-from django.db.models import F
 from django.views.generic.edit import DeleteView
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect, HttpResponse
@@ -191,10 +190,7 @@ def listattendance(request, page=1):
     mtgs = Meeting.objects \
         .select_related('meeting_type') \
         .annotate(num_attendsees=Count('attendance'))
-    inprogress_mtgs = mtgs.filter(datetime__lte=timezone.now()) \
-        .filter(datetime__gte=timezone.now() - F('duration') - datetime.timedelta(minutes=5)) \
-        .order_by('-datetime')
-    past_mtgs = mtgs.filter(datetime__lte=timezone.now() - F('duration') - datetime.timedelta(minutes=5)) \
+    past_mtgs = mtgs.filter(datetime__lte=timezone.now()) \
         .order_by('-datetime')
     future_mtgs = mtgs.filter(datetime__gte=timezone.now()) \
         .order_by('datetime')
@@ -213,8 +209,6 @@ def listattendance(request, page=1):
 
     context['lists'] = [("Past Meetings", past_mtgs),
                         ("Future Meetings", future_mtgs)]
-    if len(inprogress_mtgs) > 0:
-        context['lists'].insert(0, ("Meetings In Progress", inprogress_mtgs))
     return render(request, 'meeting_list.html', context)
 
 
