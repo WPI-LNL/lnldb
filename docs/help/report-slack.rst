@@ -30,4 +30,4 @@ editing or deleting the offending message and in some cases may even result in d
     `WPI Acceptable Use Policy <https://www.wpi.edu/about/policies/acceptable-use>`_
 
 
-Last Modified: December 7, 2021
+`Last Modified: December 7, 2021`

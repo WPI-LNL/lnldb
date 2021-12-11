@@ -1,3 +1,5 @@
+:orphan:
+
 ==============
 Authentication
 ==============
@@ -15,9 +17,9 @@ Before you will be able to fetch a user's token, you will first need to direct t
 
 .. code-block::
 
-    https://lnl.wpi.edu/api/token/request/{API_KEY_HASH}
+    https://lnl.wpi.edu/api/token/request/{CLIENT_ID}
 
-where ``{API_KEY_HASH}`` is the SHA-256 hash of your application's API Key. Once the user has enabled access to their account, they will be sent a verification code which they will then need to enter into your application. You will need to POST this code, along with your API Key and their username, to the `Token endpoint <https://lnl.wpi.edu/api/schema/swagger/#/token/Token>`_. If everything checks out, then the server will return the user's token.
+where ``{CLIENT_ID}`` is the your application's assigned identifier. Once the user has enabled access to their account, they will be sent a verification code which they will then need to enter into your application. You will need to POST this code, along with your API Key and their username, to the `Token endpoint <https://lnl.wpi.edu/api/schema/swagger/#/token/Token>`_. If everything checks out, then the server will return the user's token.
 
 -----
 
@@ -59,4 +61,4 @@ Project-based
 
 Access to some endpoints may be limited to certain registered applications only. This method is often used with backend services that do not handle user data. To gain access to an endpoint that utilizes project-based authentication, contact our `Webmaster <mailto:lnl-w@wpi.edu>`_.
 
-Last modified: December 10, 2021
+`Last modified: December 10, 2021`

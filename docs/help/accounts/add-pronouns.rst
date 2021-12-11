@@ -18,3 +18,5 @@ scroll to the bottom and click the blue "Update Member and Return" button.
 
 .. hint:
    The pronouns field has a maximum of 32 characters
+
+`Last modified: December 10, 2021`
