@@ -105,6 +105,7 @@ SLACK_TARGET_WEBDEV = env.str('SLACK_TARGET_WEBDEV', None)
 SLACK_TARGET_TESTING = env.str('SLACK_TARGET_TESTING', None)
 SLACK_TARGET_TFED = env.str('SLACK_TARGET_TFED', '')
 SLACK_TARGET_TFED_DB = env.str('SLACK_TARGET_TFED_DB', '')
+SLACK_TARGET_WEBMASTER = env.str('SLACK_TARGET_WEBMASTER', '')
 
 SAML2_AUTH = {
     'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://samltest.id/saml/idp'),
@@ -343,6 +344,7 @@ INSTALLED_APPS = (
     'jchart',
     'rest_framework',
     'rest_framework.authtoken',
+    'drf_spectacular'
 )
 if SAML2_ENABLED:
     INSTALLED_APPS += ('django_saml2_auth',)
@@ -441,7 +443,23 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-    ]
+        'rest_framework.authentication.SessionAuthentication'
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'WPI Lens and Lights API',
+    'DESCRIPTION': 'The LNL API is a simple REST API which can be used to connect apps and services with the LNL '
+                   'Database (LNLDB). This guide provides some basic documentation for most of our endpoints.',
+    'VERSION': '1.0.0',
+    'CONTACT': {
+        'name': 'LNL Webmaster',
+        'email': 'lnl-w@wpi.edu'
+    },
+    'SERVE_PUBLIC': False,
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAuthenticated'],
+    'SERVE_INCLUDE_SCHEMA': False
 }
 
 # Various Other Settings

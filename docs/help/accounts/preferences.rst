@@ -23,3 +23,5 @@ When you are done updating your preferences, don't forget to hit `Save`!
     If you do not see the `Preferences` button on your profile page, then your current role does not support customizing
     your communication preferences. If this is the case and you are looking to opt out of LNL communications, please
     `contact us <mailto:lnl-w@wpi.edu>`_.
+
+`Last modified: December 10, 2021`

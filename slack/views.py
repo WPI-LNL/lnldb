@@ -1,5 +1,65 @@
-from django.shortcuts import reverse
-from .api import lookup_user, user_profile
+from django.contrib.auth.decorators import permission_required, login_required
+from django.shortcuts import reverse, render, get_object_or_404
+from django.http import HttpResponseRedirect
+
+from .models import ReportedMessage
+from .api import lookup_user, user_profile, message_link, channel_info, message_unreact
+
+
+# Slack Management Views
+@login_required
+@permission_required('slack.view_reportedmessage', raise_exception=True)
+def report_list(request):
+    """
+    View Slack messages reported for moderation
+    """
+
+    reports = ReportedMessage.objects.filter(resolved=False)
+    if request.method == 'POST':
+        report_id = request.POST['report_id']
+        report = ReportedMessage.objects.get(pk=report_id)
+        report.resolved = True
+        report.save()
+        message_unreact(report.message.posted_to, report.message.ts, 'triangular_flag_on_post')
+        return HttpResponseRedirect(reverse('slack:moderate'))
+
+    return render(request, 'slack/slack_message_list.html', {'title': 'Reported Messages', 'reports': reports})
+
+
+@login_required
+@permission_required('slack.view_reportedmessage', raise_exception=True)
+def view_report(request, pk):
+    """
+    View full report for a Slack message that has been flagged for moderation
+    """
+
+    report = get_object_or_404(ReportedMessage, pk=pk)
+
+    if request.method == 'POST':
+        report.resolved = True
+        report.save()
+        message_unreact(report.message.posted_to, report.message.ts, 'triangular_flag_on_post')
+        return HttpResponseRedirect(reverse('slack:moderate'))
+
+    posted_to = report.message.posted_to
+    info = channel_info(posted_to)
+    if info:
+        posted_to = '#' + info['name']
+
+    slack_message = report.message.content
+    if report.message.blocks:
+        slack_message = "<a href='https://wpilnl.slack.com/app_redirect?channel=" + \
+                        report.message.posted_to + "'>Click here to view message</a>"
+
+    context = {
+        'posted_by': report.message.posted_by,
+        'posted_to': posted_to,
+        'report': report,
+        'reported_by': report.reported_by,
+        'message': slack_message
+    }
+
+    return render(request, 'slack/slack_message_report.html', context)
 
 
 # Block Kit Views
@@ -506,6 +566,102 @@ def ticket_comment_modal(ticket_id):
     ]
 
     return generate_modal("Comments", "ticket-comment-modal", blocks)
+
+
+def report_message_modal(message):
+    """
+    Blocks for the modal view that is displayed when a user reports a problematic Slack message.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param message: A SlackMessage object representing the message
+    """
+
+    blocks = [
+        {
+            "type": "section",
+            "block_id": str(message.pk),
+            "text": {
+                "type": "plain_text",
+                "text": "This message will be flagged and sent to a moderator for review.",
+                "emoji": False
+            }
+        },
+        {
+            "type": "input",
+            "block_id": "report-comment",
+            "element": {
+                "type": "plain_text_input",
+                "multiline": True,
+                "action_id": "comment-action"
+            },
+            "label": {
+                "type": "plain_text",
+                "text": "Comments",
+                "emoji": False
+            },
+            "optional": True
+        }
+    ]
+
+    return generate_modal('Report a message', 'report-modal', blocks)
+
+
+def reported_message_notification(sender, report):
+    """
+    Blocks for the notification sent to the Webmaster whenever a new report is submitted.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param sender: The Slack ID for the user that sent the report
+    :param report: The corresponding ReportedMessage object
+    """
+
+    reporter = "Someone"
+    slack_user = user_profile(sender)
+    if slack_user['ok']:
+        reporter = "@" + slack_user['user']['name']
+
+    link = message_link(report.message.posted_to, report.message.ts)
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "%s has flagged a new message for review by a moderator." % reporter
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":slack:  View in Slack",
+                        "emoji": True
+                    },
+                    "style": "primary",
+                    "url": link,
+                    "action_id": "reported-message-slack"
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Report",
+                        "emoji": False
+                    },
+                    "url": "https://lnl.wpi.edu" + reverse("slack:report", args=[report.pk]),
+                    "action_id": "reported-message-report"
+                }
+            ]
+        }
+    ]
+
+    if not link:
+        del blocks[1]['elements'][0]
+
+    return blocks
 
 
 def cc_add_notification(cci):

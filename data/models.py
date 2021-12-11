@@ -6,7 +6,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
 from django.utils.translation import gettext_lazy as _
 
-from api.models import Endpoint
 
 NOTIF_TYPE = (
     ('info', 'Info'),
@@ -103,7 +102,7 @@ class Extension(models.Model):
     api_key = models.CharField(max_length=36, verbose_name="API Key")
     enabled = models.BooleanField()
 
-    endpoints = models.ManyToManyField(Endpoint, related_name="apps", blank=True)
+    # endpoints = models.ManyToManyField(Endpoint, related_name="apps", blank=True)
     registered = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
 

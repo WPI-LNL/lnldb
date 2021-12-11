@@ -48,7 +48,7 @@ PyPDF2==1.26.0
 python-dateutil==2.8.1
 pytz==2020.4
 raven==6.10.0
-reportlab==3.6.2
+reportlab==3.6.3
 six==1.15.0
 sqlparse==0.4.2
 #tolerance==0.1.2
@@ -66,3 +66,4 @@ django-semanticui-forms==1.6.5
 filetype==1.0.7
 slack-sdk==3.9.1
 django-multiselectfield==0.1.12
+drf-spectacular==0.21.0

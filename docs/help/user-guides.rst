@@ -80,3 +80,11 @@ Training
 
     training/request-pit
     training/training-records
+
+Slack
+^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    report-slack
