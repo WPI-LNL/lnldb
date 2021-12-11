@@ -316,10 +316,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     @extend_schema(
         operation_id="Crew Checkin",
         request=inline_serializer(
-            'Attendance Request',
+            'Checkin Request',
             fields={
                 'id': serializers.IntegerField(),
-                'event': serializers.IntegerField()
+                'event': serializers.IntegerField(),
+                'checkin': serializers.DateTimeField(required=False)
             }
         ),
         responses={
@@ -358,10 +359,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
     @extend_schema(
         operation_id="Crew Checkout",
         request=inline_serializer(
-            'Attendance Request',
+            'Checkout Request',
             fields={
                 'id': serializers.IntegerField(),
-                'event': serializers.IntegerField()
+                'event': serializers.IntegerField(),
+                'checkout': serializers.DateTimeField(required=False)
             }
         ),
         responses={
