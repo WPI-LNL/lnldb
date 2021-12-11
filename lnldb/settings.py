@@ -443,6 +443,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication'
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'
 }
@@ -456,6 +457,8 @@ SPECTACULAR_SETTINGS = {
         'name': 'LNL Webmaster',
         'email': 'lnl-w@wpi.edu'
     },
+    'SERVE_PUBLIC': False,
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAuthenticated'],
     'SERVE_INCLUDE_SCHEMA': False
 }
 
