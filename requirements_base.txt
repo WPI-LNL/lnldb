@@ -66,3 +66,4 @@ django-semanticui-forms==1.6.5
 filetype==1.0.7
 slack-sdk==3.9.1
 django-multiselectfield==0.1.12
+drf-spectacular==0.21.0
