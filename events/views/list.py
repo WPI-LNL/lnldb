@@ -208,6 +208,8 @@ def filter_events(request, context, events, start, end, prefetch_org=False, pref
     page = request.GET.get('page')
     sort = request.GET.get('sort') or sort
     events = paginate_helper(events, page, sort)
+    context['pagninate_next_label'] = "Older" if '-datetime_start' in sort else "Newer"
+    context['pagninate_last_label'] = "Newer" if '-datetime_start' in sort else "Older"                                                                 
     return events, context
 
 
