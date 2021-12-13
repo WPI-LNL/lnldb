@@ -81,6 +81,7 @@ Training
     training/request-pit
     training/training-records
 
+
 Slack
 ^^^^^
 
@@ -88,3 +89,11 @@ Slack
     :maxdepth: 1
 
     report-slack
+
+Positions
+^^^^^^^^^
+
+.. toctree::
+   :maxdepth: 1
+   positions/apply
+   positions/create

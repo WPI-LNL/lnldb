@@ -106,6 +106,18 @@
             </table>
         </div>
     </div><!--/row-->
+	<div class="divider"></div>
+		<br>
+	{% if open_positions >= 1 %}
+	{% permission request.user has 'positions.apply' %}
+	<div class="container">
+		<div class="alert alert-info">There {% if open_positions == 1 %}is {% else %}are {% endif %}{{ open_positions }}
+			open position{{ open_positions|pluralize }} available!
+			Check out our <a href="{% url 'positions:list' %}">list
+				</a> for more information</div>
+	</div>
+	{% endpermission %}
+	{% endif %}
     <hr>
 {% endblock %}
 

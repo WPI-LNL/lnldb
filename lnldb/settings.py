@@ -323,6 +323,7 @@ INSTALLED_APPS = (
     'api',
     'rt',
     'slack',
+    'positions',
 
     'bootstrap3',
     'crispy_forms',
