@@ -3,16 +3,22 @@
 {% load semanticui %}
 
 {% block content %}
+    <div class="ui inverted pointing menu" style="border-radius: 0px; position: sticky; position: -webkit-sticky; top: 0; z-index: 20; margin-top: 0">
+        <img class="item" id="brand" src="/assets/ico/LNL-logo-transparent.png" alt="LNL Logo" style="height: 65px">
+        <div class="right menu">
+            <a class="item" href="{% url 'home' %}">Exit</a>
+        </div>
+    </div>
     <div class="ui middle aligned centered grid container">
-        <div class="twelve wide column">
-            <h3 class="ui {% if inverted %}inverted {% endif %}dividing header">{{ title }}</h3>
+        <div class="sixteen wide mobile twelve wide computer column" style="padding-bottom: 5%">
+            <h3 class="ui {% if inverted %}inverted {% endif %}dividing header" style="padding-top: 4%">{{ title }}</h3>
             <form class="ui {% if inverted %}inverted {% endif %}form" action="" method="POST" id="form" enctype="multipart/form-data">
             {% csrf_token %}
             {{ form.management_form }}
             {% render_form form %}
             <br>
             <button class="ui animated {% if inverted %}inverted {% else %}secondary {% endif %}button" type="submit" value="{% trans "submit" %}">
-                <div class="visible content">Submit</div>
+                <div class="visible content">{{ submit_btn.text|default:"Submit" }}</div>
                 <div class="hidden content"><i class="check icon"></i></div>
             </button>
         </form>

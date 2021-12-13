@@ -6,15 +6,19 @@ from django.db.models import Q
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, authentication_classes, action
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
-from rest_framework.exceptions import APIException, NotFound, ParseError, AuthenticationFailed, PermissionDenied
+from rest_framework.exceptions import NotFound, ParseError, AuthenticationFailed, PermissionDenied
+from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter, OpenApiTypes, OpenApiResponse, \
+    OpenApiExample, inline_serializer
 
 from random import randint
 
@@ -23,43 +27,41 @@ from emails.generators import generate_sms_email
 from events.models import OfficeHour, Event2019, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
 from pages.models import Page
-from .models import Endpoint, RequestParameter, ResponseKey, TokenRequest
+from .models import TokenRequest
 from .serializers import OfficerSerializer, HourSerializer, NotificationSerializer, EventSerializer, \
-    AttendanceSerializer, RedirectSerializer, CustomPageSerializer
+    AttendanceSerializer, RedirectSerializer, CustomPageSerializer, TokenRequestSerializer
 
 
 # Create your views here.
-def verify_endpoint(name, request):
-    """
-    All API endpoint views must make a call to this function. This ensures that authentication methods are up-to-date
-    and can be configured from the Admin interface. It also forces you to provide all the details necessary to form the
-    documentation!
-
-    :param name: The user-readable name of the endpoint
-    :param request: The calling view's request object
-    :return: Raises an exception if necessary and returns nothing if everything checks out
-    """
-    endpoint = Endpoint.objects.all().filter(name__iexact=name).first()
-    if endpoint is None:
-        raise APIException(detail="Configuration error. Please contact the webmaster.", code=500)
-    for method in endpoint.methods.all():
-        if method.auth != 'none' and method.method == request.method:
-            if not request.user.is_authenticated:
-                raise AuthenticationFailed(detail="You must be signed in to access this resource.")
-            app = Extension.objects.filter(api_key=request.data.get('APIKey', 'None')).first()
-            user_apps = request.user.connected_services.filter(enabled=True)
-            if app is None or app not in user_apps:
-                raise PermissionDenied(detail="You are not allowed to access this resource. "
-                                              "API key may be missing or invalid. ", code=403)
-
-
+@extend_schema_view(
+    list=extend_schema(
+        operation_id="Officers",
+        parameters=[
+            OpenApiParameter('title', OpenApiTypes.STR, OpenApiParameter.QUERY, False, "The officer's title"),
+            OpenApiParameter(
+                'first_name', OpenApiTypes.STR, OpenApiParameter.QUERY, False, "The first name of the officer"
+            ),
+            OpenApiParameter(
+                'last_name', OpenApiTypes.STR, OpenApiParameter.QUERY, False, "The last name of the officer"
+            ),
+            OpenApiParameter(
+                'options', OpenApiTypes.STR, OpenApiParameter.QUERY, False, "Additional fields to include in response",
+                style='simple'
+            )
+        ],
+        responses={
+            200: OpenApiResponse(OfficerSerializer, description="Ok"),
+            404: OpenApiResponse(description="Not found")
+        }
+    )
+)
 class OfficerViewSet(viewsets.ReadOnlyModelViewSet):
+    """ Use this endpoint to get a list of the club's officers """
     serializer_class = OfficerSerializer
     authentication_classes = []
     lookup_field = 'title'
 
     def get_queryset(self):
-        verify_endpoint('Officers', self.request)
         queryset = get_user_model().objects.filter(groups__name="Officer").exclude(title__isnull=True).order_by('title')
         title = self.request.query_params.get('title', None)
         first_name = self.request.query_params.get('first_name', None)
@@ -76,11 +78,45 @@ class OfficerViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class HourViewSet(viewsets.ReadOnlyModelViewSet):
+    """ Use this endpoint to get a list of our office hours """
     serializer_class = HourSerializer
     authentication_classes = []
 
+    @extend_schema(
+        operation_id="Office Hours",
+        parameters=[
+            OpenApiParameter("officer", OpenApiTypes.STR, OpenApiParameter.QUERY, False, "The officer's title"),
+            OpenApiParameter(
+                "day", OpenApiTypes.INT, OpenApiParameter.QUERY, False,
+                "The day of the week (0 = Sunday, 1 = Monday, etc.)", list(range(7))
+            ),
+            OpenApiParameter("start", OpenApiTypes.TIME, OpenApiParameter.QUERY, False, "The start time"),
+            OpenApiParameter("end", OpenApiTypes.TIME, OpenApiParameter.QUERY, False, "The end time")
+        ],
+        responses={
+            200: OpenApiResponse(HourSerializer),
+            204: None,
+            400: OpenApiResponse(description="Bad request")
+        },
+        examples=[
+            OpenApiExample(
+                'Example with start and end time',
+                [{'officer': 'President', 'day': 4, 'hour_start': '13:30:00', 'hour_end': '15:30:00'}],
+                description='If both "start" and "end" are included in the request, the response will contain entries '
+                            'that overlap with that time span.',
+                summary="/api/v1/office-hours?start=13:00&end=14:00",
+                response_only=True
+            )
+        ]
+    )
     def list(self, request):
-        queryset = self.get_queryset()
+        try:
+            queryset = self.get_queryset()
+        except ValidationError:
+            content = {
+                '400': 'Bad request. Please ensure that you have supplied valid start and end times, if applicable.'
+            }
+            return Response(content, status=status.HTTP_400_BAD_REQUEST)
         if queryset.count() == 0:
             content = {'204': 'No entries were found for the specified parameters'}
             return Response(content, status=status.HTTP_204_NO_CONTENT)
@@ -88,7 +124,6 @@ class HourViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
     def get_queryset(self):
-        verify_endpoint('Office Hours', self.request)
         queryset = OfficeHour.objects.all().order_by('day', 'hour_start')
         officer = self.request.query_params.get('officer', None)
         day = self.request.query_params.get('day', None)
@@ -111,8 +146,59 @@ class HourViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    """ Use this endpoint to fetch notifications for the website """
     authentication_classes = []
 
+    @extend_schema(
+        operation_id="Site Notifications",
+        parameters=[
+            OpenApiParameter(
+                'project_id', OpenApiTypes.STR, OpenApiParameter.QUERY, True,
+                "Unique identifier for the application accessing the endpoint"
+            ),
+            OpenApiParameter(
+                'page_id', OpenApiTypes.STR, OpenApiParameter.QUERY, True,
+                "Unique identifier assigned to the calling view"
+            ),
+            OpenApiParameter(
+                'directory', OpenApiTypes.STR, OpenApiParameter.QUERY, False,
+                "Parent directory of the calling view (if applicable). Subscribes the page to directory notifications."
+            ),
+        ],
+        responses={
+            200: inline_serializer(
+                'Notification',
+                fields={
+                    'id': serializers.CharField(),
+                    'class': serializers.IntegerField(),
+                    'format': serializers.CharField(),
+                    'type': serializers.CharField(),
+                    'expires': serializers.DateTimeField(),
+                    'title': serializers.CharField(),
+                    'message': serializers.CharField()
+                }
+            ),
+            204: None
+        },
+        examples=[
+            OpenApiExample(
+                'Notification',
+                {
+                    "id": "SWA001",
+                    "format": "notification",
+                    "type": "advisory",
+                    "class": 2,
+                    "title": "Upcoming Maintenance",
+                    "message": "All Lens and Lights web services will be temporarily unavailable on January 5 from "
+                               "2:00-2:45 AM EST as we perform routine upgrades and maintenance. We apologize for the "
+                               "inconvenience.",
+                    "expires": "2020-01-05T07:00:00Z"
+                },
+                description=render_to_string('api/notification_response.html').strip(),
+                response_only=True
+            )
+        ]
+    )
     def list(self, request):
         queryset = self.get_queryset()
         if queryset.count() == 0:
@@ -122,7 +208,6 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
     def get_queryset(self):
-        verify_endpoint('Notifications', self.request)
         queryset = Notification.objects.filter(target__iexact='all')
         project = self.request.query_params.get('project_id', None)
         page = self.request.query_params.get('page_id', None)
@@ -139,10 +224,35 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class EventViewSet(viewsets.ReadOnlyModelViewSet):
+    """ Use this endpoint to retrieve event objects """
     serializer_class = EventSerializer
     authentication_classes = []
 
     # For now, do not accept new event submissions through the API (the workorder tool already does that well)
+    @extend_schema(
+        operation_id="Events",
+        parameters=[
+            OpenApiParameter('id', OpenApiTypes.INT, OpenApiParameter.QUERY, False, "Retrieve an event by its pk value"),
+            OpenApiParameter('name', OpenApiTypes.STR, OpenApiParameter.QUERY, False, "Filter by event name"),
+            OpenApiParameter('location', OpenApiTypes.STR, OpenApiParameter.QUERY, False, "Filter by location"),
+            OpenApiParameter('start', OpenApiTypes.DATETIME, OpenApiParameter.QUERY, False, "Filter by start time"),
+            OpenApiParameter('end', OpenApiTypes.DATETIME, OpenApiParameter.QUERY, False, "Filter by end time"),
+        ],
+        responses={
+            200: EventSerializer,
+            204: None
+        },
+        examples=[
+            OpenApiExample(
+                'Event',
+                [{"id": 21, "event_name": "Test Event", "description": "A test event", "location": "Library",
+                  "datetime_start": "2021-01-01T04:00:00.000Z", "datetime_end": "2021-01-01T06:00:00.000Z"}],
+                description='If both "start" and "end" are provided, only events that fall fully within the specified '
+                            'time span will be returned.',
+                response_only=True
+            )
+        ]
+    )
     def list(self, request):
         queryset = self.get_queryset()
         if queryset.count() == 0:
@@ -152,13 +262,15 @@ class EventViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
     def get_queryset(self):
-        verify_endpoint('Events', self.request)
         queryset = Event2019.objects.filter(sensitive=False, test_event=False, approved=True).order_by('id')
+        event_id = self.request.query_params.get('id', None)
         name = self.request.query_params.get('name', None)
         location_slug = self.request.query_params.get('location', None)
         start = self.request.query_params.get('start', None)
         end = self.request.query_params.get('end', None)
         default = True
+        if event_id:
+            return queryset.filter(pk=event_id)
         if name:
             default = False
             queryset = queryset.filter(event_name__icontains=name)
@@ -201,9 +313,27 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             raise PermissionDenied(detail="This event is not currently accepting checkin / checkout requests.")
         return user, event
 
+    @extend_schema(
+        operation_id="Crew Checkin",
+        request=inline_serializer(
+            'Checkin Request',
+            fields={
+                'id': serializers.IntegerField(),
+                'event': serializers.IntegerField(),
+                'checkin': serializers.DateTimeField(required=False)
+            }
+        ),
+        responses={
+            201: OpenApiResponse(description="Created"),
+            400: OpenApiResponse(description="Bad request. One or more required keys are missing or malformed."),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Event is not accepting checkin / checkout requests at this time"),
+            404: OpenApiResponse(description="User or event not found")
+        }
+    )
     @action(['POST'], True)
     def checkin(self, request):
-        verify_endpoint('Crew Checkin', self.request)
+        """ Use this endpoint to check a user into an event as a crew member """
         user, event = self.check_required_fields()
         time = request.data.get('checkin', None)
         if time in [None, '']:
@@ -226,9 +356,28 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             event.hours.create(user=user)
         return Response(status=status.HTTP_201_CREATED)
 
+    @extend_schema(
+        operation_id="Crew Checkout",
+        request=inline_serializer(
+            'Checkout Request',
+            fields={
+                'id': serializers.IntegerField(),
+                'event': serializers.IntegerField(),
+                'checkout': serializers.DateTimeField(required=False)
+            }
+        ),
+        responses={
+            200: OpenApiResponse(description="Ok"),
+            400: OpenApiResponse(description="Bad request. One or more required keys are missing or malformed."),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Event is not accepting checkin / checkout requests at this time"),
+            404: OpenApiResponse(description="Could not retrieve crew record. This will be returned if the user is not "
+                                             "checked into the specified event or the user or event does not exist.")
+        }
+    )
     @action(['POST'], True)
     def checkout(self, request):
-        verify_endpoint('Crew Checkout', self.request)
+        """ Use this endpoint to check a user out of an event """
         user, event = self.check_required_fields()
         time = request.data.get('checkout', None)
         if time in [None, '']:
@@ -245,12 +394,42 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.update(record, serializer.validated_data)
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(status=status.HTTP_200_OK)
 
 
 class SitemapViewSet(viewsets.ReadOnlyModelViewSet):
+    """ Use this endpoint to retrieve a list of custom pages and redirect links to display in our sitemap """
     authentication_classes = []
 
+    @extend_schema(
+        operation_id="Sitemap",
+        parameters=[
+            OpenApiParameter('type', OpenApiTypes.STR, OpenApiParameter.QUERY, False, 'Filter by link type',
+                             ['page', 'redirect']),
+            OpenApiParameter('category', OpenApiTypes.STR, OpenApiParameter.QUERY, False, 'Filter by sitemap category')
+        ],
+        responses={
+            200: OpenApiResponse([CustomPageSerializer, RedirectSerializer], description="Ok"),
+            204: None
+        },
+        examples=[
+            OpenApiExample(
+                'Page', [{"title": "Example Page", "path": "example", "category": "Support"}], response_only=True
+            ),
+            OpenApiExample(
+                'Redirect', [{"title": "Sharepoint", "path": "drive/", "category": "Redirects"}], response_only=True,
+                description='**Note:** Redirects cannot be filtered by category. If "category" is set, the value of '
+                            '"type" will be ignored and pages will be returned instead.'
+            ),
+            OpenApiExample(
+                'Both',
+                [{"title": "Example Page", "path": "example", "category": "Support"},
+                 {"title": "Sharepoint", "path": "sharepoint/", "category": "Redirects"}],
+                description='**Note:** Redirects cannot be filtered by category. If "category" is set, the value of '
+                            '"type" will be ignored and only pages will be returned.'
+            )
+        ]
+    )
     def list(self, request):
         (pages, redirects) = self.get_queryset()
         if pages.count() == 0 and redirects.count() == 0:
@@ -263,7 +442,6 @@ class SitemapViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(data)
 
     def get_queryset(self):
-        verify_endpoint('Sitemap', self.request)
         pages = Page.objects.filter(sitemap=True)
         redirects = ResizedRedirect.objects.filter(sitemap=True)
 
@@ -273,6 +451,7 @@ class SitemapViewSet(viewsets.ReadOnlyModelViewSet):
         if category not in [None, '']:
             pages = pages.filter(sitemap_category__icontains=category)
             redirects = ResizedRedirect.objects.none()
+            link_type = 'page'
         if link_type == 'page':
             return pages, ResizedRedirect.objects.none()
         elif link_type == 'redirect':
@@ -327,9 +506,27 @@ def request_token(request):
     return render(request, "phone_verification.html", context)
 
 
+@extend_schema(
+    operation_id="Token",
+    request=TokenRequestSerializer,
+    responses={
+        200: inline_serializer('Token', fields={'token': serializers.CharField()}),
+        400: OpenApiResponse(description="Bad request. One or more required keys are missing or malformed."),
+        403: OpenApiResponse(description="User has not granted proper permissions for the application or the provided "
+                                         "verification code is invalid."),
+        404: OpenApiResponse(description="The specified user, application, or corresponding token request could not "
+                                         "be found."),
+        410: OpenApiResponse(description="Verification code has expired or the number of allowed attempts has been "
+                                         "exceeded.")
+    }
+)
 @api_view(['POST'])
 @authentication_classes([])
 def fetch_token(request):
+    """
+    Use this endpoint to retrieve a user's API token. The user will need to have already granted access to your
+    application and should have already received a verification code.
+    """
     data = request.data
     key = data.get('APIKey', None)
     code = data.get('code', None)
@@ -352,7 +549,7 @@ def fetch_token(request):
         token_request.save()
         return Response(
             {"detail": "Invalid verification code. {} attempts remaining.".format(token_request.attempts)},
-            status=status.HTTP_202_ACCEPTED
+            status=status.HTTP_403_FORBIDDEN
         )
 
     # Everything checks out
@@ -365,22 +562,3 @@ def fetch_token(request):
     token = {"token": token.key}
 
     return Response(token, status=status.HTTP_200_OK)
-
-
-@login_required
-def docs(request):
-    endpoints = Endpoint.objects.all()
-
-    # Obtain the most recent last_modified date
-    last_modified = None
-    for endpoint in endpoints:
-        if last_modified is None or endpoint.last_modified > last_modified:
-            last_modified = endpoint.last_modified
-
-    context = {
-        'endpoints': endpoints,
-        'requestParameters': RequestParameter.objects.all(),
-        'responseKeys': ResponseKey.objects.all(),
-        'last_modified': last_modified
-    }
-    return render(request, 'api_docs.html', context)

@@ -34,6 +34,7 @@ Accounts
     :maxdepth: 1
 
     accounts/update-profile
+    accounts/preferences
     accounts/local-login
     accounts/member-roles
     accounts/linking-rt
@@ -79,6 +80,15 @@ Training
 
     training/request-pit
     training/training-records
+
+
+Slack
+^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    report-slack
 
 Positions
 ^^^^^^^^^

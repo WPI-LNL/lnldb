@@ -36,7 +36,7 @@ Lights website is available to all WPI community members.
                <h2 style="width:auto;">Development</h2>
                <ul>
                <li><a href="develop/index.html">Guide for Developers</a></li>
-               <li><a href="https://lnl.wpi.edu/api/docs">API Reference</a></li>
+               <li><a href="api/overview.html">API Reference</a></li>
                </ul>
             </div>
          </td>
@@ -76,7 +76,7 @@ Table of Contents
    :caption: Development
 
    develop/index
-   API Reference <https://lnl.wpi.edu/api/docs/>
+   api/overview
    develop/contribute
 
 .. toctree::

@@ -1,27 +1,34 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_serializer
 from events.models import OfficeHour, Event2019, CrewAttendanceRecord
 from accounts.models import User
 from data.models import ResizedRedirect
 from pages.models import Page
 
+from .models import TokenRequest
+
 
 # Create your serializers here.
+@extend_schema_serializer(
+    exclude_fields=['img', 'class_year']
+)
 class OfficerSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super(OfficerSerializer, self).__init__(*args, **kwargs)
 
-        fields = self.context['request'].query_params.get('options')
-        if fields:
-            fields = fields.split(',')
-            fields.append('title')
-            fields.append('name')
-            allowed = set(fields)
-            current = set(self.fields.keys())
-            for field_name in current - allowed:
-                self.fields.pop(field_name)
-        else:
-            self.fields.pop('img')
-            self.fields.pop('class_year')
+        if self.context.get('request', None):
+            fields = self.context['request'].query_params.get('options')
+            if fields:
+                fields = fields.split(',')
+                fields.append('title')
+                fields.append('name')
+                allowed = set(fields)
+                current = set(self.fields.keys())
+                for field_name in current - allowed:
+                    self.fields.pop(field_name)
+            else:
+                self.fields.pop('img')
+                self.fields.pop('class_year')
 
     img = serializers.CharField(source='img.img.url')
 
@@ -107,3 +114,13 @@ class CustomPageSerializer(serializers.ModelSerializer):
             'path': instance.slug,
             'category': category
         }
+
+
+class TokenRequestSerializer(serializers.ModelSerializer):
+    APIKey = serializers.CharField(help_text="Your application's API key")
+    username = serializers.CharField(source='user.username', help_text="The user's username")
+    code = serializers.IntegerField(help_text="The user's verification code")
+
+    class Meta:
+        model = TokenRequest
+        fields = ('code', 'APIKey', 'username')

@@ -8,9 +8,8 @@ from django.contrib.auth.models import Group
 from django.contrib.sites.shortcuts import get_current_site
 from django.utils import timezone
 from rest_framework.test import APIClient
-from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.authtoken.models import Token
-from . import models, views
+from . import models
 from .templatetags import path_safe
 from events.tests.generators import UserFactory, Event2019Factory, CCInstanceFactory
 from events.models import OfficeHour, Building, Location, CrewAttendanceRecord
@@ -29,31 +28,6 @@ class APIViewTest(ViewTestCase):
         string = "Home/LNL/Directory"
         output = "Home-LNL-Directory"
         self.assertEqual(path_safe.path_safe(string), output)
-
-    def test_verify_endpoint(self):
-        endpoint = models.Endpoint.objects.create(name="Example", url="example", description="Example endpoint",
-                                                       example="title=something", response="[]")
-        # Include additional methods to test various authentication options
-        endpoint_get = models.Method.objects.create(endpoint=endpoint, method="GET", auth="token")
-
-        # Try with endpoint that is not yet configured
-        with self.assertRaises(APIException, msg="Configuration error. Please contact the webmaster."):
-            views.verify_endpoint("Example2", None)
-
-        # Try with endpoint that requires authentication
-        for method in endpoint.methods.all():
-            if method.auth != "none":
-                request = RequestFactory()
-                request.user = self.user
-                request.data = {'APIKey': 'ABCDEFG'}
-                request.method = 'GET'
-                with self.assertRaises(PermissionDenied, msg="You are not allowed to access this resource."):
-                    views.verify_endpoint("Example", request)
-
-        # Try with properly configured endpoint
-        endpoint_get.auth = "none"
-        endpoint_get.save()
-        self.assertEqual(views.verify_endpoint("Example", None), None)
 
     def test_token_endpoint(self):
         # Check that page loads ok
@@ -134,9 +108,6 @@ class APIViewTest(ViewTestCase):
         self.assertOk(self.client.post(reverse("api:fetch-token"), data), 410)
 
     def test_officer_endpoint(self):
-        models.Endpoint.objects.create(name="Officers", url="officers", description="Officer endpoint",
-                                       example="title=something", response="[]")
-
         # Test that we get 404 when there are no officers
         self.assertOk(self.client.get("/api/v1/officers"), 404)
 
@@ -178,8 +149,6 @@ class APIViewTest(ViewTestCase):
                          '[{"title":"President","name":"Test User","class_year":2020}]')
 
     def test_hour_viewset(self):
-        models.Endpoint.objects.create(name="Office Hours", url="office-hours", description="Office Hours Endpoint",
-                                       example="officer=president", response="[]")
         self.user.title = "President"
         self.user.save()
 
@@ -250,9 +219,6 @@ class APIViewTest(ViewTestCase):
                          '"hour_end":"15:30:00"}]')
 
     def test_notification_viewset(self):
-        models.Endpoint.objects.create(name="Notifications", url="notifications", description="Notifications endpoint",
-                                       example="page_id=home", response="[]")
-
         # Test that we get 204 response when no notifications exist
         self.assertOk(self.client.get("/api/v1/notifications?project_id=LNL&page_id=/"), 204)
 
@@ -299,9 +265,6 @@ class APIViewTest(ViewTestCase):
                                           "directory": "/meetings"}).data, default_response)
 
     def test_events_endpoint(self):
-        models.Endpoint.objects.create(name="Events", url="events", description="Get your event info here",
-                                       example="name=Test Event", response="[]")
-
         # Test that we get 204 response if no events can be found matching query
         self.assertOk(self.client.get("/api/v1/events"), 204)
 
@@ -366,12 +329,10 @@ class APIViewTest(ViewTestCase):
                                          {"start": str(now), "end": str(time_future + timezone.timedelta(hours=1))}
                                          ).content.decode('utf-8'), default_response)
 
-    def test_crew_endpoint(self):
-        models.Endpoint.objects.create(name="Crew Checkin", url="crew/checkin", description="Checkin to events",
-                                       example="user=12345&event=1", response="[]")
-        models.Endpoint.objects.create(name="Crew Checkout", url="crew/checkout", description="Checkout from events",
-                                       example="user=12345&event=1", response="[]")
+        # Test getting an event by its ID
+        self.assertEqual(self.client.get("/api/v1/events", {"id": "1"}).content.decode('utf-8'), name_response)
 
+    def test_crew_endpoint(self):
         # Get token for authentication
         token, created = Token.objects.get_or_create(user=self.user)
         client = APIClient()
@@ -436,7 +397,7 @@ class APIViewTest(ViewTestCase):
         # Test with checkout time included
         custom_datetime = timezone.now() + timezone.timedelta(days=-1)
         self.assertOk(client.post("/api/v1/crew/checkout",
-                                  {'id': 12345, 'event': 1, 'checkout': custom_datetime}), 201)
+                                  {'id': 12345, 'event': 1, 'checkout': custom_datetime}), 200)
 
         self.assertEqual(CrewAttendanceRecord.objects.get(user=self.user).checkout, custom_datetime)
 
@@ -447,9 +408,6 @@ class APIViewTest(ViewTestCase):
         self.assertEqual(CrewAttendanceRecord.objects.get(user=self.user, active=True).checkin, custom_datetime)
 
     def test_sitemap_endpoint(self):
-        models.Endpoint.objects.create(name="Sitemap", url="sitemap", example="category=Events", response="[]",
-                                       description="Grab redirects and links to custom pages for sitemap")
-
         # Check that we get 204 if there are no redirects or page links to return
         self.assertOk(self.client.get('/api/v1/sitemap'), 204)
 
@@ -483,12 +441,3 @@ class APIViewTest(ViewTestCase):
         # Test filter by category
         self.assertOk(self.client.get('/api/v1/sitemap', {'category': 'Events'}), 204)
         self.assertEqual(self.client.get('/api/v1/sitemap', {'category': 'test'}).content.decode('utf-8'), pages_only)
-
-    def test_docs(self):
-        # Create a couple endpoints to include in the docs
-        models.Endpoint.objects.create(name="Endpoint 1", url="first", description="First endpoint",
-                                       example="id=example", response="[]")
-        models.Endpoint.objects.create(name="Endpoint 2", url="second", description="Second endpoint",
-                                       example="id=example", response="[]")
-
-        self.assertOk(self.client.get(reverse("api:documentation")))

@@ -134,9 +134,10 @@ class EventBasicViewTest(ViewTestCase):
 
         self.assertOk(self.client.get(reverse('events:edit', args=[self.e.pk])))
 
+        CCInstanceFactory.create(crew_chief=self.user, event=self.e)
+
         # Bad input
-        self.assertRedirects(self.client.post(reverse('events:edit', args=[self.e.pk])),
-                             reverse('events:detail', args=[self.e.pk]))
+        self.assertOk(self.client.post(reverse('events:edit', args=[self.e.pk])))
 
         building = models.Building.objects.create(name="Fuller Laboratories", shortname="FL")
         booth = models.Location.objects.create(name="Booth", building=building)
@@ -151,13 +152,18 @@ class EventBasicViewTest(ViewTestCase):
             "org": "|",
             "datetime_setup_complete_0": timezone.now().date(),
             "datetime_setup_complete_1": timezone.now().time(),
-            "datetime_start": timezone.now(),
-            "datetime_end": timezone.now(),
+            "datetime_start_0": timezone.now().date(),
+            "datetime_start_1": timezone.now().time(),
+            "datetime_end_0": timezone.now().date(),
+            "datetime_end_1": timezone.now().time(),
             "save": "Save Changes"
         }
 
         self.assertRedirects(self.client.post(reverse('events:edit', args=[self.e.pk]), valid_data),
                              reverse('events:detail', args=[self.e.pk]))
+
+        self.e.refresh_from_db()
+        self.assertEqual(self.e.event_name, "Edited event")
 
     def test_cancel(self):
         self.setup()
@@ -1058,6 +1064,12 @@ class EventBasicViewTest(ViewTestCase):
         # Check that we can add attachment ok
         self.assertRedirects(self.client.post(reverse("events:files", args=[self.e.pk]), valid_data),
                              reverse("events:detail", args=[self.e.pk]))
+
+    def test_ics_download(self):
+        self.setup()
+
+        resp = self.client.get(reverse('events:ics', args=[self.e.pk]))
+        self.assertEqual(resp.get('Content-Disposition'), "attachment; filename=event.ics")
 
     def test_extras(self):
         self.setup()

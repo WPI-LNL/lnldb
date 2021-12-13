@@ -1401,33 +1401,32 @@ class NewAppForm(FieldAccessForm):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal col-md-6"
         self.helper.layout = Layout(
-            Fieldset(title, 'name', 'identifier', 'developer', 'version', 'description'),
+            Fieldset(title, 'name', 'version', 'developer', 'description', 'developer_website'),
             FormActions(Submit('save', "Submit"))
         )
         super(NewAppForm, self).__init__(*args, **kwargs)
 
         self.fields['name'].label = "Application Name"
-        self.fields['identifier'].help_text = "A list of applications compatible with the MDM can be found " \
-                                              "<a href='" + reverse("mdm:app-list") + "' target='_blank'>here</a>. " \
-                                              "Please enter the respective identifier above."
+        self.fields['developer_website'].label = "Website"
+        self.fields['developer_website'].help_text = "Please enter a fully formed URL (i.e. https://lnl.wpi.edu)"
 
     class Meta:
         model = MacOSApp
-        fields = ['name', 'identifier', 'developer', 'version', 'description']
+        fields = ['name', 'developer', 'version', 'description', 'developer_website']
 
     class FieldAccess:
         def __init__(self):
             pass
 
         can_request = FieldAccessLevel(
-            lambda user, instance: user.has_perm('devices.view_apps', instance),
-            enable=('name', 'identifier', 'developer'),
-            exclude=('version', 'description')
+            lambda user, instance: user.has_perm('devices.add_apps', instance),
+            enable=('name', 'developer', 'version', 'developer_website'),
+            exclude=('description',)
         )
 
         can_edit = FieldAccessLevel(
             lambda user, instance: user.has_perm('devices.manage_apps', instance),
-            enable=('name', 'identifier', 'developer', 'version', 'description')
+            enable=('name', 'developer', 'version', 'description', 'developer_website')
         )
 
 
@@ -1444,56 +1443,67 @@ class UpdateAppForm(forms.ModelForm):
                     'developer',
                     'version',
                     'description',
-                    'update_available',
+                    'developer_website',
+                    'requires_license',
                     css_class="col-md-12"
                 )
             ),
             FormActions(
                 Submit("save", "Delete", css_class="btn-danger"),
+                Submit("save", "Merge"),
                 Submit("save", "Save Changes")
             )
         )
         super(UpdateAppForm, self).__init__(*args, **kwargs)
 
-        self.fields['identifier'].help_text = "A list of applications compatible with the MDM can be found " \
+        self.fields['identifier'].help_text = "If the application is available in homebrew, it can be found " \
                                               "<a href='" + reverse("mdm:app-list") + "' target='_blank'>here</a>. " \
-                                              "Please enter the respective identifier above."
-        self.fields['update_available'].help_text = "Check this to instruct the MDM to update this application to " \
-                                                    "the newest version"
-        self.fields['version'].help_text = "Include the version to make the application available for deployment"
+                                              "Enter the respective identifier above (if applicable)."
+        self.fields['identifier'].label = "Homebrew Identifier"
+        self.fields['developer_website'].label = "Website"
+        self.fields['developer_website'].help_text = "Please enter a fully formed URL (i.e. https://lnl.wpi.edu)"
 
     class Meta:
         model = MacOSApp
-        fields = ['name', 'identifier', 'developer', 'version', 'description', 'update_available']
+        fields = ['name', 'identifier', 'developer', 'version', 'description', 'developer_website', 'requires_license']
+
+
+class AppMergeForm(forms.Form):
+    options = forms.ChoiceField(label="Select the application to merge this into", choices=[])
+
+    def __init__(self, *args, **kwargs):
+        pk = kwargs.pop('pk')
+        app_name = MacOSApp.objects.get(pk=pk).name
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal col-md-6"
+        self.helper.layout = Layout(
+            Fieldset('Merge ' + app_name + ' into...', 'options'),
+            FormActions(Submit('save', 'Merge'))
+        )
+        super(AppMergeForm, self).__init__(*args, **kwargs)
+
+        items = [(app.pk, app.name) for app in MacOSApp.objects.exclude(pk=pk, merged_into__isnull=False).all()]
+        self.fields['options'].choices = items
 
 
 class UninstallAppForm(forms.Form):
-    options = forms.ChoiceField(choices=[('auto', 'I would like to have this app removed from all managed devices'),
-                                         ('manual', 'I would like to leave the applications as they are')],
-                                widget=forms.RadioSelect, label="Before continuing, please select one of the following")
-
     def __init__(self, *args, **kwargs):
         mode = kwargs.pop('mode')
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal col-md-6"
-        warning = '<p style="font-weight: bold"><span style="color: red">WARNING:</span> This app has been ' \
-                  'deployed to one or more devices. Before removing this app from the MDM, you will need to decide ' \
-                  'what to do with the existing installs.</p><p>There are two ways to handle this:</p><ul>' \
-                  '<li><strong>[Recommended]</strong> The first option is to have the MDM uninstall the app ' \
-                  'automatically. The app will be removed from each device the next time the device checks in. If ' \
-                  'you are currently using a managed device, you can sign out and sign back in to force a checkin.' \
-                  '</li><li>The second option is to leave the applications as they are. Managed applications can be ' \
-                  'removed at any time using the same method you would use to remove any other application.</li></ul>'
+        warning = '<p style="font-weight: bold"><span style="color: red">WARNING:</span> Our records indicate that ' \
+                  'this app might still be installed on one or more devices. Note that if this application is still ' \
+                  'installed, it will reappear here the next time that device checks in. Managed applications can be ' \
+                  'uninstalled using the Managed Software Center or Homebrew (if applicable).</li></ul>'
         if mode == 'disassociate':
-            warning = '<p>This app may still be installed on the device. Select an option to continue.</p>'
+            warning = '<p>This app may still be installed on the device. Note that if it is, it could reappear here ' \
+                      'the next time the device checks in. Would you like to continue anyways?</p>'
         self.helper.layout = Layout(
             Fieldset(
                 'Remove Application',
                 Div(
                     HTML(warning),
-                    HTML('<div class="col-md-12">'),
-                    'options',
-                    HTML('</div><br><br>'),
+                    HTML('<br><br>'),
                     FormActions(
                         Submit('save', 'Continue')
                     )
@@ -1501,7 +1511,3 @@ class UninstallAppForm(forms.Form):
             )
         )
         super(UninstallAppForm, self).__init__(*args, **kwargs)
-
-        if mode == 'disassociate':
-            self.fields['options'].choices = [('auto', 'I would like the app to be uninstalled at the next check-in'),
-                                              ('manual', 'The app has already been removed manually')]

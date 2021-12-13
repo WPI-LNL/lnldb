@@ -1,0 +1,43 @@
+{% extends 'base_admin.html' %}
+{% load slack %}
+
+{% block content %}
+	<div class="container">
+		<h2>{{ title }}</h2>
+		<div>
+			<div class="row">
+				<div class="col-md-12">
+					<table class="table table-striped table-bordered">
+						<tr>
+							<th> Message </th>
+							<th> Posted to </th>
+							<th> Posted by </th>
+                            <th> Reported by </th>
+                            <th> Actions </th>
+						</tr>
+						{% if not reports %}
+						<tr>
+							<td colspan="5">There are no new reports</td>
+						</tr>
+						{% endif %}
+						{% for report in reports %}
+						<tr>
+							<td>{{ report.message.content }}</td>
+							<td>{{ report.message.posted_to|id_to_name|channel_from_id }}</td>
+                            <td>{{ report.message.posted_by|id_to_name }}</td>
+                            <td>{{ report.reported_by|id_to_name }}</td>
+							<td><a href="{% url 'slack:report' report.pk %}" class="btn btn-primary" style="margin-bottom: 5px">View Report</a>
+                                <form action="" method="post" style="display: inline-block">
+                                    {% csrf_token %}
+                                    <input name="report_id" value="{{ report.pk }}" hidden>
+                                    <button type="submit" class="btn btn-success" style="margin-bottom: 5px">Mark Resolved</button>
+                                </form></td>
+						</tr>
+						{% endfor %}
+					</table>
+				</div>
+			</div>
+			<br>
+		</div>
+    </div>
+{% endblock %}

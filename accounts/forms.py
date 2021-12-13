@@ -7,7 +7,7 @@ from django.conf import settings
 from django import forms
 
 from data.forms import FieldAccessForm, FieldAccessLevel
-from .models import OfficerImg, carrier_choices
+from .models import OfficerImg, carrier_choices, event_fields, UserPreferences
 from .ldap import get_student_id
 
 
@@ -70,13 +70,12 @@ class UserEditForm(FieldAccessForm):
 
         thisisme = FieldAccessLevel(
             lambda user, instance: (user == instance) and not user.locked,
-            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox',
-                'phone', 'class_year', 'nickname', 'carrier', 'pronouns')
+            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year', 'nickname', 'carrier',
+                    'pronouns')
         )
         hasperm = FieldAccessLevel(
             lambda user, instance: (user != instance) and user.has_perm('accounts.change_user', instance),
-            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox',
-                'phone', 'class_year')
+            enable=('email', 'first_name', 'last_name', 'addr', 'wpibox', 'phone', 'class_year')
         )
         edit_groups = FieldAccessLevel(
             lambda user, instance: user.has_perm('accounts.change_membership', instance),
@@ -151,6 +150,158 @@ class UserAddForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class UserPreferencesForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(UserPreferencesForm, self).__init__(*args, **kwargs)
+        if self.instance.rt_token not in [None, '']:
+            self.Meta.layout.pop(-2)
+            self.Meta.layout.insert(-1, (
+                "Text", "<button class=\"ui red small button\" type=\"submit\" name=\"submit\" "
+                        "value=\"rt-delete\">Delete Token</button>"
+            ))
+        else:
+            self.Meta.layout.pop(-2)
+            self.Meta.layout.insert(-1, (
+                "Text", "<a href=\"/support/connect/rt/\" class=\"ui green small button\">Connect Account</a>"
+            ))
+
+        if 'Inactive' in self.instance.user.group_str or 'Unclassified' in self.instance.user.group_str:
+            self.Meta.layout[8] = ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>"
+                                           "Crew Chief Needed Notifications</div><div class=\"content\">"
+                                           "<p class=\"ui help\">Receive an alert whenever the VP needs crew chiefs "
+                                           "to run an event. These messages may be sent to either "
+                                           "<em>gr-lnl-needcc@wpi.edu</em> or <em>lnl-active@wpi.edu</em>. You may "
+                                           "unsubscribe from these messages at any time through Outlook.</p>")
+            self.Meta.layout[9] = (
+                "Text", "<a href=\"https://lnl.wpi.edu/legal/opt-out/\" class=\"ui blue basic button\">Opt out</a>"
+            )
+        else:
+            self.Meta.layout[8] = ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>"
+                                           "Crew Chief Needed Notifications</div><div class=\"content\">"
+                                           "<p class=\"ui help\">Receive an alert whenever the VP needs crew chiefs "
+                                           "to run an event.</p>")
+            self.Meta.layout[9] = ("Field", "cc_needed_subscriptions")
+            self.fields['cc_needed_subscriptions'].initial = ['email', 'slack']
+
+        event_fields_required = [
+            ('location', 'Location'),
+            ('datetime_setup_complete', 'Datetime setup complete'),
+            ('datetime_start', 'Datetime start'),
+            ('datetime_end', 'Datetime end')
+        ]
+
+        event_fields_optional = []
+        for field in event_fields:
+            if field not in event_fields_required:
+                event_fields_optional.append(field)
+        self.fields['event_edited_field_subscriptions'].choices = event_fields_optional
+
+        self.fields['ignore_user_action'].widget.attrs['_style'] = 'toggle'
+        self.fields['ignore_user_action'].widget.attrs['_help'] = True
+
+    cc_add_subscriptions = forms.MultipleChoiceField(
+        choices=(('email', 'Email'), ('slack', 'Slack Notification')),
+        required=False,
+        widget=forms.CheckboxSelectMultiple(attrs={
+            '_no_required': True, 'style': 'margin: 0.5% 0.5% 0 0; cursor: pointer', '_no_label': True
+        })
+    )
+
+    cc_report_reminders = forms.ChoiceField(
+        choices=(('email', 'Email'), ('slack', 'Slack Notification'), ('all', 'Both')),
+        widget=forms.RadioSelect(attrs={
+            '_no_required': True, 'style': 'margin: 0.5% 0.5% 0 0; cursor: pointer', '_no_label': True
+        })
+    )
+
+    cc_needed_subscriptions = forms.MultipleChoiceField(
+        choices=(('email', 'Email'), ('slack', 'Slack Notification')),
+        required=False,
+        widget=forms.CheckboxSelectMultiple(
+            attrs={'_no_required': True, 'style': 'margin: 0.5% 0.5% 0 0; cursor: pointer', '_no_label': True, 'disabled': True}
+        )
+    )
+
+    event_edited_notification_methods = forms.ChoiceField(
+        choices=(('email', 'Email'), ('slack', 'Slack Notification'), ('all', 'Both')),
+        widget=forms.RadioSelect(attrs={
+            '_no_required': True, 'style': 'margin: 0.5% 0.5% 0 0; cursor: pointer', '_no_label': True
+        })
+    )
+
+    event_edited_field_subscriptions = forms.MultipleChoiceField(
+        choices=event_fields,
+        required=False,
+        widget=forms.SelectMultiple(attrs={'_no_required': True, '_no_label': True, 'placeholder': 'Add more'})
+    )
+
+    ignore_user_action = forms.BooleanField(label="Ignore my actions", required=False,
+                                            help_text="Avoid sending me notifications for actions that I initiate")
+
+    srv = forms.MultipleChoiceField(
+        choices=(('email', 'Email'), ('slack', 'Slack Notification'), ('sms', 'SMS (Text Message)')),
+        initial=['email', 'slack', 'sms'],
+        required=False,
+        widget=forms.CheckboxSelectMultiple(
+            attrs={'_no_required': True, 'style': 'margin: 0.5% 0.5% 0 0', '_no_label': True, 'disabled': True}
+        )
+    )
+
+    class Meta:
+        model = UserPreferences
+        fields = ('theme', 'cc_add_subscriptions', 'cc_report_reminders', 'event_edited_notification_methods',
+                  'event_edited_field_subscriptions', 'ignore_user_action')
+        layout = [
+            ("Text", "<div class=\"ui secondary segment\"><h4 class=\"ui dividing header\">Appearance</h4>"),
+            ("Field", "theme"),
+
+            ("Text", "</div><div class=\"ui secondary segment nobullet\"><h4 class=\"ui dividing header\">"
+                     "Communications</h4><div class=\"ui styled accordion\" style=\"width: 100%\"><div class=\"title\">"
+                     "<i class=\"dropdown icon\"></i>LNL News</div><div class=\"content\"><p class=\"ui help\">"
+                     "General club information, advertisements and meeting notices. This content will typically be "
+                     "sent to the <em>lnl-news@wpi.edu</em> email alias. You may opt out of receiving these messages "
+                     "at any time through Outlook.</p>"),
+            ("Text", "<a href=\"https://lnl.wpi.edu/legal/opt-out/\" class=\"ui blue basic button\">Opt out</a>"),
+
+            ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>Crew Chief Add Notifications</div>"
+                     "<div class=\"content\"><p class=\"ui help\">Receive a notification whenever you are added as a "
+                     "Crew Chief for a new event.</p>"),
+            ("Field", "cc_add_subscriptions"),
+
+            ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>Crew Chief Report Reminders</div>"
+                     "<div class=\"content\"><p class=\"ui help\">Receive reminders for missing crew chief reports.</p>"),
+            ("Field", "cc_report_reminders"),
+
+            ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>Crew Chief Needed Notifications</div>"
+                     "<div class=\"content\"><p class=\"ui help\">Receive an alert whenever the VP needs crew chiefs "
+                     "to run an event.</p>"),
+            ("Field", "cc_needed_subscriptions"),
+
+            ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>Event Edit Notifications</div>"
+                     "<div class=\"content\"><p class=\"ui help\">Receive alerts whenever details for an event you are "
+                     "involved with have changed.</p>"),
+            ("Field", "event_edited_notification_methods"),
+            ("Text", "<br><hr style='border: 1px dashed gray'><br>"
+                     "<p class\"ui help\">Notify me of changes to any of the following fields:<br><br>"
+                     "<span class=\"ui label\">Location</span><span class=\"ui label\">Event Setup Time</span>"
+                     "<span class=\"ui label\">Event Start</span><span class=\"ui label\">Event End</span></p>"),
+            ("Field", "event_edited_field_subscriptions"),
+
+            ("Text", "</div><div class=\"title\"><i class=\"dropdown icon\"></i>Web Service Notifications</div>"
+                     "<div class=\"content\"><p class=\"ui help\">General account and system-wide notices. You may not "
+                     "unsubscribe from these messages.</p>"),
+            ("Field", "srv"),
+
+            ("Text", "</div></div><div class=\"ui segment\">"),
+            ("Field", "ignore_user_action"),
+
+            ("Text", "</div></div><div class=\"ui secondary segment\">"
+                     "<h4 class=\"ui dividing header\">Request Tracker</h4>"),
+            ("Text", "<a href=\"/support/connect/rt/\" class=\"ui green basic button\">Connect Account</a>"),
+            ("Text", "</div>")
+        ]
 
 
 class OfficerPhotoForm(forms.ModelForm):

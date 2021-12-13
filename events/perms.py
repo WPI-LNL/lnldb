@@ -1,4 +1,5 @@
 import logging
+import inspect
 from six import string_types
 
 from django.core.exceptions import PermissionDenied
@@ -37,8 +38,11 @@ class AssocUsersCustomPermissionLogic(PermissionLogic):
         for lookup in self.field_name:
             authorized_users = field_lookup(obj, lookup)
             # break out of a generator expression
-            if hasattr(authorized_users, '__iter__'):
-                authorized_users = list(authorized_users)
+            if inspect.isgenerator(authorized_users):
+                try:
+                    authorized_users = list(*authorized_users)
+                except TypeError:
+                    authorized_users = list(field_lookup(obj, lookup))
             else:
                 authorized_users = [authorized_users]
             for user in authorized_users:

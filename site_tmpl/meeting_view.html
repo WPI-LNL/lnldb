@@ -3,6 +3,7 @@
 {% load bootstrap3 %}
 {% load permissionif %}
 {% load lnldb_tags %}
+{% load slack %}
 {% block content %}
     <div class="jumbotron">
         <h1>{{ m.name }}</h1>
@@ -64,7 +65,7 @@
 
                     <div class="note-body minutes">
                         {% if m.minutes %}
-                            {{ m.minutes | markdown }}
+                            {{ m.minutes | slack | markdown }}
                         {% else %}
                             <i>There is nothing here</i>
                         {% endif %}
@@ -77,7 +78,7 @@
 
                         <div class="note-body closed-minutes">
                             {% if m.minutes_private %}
-                                {{ m.minutes_private | markdown }}
+                                {{ m.minutes_private | slack | markdown }}
                             {% else %}
                                 <i>There is nothing here</i>
                             {% endif %}
