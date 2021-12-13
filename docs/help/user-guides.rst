@@ -79,3 +79,11 @@ Training
 
     training/request-pit
     training/training-records
+
+Positions
+^^^^^^^^^
+
+.. toctree::
+   :maxdepth: 1
+   positions/apply
+   positions/create
