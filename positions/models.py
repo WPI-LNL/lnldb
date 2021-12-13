@@ -23,7 +23,7 @@ class Position(models.Model):
             blank=True, null=True)
     closes = models.DateTimeField(verbose_name="Applications Close", null=True,
             blank=True)
-    application_form = models.URLField(verbose_name="Link to external application form", null=False, blank=False, max_length=128)
+    application_form = models.URLField(verbose_name="Link to external application form", null=True, blank=True, max_length=128)
 
     def __str__(self):
         return f"{self.name}"

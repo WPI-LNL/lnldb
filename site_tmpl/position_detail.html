@@ -10,7 +10,9 @@
 	{% permission user has 'positions.change_position' %}
 	<a class="btn btn-lg btn-primary" href="{% url 'positions:update' object.id %}">Edit</a>
 	{% endpermission %}
+	{% if object.application_form %}
 	<a class="btn btn-lg btn-success" href="{{ object.application_form }}">Apply</a>
+	{% endif %}
 </div>
 
 <table class="table">
