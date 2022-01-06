@@ -490,6 +490,11 @@ def handle_event(request):
         elif event['type'] == "app_home_opened":
             load_app_home(event['user'])
         return HttpResponse()
+    elif payload['type'] == "channel_created":
+        channel_id = payload['channel']['id']
+        if settings.SLACK_AUTO_JOIN:
+            join_channel(channel_id)
+        return HttpResponse()
     return HttpResponse("Not implemented")
 
 

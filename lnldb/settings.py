@@ -98,6 +98,9 @@ SECRET_KEY = env.str("SECRET_KEY", "I am insecure.")
 
 SLACK_TOKEN = env.str('SLACK_BOT_TOKEN', None)
 
+# If True, the bot will automatically attempt to join new channels when they are created in Slack
+SLACK_AUTO_JOIN = env.bool('SLACK_AUTO_JOIN', default=False)
+
 SLACK_TARGET_GENERAL = env.str('SLACK_TARGET_GENERAL', None)
 SLACK_TARGET_EXEC = env.str('SLACK_TARGET_EXEC', None)
 SLACK_TARGET_ACTIVE = env.str('SLACK_TARGET_ACTIVE', None)
