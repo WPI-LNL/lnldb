@@ -851,14 +851,23 @@ def __save_report(message_id, reporter, comments):
     """
 
     message = models.SlackMessage.objects.get(pk=message_id)
-    report = models.ReportedMessage.objects.create(message=message, comments=comments, reported_by=reporter)
 
-    # Send Webmaster a notification
-    blocks = views.reported_message_notification(reporter, report)
-    slack_post(settings.SLACK_TARGET_WEBMASTER, text="You have a new flagged message to review", content=blocks,
-               username="Admin Console")
+    # Ensure message was posted to public channel. For privacy reasons, we currently do not report private messages.
+    channel_details = channel_info(message.posted_to)
+    if channel_details['is_channel'] and not channel_details['is_private']:
+        report = models.ReportedMessage.objects.create(message=message, comments=comments, reported_by=reporter)
 
-    # Add red flag to message
-    message_react(message.posted_to, message.ts, 'triangular_flag_on_post')
+        # Send Exec a notification
+        blocks = views.reported_message_notification(reporter, report)
+        slack_post(settings.SLACK_TARGET_EXEC, text="You have a new flagged message to review", content=blocks,
+                   username="Admin Console")
 
+        # Add red flag to message (to inform sender their message has been reported)
+        # message_react(message.posted_to, message.ts, 'triangular_flag_on_post')
+    else:
+        message.public = False
+        message.save()
+
+        post_ephemeral(message.posted_to, "This feature currently does not support reporting private messages. Please "
+                                          "contact a member of the executive board directly.", reporter)
     connection.close()
