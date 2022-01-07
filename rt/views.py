@@ -6,6 +6,8 @@ from django.contrib.auth.decorators import login_required
 from cryptography.fernet import Fernet
 
 from accounts.models import UserPreferences
+from slack.api import lookup_user, slack_post
+from slack.views import tfed_ticket
 from . import forms, api
 
 
@@ -24,7 +26,23 @@ def new_ticket(request):
             attachments = request.FILES.getlist('attachments')
             resp = api.create_ticket("Database", request.user.email, subject, description, attachments=attachments)
             if resp.get('id', None):
+                ticket_id = resp['id']
                 messages.success(request, "Your ticket has been submitted. Thank you!")
+
+                # Send Slack notification
+                slack_user = lookup_user(request.user.email)
+                ticket_info = {
+                    "url": 'https://lnl-rt.wpi.edu/rt/Ticket/Display.html?id=' + ticket_id,
+                    "id": ticket_id,
+                    "subject": subject,
+                    "description": request.POST['description'],
+                    "status": "New",
+                    "assignee": None,
+                    "reporter": slack_user
+                }
+                ticket = tfed_ticket(ticket_info)
+                slack_post(settings.SLACK_TARGET_TFED_DB, text=request.POST['description'], content=ticket,
+                           username='Request Tracker')
             else:
                 messages.add_message(
                     request, messages.WARNING,
