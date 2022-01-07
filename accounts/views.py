@@ -497,7 +497,7 @@ def application_scope_request(request):
     del request.session['inverted']
 
     invert = False
-    prefs = UserPreferences.objects.get_or_create(user=request.user)
+    prefs, created = UserPreferences.objects.get_or_create(user=request.user)
     if inverted:
         invert = True
     elif inverted is None:

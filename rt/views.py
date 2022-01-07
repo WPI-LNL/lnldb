@@ -66,8 +66,8 @@ def link_account(request):
         if form.is_valid():
             token = request.POST['token'].encode('utf-8')
             prefs, created = UserPreferences.objects.get_or_create(user=request.user)
-            if settings.RT_CRYPTO_KEY:
-                cipher_suite = Fernet(settings.RT_CRYPTO_KEY)
+            if settings.CRYPTO_KEY:
+                cipher_suite = Fernet(settings.CRYPTO_KEY)
                 prefs.rt_token = cipher_suite.encrypt(token).decode('utf-8')
                 prefs.save()
             else:
@@ -81,7 +81,7 @@ def link_account(request):
             request.session["resource"] = "RT"
             request.session["icon"] = "https://lnl-rt.wpi.edu/rt/NoAuth/Helpers/CustomLogo/dd63008602de45a7b45597a4d43a7aad"
             request.session["scopes"] = ["View your profile", "Manage tickets on your behalf"]
-            request.session["callback_uri"] = "support:link-account"
+            request.session["callback_uri"] = reverse("support:link-account")
             request.session["inverted"] = True
             return HttpResponseRedirect(reverse("accounts:scope-request"))
 

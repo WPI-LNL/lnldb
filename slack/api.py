@@ -840,7 +840,7 @@ def __retrieve_rt_token(user_id):
             prefs = UserPreferences.objects.filter(user=user).first()
             if prefs:
                 if prefs.rt_token:
-                    cipher_suite = Fernet(settings.RT_CRYPTO_KEY)
+                    cipher_suite = Fernet(settings.CRYPTO_KEY)
                     return cipher_suite.decrypt(prefs.rt_token.encode('utf-8')).decode('utf-8')
     return None
 

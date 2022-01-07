@@ -30,34 +30,47 @@ class APIViewTest(ViewTestCase):
         self.assertEqual(path_safe.path_safe(string), output)
 
     def test_token_endpoint(self):
-        # Check that page loads ok
-        self.assertOk(self.client.get(reverse("api:request-token")))
+        with self.settings(CRYPTO_KEY='s4drGBoGJIrN8-n_1_n_ES8dSD2sLByheksYvaa9tkI='):
+            app = Extension.objects.create(name="Test App", developer="Lens and Lights",
+                                           description="An app used for testing", api_key="ABCDEFG", enabled=True)
+            # An example of a Client ID (base64 encoded)
+            client_id = 'gAAAAABh19SRlJMu7Wz-QGREpHAVT0ctusPHsPR-CNa-Jn0YToZlL4mJ3S488fFh-U4q0vI1iZ4hwz1t-SDMYopvEmRo7v0gtg=='
 
-        # If user does not have phone number and carrier listed, they will need to fill out the form
-        self.assertOk(self.client.post(reverse("api:request-token")))
+            # Should redirect to the scopes authorization page
+            self.assertRedirects(self.client.get(reverse("api:request-token", args=[client_id])),
+                                 reverse("accounts:scope-request"))
 
-        self.assertFalse(models.TokenRequest.objects.filter(user=self.user).exists())
+            # Check that page loads ok if user has granted access to the application
+            self.assertOk(self.client.get(reverse("api:request-token", args=[client_id]),
+                                          HTTP_REFERER="https://lnl.wpi.edu" + reverse("accounts:scope-request")))
 
-        valid_data = {
-            "phone": 1234567890,
-            "carrier": "vtext.com",
-            "save": "Continue"
-        }
+            self.assertOk(self.client.get(reverse("api:request-token", args=[client_id])))
 
-        self.assertOk(self.client.post(reverse("api:request-token"), valid_data))
+            # If user does not have phone number and carrier listed, they will need to fill out the form
+            self.assertOk(self.client.post(reverse("api:request-token", args=[client_id])))
 
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.phone, '1234567890')
+            self.assertFalse(models.TokenRequest.objects.filter(user=self.user).exists())
 
-        # User must confirm that information is accurate (users who have already provided this information start here)
-        resp = self.client.post(reverse("api:request-token"), valid_data)
-        self.assertContains(resp, "Check your messages")
+            valid_data = {
+                "phone": 1234567890,
+                "carrier": "vtext.com",
+                "save": "Continue"
+            }
 
-        self.assertTrue(models.TokenRequest.objects.filter(user=self.user).exists())
+            self.assertOk(self.client.post(reverse("api:request-token", args=[client_id]), valid_data))
 
-        # If code expires on the user, check that they can request a new one (will replace exisiting code)
-        resp = self.client.post(reverse("api:request-token"), valid_data)
-        self.assertContains(resp, "Check your messages")
+            self.user.refresh_from_db()
+            self.assertEqual(self.user.phone, '1234567890')
+
+            # User must confirm that information is accurate (users who have already provided this start here)
+            resp = self.client.post(reverse("api:request-token", args=[client_id]), valid_data)
+            self.assertContains(resp, "Check your messages")
+
+            self.assertTrue(models.TokenRequest.objects.filter(user=self.user).exists())
+
+            # If code expires on the user, check that they can request a new one (will replace existing code)
+            resp = self.client.post(reverse("api:request-token", args=[client_id]), valid_data)
+            self.assertContains(resp, "Check your messages")
 
         # Ensure GET requests are not allowed when obtaining the token with verification code
         self.assertOk(self.client.get(reverse("api:fetch-token")), 405)
@@ -73,11 +86,14 @@ class APIViewTest(ViewTestCase):
             "username": "testuser"
         }
 
-        # If user or application with the given information does not exist, we should get 404
+        # If user or application does not exist, or the application is disabled, we should get 404
+        app.enabled = False
+        app.save()
+
         self.assertOk(self.client.post(reverse("api:fetch-token"), data), 404)
 
-        app = Extension.objects.create(name="Test App", developer="Lens and Lights",
-                                       description="An app used for testing", api_key="ABCDEFG", enabled=True)
+        app.enabled = True
+        app.save()
 
         # If application exists, but user has not allowed full permissions, we should get 403
         self.assertOk(self.client.post(reverse("api:fetch-token"), data), 403)
