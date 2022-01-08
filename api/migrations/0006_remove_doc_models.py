@@ -12,9 +12,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.DeleteModel(
-            name='Endpoint',
-        ),
-        migrations.DeleteModel(
             name='Method',
         ),
         migrations.DeleteModel(
@@ -28,5 +25,8 @@ class Migration(migrations.Migration):
         ),
         migrations.DeleteModel(
             name='ResponseKey',
+        ),
+        migrations.DeleteModel(
+            name='Endpoint',
         ),
     ]
