@@ -422,8 +422,10 @@ def user_preferences(request):
             if request.POST.get('submit', None) == 'rt-delete':
                 obj.rt_token = None
                 obj.save()
+                form.save_m2m()
                 return HttpResponseRedirect(reverse("accounts:preferences"))
             obj.save()
+            form.save_m2m()
             messages.success(request, "Your preferences have been updated successfully!")
             return HttpResponseRedirect(reverse("accounts:detail", args=[user.pk]))
         else:

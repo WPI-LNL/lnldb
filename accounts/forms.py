@@ -7,6 +7,7 @@ from django.conf import settings
 from django import forms
 
 from data.forms import FieldAccessForm, FieldAccessLevel
+from meetings.models import MeetingType
 from .models import OfficerImg, carrier_choices, event_fields, UserPreferences
 from .ldap import get_student_id
 
@@ -200,6 +201,8 @@ class UserPreferencesForm(forms.ModelForm):
 
         self.fields['ignore_user_action'].widget.attrs['_style'] = 'toggle'
         self.fields['ignore_user_action'].widget.attrs['_help'] = True
+        self.fields['meeting_invites'].widget.attrs['_style'] = 'toggle'
+        self.fields['meeting_invites'].widget.attrs['_help'] = True
 
     cc_add_subscriptions = forms.MultipleChoiceField(
         choices=(('email', 'Email'), ('slack', 'Slack Notification')),
@@ -237,6 +240,17 @@ class UserPreferencesForm(forms.ModelForm):
         widget=forms.SelectMultiple(attrs={'_no_required': True, '_no_label': True, 'placeholder': 'Add more'})
     )
 
+    meeting_invites = forms.BooleanField(
+        label="Receive calendar invites for meetings", required=False,
+        help_text="Opt-in to receiving calendar invites for meetings (separate from meeting notices)"
+    )
+
+    meeting_invite_subscriptions = forms.ModelMultipleChoiceField(
+        queryset=MeetingType.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'_no_required': True, '_no_label': True})
+    )
+
     ignore_user_action = forms.BooleanField(label="Ignore my actions", required=False,
                                             help_text="Avoid sending me notifications for actions that I initiate")
 
@@ -252,7 +266,8 @@ class UserPreferencesForm(forms.ModelForm):
     class Meta:
         model = UserPreferences
         fields = ('theme', 'cc_add_subscriptions', 'cc_report_reminders', 'event_edited_notification_methods',
-                  'event_edited_field_subscriptions', 'ignore_user_action')
+                  'event_edited_field_subscriptions', 'ignore_user_action', 'meeting_invites',
+                  'meeting_invite_subscriptions')
         layout = [
             ("Text", "<div class=\"ui secondary segment\"><h4 class=\"ui dividing header\">Appearance</h4>"),
             ("Field", "theme"),
@@ -293,6 +308,14 @@ class UserPreferencesForm(forms.ModelForm):
                      "<div class=\"content\"><p class=\"ui help\">General account and system-wide notices. You may not "
                      "unsubscribe from these messages.</p>"),
             ("Field", "srv"),
+
+            ("Text", "</div></div><br><div class=\"ui styled accordion\" style=\"width: 100%\">"
+                     "<div class=\"title\"><i class=\"dropdown icon\"></i>Calendar Invites - Meetings</div>"
+                     "<div class=\"content\">"),
+            ("Field", "meeting_invites"),
+            ("Text", "<br><hr style='border: 1px dashed gray'>"
+                     "<p class\"ui help\">Automatically send me invites for the following types of meetings:<br>"),
+            ("Field", "meeting_invite_subscriptions"),
 
             ("Text", "</div></div><div class=\"ui segment\">"),
             ("Field", "ignore_user_action"),
