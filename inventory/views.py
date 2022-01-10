@@ -18,7 +18,7 @@ from django.urls.base import reverse
 from django.utils import timezone
 from xhtml2pdf import pisa
 
-from . import forms, models
+from . import forms, models, api
 from events.models import Location
 from emails.generators import DefaultLNLEmailGenerator
 from pdfs.views import link_callback
@@ -387,9 +387,213 @@ def item_detail(request, item_id):
 #         return HttpResponseBadRequest("Bad method")
 
 
+def update_tag_list(post_data, new_item):
+    """
+    Adds a new item to the list of asset tags stored in hidden fields on the Snipe Checkin and Checkout forms and
+    returns an additional dictionary containing basic information for each verified item.
+
+    :param post_data: The request's POST data
+    :param new_item: The next asset or accessory to add to the list
+    :returns: Updated form data and basic inventory item information (Dictionary and list of Dictionaries)
+    """
+
+    new_data = post_data.copy()
+    tags = new_data['saved_tags'].split('\n')
+    tags.append(str(new_item['id']) + "~~" + str(new_item['asset_tag']) + "~~" + new_item['name'] + "~~" +
+                new_item['rental_cost'])
+    if '' in tags:
+        tags.remove('')
+    new_data['saved_tags'] = '\n'.join(tags)
+    new_data.pop('asset_tag')
+    saved_tags = retrieve_saved_tags(new_data)
+    return new_data, saved_tags
+
+
+def retrieve_saved_tags(post_data):
+    """
+    Converts the asset tag data stored in a form into a list of dictionaries.
+
+    :param post_data: The request's POST data
+    :return: A list of dictionaries containing the metadata for the selected assets and/or accessories
+    """
+
+    tags = post_data['saved_tags'].split('\n')
+    if '' in tags:
+        tags.remove('')
+    saved_tags = [{'id': item.split('~~')[0], 'tag': item.split('~~')[1], 'name': item.split('~~')[2],
+                   'cost': float(item.split('~~')[3])} for item in tags]
+    return saved_tags
+
+
+def remove_saved_tag(post_data, tag):
+    """
+    Removes an item from the list of pending assets and/or accessories stored in a Snipe Checkin or Checkout form.
+
+    :param post_data: The request's POST data
+    :param tag: The asset tag value of the item to remove
+    :return: The updated form data and list of item metadata dictionaries
+    """
+
+    new_data = post_data.copy()
+    tags = new_data['saved_tags'].split('\n')
+    item = next((item for item in tags if item.split("~~")[1] == tag))
+    tags.remove(item)
+    new_data['saved_tags'] = '\n'.join(tags)
+    new_data.pop('asset_tag')
+    saved_tags = retrieve_saved_tags(new_data)
+    return new_data, saved_tags
+
+
 @login_required
 @permission_required('inventory.view_equipment', raise_exception=True)
 def snipe_checkout(request):
+    """ Equipment inventory checkout form. Communicates with the Snipe API. """
+
+    rental_clients = api.load_rental_clients()
+
+    if not rental_clients:
+        return HttpResponse("Failed to retrieve rental clients from Snipe", status=501)
+
+    saved_tags = []
+
+    if request.method == 'POST':
+        form = forms.SnipeCheckoutForm(rental_clients, request.POST, request.FILES)
+        if form.is_valid():
+            if request.POST['save'] == 'Add item' and request.POST['asset_tag'] not in ['', None]:
+                # Save item to list (if it exists and can be checked out)
+                new_tag = form.cleaned_data['asset_tag']
+                item = api.get_item_info(new_tag)
+                if item['status'] == 'OK':
+                    if item['user_can_checkout']:
+                        new_data, saved_tags = update_tag_list(request.POST, item)
+                        form = forms.SnipeCheckoutForm(rental_clients, new_data, request.FILES)
+                    else:
+                        messages.add_message(request, messages.ERROR,
+                                             "Item is not available for checkout at this time")
+                        saved_tags = retrieve_saved_tags(request.POST)
+                else:
+                    messages.add_message(request, messages.ERROR, item['messages'])
+                    saved_tags = retrieve_saved_tags(request.POST)
+
+            # Attempt to check out all the items
+            elif request.POST['save'] == 'Check out':
+                errors = []
+                receipt_data = []
+                success_count = {'accessories': 0, 'assets': 0}
+                for tag in retrieve_saved_tags(request.POST):
+                    is_accessory = re.match('LNLACC([0-9]+)', tag['tag'])
+                    if not is_accessory and tag in receipt_data:
+                        continue
+                    result = api.checkout(tag['id'], form.cleaned_data['checkout_to'], is_accessory)
+                    if result['status'] == 'error':
+                        errors.append({'item': tag, 'reason': result['messages']})
+                        continue
+
+                    # Item was checked out successfully! Update count and add to receipt
+                    if is_accessory:
+                        success_count['accessories'] += 1
+                    else:
+                        success_count['assets'] += 1
+
+                    receipt_data.append(tag)
+
+                if success_count['assets'] > 0 or success_count['accessories'] > 0:
+                    messages.add_message(request, messages.SUCCESS,
+                                         'Successfully checked out {} assets and {} accessories'.format(
+                                             success_count['assets'], success_count['accessories']))
+
+                renter = next((item[1] for item in rental_clients if item[0] == form.cleaned_data['checkout_to']))
+
+                receipt_info, total = generate_receipt(request, receipt_data, renter)
+
+                # Load the summary
+                return render(request, 'inventory/checkout_summary.html', {
+                    'receipt_info': receipt_info,
+                    'total': total,
+                    'errors': errors,
+                    'num_assets': success_count['assets'],
+                    'num_accessories': success_count['accessories'],
+                    'checkout_to': form.cleaned_data['checkout_to'],
+                    'checkout_to_name': renter
+                })
+
+            # Remove a pending item from the list
+            elif 'Delete' in request.POST['save']:
+                tag = str(request.POST['save'].split('~')[1])
+                new_data, saved_tags = remove_saved_tag(request.POST, tag)
+                form = forms.SnipeCheckoutForm(rental_clients, new_data, request.FILES)
+
+            else:
+                saved_tags = retrieve_saved_tags(request.POST)
+    else:
+        if 'checkout_to' in request.GET:
+            form = forms.SnipeCheckoutForm(rental_clients, initial={'checkout_to': request.GET['checkout_to']})
+        else:
+            form = forms.SnipeCheckoutForm(rental_clients)
+    return render(request, "form_rental.html", {
+        'msg': 'Inventory checkout',
+        'form': form,
+        'tags': saved_tags,
+        'submit_btn': "Check out"
+    })
+
+
+def generate_receipt(request, data, renter):
+    """
+    Generate a checkin or checkout receipt
+
+    :param data: List of dictionaries containing the metadata for each of the items that were just checked in or out
+    :param renter: The name of the user or organization the items were rented to
+    :return: Itemized list of item details and the total rental price
+    """
+
+    itemized_list = {}
+    success_count = {'accessories': 0, 'assets': 0}
+    for item in data:
+        asset_tag = item['tag']
+        is_accessory = re.match('LNLACC([0-9]+)', asset_tag)
+        if is_accessory:
+            success_count['accessories'] += 1
+            if asset_tag in itemized_list:
+                itemized_list[asset_tag]['quantity'] += 1
+            else:
+                itemized_list[asset_tag] = {'name': item['name'], 'rental_price': item['cost'], 'quantity': 1}
+        else:
+            success_count['assets'] += 1
+            if asset_tag not in itemized_list:
+                itemized_list[asset_tag] = {'name': item['name'], 'rental_price': item['cost'], 'quantity': 1}
+
+    # Determine total rental cost
+    rental_prices = [(None if asset_info['rental_price'] is None else
+                      asset_info['rental_price'] * asset_info['quantity']) for asset_info in itemized_list.values()]
+    total_rental_price = None if None in rental_prices else sum(rental_prices)
+
+    # Generate Receipt
+    html = render_to_string('pdf_templates/checkout_receipt.html', request=request, context={
+        'title': 'Checkout Receipt',
+        'receipt_info': itemized_list,
+        'num_assets': success_count['assets'],
+        'num_accessories': success_count['accessories'],
+        'total_rental_price': total_rental_price,
+        'checkout_to': renter,
+    })
+    pdf_file = BytesIO()
+    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    pdf_handle = pdf_file.getvalue()
+    filename = 'LNL-checkout-receipt-{}.pdf'.format(timezone.now().isoformat())
+    attachments = [{'file_handle': pdf_handle, 'name': filename}]
+    email = DefaultLNLEmailGenerator(subject='LNL Inventory Checkout Receipt',
+                                     to_emails=(request.user.email, settings.EMAIL_TARGET_RENTALS),
+                                     attachments=attachments,
+                                     body='A receipt for the rental checkout by {} to {} is attached.'.format(
+                                         request.user, renter))
+    email.send()
+    return itemized_list, total_rental_price
+
+
+@login_required
+@permission_required('inventory.view_equipment', raise_exception=True)
+def old_snipe_checkout(request):
     """ Equipment inventory checkout form. Communicates with Snipe via their API. """
     if not settings.SNIPE_URL:
         return HttpResponse('This page is unavailable because SNIPE_URL is not set.', status=501)
