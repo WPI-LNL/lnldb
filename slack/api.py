@@ -511,13 +511,13 @@ def load_app_home(user_id):
     tickets = []
     user = user_profile(user_id)
     if user['ok']:
-        ticket_ids = rt_api.get_tickets_for_user(user['user']['profile']['email'])
+        email = user['user']['profile']['email']
+        ticket_ids = sorted(rt_api.simple_ticket_search(requestor=email, status="__Active__"), reverse=True)
     for ticket_id in ticket_ids:
         ticket = rt_api.fetch_ticket(ticket_id)
         if ticket.get('message'):
             continue
-        if ticket['Status'] in ['open', 'new', 'stalled']:
-            tickets.append(ticket)
+        tickets.append(ticket)
     blocks = views.app_home(tickets)
 
     if not settings.SLACK_TOKEN:
