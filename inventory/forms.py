@@ -281,39 +281,3 @@ class SnipeCheckinForm(forms.Form):
                                  help_text='Enter asset tags and accessory barcodes separated by any non-alphanumeric '
                                            'character, white space, or new lines. For accessories, scan the accessory '
                                            'barcode multiple times for the number of that accessory being checked in.')
-
-
-class AccessForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        space = kwargs.pop('location')
-        r = kwargs.pop('reason')
-        self.helper = FormHelper()
-        self.helper.form_class = "form-horizontal col-md-6 m-auto"
-        self.helper.form_method = 'post'
-        self.helper.form_action = ''
-        title = "Sign in"
-        if not r:
-            reason_field = Field('reason')
-        else:
-            reason_field = Hidden('reason', value=r)
-            if r == "OUT":
-                title = "Sign out"
-        self.helper.layout = Layout(
-            HTML('<h2 class="h3">' + title + '</h2><br><p><strong>Location: </strong>' + space + '</p><hr>'),
-            Field('users'),
-            reason_field,
-            FormActions(
-                Submit('save', 'Submit')
-            )
-        )
-        super(AccessForm, self).__init__(*args, **kwargs)
-
-    users = AutoCompleteSelectMultipleField('Users', label="Select Members",
-                                            help_text="<span class='small'>Enter text to search. List everyone who is "
-                                                      "with you. Each member only needs to be checked in once per "
-                                                      "visit.</span><br><br>")
-    reason = forms.CharField(label="Reason for visit")
-
-    class Meta:
-        model = models.AccessRecord
-        fields = ('users', 'reason')

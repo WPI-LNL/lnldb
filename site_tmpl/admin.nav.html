@@ -166,9 +166,6 @@
                         {% endpermission %}
                         <li><a href="{% url 'inventory:snipe_checkout' %}">Inventory checkout</a></li>
                         <li><a href="{% url 'inventory:snipe_checkin' %}">Inventory checkin</a></li>
-                        {% permission request.user has 'inventory.view_access_logs' %}
-                        <li><a href="{% url 'inventory:view_logs' %}">Access Logs</a></li>
-                        {% endpermission %}
                         <li><a href="{% url 'inventory:snipe_password' %}">View inventory - Snipe</a></li>
                         <li><a target="_blank" href="https://lnl-rt.wpi.edu/rt/">Repairs ticket system - RT <i class="glyphicon glyphicon-new-window"></i></a></li>
                     </ul>

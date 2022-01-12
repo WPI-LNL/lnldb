@@ -241,19 +241,3 @@ class EquipmentMaintEntry(models.Model):
     class Meta:
         get_latest_by = "date"
         ordering = ['-date']
-
-
-class AccessRecord(models.Model):
-    """ Contact tracing log for LNL storage spaces """
-    users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="access_logs")
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="access_logs")
-    timestamp = models.DateTimeField(default=timezone.now)
-    reason = models.CharField(max_length=120)
-
-    def __str__(self):
-        return self.location.name
-
-    class Meta:
-        permissions = (
-            ('view_access_logs', 'View Access Logs'),
-        )
