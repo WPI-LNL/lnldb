@@ -45,6 +45,8 @@ urlpatterns = [
 
     url(r'^checkout/$', views.snipe_checkout, name="snipe_checkout"),
     url(r'^checkin/$', views.snipe_checkin, name="snipe_checkin"),
+    url(r'^checkout/legacy/$', views.old_snipe_checkout, name="legacy_checkout"),
+    url(r'^checkin/legacy/$', views.old_snipe_checkin, name="legacy_checkin"),
     url(r'^snipe/$', views.snipe_credentials, name="snipe_password"),
 
     url(r'^locations/(?P<location>[-\w]+)/checkin/$', views.log_access, name="log_access"),

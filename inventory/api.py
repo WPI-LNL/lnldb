@@ -96,3 +96,39 @@ def checkout(item_id, renter_id, accessory=False):
     else:
         return api_request('POST', '/hardware/%s/checkout' % item_id, {'checkout_to_type': 'user',
                                                                        'assigned_user': renter_id})
+
+
+def checkedout(tag):
+    """
+    Determine which users a specific accessory has been checked out to
+
+    :param tag: The item's asset tag number (String)
+    :return: List of active rentals for the specified item(s)
+    """
+
+    match = re.match('LNLACC([0-9]+)', tag)
+    if match:
+        # Item is an accessory
+        item_id = match.group(1)
+        response = api_request('GET', '/accessories/%s/checkedout' % item_id)
+        if response['status'] == 'OK':
+            return response['rows']
+    else:
+        # Item is not an accessory
+        raise ValueError('This method only works with accessories. Asset tag should start with "LNLACC"')
+    return response
+
+
+def checkin(identifier, accessory=False):
+    """
+    Check in an asset or accessory from a user
+
+    :param identifier: For accessories, use the ID of the accessory+user relationship. For assets, use its Snipe ID.
+    :param accessory: Must be true if the item is an accessory
+    :return: API Response
+    """
+
+    if accessory:
+        return api_request('POST', '/accessories/%s/checkin' % identifier)
+    else:
+        return api_request('POST', '/hardware/%s/checkin' % identifier)

@@ -40,6 +40,8 @@
             </form>
         </div>
     </div>
+    <br>
+    <a href="{% if submit_btn == "Check in" %}{% url 'inventory:legacy_checkin' %}{% else %}{% url 'inventory:legacy_checkout' %}{% endif %}" class="small" style="float: right">Switch to legacy tool</a>
 {% endblock %}
 
 {% block extras %}
