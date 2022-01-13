@@ -17,7 +17,7 @@ Lights website is available to all WPI community members.
             <div style="display:inline-block;">
                <h2 style="width:auto;">What's New?</h2>
                <ul>
-               <li><a href="release-notes/2021.html">What's new in 2021?</a></li>
+               <li><a href="release-notes/2022.html">What's new in 2022?</a></li>
                </ul>
             </div>
          </td>

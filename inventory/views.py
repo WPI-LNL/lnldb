@@ -852,6 +852,7 @@ def old_snipe_checkin(request):
 @login_required
 @permission_required('inventory.view_equipment', raise_exception=True)
 def snipe_credentials(request):
+    """ Display the login credentials for the general Snipe account """
     context = {
         'title': 'Snipe Login Credentials',
         'message': '<span style="font-size: 1.3em"><strong>Username:</strong> ' + settings.SNIPE_GENERAL_USER +
