@@ -4,6 +4,9 @@ import requests
 from django.conf import settings
 
 
+# Snipe API documentation can be found at: https://snipe-it.readme.io/reference/api-overview
+
+
 def api_request(method, endpoint, data=None):
     """
     Send an API request to Snipe

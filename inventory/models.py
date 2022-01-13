@@ -7,7 +7,6 @@ from django.db import models
 from django.db.models import Q
 from django.urls.base import reverse
 from six import python_2_unicode_compatible
-from django.utils import timezone
 from django.utils.functional import cached_property
 from mptt.fields import TreeForeignKey
 from mptt.managers import TreeManager
