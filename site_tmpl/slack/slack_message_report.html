@@ -1,0 +1,27 @@
+{% extends 'base_admin.html' %}
+{% load slack %}
+
+{% block content %}
+    <div class="row">
+        <div class="col">
+            <h1>Reported Details</h1>
+            <p style="padding-top: 1%; padding-bottom: 2%">
+                <strong>Posted by: </strong>{{ posted_by|id_to_name }}<br>
+                <strong>Posted to: </strong>{{ posted_to|id_to_name|channel_from_id }}<br>
+                <strong>Reported: </strong>{{ report.reported_on }}<br>
+                <strong>Reported by: </strong>{{ reported_by|id_to_name }}<br>
+                <strong>Status: </strong>{% if report.resolved %}Resolved{% else %}Open{% endif %}
+                <hr>
+                <strong>Message: </strong><br>{{ message }}<br>
+                <hr>
+                <strong>Comments: </strong><br>{{ report.comments }}<br>
+                <br>
+            </p>
+            <a class="btn btn-primary" href="{% url 'slack:moderate' %}">Return to List</a>
+            <form action="" method="post" style="display: inline-block">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">Resolve</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}

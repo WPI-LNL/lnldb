@@ -2,10 +2,13 @@ import requests
 import filetype
 from django.conf import settings
 from base64 import b64encode
+from urllib.parse import quote
 
 
 # API Methods
 host = 'https://lnl-rt.wpi.edu/rt/REST/2.0/'
+
+# Documentation for most of the endpoints used here can be found at: https://github.com/bestpractical/rt-extension-rest2
 
 
 def api_request(method, endpoint, data=None, token=None):
@@ -155,6 +158,119 @@ def ticket_comment(ticket_id, comments, notify=False, token=None):
     return api_request('POST', endpoint, payload, token=token)
 
 
+def ticket_history(ticket_id, simple=True, token=None):
+    """
+    Retrieve ticket history information from RT
+
+    :param ticket_id: The ticket's ID #
+    :param simple: If False, the response will contain more detailed information
+    :param token: RT Auth Token (uses the General account token if not provided)
+    :return: Dictionary - Contains a list of dictionaries with ticket history information
+    """
+
+    if not token:
+        token = settings.RT_TOKEN
+
+    headers = {"Content-Type": "application/json", "Authorization": "token " + token}
+    if simple:
+        endpoint = host.replace('2.0', '1.0') + 'ticket/' + str(ticket_id) + '/history'
+        response = requests.get(endpoint, headers=headers)
+
+        # Parse the response
+        try:
+            records = response.content.split(b'\n\n')[2].split(b'\n')
+            history = []
+            for record in records:
+                history.append({"id": record.split(b': ')[0], "description": record.split(b': ')[1]})
+        except IndexError:
+            # Return an error message
+            try:
+                if response.content.index(b'Error: ') == 0:
+                    return {"message": response.content.split(b'Error: ')[1].replace(b'\n', b' ')}
+            except ValueError:
+                pass
+            return {"message": "%s Unable to retrieve ticket history." % response.content.decode('utf-8')}
+    else:
+        endpoint = host.replace('2.0', '1.0') + 'ticket/' + str(ticket_id) + '/history?format=l'
+        response = requests.get(endpoint, headers=headers)
+
+        # Parse the response
+        try:
+            records = response.content.split(b'--\n\n#')
+            history = []
+            for record in records:
+                data = {}
+                fields = [("type", b"Type: "), ("description", b"Description: "), ("field", b"Field: "),
+                          ("old", b"OldValue: "), ("new", b"NewValue: "), ("user", b"Creator: "), ("datetime", b"Created: ")]
+                for key, field in fields:
+                    data[key] = record[record.index(field):].split(b'\n')[0].split(b': ')[1]
+                content = record[record.index(b'Content: '):].split(b'Creator: ')[0].split(b': ')[1]
+                content = b" ".join(b" ".join(content.splitlines()).split())
+                data["content"] = content
+                history.append(data)
+        except ValueError:
+            # Return an error message
+            try:
+                if response.content.index(b'Error: ') == 0:
+                    return {"message": response.content.split(b'Error: ')[1].replace(b'\n', b' ')}
+            except ValueError:
+                pass
+            return {"message": "%s Unable to retrieve ticket history." % response.content.decode('utf-8')}
+    return {"transactions": history}
+
+
+def simple_ticket_search(requestor=None, owner=None, queue=None, status=None):
+    """
+    Search for tickets in RT. You must provide a value for at least one of the following: `requestor`, `owner`, `queue`
+
+    :param requestor: Email address of the user that submitted the tickets
+    :param owner: Email address of the user the tickets have been assigned to
+    :param queue: Name of the RT queue (i.e. `Database`, `Repairs`, etc.)
+    :param status: Filter by ticket status (i.e. `New`, `Open`, `__Active__`, etc.) [Optional]
+    :return: A list of ticket ids
+    """
+
+    if not requestor and not owner and not queue:
+        raise ValueError("1 or more required fields are missing")
+
+    query = []
+
+    if requestor:
+        query.append("Requestor.EmailAddress = '" + requestor + "'")
+    if owner:
+        query.append("Owner.EmailAddress = '" + owner + "'")
+    if queue:
+        query.append("Queue = '" + queue + "'")
+    if status:
+        query.append("Status = '" + status + "'")
+
+    return search_tickets(" AND ".join(query))
+
+
+def search_tickets(query):
+    """
+    Obtain a list of RT tickets matching the specified query (works with pagination)
+
+    :param query: The TicketSQL query to use for the search
+    :return: A list of ticket ids
+    """
+
+    ids = []
+
+    results = api_request('GET', host + "tickets?query=" + quote(query))
+    if results.get('message', None):
+        return []
+    done = False
+    while not done:
+        for item in results['items']:
+            ids.append(int(item['id']))
+        if 'next_page' in results:
+            results = api_request('GET', results['next_page'])
+        else:
+            done = True
+    return sorted(ids)
+
+
 def get_user(username, token):
     """
     Obtain user profile from RT
@@ -177,18 +293,3 @@ def get_user(username, token):
         return None
 
     return api_request('GET', url, token=token)
-
-
-def get_tickets_for_user(user):
-    """
-    Obtain a list of RT tickets submitted by a user
-
-    :param user: Email address of the user
-    :return: A list of ticket ids
-    """
-
-    ids = []
-    results = api_request('GET', host + "tickets?query=Requestor.EmailAddress%20=%20'" + user.replace('@', '%40') + "'")
-    for item in results['items']:
-        ids.append(int(item['id']))
-    return sorted(ids, reverse=True)

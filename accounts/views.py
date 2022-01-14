@@ -22,7 +22,7 @@ from data.forms import form_footer
 from emails.generators import DefaultLNLEmailGenerator
 from events.models import Event2019, OfficeHour, CCReport
 from helpers import mixins, challenges
-from slack.api import lookup_user, user_add, user_kick
+from slack.api import lookup_user, user_profile, check_presence, user_add, user_kick
 
 from . import forms
 from .models import OfficerImg, UserPreferences
@@ -119,9 +119,16 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super(UserDetailView, self).get_context_data(**kwargs)
         context['u'] = u = self.object
-        context['hours'] = u.hours.filter(hours__isnull=False).select_related('event', 'service')
+        context['hours'] = u.hours.filter(hours__isnull=False).select_related('event', 'service', 'category')
         context['hour_total'] = u.hours.aggregate(hours=Sum('hours'))
         context['ccs'] = u.ccinstances.select_related('event').all()
+
+        slack_id = lookup_user(u.email)
+        slack_profile = user_profile(slack_id)
+        if slack_profile['ok']:
+            context['slack_id'] = slack_id
+            context['slack_username'] = slack_profile['user']['name']
+            context['slack_active'] = check_presence(slack_id)
 
         pending_reports = []
         for instance in context['ccs']:
@@ -399,6 +406,37 @@ class PasswordSetView(generic.FormView):
 
 
 @login_required
+def user_preferences(request):
+    """Update a user's account preferences (only visible to the user)"""
+    context = {'title': 'My Preferences', 'submit_btn': {'text': 'Save'}}
+    user = request.user
+
+    context['user'] = user
+    prefs, created = UserPreferences.objects.get_or_create(user=request.user)
+    form = forms.UserPreferencesForm(instance=prefs)
+    if request.POST:
+        form = forms.UserPreferencesForm(request.POST, instance=prefs)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.event_edited_field_subscriptions += ['location', 'datetime_setup_complete', 'datetime_start', 'datetime_end']
+            if request.POST.get('submit', None) == 'rt-delete':
+                obj.rt_token = None
+                obj.save()
+                form.save_m2m()
+                return HttpResponseRedirect(reverse("accounts:preferences"))
+            obj.save()
+            form.save_m2m()
+            messages.success(request, "Your preferences have been updated successfully!")
+            return HttpResponseRedirect(reverse("accounts:detail", args=[user.pk]))
+        else:
+            form_data = form.cleaned_data
+            form_data['srv'] = ['email', 'slack', 'sms']
+            form.data = form_data
+    context['form'] = form
+    return render(request, 'form_semanticui.html', context)
+
+
+@login_required
 @permission_required('accounts.change_membership', raise_exception=True)
 def officer_photos(request, pk=None):
     """Update officer headshot (displayed on the main LNL website about page)"""
@@ -461,7 +499,7 @@ def application_scope_request(request):
     del request.session['inverted']
 
     invert = False
-    prefs = UserPreferences.objects.get_or_create(user=request.user)
+    prefs, created = UserPreferences.objects.get_or_create(user=request.user)
     if inverted:
         invert = True
     elif inverted is None:

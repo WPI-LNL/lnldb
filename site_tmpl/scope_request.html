@@ -40,5 +40,5 @@
     {% endif %}
     <br>
     <a href="{% url "home" %}" class="ui gray button">Cancel</a>
-    <a href="{% url callback_uri %}" class="ui green button">Accept</a>
+    <a href="{{ callback_uri }}" class="ui green button">Accept</a>
 {% endblock %}

@@ -5,5 +5,6 @@ Release Notes
     :glob:
     :maxdepth: 2
 
+    2022
     2021
     2020

@@ -34,6 +34,7 @@ Accounts
     :maxdepth: 1
 
     accounts/update-profile
+    accounts/preferences
     accounts/local-login
     accounts/member-roles
     accounts/linking-rt

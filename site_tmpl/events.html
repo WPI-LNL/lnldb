@@ -247,10 +247,10 @@
     <ul class="pager">
         {% if events.has_previous %}
             <li class="previous">
-            <a href="{% append_to_get page=events.previous_page_number %}">&larr; Newer</a>
+            <a href="{% append_to_get page=events.previous_page_number %}">&larr; {%if pagninate_last_label %}{{pagninate_last_label}}{% else %}Newer{% endif %}</a>
         {% else %}
             <li class="previous disabled">
-            <a href="#" >&larr; Newer</a>
+            <a href="#" >&larr; {%if pagninate_last_label %}{{pagninate_last_label}}{% else %}Newer{% endif %}</a>
         {% endif %}
         
         </li>
@@ -260,10 +260,10 @@
         
         {% if events.has_next %}
             <li class="next">
-            <a href="{% append_to_get page=events.next_page_number %}">Older &rarr;</a>
+            <a href="{% append_to_get page=events.next_page_number %}">{%if pagninate_next_label %}{{pagninate_next_label}}{% else %}Older{% endif %} &rarr;</a>
         {% else %}
             <li class="next disabled">
-            <a href="#">Older &rarr;</a>
+            <a href="#">{%if pagninate_next_label %}{{pagninate_next_label}}{% else %}Older{% endif %} &rarr;</a>
         {% endif %}
         </li>
     </ul>

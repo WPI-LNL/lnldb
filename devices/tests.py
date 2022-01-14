@@ -343,9 +343,6 @@ class MDMTestCase(ViewTestCase):
             'user_profiles': [],
             'system_profiles_remove': [],
             'user_profiles_remove': [],
-            'apps_install': [],
-            'apps_update': False,
-            'apps_remove': [],
             'removal_password': None,
             'password': self.laptop2.admin_password
         }
@@ -355,23 +352,7 @@ class MDMTestCase(ViewTestCase):
             'user_profiles': [],
             'system_profiles_remove': [1],
             'user_profiles_remove': [],
-            'apps_install': [],
-            'apps_update': False,
-            'apps_remove': [],
             'removal_password': settings.MDM_PASS,
-            'password': self.laptop2.admin_password
-        }
-
-        output_with_apps = {
-            'status': 100,
-            'system_profiles': [],
-            'user_profiles': [],
-            'system_profiles_remove': [],
-            'user_profiles_remove': [],
-            'apps_install': ['test'],
-            'apps_update': True,
-            'apps_remove': ['test-2'],
-            'removal_password': None,
             'password': self.laptop2.admin_password
         }
 
@@ -408,16 +389,12 @@ class MDMTestCase(ViewTestCase):
 
         app = models.MacOSApp.objects.get(name="Test Application")
         app2 = models.MacOSApp.objects.get(name="Another Application")
-        app3 = models.MacOSApp.objects.create(name="Third Application", identifier="num-3", update_available=True)
+        app3 = models.MacOSApp.objects.create(name="Third Application", identifier="num-3")
         app.pending_install.add(self.laptop2)
         app2.pending_removal.add(self.laptop2)
         app3.installed.add(self.laptop2)
         app.save()
         app2.save()
-
-        # Install/update/remove apps on laptop
-        resp = self.client.post(reverse("mdm:checkin"), json.dumps(data), content_type="application/json")
-        self.assertEqual(resp.content, json.dumps(output_with_apps).encode('utf-8'))
 
         self.laptop2.refresh_from_db()
         self.assertIsNotNone(self.laptop2.last_checkin)
@@ -431,9 +408,17 @@ class MDMTestCase(ViewTestCase):
         # Check that GET request is not allowed
         self.assertOk(self.client.get(reverse("mdm:confirm-install")), 405)
 
+        data_with_apps = {
+            'APIKey': self.api_key2,
+            'apps': 'Test App=1.0.1#SecondApp=#Third App=2021.11 (1062)#',
+            'installed': [],
+            'removed': [],
+            'timestamp': '2020-01-01T11:59:00Z'
+        }
+
         data_install_profile = {
             'APIKey': self.api_key2,
-            'apps': '',
+            'apps': 'Test App=1.0.1#SecondApp=#Third App=2021.11 (1062)#',
             'installed': ['%s' % pk],
             'removed': [],
             'timestamp': '2020-01-01T11:59:00Z'
@@ -441,19 +426,39 @@ class MDMTestCase(ViewTestCase):
 
         data_remove_profile = {
             'APIKey': self.api_key2,
-            'apps': '',
+            'apps': 'Test App=1.0.1#SecondApp=#Third App=2021.11 (1062)#',
             'installed': [],
             'removed': ['%s' % pk],
             'timestamp': '2020-01-01T11:59:00Z'
         }
 
-        data_with_apps = {
-            'APIKey': self.api_key2,
-            'apps': 'test',
-            'installed': [],
-            'removed': [],
-            'timestamp': '2020-01-01T11:59:00Z'
-        }
+        # Verify that one of the MacOS apps does not exist at first
+        self.assertFalse(models.MacOSApp.objects.filter(name="Test App").exists())
+
+        # Create an app that has been assigned to the device
+        app = models.MacOSApp.objects.create(name="SecondApp", managed=True)
+        app.pending_install.add(self.laptop2)
+
+        # Create a record for an app that has been removed from the device
+        app2 = models.MacOSApp.objects.create(name="AnotherApp")
+        models.InstallationRecord.objects.create(app=app2, device=self.laptop2)
+        app2.installed.add(self.laptop2)
+
+        # Create an app that has been merged into another
+        models.MacOSApp.objects.create(name="Third App", merged_into=app)
+
+        resp = self.client.post(reverse("mdm:confirm-install"), json.dumps(data_with_apps),
+                                content_type="application/json")
+        self.assertEqual(resp.content, json.dumps({'status': 200}).encode('utf-8'))
+
+        app.refresh_from_db()
+
+        self.assertIn(self.laptop2, app.installed.all())
+        self.assertNotIn(self.laptop2, app.pending_install.all())
+        self.assertNotIn(self.laptop2, app2.installed.all())
+        self.assertTrue(models.InstallationRecord.objects.filter(app=app2, device=self.laptop2, active=False).exists())
+        self.assertTrue(models.MacOSApp.objects.filter(name="Test App").exists())
+        self.assertEqual(app.version, "2021.11 (1062)")
 
         # Verify that record does not exist at first
         profile = models.ConfigurationProfile.objects.get(pk=pk)
@@ -486,20 +491,6 @@ class MDMTestCase(ViewTestCase):
         self.assertNotIn(profile, self.laptop2.installed.all())
 
         self.assertFalse(models.InstallationRecord.objects.get(profile=profile, device=self.laptop2).active)
-
-        app = models.MacOSApp.objects.get(name="Test Application")
-        app2 = models.MacOSApp.objects.get(name="Another Application")
-        app.pending_install.add(self.laptop2)
-        app2.pending_removal.add(self.laptop2)
-        models.InstallationRecord.objects.create(app=app2, device=self.laptop2, active=True)
-
-        # Check that apps are accounted for properly (either when removed or installed)
-        resp = self.client.post(reverse("mdm:confirm-install"), json.dumps(data_with_apps),
-                                content_type="application/json")
-        self.assertEqual(resp.content, json.dumps({'status': 200}).encode('utf-8'))
-
-        self.assertIn(self.laptop2, app.installed.all())
-        self.assertTrue(models.InstallationRecord.objects.filter(app=app2, device=self.laptop2, active=False).exists())
 
     def test_get_profile_metadata(self):
         self.setup()
@@ -1376,6 +1367,17 @@ class MDMTestCase(ViewTestCase):
         # Test response for profile not linked to device
         self.assertOk(self.client.get(reverse("mdm:disassociate", args=[1, 2])), 404)
 
+    def test_view_app(self):
+        self.setup()
+
+        # By default, the user should not have permission to view app details
+        self.assertOk(self.client.get(reverse("mdm:app-detail", args=[1])), 403)
+
+        permission = Permission.objects.get(codename="view_apps")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("mdm:app-detail", args=[1])))
+
     def test_app_list(self):
         # By default, user should not have permission to view the app list
         self.assertOk(self.client.get(reverse("mdm:app-list")), 403)
@@ -1396,8 +1398,9 @@ class MDMTestCase(ViewTestCase):
 
         request_data = {
             "name": "New Application",
-            "identifier": "new-app",
             "developer": "",
+            "version": "",
+            "developer_website": "",
             "save": "Submit"
         }
 
@@ -1407,10 +1410,13 @@ class MDMTestCase(ViewTestCase):
             "developer": "",
             "version": "",
             "description": "",
+            "developer_website": "",
             "save": "Submit"
         }
 
         self.assertRedirects(self.client.post(reverse("mdm:add-app"), request_data), reverse("home"))
+
+        self.assertTrue(models.MacOSApp.objects.filter(name="New Application").exists())
 
         # If user has manage permissions, enable more options and redirect to app list
         permission = Permission.objects.get(codename="manage_apps")
@@ -1422,7 +1428,7 @@ class MDMTestCase(ViewTestCase):
 
         self.assertRedirects(self.client.post(reverse("mdm:add-app"), valid_data), reverse("mdm:apps"))
 
-        self.assertEqual(models.MacOSApp.objects.count(), 2)
+        self.assertTrue(models.MacOSApp.objects.filter(name="Another New Application").exists())
 
     def test_app_info(self):
         self.setup()
@@ -1447,7 +1453,8 @@ class MDMTestCase(ViewTestCase):
             "version": "2.0.0",
             "developer": "Lifts and Locks Inc.",
             "description": "Updated app description",
-            "update_available": False,
+            "developer_website": "https://lifts-n-locks.com",
+            "requires_license": True,
             "save": "Save Changes"
         }
 
@@ -1455,14 +1462,30 @@ class MDMTestCase(ViewTestCase):
         app.refresh_from_db()
         self.assertEqual(app.name, "Updated Application")
 
-        # Check that we can save mark for update
+        # Check that the merge button redirects to the proper page
+        merge_data = {
+            "name": "Updated Application",
+            "identifier": "",
+            "version": "2.0.0",
+            "developer": "Lifts and Locks LLC.",
+            "description": "Updated app description",
+            "developer_website": "https://lifts-n-locks.com",
+            "requires_license": True,
+            "save": "Merge"
+        }
+
+        self.assertRedirects(self.client.post(reverse("mdm:edit-app", args=[app.pk]), merge_data),
+                             reverse("mdm:merge-app", args=[app.pk]))
+
+        # Check that we can request to delete the application
         delete_data = {
             "name": "Updated Application",
             "identifier": "test",
             "version": "2.0.0",
             "developer": "Lifts and Locks LLC.",
             "description": "Updated app description",
-            "update_available": False,
+            "developer_website": "https://lifts-n-locks.com",
+            "requires_license": True,
             "save": "Delete"
         }
 
@@ -1471,6 +1494,56 @@ class MDMTestCase(ViewTestCase):
 
         self.assertRedirects(self.client.post(reverse("mdm:edit-app", args=[app.pk]), delete_data),
                              reverse("mdm:remove-app", args=[app.pk]))
+
+    def test_merge_apps(self):
+        self.setup()
+
+        # Attempt to merge "Another Application" into "Test Application"
+        app = models.MacOSApp.objects.get(name="Test Application")
+
+        app2 = models.MacOSApp.objects.get(name="Another Application")
+        app2.version = "1.0.1"
+        app2.developer = "Da Webmaster"
+        app2.developer_website = "https://wpi.edu"
+        app2.description = "It's a computer program"
+        app2.save()
+
+        # By default, users should not have permission to merge apps
+        self.assertOk(self.client.get(reverse("mdm:merge-app", args=[app2.pk])), 403)
+
+        permission = Permission.objects.get(codename="manage_apps")
+        self.user.user_permissions.add(permission)
+
+        # Will need view_apps permission for redirect
+        permission = Permission.objects.get(codename="view_apps")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("mdm:merge-app", args=[app2.pk])))
+
+        valid_data = {
+            "options": str(app.pk),
+            "save": "Merge"
+        }
+
+        self.assertRedirects(self.client.post(reverse("mdm:merge-app", args=[app2.pk]), valid_data),
+                             reverse("mdm:apps"))
+
+        app.refresh_from_db()
+        app2.refresh_from_db()
+
+        self.assertEqual(app.version, "1.0.1")
+        self.assertEqual(app.developer, "Da Webmaster")
+        self.assertEqual(app.developer_website, "https://wpi.edu")
+        self.assertEqual(app.description, "It's a computer program")
+        self.assertEqual(app2.merged_into, app)
+
+        # Attributes currently aren't changed if they already exist
+        app3 = models.MacOSApp.objects.create(name="A third app", description="Test description", version="20.22")
+
+        self.assertRedirects(self.client.post(reverse("mdm:merge-app", args=[app3.pk]), valid_data),
+                             reverse("mdm:apps"))
+
+        self.assertEqual(app.description, "It's a computer program")
 
     def test_list_apps(self):
         self.setup()
@@ -1511,6 +1584,10 @@ class MDMTestCase(ViewTestCase):
         self.laptop2.save()
 
         app = models.MacOSApp.objects.get(name="Test Application")
+        app.installed.add(self.laptop2)
+
+        app2 = models.MacOSApp.objects.get(name="Another Application")
+        app2.installed.add(self.laptop2)
 
         # By default, user should not be allowed to deploy apps
         self.assertOk(self.client.get(reverse("mdm:assign-apps", args=[self.laptop2.pk])), 403)
@@ -1521,8 +1598,7 @@ class MDMTestCase(ViewTestCase):
         # Check that we get an error message when there are no eligible apps to list
         self.assertContains(self.client.get(reverse("mdm:assign-apps", args=[self.laptop2.pk])), "Hmm...")
 
-        app.version = "1.0.1"
-        app.save()
+        app.installed.remove(self.laptop2)
 
         self.assertOk(self.client.get(reverse("mdm:assign-apps", args=[self.laptop2.pk])))
 
@@ -1586,34 +1662,18 @@ class MDMTestCase(ViewTestCase):
 
         app = models.MacOSApp.objects.create(name="Another New Application", identifier="thing")
         self.laptop2.apps_installed.add(app)
+        models.InstallationRecord.objects.create(app=app, device=self.laptop2)
 
         self.assertOk(self.client.get(reverse("mdm:remove-app", args=[app.pk])))
 
         # Load form if options need to be presented
         self.assertOk(self.client.get(reverse("mdm:uninstall-app", args=[self.laptop2.pk, app.pk])))
 
-        unlink_app_auto = {
-            "options": 'auto',
-            "save": 'Submit'
-        }
-
         unlink_app_manual = {
-            "options": 'manual',
             "save": 'Submit'
         }
 
-        # Check that we have arranged app to be removed automatically at next checkin
-        self.assertRedirects(self.client.post(reverse("mdm:uninstall-app", args=[self.laptop2.pk, app.pk]),
-                                              unlink_app_auto), reverse("mdm:apps"))
-        self.laptop2.refresh_from_db()
-        self.assertNotIn(app, self.laptop2.apps_installed.all())
-        self.assertIn(app, self.laptop2.apps_remove.all())
-
-        self.laptop2.apps_remove.remove(app)
-        self.laptop2.apps_installed.add(app)
-        models.InstallationRecord.objects.create(device=self.laptop2, app=app)
-
-        # App should have been removed already
+        # Remove laptop from app record
         self.assertRedirects(self.client.post(reverse("mdm:uninstall-app", args=[self.laptop2.pk, app.pk]),
                                               unlink_app_manual), reverse("mdm:apps"))
         self.laptop2.refresh_from_db()
@@ -1624,14 +1684,6 @@ class MDMTestCase(ViewTestCase):
         self.laptop2.apps_installed.add(app)
         self.laptop.apps_pending.add(app)
 
-        self.assertRedirects(self.client.post(reverse("mdm:remove-app", args=[app.pk]), unlink_app_auto),
-                             reverse("mdm:apps"))
-        self.assertNotIn(app, self.laptop.apps_pending.all())
-        self.assertNotIn(app, self.laptop2.apps_installed.all())
-        self.assertIn(app, self.laptop2.apps_remove.all())
-
-        self.laptop2.apps_remove.remove(app)
-        self.laptop2.apps_installed.add(app)
         models.InstallationRecord.objects.create(device=self.laptop2, app=app)
 
         self.assertRedirects(self.client.post(reverse("mdm:remove-app", args=[app.pk]), unlink_app_manual),

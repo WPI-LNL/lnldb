@@ -3,6 +3,7 @@ import logging
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.shortcuts import reverse
+from django.db import connection
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseServerError, JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
@@ -13,7 +14,7 @@ from slack_sdk.errors import SlackApiError
 from accounts.models import UserPreferences
 from data.decorators import process_in_thread
 from rt import api as rt_api
-from . import views
+from . import views, models
 
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,28 @@ def load_channels(archived=False):
     except SlackApiError as e:
         assert e.response['ok'] is False
         return e.response
+
+
+def channel_info(channel_id):
+    """
+    Retrieves all the information about a channel
+
+    :param channel_id: The ID of the channel
+    :return: Channel details (Dictionary)
+    """
+
+    if not settings.SLACK_TOKEN:
+        return None
+
+    client = WebClient(token=settings.SLACK_TOKEN)
+
+    try:
+        response = client.conversations_info(channel=channel_id)
+        assert response['ok'] is True
+        return response['channel']
+    except SlackApiError as e:
+        assert e.response['ok'] is False
+        return None
 
 
 def join_channel(channel):
@@ -185,6 +208,54 @@ def post_ephemeral(channel, text, user, username=None):
         return e.response
 
 
+def message_react(channel, message, reaction):
+    """
+    React to a Slack message
+
+    :param channel: The channel the message was posted to
+    :param message: The timestamp of the message
+    :param reaction: The name of the emoji to react to the message with
+    :return: Response object (Dictionary)
+    """
+
+    if not settings.SLACK_TOKEN:
+        return {'ok': False, 'error': 'config_error'}
+
+    client = WebClient(token=settings.SLACK_TOKEN)
+
+    try:
+        response = client.reactions_add(channel=channel, timestamp=message, name=reaction)
+        assert response['ok'] is True
+        return response
+    except SlackApiError as e:
+        assert e.response['ok'] is False
+        return e.response
+
+
+def message_unreact(channel, message, reaction):
+    """
+    Remove a reaction from a Slack message
+
+    :param channel: The channel the message was posted to
+    :param message: The timestamp of the message
+    :param reaction: The name of the emoji to remove from the message
+    :return: Response object (Dictionary)
+    """
+
+    if not settings.SLACK_TOKEN:
+        return {'ok': False, 'error': 'config_error'}
+
+    client = WebClient(token=settings.SLACK_TOKEN)
+
+    try:
+        response = client.reactions_remove(channel=channel, timestamp=message, name=reaction)
+        assert response['ok'] is True
+        return response
+    except SlackApiError as e:
+        assert e.response['ok'] is False
+        return e.response
+
+
 def retrieve_message(channel, message_id):
     """
     Retrieve a single message from Slack
@@ -238,6 +309,29 @@ def replace_message(channel, message_id, text=None, content=None):
             return e.response
     else:
         return {'ok': False, 'error': 'no_text'}
+
+
+def message_link(channel, message_id):
+    """
+    Get a permalink for a specific message in Slack.
+
+    :param channel: The channel the message was posted in
+    :param message_id: The timestamp of the message
+    :return: Permalink URL
+    """
+
+    if not settings.SLACK_TOKEN:
+        return None
+
+    client = WebClient(token=settings.SLACK_TOKEN)
+
+    try:
+        response = client.chat_getPermalink(channel=channel, message_ts=message_id)
+        assert response['ok'] is True
+        return response['permalink']
+    except SlackApiError as e:
+        assert e.response['ok'] is False
+        return None
 
 
 def user_add(channel, users):
@@ -396,6 +490,11 @@ def handle_event(request):
         elif event['type'] == "app_home_opened":
             load_app_home(event['user'])
         return HttpResponse()
+    elif payload['type'] == "channel_created":
+        channel_id = payload['channel']['id']
+        if settings.SLACK_AUTO_JOIN:
+            join_channel(channel_id)
+        return HttpResponse()
     return HttpResponse("Not implemented")
 
 
@@ -412,13 +511,13 @@ def load_app_home(user_id):
     tickets = []
     user = user_profile(user_id)
     if user['ok']:
-        ticket_ids = rt_api.get_tickets_for_user(user['user']['profile']['email'])
+        email = user['user']['profile']['email']
+        ticket_ids = sorted(rt_api.simple_ticket_search(requestor=email, status="__Active__"), reverse=True)
     for ticket_id in ticket_ids:
         ticket = rt_api.fetch_ticket(ticket_id)
         if ticket.get('message'):
             continue
-        if ticket['Status'] in ['open', 'new', 'stalled']:
-            tickets.append(ticket)
+        tickets.append(ticket)
     blocks = views.app_home(tickets)
 
     if not settings.SLACK_TOKEN:
@@ -452,6 +551,22 @@ def handle_interaction(request):
         callback_id = payload.get('callback_id', None)
         if callback_id == "tfed":
             blocks = views.tfed_modal()
+            modal_id = open_modal(payload.get('trigger_id', None), blocks)
+            if modal_id:
+                return HttpResponse()
+            return HttpResponseServerError("Failed to open modal")
+    if interaction_type == "message_action":
+        callback_id = payload.get('callback_id', None)
+        if callback_id == "report":
+            channel = payload.get('channel', {'id': None})['id']
+            sender = payload['message'].get('user', None)
+            if not sender:
+                sender = payload['message']['username']
+            ts = payload['message']['ts']
+            text = payload['message']['text']
+            message, created = models.SlackMessage.objects.get_or_create(posted_to=channel, posted_by=sender, ts=ts,
+                                                                         content=text)
+            blocks = views.report_message_modal(message)
             modal_id = open_modal(payload.get('trigger_id', None), blocks)
             if modal_id:
                 return HttpResponse()
@@ -505,6 +620,12 @@ def handle_interaction(request):
             user_id = payload['user']['id']
             token = __retrieve_rt_token(user_id)
             __post_ticket_comment(ticket_id, user_id, comments, token)
+            return HttpResponse()
+        elif callback_id == "report-modal":
+            message_id = payload['view']['blocks'][0]['block_id']
+            comments = values['report-comment']['comment-action']['value']
+            reporter = payload['user']['id']
+            __save_report(message_id, reporter, comments)
             return HttpResponse()
         return HttpResponseNotFound()
 
@@ -719,6 +840,39 @@ def __retrieve_rt_token(user_id):
             prefs = UserPreferences.objects.filter(user=user).first()
             if prefs:
                 if prefs.rt_token:
-                    cipher_suite = Fernet(settings.RT_CRYPTO_KEY)
+                    cipher_suite = Fernet(settings.CRYPTO_KEY)
                     return cipher_suite.decrypt(prefs.rt_token.encode('utf-8')).decode('utf-8')
     return None
+
+
+@process_in_thread
+def __save_report(message_id, reporter, comments):
+    """
+    Create a report when a user reports a problematic Slack message
+
+    :param message_id: The primary key value of the corresponding SlackMessage object
+    :param reporter: Slack user ID for the user that reported the message
+    :param comments: Optional comments for the report
+    """
+
+    message = models.SlackMessage.objects.get(pk=message_id)
+
+    # Ensure message was posted to public channel. For privacy reasons, we currently do not report private messages.
+    channel_details = channel_info(message.posted_to)
+    if channel_details['is_channel'] and not channel_details['is_private']:
+        report = models.ReportedMessage.objects.create(message=message, comments=comments, reported_by=reporter)
+
+        # Send Exec a notification
+        blocks = views.reported_message_notification(reporter, report)
+        slack_post(settings.SLACK_TARGET_EXEC, text="You have a new flagged message to review", content=blocks,
+                   username="Admin Console")
+
+        # Add red flag to message (to inform sender their message has been reported)
+        # message_react(message.posted_to, message.ts, 'triangular_flag_on_post')
+    else:
+        message.public = False
+        message.save()
+
+        post_ephemeral(message.posted_to, "This feature currently does not support reporting private messages. Please "
+                                          "contact a member of the executive board directly.", reporter)
+    connection.close()

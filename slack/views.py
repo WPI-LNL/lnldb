@@ -1,3 +1,67 @@
+from django.contrib.auth.decorators import permission_required, login_required
+from django.shortcuts import reverse, render, get_object_or_404
+from django.http import HttpResponseRedirect
+
+from .models import ReportedMessage
+from .api import lookup_user, user_profile, message_link, channel_info
+
+
+# Slack Management Views
+@login_required
+@permission_required('slack.view_reportedmessage', raise_exception=True)
+def report_list(request):
+    """
+    View Slack messages reported for moderation
+    """
+
+    reports = ReportedMessage.objects.filter(resolved=False)
+    if request.method == 'POST':
+        report_id = request.POST['report_id']
+        report = ReportedMessage.objects.get(pk=report_id)
+        report.resolved = True
+        report.save()
+        # message_unreact(report.message.posted_to, report.message.ts, 'triangular_flag_on_post')
+        return HttpResponseRedirect(reverse('slack:moderate'))
+
+    return render(request, 'slack/slack_message_list.html', {'title': 'Reported Messages', 'reports': reports})
+
+
+@login_required
+@permission_required('slack.view_reportedmessage', raise_exception=True)
+def view_report(request, pk):
+    """
+    View full report for a Slack message that has been flagged for moderation
+    """
+
+    report = get_object_or_404(ReportedMessage, pk=pk)
+
+    if request.method == 'POST':
+        report.resolved = True
+        report.save()
+        # message_unreact(report.message.posted_to, report.message.ts, 'triangular_flag_on_post')
+        return HttpResponseRedirect(reverse('slack:moderate'))
+
+    posted_to = report.message.posted_to
+    info = channel_info(posted_to)
+    if info:
+        posted_to = '#' + info['name']
+
+    slack_message = report.message.content
+    if report.message.blocks:
+        slack_message = "<a href='https://wpilnl.slack.com/app_redirect?channel=" + \
+                        report.message.posted_to + "'>Click here to view message</a>"
+
+    context = {
+        'posted_by': report.message.posted_by,
+        'posted_to': posted_to,
+        'report': report,
+        'reported_by': report.reported_by,
+        'message': slack_message
+    }
+
+    return render(request, 'slack/slack_message_report.html', context)
+
+
 # Block Kit Views
 def generate_modal(title, callback_id, blocks):
     """
@@ -502,3 +566,265 @@ def ticket_comment_modal(ticket_id):
     ]
 
     return generate_modal("Comments", "ticket-comment-modal", blocks)
+
+
+def report_message_modal(message):
+    """
+    Blocks for the modal view that is displayed when a user reports a problematic Slack message.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param message: A SlackMessage object representing the message
+    """
+
+    blocks = [
+        {
+            "type": "section",
+            "block_id": str(message.pk),
+            "text": {
+                "type": "plain_text",
+                "text": "This message will be flagged and sent to a moderator for review.",
+                "emoji": False
+            }
+        },
+        {
+            "type": "input",
+            "block_id": "report-comment",
+            "element": {
+                "type": "plain_text_input",
+                "multiline": True,
+                "action_id": "comment-action"
+            },
+            "label": {
+                "type": "plain_text",
+                "text": "Comments",
+                "emoji": False
+            },
+            "optional": True
+        }
+    ]
+
+    return generate_modal('Report a message', 'report-modal', blocks)
+
+
+def reported_message_notification(sender, report):
+    """
+    Blocks for the notification sent to the Webmaster whenever a new report is submitted.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param sender: The Slack ID for the user that sent the report
+    :param report: The corresponding ReportedMessage object
+    """
+
+    reporter = "Someone"
+    slack_user = user_profile(sender)
+    if slack_user['ok']:
+        reporter = "@" + slack_user['user']['name']
+
+    link = message_link(report.message.posted_to, report.message.ts)
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "%s has flagged a new message for review by a moderator." % reporter
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":slack:  View in Slack",
+                        "emoji": True
+                    },
+                    "style": "primary",
+                    "url": link,
+                    "action_id": "reported-message-slack"
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Report",
+                        "emoji": False
+                    },
+                    "url": "https://lnl.wpi.edu" + reverse("slack:report", args=[report.pk]),
+                    "action_id": "reported-message-report"
+                }
+            ]
+        }
+    ]
+
+    if not link:
+        del blocks[1]['elements'][0]
+
+    return blocks
+
+
+def cc_add_notification(cci):
+    """
+    Blocks for a Crew Chief add notification.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param cci: EventCCInstance object
+    """
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "You've been added as a crew chief to the event *%s*. Your setup is currently scheduled for "
+                        "*%s* in the *%s*." % (cci.event.event_name, cci.setup_start.strftime('%b %-d, %Y at %-I:%M %p'),
+                                               cci.setup_location.name.strip())
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Event Details",
+                        "emoji": False
+                    },
+                    "style": "primary",
+                    "url": "https://lnl.wpi.edu" + reverse("events:detail", args=[cci.event.pk]),
+                    "action_id": "cc-add-%s" % cci.event.pk
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":calendar:  Add to calendar",
+                        "emoji": True
+                    },
+                    "url": "https://lnl.wpi.edu" + reverse("events:ics", args=[cci.event.pk]),
+                    "action_id": "ics-download-%s" % cci.event.pk
+                },
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":page_facing_up:  Submit CC Report",
+                        "emoji": True
+                    },
+                    "url": "https://lnl.wpi.edu" + reverse("my:report", args=[cci.event.pk]),
+                    "action_id": "cc-report-%s" % cci.event.pk
+                }
+            ]
+        }
+    ]
+
+    return blocks
+
+
+def cc_report_reminder(cci):
+    """
+    Blocks for a missing crew chief report reminder
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param cci: EventCCInstance object
+    """
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "CC Report Reminder",
+                "emoji": False
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "This is a reminder that you have a pending crew chief report for *%s*.\n\n\n"
+                        "Submitting a crew chief report and recording crew hours are required parts of being a crew "
+                        "chief. These tasks are expected to be completed shortly after an event while you still have "
+                        "all the details of the event fresh in your mind. Delaying submitting your crew chief report "
+                        "directly delays the billing of this event." % cci.event.event_name
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":page_facing_up:  Submit Report",
+                        "emoji": True
+                    },
+                    "style": "primary",
+                    "url": "https://lnl.wpi.edu" + reverse("my:report", args=[cci.event.pk]),
+                    "action_id": "cc-report-%s" % cci.event.pk
+                }
+            ]
+        }
+    ]
+
+    return blocks
+
+
+def event_edited_notification(event, triggered_by, fields_changed):
+    """
+    Blocks for an event edited Slack notification.
+    Generated using the Block Kit Builder (https://app.slack.com/block-kit-builder)
+
+    :param event: The event object
+    :param triggered_by: The user that edited the event
+    :param fields_changed: A list of fields that have changed
+    """
+
+    user = triggered_by.get_full_name()
+    slack_user = user_profile(lookup_user(triggered_by.email))
+    if slack_user['ok']:
+        user = "@" + slack_user['user']['name']
+
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "The following event was just edited by %s" % user
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*Fields changed*: %s\n\n> *%s*\n> _%s_\n> *Start*: %s\n> *End*: %s\n> *Services*: %s\n"
+                        "> *Client*: %s" % (', '.join(fields_changed), event.event_name, event.location,
+                                            event.datetime_start.strftime('%b %-d, %Y, %-I:%M %p'),
+                                            event.datetime_end.strftime('%b %-d, %Y, %-I:%M %p'), event.short_services,
+                                            event.org_to_be_billed)
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Event",
+                        "emoji": False
+                    },
+                    "style": "primary",
+                    "url": "https://lnl.wpi.edu" + reverse('events:detail', args=[event.pk]),
+                    "action_id": "edited-event-%s" % str(event.pk)
+                }
+            ]
+        }
+    ]
+
+    return blocks

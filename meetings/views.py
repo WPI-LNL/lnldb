@@ -11,16 +11,18 @@ from django.http.response import Http404
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 from django.utils import timezone
+from django.conf import settings
 from email.mime.base import MIMEBase
 from email.encoders import encode_base64
 from helpers.util import curry_class
 
 from helpers.mixins import HasPermMixin, LoginRequiredMixin
 from data.views import serve_file
-from emails.generators import generate_notice_cc_email, generate_notice_email
+from emails.generators import generate_notice_cc_email, generate_notice_email, DefaultLNLEmailGenerator
 from events.forms import CCIForm
 from events.models import BaseEvent, EventCCInstance
-from events.cal import generate_ics
+from events.cal import generate_ics, EventAttendee
+from accounts.models import UserPreferences
 
 from .forms import (AnnounceCCSendForm, AnnounceSendForm, MeetingAdditionForm,
                     MtgAttachmentEditForm)
@@ -167,17 +169,19 @@ def editattendance(request, mtg_id):
             request.user.has_perms(perms, m)):
         raise PermissionDenied
     if request.method == 'POST':
-        form = MeetingAdditionForm(request.POST, request.FILES, instance=m)
+        form = MeetingAdditionForm(data=request.POST, files=request.FILES, instance=m, request_user=request.user)
         if form.is_valid():
-            for each in form.cleaned_data['attachments']:
+            for each in form.cleaned_data.get('attachments', []):
                 MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m, private=False)
-            for each in form.cleaned_data['attachments_private']:
+            for each in form.cleaned_data.get('attachments_private', []):
                 MtgAttachment.objects.create(file=each, name=each.name, author=request.user, meeting=m, private=True)
             m = form.save()
+            if 'location' in form.changed_data or 'datetime' in form.changed_data:
+                send_invite(m, is_update=True)
             url = reverse('meetings:detail', args=(m.id,)) + "#attendance"
             return HttpResponseRedirect(url)
     else:
-        form = MeetingAdditionForm(instance=m)
+        form = MeetingAdditionForm(instance=m, request_user=request.user)
     context['form'] = form
     return render(request, 'form_crispy_meetings.html', context)
 
@@ -218,12 +222,19 @@ def newattendance(request):
     """ Create a new meeting """
     context = {}
     if request.method == 'POST':
-        form = MeetingAdditionForm(request.POST)
+        form = MeetingAdditionForm(request.user, request.POST, request.FILES)
         if form.is_valid():
-            m = form.save()
-            return HttpResponseRedirect(reverse('meetings:detail', args=(m.id,)))
+            mtg = form.save()
+            send_invite(mtg)
+            for attachment in form.cleaned_data.get('attachments', []):
+                MtgAttachment.objects.create(file=attachment, name=attachment.name, author=request.user, private=False,
+                                             meeting=mtg)
+            for attachment in form.cleaned_data.get('attachments_private', []):
+                MtgAttachment.objects.create(file=attachment, name=attachment.name, author=request.user, private=True,
+                                             meeting=mtg)
+            return HttpResponseRedirect(reverse('meetings:detail', args=(mtg.id,)))
     else:
-        form = MeetingAdditionForm()
+        form = MeetingAdditionForm(request.user)
     context['form'] = form
     context['msg'] = "New Meeting"
     return render(request, 'form_crispy_meetings.html', context)
@@ -239,6 +250,13 @@ class DeleteMeeting(LoginRequiredMixin, HasPermMixin, DeleteView):
 
     def get_success_url(self):
         return reverse("meetings:list")
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        success_url = self.get_success_url()
+        send_invite(self.object, is_cancellation=True)
+        self.object.delete()
+        return HttpResponseRedirect(success_url)
 
 
 @login_required
@@ -323,3 +341,54 @@ def download_invite(request, mtg_id):
     response = HttpResponse(invite, content_type="text/calendar")
     response['Content-Disposition'] = "attachment; filename=invite.ics"
     return response
+
+
+def send_invite(meeting, is_update=False, is_cancellation=False):
+    """
+    Generate and send an interactive calendar invite for a meeting (separate from a meeting notice).
+
+    :param meeting: The meeting to include in the invite
+    :param is_update: Set to True if the meeting details have just been updated
+    :param is_cancellation: Set to True if the meeting has been cancelled
+    """
+
+    subscribers = []
+    recipients = []
+
+    user_prefs = UserPreferences.objects.filter(meeting_invite_subscriptions__in=[meeting.meeting_type])
+    for record in user_prefs:
+        if record.meeting_invites:
+            subscribers.append(record.user)
+            recipients.append(record.user.email)
+
+    attendees = []
+    for user in meeting.attendance.all():
+        attendees.append(EventAttendee(meeting, user))
+    for user in subscribers:
+        if user not in meeting.attendance.all():
+            attendees.append(EventAttendee(meeting, user, False))
+
+    agenda = "You're receiving this message because you signed up to receive calendar invites for certain LNL " \
+             "meetings. To opt-out, visit https://lnl.wpi.edu" + reverse("accounts:preferences")
+    if meeting.agenda:
+        agenda = "# Agenda\n" + meeting.agenda
+
+    # Generate calendar invite
+    invite_filename = 'meeting.ics'
+    invite = MIMEBase('text', "calendar", method="REQUEST", name=invite_filename)
+    invite.set_payload(generate_ics([meeting], attendees, True, is_cancellation))
+    encode_base64(invite)
+    invite.add_header('Content-Description', 'Add to Calendar')
+    invite.add_header('Content-Class', "urn:content-classes:calendarmessage")
+    invite.add_header('Filename', invite_filename)
+    invite.add_header('Path', invite_filename)
+
+    subject = meeting.name
+    if is_update:
+        subject = "Updated: " + meeting.name
+    if is_cancellation:
+        subject = "Canceled: " + meeting.name
+
+    email = DefaultLNLEmailGenerator(subject, to_emails=[], bcc=recipients, from_email=settings.EMAIL_FROM_NOREPLY,
+                                     template_basename="emails/email_basic", body=agenda, attachments=[invite])
+    email.send()

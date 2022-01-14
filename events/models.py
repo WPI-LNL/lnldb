@@ -243,7 +243,7 @@ class BaseEvent(PolymorphicModel):
     event_name = models.CharField(max_length=128, db_index=True)
     description = models.TextField(null=True, blank=True)
     location = models.ForeignKey('Location', on_delete=models.PROTECT)
-    contact = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Contact")
+    contact = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Contact", related_name="contact")
     org = models.ManyToManyField('Organization', blank=True, verbose_name="Client", related_name='events')
     billing_org = models.ForeignKey('Organization', on_delete=models.PROTECT, null=True, blank=True, related_name="billedevents")
 
@@ -886,6 +886,20 @@ class Event2019(BaseEvent):
             str(self.workday_fund) +
             str(self.worktag)
             ).encode('utf-8')).hexdigest()
+
+    # Service glyphicon for templates
+    @property
+    def allservices(self):
+        foo = []
+        if self.serviceinstance_set.filter(service__category=Category.objects.get(name="Lighting")).exists():
+            foo.append({"i": "glyphicon glyphicon-fire", "title": "lighting"})
+        if self.serviceinstance_set.filter(service__category=Category.objects.get(name="Sound")).exists():
+            foo.append({"i": "glyphicon glyphicon-volume-up", "title": "sound"})
+        if self.serviceinstance_set.filter(service__category=Category.objects.get(name="Projection")).exists():
+            foo.append({"i": "glyphicon glyphicon-film", "title": "projection"})
+        if self.serviceinstance_set.filter(service__category=Category.objects.get(name="Misc")).exists():
+            foo.append({"i": "glyphicon glyphicon-tasks", "title": "misc services"})
+        return foo
 
     class Meta:
         verbose_name = '2019 Event'

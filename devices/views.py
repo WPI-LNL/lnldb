@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 from hashlib import sha256
 from itertools import chain
-import json, os, datetime, uuid, pytz
+import json, os, datetime, uuid, pytz, plistlib
 
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
@@ -22,7 +22,7 @@ from django.views.decorators.cache import never_cache
 from .models import Laptop, LaptopPasswordRetrieval, LaptopPasswordRotation, ConfigurationProfile, InstallationRecord, \
     MacOSApp
 from .forms import ProfileForm, EnrollmentForm, RemovalForm, ClientForm, AssignmentForm, ProfileRemovalForm, \
-    NewAppForm, UpdateAppForm, UninstallAppForm
+    NewAppForm, UpdateAppForm, UninstallAppForm, AppMergeForm
 from emails.generators import GenericEmailGenerator
 
 
@@ -225,9 +225,6 @@ def mdm_checkin(request):
     system_profiles_remove = []
     user_profiles_remove = []
     password = None
-    apps_install = []
-    apps_update = False
-    apps_remove = []
 
     for record in InstallationRecord.objects.filter(device=laptop, profile__isnull=False, version="RM", active=True):
         profile = record.profile
@@ -244,21 +241,10 @@ def mdm_checkin(request):
             else:
                 user_profiles.append(profile.pk)
 
-    for app in laptop.apps_pending.all():
-        apps_install.append(app.identifier)
-
-    for app in laptop.apps_installed.all():
-        if app.update_available:
-            apps_update = True
-
-    for app in laptop.apps_remove.all():
-        apps_remove.append(app.identifier)
-
     if len(system_profiles) > 0 or len(user_profiles) > 0 or len(system_profiles_remove) > 0 or \
-            len(user_profiles_remove) > 0 or len(apps_install) > 0 or len(apps_remove) > 0 or apps_update:
+            len(user_profiles_remove) > 0:
         response_data = {"status": 100, "system_profiles": system_profiles, "user_profiles": user_profiles,
                          "system_profiles_remove": system_profiles_remove, "user_profiles_remove": user_profiles_remove,
-                         "apps_install": apps_install, "apps_update": apps_update, "apps_remove": apps_remove,
                          "removal_password": password, "password": laptop.admin_password}
     else:
         response_data = {"status": 200}
@@ -273,7 +259,7 @@ def mdm_checkin(request):
 def install_confirmation(request):
     """
     Endpoint for accepting receipt of install. Managed devices should contact this endpoint anytime new resources are
-    installed. If the installation of a resource fails, the Webmaster will be notified.
+    installed.
 
     :returns: JSON - {'status': 200}
     """
@@ -282,7 +268,7 @@ def install_confirmation(request):
                                mdm_enrolled=True)
     profiles_installed = data['installed']
     profiles_removed = data['removed']
-    apps = data['apps'].split('.')
+    apps = data['apps'].split('#')
     for pk in profiles_installed:
         profile = get_object_or_404(ConfigurationProfile, pk=pk)
         timestamp = datetime.datetime.strptime(data['timestamp'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=pytz.UTC)
@@ -307,38 +293,45 @@ def install_confirmation(request):
         record.active = False
         record.expires = timezone.now()
         record.save()
+
     installed = []
-    bypass = False
-    for identifier in apps:
-        if identifier == "BYPASS":
-            bypass = True
+    for item in apps:
+        if item in [None, '']:
+            continue
+        identifier = item.split('=')[0]
+        version = item.split('=')[1]
+        app = MacOSApp.objects.filter(name__iexact=identifier).first()
+        if app:
+            if app.merged_into is not None:
+                app = app.merged_into
+            if version not in [None, ''] and app.version is None:
+                app.version = version
+                app.save()
+            if app in MacOSApp.objects.filter(pending_install=device):
+                app.pending_install.remove(device)
+            if app not in MacOSApp.objects.filter(installed=device):
+                app.installed.add(device)
+                if version is None:
+                    version = app.version
+                InstallationRecord.objects.create(app=app, device=device, version=version)
+            elif InstallationRecord.objects.get(app=app, device=device, active=True).version != version:
+                record = InstallationRecord.objects.get(app=app, device=device, active=True)
+                record.active = False
+                record.expires = timezone.now()
+                record.save()
+                InstallationRecord.objects.create(app=app, device=device, version=version)
         else:
-            app = MacOSApp.objects.filter(identifier=identifier).first()
-            if app:
-                installed.append(app)
-    failed = []
-    for app in MacOSApp.objects.filter(pending_install=device):
-        if app in installed:
-            app.pending_install.remove(device)
+            if version not in [None, '']:
+                app = MacOSApp.objects.create(name=identifier, version=version)
+            else:
+                app = MacOSApp.objects.create(name=identifier)
             app.installed.add(device)
             InstallationRecord.objects.create(app=app, device=device, version=app.version)
-        else:
-            failed.append(app)
-    if len(failed) > 0 and not bypass:
-        details = ""
-        for app in failed:
-            details += "<li>" + app.name + " (Version " + app.version + ")</li>"
-        message = "One or more managed applications failed to deploy to <strong>" + device.name + "</strong>. Note " \
-                  "that a small number of applications are incompatible with this method of deployment. If " \
-                  "problems persist, we recommend attempting to deploy this software through Munki instead.<hr><br>" \
-                  "<ul>" + details + "</ul>"
-        email = GenericEmailGenerator(subject="Application Deployment Failed", to_emails=settings.EMAIL_TARGET_W,
-                                      body=message)
-        email.send()
-    for app in MacOSApp.objects.filter(Q(pending_removal=device) | Q(installed=device)):
-        if app not in installed and not bypass:
+        installed.append(app)
+
+    for app in MacOSApp.objects.filter(installed=device):
+        if app not in installed:
             app.installed.remove(device)
-            app.pending_removal.remove(device)
             record = InstallationRecord.objects.get(app=app, device=device, active=True)
             record.active = False
             record.expires = timezone.now()
@@ -897,7 +890,7 @@ def remove_profile(request, profile, device=0):
 @permission_required('devices.add_apps', raise_exception=True)
 def add_app(request):
     """
-    Administrators can use this page to add new managed applications to the MDM. Non-admin users will have the option
+    Administrators can use this page to add new managed applications. Non-admin users will have the option
     to request new software. Requests from non-admins will trigger a notification for the Webmaster.
     """
     context = {}
@@ -913,7 +906,7 @@ def add_app(request):
                 message = request.user.name + " has requested that you add " + request.POST['name'] + \
                           " to the list of available applications in the MDM Managed Software Library.<br><br>" \
                           "Log into the <a href='https://lnl.wpi.edu" + reverse("mdm:list") + "'>MDM Console</a> to " \
-                          "complete the process or deny the request."
+                          "view or deny the request."
                 email = GenericEmailGenerator(subject="New MacBook Software Request", to_emails=settings.EMAIL_TARGET_W,
                                               body=message)
                 email.send()
@@ -929,8 +922,23 @@ def add_app(request):
 
 @login_required
 @permission_required('devices.view_apps', raise_exception=True)
+def view_app(request, pk):
+    """
+    Details page for a specific managed application
+
+    :param pk: Primary key of managed application
+    """
+
+    app = get_object_or_404(MacOSApp, pk=pk)
+
+    context = {'app': app}
+    return render(request, 'mdm/app_detail.html', context)
+
+
+@login_required
+@permission_required('devices.view_apps', raise_exception=True)
 def app_list(request):
-    """Lists all the managed applications"""
+    """Lists all the applications available through Homebrew"""
     return render(request, 'mdm/app_list.html', {})
 
 
@@ -938,8 +946,7 @@ def app_list(request):
 @permission_required('devices.manage_apps', raise_exception=True)
 def update_app_info(request, pk):
     """
-    Update the metadata for a managed application. Including the version number will allow the application to be
-    deployed through the MDM.
+    Update the metadata for a managed application.
 
     :param pk: Primary key of managed application
     """
@@ -953,6 +960,9 @@ def update_app_info(request, pk):
             if request.POST['save'] == "Save Changes":
                 form.save()
                 messages.success(request, "Application info updated successfully")
+            elif request.POST['save'] == "Merge":
+                form.save()
+                return HttpResponseRedirect(reverse("mdm:merge-app", args=[app.pk]))
             else:
                 app = form.instance
                 return HttpResponseRedirect(reverse("mdm:remove-app", args=[app.pk]))
@@ -961,6 +971,120 @@ def update_app_info(request, pk):
         form = UpdateAppForm(instance=app)
     context['form'] = form
     return render(request, 'form_crispy.html', context)
+
+
+@login_required
+@permission_required('devices.manage_apps', raise_exception=True)
+def merge_app(request, pk):
+    """
+    Page for merging two app records together. This is helpful when we want to hide duplicates.
+
+    :param pk: Primary key of the managed application to be merged
+    """
+
+    context = {}
+
+    app = get_object_or_404(MacOSApp, pk=pk)
+
+    if request.method == 'POST':
+        form = AppMergeForm(request.POST, pk=pk)
+        if form.is_valid():
+            selected = form.cleaned_data.get('options')
+            parent = MacOSApp.objects.get(pk=selected)
+            app.merged_into = parent
+            app.save()
+            if parent.description in [None, ''] and app.description not in [None, '']:
+                parent.description = app.description
+            if parent.version in [None, ''] and app.version not in [None, '']:
+                parent.version = app.version
+            if parent.developer in [None, ''] and app.developer not in [None, '']:
+                parent.developer = app.developer
+            if parent.developer_website in [None, ''] and app.developer_website not in [None, '']:
+                parent.developer_website = app.developer_website
+            parent.save()
+            messages.success(request, 'Applications merged successfully')
+            return HttpResponseRedirect(reverse('mdm:apps'))
+    else:
+        form = AppMergeForm(pk=pk)
+    context['form'] = form
+    return render(request, 'form_crispy.html', context)
+
+
+def refresh_managed_software_status():
+    """ Checks the Munki catalogs to retrieve the latest managed software lists """
+
+    try:
+        with open(settings.MEDIA_ROOT + '/software/catalogs/default', 'rb') as catalog:
+            data = plistlib.load(catalog)
+
+            apps = []
+
+            # Grab app data from plist
+            for app_data in data:
+                app_name = app_data.get('display_name', None)
+                app_description = app_data.get('description', None)
+                app_version = app_data.get('version', None)
+                app_developer = app_data.get('developer', None)
+                apps.append({"name": app_name, "description": app_description.strip(), "version": app_version,
+                             "developer": app_developer})
+
+            # Update database
+            managed_apps = []
+            for app in apps:
+                obj = MacOSApp.objects.filter(name__iexact=app['name']).first()
+                if obj:
+                    if obj.merged_into is not None:
+                        obj = obj.merged_into
+                    obj.managed = True
+                    managed_apps.append(obj)
+                    if app['description'] and not obj.description:
+                        obj.description = app['description']
+                    if app['developer'] and not obj.developer:
+                        obj.developer = app['developer']
+                    if app['version'] and not obj.version:
+                        obj.version = app['version']
+                    obj.save()
+                else:
+                    obj = MacOSApp.objects.create(name=app['name'], description=app['description'],
+                                                  version=app['version'], developer=app['developer'], managed=True)
+                    managed_apps.append(obj)
+
+            # Check for old managed apps that are no longer in the catalog
+            for app in MacOSApp.objects.filter(managed=True).all():
+                if app not in managed_apps:
+                    app.managed = False
+                    app.save()
+    except FileNotFoundError:
+        pass
+
+
+@login_required
+@permission_required("devices.manage_apps", raise_exception=True)
+def reload_from_munki(request, pk):
+    """
+    Refresh an application's record with data from the Munki catalog
+
+    :param pk: The primary key of the application to refresh data for
+    """
+
+    app = get_object_or_404(MacOSApp, pk=pk)
+    description = app.description
+    version = app.version
+    app.description = None
+    app.version = None
+    app.save()
+
+    refresh_managed_software_status()
+
+    app.refresh_from_db()
+
+    if app.description in [None, '']:
+        app.description = description
+    if app.version in [None, '']:
+        app.version = version
+    app.save()
+
+    return HttpResponseRedirect(reverse("mdm:app-detail", args=[pk]))
 
 
 @login_required
@@ -978,13 +1102,14 @@ def list_apps(request, pk=0):
         context['h2'] = "Managed Applications"
         context['header_1'] = "Developer"
         context['header_2'] = "Version"
-        apps = MacOSApp.objects.all().reverse()
+        refresh_managed_software_status()
+        apps = MacOSApp.objects.filter(merged_into__isnull=True).reverse()
         if not request.user.has_perm('devices.manage_apps'):
-            apps = apps.filter(version__isnull=False)
+            apps = apps.filter(managed=True).exclude(installed__isnull=True, pending_install__isnull=True)
         for app in apps:
             assignment_count = app.pending_install.count()
-            install_count = app.installed.count()
-            data = {'meta': app, 'assignment_count': assignment_count, 'install_count': install_count}
+            installed_on = app.installed.all()
+            data = {'meta': app, 'assignment_count': assignment_count, 'installed': installed_on}
             context['items'].append(data)
     else:
         if not request.user.has_perm('devices.manage_apps'):
@@ -998,7 +1123,6 @@ def list_apps(request, pk=0):
         context['device_id'] = pk
         apps = MacOSApp.objects.filter(pending_install__in=[device])
         apps |= MacOSApp.objects.filter(installed__in=[device])
-        apps |= MacOSApp.objects.filter(pending_removal__in=[device])
         for app in apps:
             status = 'Not assigned'
             for entry in app.installed.all():
@@ -1007,9 +1131,6 @@ def list_apps(request, pk=0):
             for entry in app.pending_install.all():
                 if entry == device:
                     status = 'Assigned'
-            for entry in app.pending_removal.all():
-                if entry == device:
-                    status = 'Pending Removal'
             data = {'meta': app, 'status': status}
             context['items'].append(data)
 
@@ -1026,14 +1147,12 @@ def list_app_devices(request, pk):
     """
     context = {}
     app = get_object_or_404(MacOSApp, pk=pk)
-    to_remove = Laptop.objects.filter(apps_remove__in=[app])
     pending = Laptop.objects.filter(apps_pending__in=[app])
     installed = InstallationRecord.objects.filter(app=app, device__apps_installed__in=[app], active=True)
     context['resource'] = app
     context['resource_type'] = 'App'
     context['pending'] = pending
     context['installed'] = installed
-    context['pending_removal'] = to_remove
     return render(request, 'mdm/device_list.html', context)
 
 
@@ -1054,7 +1173,7 @@ def link_apps(request, device=None, app=None):
         resource_type = "apps"
         rel = get_object_or_404(Laptop, pk=device)
         options = MacOSApp.objects.exclude(Q(pending_install__in=[rel]) | Q(installed__in=[rel]))\
-            .filter(version__isnull=False)
+            .filter(merged_into__isnull=True)
         # The following message will be displayed if there are no options (doesn't render in the form view)
         context['message'] = "It seems like there are no more applications to assign to this device."
     else:
@@ -1103,11 +1222,6 @@ def remove_app(request, app, device=0):
     If a primary key value is supplied for both the `device` and `app`, the user will be able to remove the
     assignment between the managed application and that particular device. If only the `app` is provided, all device
     assignments for the application will be removed and the app will no longer be available to devices under the MDM.
-    In both cases, two options will be presented to the user:
-
-        1.) Mark the application as removed (if the app had already been removed manually)
-
-        2.) Instruct the MDM to uninstall the application automatically at the next checkin
 
     :param app: Primary key of managed application
     :param device: Primary key of device (Optional)
@@ -1145,43 +1259,21 @@ def remove_app(request, app, device=0):
         else:
             raise Http404
 
-    # If auto-removal option presented, handle form data
+    # Handle form data
     if request.method == 'POST':
         form = UninstallAppForm(request.POST, mode=mode)
         if form.is_valid():
-            selected = form.cleaned_data['options']
-            if selected == 'auto':
-                if mode == 'disassociate':
-                    laptop.apps_installed.remove(app)
-                    laptop.apps_remove.add(app)
-                else:
-                    # Cancel all pending assignments first
-                    for laptop in app.pending_install.all():
-                        app.pending_install.remove(laptop)
-
-                    # Prepare MDM to remove apps from device
-                    for laptop in app.installed.all():
-                        laptop.apps_installed.remove(app)
-                        laptop.apps_remove.add(app)
-                messages.success(request, "Applications will be removed automatically at next checkin",
+            if mode == 'disassociate':
+                record = get_object_or_404(InstallationRecord, app=app, device=laptop, active=True)
+                record.active = False
+                record.expires = timezone.now()
+                record.save()
+                laptop.apps_installed.remove(app)
+                messages.success(request, "Application successfully removed from {}".format(laptop.name),
                                  extra_tags='success')
             else:
-                if mode == 'disassociate':
-                    record = get_object_or_404(InstallationRecord, app=app, device=laptop, active=True)
-                    record.active = False
-                    record.expires = timezone.now()
-                    record.save()
-                    laptop.apps_installed.remove(app)
-                    messages.success(request, "Application successfully removed from {}".format(laptop.name),
-                                     extra_tags='success')
-                else:
-                    for laptop in app.installed.all():
-                        record = get_object_or_404(InstallationRecord, app=app, device=laptop, active=True)
-                        record.active = False
-                        record.expires = timezone.now()
-                        record.save()
-                    app.delete()
-                    messages.success(request, "Application deleted successfully")
+                app.delete()
+                messages.success(request, "Application deleted successfully")
             return HttpResponseRedirect(reverse("mdm:apps"))
         else:
             context['form'] = form
@@ -1199,20 +1291,23 @@ def logs(request):
     for record in InstallationRecord.objects.all():
         if record.profile:
             resource = record.profile
-            resource_type = "Configuration Profile"
+            resource_type = "(Configuration Profile) "
         else:
             resource = record.app
-            resource_type = "Application"
+            if record.version:
+                resource_type = "(" + record.version + ") "
+            else:
+                resource_type = ""
         if record.active:
             obj = {'timestamp': record.installed_on,
-                   'details': resource.name + " (" + resource_type + ") was installed on " + record.device.name}
+                   'details': resource.name + " " + resource_type + "was installed on " + record.device.name}
             events.append(obj)
         else:
             obj = {'timestamp': record.expires,
-                   'details': resource.name + " (" + resource_type + ") was removed from " + record.device.name}
+                   'details': resource.name + " " + resource_type + "was removed from " + record.device.name}
             events.append(obj)
             obj = {'timestamp': record.installed_on,
-                   'details': resource.name + " (" + resource_type + ") was installed on " + record.device.name}
+                   'details': resource.name + " " + resource_type + "was installed on " + record.device.name}
             events.append(obj)
     events.sort(key=get_timestamp, reverse=True)
 

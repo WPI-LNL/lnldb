@@ -18,8 +18,11 @@ from django.views.generic import CreateView, DeleteView, UpdateView
 from django.views.decorators.http import require_GET, require_POST
 from reversion.models import Version
 
+from accounts.models import UserPreferences
 from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator, BillingEmailGenerator,
                                DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
+from slack.views import cc_report_reminder
+from slack.api import lookup_user, slack_post
 from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
@@ -35,6 +38,7 @@ from helpers.revision import set_revision_comment
 from helpers.util import curry_class
 from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standalone,
                         generate_multibill_pdf_standalone)
+from ..cal import generate_ics
 
 
 @login_required
@@ -222,18 +226,27 @@ def reviewremind(request, id, uid):
                                                       'has not yet been reviewed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
-    cci = event.ccinstances.filter(crew_chief_id=uid)
+    cci = event.ccinstances.filter(crew_chief_id=uid).first()
     if cci:
         # only do heavy lifting if we need to
+        prefs, created = UserPreferences.objects.get_or_create(user=cci.crew_chief)
+        send_notification = True
+        if cci.crew_chief == request.user and prefs.ignore_user_action:
+            send_notification = False
+        if send_notification and prefs.cc_report_reminders in ['email', 'all']:
+            pdf_handle = generate_pdfs_standalone([event.id])
+            filename = "%s.workorder.pdf" % slugify(event.event_name)
+            attachments = [{"file_handle": pdf_handle, "name": filename}]
 
-        pdf_handle = generate_pdfs_standalone([event.id])
-        filename = "%s.workorder.pdf" % slugify(event.event_name)
-        attachments = [{"file_handle": pdf_handle, "name": filename}]
-
-        cci = cci[0]
-        reminder = ReportReminder.objects.create(event=cci.event, crew_chief=cci.crew_chief)
-        email = ReportReminderEmailGenerator(reminder=reminder, attachments=attachments)
-        email.send()
+            reminder = ReportReminder.objects.create(event=cci.event, crew_chief=cci.crew_chief)
+            email = ReportReminderEmailGenerator(reminder=reminder, attachments=attachments)
+            email.send()
+        if send_notification and prefs.cc_report_reminders in ['slack', 'all']:
+            message = "This is a reminder that you have a pending crew chief report for %s." % event.event_name
+            blocks = cc_report_reminder(cci)
+            slack_user = lookup_user(cci.crew_chief.email)
+            if slack_user:
+                slack_post(slack_user, text=message, content=blocks)
         messages.add_message(request, messages.INFO, 'Reminder Sent')
         return HttpResponseRedirect(reverse("events:review", args=(event.id,)))
     else:
@@ -264,9 +277,19 @@ def remindall(request, id):
     attachments = [{"file_handle": pdf_handle, "name": filename}]
 
     for cci in event.crew_needing_reports:
-        reminder = ReportReminder.objects.create(event=event, crew_chief=cci.crew_chief)
-        email = ReportReminderEmailGenerator(reminder=reminder, attachments=attachments)
-        email.send()
+        prefs, created = UserPreferences.objects.get_or_create(user=cci.crew_chief)
+        if cci.crew_chief == request.user and prefs.ignore_user_action:
+            continue
+        if prefs.cc_report_reminders in ['email', 'all']:
+            reminder = ReportReminder.objects.create(event=event, crew_chief=cci.crew_chief)
+            email = ReportReminderEmailGenerator(reminder=reminder, attachments=attachments)
+            email.send()
+        if prefs.cc_report_reminders in ['slack', 'all']:
+            message = "This is a reminder that you have a pending crew chief report for %s." % event.event_name
+            blocks = cc_report_reminder(cci)
+            slack_user = lookup_user(cci.crew_chief.email)
+            if slack_user:
+                slack_post(slack_user, text=message, content=blocks)
 
     messages.add_message(request, messages.INFO, 'Reminders sent to all crew chiefs needing reports for %s' %
                          event.event_name)
@@ -806,6 +829,18 @@ def assignattach_external(request, id):
     context['formset'] = formset
 
     return render(request, 'formset_crispy_attachments.html', context)
+
+
+@login_required
+def download_ics(request, pk):
+    """ Generate and download an ics file """
+
+    event = get_object_or_404(BaseEvent, pk=pk)
+    invite = generate_ics([event], None)
+
+    response = HttpResponse(invite, content_type="text/calendar")
+    response['Content-Disposition'] = "attachment; filename=event.ics"
+    return response
 
 
 @login_required
