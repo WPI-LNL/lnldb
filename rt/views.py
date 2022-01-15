@@ -24,13 +24,18 @@ def new_ticket(request):
             description += "\nSubmitted from: %s" % request.META.get('REMOTE_ADDR')
             description += "\nDevice Info: %s" % request.META.get('HTTP_USER_AGENT')
             attachments = request.FILES.getlist('attachments')
-            resp = api.create_ticket("Database", request.user.email, subject, description, attachments=attachments)
+            requestor = request.user.email
+            if request.user.first_name and request.user.last_name:
+                requestor = request.user.name + " <" + request.user.email + ">"
+            resp = api.create_ticket("Database", requestor, subject, description, attachments=attachments)
             if resp.get('id', None):
                 ticket_id = resp['id']
                 messages.success(request, "Your ticket has been submitted. Thank you!")
 
                 # Send Slack notification
                 slack_user = lookup_user(request.user.email)
+                if not slack_user:
+                    slack_user = request.user.username
                 ticket_info = {
                     "url": 'https://lnl-rt.wpi.edu/rt/Ticket/Display.html?id=' + ticket_id,
                     "id": ticket_id,
