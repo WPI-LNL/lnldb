@@ -1,0 +1,60 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            <h2> {{ msg }} </h2>
+            <form action="" class="uniForm" method="post">
+                {% if helper %}
+                    {% crispy form helper %}
+                {% else %}
+                    {% crispy form %}
+                {% endif %}
+                <hr>
+                {% if tags %}
+                <h3 class="h4">Pending Items</h3>
+                <table class="table table-striped">
+                    <thead style="background-color: grey; color: white">
+                        <tr>
+                            <td>Asset Tag</td>
+                            <td>Asset Name</td>
+                            <td>Rental Price (weekly)</td>
+                            <td>Remove?</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tag in tags %}
+                        <tr>
+                            <td>{{ tag.tag }}</td>
+                            <td>{{ tag.name|safe }}</td>
+                            <td>${{ tag.cost|floatformat:2|default_if_none:"0.00" }}</td>
+                            <td><button type="submit" name="save" value="Delete~{{ tag.tag }}" class="btn btn-sm btn-danger">Remove</button></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p>Do not press "{{ submit_btn }}" more than once. Be patient. It may take a few minutes to process a large number of assets.</p>
+                <input type="submit" name="save" value="{{ submit_btn }}" class="btn btn-primary">
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    <br>
+    <a href="{% if submit_btn == "Check in" %}{% url 'inventory:legacy_checkin' %}{% else %}{% url 'inventory:legacy_checkout' %}{% endif %}" class="small" style="float: right">Switch to legacy tool</a>
+{% endblock %}
+
+{% block extras %}
+{{ form.media }}
+<style>
+    .padleft {
+    margin-left:65px;
+    }
+    .pushdown {
+    margin-top:5px
+    }
+</style>
+{% endblock %}
+
+{% block finalsay %}
+{% endblock %}

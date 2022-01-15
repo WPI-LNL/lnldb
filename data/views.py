@@ -23,7 +23,6 @@ from watson import search as watson
 
 from events import models as events_models
 from emails.generators import EventEmailGenerator
-from inventory.models import AccessRecord
 
 
 def maintenance(request):
@@ -284,20 +283,9 @@ def contact_tracing_logs(request):
     writer = csv.writer(response)
     writer.writerow(['User', 'Student_ID', 'Event', 'Location', 'Checkin_Time', 'Checkout_Time', 'Reason'])
 
-    sets = request.GET.get('data_sets', "all")
-    if sets == "all" or sets == "events":
-        for record in AccessRecord.objects.all():
-            for user in record.users.all():
-                if record.reason == "OUT":
-                    writer.writerow([user.name, user.student_id, "", record.location.name, "", record.timestamp,
-                                     "Checking out"])
-                else:
-                    writer.writerow([user.name, user.student_id, "", record.location.name, record.timestamp, "",
-                                     record.reason])
-    if sets == "all" or sets == "spaces":
-        for record in events_models.CrewAttendanceRecord.objects.all():
-            writer.writerow([record.user.name, record.user.student_id, record.event.event_name,
-                             record.event.location.name, record.checkin, record.checkout, "Event Crew"])
+    for record in events_models.CrewAttendanceRecord.objects.all():
+        writer.writerow([record.user.name, record.user.student_id, record.event.event_name,
+                         record.event.location.name, record.checkin, record.checkout, "Event Crew"])
     return response
 
 

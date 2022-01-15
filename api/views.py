@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from django.shortcuts import render
+from django.shortcuts import render, reverse
 from django.db.models import Q
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.template.loader import render_to_string
 from django.shortcuts import get_object_or_404
+from django.http import HttpResponseRedirect
 from django.utils import timezone
 from rest_framework import viewsets, status, serializers
 from rest_framework.response import Response
@@ -17,11 +18,13 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import NotFound, ParseError, AuthenticationFailed, PermissionDenied
+from cryptography.fernet import Fernet
 from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter, OpenApiTypes, OpenApiResponse, \
     OpenApiExample, inline_serializer
 
 from random import randint
 
+from accounts.models import UserPreferences
 from accounts.forms import SMSOptInForm
 from emails.generators import generate_sms_email
 from events.models import OfficeHour, Event2019, Location, CrewAttendanceRecord
@@ -460,12 +463,44 @@ class SitemapViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 @login_required
-def request_token(request):
+def request_token(request, client_id):
+    """
+    Applications should direct users to this page to grant access to their application and to request an API token
+
+    :param client_id: The corresponding application's Client ID
+    """
+
     missing = True
     sent = False
     context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True,
                'styles': "#main {\n\tbackground-color: white !important;\n\theight: 100vh;\n}\n.text-white {"
                          "\n\tcolor: black !important;\n}\n.help-block {\n\tdisplay: none;\n}"}
+
+    # Verify Client ID and retrieve corresponding application record
+    if not settings.CRYPTO_KEY:
+        raise Exception("Unable to process Client ID. Cryptographic key is missing.")
+
+    cipher_suite = Fernet(settings.CRYPTO_KEY)
+    api_key = cipher_suite.decrypt(client_id.encode('utf-8')).decode('utf-8')
+    app = get_object_or_404(Extension, api_key=api_key)
+
+    # If the user just granted permissions to the application, update the app record
+    if reverse("accounts:scope-request") in request.META.get('HTTP_REFERER', ''):
+        app.users.add(request.user)
+
+    # If the user hasn't yet granted access to the application, redirect them there first
+    if request.user not in app.users.all():
+        request.session["app"] = app.name
+        request.session["resource"] = "your LNL account"
+        try:
+            request.session["icon"] = app.icon.path
+        except ValueError:
+            request.session["icon"] = "https://lnl.wpi.edu/assets/ico/apple-touch-icon-114-precomposed.png"
+        request.session["scopes"] = ["Check into events, on your behalf", "Check out of events, on your behalf"]
+        request.session["callback_uri"] = reverse("api:request-token", args=[client_id])
+        prefs, created = UserPreferences.objects.get_or_create(user=request.user)
+        request.session["inverted"] = prefs.theme == 'dark'
+        return HttpResponseRedirect(reverse("accounts:scope-request"))
 
     if request.user.phone and request.user.carrier:
         missing = False

@@ -369,7 +369,7 @@ class EventAttendee(object):
             return "OPT-PARTICIPANT"
 
 
-def generate_ics(events, attendees, request=False):
+def generate_ics(events, attendees, request=False, cancel=False):
     """
     Generate an iCalendar file (ics) - AKA calendar invite
 
@@ -379,13 +379,14 @@ def generate_ics(events, attendees, request=False):
     :param events: List of compatible event objects (i.e. BaseEvent, Meeting, etc.)
     :param attendees: List of EventAttendee objects
     :param request: If True, will prompt user to accept invite (replies are not sent back)
+    :param cancel: If True, the resulting file will indicate that the event has been cancelled
     :return: byte string containing file contents
     """
     if not attendees:
         attendees = []
 
     cal = icalendar.Calendar()
-    if request:
+    if request or cancel:
         cal['method'] = 'REQUEST'
     else:
         cal['method'] = 'PUBLISH'
@@ -401,7 +402,10 @@ def generate_ics(events, attendees, request=False):
         vevent['dtend'] = event.cal_end().strftime('%Y%m%dT%H%M%SZ')
         vevent['dtstamp'] = timezone.now().strftime('%Y%m%dT%H%M%SZ')
         vevent['location'] = event.cal_location()
-        vevent['url'] = event.cal_link()
+        if cancel:
+            vevent['status'] = "CANCELLED"
+        else:
+            vevent['url'] = event.cal_link()
         for attendee in attendees:
             if attendee.event == event:
                 vevent.add(

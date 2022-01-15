@@ -422,8 +422,10 @@ def user_preferences(request):
             if request.POST.get('submit', None) == 'rt-delete':
                 obj.rt_token = None
                 obj.save()
+                form.save_m2m()
                 return HttpResponseRedirect(reverse("accounts:preferences"))
             obj.save()
+            form.save_m2m()
             messages.success(request, "Your preferences have been updated successfully!")
             return HttpResponseRedirect(reverse("accounts:detail", args=[user.pk]))
         else:
@@ -497,7 +499,7 @@ def application_scope_request(request):
     del request.session['inverted']
 
     invert = False
-    prefs = UserPreferences.objects.get_or_create(user=request.user)
+    prefs, created = UserPreferences.objects.get_or_create(user=request.user)
     if inverted:
         invert = True
     elif inverted is None:
