@@ -76,13 +76,13 @@ class APIViewTest(ViewTestCase):
         self.assertOk(self.client.get(reverse("api:fetch-token")), 405)
 
         # If information is missing we should get a 400 error
-        self.assertOk(self.client.post(reverse("api:fetch-token"), {'code': 12345}), 400)
+        self.assertOk(self.client.post(reverse("api:fetch-token"), {'code': 654321}), 400)
 
         # Application should send the following to obtain the token
         token_request = models.TokenRequest.objects.get(user=self.user)
         data = {
             "APIKey": "ABCDEFG",
-            "code": "12345",
+            "code": "654321",
             "username": "testuser"
         }
 
