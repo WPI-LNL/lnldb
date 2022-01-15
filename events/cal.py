@@ -398,9 +398,9 @@ def generate_ics(events, attendees, request=False, cancel=False):
         vevent['summary'] = event.cal_name()
         vevent['description'] = event.cal_desc()
         vevent['uid'] = event.cal_guid()
-        vevent['dtstart'] = event.cal_start().strftime('%Y%m%dT%H%M%SZ')
-        vevent['dtend'] = event.cal_end().strftime('%Y%m%dT%H%M%SZ')
-        vevent['dtstamp'] = timezone.now().strftime('%Y%m%dT%H%M%SZ')
+        vevent.add('dtstart', event.cal_start())
+        vevent.add('dtend', event.cal_end())
+        vevent.add('dtstamp', timezone.now())
         vevent['location'] = event.cal_location()
         if cancel:
             vevent['status'] = "CANCELLED"
