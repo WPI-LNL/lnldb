@@ -15,17 +15,17 @@ Retrieving Tokens
 
 Before you will be able to fetch a user's token, you will first need to direct them to grant access to your application. This can be accomplished by opening the following URL in any web browser:
 
-.. code-block::
+.. code-block:: text
 
-    https://lnl.wpi.edu/api/token/request/{CLIENT_ID}
+    https://lnl.wpi.edu/api/token/request/{CLIENT_ID}/
 
-where ``{CLIENT_ID}`` is the your application's assigned identifier. Once the user has enabled access to their account, they will be sent a verification code which they will then need to enter into your application. You will need to POST this code, along with your API Key and their username, to the `Token endpoint <https://lnl.wpi.edu/api/schema/swagger/#/token/Token>`_. If everything checks out, then the server will return the user's token.
+where ``{CLIENT_ID}`` is your application's assigned identifier. Once the user has enabled access to their account, they will be sent a verification code which they will then need to enter into your application. You will need to POST this code, along with your API Key and their username, to the `Token endpoint <https://lnl.wpi.edu/api/schema/swagger/#/token/Token>`_. If everything checks out, then the server will return the user's token.
 
 -----
 
 **Example:**
 
-.. code-block::
+.. code-block:: text
 
     POST https://lnl.wpi.edu/api/token/fetch/
 
@@ -33,7 +33,7 @@ where ``{CLIENT_ID}`` is the your application's assigned identifier. Once the us
 
 If successful, this would return something like:
 
-.. code-block::
+.. code-block:: text
 
     HTTP/1.1 200 OK
     Content-Type: application/json
@@ -50,7 +50,7 @@ Using Tokens
 
 To authenticate using your token, simply include your key in the ``Authorization`` HTTP header. The key should be prefixed by the string literal "Token", with whitespace separating the two strings.
 
-.. code-block::
+.. code-block:: text
 
     Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b
 
@@ -61,4 +61,4 @@ Project-based
 
 Access to some endpoints may be limited to certain registered applications only. This method is often used with backend services that do not handle user data. To gain access to an endpoint that utilizes project-based authentication, contact our `Webmaster <mailto:lnl-w@wpi.edu>`_.
 
-`Last modified: December 10, 2021`
+`Last modified: January 15, 2022`

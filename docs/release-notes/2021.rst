@@ -2,6 +2,14 @@
 Updates 2021
 ============
 
+December
+========
+To end the year, we tested out some new moderation tools for Slack and upgraded the API documentation to support the
+OpenAPI specification. As always there were also a few bug fixes and UI improvements.
+
+- :commit:`7d655fec7a2d858fa8ef01b73ff3a8cde772898c` Added new API documentation that supports the OpenAPI specification
+- :commit:`795c810d1c88b1bac50d24bdd21df7895b158a76` Updated the survey dashboard graphs to exclude scores of -1 (`#545 <https://github.com/WPI-LNL/lnldb/issues/545>`_)
+
 November
 ========
 In November we switched from Travis CI to GitHub Actions and deployed several bug fixes, UI improvements, and new

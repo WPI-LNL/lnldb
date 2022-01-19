@@ -3,7 +3,7 @@ from django.shortcuts import reverse, render, get_object_or_404
 from django.http import HttpResponseRedirect
 
 from .models import ReportedMessage
-from .api import lookup_user, user_profile, message_link, channel_info, message_unreact
+from .api import lookup_user, user_profile, message_link, channel_info
 
 
 # Slack Management Views
@@ -20,7 +20,7 @@ def report_list(request):
         report = ReportedMessage.objects.get(pk=report_id)
         report.resolved = True
         report.save()
-        message_unreact(report.message.posted_to, report.message.ts, 'triangular_flag_on_post')
+        # message_unreact(report.message.posted_to, report.message.ts, 'triangular_flag_on_post')
         return HttpResponseRedirect(reverse('slack:moderate'))
 
     return render(request, 'slack/slack_message_list.html', {'title': 'Reported Messages', 'reports': reports})
@@ -38,7 +38,7 @@ def view_report(request, pk):
     if request.method == 'POST':
         report.resolved = True
         report.save()
-        message_unreact(report.message.posted_to, report.message.ts, 'triangular_flag_on_post')
+        # message_unreact(report.message.posted_to, report.message.ts, 'triangular_flag_on_post')
         return HttpResponseRedirect(reverse('slack:moderate'))
 
     posted_to = report.message.posted_to

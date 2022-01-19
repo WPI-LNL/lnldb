@@ -54,7 +54,7 @@ class RTAPITests(ViewTestCase):
         self.assertTrue(UserPreferences.objects.filter(user=self.user).exists())
 
         # If the cryptographic key is available, check that the token was saved properly
-        if settings.RT_CRYPTO_KEY:
+        if settings.CRYPTO_KEY:
             prefs = UserPreferences.objects.get(user=self.user)
-            cipher_suite = Fernet(settings.RT_CRYPTO_KEY)
+            cipher_suite = Fernet(settings.CRYPTO_KEY)
             self.assertEqual(data["token"], cipher_suite.decrypt(prefs.rt_token.encode('utf-8')).decode('utf-8'))

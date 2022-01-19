@@ -1,16 +1,16 @@
 {% extends 'base_admin.html' %}
 
 {% block content %}
-    <p><a href="{% url 'inventory:snipe_checkout' %}?checkout_to={{ checkout_to }}">Check out more items</a></p>
+    <p style="float: right"><a href="{% url 'inventory:snipe_checkout' %}?checkout_to={{ checkout_to }}" class="btn btn-primary">Check out more items</a></p>
     <p>The information below has been emailed to you.</p>
     <h1>Checkout Receipt</h1>
     <p>
-        {% now 'jS F Y H:i' %}<br>
+        {% now 'F jS, Y H:i' %}<br>
         {{ num_assets }} assets checked out<br>
         {{ num_accessories }} accessories checked out<br>
         Checked out to {{ checkout_to_name }}<br>
-        {% if total_rental_price %}
-            Total rental price: ${{ total_rental_price }}/week
+        {% if total %}
+            Total rental price: ${{ total|floatformat:2 }}/week
         {% else %}
             Total rental price cannot be calculated because some items are missing rental prices.
         {% endif %}
@@ -31,11 +31,22 @@
                     <tr>
                         <td>{{ asset_tag }}</td>
                         <td>{{ asset_info.name|safe }}</td>
-                        <td>{% if asset_info.rental_price %}${{ asset_info.rental_price }}{% endif %}</td>
+                        <td>{% if asset_info.rental_price %}${{ asset_info.rental_price|floatformat:2 }}{% endif %}</td>
                         <td>{{ asset_info.quantity }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     </p>
+    {% if errors %}
+    <div class="alert alert-dismissable alert-warning">
+        <button type="button" class="close" data-dismiss="alert">×</button>
+        <h4 class="h5">Unfortunately, the following items may not have been checked out:</h4>
+        <ul>
+        {% for error in errors %}
+            <li>{{ error.item.tag }} ({{ error.item.name|safe }}) - <span style="color: red">{{ error.reason }}</span></li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 {% endblock %}

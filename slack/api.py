@@ -489,6 +489,9 @@ def handle_event(request):
             slack_post(event['user']['id'], text="Welcome to LNL!", content=views.welcome_message())
         elif event['type'] == "app_home_opened":
             load_app_home(event['user'])
+        elif event['type'] == "channel_created":
+            if settings.SLACK_AUTO_JOIN:
+                join_channel(event['channel']['id'])
         return HttpResponse()
     return HttpResponse("Not implemented")
 
@@ -506,13 +509,13 @@ def load_app_home(user_id):
     tickets = []
     user = user_profile(user_id)
     if user['ok']:
-        ticket_ids = rt_api.get_tickets_for_user(user['user']['profile']['email'])
+        email = user['user']['profile']['email']
+        ticket_ids = sorted(rt_api.simple_ticket_search(requestor=email, status="__Active__"), reverse=True)
     for ticket_id in ticket_ids:
         ticket = rt_api.fetch_ticket(ticket_id)
         if ticket.get('message'):
             continue
-        if ticket['Status'] in ['open', 'new', 'stalled']:
-            tickets.append(ticket)
+        tickets.append(ticket)
     blocks = views.app_home(tickets)
 
     if not settings.SLACK_TOKEN:
@@ -835,7 +838,7 @@ def __retrieve_rt_token(user_id):
             prefs = UserPreferences.objects.filter(user=user).first()
             if prefs:
                 if prefs.rt_token:
-                    cipher_suite = Fernet(settings.RT_CRYPTO_KEY)
+                    cipher_suite = Fernet(settings.CRYPTO_KEY)
                     return cipher_suite.decrypt(prefs.rt_token.encode('utf-8')).decode('utf-8')
     return None
 
@@ -851,14 +854,23 @@ def __save_report(message_id, reporter, comments):
     """
 
     message = models.SlackMessage.objects.get(pk=message_id)
-    report = models.ReportedMessage.objects.create(message=message, comments=comments, reported_by=reporter)
 
-    # Send Webmaster a notification
-    blocks = views.reported_message_notification(reporter, report)
-    slack_post(settings.SLACK_TARGET_WEBMASTER, text="You have a new flagged message to review", content=blocks,
-               username="Admin Console")
+    # Ensure message was posted to public channel. For privacy reasons, we currently do not report private messages.
+    channel_details = channel_info(message.posted_to)
+    if channel_details['is_channel'] and not channel_details['is_private']:
+        report = models.ReportedMessage.objects.create(message=message, comments=comments, reported_by=reporter)
 
-    # Add red flag to message
-    message_react(message.posted_to, message.ts, 'triangular_flag_on_post')
+        # Send Exec a notification
+        blocks = views.reported_message_notification(reporter, report)
+        slack_post(settings.SLACK_TARGET_EXEC, text="You have a new flagged message to review", content=blocks,
+                   username="Admin Console")
 
+        # Add red flag to message (to inform sender their message has been reported)
+        # message_react(message.posted_to, message.ts, 'triangular_flag_on_post')
+    else:
+        message.public = False
+        message.save()
+
+        post_ephemeral(message.posted_to, "This feature currently does not support reporting private messages. Please "
+                                          "contact a member of the executive board directly.", reporter)
     connection.close()

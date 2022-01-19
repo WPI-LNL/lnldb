@@ -1,7 +1,8 @@
 # noinspection PyProtectedMember
 from django.contrib.auth.models import AbstractUser, _user_has_perm
 from django.db.models import (Model, BooleanField, CharField, IntegerField, BigIntegerField, PositiveIntegerField, Q,
-                              TextField, DateField, DateTimeField, OneToOneField, ImageField, CASCADE, signals)
+                              TextField, DateField, DateTimeField, OneToOneField, ManyToManyField, ImageField, CASCADE,
+                              signals)
 from multiselectfield import MultiSelectField
 from django.conf import settings
 from six import python_2_unicode_compatible
@@ -9,6 +10,7 @@ from django.dispatch import receiver
 
 from data.storage import OverwriteStorage
 from events.models import Organization
+from meetings.models import MeetingType
 
 import os
 
@@ -253,3 +255,9 @@ class UserPreferences(Model):
     ignore_user_action = BooleanField(
         default=False, help_text="Uncheck this to ignore notifications for actions triggered by the user"
     )
+
+    meeting_invites = BooleanField(
+        default=False, help_text="Opt-in to receiving calendar invites for meetings"
+    )
+
+    meeting_invite_subscriptions = ManyToManyField(MeetingType, blank=True, related_name="invite_subscriptions")

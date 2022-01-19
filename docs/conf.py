@@ -56,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'LNL Database'
-copyright = u'2021, Jake Merdich, Gabe Morell, Tom Nurse'
+copyright = u'2022, Jake Merdich, Gabe Morell, Tom Nurse'
 author = u'Jake Merdich, Gabe Morell, Tom Nurse'
 
 # The version info for the project you're documenting, acts as replacement for

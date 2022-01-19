@@ -24,3 +24,11 @@ Forms
 .. automodule:: inventory.forms
     :members:
     :undoc-members:
+
+-----
+
+API Methods
+-----------
+.. automodule:: inventory.api
+    :members:
+    :undoc-members:

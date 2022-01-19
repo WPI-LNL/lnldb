@@ -1,0 +1,17 @@
+============
+Updates 2022
+============
+
+January
+=======
+We kicked off the new year in a big way! Several long-awaited bug fixes and UI improvements were finally introduced this
+month, including a redesigned bulk checkin and checkout feature for rentals. We also introduced the ability to
+automatically send calendar invites for meetings (if users choose to opt in).
+
+- :commit:`2a0ac4b4f11a753daa14e65112fb883281345703` Corrected the sort order of several event listings
+- :commit:`2670226a3ec8377b0cbb57a83c9b975ebcdde4ee` Redesigned Snipe checkin and checkout for better error handling
+- :commit:`b2888c5ba6cdfe2249138f1c2c3daa665c23c8b0` Added automated calendar invites for meetings (opt-in required)
+- :commit:`2d4754a70f1d71d483875db8270fb257e85e720c` New permission denied page with the option to submit a ticket
+- :commit:`25266a29eeeb76990fd256f97f585a7be2c5cde9` Completed the API token request endpoint
+- :commit:`49121da6a5742e41f3e2d8546abd3cebfd6006b7` Send Slack notification when submitting RT tickets through the LNLDB
+- :commit:`9c1951745ca3bac8cc0d90d0eb426006321464f2` Added the ability for the Slack app to automatically join new public channels

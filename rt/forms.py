@@ -9,6 +9,8 @@ class TicketSubmissionForm(forms.Form):
 
     class Meta:
         layout = [
+            ("Text", "<span style='color: grey'><em>Your name and contact information will automatically be shared "
+                     "with our support team when you submit this form.</em></span><br><br>"),
             ("Field", "subject"),
             ("Field", "description"),
             ("Field", "attachments")
