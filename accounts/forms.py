@@ -4,11 +4,12 @@ from crispy_forms.layout import HTML, Div, Field, Fieldset, Layout, Row, Submit,
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.conf import settings
+from django.db.models import Q
 from django import forms
 
 from data.forms import FieldAccessForm, FieldAccessLevel
 from meetings.models import MeetingType
-from .models import OfficerImg, carrier_choices, event_fields, UserPreferences
+from .models import Officer, ProfilePhoto, carrier_choices, event_fields, UserPreferences
 from .ldap import get_student_id
 
 
@@ -20,6 +21,8 @@ class LoginForm(AuthenticationForm):
 
 
 class UserEditForm(FieldAccessForm):
+    title = forms.ModelChoiceField(queryset=Officer.objects.filter(user__isnull=True), required=False)
+
     def __init__(self, *args, **kwargs):
         request_user = kwargs['request_user']
         instance_user = kwargs['instance']
@@ -37,10 +40,8 @@ class UserEditForm(FieldAccessForm):
         ]
         if request_user.is_lnl:
             layout.extend([
-                Fieldset("Student Info",
-                         'wpibox', 'class_year', 'student_id'),
-                Fieldset("Internal Info",
-                         'title', 'mdc', 'groups', 'away_exp'),
+                Fieldset("Student Info", 'wpibox', 'class_year', 'student_id'),
+                Fieldset("Internal Info", 'title', 'mdc', 'groups', 'away_exp'),
             ])
         layout.append(
             FormActions(
@@ -52,6 +53,9 @@ class UserEditForm(FieldAccessForm):
         if request_user.is_lnl and instance_user.is_lnl:
             self.fields['class_year'].required = True
 
+        self.fields['title'].queryset = Officer.objects.filter(Q(user__isnull=True) | Q(user=instance_user))
+        self.fields['title'].initial = Officer.objects.filter(user=instance_user).first()
+
     def clean_student_id(self):
         student_id = self.cleaned_data.get('student_id', None)
         if not student_id and self.instance.is_lnl and settings.SYNC_STUDENT_ID:
@@ -59,6 +63,24 @@ class UserEditForm(FieldAccessForm):
             if uid:
                 return int(uid)
         return student_id
+
+    def save(self, commit=True):
+        super(UserEditForm, self).save(commit)
+
+        if 'title' in self.changed_data:
+            officer_info = Officer.objects.filter(user=self.instance).first()
+            if officer_info:
+                officer_info.user = None
+                officer_info.img = None
+                officer_info.save()
+
+            if self.cleaned_data['title']:
+                officer_info = Officer.objects.get(pk=self.cleaned_data['title'].pk)
+                officer_info.user = self.instance
+                profile_photo = ProfilePhoto.objects.filter(officer=self.instance).first()
+                officer_info.img = profile_photo
+                officer_info.save()
+        return self.instance
 
     class Meta:
         model = get_user_model()
@@ -342,7 +364,7 @@ class OfficerPhotoForm(forms.ModelForm):
         super(OfficerPhotoForm, self).__init__(*args, **kwargs)
 
     class Meta:
-        model = OfficerImg
+        model = ProfilePhoto
         fields = ['img']
 
 
