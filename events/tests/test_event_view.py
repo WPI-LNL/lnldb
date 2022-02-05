@@ -2354,7 +2354,7 @@ class EventListBasicViewTest(ViewTestCase):
         self.assertOk(self.client.get(reverse("events:all-cal")))
 
     def test_ical_generation(self):
-    	# Check timezone
+        # Check timezone
         if settings.TIME_ZONE == "UTC":
             tz = b''
             start = timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)).strftime('%Y%m%dT%H%M%SZ')\
