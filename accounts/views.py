@@ -269,7 +269,8 @@ def smart_login(request):
     if settings.SAML2_ENABLED and pref_saml == "true":
         return saml_login(request)
     else:
-        return LoginView.as_view(template_name='registration/login.html', authentication_form=forms.LoginForm)(request)
+        return LoginView.as_view(template_name='registration/login.html', authentication_form=forms.LoginForm,
+                                 extra_context={'background_img': settings.LOGIN_BACKGROUND})(request)
 
 
 @login_required
