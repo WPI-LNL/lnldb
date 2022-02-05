@@ -2,7 +2,6 @@ import datetime
 import os
 
 from django.conf import settings
-from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Avg, Count, Q
 from django.http import HttpResponse, HttpResponseRedirect
@@ -10,7 +9,7 @@ from django.shortcuts import render, reverse
 from django.utils import timezone
 
 from events.charts import SurveyVpChart, SurveyCrewChart, SurveyPricelistChart, SurveyLnlChart
-from events.models import BaseEvent, Workshop, CrewAttendanceRecord
+from events.models import BaseEvent, Workshop
 from helpers.challenges import is_officer
 from pages.models import OnboardingScreen, OnboardingRecord
 
@@ -288,28 +287,3 @@ def workshops(request):
                   "Helvetica Neue, Helvetica, Arial, sans-serif;\n} "
     }
     return render(request, 'workshops.html', context)
-
-
-@login_required
-@permission_required('events.view_attendance_records', raise_exception=True)
-def attendance_logs(request):
-    """ View crew attendance logs (events) """
-
-    headers = ['User', 'Event', 'Location', 'Checkin', 'Checkout']
-
-    def get_checkin_time(data):
-        return data.get('checkin')
-
-    records = []
-    for record in CrewAttendanceRecord.objects.all():
-        obj = {'user': record.user, 'event': record.event, 'checkin': record.checkin, 'checkout': record.checkout}
-        if not record.active and not record.checkout:
-            obj['checkout'] = "UNKNOWN"
-        records.append(obj)
-    records.sort(key=get_checkin_time, reverse=True)
-
-    paginator = Paginator(records, 50)
-    page_number = request.GET.get('page', 1)
-    current_page = paginator.get_page(page_number)
-    context = {'records': current_page, 'title': 'Crew Logs', 'headers': headers}
-    return render(request, 'access_log.html', context)

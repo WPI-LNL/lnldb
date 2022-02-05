@@ -67,8 +67,6 @@ urlpatterns += [
     url(r'^workorder/', RedirectView.as_view(url='/workorder/', permanent=False)),
     url(r'^workshops/$', workshops, name='workshops'),
 
-    # Download checkin data (hopefully this url can be removed some day)
-    url(r'^downloads/logs/contact-tracing/$', data.views.contact_tracing_logs, name="csv-logs"),
     url(r'^maintenance/$', data.views.maintenance, name="maintenance"),
 
     # keep old urls

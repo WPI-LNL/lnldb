@@ -1490,7 +1490,7 @@ class OfficeHour(models.Model):
 
 
 class CrewAttendanceRecord(models.Model):
-    """ Checkin and checkout times for a crew member attending an event (used for contact tracing) """
+    """ Checkin and checkout times for a crew member attending an event """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="event_records")
     event = models.ForeignKey(Event2019, on_delete=models.SET_NULL, null=True, related_name="crew_attendance")
     checkin = models.DateTimeField(default=timezone.now)
@@ -1499,8 +1499,3 @@ class CrewAttendanceRecord(models.Model):
 
     def __str__(self):
         return self.user.name + " - " + self.event.event_name
-
-    class Meta:
-        permissions = (
-            ('view_attendance_records', 'View Attendance Records'),
-        )

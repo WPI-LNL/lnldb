@@ -122,5 +122,4 @@ urlpatterns = [
     url(r'^crew/checkin/$', flow_views.checkin, name="crew-checkin"),
     url(r'^crew/checkout/$', flow_views.checkout, name="crew-checkout"),
     url(r'^crew/bulk/$', flow_views.bulk_checkin, name="crew-bulk"),
-    url(r'^crew/logs/$', indices.attendance_logs, name="crew-logs")
 ]

@@ -149,12 +149,6 @@ class WorkshopAdmin(admin.ModelAdmin):
     inlines = [WorkshopDatesAdmin]
 
 
-class AttendanceRecordAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'checkin', 'checkout', 'active')
-    list_filter = ('checkin', 'checkout', 'active')
-    search_fields = ('event', 'user')
-
-
 admin.site.register(models.Billing)
 admin.site.register(models.Hours)
 admin.site.register(models.Building)
@@ -175,4 +169,3 @@ admin.site.register(models.Service)
 admin.site.register(models.PostEventSurvey)
 admin.site.register(models.Workshop, WorkshopAdmin)
 admin.site.register(models.OfficeHour)
-admin.site.register(models.CrewAttendanceRecord, AttendanceRecordAdmin)
