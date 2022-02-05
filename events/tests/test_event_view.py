@@ -2554,18 +2554,6 @@ class EventIndices(ViewTestCase):
 
         self.assertOk(self.client.get(reverse("survey-dashboard")))
 
-    def test_attendance_logs(self):
-        event = Event2019Factory(event_name="Test Event")
-        models.CrewAttendanceRecord(event=event, user=self.user, active=False)
-
-        # By default the user should not have permission
-        self.assertOk(self.client.get(reverse("events:crew-logs")), 403)
-
-        permission = Permission.objects.get(codename="view_attendance_records")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:crew-logs")))
-
 
 class EventTemplateTags(TestCase):
     def test_append_get(self):
