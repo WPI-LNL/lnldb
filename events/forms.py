@@ -14,6 +14,7 @@ from crispy_forms.layout import (HTML, Div, Row, Column, Field, Hidden, Layout, 
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db.models import Model, Q
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget
 from django.utils import timezone
@@ -564,7 +565,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'Name And Location',
                 'event_name',
                 'location',
-                Field('reference_code'),
+                'reference_code',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
                 HTML('<div style="width: 50%">'),
@@ -628,7 +629,8 @@ class InternalEventForm2019(FieldAccessForm):
 
         event_times = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_times', instance),
-            enable=('datetime_start', 'datetime_setup_complete', 'datetime_end')
+            enable=('datetime_start', 'datetime_setup_complete', 'datetime_end',
+                'reference_code')
         )
 
         edit_descriptions = FieldAccessLevel(
@@ -639,7 +641,7 @@ class InternalEventForm2019(FieldAccessForm):
 
         change_owner = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.adjust_event_owner', instance),
-            enable=('contact', 'org')
+            enable=('contact', 'org', 'reference_code')
         )
 
         change_type = FieldAccessLevel(
@@ -681,7 +683,9 @@ class InternalEventForm2019(FieldAccessForm):
         model = Event2019
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org',
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
-                  'datetime_end', 'sensitive', 'test_event', 'entered_into_workday', 'send_survey', 'max_crew')
+                  'datetime_end', 'sensitive', 'test_event',
+                  'entered_into_workday', 'send_survey', 'max_crew',
+                  'reference_code')
         widgets = {
             'description': PagedownWidget(),
             'internal_notes': PagedownWidget(),
@@ -700,6 +704,9 @@ class InternalEventForm2019(FieldAccessForm):
     datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
     max_crew = forms.IntegerField(label="Maximum Crew", help_text="Include this to enforce an occupancy limit",
                                   required=False)
+    # Regex will match valid 25Live reservation codes in the format
+    # `2022-ABNXQQ`
+    reference_code = forms.CharField(validators=[RegexValidator(regex=r"[0-9]{4}-[A-Z]{6}")])
 
 
 class EventReviewForm(forms.ModelForm):
