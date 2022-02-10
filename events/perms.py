@@ -122,6 +122,10 @@ class OrgOwnerPermLogic(AssocUsersCustomPermissionLogic):
     perms = OrgMemberPermLogic.perms + ('events.edit_org', 'events.edit_org_billing', 'events.edit_org_members',
                                         'events.deprecate_org', 'events.list_org_hidden_events')
 
+class BillingOrgPermLogic(AssocUsersCustomPermissionLogic):
+    field_name = 'billing_org__associated_users'
+    perms = ('events.bill_event', 'events.edit_org_billing',
+    'events.view_events')
 
 class ReportAuthorPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'crew_chief'
@@ -135,6 +139,7 @@ PERMISSION_LOGICS = (
     ('events.BaseEvent', WorkedAtEventPermLogic()),
     ('events.BaseEvent', EventOrgMemberPermLogic()),
     ('events.BaseEvent', EventOrgOwnerPermLogic()),
+    ('events.BaseEvent', BillingOrgPermLogic()),
     ('events.Organization', OrgMemberPermLogic()),
     ('events.Organization', OrgOwnerPermLogic()),
     ('events.CCReport', ReportAuthorPermLogic()),
