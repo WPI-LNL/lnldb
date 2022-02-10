@@ -564,6 +564,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'Name And Location',
                 'event_name',
                 'location',
+                Field('reference_code'),
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
                 HTML('<div style="width: 50%">'),

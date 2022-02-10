@@ -817,6 +817,12 @@ class Event2019(BaseEvent):
     # Added during COVID pandemic
     max_crew = models.PositiveIntegerField(null=True, blank=True)
 
+    # 25live integration
+    reference_code = models.CharField(max_length=12, null=True, blank=True,
+            help_text="The 25Live reference code, found on the event page")
+    event_id = models.IntegerField(null=True, blank=True, 
+        help_text="The 25Live event ID. If not provided, it will be generated from the reference code.")
+
     @property
     def has_projection(self):
         return self.serviceinstance_set.filter(service__category__name='Projection').exists()
