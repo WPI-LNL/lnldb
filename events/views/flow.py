@@ -934,31 +934,7 @@ def viewevent(request, id):
     context['history'] = Version.objects.get_for_object(event)
     if isinstance(event, Event2019):
         context['crew_count'] = event.crew_attendance.filter(active=True).values('user').count()
-
-    if isinstance(event, Event2019):
-        url = requests.get(f"https://25live.collegenet.com/25live/data/wpi/run/event.xml?event_id={event.event_id}")
-        dom = minidom.parseString(url.text)
-        context['25_event_name'] = dom.getElementsByTagName("r25:event_name")[0].firstChild.nodeValue
-
-        reservations_raw = dom.getElementsByTagName("r25:reservation")
-        reservations = []
-        for r in reservations_raw:
-            raw_resstart = r.getElementsByTagName("r25:reservation_start_dt")[0].firstChild.nodeValue
-            raw_resend = r.getElementsByTagName("r25:reservation_end_dt")[0].firstChild.nodeValue
-            
-            spaceres = r.getElementsByTagName("r25:space_reservation")[0]
-            space = spaceres.getElementsByTagName("r25:space")[0]
-            space_name = space.getElementsByTagName("r25:formal_name")[0].firstChild.nodeValue
-
-            reservations.append({
-                "start": raw_resstart,
-                "end": raw_resend,
-                "space_name": space_name,
-                })
-        print(reservations)
-        context['25_reservations'] = reservations
-
-
+ 
     if event.serviceinstance_set.exists():
         context['categorized_services_and_extras'] = {}
         for category in Category.objects.all():

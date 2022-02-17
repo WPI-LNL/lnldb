@@ -178,9 +178,6 @@
                 {% permission request.user has 'events.view_posteventsurveyresults' of event.surveys.first %}
                     <li><a href="#survey" data-toggle="tab">Survey</a></li>
                 {% endpermission %}
-                {% permission request.user has 'events.approve_event' of event %}
-                    <li><a href="#25live" data-toggle="tab">25Live</a></li>
-                {% endpermission %}
                 <li><a href="#history" data-toggle="tab">History</a></li>
             </ul>
 
@@ -986,36 +983,6 @@
                     {% else %}
                         Nobody has taken the survey.
                     {% endif %}
-                </div>
-                {% endpermission %}
-                {% permission request.user has 'events.approve_event' of event %}
-                <div id="25live" class="tab-pane">
-                    <h2>25Live Data</h2>
-                    <table class="table">
-                        <tr>
-                            <th>Event Name</th>
-                            <td>{{ 25_event_name }}</td>
-                        </tr>
-                    </table>
-
-                    <h3>Reservations</h3>
-                    {% for r in reservations %}
-                    {{ r.space_name }}
-                    <table class="table">
-                        <tr>
-                            <th>Start</th>
-                            <td>{{ r.start }}</td>
-                        </tr>
-                        <tr>
-                            <th>End</th>
-                            <td>{{ r.end }}</td>
-                        </tr>
-                        <tr>
-                            <th>Location</th>
-                            <td>{{ r.space_name }}</td>
-                        </tr>
-                    </table>
-                    {% endfor %}
                 </div>
                 {% endpermission %}
                 <div id="history" class="tab-pane">
