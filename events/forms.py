@@ -706,7 +706,8 @@ class InternalEventForm2019(FieldAccessForm):
                                   required=False)
     # Regex will match valid 25Live reservation codes in the format
     # `2022-ABNXQQ`
-    reference_code = forms.CharField(validators=[RegexValidator(regex=r"[0-9]{4}-[A-Z]{6}")])
+    reference_code =forms.CharField(validators=[RegexValidator(regex=r"[0-9]{4}-[A-Z]{6}")],
+            required = False)
 
 
 class EventReviewForm(forms.ModelForm):

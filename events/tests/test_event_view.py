@@ -98,6 +98,7 @@ class EventBasicViewTest(ViewTestCase):
             "entered_into_workday": False,
             "send_survey": True,
             "org": "|",
+            "reference_code": "",
             "datetime_setup_complete_0": timezone.now().date(),
             "datetime_setup_complete_1": timezone.now().time(),
             "datetime_start_0": timezone.now().date(),
