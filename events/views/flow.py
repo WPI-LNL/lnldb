@@ -40,10 +40,6 @@ from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standa
                         generate_multibill_pdf_standalone)
 from ..cal import generate_ics
 
-from xml.dom import minidom
-import requests
-
-
 @login_required
 @permission_required('events.approve_event', raise_exception=True)
 def approval(request, id):
