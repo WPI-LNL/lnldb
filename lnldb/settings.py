@@ -135,6 +135,8 @@ SAML2_AUTH = {
     'USE_JWT': False,
 }
 
+LOGIN_BACKGROUND = env.str('LOGIN_BACKGROUND', None)
+
 # Two-Factor Verification
 TFV_ATTEMPTS = env.str('TFV_ATTEMPTS', 3)
 TFV_CODE_EXPIRES = env.str('TFV_CODE_EXPIRES', 600)

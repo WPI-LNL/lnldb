@@ -196,6 +196,16 @@ def org_acceptxfer(request, idstr):
         context['msg'] = 'This transfer has expired, please make a new one (you had a week :-\)'
         context['status'] = 'Expired'
 
+    elif not request.user == transfer.org.user_in_charge and request.user == transfer.initiator \
+            and timezone.now() < transfer.created + timezone.timedelta(days=1):
+        context['msg'] = 'We\'re sorry! The transfer could not be completed at this time. Since you are not the ' \
+                         'current owner of the organization, this transfer has been placed on a temporary hold. This ' \
+                         'hold may last up to 24 hours and helps us prevent unauthorized transfers. During this time ' \
+                         'only the current owner may approve this request. If the current owner is unreachable, you ' \
+                         'may try this link again once the hold expires.'
+        context['status'] = 'Transfer Blocked'
+        context['msgclass'] = 'alert-warning'
+
     else:
         with reversion.create_revision():
             reversion.set_user(transfer.initiator)

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_serializer
 from events.models import OfficeHour, Event2019, CrewAttendanceRecord
-from accounts.models import User
+from accounts.models import Officer
 from data.models import ResizedRedirect
 from pages.models import Page
 
@@ -30,15 +30,23 @@ class OfficerSerializer(serializers.ModelSerializer):
                 self.fields.pop('img')
                 self.fields.pop('class_year')
 
-    img = serializers.CharField(source='img.img.url')
+    class_year = serializers.IntegerField(source='user.class_year')
+    img = serializers.SerializerMethodField()
+    name = serializers.CharField(source='user.name')
+
+    def get_img(self, obj):
+        if obj.img:
+            return obj.img.img.url
+        else:
+            return None
 
     class Meta:
-        model = User
+        model = Officer
         fields = ('title', 'name', 'img', 'class_year')
 
 
 class HourSerializer(serializers.ModelSerializer):
-    officer = serializers.CharField(source='officer.title')
+    officer = serializers.CharField(source='officer.exec_position.title')
     location = serializers.CharField(source='location.name')
 
     class Meta:

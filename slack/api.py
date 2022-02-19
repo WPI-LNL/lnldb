@@ -489,11 +489,9 @@ def handle_event(request):
             slack_post(event['user']['id'], text="Welcome to LNL!", content=views.welcome_message())
         elif event['type'] == "app_home_opened":
             load_app_home(event['user'])
-        return HttpResponse()
-    elif payload['type'] == "channel_created":
-        channel_id = payload['channel']['id']
-        if settings.SLACK_AUTO_JOIN:
-            join_channel(channel_id)
+        elif event['type'] == "channel_created":
+            if settings.SLACK_AUTO_JOIN:
+                join_channel(event['channel']['id'])
         return HttpResponse()
     return HttpResponse("Not implemented")
 

@@ -2,7 +2,7 @@
 from django.contrib.auth.models import AbstractUser, _user_has_perm
 from django.db.models import (Model, BooleanField, CharField, IntegerField, BigIntegerField, PositiveIntegerField, Q,
                               TextField, DateField, DateTimeField, OneToOneField, ManyToManyField, ImageField, CASCADE,
-                              signals)
+                              SET_NULL, signals)
 from multiselectfield import MultiSelectField
 from django.conf import settings
 from six import python_2_unicode_compatible
@@ -42,7 +42,6 @@ class User(AbstractUser):
             self.email = "%s@wpi.edu" % self.username
         super(User, self).save(*args, **kwargs)
 
-    title = CharField(max_length=60, null=True, blank=True, verbose_name="Officer Position")
     wpibox = IntegerField(null=True, blank=True, verbose_name="WPI Box Number")
     phone = CharField(max_length=24, null=True, blank=True, verbose_name="Phone Number")
     carrier = CharField(choices=carrier_choices, max_length=25, verbose_name="Cellular Carrier",
@@ -174,7 +173,7 @@ def path_and_rename(instance, filename):
     """
     Determine path for storing officer headshots. Will rename with officer's username.
 
-    :param instance: An OfficerImg instance
+    :param instance: A ProfilePhoto instance
     :param filename: The original name of the uploaded file
     :returns: New path to save file to
     """
@@ -186,8 +185,8 @@ def path_and_rename(instance, filename):
 
 
 @python_2_unicode_compatible
-class OfficerImg(Model):
-    """Officer headshots"""
+class ProfilePhoto(Model):
+    """ Officer profile photo """
     officer = OneToOneField(User, on_delete=CASCADE, related_name="img")
     img = ImageField(upload_to=path_and_rename, storage=OverwriteStorage(), verbose_name="Image")
 
@@ -195,14 +194,24 @@ class OfficerImg(Model):
         return self.officer.name
 
 
-@receiver(signals.post_delete, sender=OfficerImg)
+@receiver(signals.post_delete, sender=ProfilePhoto)
 def officer_img_cleanup(sender, instance, **kwargs):
     """
-    When an instance of OfficerImg is deleted, delete the respective files as well.
+    When an instance of ProfilePhoto is deleted, delete the respective files as well.
 
-    :param instance: An OfficerImg instance
+    :param instance: A ProfilePhoto instance
     """
     instance.img.delete(False)
+
+
+class Officer(Model):
+    """ Represents an Officer position """
+    user = OneToOneField(User, on_delete=SET_NULL, blank=True, null=True, related_name="exec_position")
+    title = CharField(max_length=60, verbose_name="Officer Position")
+    img = OneToOneField(ProfilePhoto, on_delete=SET_NULL, blank=True, null=True, related_name="officer_img")
+
+    def __str__(self):
+        return self.title
 
 
 class PhoneVerificationCode(Model):

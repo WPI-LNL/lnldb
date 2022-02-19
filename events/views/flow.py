@@ -782,7 +782,9 @@ def assignattach(request, id):
                     to.append(settings.EMAIL_TARGET_HP)
                 for ccinstance in event.ccinstances.all():
                     if ccinstance.crew_chief.email:
-                        to.append(ccinstance.crew_chief.email)
+                        prefs, created = UserPreferences.objects.get_or_create(user=ccinstance.crew_chief)
+                        if not prefs.ignore_user_action or ccinstance.crew_chief != request.user:
+                            to.append(ccinstance.crew_chief.email)
                 subject = "Event Attachments"
                 email_body = "Attachments for the following event were modified by %s." % request.user.get_full_name()
                 email = EventEmailGenerator(event=event, subject=subject, to_emails=to, body=email_body)

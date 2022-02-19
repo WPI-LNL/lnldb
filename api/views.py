@@ -24,7 +24,7 @@ from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiPara
 
 from random import randint
 
-from accounts.models import UserPreferences
+from accounts.models import UserPreferences, Officer
 from accounts.forms import SMSOptInForm
 from emails.generators import generate_sms_email
 from events.models import OfficeHour, Event2019, Location, CrewAttendanceRecord
@@ -65,16 +65,16 @@ class OfficerViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'title'
 
     def get_queryset(self):
-        queryset = get_user_model().objects.filter(groups__name="Officer").exclude(title__isnull=True).order_by('title')
+        queryset = Officer.objects.filter(user__groups__name="Officer").exclude(user__isnull=True).order_by('title')
         title = self.request.query_params.get('title', None)
         first_name = self.request.query_params.get('first_name', None)
         last_name = self.request.query_params.get('last_name', None)
         if title is not None:
             queryset = queryset.filter(title__iexact=title)
         if first_name is not None:
-            queryset = queryset.filter(first_name__iexact=first_name)
+            queryset = queryset.filter(user__first_name__iexact=first_name)
         if last_name is not None:
-            queryset = queryset.filter(last_name__iexact=last_name)
+            queryset = queryset.filter(user__last_name__iexact=last_name)
         if queryset.count() == 0:
             raise NotFound(detail='Not found', code=404)
         return queryset
@@ -134,7 +134,7 @@ class HourViewSet(viewsets.ReadOnlyModelViewSet):
         start = self.request.query_params.get('start', None)
         end = self.request.query_params.get('end', None)
         if officer is not None:
-            queryset = queryset.filter(officer__title__iexact=officer)
+            queryset = queryset.filter(officer__exec_position__title__iexact=officer)
         if day is not None:
             queryset = queryset.filter(day=day)
         if location is not None:

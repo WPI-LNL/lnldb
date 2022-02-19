@@ -164,14 +164,14 @@ class AccountsTestCase(ViewTestCase):
         self.user.user_permissions.add(change_group)
 
         self.officer.user_set.add(self.user2)
-        self.user2.title = "President"
+        models.Officer.objects.create(user=self.user2, title="President")
         self.user2.save()
 
         if settings.SLACK_TOKEN in [None, '']:
             self.assertRedirects(self.client.post(reverse("accounts:update", args=[2]), member_data),
                                  reverse("accounts:detail", args=[2]))
             self.user2.refresh_from_db()
-            self.assertIsNone(self.user2.title)
+            self.assertFalse(models.Officer.objects.filter(user=self.user2).exists())
 
     def test_user_detail_view(self):
         self.setup()
@@ -531,13 +531,13 @@ class OfficerImgTestCase(test.TestCase):
     def setup(self):
         self.user = models.User.objects.create(username="tester")
         img = SimpleUploadedFile(name="test.jpg", content=b"file data", content_type="image/jpeg")
-        self.img = models.OfficerImg.objects.create(officer=self.user, img=img)
+        self.img = models.ProfilePhoto.objects.create(officer=self.user, img=img)
         self.img.save()
 
     def test_officer_img_cleanup(self):
         self.setup()
 
-        models.OfficerImg.objects.get(officer=self.user).delete()
+        models.ProfilePhoto.objects.get(officer=self.user).delete()
 
         self.assertFalse(os.path.exists(os.path.join(settings.MEDIA_ROOT, "officers", "tester.jpg")))
 

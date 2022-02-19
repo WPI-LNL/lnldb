@@ -1,11 +1,16 @@
-{% extends 'base.html' %}
+{% extends 'base_static.html' %}
 {% load crispy_forms_tags %}
 
-{% block nav %}
-    {% include "my.nav.html" %}
-{% endblock %}
-
 {% block extras %}
+    <style>
+        .asteriskField {
+            display: none;
+        }
+
+        body {
+            background-color: #343a40;
+        }
+    </style>
     {% if SAML2_ENABLED  %}
     <script type="application/javascript">
 
@@ -28,34 +33,52 @@
     {% endif %}
 {% endblock %}
 
-{% block content %}
-
-<div class="container marketing" style="text-align:center;">
-    <div class="row">
-        {% if SAML2_ENABLED %}
-            <div class="col-md-5 offset1">
-                <h2> Login via WPI Account</h2>
-                <p class="lead">If you are currently part of the WPI Community, you can login to the application via Microsoft Azure SSO.</p>
+{% block body %}
+    <div class="p-0 bg-dark" style="{% if background_img %}background-image: url('{{ background_img }}'); {% endif %}
+            background-position: top; background-size: cover; height: 95vh; background-repeat: no-repeat; display: flex; align-items: center">
+        <div class="col-md-4 container" style="margin: auto;">
+            <div class="mx-2 bg-light p-4" style="border-radius: 5px">
+                <div class='text-center' style="margin: auto">
+                    <img src="/assets/ico/apple-touch-icon-144-precomposed.png" draggable="False" style="border-radius: 5px; max-width: 20%">
+                </div>
+                <br>
+                <p class="text-center"><strong>Connecting to:</strong> LNLDB</p>
+                <hr>
                 {% if SAML2_ENABLED %}
-                    <p>
-                        <a class="btn btn-lg btn-block btn-primary" href="{% url 'accounts:login' %}?force_saml=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}"
+                <div id="btns"{% if form.errors %} style="display: none"{% endif %}>
+                    <button class="btn btn-warning btn btn-lg btn-block" onclick="local_login();">Local Login</button>
+                    <a class="btn btn-lg btn-block btn-primary" href="{% url 'accounts:login' %}?force_saml=true{% if request.GET.next %}&next={{ request.GET.next | urlencode }}{% endif %}"
                            style="background: #2f2f2f url('/static/img/ms_signin_dark.png') no-repeat center;">&nbsp;</a>
-                        <form>
-                            <label>
-                                <input type="checkbox" id="prefer_saml" name="prefer_saml">
-                                Automatically send me to Microsoft SSO in the future.
-                            </label>
-                        </form>
-                    </p>
+                    <br>
+                    <form>
+                        <div class="form-check small">
+                            <input type="checkbox" class="form-check-input" id="prefer_saml" name="prefer_saml">
+                            <label class="form-check-label" for="exampleCheck1">Automatically send me to Microsoft SSO in the future</label>
+                        </div>
+                    </form>
+                </div>
                 {% endif %}
+                <div id="local-login"{% if SAML2_ENABLED and not form.errors %} style="display: none"{% endif %} class="pb-4">
+                    {% crispy form %}
+                    {% if SAML2_ENABLED %}<button class="btn text-secondary p-0" style="background-color: transparent; display: inline-block" onclick="back();"><span class="small"><i class="fas fa-arrow-circle-left"></i> Back</span></button>{% endif %}
+                    <a href="{% url "accounts:reset:start" %}" class="small pt-2" style="float: right">Forgot Password?</a>
+                </div>
             </div>
-        {% endif %}
-        <div class="col-md-5 login">
-            <h2> Login via Local Account </h2>
-            {% crispy form %}
-            <p class="muted text-muted"><a href="{% url "accounts:reset:start" %}"> Forgot your password? </a></p>
         </div>
     </div>
-</div>
+    <div class='bg-dark w-100'>
+        <a class="mb-0 p-2 pl-4 text-white small" style="display: inline-block; text-decoration: none; vertical-align: middle" href="/">WPI Lens and Lights</a>
+        <p class="mb-0 p-2 pr-4 text-white small" style="float: right; display: inline-block"><a href="/help" style="color: #bbb">Help</a> &middot; <a href="/legal/privacy/" style="color: #bbb">Privacy</a> &middot; <a href="/sitemap" style="color: #bbb">Sitemap</a></p>
+    </div>
+    <script>
+    function local_login() {
+        document.getElementById("btns").style.display = "none";
+        document.getElementById("local-login").style.display = "block";
+    }
 
+    function back() {
+        document.getElementById("btns").style.display = "block";
+        document.getElementById("local-login").style.display = "none";
+    }
+    </script>
 {% endblock %}
