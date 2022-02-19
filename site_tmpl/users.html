@@ -24,7 +24,7 @@
                 <td><a href="{% url "accounts:detail" user.id %}">{{ user }}</a></td>
                 <td>{{ user.email }}</td>
                 {% if positions_column %}
-                    <td>{{ user.title }}</td>
+                    <td>{{ user.exec_position.title }}</td>
                 {% endif %}
                 <td>{% if user.class_year %}{{ user.class_year }}{% endif %}</td>
                 {% permission request.user has 'accounts.view_user' %}

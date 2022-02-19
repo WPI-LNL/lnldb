@@ -11,6 +11,7 @@ from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 from . import models
 from .templatetags import path_safe
+from accounts.models import Officer
 from events.tests.generators import UserFactory, Event2019Factory, CCInstanceFactory
 from events.models import OfficeHour, Building, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
@@ -128,7 +129,7 @@ class APIViewTest(ViewTestCase):
         self.assertOk(self.client.get("/api/v1/officers"), 404)
 
         # Test that we see all officers and not normal user (will require user to have title)
-        self.user.title = "President"
+        officer_info = Officer.objects.create(user=self.user, title="President")
         self.user.first_name = "Test"
         self.user.last_name = "User"
         self.user.save()
@@ -143,8 +144,7 @@ class APIViewTest(ViewTestCase):
         self.assertEqual(self.client.get("/api/v1/officers").content.decode('utf-8'),
                          '[{"title":"President","name":"Test User"}]')
 
-        user2.title = "Vice President"
-        user2.save()
+        Officer.objects.create(user=user2, title="Vice President")
 
         self.assertEqual(self.client.get("/api/v1/officers").content.decode('utf-8'),
                          '[{"title":"President","name":"Test User"},{"title":"Vice President","name":"Other Officer"}]')
@@ -165,10 +165,9 @@ class APIViewTest(ViewTestCase):
                          '[{"title":"President","name":"Test User","class_year":2020}]')
 
     def test_hour_viewset(self):
-        self.user.title = "President"
-        self.user.save()
-
-        user2 = UserFactory.create(password="123", title="Vice President")
+        user2 = UserFactory.create(password="123")
+        Officer.objects.create(user=self.user, title="President")
+        Officer.objects.create(user=user2, title="Vice President")
 
         # Test that no content returns a 204
         self.assertOk(self.client.get("/api/v1/office-hours"), 204)

@@ -389,6 +389,7 @@ def send_invite(meeting, is_update=False, is_cancellation=False):
     if is_cancellation:
         subject = "Canceled: " + meeting.name
 
-    email = DefaultLNLEmailGenerator(subject, to_emails=[], bcc=recipients, from_email=settings.EMAIL_FROM_NOREPLY,
-                                     template_basename="emails/email_basic", body=agenda, attachments=[invite])
+    email = DefaultLNLEmailGenerator(subject, to_emails=settings.EMAIL_FROM_NOREPLY, bcc=recipients,
+                                     from_email=settings.EMAIL_FROM_NOREPLY, template_basename="emails/email_basic",
+                                     body=agenda, attachments=[invite])
     email.send()

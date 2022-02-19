@@ -98,6 +98,7 @@ class EventBasicViewTest(ViewTestCase):
             "entered_into_workday": False,
             "send_survey": True,
             "org": "|",
+            "reference_code": "",
             "datetime_setup_complete_0": timezone.now().date(),
             "datetime_setup_complete_1": timezone.now().time(),
             "datetime_start_0": timezone.now().date(),
@@ -2354,7 +2355,7 @@ class EventListBasicViewTest(ViewTestCase):
         self.assertOk(self.client.get(reverse("events:all-cal")))
 
     def test_ical_generation(self):
-    	# Check timezone
+        # Check timezone
         if settings.TIME_ZONE == "UTC":
             tz = b''
             start = timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)).strftime('%Y%m%dT%H%M%SZ')\
@@ -2553,18 +2554,6 @@ class EventIndices(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("survey-dashboard")))
-
-    def test_attendance_logs(self):
-        event = Event2019Factory(event_name="Test Event")
-        models.CrewAttendanceRecord(event=event, user=self.user, active=False)
-
-        # By default the user should not have permission
-        self.assertOk(self.client.get(reverse("events:crew-logs")), 403)
-
-        permission = Permission.objects.get(codename="view_attendance_records")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:crew-logs")))
 
 
 class EventTemplateTags(TestCase):

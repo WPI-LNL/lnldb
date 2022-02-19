@@ -817,6 +817,12 @@ class Event2019(BaseEvent):
     # Added during COVID pandemic
     max_crew = models.PositiveIntegerField(null=True, blank=True)
 
+    # 25live integration
+    reference_code = models.CharField(max_length=12, null=True, blank=True,
+            help_text="The 25Live reference code, found on the event page")
+    event_id = models.IntegerField(null=True, blank=True, 
+        help_text="The 25Live event ID. If not provided, it will be generated from the reference code.")
+
     @property
     def has_projection(self):
         return self.serviceinstance_set.filter(service__category__name='Projection').exists()
@@ -1490,7 +1496,7 @@ class OfficeHour(models.Model):
 
 
 class CrewAttendanceRecord(models.Model):
-    """ Checkin and checkout times for a crew member attending an event (used for contact tracing) """
+    """ Checkin and checkout times for a crew member attending an event """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="event_records")
     event = models.ForeignKey(Event2019, on_delete=models.SET_NULL, null=True, related_name="crew_attendance")
     checkin = models.DateTimeField(default=timezone.now)
@@ -1499,8 +1505,3 @@ class CrewAttendanceRecord(models.Model):
 
     def __str__(self):
         return self.user.name + " - " + self.event.event_name
-
-    class Meta:
-        permissions = (
-            ('view_attendance_records', 'View Attendance Records'),
-        )
