@@ -96,6 +96,7 @@ Table of Contents
    reference/projection
    reference/rt
    reference/slack
+   reference/spotify
 
 .. toctree::
    :maxdepth: 2

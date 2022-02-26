@@ -178,6 +178,9 @@
                 {% permission request.user has 'events.view_posteventsurveyresults' of event.surveys.first %}
                     <li><a href="#survey" data-toggle="tab">Survey</a></li>
                 {% endpermission %}
+                {% if apps|length > 0 %}
+                <li><a href="#apps" data-toggle="tab">Apps</a></li>
+                {% endif %}
                 <li><a href="#history" data-toggle="tab">History</a></li>
             </ul>
 
@@ -972,6 +975,53 @@
                     {% endif %}
                 </div>
                 {% endpermission %}
+                {% if apps|length > 0 %}
+                <div id="apps" class="tab-pane">
+                    <h2> Third-party Integrations </h2>
+                    <br>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {% if "spotify" in apps %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <h3 class="h4" style="margin-top: 0; margin-bottom: 0">Spotify</h3>
+                                </div>
+                                <div class="panel-body">
+                                    {% if event.session_set.first %}
+                                        {% if not event.reviewed and not event.cancelled and not event.closed %}
+                                            <h4>Current Session</h4>
+                                            <p>Request songs at: <a href="{% url 'spotify:request' event.session_set.first.slug %}">
+                                                {{ request.scheme }}://{{ request.get_host }}{% url 'spotify:request' event.session_set.first.slug %}</a>
+                                            </p>
+                                            {% permission request.user has 'spotify.change_session' of event.session_set.first %}
+                                            <ul>
+                                                <li><strong>Account:</strong> {{ event.session_set.first.user }}</li>
+                                                <li><strong>Accepting requests:</strong> {{ event.session_set.first.accepting_requests|yesno|capfirst }}</li>
+                                                <li><strong>Allow explicit music:</strong> {{ event.session_set.first.allow_explicit|yesno|capfirst }}</li>
+                                                <li><strong>Payment required:</strong> {{ event.session_set.first.require_payment|yesno|capfirst }}</li>
+                                            </ul>
+                                            <br>
+                                            <a href="{% url 'spotify:event-session' event.pk %}" class="btn btn-default">Configure Session</a>
+                                            <a href="{% url 'spotify:list' event.session_set.first.pk %}" class="btn btn-default">Manage Requests</a>
+                                            {% endpermission %}
+                                        {% else %}
+                                            <h4>Session Closed</h4>
+                                            <p>Song requests can no longer be submitted for this event. To view a list
+                                                of content played during the event, click the button below.</p>
+                                            <br>
+                                            <a href="{% url 'spotify:list' event.session_set.first.pk %}" class="btn btn-success">View History</a>
+                                        {% endif %}
+                                    {% else %}
+                                        <p>Start a new session to begin collecting song requests.</p>
+                                        <a href="{% url 'spotify:event-session' event.pk %}" class="btn btn-success">New Session</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
                 <div id="history" class="tab-pane">
                     <h2> History </h2>
                     <table class="table">

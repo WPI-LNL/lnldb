@@ -1,6 +1,7 @@
 {% extends 'base_admin.html' %}
 {% load permissionif %}
 {% load lnldb_tags %}
+{% load spotify_tags %}
 
 {% block content %}
 	<div class="container">
@@ -22,33 +23,80 @@
 							<td colspan="5">There are currently no new song requests to review</td>
 						</tr>
 						{% endif %}
-						{% for request in pending %}
+						{% for song_request in pending %}
 						<tr>
-                            <td>{% if request.identifier != "Silence" and request.identifier != "Donation" %}<a href="https://open.spotify.com/track/{{ request.identifier }}" target="_blank">{{ request.name }}</a>{% else %}{{ request.name }}{% endif %}</td>
-							<td>{{ request.duration|minutes_seconds }}</td>
-                            <td>{{ request.submitted_by }}</td>
-                            <td>{% if request.email %}{{ request.email }}{% elif request.phone %}{{ request.phone }}{% endif %}</td>
-							<td>{% if not request.approved %}<a href="{% url "spotify:approve-request" request.id %}" class="btn btn-success" style="margin-bottom: 5px">Approve</a>
-                            <a href="{% url "spotify:cancel-request" request.id %}" class="btn btn-danger" style="margin-bottom: 5px">Deny</a>{% else %}
-                                <a href="{% url "spotify:mark-paid" request.id %}" class="btn btn-primary" style="margin-bottom: 5px">Mark Paid</a>{% endif %}</td>
+                            <td>{% if song_request.identifier != "Silence" and song_request.identifier != "Donation" %}<a href="https://open.spotify.com/track/{{ song_request.identifier }}" target="_blank">{{ song_request.name }}</a>{% else %}{{ song_request.name }}{% endif %}</td>
+							<td>{{ song_request.duration|minutes_seconds }}</td>
+                            <td>{{ song_request.submitted_by }}</td>
+                            <td>{% if song_request.email %}{{ song_request.email }}{% elif song_request.phone %}{{ song_request.phone }}{% endif %}</td>
+							<td>{% permission request.user has 'spotify.approve_song_request' of song_request %}
+                                {% if not song_request.approved %}
+                                <form style="display: inline-block" action="{% url "spotify:approve-request" song_request.id %}" method="post" enctype="multipart/form-data">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success" style="margin-bottom: 5px">Approve</button>
+                                </form>
+                                <form style="display: inline-block" action="{% url "spotify:cancel-request" song_request.id %}" method="post" enctype="multipart/form-data">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger" style="margin-bottom: 5px">Deny</button>
+                                </form>
+                                {% else %}
+                                    {% if session.require_payment %}
+                                        <form action="{% url "spotify:mark-paid" song_request.id %}" method="post" enctype="multipart/form-data">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-primary" style="margin-bottom: 5px">Mark Paid</button>
+                                        </form>
+                                    {% else %}
+                                        <form action="{% url "spotify:queue" song_request.id %}" method="post" enctype="multipart/form-data">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-success" style="margin-bottom: 5px">Queue</button>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+                                {% else %}
+                                <p class="text-muted"><em>Waiting for Crew Chief...</em></p>
+                            {% endpermission %}</td>
 						</tr>
 						{% endfor %}
 					</table>
 				</div>
 			</div>
 			<br>
-            <h3>Sent to Queue</h3>
-            <ul>
-                {% for request in paid %}
-                <li>{{ request.name }} ({{ request.submitted_by }})</li>
-                {% endfor %}
-            </ul>
-            <br>
-            <p><strong>Total: </strong>{{ paid.count }}</p>
-            <p><strong>Est. Runtime: </strong>{{ queue_length }} minutes</p>
-            <br>
-            <br>
-            <a class="btn btn-default" href="{% url "spotify:signin" %}">Log in</a>&nbsp;<a class="btn btn-default" href="{% url "spotify:refresh" %}">Refresh Token</a>
+            <div class="row">
+                {% if current_track.item %}
+                <div class="col-md-6">
+                    <h3>Currently Playing</h3>
+                    <div class="row flex-row flex-nowrap" style="overflow: scroll">
+                        <div class="col-md-6">
+                            <br>
+                            <div class='card card-block'>
+                                <img src='{{ current_track.item.album.images.0.url }}' class='card-img-top' style="width: 100%;"/>
+                                <div class='card-body'>
+                                    <p style='min-height: 90px; padding-top: 5%'><span class='h4'>{{ current_track.item.name }}</span><br>{{ current_track.item.artists|artists }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <br>
+                </div>
+                {% endif %}
+                <div class="col-md-6">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="h4">Sent to Queue</h3>
+                        </div>
+                        <div class="panel-body">
+                            <ul>
+                                {% for request in paid %}
+                                <li>{{ request.name }} ({{ request.submitted_by }})</li>
+                                {% endfor %}
+                            </ul>
+                            <br>
+                            <p><strong>Total: </strong>{{ paid.count }}</p>
+                            <p><strong>Est. Runtime: </strong>{% if queue_length %}{{ queue_length }} minutes{% else %}Not available{% endif %}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 		</div>
     </div>
 {% endblock %}
