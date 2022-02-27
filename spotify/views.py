@@ -164,6 +164,24 @@ def song_request(request, session_id):
     return render(request, 'song_request_form.html', context)
 
 
+def pay_fee(request, session_id):
+    """
+    If payment is required when making a song request, this page should be displayed.
+
+    :param session_id: The primary key value of the session object
+    """
+
+    session = get_object_or_404(models.Session, pk=session_id)
+
+    amount = 1
+
+    options = request.GET.get('type', 'track')
+    if options == "silence":
+        amount = 5
+
+    return render(request, 'pay.html', {'session': session, 'amount': amount, 'LIGHT_THEME': True})
+
+
 @login_required
 def queue_manager(request, session):
     """

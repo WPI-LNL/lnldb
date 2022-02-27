@@ -1,7 +1,8 @@
+import re
 from django import forms
 from django.db.models import Q
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Field, Submit, Layout, HTML
+from crispy_forms.layout import Field, Submit, Layout, HTML, Row, Column, Hidden
 from crispy_forms.bootstrap import FormActions
 
 from . import models
@@ -20,20 +21,52 @@ class SpotifySessionForm(forms.ModelForm):
             Field('allow_explicit'),
             Field('auto_approve'),
             Field('private'),
+            HTML('<br><hr><h3>Payment Details</h3><br>'),
             Field('require_payment'),
+            Field('allow_silence'),
+            HTML('<br>'),
+            Field('paypal'),
+            Row(
+                Column(
+                    Field('venmo'),
+                    css_class="col-md-6"
+                ),
+                Column(
+                    Field('venmo_verification'),
+                    css_class="col-md-6"
+                )
+            ),
             FormActions(
                 Submit('save', 'Save Session')
             )
         )
         self.fields['user'].queryset = models.SpotifyUser.objects.filter(token_info__isnull=False)\
             .filter(Q(personal=False) | Q(user=request_user))
+        self.fields['allow_silence'].label = "Can request silence ($5)"
     user = forms.ModelChoiceField(queryset=models.SpotifyUser.objects.filter(token_info__isnull=False, personal=False),
                                   label="Spotify Account")
     auto_approve = forms.BooleanField(required=False, label="Automatically approve requests")
     private = forms.BooleanField(required=False, label="Restrict to LNL members")
 
+    paypal = forms.URLField(
+        label="PayPal.Me Link", required=False,
+        help_text="Don't have one? <a href='https://www.paypal.com/paypalme/' target='_blank'>Create one</a>"
+    )
+
+    venmo_verification = forms.CharField(help_text="Last 4 digits of your phone number", required=False)
+
+    def clean_paypal(self):
+        paypal = self.cleaned_data['paypal']
+        if not re.match(r"^https://paypal.me/[0-9a-zA-Z-_]*", paypal) and paypal not in [None, '']:
+            raise forms.ValidationError('Invalid PayPal.Me link')
+
+        if paypal and paypal[-1] == "/":
+            paypal = paypal[:-1]
+        return paypal
+
     class Meta:
-        fields = ('user', 'accepting_requests', 'allow_explicit', 'require_payment', 'auto_approve', 'private',)
+        fields = ('user', 'accepting_requests', 'allow_explicit', 'require_payment', 'auto_approve', 'private',
+                  'allow_silence', 'paypal', 'venmo', 'venmo_verification')
         model = models.Session
 
 

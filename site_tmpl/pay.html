@@ -1,0 +1,48 @@
+{% extends 'base_static.html' %}
+
+{% block content %}
+    <h2>Complete your Donation</h2>
+    <br>
+    <p><strong>Your total: </strong>${{ amount }}.00</p>
+    <p>LNL currently accepts the following payment methods. Feel free to choose whichever option is most convenient for you!</p>
+    <div class="icon-container row px-3" style="font-size: 2em">
+        <i class="far fa-money-bill-alt pr-3" style="color: green; font-size: 1.5em" title="Come visit us in person to make your payment"></i>
+        {% if session.paypal %}<i class="fab fa-cc-paypal pr-3" style="color:blue; border: none; background: none; font-size: 1.5em"></i>{% endif %}
+        {% if session.venmo %}<i style="font-size: 0.9em; color: #4da6ff" class="pr-3">Venmo</i>{% endif %}
+    </div>
+    {% if session.paypal or session.venmo %}
+    <div>
+        <br>
+        <hr>
+        <h3>Mobile Payments</h3>
+        <br>
+        <div class="row">
+            {% if session.paypal %}
+            <div class="col-md-5">
+                <h4>PayPal</h4>
+                <br>
+                <a href="{{ session.paypal }}/{{ amount }}" title="Pay with PayPal"><img src="https://www.paypalobjects.com/digitalassets/c/website/marketing/apac/C2/logos-buttons/optimize/34_Yellow_PayPal_Pill_Button.png" alt="PayPal" /></a>
+                <br>
+            </div>
+            {% endif %}
+            {% if session.venmo %}
+            <div class="col-md-7">
+                <h4>Venmo</h4>
+                <ul>
+                    <li><strong>Venmo:</strong> Send your payment to <em>{{ session.venmo }}</em>. {% if session.venmo_verification %}If asked to verify the last four digits of the phone number, enter: <strong>{{ session.venmo_verification }}</strong>{% endif %}</li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        <br>
+    </div>
+    {% endif %}
+    <br>
+    <hr>
+    <div class="jumbotron">
+        <h3>Having trouble paying?</h3>
+        <p>Come visit us in person and we'll be more than happy to help you out!</p>
+    </div>
+    <br>
+    {% if session.venmo or session.paypal %}<p class="small text-muted"><em>Venmo® and PayPal® are registered trademarks of PayPal, Inc.</em></p>{% endif %}
+{% endblock %}

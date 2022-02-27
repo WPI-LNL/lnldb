@@ -63,21 +63,39 @@ class SpotifyTests(ViewTestCase):
                              reverse("events:detail", args=[self.event.pk]) + "#apps")
 
     def test_song_request(self):
-        # Test that song request form loads ok
-        self.assertOk(self.client.get(reverse("spotify:request", args=[self.session.slug])))
+        with self.settings(SPOTIFY_CLIENT_ID=None):
+            # Test that song request form loads ok
+            self.assertOk(self.client.get(reverse("spotify:request", args=[self.session.slug])))
 
-        # Check that submission data requires email or phone number
-        submission_data = {
-            "first_name": "Peter",
-            "last_name": "Parker",
-            "email": "",
-            "phone": "",
-            "save": "6BDvEzgDediLAvCmW6bZhV"  # Track ID
-        }
+            # Check that submission data requires email or phone number
+            submission_data = {
+                "first_name": "Peter",
+                "last_name": "Parker",
+                "email": "",
+                "phone": "",
+                "request_type": "track",
+                "save": "6BDvEzgDediLAvCmW6bZhV"  # Track ID
+            }
 
-        self.assertOk(self.client.post(reverse("spotify:request", args=[self.session.slug]), submission_data))
+            self.assertOk(self.client.post(reverse("spotify:request", args=[self.session.slug]), submission_data))
 
-        # Skip testing successful form submissions (Spotify auth not implemented for tests)
+            silence_data = {
+                "first_name": "Peter",
+                "last_name": "Parker",
+                "email": "pp@wpi.edu",
+                "phone": "",
+                "request_type": "silence",
+                "save": "Submit"
+            }
+
+            self.assertRedirects(self.client.post(reverse("spotify:request", args=[self.session.slug]), silence_data),
+                                 reverse("spotify:payment", args=[self.session.pk]) + "?type=silence")
+
+            # Skip testing most successful form submissions (Spotify auth not implemented for tests)
+
+    def test_pay_fee(self):
+        # Check that the page loads ok
+        self.assertOk(self.client.get(reverse("spotify:payment", args=[self.session.pk]) + "?type=silence"))
 
     def test_queue_manager(self):
         # Check that approval permissions are required
