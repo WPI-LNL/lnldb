@@ -1,5 +1,7 @@
+import json
 from django.conf import settings
 from django.utils import timezone
+from cryptography.fernet import Fernet
 from spotipy.cache_handler import CacheHandler
 from spotipy import SpotifyOAuth, Spotify, SpotifyException, SpotifyOauthError
 from . import models
@@ -27,7 +29,14 @@ class DjangoCacheHandler(CacheHandler):
         if self.user != account.user:
             raise SpotifySessionError("Invalid account ID for user %s" % self.user.name)
 
-        return account.token_info
+        if not account.token_info:
+            return None
+
+        try:
+            cipher_suite = Fernet(settings.CRYPTO_KEY)
+        except ValueError:
+            raise SpotifySessionError("Cryptographic key is either missing or invalid")
+        return json.loads(cipher_suite.decrypt(account.token_info.encode('utf-8')))
 
     def save_token_to_cache(self, token_info):
         account = models.SpotifyUser.objects.filter(pk=self.account).first()
@@ -38,7 +47,13 @@ class DjangoCacheHandler(CacheHandler):
             account = models.SpotifyUser.objects.create(user=self.user)
             self.account = account.pk
 
-        account.token_info = token_info
+        try:
+            cipher_suite = Fernet(settings.CRYPTO_KEY)
+        except ValueError:
+            raise SpotifySessionError("Cryptographic key is either missing or invalid")
+        encrypted_token_info = cipher_suite.encrypt(json.dumps(token_info).encode('utf-8')).decode('utf-8')
+
+        account.token_info = encrypted_token_info
         account.save()
 
 

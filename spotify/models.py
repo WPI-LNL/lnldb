@@ -1,7 +1,6 @@
 from django.db import models
 from django.conf import settings
 from django.utils.crypto import get_random_string
-from jsonfield.fields import JSONField
 
 from events.models import Event2019
 from helpers.util import unique_slug_generator
@@ -13,7 +12,7 @@ class SpotifyUser(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="spotify_accounts")
     display_name = models.CharField(max_length=150, blank=True, null=True)
     spotify_id = models.CharField(max_length=150, blank=True, null=True)
-    token_info = JSONField(blank=True, null=True)
+    token_info = models.TextField(blank=True, null=True)
 
     personal = models.BooleanField(default=True, help_text="Uncheck this for shared club accounts")
 
