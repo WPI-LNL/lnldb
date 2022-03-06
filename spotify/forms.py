@@ -76,6 +76,10 @@ class SongRequestForm(forms.ModelForm):
         self.session = session
         self.helper = FormHelper()
         self.helper.form_tag = False
+        if self.session.allow_silence:
+            request_type = Field('request_type')
+        else:
+            request_type = Hidden('request_type', "track")
         self.helper.layout = Layout(
             HTML('<div class="row"><div class="col-md-6">'),
             Field('first_name'),
@@ -85,11 +89,20 @@ class SongRequestForm(forms.ModelForm):
             Field('email', placeholder='Ex: rhgoddard@wpi.edu'),
             HTML('</div><div class="col-md-6">'),
             Field('phone', placeholder='(123) 456-7890'),
-            HTML('</div></div>')
+            HTML('</div></div><br>'),
+            Row(
+                Column(
+                    request_type,
+                    css_class="col-md-6"
+                )
+            )
         )
 
     first_name = forms.CharField(max_length=74, widget=forms.TextInput(attrs={'placeholder': 'First Name'}))
     last_name = forms.CharField(max_length=74, widget=forms.TextInput(attrs={'placeholder': 'Last Name'}))
+    request_type = forms.ChoiceField(choices=(
+        ("track", " Request a song ($1.00)"), ("silence", " Request 1 minute of silence ($5.00)")
+    ), label="I would like to: ", widget=forms.RadioSelect(), initial="track")
 
     def clean(self):
         if self.cleaned_data['email'] in ['', None] and self.cleaned_data['phone'] in ['', None]:

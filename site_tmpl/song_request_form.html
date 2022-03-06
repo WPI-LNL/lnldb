@@ -7,7 +7,7 @@
     <h2>{{ title }}</h2>
     {% if session.accepting_requests %}
     <form action="" method="post" enctype="multipart/form-data">
-        <div{% if tracks %} style="display: none"{% endif %}>
+        <div{% if verified or complete %} style="display: none"{% endif %}>
             <br>
             <p>Welcome! You can use this page to request music for today's event.
                 {% if not session.require_payment %}All song requests are free of charge. {% endif %}
@@ -24,10 +24,14 @@
                 {% crispy form %}
             {% endif %}
             <br>
+            {% if session.allow_silence %}
+            <button type="submit" class="btn btn-primary" name="save" value="Submit">Submit</button>
+            {% else %}
             <hr>
+            {% endif %}
         </div>
-        <div id="search_bar">
-            <p id="runtime" style="display: none; float: right" class="h6">Estimated wait: <span id="runtime-val"></span> minutes</p>
+        <div id="search_bar" {% if not verified and session.allow_silence or complete %}style="display: none"{% endif %}>
+            <p id="runtime" style="{% if not runtime %}display: none; {% endif %}float: right" class="h6">Estimated wait: {{ runtime }} minute{{ runtime|pluralize }}</p>
             <h4 class="mt-4">Search Music</h4>
             <input name="search_q" type="text" class="form-control" placeholder="Search">
             <br>
@@ -106,10 +110,19 @@
     {% else %}
     <div class="alert alert-danger">Sorry, this event is no longer accepting requests.</div>
     {% endif %}
+    {% if complete %}
+    <div class="jumbotron text-center pb-5">
+        <h2>Request Submitted</h2>
+        <p>We have received your request and will review it shortly.{% if runtime %}
+            <br><br><strong>Estimated wait</strong>: {{ runtime }} minute{{ runtime|pluralize }}{% endif %}</p>
+    </div>
+    {% endif %}
     <br><br>
     <p class="text-center">Powered by: <span style="color: #1db954"><i class="fab fa-spotify"></i> Spotify</span></p>
-    <p class="small">By using this site you agree to
+    <p class="small">{% if complete %}<br>Note: Lens and Lights reserves the right to decline your request at any time and for any
+        reason with or without advance notice.<br>{% endif %}By using this site you agree to
         <a href="https://www.spotify.com/us/legal/end-user-agreement/">Spotify's Terms of Use</a> as well as LNL's
-        <a href="/legal/privacy/">Privacy Policy</a>.</p>
+        <a href="/legal/privacy/">Privacy Policy</a>.
+    </p>
 </div>
 {% endblock %}

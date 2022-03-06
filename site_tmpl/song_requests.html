@@ -87,7 +87,12 @@
                         <div class="panel-body">
                             <ul>
                                 {% for request in paid %}
-                                <li>{{ request.name }} ({{ request.submitted_by }})</li>
+                                <li>{% if request.identifier != "Silence" and request.identifier != "Donation" %}
+                                    <a href="https://open.spotify.com/track/{{ request.identifier }}" target="_blank">{{ request.name }}</a>
+                                {% else %}
+                                    {{ request.name }}
+                                {% endif %} ({{ request.submitted_by }})
+                                </li>
                                 {% endfor %}
                             </ul>
                             <br>

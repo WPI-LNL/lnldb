@@ -93,6 +93,12 @@ class SpotifyTests(ViewTestCase):
 
             # Skip testing most successful form submissions (Spotify auth not implemented for tests)
 
+            # If session is private, non-LNL members should not be able to submit requests
+            self.session.private = True
+            self.session.save()
+
+            self.assertRedirects(self.client.get(reverse("spotify:request", args=[self.session.slug])), reverse("home"))
+
     def test_pay_fee(self):
         # Check that the page loads ok
         self.assertOk(self.client.get(reverse("spotify:payment", args=[self.session.pk]) + "?type=silence"))

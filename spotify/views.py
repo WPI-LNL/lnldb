@@ -96,7 +96,11 @@ def auth_callback(request):
 
 @login_required
 def configure_session(request, event_id):
-    """ Set up a Spotify shared listening session and begin accepting song requests for an event """
+    """
+    Set up a Spotify shared listening session and begin accepting song requests for an event
+
+    :param event_id: The primary key value of the event the session is attached to
+    """
 
     context = {'msg': 'Configure Spotify Session'}
     event = get_object_or_404(Event2019, pk=event_id)
@@ -126,41 +130,92 @@ def configure_session(request, event_id):
 
 
 def song_request(request, session_id):
-    """ Page for accepting song requests """
+    """
+    Page for accepting song requests
+
+    :param session_id: The unique slug for the corresponding session
+    """
     session = get_object_or_404(models.Session, slug=session_id)
     form = forms.SongRequestForm(session)
+    verified = False
+    complete = False
+    runtime = queue_estimate(session)
     tracks = []
     albums = []
     artists = []
+
+    if request.user.is_authenticated:
+        if session.private and not request.user.is_lnl:
+            messages.add_message(request, messages.WARNING, "Unable to join private Spotify session")
+            return HttpResponseRedirect(reverse("home"))
+
+        form = forms.SongRequestForm(session, {
+            "first_name": request.user.first_name,
+            "last_name": request.user.last_name,
+            "email": request.user.email,
+            "phone": request.user.phone,
+            "request_type": "track"
+        })
+
+        if not session.allow_silence and request.user.first_name and request.user.last_name and \
+                (request.user.email or request.user.phone):
+            verified = True
+    elif session.private:
+        next_url = reverse("spotify:request", args=[session.slug])
+        return HttpResponseRedirect(reverse("accounts:login") + "?next=" + next_url)
+
     if request.method == 'POST':
         form = forms.SongRequestForm(session, request.POST)
         if form.is_valid():
-            api = get_spotify_session(session.user, request.user)
-            if request.POST['save'] == "Search":
-                results = api.search(request.POST['search_q'], type="track,album,artist")
-                tracks = results['tracks']['items']
-                albums = results['albums']['items']
-                artists = results['artists']['items']
-            else:
-                track_info = api.track(request.POST['save'])
-                new_request = form.save(commit=False)
-                new_request.session = session
-                new_request.submitted_by = request.POST['first_name'] + " " + request.POST['last_name']
-                new_request.identifier = request.POST['save']
-                new_request.name = track_info['name']
-                new_request.duration = track_info['duration_ms']
-                if session.auto_approve:
-                    new_request.approved = True
-                    if not session.require_payment:
-                        try:
-                            api.add_to_queue(request.POST['save'])
-                            new_request.queued = timezone.now()
-                        except SpotifyException:
-                            pass
-                new_request.save()
+            try:
+                # If the user is given the option to request silence, handle the first step accordingly
+                if request.POST['save'] == "Submit":
+                    if request.POST['request_type'] == "silence":
+                        new_request = form.save(commit=False)
+                        new_request.session = session
+                        new_request.submitted_by = request.POST['first_name'] + " " + request.POST['last_name']
+                        new_request.identifier = "Silence"
+                        new_request.name = "1 Minute of Silence"
+                        new_request.duration = 60000
+                        new_request.save()
+                        return HttpResponseRedirect(reverse("spotify:payment", args=[session.pk]) + "?type=silence")
+                    verified = True
+
+                # Search Spotify's API for a tracks, albums, and artists matching a given query
+                elif request.POST['save'] == "Search":
+                    api = get_spotify_session(session.user, request.user)
+                    verified = True
+                    results = api.search(request.POST['search_q'], type="track,album,artist")
+                    tracks = results['tracks']['items']
+                    albums = results['albums']['items']
+                    artists = results['artists']['items']
+                else:
+                    # Submit request and redirect to payment page if necessary
+                    api = get_spotify_session(session.user, request.user)
+                    track_info = api.track(request.POST['save'])
+                    new_request = form.save(commit=False)
+                    new_request.session = session
+                    new_request.submitted_by = request.POST['first_name'] + " " + request.POST['last_name']
+                    new_request.identifier = request.POST['save']
+                    new_request.name = track_info['name']
+                    new_request.duration = track_info['duration_ms']
+                    if session.auto_approve:
+                        new_request.approved = True
+                        if not session.require_payment:
+                            try:
+                                api.add_to_queue(request.POST['save'])
+                                new_request.queued = timezone.now()
+                            except SpotifyException:
+                                pass
+                    new_request.save()
+                    complete = True
+                    if session.require_payment:
+                        return HttpResponseRedirect(reverse("spotify:payment", args=[session.pk]))
+            except SpotifyException as error:
+                messages.add_message(request, messages.ERROR, "Spotify API Error: %s" % error.msg.split(':')[-1])
 
     context = {'form': form, 'LIGHT_THEME': True, 'tracks': tracks, 'albums': albums, 'artists': artists,
-               'session': session}
+               'session': session, 'verified': verified, 'complete': complete, 'runtime': runtime}
     return render(request, 'song_request_form.html', context)
 
 
@@ -209,7 +264,7 @@ def queue_manager(request, session):
 @require_POST
 @login_required
 def approve_request(request, pk):
-    """ Approve a song request """
+    """ Approve a song request (POST only) """
     r = get_object_or_404(models.SongRequest, pk=pk)
 
     if not request.user.has_perm('spotify.approve_song_request', r):
@@ -224,7 +279,7 @@ def approve_request(request, pk):
 @require_POST
 @login_required
 def cancel_request(request, pk):
-    """ Deny a song request """
+    """ Deny a song request (POST only) """
     r = get_object_or_404(models.SongRequest, pk=pk)
 
     if not request.user.has_perm('spotify.approve_song_request', r):
@@ -239,7 +294,7 @@ def cancel_request(request, pk):
 @require_POST
 @login_required
 def paid(request, pk):
-    """ Mark a song request as paid (if applicable) """
+    """ Mark a song request as paid (if applicable). POST only. """
     r = get_object_or_404(models.SongRequest, pk=pk)
 
     if not request.user.has_perm('spotify.approve_song_request', r):
@@ -248,9 +303,14 @@ def paid(request, pk):
     r.paid = True
     r.save()
 
-    error = add_to_queue(r, request.user)
-    if error:
-        messages.add_message(request, messages.ERROR, error.msg.split(':')[-1])
+    if r.identifier == "Silence":
+        r.queued = timezone.now()
+        r.save()
+        messages.add_message(request, messages.INFO, "Reminder: You will need to handle the minute of silence manually")
+    else:
+        error = add_to_queue(r, request.user)
+        if error:
+            messages.add_message(request, messages.ERROR, error.msg.split(':')[-1])
 
     return HttpResponseRedirect(reverse("spotify:list", args=[r.session.pk]))
 
@@ -259,7 +319,7 @@ def paid(request, pk):
 @login_required
 def queue_song(request, pk):
     """
-    Add a song to the Spotify session queue
+    Add a song to the Spotify session queue (POST only)
 
     :param pk: The primary key value of the corresponding song request
     """
@@ -268,8 +328,13 @@ def queue_song(request, pk):
     if not request.user.has_perm('spotify.approve_song_request', r):
         raise PermissionDenied
 
-    error = add_to_queue(r, request.user)
-    if error:
-        messages.add_message(request, messages.ERROR, error.msg.split(':')[-1])
+    if r.identifier != "Silence":
+        error = add_to_queue(r, request.user)
+        if error:
+            messages.add_message(request, messages.ERROR, error.msg.split(':')[-1])
+    else:
+        r.queued = timezone.now()
+        r.save()
+        messages.add_message(request, messages.INFO, "Reminder: You will need to handle the minute of silence manually")
 
     return HttpResponseRedirect(reverse("spotify:list", args=[r.session.pk]))
