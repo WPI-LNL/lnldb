@@ -197,3 +197,7 @@ class SpotifyTests(ViewTestCase):
         with self.settings(SPOTIFY_CLIENT_ID=None):
             self.assertRedirects(self.client.post(reverse("spotify:queue", args=[self.song_request.pk])),
                                  reverse("spotify:list", args=[self.song_request.session.pk]))
+
+    def test_qr_code(self):
+        # Check that the page loads ok
+        self.assertOk(self.client.get(reverse("spotify:qr", args=[self.session.pk])))

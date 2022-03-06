@@ -2,6 +2,8 @@
 {% load markdown_deux_tags %}
 {% load permissionif %}
 {% load gpa_scale_emoji %}
+{% load spotify_tags %}
+
 {% block content %}
     <div class="jumbotron">
         <div class="clearfix">
@@ -986,7 +988,7 @@
                                 <div class="panel-heading">
                                     <h3 class="h4" style="margin-top: 0; margin-bottom: 0">Spotify</h3>
                                 </div>
-                                <div class="panel-body">
+                                <div class="panel-body" style="overflow-wrap: break-word">
                                     {% if event.session_set.first %}
                                         {% if not event.reviewed and not event.cancelled and not event.closed %}
                                             <h4>Current Session</h4>
@@ -1003,6 +1005,12 @@
                                             <br>
                                             <a href="{% url 'spotify:event-session' event.pk %}" class="btn btn-default">Configure Session</a>
                                             <a href="{% url 'spotify:list' event.session_set.first.pk %}" class="btn btn-default">Manage Requests</a>
+                                            <a href="{% url 'spotify:qr' event.session_set.first.pk %}" class="btn btn-default">QR Code</a>
+                                            {% elpermission request.user has 'spotify.view_session' of event.session_set.first %}
+                                            <div class="col-md-3" style="cursor: pointer"
+                                                 onclick="window.location.href = '{% url 'spotify:qr' event.session_set.first.pk %}';">
+                                                {% qr_code event.session_set.first %}
+                                            </div>
                                             {% endpermission %}
                                         {% else %}
                                             <h4>Session Closed</h4>

@@ -1,15 +1,18 @@
+import qrcode
 from django.utils import timezone
 from django.conf import settings
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render, get_object_or_404, reverse
 from django.contrib.auth import get_user_model, PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib.messages.views import messages
+from io import BytesIO
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify, SpotifyException
 
 from events.models import Event2019
+from .templatetags.spotify_tags import qr_code
 from .api import DjangoCacheHandler, scopes, get_spotify_session, queue_estimate, get_currently_playing, add_to_queue
 from . import models, forms
 
@@ -127,6 +130,37 @@ def configure_session(request, event_id):
     context['form'] = form
     context['session'] = session
     return render(request, 'form_crispy.html', context)
+
+
+def generate_qr_code(request, session_id):
+    """
+    Generate a QR Code
+
+    :param session_id: The primary key value of the shared listening session
+    """
+
+    session = get_object_or_404(models.Session, pk=session_id)
+
+    options = request.GET.get('options', None)
+    if options and options == 'download':
+        code = qrcode.QRCode()
+        code.add_data(request.build_absolute_uri(reverse("spotify:request", args=[session.slug])))
+        code.make(fit=True)
+
+        img = code.make_image()
+        stream = BytesIO()
+        img.save(stream, format="PNG")
+        response = HttpResponse(stream.getvalue(), content_type="image/png")
+        response['Content-Disposition'] = "attachment; filename=%s.png" % session.event.event_name
+        return response
+
+    img = "<div style='width: 50%; margin: auto;'>" + qr_code({'request': request}, session, True) + "</div>"
+
+    context = {'page': {'title': 'Scan to Request a Song', 'icon': img,
+                        'action_href': reverse('spotify:qr', args=[session.pk]) + "?options=download",
+                        'action_title': 'Download', 'next_btn': 'Exit', 'inverted': True},
+               'next_href': reverse("events:detail", args=[session.event.pk]) + "#apps"}
+    return render(request, 'onboarding.html', context)
 
 
 def song_request(request, session_id):
