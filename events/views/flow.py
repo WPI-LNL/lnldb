@@ -1074,6 +1074,14 @@ def viewevent(request, id):
             apps.append('spotify')
         elif event.session_set.first():
             apps.append('spotify')
+
+    # Automatically stop accepting song requests if event is no longer eligible
+    if event.session_set.first():
+        session = event.session_set.first()
+        if session.accepting_requests and (not event.approved or event.reviewed or event.cancelled or event.closed):
+            session.accepting_requests = False
+            session.save()
+
     context['apps'] = apps
 
     return render(request, 'uglydetail.html', context)

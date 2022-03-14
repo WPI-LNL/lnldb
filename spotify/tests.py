@@ -28,7 +28,7 @@ class SpotifyTests(ViewTestCase):
         # User needs add or change session permissions
         self.assertOk(self.client.get(reverse("spotify:event-session", args=[self.event.pk])), 403)
 
-        permission = Permission.objects.get(codename="add_session", content_type__app_label__contains="spotify")
+        permission = Permission.objects.get(codename="change_session", content_type__app_label__contains="spotify")
         self.user.user_permissions.add(permission)
 
         # Will need view event permission for redirect
@@ -46,7 +46,7 @@ class SpotifyTests(ViewTestCase):
         self.assertOk(self.client.get(reverse("spotify:event-session", args=[self.event.pk])))
 
         # Test form submission
-        self.account.token_info = {'token': "Form will only show authenticated accounts"}
+        self.account.token_info = "Form will only show authenticated accounts (token information is encrypted)"
         self.account.save()
 
         valid_data = {

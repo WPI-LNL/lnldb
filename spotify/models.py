@@ -50,6 +50,12 @@ class Session(models.Model):
             self.slug = unique_slug_generator(self, self.event.event_name)
         super(Session, self).save(*args, **kwargs)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user'], name="active_session_lock",
+                                    condition=models.Q(accepting_requests=True))
+        ]
+
 
 class SongRequest(models.Model):
     """ Used in keeping track of a song request """

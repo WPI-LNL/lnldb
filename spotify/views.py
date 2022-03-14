@@ -1,6 +1,7 @@
 import qrcode
 from django.utils import timezone
 from django.conf import settings
+from django.db import IntegrityError, transaction
 from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render, get_object_or_404, reverse
 from django.contrib.auth import get_user_model, PermissionDenied
@@ -110,8 +111,11 @@ def configure_session(request, event_id):
 
     session = models.Session.objects.filter(event=event).first()
 
-    if not request.user.has_perm('spotify.add_session', session) and \
-            not request.user.has_perm('spotify.change_session', session):
+    if not session and not request.user.has_perm('spotify.add_session') and \
+            request.user not in [cc.crew_chief for cc in event.ccinstances.all()]:
+        raise PermissionDenied
+
+    if session and not request.user.has_perm('spotify.change_session', session):
         raise PermissionDenied
 
     if not event.approved or event.reviewed or event.closed or event.cancelled:
@@ -121,10 +125,18 @@ def configure_session(request, event_id):
     if request.method == 'POST':
         form = forms.SpotifySessionForm(request.user, request.POST, instance=session)
         if form.is_valid():
-            session = form.save(commit=False)
-            session.event = event
-            session.save()
-            return HttpResponseRedirect(reverse("events:detail", args=[event.pk]) + "#apps")
+            try:
+                with transaction.atomic():
+                    session = form.save(commit=False)
+                    session.event = event
+                    session.save()
+                return HttpResponseRedirect(reverse("events:detail", args=[event.pk]) + "#apps")
+            except IntegrityError:
+                active_session = models.Session.objects.get(user=request.POST['user'], accepting_requests=True)
+                warning = "The Spotify account you selected is currently in use for <a href='%s'>%s</a>. Please " \
+                          "select a different account or uncheck \"Accepting requests\" to continue." % \
+                          (reverse("events:detail", args=[active_session.event.pk]), active_session.event.event_name)
+                messages.warning(request, warning)
     else:
         form = forms.SpotifySessionForm(request_user=request.user, instance=session)
     context['form'] = form
