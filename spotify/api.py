@@ -7,7 +7,7 @@ from spotipy import SpotifyOAuth, Spotify, SpotifyException, SpotifyOauthError
 from . import models
 
 
-scopes = ['user-read-currently-playing', 'user-modify-playback-state']
+scopes = ['user-read-currently-playing', 'user-read-playback-state', 'user-modify-playback-state']
 
 
 class DjangoCacheHandler(CacheHandler):
@@ -109,11 +109,12 @@ def add_to_queue(song_request, request_user):
     return None
 
 
-def queue_estimate(session):
+def queue_estimate(session, ms=False):
     """
     Attempt to determine wait time for new song requests
 
     :param session: The corresponding Session object
+    :param ms: If True, return the estimate in milliseconds
     :return: Time remaining, if available (Int)
     """
 
@@ -129,7 +130,8 @@ def queue_estimate(session):
         upcoming = models.SongRequest.objects.filter(queued__gt=current_song.queued)
         for request in upcoming:
             time_remaining += request.duration
-        time_remaining = int(time_remaining / 60000)
+        if not ms:
+            time_remaining = int(time_remaining / 60000)
         return time_remaining
     return None
 
@@ -145,5 +147,20 @@ def get_currently_playing(session):
     try:
         api = get_spotify_session(session.user, session.user.user)
         return api.currently_playing()
+    except SpotifyException:
+        return None
+
+
+def get_playback_state(session):
+    """
+    Retrieves information about the session's current playback state
+
+    :param session: The corresponding Session object
+    :return: Playback state information (Dictionary)
+    """
+
+    try:
+        api = get_spotify_session(session.user, session.user.user)
+        return api.current_playback()
     except SpotifyException:
         return None

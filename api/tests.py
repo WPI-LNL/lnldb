@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from cryptography.fernet import Fernet
 from data.tests.util import ViewTestCase
 from django.test.client import RequestFactory
 from django.urls.base import reverse
 from django.conf import settings
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, Permission
 from django.contrib.sites.shortcuts import get_current_site
 from django.utils import timezone
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APIRequestFactory
 from rest_framework.authtoken.models import Token
 from . import models
 from .templatetags import path_safe
@@ -16,6 +17,7 @@ from events.tests.generators import UserFactory, Event2019Factory, CCInstanceFac
 from events.models import OfficeHour, Building, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
 from pages.models import Page
+from spotify.models import SpotifyUser, Session
 import pytz
 import logging
 
@@ -456,3 +458,278 @@ class APIViewTest(ViewTestCase):
         # Test filter by category
         self.assertOk(self.client.get('/api/v1/sitemap', {'category': 'Events'}), 204)
         self.assertEqual(self.client.get('/api/v1/sitemap', {'category': 'test'}).content.decode('utf-8'), pages_only)
+
+
+class SpotifyAPIViewTests(ViewTestCase):
+    def setUp(self):
+        super(SpotifyAPIViewTests, self).setUp()
+        self.crypto_key = Fernet.generate_key()
+        token_info = b'{"access_token": "USE THIS TO AUTHENTICATE AGAINST THE SPOTIFY API", "token_type": "Bearer", ' \
+                     b'"expires_in": 3600, "scope": "user-read-currently-playing user-read-playback-state ' \
+                     b'user-modify-playback-state", "expires_at": 1647219907, "refresh_token": "USE THIS TO GET A ' \
+                     b'NEW TOKEN WHEN THE ACCESS TOKEN EXPIRES"}'
+        cipher_suite = Fernet(self.crypto_key)
+        self.encrypted_token_info = cipher_suite.encrypt(token_info).decode('utf-8')
+
+    def test_session_list(self):
+        client = APIClient()
+
+        # Create some sessions to list
+        event = Event2019Factory.create(event_name="Test Event", approved=True)
+        event2 = Event2019Factory.create(event_name="Another Event", approved=True,
+                                         datetime_start=timezone.now() - timezone.timedelta(days=1))
+        account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
+        session1 = Session.objects.create(event=event, user=account)
+        session2 = Session.objects.create(event=event2, user=account, accepting_requests=False, private=True)
+
+        # Set up expected outputs
+        event_start_str = timezone.localtime(event.datetime_start).strftime("%Y-%m-%dT%H:%M:%S%z")
+        event_end_str = timezone.localtime(event.datetime_end).strftime("%Y-%m-%dT%H:%M:%S%z")
+        event2_start_str = timezone.localtime(event2.datetime_start).strftime("%Y-%m-%dT%H:%M:%S%z")
+        event2_end_str = timezone.localtime(event2.datetime_end).strftime("%Y-%m-%dT%H:%M:%S%z")
+
+        factory = APIRequestFactory()
+        request = factory.get("/api/v1/spotify/sessions")
+        request_form_url = request.build_absolute_uri(reverse('spotify:request', args=[session1.slug]))
+        qr_code_url = request.build_absolute_uri(reverse('spotify:qr', args=[session1.pk]))
+        request_form2_url = request.build_absolute_uri(reverse('spotify:request', args=[session2.slug]))
+        qr_code2_url = request.build_absolute_uri(reverse('spotify:qr', args=[session2.pk]))
+
+        # The following output will only contain sessions that are not private and are accepting requests
+        limited_output = '[{"id":"test-event","event":{"id":' + str(event.pk) + ',"event_name":"Test Event",' \
+                         '"description":null,"location":"' + str(event.location) + '","datetime_start":"' + \
+                         event_start_str + '","datetime_end":"' + event_end_str + '"},"allow_explicit":true,' \
+                         '"require_payment":false,"accepting_requests":true,"urls":{"request_form":"' + \
+                         request_form_url + '","qr_code":"' + qr_code_url + '"}}]'
+
+        # The following output includes additional details for privileged users (excludes inactive sessions by default)
+        privileged_output = '[{"id":"test-event","event":{"id":' + str(event.pk) + ',"event_name":"Test Event",' \
+                            '"description":null,"location":"' + str(event.location) + '","datetime_start":"' + \
+                            event_start_str + '","datetime_end":"' + event_end_str + '"},"user":{"id":' + \
+                            str(account.pk) + ',"display_name":null,"spotify_id":null,"personal":false},' \
+                            '"allow_explicit":true,"require_payment":false,"private":false,"accepting_requests":true,' \
+                            '"auto_approve":false,"urls":{"request_form":"' + request_form_url + '","qr_code":"' + \
+                            qr_code_url + '"}}]'
+
+        # This is the full output when "show_inactive" is set to True (only privileged users can set "show_inactive")
+        full_output = '[{"id":"test-event","event":{"id":' + str(event.pk) + ',"event_name":"Test Event",' \
+                      '"description":null,"location":"' + str(event.location) + '","datetime_start":"' + \
+                      event_start_str + '","datetime_end":"' + event_end_str + '"},"user":{"id":' + str(account.pk) + \
+                      ',"display_name":null,"spotify_id":null,"personal":false},"allow_explicit":true,' \
+                      '"require_payment":false,"private":false,"accepting_requests":true,"auto_approve":false,"urls":{'\
+                      '"request_form":"' + request_form_url + '","qr_code":"' + qr_code_url + '"}},{"id":"' + \
+                      session2.slug + '","event":{"id":' + str(event2.pk) + ',"event_name":"Another Event",' \
+                      '"description":null,"location":"' + str(event.location) + '","datetime_start":"' + \
+                      event2_start_str + '","datetime_end":"' + event2_end_str + '"},"user":{"id":' + str(account.pk) +\
+                      ',"display_name":null,"spotify_id":null,"personal":false},"allow_explicit":true,' \
+                      '"require_payment":false,"private":true,"accepting_requests":false,"auto_approve":false,"urls":{' \
+                      '"request_form":"' + request_form2_url + '","qr_code":"' + qr_code2_url + '"}}]'
+
+        # If user not authenticated or unprivileged always show limited output
+        self.assertEqual(client.get("/api/v1/spotify/sessions").content.decode('utf-8'), limited_output)
+        self.assertEqual(client.get("/api/v1/spotify/sessions", {"show_inactive": True}).content.decode('utf-8'),
+                         limited_output)
+        self.assertEqual(client.get("/api/v1/spotify/sessions", {"private": True}).content.decode('utf-8'),
+                         limited_output)
+
+        # Make user privileged
+        token, created = Token.objects.get_or_create(user=self.user)
+        client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        permission = Permission.objects.get(codename="view_session", content_type__app_label="spotify")
+        self.user.user_permissions.add(permission)
+
+        self.assertEqual(client.get("/api/v1/spotify/sessions").content.decode('utf-8'), privileged_output)
+
+        # Test with various options
+        self.assertEqual(client.get("/api/v1/spotify/sessions", {"show_inactive": True}).content.decode('utf-8'),
+                         full_output)
+
+        self.assertEqual(client.get("/api/v1/spotify/sessions", {"event": "test"}).content.decode('utf-8'),
+                         privileged_output)
+
+        self.assertOk(client.get("/api/v1/spotify/sessions", {"user": "user3"}), 204)
+
+    def test_session_detail(self):
+        client = APIClient()
+
+        # Set up a session
+        event = Event2019Factory.create(event_name="Test Event", approved=True)
+        account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
+        session = Session.objects.create(event=event, user=account)
+
+        # Set up expected outputs
+        event_start_str = timezone.localtime(event.datetime_start).strftime("%Y-%m-%dT%H:%M:%S%z")
+        event_end_str = timezone.localtime(event.datetime_end).strftime("%Y-%m-%dT%H:%M:%S%z")
+
+        factory = APIRequestFactory()
+        request = factory.get("/api/v1/spotify/sessions")
+        request_form_url = request.build_absolute_uri(reverse('spotify:request', args=[session.slug]))
+        qr_code_url = request.build_absolute_uri(reverse('spotify:qr', args=[session.pk]))
+
+        # The following output is displayed if the user has insufficient permissions or did not provide a token
+        limited_output = '{"id":"test-event","event":{"id":' + str(event.pk) + ',"event_name":"Test Event",' \
+                         '"description":null,"location":"' + str(event.location) + '","datetime_start":"' + \
+                         event_start_str + '","datetime_end":"' + event_end_str + '"},"allow_explicit":true,' \
+                         '"require_payment":false,"accepting_requests":true,"is_playing":false,"runtime_ms":null,' \
+                         '"current_track":null,"urls":{"request_form":"' + request_form_url + '","qr_code":"' + \
+                         qr_code_url + '"}}'
+
+        # The following output will be displayed if the user has permission to see additional information
+        privileged_output = '{"id":"test-event","event":{"id":' + str(event.pk) + ',"event_name":"Test Event",' \
+                            '"description":null,"location":"' + str(event.location) + '","datetime_start":"' + \
+                            event_start_str + '","datetime_end":"' + event_end_str + '"},"user":{"id":' + \
+                            str(account.pk) + ',"display_name":null,"spotify_id":null,"personal":false},' \
+                            '"allow_explicit":true,"require_payment":false,"private":false,"accepting_requests":true,' \
+                            '"auto_approve":false,"is_playing":false,"runtime_ms":null,"device":null,' \
+                            '"current_track":null,"urls":{"request_form":"' + request_form_url + '","qr_code":"' + \
+                            qr_code_url + '"}}'
+
+        with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
+            # Test response if user is not authenticated or is unprivileged (exclude private or inactive sessions)
+            self.assertEqual(client.get("/api/v1/spotify/sessions/1").content.decode('utf-8'), limited_output)
+
+        session.private = True
+        session.save()
+
+        self.assertOk(client.get("/api/v1/spotify/sessions/1"), 401)  # Cannot view private session if unauthenticated
+
+        # Get token for authentication
+        token, created = Token.objects.get_or_create(user=self.user)
+        client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        self.assertOk(client.get("/api/v1/spotify/sessions/1"), 403)  # Requires view session permission if private
+
+        permission = Permission.objects.get(codename="view_session", content_type__app_label="spotify")
+        self.user.user_permissions.add(permission)
+
+        with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
+            # Verify privileged output
+            self.assertOk(client.get("/api/v1/spotify/sessions/1"))
+
+            session.private = False
+            session.save()
+
+            self.assertEqual(client.get("/api/v1/spotify/sessions/1").content.decode('utf-8'), privileged_output)
+
+    def test_new_session(self):
+        client = APIClient()
+
+        # Check that authentication is required
+        self.assertOk(client.post("/api/v1/spotify/sessions", {}), 401)
+
+        # Get token for authentication
+        token, created = Token.objects.get_or_create(user=self.user)
+        client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        # Test that event and account IDs are required
+        self.assertOk(client.post("/api/v1/spotify/sessions", {'event': 1}), 400)
+        self.assertOk(client.post("/api/v1/spotify/sessions", {'user': 1}), 400)
+
+        # Check that we get 404 if an event or account does not exist
+        self.assertOk(client.post("/api/v1/spotify/sessions", {'event': 21, 'user': 69}), 404)
+
+        event = Event2019Factory.create(event_name="Test Event")
+
+        self.assertOk(client.post("/api/v1/spotify/sessions", {'event': event.pk, 'user': 69}), 404)
+
+        account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
+
+        # User should not have permission by default
+        self.assertOk(client.post("/api/v1/spotify/sessions", {'event': event.pk, 'user': account.pk}), 403)
+
+        # Will need to be a crew chief or have the add_session permission
+        permission = Permission.objects.get(codename="add_session", content_type__app_label="spotify")
+        self.user.user_permissions.add(permission)
+
+        # Refuse request if event is ineligible
+        self.assertOk(client.post("/api/v1/spotify/sessions", {'event': event.pk, 'user': account.pk}), 403)
+
+        event.approved = True
+        event.save()
+
+        # Check valid data
+        valid_data = {
+            'event': event.pk,
+            'user': account.pk,
+            'accepting_requests': True,
+            'allow_explicit': True,
+            'auto_approve': False,
+            'private': False
+        }
+        with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
+            self.assertOk(client.post("/api/v1/spotify/sessions", valid_data), 201)
+
+        self.assertTrue(Session.objects.filter(event=event).exists())
+
+        # Check that we can't create a second session for the same event
+        self.assertOk(client.post("/api/v1/spotify/sessions", valid_data), 409)
+
+        # Check that we can't activate a new session with the same Spotify account if it's already in use
+        event2 = Event2019Factory.create(event_name="Second Event", approved=True)
+
+        second_session = {
+            'event': event2.pk,
+            'user': account.pk,
+            'accepting_requests': True,
+            'allow_explicit': True,
+            'auto_approve': False,
+            'private': True
+        }
+        self.assertOk(client.post("/api/v1/spotify/sessions", second_session), 409)
+
+    def test_update_session(self):
+        client = APIClient()
+
+        # Check that authentication is required
+        self.assertOk(client.patch("/api/v1/spotify/sessions/1", {}), 401)
+
+        # Get token for authentication
+        token, created = Token.objects.get_or_create(user=self.user)
+        client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        # Check that POST requests are not permitted
+        self.assertOk(client.post("/api/v1/spotify/sessions/1", {}), 405)
+
+        # Check that we get 404 if session does not exist
+        self.assertOk(client.patch("/api/v1/spotify/sessions/1", {}), 404)
+
+        event = Event2019Factory.create(event_name="Test Event")
+        account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
+        session = Session.objects.create(event=event, user=account)
+
+        # User should not have permission by default
+        self.assertOk(client.patch("/api/v1/spotify/sessions/1", {}), 403)
+
+        # Will need to have the change_session permission
+        permission = Permission.objects.get(codename="change_session", content_type__app_label="spotify")
+        self.user.user_permissions.add(permission)
+
+        # Refuse request if event is ineligible
+        self.assertOk(client.patch("/api/v1/spotify/sessions/1", {}), 403)
+
+        event.approved = True
+        event.save()
+
+        # Ensure user is allowed to use the new account (if changed)
+        user2 = UserFactory.create(password="123")
+        account2 = SpotifyUser.objects.create(user=user2, personal=True, token_info=self.encrypted_token_info)
+
+        self.assertOk(client.patch("/api/v1/spotify/sessions/1", {'user': account2.pk}), 403)
+
+        # Check valid data (this endpoint is designed for partial updates)
+        valid_data = {
+            'accepting_requests': False
+        }
+        with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
+            self.assertOk(client.patch("/api/v1/spotify/sessions/1", valid_data))
+
+        session.refresh_from_db()
+        self.assertFalse(session.accepting_requests)
+
+        # Check that we can't activate a session with a Spotify account that is already in use
+        event2 = Event2019Factory.create(event_name="Second Event")
+        Session.objects.create(event=event2, user=account)
+
+        valid_data['accepting_requests'] = True
+        self.assertOk(client.patch("/api/v1/spotify/sessions/1", valid_data), 409)

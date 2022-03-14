@@ -1,7 +1,7 @@
 from django.conf.urls import include, url
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from . import views
-from .routers import ReadOnlyRouter, WriteOnlyRouter
+from .routers import ReadOnlyRouter, WriteOnlyRouter, SpotifyRouter
 
 router = ReadOnlyRouter()
 router.register(r'officers', views.OfficerViewSet, basename='Officer')
@@ -13,9 +13,13 @@ router.register(r'sitemap', views.SitemapViewSet, basename='Sitemap')
 write_router = WriteOnlyRouter()
 write_router.register(r'crew', views.AttendanceViewSet, basename="Crew")
 
+spotify_router = SpotifyRouter()
+spotify_router.register(r'sessions', views.SpotifySessionViewSet, basename="Spotify Session")
+
 urlpatterns = [
     url(r'v1/', include(router.urls)),
     url(r'v1/', include(write_router.urls)),
+    url(r'v1/spotify/', include(spotify_router.urls)),
     url(r'^token/request/(?P<client_id>.+)/$', views.request_token, name="request-token"),
     url(r'^token/fetch/$', views.fetch_token, name="fetch-token"),
     url(r'^schema/$', SpectacularAPIView.as_view(), name="schema"),
