@@ -1066,21 +1066,22 @@ def viewevent(request, id):
     # Determine which apps will be visible
     apps = []
 
-    # Spotify
-    if event.approved and request.user.has_perm('spotify.view_session'):
-        if not event.session_set.first() and not event.reviewed and not event.cancelled and not event.closed \
-                and (request.user in [cc.crew_chief for cc in event.ccinstances.all()] or
-                     request.user.has_perm('spotify.add_session')):
-            apps.append('spotify')
-        elif event.session_set.first():
-            apps.append('spotify')
+    if isinstance(event, Event2019):
+        # Spotify
+        if event.approved and request.user.has_perm('spotify.view_session'):
+            if not event.session_set.first() and not event.reviewed and not event.cancelled and not event.closed \
+                    and (request.user in [cc.crew_chief for cc in event.ccinstances.all()] or
+                         request.user.has_perm('spotify.add_session')):
+                apps.append('spotify')
+            elif event.session_set.first():
+                apps.append('spotify')
 
-    # Automatically stop accepting song requests if event is no longer eligible
-    if event.session_set.first():
-        session = event.session_set.first()
-        if session.accepting_requests and (not event.approved or event.reviewed or event.cancelled or event.closed):
-            session.accepting_requests = False
-            session.save()
+        # Automatically stop accepting song requests if event is no longer eligible
+        if event.session_set.first():
+            session = event.session_set.first()
+            if session.accepting_requests and (not event.approved or event.reviewed or event.cancelled or event.closed):
+                session.accepting_requests = False
+                session.save()
 
     context['apps'] = apps
 
