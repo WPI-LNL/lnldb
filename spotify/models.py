@@ -51,6 +51,9 @@ class Session(models.Model):
         super(Session, self).save(*args, **kwargs)
 
     class Meta:
+        permissions = (
+            ('manage_playback', 'Can manage session playback (play, pause, etc.)'),
+        )
         constraints = [
             models.UniqueConstraint(fields=['user'], name="active_session_lock",
                                     condition=models.Q(accepting_requests=True))

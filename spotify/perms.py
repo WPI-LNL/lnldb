@@ -3,7 +3,7 @@ from events.perms import AssocUsersCustomPermissionLogic
 
 class CrewChiefSessionPermLogic(AssocUsersCustomPermissionLogic):
     field_name = ['event__ccinstances__crew_chief']
-    perms = ('spotify.view_session', 'spotify.change_session', 'spotify.add_session')
+    perms = ('spotify.view_session', 'spotify.change_session', 'spotify.add_session', 'spotify.manage_playback')
 
 
 class CrewChiefSongRequestPermLogic(AssocUsersCustomPermissionLogic):

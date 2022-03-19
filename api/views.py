@@ -32,6 +32,7 @@ from events.models import OfficeHour, Event2019, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
 from pages.models import Page
 from spotify.models import Session, SpotifyUser
+from spotify.api import play, pause, skip, previous
 from .models import TokenRequest
 from .serializers import OfficerSerializer, HourSerializer, NotificationSerializer, EventSerializer, \
     AttendanceSerializer, RedirectSerializer, CustomPageSerializer, SpotifySessionReadOnlySerializer, \
@@ -676,6 +677,132 @@ class SpotifySessionViewSet(viewsets.GenericViewSet):
             response_serializer = SpotifySessionReadOnlySerializer(session, request=request)
             return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        operation_id="Start / Resume Playback",
+        parameters=[
+            OpenApiParameter('device', OpenApiTypes.STR, OpenApiParameter.QUERY, False,
+                             'The unique ID of the target device')
+        ],
+        request=None,
+        responses={
+            204: OpenApiResponse(description="Playback started"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        }
+    )
+    @action(['PUT'], detail=True)
+    def play(self, request, pk=None):
+        """ Use this endpoint to start / resume playback for a session """
+
+        session = get_object_or_404(Session, pk=pk)
+
+        # Check that user has permission to manage playback
+        if not request.user.has_perm('spotify.manage_playback', session) or \
+                (session.user.personal and request.user != session.user.user) or not session.user.token_info:
+            raise PermissionDenied
+
+        # Check to see if event is still active
+        if not session.event.approved or session.event.reviewed or session.event.cancelled or session.event.closed:
+            raise NotFound(detail="Playback controls are currently unavailable for this event")
+
+        device_id = self.request.query_params.get('device', None)
+
+        error = play(session, device_id)
+        if error:
+            raise NotFound(detail=error)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        operation_id="Pause Playback",
+        request=None,
+        responses={
+            204: OpenApiResponse(description="Playback paused"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        }
+    )
+    @action(['PUT'], detail=True)
+    def pause(self, request, pk=None):
+        """ Use this endpoint to pause playback for a session """
+
+        session = get_object_or_404(Session, pk=pk)
+
+        # Check that user has permission to manage playback
+        if not request.user.has_perm('spotify.manage_playback', session) or \
+                (session.user.personal and request.user != session.user.user) or not session.user.token_info:
+            raise PermissionDenied
+
+        # Check to see if event is still active
+        if not session.event.approved or session.event.reviewed or session.event.cancelled or session.event.closed:
+            raise NotFound(detail="Playback controls are currently unavailable for this event")
+
+        error = pause(session)
+        if error:
+            raise NotFound(detail=error)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        operation_id="Skip to Previous",
+        request=None,
+        responses={
+            204: OpenApiResponse(description="Command sent"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        }
+    )
+    @action(['PUT'], detail=True)
+    def previous(self, request, pk=None):
+        """ Use this endpoint to jump to the previous track """
+
+        session = get_object_or_404(Session, pk=pk)
+
+        # Check that user has permission to manage playback
+        if not request.user.has_perm('spotify.manage_playback', session) or \
+                (session.user.personal and request.user != session.user.user) or not session.user.token_info:
+            raise PermissionDenied
+
+        # Check to see if event is still active
+        if not session.event.approved or session.event.reviewed or session.event.cancelled or session.event.closed:
+            raise NotFound(detail="Playback controls are currently unavailable for this event")
+
+        error = previous(session)
+        if error:
+            raise NotFound(detail=error)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        operation_id="Skip to Next",
+        request=None,
+        responses={
+            204: OpenApiResponse(description="Command sent"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        }
+    )
+    @action(['PUT'], detail=True)
+    def next(self, request, pk=None):
+        """ Use this endpoint to skip to the next track """
+
+        session = get_object_or_404(Session, pk=pk)
+
+        # Check that user has permission to manage playback
+        if not request.user.has_perm('spotify.manage_playback', session) or \
+                (session.user.personal and request.user != session.user.user) or not session.user.token_info:
+            raise PermissionDenied
+
+        # Check to see if event is still active
+        if not session.event.approved or session.event.reviewed or session.event.cancelled or session.event.closed:
+            raise NotFound(detail="Playback controls are currently unavailable for this event")
+
+        error = skip(session)
+        if error:
+            raise NotFound(detail=error)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 def query_parameter_to_boolean(value):

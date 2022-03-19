@@ -164,3 +164,64 @@ def get_playback_state(session):
         return api.current_playback()
     except SpotifyException:
         return None
+
+
+def play(session, device=None):
+    """
+    Starts or resumes playback for a given session.
+
+    :param session: The corresponding Session object
+    :param device: The unique id of the device to start playback on
+    :return: None (if successful); Error message otherwise (string)
+    """
+
+    try:
+        api = get_spotify_session(session.user, session.user.user)
+        return api.start_playback(device)
+    except SpotifyException as e:
+        return e.msg.split('\n')[-1]
+
+
+def pause(session):
+    """
+    Pause playback for a given session.
+
+    :param session: The corresponding Session object
+    :return: None (if successful); Error message otherwise (string)
+    """
+
+    try:
+        api = get_spotify_session(session.user, session.user.user)
+        return api.pause_playback()
+    except SpotifyException as e:
+        return e.msg.split('\n')[-1]
+
+
+def previous(session):
+    """
+    Skip to the previous track.
+
+    :param session: The corresponding Session object
+    :return: None (if successful); Error message otherwise (string)
+    """
+
+    try:
+        api = get_spotify_session(session.user, session.user.user)
+        return api.previous_track()
+    except SpotifyException as e:
+        return e.msg.split('\n')[-1]
+
+
+def skip(session):
+    """
+    Skip to the next track.
+
+    :param session: The corresponding Session object
+    :return: None (if successful); Error message otherwise (string)
+    """
+
+    try:
+        api = get_spotify_session(session.user, session.user.user)
+        return api.next_track()
+    except SpotifyException as e:
+        return e.msg.split('\n')[-1]
