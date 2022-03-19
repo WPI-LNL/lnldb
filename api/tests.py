@@ -522,7 +522,7 @@ class SpotifyAPIViewTests(ViewTestCase):
                       '"description":null,"location":"' + str(event.location) + '","datetime_start":"' + \
                       event2_start_str + '","datetime_end":"' + event2_end_str + '"},"user":{"id":' + str(account.pk) +\
                       ',"display_name":null,"spotify_id":null,"personal":false},"allow_explicit":true,' \
-                      '"require_payment":false,"private":true,"accepting_requests":false,"auto_approve":false,"urls":{' \
+                      '"require_payment":false,"private":true,"accepting_requests":false,"auto_approve":false,"urls":{'\
                       '"request_form":"' + request_form2_url + '","qr_code":"' + qr_code2_url + '"}}]'
 
         # If user not authenticated or unprivileged always show limited output
@@ -587,30 +587,33 @@ class SpotifyAPIViewTests(ViewTestCase):
 
         with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
             # Test response if user is not authenticated or is unprivileged (exclude private or inactive sessions)
-            self.assertEqual(client.get("/api/v1/spotify/sessions/1").content.decode('utf-8'), limited_output)
+            self.assertEqual(client.get("/api/v1/spotify/sessions/test-event").content.decode('utf-8'), limited_output)
 
         session.private = True
         session.save()
 
-        self.assertOk(client.get("/api/v1/spotify/sessions/1"), 401)  # Cannot view private session if unauthenticated
+        # Cannot view private session if unauthenticated
+        self.assertOk(client.get("/api/v1/spotify/sessions/" + session.slug), 401)
 
         # Get token for authentication
         token, created = Token.objects.get_or_create(user=self.user)
         client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
 
-        self.assertOk(client.get("/api/v1/spotify/sessions/1"), 403)  # Requires view session permission if private
+        # Requires view session permission if private
+        self.assertOk(client.get("/api/v1/spotify/sessions/" + session.slug), 403)
 
         permission = Permission.objects.get(codename="view_session", content_type__app_label="spotify")
         self.user.user_permissions.add(permission)
 
         with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
             # Verify privileged output
-            self.assertOk(client.get("/api/v1/spotify/sessions/1"))
+            self.assertOk(client.get("/api/v1/spotify/sessions/" + session.slug))
 
             session.private = False
             session.save()
 
-            self.assertEqual(client.get("/api/v1/spotify/sessions/1").content.decode('utf-8'), privileged_output)
+            self.assertEqual(client.get("/api/v1/spotify/sessions/test-event").content.decode('utf-8'),
+                             privileged_output)
 
     def test_new_session(self):
         client = APIClient()
@@ -682,31 +685,31 @@ class SpotifyAPIViewTests(ViewTestCase):
         client = APIClient()
 
         # Check that authentication is required
-        self.assertOk(client.patch("/api/v1/spotify/sessions/1", {}), 401)
+        self.assertOk(client.patch("/api/v1/spotify/sessions/test-event", {}), 401)
 
         # Get token for authentication
         token, created = Token.objects.get_or_create(user=self.user)
         client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
 
         # Check that POST requests are not permitted
-        self.assertOk(client.post("/api/v1/spotify/sessions/1", {}), 405)
+        self.assertOk(client.post("/api/v1/spotify/sessions/test-event", {}), 405)
 
         # Check that we get 404 if session does not exist
-        self.assertOk(client.patch("/api/v1/spotify/sessions/1", {}), 404)
+        self.assertOk(client.patch("/api/v1/spotify/sessions/test-event", {}), 404)
 
         event = Event2019Factory.create(event_name="Test Event")
         account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
         session = Session.objects.create(event=event, user=account)
 
         # User should not have permission by default
-        self.assertOk(client.patch("/api/v1/spotify/sessions/1", {}), 403)
+        self.assertOk(client.patch("/api/v1/spotify/sessions/test-event", {}), 403)
 
         # Will need to have the change_session permission
         permission = Permission.objects.get(codename="change_session", content_type__app_label="spotify")
         self.user.user_permissions.add(permission)
 
         # Refuse request if event is ineligible
-        self.assertOk(client.patch("/api/v1/spotify/sessions/1", {}), 403)
+        self.assertOk(client.patch("/api/v1/spotify/sessions/test-event", {}), 403)
 
         event.approved = True
         event.save()
@@ -715,14 +718,14 @@ class SpotifyAPIViewTests(ViewTestCase):
         user2 = UserFactory.create(password="123")
         account2 = SpotifyUser.objects.create(user=user2, personal=True, token_info=self.encrypted_token_info)
 
-        self.assertOk(client.patch("/api/v1/spotify/sessions/1", {'user': account2.pk}), 403)
+        self.assertOk(client.patch("/api/v1/spotify/sessions/test-event", {'user': account2.pk}), 403)
 
         # Check valid data (this endpoint is designed for partial updates)
         valid_data = {
             'accepting_requests': False
         }
         with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
-            self.assertOk(client.patch("/api/v1/spotify/sessions/1", valid_data))
+            self.assertOk(client.patch("/api/v1/spotify/sessions/test-event", valid_data))
 
         session.refresh_from_db()
         self.assertFalse(session.accepting_requests)
@@ -732,136 +735,136 @@ class SpotifyAPIViewTests(ViewTestCase):
         Session.objects.create(event=event2, user=account)
 
         valid_data['accepting_requests'] = True
-        self.assertOk(client.patch("/api/v1/spotify/sessions/1", valid_data), 409)
+        self.assertOk(client.patch("/api/v1/spotify/sessions/test-event", valid_data), 409)
 
     def test_play(self):
         client = APIClient()
 
         # Check that authentication is required
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/play"), 401)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/play"), 401)
 
         # Get token for authentication
         token, created = Token.objects.get_or_create(user=self.user)
         client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
 
         # Return 404 if session does not exist
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/play"), 404)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/play"), 404)
 
         event = Event2019Factory.create(event_name="Test Event")
         account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
         Session.objects.create(event=event, user=account)
 
         # Check that user has permission to manage playback
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/play"), 403)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/play"), 403)
 
         permission = Permission.objects.get(codename="manage_playback")
         self.user.user_permissions.add(permission)
 
         # If the event is no longer active, return 404
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/play"), 404)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/play"), 404)
 
         event.approved = True
         event.save()
 
         # Check that we get 404 response (should fail since we aren't actually sending the request to Spotify)
         with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
-            self.assertOk(client.put("/api/v1/spotify/sessions/1/play"), 404)
+            self.assertOk(client.put("/api/v1/spotify/sessions/test-event/play"), 404)
 
     def test_pause(self):
         client = APIClient()
 
         # Check that authentication is required
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/pause"), 401)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/pause"), 401)
 
         # Get token for authentication
         token, created = Token.objects.get_or_create(user=self.user)
         client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
 
         # Return 404 if session does not exist
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/pause"), 404)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/pause"), 404)
 
         event = Event2019Factory.create(event_name="Test Event")
         account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
         Session.objects.create(event=event, user=account)
 
         # Check that user has permission to manage playback
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/pause"), 403)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/pause"), 403)
 
         permission = Permission.objects.get(codename="manage_playback")
         self.user.user_permissions.add(permission)
 
         # If the event is no longer active, return 404
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/pause"), 404)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/pause"), 404)
 
         event.approved = True
         event.save()
 
         # Check that we get 404 response (should fail since we aren't actually sending the request to Spotify)
         with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
-            self.assertOk(client.put("/api/v1/spotify/sessions/1/pause"), 404)
+            self.assertOk(client.put("/api/v1/spotify/sessions/test-event/pause"), 404)
 
     def test_previous(self):
         client = APIClient()
 
         # Check that authentication is required
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/previous"), 401)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/previous"), 401)
 
         # Get token for authentication
         token, created = Token.objects.get_or_create(user=self.user)
         client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
 
         # Return 404 if session does not exist
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/previous"), 404)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/previous"), 404)
 
         event = Event2019Factory.create(event_name="Test Event")
         account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
         Session.objects.create(event=event, user=account)
 
         # Check that user has permission to manage playback
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/previous"), 403)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/previous"), 403)
 
         permission = Permission.objects.get(codename="manage_playback")
         self.user.user_permissions.add(permission)
 
         # If the event is no longer active, return 404
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/previous"), 404)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/previous"), 404)
 
         event.approved = True
         event.save()
 
         # Check that we get 404 response (should fail since we aren't actually sending the request to Spotify)
         with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
-            self.assertOk(client.put("/api/v1/spotify/sessions/1/previous"), 404)
+            self.assertOk(client.put("/api/v1/spotify/sessions/test-event/previous"), 404)
 
     def test_next(self):
         client = APIClient()
 
         # Check that authentication is required
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/next"), 401)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/next"), 401)
 
         # Get token for authentication
         token, created = Token.objects.get_or_create(user=self.user)
         client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
 
         # Return 404 if session does not exist
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/next"), 404)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/next"), 404)
 
         event = Event2019Factory.create(event_name="Test Event")
         account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
         Session.objects.create(event=event, user=account)
 
         # Check that user has permission to manage playback
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/next"), 403)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/next"), 403)
 
         permission = Permission.objects.get(codename="manage_playback")
         self.user.user_permissions.add(permission)
 
         # If the event is no longer active, return 404
-        self.assertOk(client.put("/api/v1/spotify/sessions/1/next"), 404)
+        self.assertOk(client.put("/api/v1/spotify/sessions/test-event/next"), 404)
 
         event.approved = True
         event.save()
 
         # Check that we get 404 response (should fail since we aren't actually sending the request to Spotify)
         with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
-            self.assertOk(client.put("/api/v1/spotify/sessions/1/next"), 404)
+            self.assertOk(client.put("/api/v1/spotify/sessions/test-event/next"), 404)

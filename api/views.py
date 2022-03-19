@@ -459,6 +459,8 @@ class SitemapViewSet(viewsets.ReadOnlyModelViewSet):
 class SpotifySessionViewSet(viewsets.GenericViewSet):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
+    lookup_field = 'slug'
+    lookup_url_kwarg = 'id'
 
     def get_serializer_class(self):
         if self.action in ['create', 'partial_update']:
@@ -553,13 +555,13 @@ class SpotifySessionViewSet(viewsets.GenericViewSet):
             )
         ]
     )
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request, id=None):
         """
         Use this endpoint to retrieve the current playback state and configuration for a Spotify song request session.
         Authentication is required to access sessions that are not public or are no longer active.
         """
 
-        session = get_object_or_404(Session, pk=pk)
+        session = get_object_or_404(Session, slug=id)
 
         if session.private or not session.accepting_requests:
             if not request.user or not request.user.is_authenticated:
@@ -644,10 +646,10 @@ class SpotifySessionViewSet(viewsets.GenericViewSet):
             409: OpenApiResponse(description="Conflict")
         }
     )
-    def partial_update(self, request, pk=None):
+    def partial_update(self, request, id=None):
         """ Use this endpoint to update the configuration for a specific Spotify song request session """
 
-        session = get_object_or_404(Session, pk=pk)
+        session = get_object_or_404(Session, slug=id)
 
         # Check that user has permission to perform this action
         if not request.user.has_perm('spotify.change_session', session) or \
@@ -693,10 +695,10 @@ class SpotifySessionViewSet(viewsets.GenericViewSet):
         }
     )
     @action(['PUT'], detail=True)
-    def play(self, request, pk=None):
+    def play(self, request, id=None):
         """ Use this endpoint to start / resume playback for a session """
 
-        session = get_object_or_404(Session, pk=pk)
+        session = get_object_or_404(Session, slug=id)
 
         # Check that user has permission to manage playback
         if not request.user.has_perm('spotify.manage_playback', session) or \
@@ -725,10 +727,10 @@ class SpotifySessionViewSet(viewsets.GenericViewSet):
         }
     )
     @action(['PUT'], detail=True)
-    def pause(self, request, pk=None):
+    def pause(self, request, id=None):
         """ Use this endpoint to pause playback for a session """
 
-        session = get_object_or_404(Session, pk=pk)
+        session = get_object_or_404(Session, slug=id)
 
         # Check that user has permission to manage playback
         if not request.user.has_perm('spotify.manage_playback', session) or \
@@ -755,10 +757,10 @@ class SpotifySessionViewSet(viewsets.GenericViewSet):
         }
     )
     @action(['PUT'], detail=True)
-    def previous(self, request, pk=None):
+    def previous(self, request, id=None):
         """ Use this endpoint to jump to the previous track """
 
-        session = get_object_or_404(Session, pk=pk)
+        session = get_object_or_404(Session, slug=id)
 
         # Check that user has permission to manage playback
         if not request.user.has_perm('spotify.manage_playback', session) or \
@@ -785,10 +787,10 @@ class SpotifySessionViewSet(viewsets.GenericViewSet):
         }
     )
     @action(['PUT'], detail=True)
-    def next(self, request, pk=None):
+    def next(self, request, id=None):
         """ Use this endpoint to skip to the next track """
 
-        session = get_object_or_404(Session, pk=pk)
+        session = get_object_or_404(Session, slug=id)
 
         # Check that user has permission to manage playback
         if not request.user.has_perm('spotify.manage_playback', session) or \
