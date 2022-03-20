@@ -32,7 +32,7 @@ from events.models import OfficeHour, Event2019, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
 from pages.models import Page
 from spotify.models import Session, SpotifyUser
-from spotify.api import play, pause, skip, previous
+from spotify.api import play, pause, skip, previous, get_available_devices
 from .models import TokenRequest
 from .serializers import OfficerSerializer, HourSerializer, NotificationSerializer, EventSerializer, \
     AttendanceSerializer, RedirectSerializer, CustomPageSerializer, SpotifySessionReadOnlySerializer, \
@@ -454,6 +454,41 @@ class SitemapViewSet(viewsets.ReadOnlyModelViewSet):
         elif link_type == 'redirect':
             return Page.objects.none(), redirects
         return pages, redirects
+
+
+class SpotifyUserViewSet(viewsets.GenericViewSet):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="Get Available Devices",
+        parameters=[
+            OpenApiParameter('id', OpenApiTypes.INT, OpenApiParameter.PATH, True, "The unique ID of the Spotify user")
+        ],
+        responses={
+            200: OpenApiResponse(description="Ok"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        }
+    )
+    @action(['GET'], True)
+    def devices(self, request, pk=None):
+        """ Use this endpoint to retrieve a list of available devices """
+
+        account = get_object_or_404(SpotifyUser, pk=pk, token_info__isnull=False)
+
+        if account.personal and request.user != account.user:
+            raise PermissionDenied
+        elif not account.personal and not request.user.has_perm('view_spotifyuser', account):
+            raise PermissionDenied
+
+        devices = get_available_devices(account)
+
+        if not devices:
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        return Response(devices, status=status.HTTP_200_OK)
 
 
 class SpotifySessionViewSet(viewsets.GenericViewSet):

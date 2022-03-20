@@ -15,6 +15,7 @@ write_router.register(r'crew', views.AttendanceViewSet, basename="Crew")
 
 spotify_router = SpotifyRouter()
 spotify_router.register(r'sessions', views.SpotifySessionViewSet, basename="Spotify Session")
+spotify_router.register(r'users', views.SpotifyUserViewSet, basename="Spotify User")
 
 urlpatterns = [
     url(r'v1/', include(router.urls)),

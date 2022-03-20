@@ -166,6 +166,21 @@ def get_playback_state(session):
         return None
 
 
+def get_available_devices(account):
+    """
+    Retrieves information about a Spotify user's available devices
+
+    :param account: The corresponding SpotifyUser object
+    :return: Device info (List of Dictionaries)
+    """
+
+    try:
+        api = get_spotify_session(account, account.user)
+        return api.devices()
+    except SpotifyException:
+        return None
+
+
 def play(session, device=None):
     """
     Starts or resumes playback for a given session.

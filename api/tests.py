@@ -868,3 +868,28 @@ class SpotifyAPIViewTests(ViewTestCase):
         # Check that we get 404 response (should fail since we aren't actually sending the request to Spotify)
         with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
             self.assertOk(client.put("/api/v1/spotify/sessions/test-event/next"), 404)
+
+    def test_device_list(self):
+        client = APIClient()
+
+        # Check that authentication is required
+        self.assertOk(client.get("/api/v1/spotify/users/1/devices"), 401)
+
+        # Get token for authentication
+        token, created = Token.objects.get_or_create(user=self.user)
+        client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        # Return 404 if there are no accounts for the specified user
+        self.assertOk(client.get("/api/v1/spotify/users/1/devices"), 404)
+
+        account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
+
+        # Return 403 if user does not have permission to view account details
+        self.assertOk(client.get("/api/v1/spotify/users/1/devices"), 403)
+
+        account.personal = True
+        account.save()
+
+        # Check that the response is 204 (since we aren't actually sending the request to Spotify)
+        with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
+            self.assertOk(client.get("/api/v1/spotify/users/1/devices"), 204)
