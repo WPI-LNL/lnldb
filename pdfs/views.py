@@ -175,8 +175,10 @@ def generate_event_bill_pdf(request, event):
     data['events_data'] = [event_data]
 
     resp = generate_pdf(data, 'pdf_templates/bill-itemized.html', request)
-
-    resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
+    if not event.reviewed:
+        resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
+    else:
+        resp['Content-Disposition'] = 'inline; filename="%s-quote.pdf"' % slugify(event.event_name)
     return resp
 
 
