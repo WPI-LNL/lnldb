@@ -16,7 +16,7 @@
                 <div>
                 {% endif %}
 					{{ formset.management_form }}
-					<table class="table table-striped" valign="top">
+					<table class="table table-striped" valign="top"><tbody id="form_data">
 						<tr>
 							<th>PIT Level</th>
 							<th>Created On </th>
@@ -40,17 +40,30 @@
 							<td>{{ form.DELETE }} </td>
 						</tr>
 					{% endfor %}
-					</table>
+					</tbody></table>
 					<p class="text-muted">Pressing 'Delete This User' below will delete all of the information you see on this page and
 					the user will no longer be listed in the projectionist list.</p>
 					<div class="form-actions">
 						<input name="submit" value="Save changes" class="btn btn-primary" id="submit-id-save" type="submit"> 
+						<input type="button" class="btn btn-success" value="Add Row" id="add_form">
 						{% if pk %}<a class="btn btn-danger" href="{% url "projection:remove" pk %}">Delete This User</a> {% endif %}
 					</div>
 				</div>
             </form>
         </div>
     </div>
+    {% include "js_formset_add_row.tmpl" %}
+    {% with formset.empty_form as form %}
+        <table style="display:none;"> <tbody id="empty_form">
+                <tr>
+					<td>{{ form.id }}{{ form.pit_level }} </td>
+					<td>{{ form.created_on }} </td>
+					<td>{{ form.valid }} </td>
+					<td>{{ form.DELETE }} </td>
+				</tr>
+            </tbody>
+        </table>
+    {% endwith %}
 {% endblock %}
 
 {% block extras %}

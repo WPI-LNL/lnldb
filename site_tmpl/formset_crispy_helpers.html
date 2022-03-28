@@ -8,7 +8,7 @@
                 <form method="post" action="" class="form-inline">
                 {% csrf_token %}
                 {{ formset.management_form }}
-                <table class="table table-striped" valign="top">
+                <table class="table table-striped" valign="top"> <tbody id="form_data">
                     <tr>
                         <th>Setup Location </th>
                         <th>Setup Time </th>
@@ -46,13 +46,30 @@
                         <td>{{ form.DELETE }} </td>
                     </tr>
                 {% endfor %}
-                </table>
+                </tbody></table>
                 
-                <div class="form-actions"><input name="save" value="Save changes" class="btn btn-primary" id="submit-id-save" type="submit"> </div>
+                <div class="form-actions"><input name="save" value="Save changes" class="btn btn-primary" id="submit-id-save" type="submit">
+                <input type="button" class="btn btn-success" value="Add Row" id="add_form"></div>
                 </form>
                 
         </div>
     </div>
+{% include "js_formset_add_row.tmpl" %}
+    {% with formset.empty_form as form %}
+        <table style="display:none;"> <tbody id="empty_form">
+            <tr>
+                <td>{{ form.id }}{{ form.setup_location }} </td>
+                <td class="dtptable">{{ form.setup_start }} </td>
+                {% if oldevent %}
+                    <td>{{ form.service }}</td>
+                {% else %}
+                    <td>{{ form.category }}</td>
+                {% endif %}
+                <td>{{ form.crew_chief }} </td>
+                <td>{{ form.DELETE }} </td>
+            </tr>
+        </tbody> </table>
+    {% endwith %}
 {% endblock %}
 
 {% block extras %}
