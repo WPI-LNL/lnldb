@@ -222,6 +222,19 @@
                             <td>{{event.submitted_ip}}</td>
                         </tr>
                         {% endpermission %}
+                        {% if event.reference_code %}
+                        <tr>
+                            <th>Reference Code</th>
+                            <td>{{ event.reference_code }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if event.event_id %}
+                        <tr>
+                            <th>25Live Reservation</th>
+                            <td><a
+                                        href="https://25live.collegenet.com/pro/wpi#!/home/event/{{ event.event_id }}/details">{{ event.event_id }}</a></td>
+                        </tr>
+                        {% endif %}
                         <tr>
                             <th>Approved:</th>
                             <td>

@@ -15,7 +15,7 @@
             <form method="post" action="" class="form-inline" enctype="multipart/form-data">
                 {% csrf_token %}
                 {{ formset.management_form }}
-                <table class="table table-striped" valign="top">
+                <table class="table table-striped" valign="top"><tbody id="form_data">
                     <tr>
                     {% for field in formset.forms.0 %}
                         {% if field.label and not field.is_hidden %}
@@ -39,11 +39,24 @@
                             {{ hidden }}
                         {% endfor %}
                     {% endfor %}
-                </table>
-                <div class="form-actions"><input name="save" value="Save Changes" class="btn btn-primary" id="submit-id-save" type="submit"> </div>
+                </tbody></table>
+                <div class="form-actions"><input name="save" value="Save Changes" class="btn btn-primary" id="submit-id-save" type="submit"> 
+                <input type="button" class="btn btn-success" value="Add Row" id="add_form"></div>
             </form>
         </div>
     </div>
+    {% include "js_formset_add_row.tmpl" %}
+    {% with formset.empty_form as form %}
+        <table style="display:none;"> <tbody id="empty_form">
+            <tr>
+                {% for field in form %}
+                    {% if field.label and not field.is_hidden %}
+                        <td>{{ field|as_crispy_field }}</td>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+        </tbody> </table>
+    {% endwith %}
 {% endblock %}
 
 {% block finalsay %}

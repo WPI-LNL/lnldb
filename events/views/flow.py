@@ -40,7 +40,6 @@ from pdfs.views import (generate_pdfs_standalone, generate_event_bill_pdf_standa
                         generate_multibill_pdf_standalone)
 from ..cal import generate_ics
 
-
 @login_required
 @permission_required('events.approve_event', raise_exception=True)
 def approval(request, id):
@@ -436,7 +435,7 @@ def hours_bulk_admin(request, id):
     context['event'] = event
     context['oldevent'] = isinstance(event, Event)
 
-    mk_hours_formset = inlineformset_factory(BaseEvent, Hours, extra=15, exclude=[])
+    mk_hours_formset = inlineformset_factory(BaseEvent, Hours, extra=3, exclude=[])
     mk_hours_formset.form = curry_class(MKHoursForm, event=event)
 
     if request.method == 'POST':
@@ -735,7 +734,7 @@ def assigncc(request, id):
     context['event'] = event
     context['oldevent'] = isinstance(event, Event)
 
-    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=5, exclude=[])
+    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
     cc_formset.form = curry_class(CCIForm, event=event)
 
     if request.method == 'POST':
@@ -931,6 +930,7 @@ def viewevent(request, id):
     context['history'] = Version.objects.get_for_object(event)
     if isinstance(event, Event2019):
         context['crew_count'] = event.crew_attendance.filter(active=True).values('user').count()
+ 
     if event.serviceinstance_set.exists():
         context['categorized_services_and_extras'] = {}
         for category in Category.objects.all():

@@ -94,7 +94,8 @@ fieldsets = (
         'fields': ('event_name', 'description', 'internal_notes', 'contact', 'org', 'billing_org')
     }),
     ('Scheduling & Location', {
-        'fields': ('datetime_setup_complete', 'datetime_start', 'datetime_end', 'location')
+        'fields': ('datetime_setup_complete', 'datetime_start', 'datetime_end',
+            'location', 'reference_code', 'event_id')
     }),
     ('Services', {
         'fields': ('lighting', 'lighting_reqs', 'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices',
