@@ -90,6 +90,22 @@ def get_spotify_session(account, request_user):
     return Spotify(auth_manager=auth_manager)
 
 
+def get_track(session, identifier):
+    """
+    Retrieves the metadata for a given item in Spotify
+
+    :param session: A Session object (used for authenticating the request)
+    :param identifier: The unique Spotify ID for the item
+    :return: Item metadata, if available (Dictionary)
+    """
+
+    try:
+        api = get_spotify_session(session.user, session.user.user)
+        return api.track(identifier)
+    except SpotifyException:
+        return None
+
+
 def add_to_queue(song_request, request_user):
     """
     Attempt to add a track to the Spotify queue

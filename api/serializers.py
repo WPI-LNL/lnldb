@@ -5,7 +5,7 @@ from events.models import OfficeHour, Event2019, CrewAttendanceRecord
 from accounts.models import Officer
 from data.models import ResizedRedirect
 from pages.models import Page
-from spotify.models import Session, SpotifyUser
+from spotify.models import Session, SpotifyUser, SongRequest
 from spotify.api import get_playback_state, queue_estimate
 
 from .models import TokenRequest
@@ -243,6 +243,25 @@ class SpotifySessionWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Session
         fields = ('event', 'user', 'accepting_requests', 'allow_explicit', 'auto_approve', 'private')
+
+
+class SongRequestSerializer(serializers.ModelSerializer):
+    session = serializers.CharField(source='session.slug')
+    queued_ts = serializers.DateTimeField(source='queued')
+    requestor = serializers.SerializerMethodField()
+    urls = serializers.SerializerMethodField()
+
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_requestor(self, obj):
+        return {"name": obj.submitted_by, "email": obj.email, "phone": obj.phone}
+
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_urls(self, obj):
+        return {'spotify_url': 'https://open.spotify.com/track/{}'.format(obj.identifier)}
+
+    class Meta:
+        model = SongRequest
+        fields = ('id', 'session', 'name', 'duration', 'approved', 'queued_ts', 'requestor', 'urls')
 
 
 class TokenRequestSerializer(serializers.ModelSerializer):

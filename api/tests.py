@@ -17,7 +17,7 @@ from events.tests.generators import UserFactory, Event2019Factory, CCInstanceFac
 from events.models import OfficeHour, Building, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
 from pages.models import Page
-from spotify.models import SpotifyUser, Session
+from spotify.models import SpotifyUser, Session, SongRequest
 import pytz
 import logging
 
@@ -893,3 +893,159 @@ class SpotifyAPIViewTests(ViewTestCase):
         # Check that the response is 204 (since we aren't actually sending the request to Spotify)
         with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
             self.assertOk(client.get("/api/v1/spotify/users/1/devices"), 204)
+
+    def test_list_requests(self):
+        client = APIClient()
+
+        # Check that authentication is required
+        self.assertOk(client.get("/api/v1/spotify/requests"), 401)
+
+        # Get token for authentication
+        token, created = Token.objects.get_or_create(user=self.user)
+        client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        # Return 400 if session id is not provided
+        self.assertOk(client.get("/api/v1/spotify/requests"), 400)
+
+        # Return 404 if session is not found
+        self.assertOk(client.get("/api/v1/spotify/requests", {'session': 'first-event'}), 404)
+
+        event = Event2019Factory.create(event_name="Test Event", approved=True)
+        account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
+        session = Session.objects.create(event=event, user=account)
+
+        # Return 204 if no requests can be found
+        self.assertOk(client.get("/api/v1/spotify/requests", {'session': 'test-event'}), 204)
+
+        r = SongRequest.objects.create(session=session, name="Pacific Coast Cool", identifier="6BDvEzgDediLAvCmW6bZhV",
+                                       duration=229000, submitted_by="Bruce Wayne")
+
+        # Return 403 if user does not have permission to access the requests
+        self.assertOk(client.get("/api/v1/spotify/requests", {'session': 'test-event'}), 403)
+
+        permission = Permission.objects.get(codename="view_session", content_type__app_label="spotify")
+        self.user.user_permissions.add(permission)
+
+        # Check limited response (only unapproved requests)
+        expected = '[{"id":1,"session":"test-event","name":"Pacific Coast Cool","duration":229000,"approved":false,' \
+                   '"queued_ts":null,"requestor":{"name":"Bruce Wayne","email":null,"phone":null},"urls":{' \
+                   '"spotify_url":"https://open.spotify.com/track/6BDvEzgDediLAvCmW6bZhV"}}]'
+
+        self.assertEqual(client.get("/api/v1/spotify/requests", {'session': 'test-event'}).content.decode('utf-8'),
+                         expected)
+
+        r.approved = True
+        r.save()
+
+        self.assertOk(client.get("/api/v1/spotify/requests", {'session': 'test-event'}), 204)
+
+        # Check full response (with approved requests)
+        expected = '[{"id":1,"session":"test-event","name":"Pacific Coast Cool","duration":229000,"approved":true,' \
+                   '"queued_ts":null,"requestor":{"name":"Bruce Wayne","email":null,"phone":null},"urls":{' \
+                   '"spotify_url":"https://open.spotify.com/track/6BDvEzgDediLAvCmW6bZhV"}}]'
+        self.assertEqual(client.get("/api/v1/spotify/requests", {'session': 'test-event', 'show_approved': True})
+                         .content.decode('utf-8'), expected)
+
+    def test_new_request(self):
+        client = APIClient()
+
+        # Check that a matching (active) session must exist
+        data = {
+            "session": "test-event",
+            "identifier": "6BDvEzgDediLAvCmW6bZhV",
+            "first_name": "Bruce",
+            "last_name": "Wayne",
+            "email": "bruce@batcave.net"
+        }
+        self.assertOk(client.post("/api/v1/spotify/requests", data), 404)
+
+        event = Event2019Factory.create(event_name="Test Event", approved=True)
+        account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
+        session = Session.objects.create(event=event, user=account, require_payment=True)
+
+        # Return 402 if session requires payment (the API will only take requests for free sessions)
+        self.assertOk(client.post("/api/v1/spotify/requests", data), 402)
+
+        session.require_payment = False
+        session.private = True
+        session.save()
+
+        # If session is private and user is not a member of LNL or is unauthenticated return 403 or 401, respectively
+        data['session'] = session.slug
+        self.assertOk(client.post("/api/v1/spotify/requests", data), 401)
+
+        # Get token for authentication
+        token, created = Token.objects.get_or_create(user=self.user)
+        client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        self.assertOk(client.post("/api/v1/spotify/requests", data), 403)
+
+        active = Group.objects.create(name="Active")
+        active.user_set.add(self.user)
+
+        # If the corresponding event is not eligible, return 403
+        event.approved = False
+        event.save()
+
+        self.assertOk(client.post("/api/v1/spotify/requests", data), 403)
+
+        event.approved = True
+        event.save()
+
+        # Check response on "success" (won't be able to get track info from Spotify so should get 404)
+        with self.settings(SPOTIFY_CLIENT_ID=None, CRYPTO_KEY=self.crypto_key):
+            self.assertOk(client.post("/api/v1/spotify/requests", data), 404)
+
+    def test_approve_request(self):
+        client = APIClient()
+
+        # Check that authentication is required
+        self.assertOk(client.patch("/api/v1/spotify/requests/1"), 401)
+
+        # Get token for authentication
+        token, created = Token.objects.get_or_create(user=self.user)
+        client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        # Check that request exists and hasn't already been approved
+        self.assertOk(client.patch("/api/v1/spotify/requests/1"), 404)
+
+        event = Event2019Factory.create(event_name="Test Event")
+        account = SpotifyUser.objects.create(user=self.user, personal=False, token_info=self.encrypted_token_info)
+        session = Session.objects.create(event=event, user=account)
+        sr = SongRequest.objects.create(session=session, name="Pacific Coast Cool", identifier="6BDvEzgDediLAvCmW6bZhV",
+                                        duration=229000, submitted_by="Clark Kent")
+
+        # Check that user has permission to approve request
+        self.assertOk(client.patch("/api/v1/spotify/requests/1"), 403)
+
+        permission = Permission.objects.get(codename="approve_song_request")
+        self.user.user_permissions.add(permission)
+
+        # Check that event is still eligible
+        self.assertOk(client.patch("/api/v1/spotify/requests/1"), 403)
+
+        event.approved = True
+        event.save()
+
+        # Check that request was approved
+        self.assertOk(client.patch("/api/v1/spotify/requests/1"))
+
+        sr.refresh_from_db()
+        self.assertTrue(sr.approved)
+
+        # Check that we can't approve a request for a session if another session using the same account is now active
+        sr2 = SongRequest.objects.create(session=session, name="Baby Shark", identifier="5ygDXis42ncn6kYG14lEVG",
+                                         duration=229000, submitted_by="Stan Lee")
+        session.accepting_requests = False
+        session.save()
+        session2 = Session.objects.create(event=event, user=account)
+
+        self.assertOk(client.patch("/api/v1/spotify/requests/2"), 403)
+
+        session2.accepting_requests = False
+        session2.save()
+
+        self.assertOk(client.patch("/api/v1/spotify/requests/2"))
+
+        sr2.refresh_from_db()
+        self.assertTrue(sr2.approved)

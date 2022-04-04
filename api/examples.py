@@ -111,3 +111,22 @@ spotify_playback_state = {
         "qr_code": "https://lnl.wpi.edu/spotify/session/1/qr-code/"
     }
 }
+
+song_request = [
+    {
+        "id": 1,
+        "session": "test-event",
+        "name": "Pacific Coast Cool",
+        "duration": 229000,
+        "approved": False,
+        "queued_ts": None,
+        "requestor": {
+            "name": "Barry Allen",
+            "email": "flash@starlabs.net",
+            "phone": None
+        },
+        "urls": {
+            "spotify_url": "https://open.spotify.com/track/6BDvEzgDediLAvCmW6bZhV"
+        }
+    }
+]
