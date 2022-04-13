@@ -74,6 +74,8 @@ class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, gen
                 messages.success(self.request, "Welcome email sent")
 
             exec_group = Group.objects.get(name="Officer")
+            active_group = Group.objects.get(name="Active")
+            alumni_group = Group.objects.get(name="Alumni")
             if exec_group not in newgroups:
                 # Ensure that title is stripped when no longer an officer
                 officer_info = Officer.objects.filter(user=self.object).first()
@@ -91,8 +93,14 @@ class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, gen
                 slack_user = lookup_user(self.object.email)
                 if slack_user:
                     user_add(settings.SLACK_TARGET_EXEC, slack_user)
-
-            # TODO: Add new active members to the active channel in Slack (and remove inactive / alumni etc.)
+            elif active_group not in oldgroups:
+                slack_user = lookup_user(self.object.email)
+                if slack_user:
+                    user_add(settings.SLACK_TARGET_ACTIVE, slack_user)
+            elif active_group not in newgroups:
+                slack_user = lookup_user(self.object.email)
+                if slack_user and active_group in oldgroups:
+                    user_kick(settings.SLACK_TARGET_ACTIVE, slack_user)
 
         messages.success(self.request, "Account Info Saved!", extra_tags='success')
         return super(UserUpdateView, self).form_valid(form)
