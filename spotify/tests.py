@@ -104,7 +104,7 @@ class SpotifyTests(ViewTestCase):
         self.assertOk(self.client.get(reverse("spotify:payment", args=[self.session.pk]) + "?type=silence"))
 
     def test_queue_manager(self):
-        # Check that approval permissions are required
+        # Check required permissions
         self.assertOk(self.client.get(reverse("spotify:list", args=[self.session.pk])), 403)
 
         permission = Permission.objects.get(codename="view_session", content_type__app_label="spotify")
