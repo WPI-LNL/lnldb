@@ -35,7 +35,7 @@ def login(request):
         account_id = existing_account.pk
 
     # Admin site can login to an account directly
-    if request.GET.get('user', None):
+    if request.GET.get('user', None) and request.user.is_superuser:
         user_id = request.GET.get('user')
         account = get_object_or_404(models.SpotifyUser, pk=user_id)
         user = account.user
