@@ -139,11 +139,11 @@ def queue_estimate(session, ms=False):
         return None
     progress = currently_playing['progress_ms']
     item = currently_playing['item']['id']
-    current_song = models.SongRequest.objects.filter(identifier=item).first()
+    current_song = models.SongRequest.objects.filter(identifier=item, session=session).first()
     time_remaining = 0
     if current_song and current_song.queued:
         time_remaining += current_song.duration - progress
-        upcoming = models.SongRequest.objects.filter(queued__gt=current_song.queued)
+        upcoming = models.SongRequest.objects.filter(queued__gt=current_song.queued, session=session)
         for request in upcoming:
             time_remaining += request.duration
         if not ms:
