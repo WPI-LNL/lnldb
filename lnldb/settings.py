@@ -111,6 +111,10 @@ SLACK_TARGET_TFED = env.str('SLACK_TARGET_TFED', '')
 SLACK_TARGET_TFED_DB = env.str('SLACK_TARGET_TFED_DB', '')
 SLACK_TARGET_WEBMASTER = env.str('SLACK_TARGET_WEBMASTER', '')
 
+SPOTIFY_CLIENT_ID = env.str('SPOTIFY_CLIENT', '')
+SPOTIFY_CLIENT_SECRET = env.str('SPOTIFY_SECRET', '')
+SPOTIFY_REDIRECT_URI = env.str('SPOTIFY_CALLBACK_URI', '')
+
 SAML2_AUTH = {
     'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://samltest.id/saml/idp'),
     'DEFAULT_NEXT_URL': '/db/',
@@ -329,6 +333,7 @@ INSTALLED_APPS = (
     'api',
     'rt',
     'slack',
+    'spotify',
 
     'bootstrap3',
     'crispy_forms',
