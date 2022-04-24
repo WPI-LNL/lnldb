@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 from django.shortcuts import render, reverse
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -17,7 +18,7 @@ from rest_framework.decorators import api_view, authentication_classes, action
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
-from rest_framework.exceptions import NotFound, ParseError, AuthenticationFailed, PermissionDenied
+from rest_framework.exceptions import NotFound, ParseError, AuthenticationFailed, PermissionDenied, NotAuthenticated
 from cryptography.fernet import Fernet
 from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter, OpenApiTypes, OpenApiResponse, \
     OpenApiExample, inline_serializer
@@ -30,9 +31,13 @@ from emails.generators import generate_sms_email
 from events.models import OfficeHour, Event2019, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
 from pages.models import Page
+from spotify.models import Session, SpotifyUser, SongRequest
+from spotify.api import play, pause, skip, previous, get_available_devices, get_track, queue_estimate
 from .models import TokenRequest
 from .serializers import OfficerSerializer, HourSerializer, NotificationSerializer, EventSerializer, \
-    AttendanceSerializer, RedirectSerializer, CustomPageSerializer, TokenRequestSerializer
+    AttendanceSerializer, RedirectSerializer, CustomPageSerializer, SpotifySessionReadOnlySerializer, \
+    SpotifySessionWriteSerializer, SongRequestSerializer, TokenRequestSerializer
+from . import examples
 
 
 # Create your views here.
@@ -185,18 +190,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         },
         examples=[
             OpenApiExample(
-                'Notification',
-                {
-                    "id": "SWA001",
-                    "format": "notification",
-                    "type": "advisory",
-                    "class": 2,
-                    "title": "Upcoming Maintenance",
-                    "message": "All Lens and Lights web services will be temporarily unavailable on January 5 from "
-                               "2:00-2:45 AM EST as we perform routine upgrades and maintenance. We apologize for the "
-                               "inconvenience.",
-                    "expires": "2020-01-05T07:00:00Z"
-                },
+                'Notification', examples.notification_response,
                 description=render_to_string('api/notification_response.html').strip(),
                 response_only=True
             )
@@ -460,6 +454,587 @@ class SitemapViewSet(viewsets.ReadOnlyModelViewSet):
         elif link_type == 'redirect':
             return Page.objects.none(), redirects
         return pages, redirects
+
+
+class SpotifyUserViewSet(viewsets.GenericViewSet):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="Get Available Devices",
+        parameters=[
+            OpenApiParameter('id', OpenApiTypes.INT, OpenApiParameter.PATH, True, "The unique ID of the Spotify user")
+        ],
+        responses={
+            200: OpenApiResponse(description="Ok"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        }
+    )
+    @action(['GET'], True)
+    def devices(self, request, pk=None):
+        """ Use this endpoint to retrieve a list of available devices """
+
+        account = get_object_or_404(SpotifyUser, pk=pk, token_info__isnull=False)
+
+        if account.personal and request.user != account.user:
+            raise PermissionDenied
+        elif not account.personal and not request.user.has_perm('view_spotifyuser', account):
+            raise PermissionDenied
+
+        devices = get_available_devices(account)
+
+        if not devices:
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        return Response(devices, status=status.HTTP_200_OK)
+
+
+class SpotifySessionViewSet(viewsets.GenericViewSet):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'slug'
+    lookup_url_kwarg = 'id'
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'partial_update']:
+            return SpotifySessionWriteSerializer
+        else:
+            return SpotifySessionReadOnlySerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return []
+        return super(SpotifySessionViewSet, self).get_permissions()
+
+    def get_queryset(self):
+        queryset = Session.objects.all().order_by('-event__datetime_start')
+        inactive = self.request.query_params.get('show_inactive', False)
+        explicit = self.request.query_params.get('explicit', None)
+        private = self.request.query_params.get('private', None)
+        event = self.request.query_params.get('event', None)
+        user = self.request.query_params.get('user', None)
+
+        if not self.request.user or not self.request.user.is_authenticated or \
+                not self.request.user.has_perm('spotify.view_session'):
+            private = False
+            inactive = False
+            user = None
+
+        if not query_parameter_to_boolean(inactive):
+            queryset = queryset.filter(
+                accepting_requests=True, event__approved=True, event__reviewed=False, event__cancelled=False,
+                event__closed=False
+            )
+
+        if explicit is not None:
+            queryset = queryset.filter(allow_explicit=query_parameter_to_boolean(explicit))
+        if private is not None:
+            queryset = queryset.filter(private=query_parameter_to_boolean(private))
+        if event:
+            queryset = queryset.filter(Q(event__event_name__icontains=event) | Q(event__location__name__icontains=event))
+        if user:
+            queryset = queryset.filter(Q(user__spotify_id__iexact=user) | Q(user__display_name__icontains=user))
+        return queryset
+
+    @extend_schema(
+        operation_id="Get Spotify Sessions",
+        parameters=[
+            OpenApiParameter("event", OpenApiTypes.STR, OpenApiParameter.QUERY, False,
+                             "Filter by event name or location"),
+            OpenApiParameter("explicit", OpenApiTypes.BOOL, OpenApiParameter.QUERY, False,
+                             "Filter by whether or not explicit music is allowed"),
+            OpenApiParameter("private", OpenApiTypes.BOOL, OpenApiParameter.QUERY, False,
+                             "Filter by whether or not the session is restricted to LNL members only"),
+            OpenApiParameter("user", OpenApiTypes.STR, OpenApiParameter.QUERY, False,
+                             "Filter by Spotify accounts with matching username or display name"),
+            OpenApiParameter("show_inactive", OpenApiTypes.BOOL, OpenApiParameter.QUERY, False,
+                             "Include inactive sessions", default=False)
+        ],
+        responses={
+            200: OpenApiResponse(SpotifySessionReadOnlySerializer(many=True), description="Ok"),
+            204: None,
+            400: OpenApiResponse(description="Bad Request. One or more query parameters were invalid or malformed.")
+        }
+    )
+    def list(self, request):
+        """ Use this endpoint to retrieve a list of Spotify song request sessions """
+        try:
+            queryset = self.get_queryset()
+        except ValidationError:
+            content = {'detail': 'Bad Request. One or more query parameters were invalid or malformed.'}
+            return Response(content, status=status.HTTP_400_BAD_REQUEST)
+
+        if queryset.count() == 0:
+            return Response([], status=status.HTTP_204_NO_CONTENT)
+
+        serializer = SpotifySessionReadOnlySerializer(queryset, request=request, many=True)
+        return Response(serializer.data)
+
+    @extend_schema(
+        operation_id="Get Spotify Session Playback State",
+        responses={
+            200: OpenApiResponse(SpotifySessionReadOnlySerializer, description="Ok"),
+            401: OpenApiResponse(description="Not authenticated"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        },
+        examples=[
+            OpenApiExample(
+                'Playback State', examples.spotify_playback_state, response_only=True,
+                description="Current track and device information comes directly from the Spotify API. Learn more at "
+                            "<a href='https://developer.spotify.com/documentation/web-api/reference/#/operations/get-"
+                            "information-about-the-users-current-playback'>https://developer.spotify.com/documentation/"
+                            "web-api/reference/#/operations/get-information-about-the-users-current-playback</a>."
+            )
+        ]
+    )
+    def retrieve(self, request, id=None):
+        """
+        Use this endpoint to retrieve the current playback state and configuration for a Spotify song request session.
+        Authentication is required to access sessions that are not public or are no longer active.
+        """
+
+        session = get_object_or_404(Session, slug=id)
+
+        if session.private or not session.accepting_requests:
+            if not request.user or not request.user.is_authenticated:
+                raise NotAuthenticated
+            elif not request.user.has_perm('spotify.view_session', session):
+                raise PermissionDenied
+        serializer = SpotifySessionReadOnlySerializer(session, request=request)
+        return Response(serializer.data)
+
+    @extend_schema(
+        operation_id="Create Spotify Session",
+        request=SpotifySessionWriteSerializer,
+        responses={
+            201: OpenApiResponse(SpotifySessionReadOnlySerializer, description="Ok"),
+            400: OpenApiResponse(description="Bad request"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied. Event may be ineligible or current user does not have "
+                                             "sufficient permissions."),
+            404: OpenApiResponse(description="Event or Spotify account with the specified id does not exist"),
+            409: OpenApiResponse(description="Conflict")
+        }
+    )
+    def create(self, request):
+        """
+        Use this endpoint to start a new Spotify song request session. Note that the API does not support paid sessions.
+        """
+
+        event_id = request.data.get('event', None)
+        account_id = request.data.get('user', None)
+        if not event_id or not account_id:
+            raise ParseError(detail="Missing one or more required fields. Please supply valid event and account IDs.")
+
+        event = get_object_or_404(Event2019, pk=event_id)
+        account = get_object_or_404(SpotifyUser, pk=account_id, token_info__isnull=False)
+
+        # Check that user has permission to perform this action
+        if not (request.user in [cc.crew_chief for cc in event.ccinstances.all()] or
+                request.user.has_perm('spotify.add_session')) or (account.personal and request.user != account.user):
+            raise PermissionDenied
+
+        # Check that event is eligible
+        if not event.approved or event.reviewed or event.cancelled or event.closed:
+            raise PermissionDenied(detail="Cannot create session at this time: Event ineligible.")
+
+        # Check for existing session
+        if Session.objects.filter(event=event).exists():
+            return Response({'detail': 'Session already exists'}, status=status.HTTP_409_CONFLICT)
+
+        serializer = SpotifySessionWriteSerializer(data=request.data)
+        if serializer.is_valid(True):
+            try:
+                with transaction.atomic():
+                    session = serializer.save()
+            except IntegrityError:
+                return Response({"detail": "The specified Spotify account is currently in use by another session"},
+                                status=status.HTTP_409_CONFLICT)
+
+            response_serializer = SpotifySessionReadOnlySerializer(session, request=request)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        operation_id="Update Spotify Session",
+        request=inline_serializer(
+            'SpotifySession',
+            fields={
+                'user': serializers.IntegerField(required=False,
+                                                 help_text="Primary key value of the corresponding Spotify account"),
+                'accepting_requests': serializers.BooleanField(required=False),
+                'allow_explicit': serializers.BooleanField(required=False),
+                'auto_approve': serializers.BooleanField(required=False),
+                'private': serializers.BooleanField(required=False)
+            }
+        ),
+        responses={
+            200: OpenApiResponse(SpotifySessionReadOnlySerializer, description="Ok"),
+            400: OpenApiResponse(description="Bad request"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied. Updates may no longer be allowed for this session or "
+                                             "the current user does not have sufficient permissions."),
+            404: OpenApiResponse(description="Not found"),
+            409: OpenApiResponse(description="Conflict")
+        }
+    )
+    def partial_update(self, request, id=None):
+        """ Use this endpoint to update the configuration for a specific Spotify song request session """
+
+        session = get_object_or_404(Session, slug=id)
+
+        # Check that user has permission to perform this action
+        if not request.user.has_perm('spotify.change_session', session) or \
+                (session.user.personal and request.user != session.user.user) or not session.user.token_info:
+            raise PermissionDenied
+
+        # Check that the session is still eligible to be updated
+        if not session.event.approved or session.event.reviewed or session.event.cancelled or session.event.closed:
+            session.accepting_requests = False
+            session.save()
+            raise PermissionDenied(detail="Cannot update session at this time: Event ineligible.")
+
+        # Verify that user is allowed to use the new requested account (if changed)
+        account_id = request.data.get('user', None)
+        if account_id:
+            new_account = get_object_or_404(SpotifyUser, pk=account_id, token_info__isnull=False)
+            if new_account.personal and request.user != new_account.user:
+                raise PermissionDenied
+
+        serializer = SpotifySessionWriteSerializer(session, data=request.data, partial=True)
+        if serializer.is_valid(True):
+            try:
+                with transaction.atomic():
+                    session = serializer.save()
+            except IntegrityError:
+                return Response({"detail": "The Spotify account you selected is currently in use by another session"},
+                                status=status.HTTP_409_CONFLICT)
+
+            response_serializer = SpotifySessionReadOnlySerializer(session, request=request)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        operation_id="Start / Resume Playback",
+        parameters=[
+            OpenApiParameter('device', OpenApiTypes.STR, OpenApiParameter.QUERY, False,
+                             'The unique ID of the target device')
+        ],
+        request=None,
+        responses={
+            204: OpenApiResponse(description="Playback started"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        }
+    )
+    @action(['PUT'], detail=True)
+    def play(self, request, id=None):
+        """ Use this endpoint to start / resume playback for a session """
+
+        session = get_object_or_404(Session, slug=id)
+
+        # Check that user has permission to manage playback
+        if not request.user.has_perm('spotify.manage_playback', session) or \
+                (session.user.personal and request.user != session.user.user) or not session.user.token_info:
+            raise PermissionDenied
+
+        # Check to see if event is still active
+        if not session.event.approved or session.event.reviewed or session.event.cancelled or session.event.closed:
+            raise NotFound(detail="Playback controls are currently unavailable for this event")
+
+        device_id = self.request.query_params.get('device', None)
+
+        error = play(session, device_id)
+        if error:
+            raise NotFound(detail=error)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        operation_id="Pause Playback",
+        request=None,
+        responses={
+            204: OpenApiResponse(description="Playback paused"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        }
+    )
+    @action(['PUT'], detail=True)
+    def pause(self, request, id=None):
+        """ Use this endpoint to pause playback for a session """
+
+        session = get_object_or_404(Session, slug=id)
+
+        # Check that user has permission to manage playback
+        if not request.user.has_perm('spotify.manage_playback', session) or \
+                (session.user.personal and request.user != session.user.user) or not session.user.token_info:
+            raise PermissionDenied
+
+        # Check to see if event is still active
+        if not session.event.approved or session.event.reviewed or session.event.cancelled or session.event.closed:
+            raise NotFound(detail="Playback controls are currently unavailable for this event")
+
+        error = pause(session)
+        if error:
+            raise NotFound(detail=error)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        operation_id="Skip to Previous",
+        request=None,
+        responses={
+            204: OpenApiResponse(description="Command sent"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        }
+    )
+    @action(['PUT'], detail=True)
+    def previous(self, request, id=None):
+        """ Use this endpoint to jump to the previous track """
+
+        session = get_object_or_404(Session, slug=id)
+
+        # Check that user has permission to manage playback
+        if not request.user.has_perm('spotify.manage_playback', session) or \
+                (session.user.personal and request.user != session.user.user) or not session.user.token_info:
+            raise PermissionDenied
+
+        # Check to see if event is still active
+        if not session.event.approved or session.event.reviewed or session.event.cancelled or session.event.closed:
+            raise NotFound(detail="Playback controls are currently unavailable for this event")
+
+        error = previous(session)
+        if error:
+            raise NotFound(detail=error)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        operation_id="Skip to Next",
+        request=None,
+        responses={
+            204: OpenApiResponse(description="Command sent"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        }
+    )
+    @action(['PUT'], detail=True)
+    def next(self, request, id=None):
+        """ Use this endpoint to skip to the next track """
+
+        session = get_object_or_404(Session, slug=id)
+
+        # Check that user has permission to manage playback
+        if not request.user.has_perm('spotify.manage_playback', session) or \
+                (session.user.personal and request.user != session.user.user) or not session.user.token_info:
+            raise PermissionDenied
+
+        # Check to see if event is still active
+        if not session.event.approved or session.event.reviewed or session.event.cancelled or session.event.closed:
+            raise NotFound(detail="Playback controls are currently unavailable for this event")
+
+        error = skip(session)
+        if error:
+            raise NotFound(detail=error)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class SongRequestViewSet(viewsets.GenericViewSet):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['create']:
+            return []
+        return super(SongRequestViewSet, self).get_permissions()
+
+    def get_queryset(self):
+        session_id = self.request.query_params.get('session', None)
+        show_approved = self.request.query_params.get('show_approved', False)
+
+        if not session_id:
+            raise ValidationError("A valid session ID is required")
+
+        session = get_object_or_404(Session, slug=session_id)
+        queryset = SongRequest.objects.filter(session=session).order_by('pk')
+
+        if not show_approved:
+            queryset = queryset.exclude(approved=True)
+
+        return queryset
+
+    @extend_schema(
+        operation_id="Get Song Requests",
+        parameters=[
+            OpenApiParameter('session', OpenApiTypes.STR, OpenApiParameter.QUERY, True,
+                             "Unique session ID for the session the requests belong to"),
+            OpenApiParameter('show_approved', OpenApiTypes.BOOL, OpenApiParameter.QUERY, False,
+                             "Include requests that have already been approved")
+        ],
+        responses={
+            200: OpenApiResponse(SongRequestSerializer(many=True), description="Ok"),
+            204: OpenApiResponse(description="Nothing to return"),
+            401: OpenApiResponse(description="Unauthenticated"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found. No session matching the provided ID exists.")
+        },
+        examples=[
+            OpenApiExample('Song Request', examples.song_request, response_only=True)
+        ]
+    )
+    def list(self, request):
+        """ Use this endpoint to get a list of song requests for an event """
+
+        try:
+            queryset = self.get_queryset()
+        except ValidationError as e:
+            return Response({'detail': 'Bad request. %s' % e.message}, status=status.HTTP_400_BAD_REQUEST)
+
+        if queryset.count() == 0:
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        for song_request in queryset.all():
+            if not request.user.has_perm('spotify.view_session', song_request.session):
+                raise PermissionDenied
+
+        serializer = SongRequestSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        operation_id="Create Song Request",
+        request=inline_serializer(
+            'Song Request',
+            fields={
+                'session': serializers.CharField(),
+                'identifier': serializers.CharField(help_text="Unique Spotify identifier for the requested track"),
+                'first_name': serializers.CharField(help_text="First Name of the person submitting the request"),
+                'last_name': serializers.CharField(help_text="Last Name of the person submitting the request"),
+                'email': serializers.EmailField(required=False),
+                'phone': serializers.CharField(required=False)
+            }
+        ),
+        responses={
+            201: OpenApiResponse(inline_serializer(
+                'Song Request Receipt', fields={'estimated_wait': serializers.IntegerField()}), description="Created"
+            ),
+            400: OpenApiResponse(description="Bad request"),
+            401: OpenApiResponse(description="Unauthorized (private sessions)"),
+            402: OpenApiResponse(description="Payment required"),
+            403: OpenApiResponse(description="Permission denied (private sessions)"),
+            404: OpenApiResponse(description="Not found. No session matching the provided ID exists.")
+        }
+    )
+    def create(self, request):
+        """ Use this endpoint to submit a new song request (Not supported for paid sessions) """
+
+        session_id = request.data.get('session', None)
+
+        session = get_object_or_404(Session, slug=session_id, accepting_requests=True)
+
+        # Check that request is valid
+        track_id = request.data.get('identifier', None)
+        first_name = request.data.get('first_name', None)
+        last_name = request.data.get('last_name', None)
+        email = request.data.get('email', None)
+        phone = request.data.get('phone', None)
+        if not track_id or not first_name or not last_name or (not email and not phone):
+            raise ParseError(detail="One or more required fields are missing. Note that each request must include an "
+                                    "email address or phone number.")
+
+        requestor = first_name + " " + last_name
+
+        # If a session requires payment, users should use the form on the LNL website
+        if session.require_payment:
+            return Response({'detail': 'Not supported. Payment Required.'}, status=status.HTTP_402_PAYMENT_REQUIRED)
+
+        # Private sessions require authentication and are restricted to LNL members only
+        if session.private:
+            if not request.user or not request.user.is_authenticated:
+                raise NotAuthenticated(detail="Authentication is required for private sessions")
+            elif not request.user.is_lnl:
+                raise PermissionDenied
+
+        # If an event is no longer eligible to accept requests, refuse to fulfil the request
+        if not session.event.approved or session.event.cancelled or session.event.closed or session.event.reviewed:
+            session.accepting_requests = False
+            session.save()
+            raise PermissionDenied(detail="Failed to submit request: Session is no longer accepting requests.")
+
+        # Create the request and respond with the estimated wait time
+        track = get_track(session, track_id)
+        if not track:
+            return Response({'detail': 'Failed to retrieve track information'}, status=status.HTTP_404_NOT_FOUND)
+
+        song_request = {
+            'session': request.data['session'],
+            'name': track['name'],
+            'identifier': track_id,
+            'duration': track['duration_ms'],
+            'submitted_by': requestor,
+            'email': email,
+            'phone': phone
+        }
+        serializer = SongRequestSerializer(data=song_request)
+        if serializer.is_valid(True):
+            serializer.save()
+        return Response({'estimated_wait': queue_estimate(session, True)}, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        operation_id="Approve Song Request",
+        responses={
+            200: OpenApiResponse(SongRequestSerializer, description="Ok"),
+            401: OpenApiResponse(description="Unauthorized"),
+            403: OpenApiResponse(description="Permission denied"),
+            404: OpenApiResponse(description="Not found")
+        },
+        examples=[
+            OpenApiExample('Song Request', examples.song_request, response_only=True)
+        ]
+    )
+    def partial_update(self, request, pk):
+        """ Use this endpoint to approve a song request """
+
+        song_request = get_object_or_404(SongRequest, pk=pk, approved=False)
+
+        if not request.user.has_perm('spotify.approve_song_request', song_request):
+            raise PermissionDenied
+
+        # If another session using the same Spotify account has started, refuse any further modifications
+        active_sessions = Session.objects.filter(user=song_request.session.user, accepting_requests=True).all()
+        if song_request.session not in active_sessions and active_sessions.count() > 0:
+            raise PermissionDenied(detail="This request belongs to a session that can no longer be modified. The "
+                                          "corresponding Spotify account is currently in use elsewhere.")
+
+        # If the event is no longer active, deny permission
+        event = song_request.session.event
+        if not event.approved or event.reviewed or event.closed or event.cancelled:
+            raise PermissionDenied(detail="This feature is currently unavailable: Event ineligible")
+
+        serializer = SongRequestSerializer(song_request, data={'approved': True}, partial=True)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+def query_parameter_to_boolean(value):
+    """ Converts query parameter value to boolean (if not already) """
+
+    if isinstance(value, bool) or value is None:
+        return value
+
+    if isinstance(value, int):
+        value = str(value)
+
+    if value.lower() in ["false", "0"]:
+        return False
+    elif value.lower() in ["true", "1"]:
+        return True
+    return None
 
 
 @login_required

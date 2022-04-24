@@ -569,6 +569,26 @@
         "view_pits",
         "projection",
         "projectionist"
+      ],
+      [
+        "view_session",
+        "spotify",
+        "session"
+      ],
+      [
+        "add_session",
+        "spotify",
+        "session"
+      ],
+      [
+        "change_session",
+        "spotify",
+        "session"
+      ],
+      [
+        "approve_song_request",
+        "spotify",
+        "songrequest"
       ]
     ]
   }
@@ -742,6 +762,11 @@
         "view_pits",
         "projection",
         "projectionist"
+      ],
+      [
+        "view_session",
+        "spotify",
+        "session"
       ]
     ]
   }
@@ -826,6 +851,11 @@
         "view_pits",
         "projection",
         "projectionist"
+      ],
+      [
+        "view_session",
+        "spotify",
+        "session"
       ]
     ]
   }

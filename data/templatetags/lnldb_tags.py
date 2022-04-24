@@ -37,3 +37,10 @@ def get_base_url(context):
             or settings.SECURE_HSTS_SECONDS
     scheme = 'https' if is_secure else 'http'
     return '%s://%s' % (scheme, settings.ALLOWED_HOSTS[0])
+
+
+@register.filter()
+def minutes_seconds(millis):
+    minutes = int(millis / 60000)
+    seconds = (millis / 1000) - (minutes * 60)
+    return "%i:%02d" % (minutes, seconds)
