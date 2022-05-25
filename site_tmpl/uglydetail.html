@@ -263,6 +263,18 @@
                                 {% endif %}
                             </td>
                         </tr>
+                        {% permission request.user has 'events.event_view_sensitive' of event %}
+                            <tr>   
+                                <th>Cancellation Reason:</th>
+                                <td>
+                                    {% if event.cancelled_reason %}
+                                        {{ event.cancelled_reason }}
+                                    {% else %}
+                                        None
+                                    {% endif %}
+                                </td>
+                            </tr> 
+                        {% endpermission %}
                         {% endif %}
                         {% if event.closed %}
                             <tr>
