@@ -2,10 +2,9 @@ from __future__ import unicode_literals
 import datetime
 from itertools import chain
 
-from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db.models.aggregates import Sum
-from django.forms.models import inlineformset_factory, modelformset_factory
+from django.forms.models import modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls.base import reverse
@@ -14,12 +13,10 @@ from django.views.generic import CreateView
 from django.template import loader
 
 from emails.generators import generate_selfservice_notice_email
-from events.forms import (EditHoursForm, InternalReportForm, MKHoursForm,
-                          SelfServiceOrgRequestForm, PostEventSurveyForm, OfficeHoursForm)
-from events.models import CCReport, BaseEvent, Event, Hours, PostEventSurvey, CCR_DELTA, OfficeHour
+from events.forms import (SelfServiceOrgRequestForm, PostEventSurveyForm, OfficeHoursForm)
+from events.models import CCReport, BaseEvent, PostEventSurvey, OfficeHour
 from helpers.mixins import LoginRequiredMixin
 from helpers.revision import set_revision_comment
-from helpers.util import curry_class
 
 
 @login_required
@@ -98,172 +95,14 @@ def myevents(request):
 
     return render(request, 'myevents.html', context)
 
-
-@login_required
-def eventfiles(request, eventid):
-    return redirect('/db/events/view/' + eventid + '/#files')
-
-
-# Views Relating to Crew Chiefs
 @login_required
 def ccreport(request, eventid):
-    """ Submits a crew chief report """
-    context = {}
-
-    user = request.user
-
-    uevent = user.ccinstances.filter(event__pk=eventid)
-    # check that the event in question belongs to the user
-    if not uevent:
-        return HttpResponse("This event must not have been yours, or is closed")
-
-    event = uevent[0].event
-    if not event.reports_editable:
-        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
-
-    # get event
-    x = event.ccinstances.filter(crew_chief=user)
-    context['msg'] = "Crew Chief Report for '<em>%s</em>' (%s)" % (event, ",".join([str(i.category) for i in x]))
-
-    # create report
-    try:
-        report = CCReport.objects.get(event=event, crew_chief=user)
-    except CCReport.DoesNotExist:
-        report = None
-
-    # standard save flow
-    if request.method == 'POST':
-        formset = InternalReportForm(data=request.POST, event=event, request_user=user, instance=report)
-        if formset.is_valid():
-            formset.save()
-            return HttpResponseRedirect(reverse("my:events"))
-        else:
-            context['formset'] = formset
-
+    if BaseEvent.objects.get(pk=eventid).closed:
+        return redirect('/db/events/view/' + str(eventid) + '/#reports')
+    elif (my_ccreports:= CCReport.objects.filter(event=eventid, crew_chief=request.user)).exists():
+        return redirect('/db/events/view/' + str(eventid) + '/report/update/' + str(my_ccreports.last().id) + '/')
     else:
-        formset = InternalReportForm(event=event, request_user=user, instance=report)
-
-        context['formset'] = formset
-
-    return render(request, 'mycrispy.html', context)
-
-
-@login_required
-def hours_list(request, eventid):
-    """ Lists a user's work hours """
-    context = {}
-    user = request.user
-
-    event = user.ccinstances.filter(event__pk=eventid)
-
-    if not event:
-        return HttpResponse("You must not have cc'd this event, or it's closed")
-    event = event[0].event
-    context['event'] = event
-
-    hours = event.hours.all()
-    context['hours'] = hours
-
-    return render(request, 'myhours.html', context)
-
-
-@login_required
-def hours_mk(request, eventid):
-    """ Hour Entry Form for CC """
-    context = {}
-
-    user = request.user
-    uevent = user.ccinstances.filter(event__pk=eventid)
-
-    if not uevent:
-        return HttpResponse("This event must not have been yours, or is closed")
-
-    event = uevent[0].event
-
-    if not isinstance(event, Event):
-        # New event - redirect to bulk update tool instead
-        return HttpResponseRedirect(reverse("my:hours-bulk", args=(event.id,)))
-
-    if not event.reports_editable:
-        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
-
-    context['msg'] = "Hours for '%s'" % event.event_name
-    if request.method == 'POST':
-        formset = MKHoursForm(event, request.POST)
-        if formset.is_valid():
-            formset.save()
-            return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
-    else:
-        formset = MKHoursForm(event)
-
-    context['formset'] = formset
-
-    return render(request, 'mycrispy.html', context)
-
-
-@login_required
-def hours_edit(request, eventid, userid):
-    """ Hour Entry Form for CC (editing)"""
-    context = {}
-    user = request.user
-    uevent = user.ccinstances.filter(event__pk=eventid)
-
-    if not uevent:
-        return HttpResponse("You must not have cc'd this event, or it's closed")
-
-    event = uevent[0].event
-    if not event.reports_editable:
-        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
-
-    hours = get_object_or_404(Hours, event=event, user_id=userid)
-    u = get_object_or_404(get_user_model(), pk=userid)
-    context['msg'] = "Hours for '%s' on '%s'" % (u, event.event_name)
-    if request.method == 'POST':
-        formset = EditHoursForm(request.POST, instance=hours)
-        if formset.is_valid():
-            formset.save()
-            return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
-    else:
-        formset = EditHoursForm(instance=hours)
-
-    context['formset'] = formset
-
-    return render(request, 'mycrispy.html', context)
-
-
-@login_required
-def hours_bulk(request, eventid):
-    """ Bulk Hours Entry Form """
-    context = {}
-    user = request.user
-    uevent = user.ccinstances.filter(event__pk=eventid)
-
-    if not uevent:
-        return HttpResponse("You must not have cc'd this event, or it's closed")
-
-    event = uevent[0].event
-    if not event.reports_editable:
-        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
-
-    context['msg'] = "Bulk Hours Entry"
-
-    context['event'] = event
-
-    mk_event_formset = inlineformset_factory(Event, Hours, extra=3, exclude=[])
-    mk_event_formset.form = curry_class(MKHoursForm, event=event)
-
-    if request.method == 'POST':
-        formset = mk_event_formset(request.POST, instance=event)
-        if formset.is_valid():
-            formset.save()
-            return HttpResponseRedirect(reverse("my:hours-list", args=(event.id,)))
-    else:
-        formset = mk_event_formset(instance=event)
-
-    context['formset'] = formset
-
-    return render(request, 'formset_hours_bulk.html', context)
-
+        return redirect('/db/events/view/' + str(eventid) + '/report/mk/')
 
 class PostEventSurveyCreate(LoginRequiredMixin, CreateView):
     model = PostEventSurvey
