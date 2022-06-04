@@ -19,16 +19,13 @@
                 {% if selfcrew_events.exists %}
                     <div class="visible-xs panel panel-default">
                         <div class="panel-heading">
-                            <h3 class="panel-title">Mark yourself as crew for an ongoing event</h3>
+                            <h3 class="panel-title">Select the event name to mark yourself as crew</h3>
                         </div>
                         <div class="panel-body">
-                            <a class="btn btn-primary" href="{% url 'events:crew-checkin' %}">Check in</a>
-                            <a class="btn btn-primary" href="{% url 'events:crew-checkout' %}">Check out</a>
-                            {% comment %}
                             {% for event in selfcrew_events %}
                                 <a class="btn btn-default" href="{% url 'events:selfcrew' event.id %}">{{ event.event_name }}</a>
                             {% endfor %}
-                            {% endcomment %}
+                            <a class="btn btn-warning" href="{% url 'events:crew-checkout' %}">Crew Check Out</a>
                         </div>
                     </div>
                 {% endif %}
@@ -47,6 +44,10 @@
                         {% endpermission %}
                         {% if request.user.is_superuser %}
                             <a class="btn btn-danger" href="../admin">Admin</a>
+                        {% endif %}
+                        {% if selfcrew_events.exists %}
+                            <a class="hidden-xs btn btn-warning" href="{% url 'events:crew-checkin' %}">Crew Check In</a>
+                            <a class="hidden-xs btn btn-warning" href="{% url 'events:crew-checkout' %}">Crew Check Out</a>
                         {% endif %}
                     </div>
                 </div>
