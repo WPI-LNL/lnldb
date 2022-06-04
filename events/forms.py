@@ -20,6 +20,7 @@ from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, 
 from django.utils import timezone
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
+from accounts.models import User
 
 from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
 from events.fields import GroupedModelChoiceField
@@ -1268,6 +1269,60 @@ class MKHoursForm(forms.ModelForm):
     category = ModelChoiceField(queryset=Category.objects.all(), required=False)
     service = ModelChoiceField(queryset=Service.objects.all(), required=False)  # queryset gets changed in constructor
 
+class MKSingleHoursForm(forms.ModelForm):
+    """ Hours Form for a single user at an event"""
+    def __init__(self, event, user, *args, **kwargs):
+        self.event = event
+        self.user = user
+        self.helper = FormHelper()
+        self.helper.form_class = "form-horizontal"
+        self.helper.form_method = "post"
+        self.helper.form_action = ""
+        self.helper.layout = Layout(
+            Field('user'),
+            Field('hours'),
+            Field('service'),
+            FormActions(
+                Submit('save', 'Save Changes'),
+                # Reset('reset','Reset Form'),
+            )
+        )
+        super(MKSingleHoursForm, self).__init__(*args, **kwargs)
+        self.fields['service'].queryset = get_qs_from_event(self.event)
+        if isinstance(self.event, Event2019):
+            self.fields['category'].queryset = Category.objects.filter(
+                pk__in=self.event.serviceinstance_set.values_list('service__category', flat=True))
+        if user is not None:
+            self.fields['user'] = forms.ModelChoiceField(queryset=User.objects.filter(pk=user.id), disabled=True, empty_label=None, initial=user)
+
+    def clean(self):
+        user = self.user if self.user is not None else self.cleaned_data.get('user')
+        super(MKSingleHoursForm, self).clean()
+        category = self.cleaned_data.get('category')
+        service = self.cleaned_data.get('service')
+        if user is None:
+            # this problem will raise an error elsewhere
+            return
+        if self.event.hours.filter(user=user, category=category, service=service).exists() and not self.instance.pk:
+            raise ValidationError("User already has hours for this category/service. Edit those instead")
+
+    def save(self, commit=True):
+        obj = super(MKSingleHoursForm, self).save(commit=False)
+        if obj.category is None and obj.service is not None:
+            obj.category = obj.service.category
+        obj.event = self.event
+        if commit:
+            obj.save()
+        return obj
+
+    class Meta:
+        model = Hours
+        fields = ('user','hours', 'category', 'service')
+    
+    user = AutoCompleteSelectField('Users', required=True)
+    hours = forms.DecimalField(min_value=decimal.Decimal("0.00"))
+    category = ModelChoiceField(queryset=Category.objects.all(), required=False)
+    service = ModelChoiceField(queryset=Service.objects.all(), required=False)  # queryset gets changed in constructor
 
 class EditHoursForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
