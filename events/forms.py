@@ -1349,6 +1349,8 @@ class CCIForm(forms.ModelForm):
         if isinstance(event, Event2019):
             self.fields['category'].queryset = Category.objects.filter(
                 pk__in=event.serviceinstance_set.values_list('service__category', flat=True))
+            if len(self.fields['category'].queryset) == 1:
+                self.fields['category'].initial = self.fields['category'].queryset.first()
         self.fields['setup_start'].initial = self.fields['setup_start'].prepare_value(
             self.event.datetime_setup_complete.replace(second=0, microsecond=0)
         )
