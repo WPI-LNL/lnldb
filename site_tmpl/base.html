@@ -17,31 +17,38 @@
 
         {% if AIRPLANE_MODE %}
             <link rel="stylesheet" href="{% static 'css/bootstrap.css' %}">
-            <link rel="stylesheet" href="{% static 'css/bootstrap-theme.css' %}">
+            <script src="{% static 'js/bootstrap.bundle.js' %}"></script>
+            <script src="{% static 'js/chart.js' %}"></script>
             <script src="{% static 'js/jquery.js' %}"></script>
             <script src="{% static 'js/jquery-ui.js' %}"></script>
-            <script src="{% static 'js/bootstrap.js' %}"></script>
-            <script src="{% static 'js/Chart.bundle.min.js' %}"></script>
+            <script src="{% static 'js/less.js' %}"></script>
         {% else %}
-            <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
-            <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
-            <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-            <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
-            <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-            <script src="//cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.min.js"></script>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
+            <script src="https://cdn.jsdelivr.net/npm/chart.js@3.8.0/dist/chart.min.js" integrity="sha256-cHVO4dqZfamRhWD7s4iXyaXWVK10odD+qp4xidFzqTI=" crossorigin="anonymous"></script>
+            <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+            <script src="https://cdn.jsdelivr.net/npm/jquery-ui@1.13.1/ui/widget.js" integrity="sha256-1F4vdkOBSgXYOyCxF0xsyjkwXhkUF7Z8OtJ+Ydk1sKg=" crossorigin="anonymous"></script>
+            <script src="https://cdn.jsdelivr.net/npm/less@4.1.2/dist/less.min.js" integrity="sha256-bWFW434ozIsXfX1rHMXdSTCOt+oZa2q4deumx0rfUV4=" crossorigin="anonymous"></script>
         {% endif %}
-
-        <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet">
-        <!--         <link href="{% static 'css/bootstrap-responsive.css' %}" rel="stylesheet"> -->
 
         <script src="{% static 'js/flexmenu.min.js' %}"></script>
-        <link href='{% static 'ajax_select/css/ajax_select.css' %}' rel="stylesheet" type="text/css">
+        <link href="{% static 'ajax_select/css/ajax_select.css' %}" rel="stylesheet" type="text/css">
         <script src="{% static 'ajax_select/js/ajax_select.js' %}"></script>
-
         <link rel="stylesheet" type="text/css" href="{% static 'hijack/hijack-styles.css' %}" />
+
+        <link href="{% static 'css/datepicker.css' %}" rel="stylesheet" type="text/css">
+        <link href="{% static 'css/bootstrap-timepicker.min.css' %}" rel="stylesheet" type="text/css">
+        <script src="{% static 'js/bootstrap-datepicker.js' %}"></script>
+        <script src="{% static 'js/bootstrap-timepicker.min.js' %}"></script>
+
+        <!-- <link href="{% static 'css/style.css' %}" rel="stylesheet"> -->
+
+        <link href="{% static 'css/local_styles.css' %}" rel="stylesheet">
+
         {% if CCSS == 'survey' %}
-        <link rel="stylesheet" type="text/css" href="{% static 'css/survey.css' %}"/>
+            <link rel="stylesheet" type="text/css" href="{% static 'css/survey.css' %}"/>
         {% endif %}
+
         <script type="text/javascript">
             $(document).ready(function () {
                 $(".dateinput").datepicker({
@@ -86,10 +93,6 @@
                 $('a[href="' + window.location.hash + '"][data-toggle="tab"]').tab('show');
             });
     </script>
-        <!--         <link href="{% static 'css/style.css' %}" rel="stylesheet"> -->
-
-        <link href="{% static 'css/local_styles.css' %}" rel="stylesheet">
-
         {% block overrides %}
         {% endblock %}
 
@@ -128,11 +131,6 @@
         <meta name="theme-color" content="#ffffff">
         {% block extras %}
         {% endblock %}
-
-        <link href="{% static 'css/datepicker.css' %}" rel="stylesheet" type="text/css">
-        <link href="{% static 'css/bootstrap-timepicker.min.css' %}" rel="stylesheet" type="text/css">
-        <script src="{% static 'js/bootstrap-datepicker.js' %}"></script>
-        <script src="{% static 'js/bootstrap-timepicker.min.js' %}"></script>
     </head>
 
     <body>
