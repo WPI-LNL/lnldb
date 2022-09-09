@@ -53,6 +53,7 @@ urlpatterns += [
     url(r'^slack/', include(('slack.urls', 'slack'), namespace='slack')),
     url(r'^mdm/', include(('devices.urls.mdm', 'mdm'), namespace="mdm")),
     url(r'^support/', include(('rt.urls', 'support'), namespace='support')),
+    url(r'^spotify/', include(('spotify.urls', 'spotify'), namespace='spotify')),
     url(r'', include(('pages.urls', 'pages'), namespace='pages')),
 
     # special urls
