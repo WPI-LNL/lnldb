@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser, _user_has_perm
 from django.db.models import (Model, BooleanField, CharField, IntegerField, BigIntegerField, PositiveIntegerField, Q,
                               TextField, DateField, DateTimeField, OneToOneField, ManyToManyField, ImageField, CASCADE,
                               SET_NULL, signals)
+from django.core.validators import MinValueValidator,MaxValueValidator
+from datetime import date, datetime
 from multiselectfield import MultiSelectField
 from django.conf import settings
 from six import python_2_unicode_compatible
@@ -51,7 +53,7 @@ class User(AbstractUser):
     mdc = CharField(max_length=32, null=True, blank=True, verbose_name="MDC")
     nickname = CharField(max_length=32, null=True, blank=True, verbose_name="Nickname")
     student_id = PositiveIntegerField(null=True, blank=True, verbose_name="Student ID")
-    class_year = PositiveIntegerField(null=True, blank=True)
+    class_year = PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(1962), MaxValueValidator(datetime.now().year + 6)])
     locked = BooleanField(default=False)
     away_exp = DateField(verbose_name="Away Status Expiration", null=True, blank=True)
     onboarded = BooleanField(default=False, verbose_name="Onboarding Complete")
