@@ -4,7 +4,7 @@ from django.db.models import (Model, BooleanField, CharField, IntegerField, BigI
                               TextField, DateField, DateTimeField, OneToOneField, ManyToManyField, ImageField, CASCADE,
                               SET_NULL, signals)
 from django.core.validators import MinValueValidator,MaxValueValidator
-from datetime import timezone
+from django.utils import timezone
 from multiselectfield import MultiSelectField
 from django.conf import settings
 from six import python_2_unicode_compatible
