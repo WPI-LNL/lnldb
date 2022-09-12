@@ -53,7 +53,7 @@ class User(AbstractUser):
     mdc = CharField(max_length=32, null=True, blank=True, verbose_name="MDC")
     nickname = CharField(max_length=32, null=True, blank=True, verbose_name="Nickname")
     student_id = PositiveIntegerField(null=True, blank=True, verbose_name="Student ID")
-    class_year = PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(timezone.now().year), MaxValueValidator(timezone.now().year + 6)])
+    class_year = PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(1962), MaxValueValidator(timezone.now().year + 6)])
     locked = BooleanField(default=False)
     away_exp = DateField(verbose_name="Away Status Expiration", null=True, blank=True)
     onboarded = BooleanField(default=False, verbose_name="Onboarding Complete")
