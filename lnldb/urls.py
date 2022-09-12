@@ -53,6 +53,7 @@ urlpatterns += [
     url(r'^slack/', include(('slack.urls', 'slack'), namespace='slack')),
     url(r'^mdm/', include(('devices.urls.mdm', 'mdm'), namespace="mdm")),
     url(r'^support/', include(('rt.urls', 'support'), namespace='support')),
+    url(r'^spotify/', include(('spotify.urls', 'spotify'), namespace='spotify')),
     url(r'', include(('pages.urls', 'pages'), namespace='pages')),
 
     # special urls
@@ -67,8 +68,6 @@ urlpatterns += [
     url(r'^workorder/', RedirectView.as_view(url='/workorder/', permanent=False)),
     url(r'^workshops/$', workshops, name='workshops'),
 
-    # Download checkin data (hopefully this url can be removed some day)
-    url(r'^downloads/logs/contact-tracing/$', data.views.contact_tracing_logs, name="csv-logs"),
     url(r'^maintenance/$', data.views.maintenance, name="maintenance"),
 
     # keep old urls

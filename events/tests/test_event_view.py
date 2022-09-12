@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.contrib.auth.models import Permission, Group
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.http import QueryDict
 from django.test import TestCase
 from django.test.client import RequestFactory
@@ -97,6 +98,7 @@ class EventBasicViewTest(ViewTestCase):
             "entered_into_workday": False,
             "send_survey": True,
             "org": "|",
+            "reference_code": "",
             "datetime_setup_complete_0": timezone.now().date(),
             "datetime_setup_complete_1": timezone.now().time(),
             "datetime_start_0": timezone.now().date(),
@@ -2353,23 +2355,35 @@ class EventListBasicViewTest(ViewTestCase):
         self.assertOk(self.client.get(reverse("events:all-cal")))
 
     def test_ical_generation(self):
+        # Check timezone
+        if settings.TIME_ZONE == "UTC":
+            tz = b''
+            start = timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)).strftime('%Y%m%dT%H%M%SZ')\
+                .encode('utf-8')
+            end = timezone.make_aware(timezone.datetime(2020, 1, 1)).strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
+        else:
+            tz = b'TZID=' + settings.TIME_ZONE.encode('utf-8') + b';'
+            start = timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)).strftime('%Y%m%dT%H%M%S')\
+                .encode('utf-8')
+            end = timezone.make_aware(timezone.datetime(2020, 1, 1)).strftime('%Y%m%dT%H%M%S').encode('utf-8')
+        
         # Test with no attendees
-        start = timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)).strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
-        end = timezone.make_aware(timezone.datetime(2020, 1, 1)).strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
         now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
-        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\nMETHOD:PUBLISH\r\n' \
-                   b'BEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART:' + start + b'\r\nDTEND:' + end + b'\r\n' \
-                   b'DTSTAMP:' + now + b'\r\nUID:event1@lnldb\r\nDESCRIPTION:Requested by \r\n' \
-                   b'LOCATION:\r\nURL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
+        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\n' \
+                   b'METHOD:PUBLISH\r\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART;' + tz + b'VALUE=DATE-TIME:' + \
+                   start + b'\r\nDTEND;' + tz + b'VALUE=DATE-TIME:' + end + b'\r\nDTSTAMP;VALUE=DATE-TIME:' + now + \
+                   b'\r\nUID:event1@lnldb\r\nDESCRIPTION:Requested by \r\nLOCATION:\r\n' \
+                   b'URL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
         output = cal.generate_ics([self.e], None)
         self.assertEqual(output, expected)
 
         # Test response when set to generate a request
         now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
-        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\nMETHOD:REQUEST\r\n' \
-                   b'BEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART:' + start + b'\r\nDTEND:' + end + b'\r\n' \
-                   b'DTSTAMP:' + now + b'\r\nUID:event1@lnldb\r\nDESCRIPTION:Requested by \r\n' \
-                   b'LOCATION:\r\nURL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
+        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\n' \
+                   b'METHOD:REQUEST\r\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART;' + tz + b'VALUE=DATE-TIME:' + \
+                   start + b'\r\nDTEND;' + tz + b'VALUE=DATE-TIME:' + end + b'\r\nDTSTAMP;VALUE=DATE-TIME:' + now + \
+                   b'\r\nUID:event1@lnldb\r\nDESCRIPTION:Requested by \r\nLOCATION:\r\n' \
+                   b'URL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
         output = cal.generate_ics([self.e], None, True)
         self.assertEqual(output, expected)
 
@@ -2381,11 +2395,12 @@ class EventListBasicViewTest(ViewTestCase):
         attendee2 = cal.EventAttendee(self.e, self.user, False)
         attendee3 = cal.EventAttendee(self.e2, self.user)
         now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
-        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\nMETHOD:PUBLISH\r' \
-                   b'\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART:' + start + b'\r\nDTEND:' + end + b'\r\n' \
-                   b'DTSTAMP:' + now + b'\r\nUID:event1@lnldb\r\nATTENDEE;CN="Test User";ROLE=REQ-PARTICIPANT;' \
-                   b'RSVP=FALSE:MAILTO:abc@foo.com\r\nATTENDEE;CN="Test User";ROLE=OPT-PARTICIPANT;RSVP=FALSE:' \
-                   b'MAILTO:abc@foo.com\r\nDESCRIPTION:Requested by \r\nLOCATION:\r\n' \
+        expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\n' \
+                   b'METHOD:PUBLISH\r\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART;' + tz + b'VALUE=DATE-TIME:' + \
+                   start + b'\r\nDTEND;' + tz + b'VALUE=DATE-TIME:' + end + b'\r\nDTSTAMP;VALUE=DATE-TIME:' + now + \
+                   b'\r\nUID:event1@lnldb\r\nATTENDEE;CN="Test User";ROLE=REQ-PARTICIPANT;' \
+                   b'RSVP=FALSE:MAILTO:abc@foo.com\r\nATTENDEE;CN="Test User";ROLE=OPT-PARTICIPANT;' \
+                   b'RSVP=FALSE:MAILTO:abc@foo.com\r\nDESCRIPTION:Requested by \r\nLOCATION:\r\n' \
                    b'URL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
         output = cal.generate_ics([self.e], [attendee1, attendee2, attendee3])
         self.assertEqual(output, expected)
@@ -2539,18 +2554,6 @@ class EventIndices(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("survey-dashboard")))
-
-    def test_attendance_logs(self):
-        event = Event2019Factory(event_name="Test Event")
-        models.CrewAttendanceRecord(event=event, user=self.user, active=False)
-
-        # By default the user should not have permission
-        self.assertOk(self.client.get(reverse("events:crew-logs")), 403)
-
-        permission = Permission.objects.get(codename="view_attendance_records")
-        self.user.user_permissions.add(permission)
-
-        self.assertOk(self.client.get(reverse("events:crew-logs")))
 
 
 class EventTemplateTags(TestCase):

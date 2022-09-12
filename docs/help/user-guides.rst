@@ -80,3 +80,11 @@ Training
 
     training/request-pit
     training/training-records
+
+Integrations
+^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    integrations/spotify

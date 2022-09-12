@@ -23,7 +23,7 @@
                                         <th class="col-xs-1">Delete</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="form_data">
                                     {% for form in services_formset %}
                                         {% if form.errors %}
                                             <tr class="warning">
@@ -40,6 +40,7 @@
                                     {% endfor %}
                                 </tbody>
                             </table>
+                            <input type="button" class="btn btn-success" value="Add Row" id="add_form">
                         </div>
                     {% endif %}
                 </div>
@@ -49,6 +50,17 @@
             </form>
         </div>
     </div>
+    {% include "js_formset_add_row.tmpl" with formset=services_formset%}
+    {% with services_formset.empty_form as form %}
+        <table style="display:none;"> <tbody id="empty_form">
+                <tr>
+                    <td>{{ form.id }}{{ form.service }} </td>
+                    <td>{{ form.detail }} </td>
+                    <td>{{ form.DELETE }} </td>
+                </tr>
+            </tbody>
+        </table>
+    {% endwith %}
 {% endblock %}
 
 {% block extras %}

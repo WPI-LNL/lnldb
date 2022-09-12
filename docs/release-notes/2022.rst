@@ -1,0 +1,29 @@
+============
+Updates 2022
+============
+
+February
+========
+This month brought in more bug fixes and minor improvements. We also started taking some initial steps toward a more
+modern UI for the LNLDB with a new login page.
+
+- :commit:`94aac73985c704da77001ea22f182217faacaa00` Redesigned login page UI
+
+January
+=======
+We kicked off the new year in a big way! Several long-awaited bug fixes and UI improvements were finally introduced this
+month, including a redesigned bulk checkin and checkout feature for rentals. We also introduced the ability to
+automatically send calendar invites for meetings (if users choose to opt in).
+
+- :commit:`9b656edd23f0872669c940b6c839f90e875a221c` File added notifications now work with the `Ignore my actions` setting
+- :commit:`8c7fdd6b84b93abfc27b44a0b03ced5b5204ddf9` Poke for CC messages now include the officer's title rather than defaulting to VP
+- :commit:`77d4600811560cc055cefcef3fe60be7294eaee4` Fixes an issue where bcc on calendar invite emails was working incorrectly (`#598 <https://github.com/WPI-LNL/lnldb/issues/598>`_)
+- :commit:`a656a6ff1eba37c7f490083be1f2815af50c8aee` RT tickets submitted through the LNLDB now include a user's full name
+- :commit:`89f3d31ba727feb1c95dca36b3a3c551963419b7` Fixed a timezone bug found in calendar invites
+- :commit:`2a0ac4b4f11a753daa14e65112fb883281345703` Corrected the sort order of several event listings
+- :commit:`2670226a3ec8377b0cbb57a83c9b975ebcdde4ee` Redesigned Snipe checkin and checkout for better error handling
+- :commit:`b2888c5ba6cdfe2249138f1c2c3daa665c23c8b0` Added automated calendar invites for meetings (opt-in required)
+- :commit:`2d4754a70f1d71d483875db8270fb257e85e720c` New permission denied page with the option to submit a ticket
+- :commit:`25266a29eeeb76990fd256f97f585a7be2c5cde9` Completed the API token request endpoint
+- :commit:`49121da6a5742e41f3e2d8546abd3cebfd6006b7` Send Slack notification when submitting RT tickets through the LNLDB
+- :commit:`9c1951745ca3bac8cc0d90d0eb426006321464f2` Added the ability for the Slack app to automatically join new public channels

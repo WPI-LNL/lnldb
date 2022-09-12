@@ -1,0 +1,172 @@
+{% extends 'static_page.html' %}
+{% load crispy_forms_tags %}
+{% load spotify_tags %}
+
+{% block content %}
+<div class="container">
+    <h2>{{ title }}</h2>
+    {% if session.accepting_requests %}
+    <form action="" method="post" enctype="multipart/form-data">
+        <div{% if verified or complete %} style="display: none"{% endif %}>
+            <br>
+            <p>Welcome! You can use this page to request music for today's event.
+                {% if not session.require_payment %}All song requests are free of charge. {% endif %}
+            </p>
+            <br>
+            <p><em>To get started, please enter the following information below then make a selection.
+                {% if session.require_payment %}Once your request has been submitted, you'll be redirected to our payment
+                    detail page.{% endif %}</em>
+            </p>
+
+            {% if helper %}
+                {% crispy form helper %}
+            {% else %}
+                {% crispy form %}
+            {% endif %}
+            <br>
+            {% if session.allow_silence %}
+            <button type="submit" class="btn btn-primary" name="save" value="Submit">Submit</button>
+            {% else %}
+            <hr>
+            {% endif %}
+        </div>
+        <div id="search_bar" {% if not verified and session.allow_silence or complete %}style="display: none"{% endif %}>
+            <p id="runtime" style="{% if not runtime %}display: none; {% endif %}float: right" class="h6">Estimated wait: {{ runtime }} minute{{ runtime|pluralize }}</p>
+            <h4 class="mt-4">Search Music</h4>
+            <input name="search_q" type="text" class="form-control" placeholder="Search">
+            <br>
+            <button name="save" value="Search" type="submit" class="btn btn-primary">Search</button>
+        </div>
+        {% if tracks %}
+        <hr>
+        <div id="results" class="mt-4 table-responsive">
+            <h3>Tracks</h3>
+            <table class="table table-striped table-light">
+                <thead class="table-dark">
+                    <tr>
+                        <td>Name</td>
+                        <td>Artists</td>
+                        <td>Album</td>
+                        <td>Duration</td>
+                        <td>Request</td>
+                    </tr>
+                </thead>
+                <tbody id="tracks">
+                {% for track in tracks %}
+                    {% if not track.explicit or session.allow_explicit %}
+                    <tr>
+                        <td>{% if track.preview_url %}
+                            <i style="cursor: pointer" class="fas fa-play" onclick="play_preview('{{ track.id }}', this);"></i>
+                            {% else %}
+                            <i class="fas fa-play text-muted" disabled title="Preview not available"></i>
+                            {% endif %}
+                            &nbsp;&nbsp;{{ track.name }} {% if track.explicit %}<span class='badge badge-warning'>Explicit</span>{% endif %}
+                            <audio id="audio-{{ track.id }}" src="{{ track.preview_url }}" style="display: none"></audio>
+                        </td>
+                        <td>{{ track.artists|artists }}</td>
+                        <td>{{ track.album.name }}</td>
+                        <td>{{ track.duration_ms|pretty_duration }}</td>
+                        <td><button class='btn btn-primary' name="save" type="submit" value="{{ track.id }}">Request Track</button></td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+            {% if albums or artists %}
+            <hr>
+            <h2>Explore</h2>
+            <br>
+            {% endif %}
+            {% if albums %}
+            <h4>Albums</h4>
+            <p class="text-right text-muted">Scroll for more >></p>
+            <div class="container-fluid">
+                <div class="row flex-row flex-nowrap" style="overflow: scroll" id="albums">
+                    {% for album in albums %}
+                    <div class='col-md-3'>
+                        <div class='card card-block'>
+                            <img src='{{ album.images.0.url }}' class='card-img-top'/>
+                            <div class='card-body'>
+                                <p style='min-height: 90px'><span class='h5'>{{ album.name }}</span><br>{{ album.artists|artists }}</p>
+                                <a href='{{ album.external_urls.spotify }}' class='btn btn-success' target='_blank'>View on Spotify</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <hr>
+            {% endif %}
+            {% if artists %}
+            <h4>Artists</h4>
+            <p class="text-right text-muted">Scroll for more >></p>
+            <div class="container-fluid">
+                <div class="row flex-row flex-nowrap" style="overflow: scroll" id="artists">
+                    {% for artist in artists %}
+                    <div class='col-md-3'>
+                        <div class='card card-block'>
+                            <img src="{{ artist.images.0.url|default:'/assets/img/officers/profile.png' }}" class='card-img-top'/>
+                            <div class='card-body'>
+                                <p style='min-height: 110px'><span class='h5'>{{ artist.name }}</span><br>
+                                    <strong>Followers: </strong>{{ artist.followers.total }}<br><br>{{ artist.genres|join:', '|title }}</p>
+                                <a href='{{ artist.external_urls.spotify }}' class='btn btn-success' target='_blank'>View on Spotify</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </form>
+    {% else %}
+    <div class="alert alert-danger">Sorry, this event is no longer accepting requests.</div>
+    {% endif %}
+    {% if complete %}
+    <div class="jumbotron text-center pb-5">
+        <h2>Request Submitted</h2>
+        <p>We have received your request and will review it shortly.{% if runtime %}
+            <br><br><strong>Estimated wait</strong>: {{ runtime }} minute{{ runtime|pluralize }}{% endif %}</p>
+    </div>
+    {% endif %}
+    <br><br>
+    <p class="text-center">Powered by: <span style="color: #1db954"><i class="fab fa-spotify"></i> Spotify</span></p>
+    <p class="small">{% if complete %}<br>Note: Lens and Lights reserves the right to decline your request at any time and for any
+        reason with or without advance notice.<br>{% endif %}By using this site you agree to
+        <a href="https://www.spotify.com/us/legal/end-user-agreement/">Spotify's Terms of Use</a> as well as LNL's
+        <a href="/legal/privacy/">Privacy Policy</a>.
+    </p>
+    <script>
+    function play_preview(identifier, sender) {
+        preview = document.getElementById("audio-" + identifier);
+        buttons = document.getElementsByClassName("fas");
+
+        if (!preview.paused) {
+            sender.classList.add("fa-play");
+            sender.classList.remove("fa-pause");
+            preview.pause();
+        } else {
+            audio_tags = document.getElementsByTagName("audio");
+            for (i = 0; i < audio_tags.length; i++) {
+                audio_tags[i].pause();
+            }
+            for (i = 0; i < buttons.length; i++) {
+                buttons[i].classList.remove("fa-pause");
+                buttons[i].classList.add("fa-play");
+            }
+            sender.classList.add("fa-pause");
+            sender.classList.remove("fa-play");
+            preview.play();
+            preview.addEventListener("ended", function() {
+                buttons = document.getElementsByClassName("fas");
+                for (i = 0; i < buttons.length; i++) {
+                    buttons[i].classList.remove("fa-pause");
+                    buttons[i].classList.add("fa-play");
+                }
+            });
+        }
+    }
+    </script>
+</div>
+{% endblock %}

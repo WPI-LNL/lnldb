@@ -4,10 +4,12 @@ from crispy_forms.layout import HTML, Div, Field, Fieldset, Layout, Row, Submit,
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.conf import settings
+from django.db.models import Q
 from django import forms
 
 from data.forms import FieldAccessForm, FieldAccessLevel
-from .models import OfficerImg, carrier_choices, event_fields, UserPreferences
+from meetings.models import MeetingType
+from .models import Officer, ProfilePhoto, carrier_choices, event_fields, UserPreferences
 from .ldap import get_student_id
 
 
@@ -15,10 +17,12 @@ class LoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super(LoginForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
-        self.helper.add_input(Submit('submit', 'Log In Locally', css_class="btn btn-lg btn-block btn-info"))
+        self.helper.add_input(Submit('submit', 'Log In', css_class="btn btn-lg btn-block btn-warning"))
 
 
 class UserEditForm(FieldAccessForm):
+    title = forms.ModelChoiceField(queryset=Officer.objects.filter(user__isnull=True), required=False)
+
     def __init__(self, *args, **kwargs):
         request_user = kwargs['request_user']
         instance_user = kwargs['instance']
@@ -36,10 +40,8 @@ class UserEditForm(FieldAccessForm):
         ]
         if request_user.is_lnl:
             layout.extend([
-                Fieldset("Student Info",
-                         'wpibox', 'class_year', 'student_id'),
-                Fieldset("Internal Info",
-                         'title', 'mdc', 'groups', 'away_exp'),
+                Fieldset("Student Info", 'wpibox', 'class_year', 'student_id'),
+                Fieldset("Internal Info", 'title', 'mdc', 'groups', 'away_exp'),
             ])
         layout.append(
             FormActions(
@@ -51,6 +53,9 @@ class UserEditForm(FieldAccessForm):
         if request_user.is_lnl and instance_user.is_lnl:
             self.fields['class_year'].required = True
 
+        self.fields['title'].queryset = Officer.objects.filter(Q(user__isnull=True) | Q(user=instance_user))
+        self.fields['title'].initial = Officer.objects.filter(user=instance_user).first()
+
     def clean_student_id(self):
         student_id = self.cleaned_data.get('student_id', None)
         if not student_id and self.instance.is_lnl and settings.SYNC_STUDENT_ID:
@@ -58,6 +63,24 @@ class UserEditForm(FieldAccessForm):
             if uid:
                 return int(uid)
         return student_id
+
+    def save(self, commit=True):
+        super(UserEditForm, self).save(commit)
+
+        if 'title' in self.changed_data:
+            officer_info = Officer.objects.filter(user=self.instance).first()
+            if officer_info:
+                officer_info.user = None
+                officer_info.img = None
+                officer_info.save()
+
+            if self.cleaned_data['title']:
+                officer_info = Officer.objects.get(pk=self.cleaned_data['title'].pk)
+                officer_info.user = self.instance
+                profile_photo = ProfilePhoto.objects.filter(officer=self.instance).first()
+                officer_info.img = profile_photo
+                officer_info.save()
+        return self.instance
 
     class Meta:
         model = get_user_model()
@@ -200,6 +223,8 @@ class UserPreferencesForm(forms.ModelForm):
 
         self.fields['ignore_user_action'].widget.attrs['_style'] = 'toggle'
         self.fields['ignore_user_action'].widget.attrs['_help'] = True
+        self.fields['meeting_invites'].widget.attrs['_style'] = 'toggle'
+        self.fields['meeting_invites'].widget.attrs['_help'] = True
 
     cc_add_subscriptions = forms.MultipleChoiceField(
         choices=(('email', 'Email'), ('slack', 'Slack Notification')),
@@ -237,6 +262,17 @@ class UserPreferencesForm(forms.ModelForm):
         widget=forms.SelectMultiple(attrs={'_no_required': True, '_no_label': True, 'placeholder': 'Add more'})
     )
 
+    meeting_invites = forms.BooleanField(
+        label="Receive calendar invites for meetings", required=False,
+        help_text="Opt-in to receiving calendar invites for meetings (separate from meeting notices)"
+    )
+
+    meeting_invite_subscriptions = forms.ModelMultipleChoiceField(
+        queryset=MeetingType.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'_no_required': True, '_no_label': True})
+    )
+
     ignore_user_action = forms.BooleanField(label="Ignore my actions", required=False,
                                             help_text="Avoid sending me notifications for actions that I initiate")
 
@@ -252,7 +288,8 @@ class UserPreferencesForm(forms.ModelForm):
     class Meta:
         model = UserPreferences
         fields = ('theme', 'cc_add_subscriptions', 'cc_report_reminders', 'event_edited_notification_methods',
-                  'event_edited_field_subscriptions', 'ignore_user_action')
+                  'event_edited_field_subscriptions', 'ignore_user_action', 'meeting_invites',
+                  'meeting_invite_subscriptions')
         layout = [
             ("Text", "<div class=\"ui secondary segment\"><h4 class=\"ui dividing header\">Appearance</h4>"),
             ("Field", "theme"),
@@ -294,6 +331,14 @@ class UserPreferencesForm(forms.ModelForm):
                      "unsubscribe from these messages.</p>"),
             ("Field", "srv"),
 
+            ("Text", "</div></div><br><div class=\"ui styled accordion\" style=\"width: 100%\">"
+                     "<div class=\"title\"><i class=\"dropdown icon\"></i>Calendar Invites - Meetings</div>"
+                     "<div class=\"content\">"),
+            ("Field", "meeting_invites"),
+            ("Text", "<br><hr style='border: 1px dashed gray'>"
+                     "<p class\"ui help\">Automatically send me invites for the following types of meetings:<br>"),
+            ("Field", "meeting_invite_subscriptions"),
+
             ("Text", "</div></div><div class=\"ui segment\">"),
             ("Field", "ignore_user_action"),
 
@@ -319,7 +364,7 @@ class OfficerPhotoForm(forms.ModelForm):
         super(OfficerPhotoForm, self).__init__(*args, **kwargs)
 
     class Meta:
-        model = OfficerImg
+        model = ProfilePhoto
         fields = ['img']
 
 

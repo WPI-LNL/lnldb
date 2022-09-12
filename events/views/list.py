@@ -151,7 +151,7 @@ def build_redirect(request, **kwargs):
 
 
 def filter_events(request, context, events, start, end, prefetch_org=False, prefetch_cc=False, prefetch_billing=False,
-                  hide_unapproved=False, event2019=False):
+                  hide_unapproved=False, event2019=False, sort='-datetime_start'):
     """
     Filter a queryset of events based on specified criteria
 
@@ -167,6 +167,7 @@ def filter_events(request, context, events, start, end, prefetch_org=False, pref
     related items based on building
     :param hide_unapproved: Boolean - If true, exclude events that have not been approved
     :param event2019: Boolean - If true, queryset only contains Event2019 objects
+    :param sort: String - Default field to sort by (prepend "-" for reverse)
     :returns: Queryset of events and updated context dictionary
     """
     if not request.user.has_perm('events.view_hidden_event'):
@@ -205,8 +206,10 @@ def filter_events(request, context, events, start, end, prefetch_org=False, pref
     events, context = datefilter(events, context, start, end)
 
     page = request.GET.get('page')
-    sort = request.GET.get('sort') or '-datetime_start'
+    sort = request.GET.get('sort') or sort
     events = paginate_helper(events, page, sort)
+    context['pagninate_next_label'] = "Older" if '-datetime_start' in sort else "Newer"
+    context['pagninate_last_label'] = "Newer" if '-datetime_start' in sort else "Older"                                                                 
     return events, context
 
 
@@ -264,7 +267,7 @@ def upcoming(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = BaseEvent.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)).distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_cc=True)
+    events, context = filter_events(request, context, events, start, end, prefetch_cc=True, sort='datetime_start')
 
     context['h2'] = "Upcoming Events"
     context['events'] = events
@@ -307,7 +310,7 @@ def incoming(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = BaseEvent.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
-    events, context = filter_events(request, context, events, start, end)
+    events, context = filter_events(request, context, events, start, end, sort='datetime_start')
 
     context['h2'] = "Incoming Events"
     context['events'] = events
@@ -355,7 +358,7 @@ def openworkorders(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, sort='datetime_start')
 
     context['h2'] = "Open Events"
     context['events'] = events
@@ -410,7 +413,7 @@ def findchief(request, start=None, end=None):
         .filter(Q(Event___ccs_needed__gt=F('num_ccs')) |
                 Q(num_ccs__lt=Count('serviceinstance__service__category', distinct=True))).distinct()
 
-    events, context = filter_events(request, context, events, start, end, prefetch_cc=True)
+    events, context = filter_events(request, context, events, start, end, prefetch_cc=True, sort='datetime_start')
 
     context['h2'] = "Needs a Crew Chief"
     context['takes_param_projection'] = True
@@ -463,8 +466,8 @@ def unreviewed(request, start=None, end=None):
 
     now = datetime.datetime.now(pytz.utc)
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).filter(reviewed=False)\
-        .filter(datetime_end__lte=now).order_by('datetime_start').distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_cc=True)
+        .filter(datetime_end__lte=now).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_cc=True, sort='datetime_start')
 
     context['h2'] = "Events Pending Billing Review"
     context['events'] = events
@@ -513,10 +516,8 @@ def unbilled(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = BaseEvent.objects.filter(closed=False).filter(reviewed=True)\
-        .filter(billings__isnull=True, multibillings__isnull=True).filter(billed_in_bulk=False)\
-        .order_by('datetime_start').distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
-
+        .filter(billings__isnull=True, multibillings__isnull=True).filter(billed_in_bulk=False).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, sort='datetime_start')
     context['h2'] = "Events to be Billed"
     context['events'] = events
     context['baseurl'] = reverse("events:unbilled")
@@ -563,9 +564,8 @@ def unbilled_semester(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = BaseEvent.objects.filter(closed=False).filter(reviewed=True)\
-        .filter(billings__isnull=True, multibillings__isnull=True).filter(billed_in_bulk=True)\
-        .order_by('datetime_start').distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
+        .filter(billings__isnull=True, multibillings__isnull=True).filter(billed_in_bulk=True).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, sort='datetime_start')
 
     context['h2'] = "Events to be Billed in Bulk"
     context['events'] = events
@@ -663,8 +663,8 @@ def unpaid(request, start=None, end=None):
         .filter(Q(billings__isnull=False) | Q(multibillings__isnull=False)).exclude(closed=True)\
         .exclude(numpaid__gt=0).filter(reviewed=True) \
         .exclude(billings__isnull=False, Event2019___workday_fund__isnull=False, Event2019___worktag__isnull=False) \
-        .exclude(billings__isnull=False, Event2019___entered_into_workday=True).order_by('datetime_start').distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_billing=True)
+        .exclude(billings__isnull=False, Event2019___entered_into_workday=True).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, sort='datetime_start')
 
     context['h2'] = "Pending Payments"
     context['events'] = events
@@ -713,7 +713,7 @@ def awaitingworkday(request, start=None, end=None):
         .filter(reviewed=True, billings__isnull=False, workday_fund__isnull=False, worktag__isnull=False,
                 entered_into_workday=False) \
         .exclude(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)).distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, event2019=True)
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, event2019=True, sort='datetime_start')
 
     context['h2'] = "Events to Enter Into Workday"
     context['events'] = events
@@ -751,9 +751,8 @@ def unpaid_workday(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = Event2019.objects.annotate(numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
-        .filter(closed=False, reviewed=True, entered_into_workday=True).exclude(numpaid__gt=0)\
-        .order_by('datetime_start').distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_org=True, event2019=True)
+        .filter(closed=False, reviewed=True, entered_into_workday=True).exclude(numpaid__gt=0).distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_org=True, event2019=True, sort='datetime_start')
 
     context['h2'] = "Pending Workday ISDs"
     context['events'] = events
@@ -952,7 +951,7 @@ def workshop_dates(request, pk):
     context = {}
     workshop = Workshop.objects.get(pk=pk)
     dates = WorkshopDate.objects.filter(workshop=workshop)
-    dates_formset = modelformset_factory(WorkshopDate, exclude=['workshop'], extra=5, can_delete=True,
+    dates_formset = modelformset_factory(WorkshopDate, exclude=['workshop'], extra=3, can_delete=True,
                                          form=WorkshopDatesForm)
     formset = dates_formset(queryset=dates)
 

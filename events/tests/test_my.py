@@ -7,7 +7,8 @@ from model_mommy import mommy
 
 from data.tests.util import ViewTestCase
 from ..models import EventCCInstance, OfficeHour, Category, Lighting, Hours, ServiceInstance, OrganizationTransfer
-from .generators import EventFactory, OrgFactory, CCInstanceFactory, Event2019Factory, ServiceFactory, LocationFactory
+from .generators import UserFactory, EventFactory, OrgFactory, CCInstanceFactory, Event2019Factory, ServiceFactory, \
+    LocationFactory
 
 logging.disable(logging.WARNING)
 
@@ -291,8 +292,9 @@ class MyViewTest(ViewTestCase):
         self.assertOk(self.client.post(reverse("my:org-request"), data))
 
     def test_accept_orgtransfer(self):
+        user2 = UserFactory.create(password="123")
         transfer = OrganizationTransfer.objects.create(initiator=self.user, uuid="6ab57f4a278e470b92e428b6a2594269",
-                                                       new_user_in_charge=self.user, old_user_in_charge=self.user,
+                                                       new_user_in_charge=self.user, old_user_in_charge=user2,
                                                        org=self.org)
         transfer.expiry = timezone.now() - timezone.timedelta(days=1)
         transfer.save()
@@ -301,6 +303,14 @@ class MyViewTest(ViewTestCase):
         self.assertContains(self.client.get(reverse("my:org-accept", args=[transfer.uuid])), "expired")
 
         transfer.expiry = timezone.now() + timezone.timedelta(days=1)
+        transfer.save()
+
+        # If initiator is the one who attempted to complete the transfer, make sure there is a hold in place
+        self.org.user_in_charge = user2
+        self.org.save()
+        self.assertContains(self.client.get(reverse("my:org-accept", args=[transfer.uuid])), "hold")
+
+        transfer.initiator = user2
         transfer.save()
 
         self.assertContains(self.client.get(reverse("my:org-accept", args=[transfer.uuid])), "Success")

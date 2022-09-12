@@ -16,6 +16,8 @@ from events.models import BaseEvent, Event2019, ServiceInstance
 from helpers.revision import set_revision_comment
 from helpers.util import curry_class
 
+import requests, json
+
 
 @login_required
 def eventnew(request, id=None):
@@ -69,7 +71,18 @@ def eventnew(request, id=None):
         if form.is_valid() and (not is_event2019 or services_formset.is_valid()):
             if instance:
                 set_revision_comment('Edited', form)
+
                 obj = form.save()
+
+                # 25Live parsing
+                if is_event2019 and obj.event_id is None:
+                    if form.data.get('reference_code') != "": 
+                        url = requests.get(f"https://25live.collegenet.com/25live/data/wpi/run/list/listdata.json?compsubject=event&obj_cache_accl=0&name={form.data.get('reference_code')}")
+                        text = url.text[6:]
+                        jsondata = json.loads(text)
+                        obj.event_id = jsondata["rows"][0]["contextId"]
+                        obj.save()
+                    
                 if is_event2019:
                     services_formset.save()
                 if should_send_notification:

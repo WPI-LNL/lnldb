@@ -42,4 +42,4 @@ you to create all new interfaces and extensions for LNL's web services. We hope 
 innovation as we strive to offer the best experience possible for our members and our clients.
 
 .. seealso::
-    The API Reference can be found `here <https://lnl.wpi.edu/api/docs/>`_ (login required)
+    The API Reference can be found `here <https://lnl.wpi.edu/api/schema/swagger/>`_ (login required)

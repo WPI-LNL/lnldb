@@ -17,7 +17,7 @@ Lights website is available to all WPI community members.
             <div style="display:inline-block;">
                <h2 style="width:auto;">What's New?</h2>
                <ul>
-               <li><a href="release-notes/2021.html">What's new in 2021?</a></li>
+               <li><a href="release-notes/2022.html">What's new in 2022?</a></li>
                </ul>
             </div>
          </td>
@@ -36,7 +36,7 @@ Lights website is available to all WPI community members.
                <h2 style="width:auto;">Development</h2>
                <ul>
                <li><a href="develop/index.html">Guide for Developers</a></li>
-               <li><a href="https://lnl.wpi.edu/api/docs">API Reference</a></li>
+               <li><a href="api/overview.html">API Reference</a></li>
                </ul>
             </div>
          </td>
@@ -76,7 +76,7 @@ Table of Contents
    :caption: Development
 
    develop/index
-   API Reference <https://lnl.wpi.edu/api/docs/>
+   api/overview
    develop/contribute
 
 .. toctree::
@@ -96,6 +96,7 @@ Table of Contents
    reference/projection
    reference/rt
    reference/slack
+   reference/spotify
 
 .. toctree::
    :maxdepth: 2

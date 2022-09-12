@@ -94,7 +94,8 @@ fieldsets = (
         'fields': ('event_name', 'description', 'internal_notes', 'contact', 'org', 'billing_org')
     }),
     ('Scheduling & Location', {
-        'fields': ('datetime_setup_complete', 'datetime_start', 'datetime_end', 'location')
+        'fields': ('datetime_setup_complete', 'datetime_start', 'datetime_end',
+            'location', 'reference_code', 'event_id')
     }),
     ('Services', {
         'fields': ('lighting', 'lighting_reqs', 'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices',
@@ -149,12 +150,6 @@ class WorkshopAdmin(admin.ModelAdmin):
     inlines = [WorkshopDatesAdmin]
 
 
-class AttendanceRecordAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'checkin', 'checkout', 'active')
-    list_filter = ('checkin', 'checkout', 'active')
-    search_fields = ('event', 'user')
-
-
 admin.site.register(models.Billing)
 admin.site.register(models.Hours)
 admin.site.register(models.Building)
@@ -176,4 +171,3 @@ admin.site.register(models.Service)
 admin.site.register(models.PostEventSurvey)
 admin.site.register(models.Workshop, WorkshopAdmin)
 admin.site.register(models.OfficeHour)
-admin.site.register(models.CrewAttendanceRecord, AttendanceRecordAdmin)

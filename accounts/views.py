@@ -25,7 +25,7 @@ from helpers import mixins, challenges
 from slack.api import lookup_user, user_profile, check_presence, user_add, user_kick
 
 from . import forms
-from .models import OfficerImg, UserPreferences
+from .models import Officer, ProfilePhoto, UserPreferences
 
 
 class UserAddView(mixins.HasPermMixin, generic.CreateView):
@@ -76,8 +76,11 @@ class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, gen
             exec_group = Group.objects.get(name="Officer")
             if exec_group not in newgroups:
                 # Ensure that title is stripped when no longer an officer
-                self.object.title = None
-                self.object.save()
+                officer_info = Officer.objects.filter(user=self.object).first()
+                if officer_info:
+                    officer_info.user = None
+                    officer_info.img = None
+                    officer_info.save()
 
                 # Kick user from exec chat in Slack (if applicable)
                 slack_user = lookup_user(self.object.email)
@@ -266,7 +269,8 @@ def smart_login(request):
     if settings.SAML2_ENABLED and pref_saml == "true":
         return saml_login(request)
     else:
-        return LoginView.as_view(template_name='registration/login.html', authentication_form=forms.LoginForm)(request)
+        return LoginView.as_view(template_name='registration/login.html', authentication_form=forms.LoginForm,
+                                 extra_context={'background_img': settings.LOGIN_BACKGROUND})(request)
 
 
 @login_required
@@ -314,7 +318,7 @@ def secretary_dashboard(request):
 
     context = {}
     num_active = get_user_model().objects.filter(groups__name='Active').count()
-    simple_majority = int(math.ceil(num_active / 2.0))
+    simple_majority = int(math.ceil(num_active / 2.0)) + 1
     two_thirds_majority = int(math.ceil(num_active * 2 / 3.0))
     members_to_activate = get_user_model().objects.filter(groups__name='Associate') \
         .annotate(hours_count=Count(Case(When(hours__event__datetime_start__gte=semester_ago, then=F('hours'))),
@@ -422,8 +426,10 @@ def user_preferences(request):
             if request.POST.get('submit', None) == 'rt-delete':
                 obj.rt_token = None
                 obj.save()
+                form.save_m2m()
                 return HttpResponseRedirect(reverse("accounts:preferences"))
             obj.save()
+            form.save_m2m()
             messages.success(request, "Your preferences have been updated successfully!")
             return HttpResponseRedirect(reverse("accounts:detail", args=[user.pk]))
         else:
@@ -447,20 +453,23 @@ def officer_photos(request, pk=None):
         return HttpResponseRedirect(reverse("home"))
 
     context['officer'] = officer
-    img = OfficerImg.objects.filter(officer=officer).first()
+    img = ProfilePhoto.objects.filter(officer=officer).first()
     form = forms.OfficerPhotoForm(instance=img)
 
     if request.method == "POST":
         form = forms.OfficerPhotoForm(request.POST, request.FILES, instance=img)
         if request.POST['save'] == "Remove":
-            img = OfficerImg.objects.filter(officer=officer).first()
             if img is not None:
                 img.delete()
                 messages.success(request, "Your profile photo was removed successfully!", extra_tags='success')
             return HttpResponseRedirect(reverse("accounts:detail", args=[officer.pk]))
         if form.is_valid():
             form.instance.officer = officer
-            form.save()
+            photo = form.save()
+            officer_info = Officer.objects.filter(user=officer).first()
+            if officer_info:
+                officer_info.img = photo
+                officer_info.save()
             messages.success(request, "Your profile photo was updated successfully!", extra_tags='success')
             return HttpResponseRedirect(reverse("accounts:detail", args=[officer.pk]))
         else:
@@ -497,7 +506,7 @@ def application_scope_request(request):
     del request.session['inverted']
 
     invert = False
-    prefs = UserPreferences.objects.get_or_create(user=request.user)
+    prefs, created = UserPreferences.objects.get_or_create(user=request.user)
     if inverted:
         invert = True
     elif inverted is None:

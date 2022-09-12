@@ -2,7 +2,6 @@ import json
 import mimetypes
 import os
 import stat
-import csv
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -23,7 +22,6 @@ from watson import search as watson
 
 from events import models as events_models
 from emails.generators import EventEmailGenerator
-from inventory.models import AccessRecord
 
 
 def maintenance(request):
@@ -270,35 +268,6 @@ def workorderwizard_findprevious(request):
         'start': str(closest_match.datetime_start),
         'services': services_data
     }))
-
-
-# Feel free to remove this if this pandemic ever ends
-@login_required
-def contact_tracing_logs(request):
-    """Download csv file containing contact tracing logs"""
-    if not request.user.is_superuser:
-        return err403(request)
-    response = HttpResponse(content_type="text/csv")
-    response['Content-Disposition'] = 'attachment; filename="LNL-Contact-Tracing.csv"'
-
-    writer = csv.writer(response)
-    writer.writerow(['User', 'Student_ID', 'Event', 'Location', 'Checkin_Time', 'Checkout_Time', 'Reason'])
-
-    sets = request.GET.get('data_sets', "all")
-    if sets == "all" or sets == "events":
-        for record in AccessRecord.objects.all():
-            for user in record.users.all():
-                if record.reason == "OUT":
-                    writer.writerow([user.name, user.student_id, "", record.location.name, "", record.timestamp,
-                                     "Checking out"])
-                else:
-                    writer.writerow([user.name, user.student_id, "", record.location.name, record.timestamp, "",
-                                     record.reason])
-    if sets == "all" or sets == "spaces":
-        for record in events_models.CrewAttendanceRecord.objects.all():
-            writer.writerow([record.user.name, record.user.student_id, record.event.event_name,
-                             record.event.location.name, record.checkin, record.checkout, "Event Crew"])
-    return response
 
 
 def err403(request, *args, **kwargs):

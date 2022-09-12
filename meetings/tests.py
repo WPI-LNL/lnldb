@@ -6,7 +6,8 @@ from django.utils import timezone
 from . import models
 from meetings.models import get_default_email, mtg_attachment_file_name
 from events import models as eventmodels
-from events.tests.generators import EventFactory, LocationFactory
+from events.tests.generators import EventFactory, LocationFactory, UserFactory
+from accounts.models import UserPreferences
 from django.urls.base import reverse
 import logging
 
@@ -222,6 +223,11 @@ class MeetingsViewTest(ViewTestCase):
 
     def test_new_attendance(self):
         office = LocationFactory(name="Office", setup_only=False, available_for_meetings=True)
+        user2 = UserFactory()
+
+        # Create calendar invite subscription
+        prefs, created = UserPreferences.objects.get_or_create(user=self.user, meeting_invites=True)
+        prefs.meeting_invite_subscriptions.add(self.meeting_type1)
 
         # User should not have permission to create meetings by default
         self.assertOk(self.client.get(reverse("meetings:new")), 403)
@@ -240,9 +246,9 @@ class MeetingsViewTest(ViewTestCase):
             "location": str(office.pk),
             "datetime_0": timezone.now().date(),
             "datetime_1": timezone.now().time(),
-            "attendance": [str(self.user.pk)],
+            "attendance": [str(user2.pk)],
             "duration": "1 hour",
-            "agenda": "",
+            "agenda": "This is an example of an agenda",
             "minutes": "",
             "minutes_private": "",
             "attachments": "",

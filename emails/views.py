@@ -1,5 +1,6 @@
 from django.views.generic.detail import DetailView
 
+from accounts.models import Officer
 from meetings.models import CCNoticeSend, MeetingAnnounce
 from .forms import SrvAnnounceSendForm, TargetedSMSForm, SMSForm, PokeCCForm
 from .generators import generate_web_service_email, generate_sms_email, generate_poke_cc_email_content, \
@@ -180,8 +181,11 @@ def poke_cc(request):
                             }
                         },
                     ]
-                    response = slack_post(settings.SLACK_TARGET_ACTIVE, text=message, content=blocks,
-                                          username='LNL Vice President')
+                    username = 'LNL Vice President'
+                    officer = Officer.objects.filter(user=request.user).first()
+                    if officer:
+                        username = officer.title
+                    response = slack_post(settings.SLACK_TARGET_ACTIVE, text=message, content=blocks, username=username)
                     if not response['ok']:
                         messages.add_message(request, messages.WARNING,
                                              'There was an error posting to Slack: %s' % response['error'])

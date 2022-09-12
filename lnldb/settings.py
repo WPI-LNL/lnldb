@@ -52,7 +52,8 @@ SNIPE_GENERAL_USER = env.str('SNIPE_USERNAME', "")
 SNIPE_GENERAL_PASS = env.str('SNIPE_PASSWORD', "")
 
 RT_TOKEN = env.str('RT_API_KEY', '')
-RT_CRYPTO_KEY = env.str('RT_CRYPTO_KEY', '')
+
+CRYPTO_KEY = env.str('CRYPTO_KEY', '')
 
 TESTING = sys.argv[1:2] == ['test']
 
@@ -98,6 +99,9 @@ SECRET_KEY = env.str("SECRET_KEY", "I am insecure.")
 
 SLACK_TOKEN = env.str('SLACK_BOT_TOKEN', None)
 
+# If True, the bot will automatically attempt to join new channels when they are created in Slack
+SLACK_AUTO_JOIN = env.bool('SLACK_AUTO_JOIN', default=False)
+
 SLACK_TARGET_GENERAL = env.str('SLACK_TARGET_GENERAL', None)
 SLACK_TARGET_EXEC = env.str('SLACK_TARGET_EXEC', None)
 SLACK_TARGET_ACTIVE = env.str('SLACK_TARGET_ACTIVE', None)
@@ -105,6 +109,11 @@ SLACK_TARGET_WEBDEV = env.str('SLACK_TARGET_WEBDEV', None)
 SLACK_TARGET_TESTING = env.str('SLACK_TARGET_TESTING', None)
 SLACK_TARGET_TFED = env.str('SLACK_TARGET_TFED', '')
 SLACK_TARGET_TFED_DB = env.str('SLACK_TARGET_TFED_DB', '')
+SLACK_TARGET_WEBMASTER = env.str('SLACK_TARGET_WEBMASTER', '')
+
+SPOTIFY_CLIENT_ID = env.str('SPOTIFY_CLIENT', '')
+SPOTIFY_CLIENT_SECRET = env.str('SPOTIFY_SECRET', '')
+SPOTIFY_REDIRECT_URI = env.str('SPOTIFY_CALLBACK_URI', '')
 
 SAML2_AUTH = {
     'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://samltest.id/saml/idp'),
@@ -126,6 +135,8 @@ SAML2_AUTH = {
     'NAME_ID_FORMAT': 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
     'USE_JWT': False,
 }
+
+LOGIN_BACKGROUND = env.str('LOGIN_BACKGROUND', None)
 
 # Two-Factor Verification
 TFV_ATTEMPTS = env.str('TFV_ATTEMPTS', 3)
@@ -322,6 +333,7 @@ INSTALLED_APPS = (
     'api',
     'rt',
     'slack',
+    'spotify',
 
     'bootstrap3',
     'crispy_forms',
@@ -343,6 +355,7 @@ INSTALLED_APPS = (
     'jchart',
     'rest_framework',
     'rest_framework.authtoken',
+    'drf_spectacular'
 )
 if SAML2_ENABLED:
     INSTALLED_APPS += ('django_saml2_auth',)
@@ -441,7 +454,23 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-    ]
+        'rest_framework.authentication.SessionAuthentication'
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'WPI Lens and Lights API',
+    'DESCRIPTION': 'The LNL API is a simple REST API which can be used to connect apps and services with the LNL '
+                   'Database (LNLDB). This guide provides some basic documentation for most of our endpoints.',
+    'VERSION': '1.0.0',
+    'CONTACT': {
+        'name': 'LNL Webmaster',
+        'email': 'lnl-w@wpi.edu'
+    },
+    'SERVE_PUBLIC': False,
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAuthenticated'],
+    'SERVE_INCLUDE_SCHEMA': False
 }
 
 # Various Other Settings

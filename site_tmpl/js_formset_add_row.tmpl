@@ -1,0 +1,32 @@
+<script>
+    function add_form(){
+        var form_idx = $('#id_{{formset.prefix}}-TOTAL_FORMS').val();
+        $('#form_data').append($('#empty_form').html().replace(/__prefix__/g, form_idx));
+        // console.log('Adding field ' + form_idx);
+        $('#id_{{formset.prefix}}-TOTAL_FORMS').val(parseInt(form_idx) + 1);
+        $('#form_data>tr:last-child>td:first').find('input[type=text]').focus();
+
+
+        // Adds datepicker/timepicker popup for forms which contain date/time fields
+        $(".dateinput").datepicker({
+                    format: 'yyyy-mm-dd',
+                    clearBtn: true,
+                    todayBtn: true,
+                    todayHighlight: true,
+                    orientation: 'top'
+                });
+        $(".timeinput").timepicker({
+                    minuteStep: 1,
+                    showInputs: true,
+                    defaultTime: '',
+                    showMeridian: true
+                });
+    }
+    $('#add_form').click(function() {
+        add_form();
+        $(window).trigger('init-autocomplete');
+    });
+    //$('.table').keypress(function(e) {
+    //    if (e.which == 13) { add_form();}
+    //});
+</script>

@@ -14,6 +14,7 @@ from crispy_forms.layout import (HTML, Div, Row, Column, Field, Hidden, Layout, 
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db.models import Model, Q
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget, CharField
 from django.utils import timezone
@@ -564,6 +565,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'Name And Location',
                 'event_name',
                 'location',
+                'reference_code',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
                 HTML('<div style="width: 50%">'),
@@ -628,7 +630,8 @@ class InternalEventForm2019(FieldAccessForm):
 
         event_times = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_times', instance),
-            enable=('datetime_start', 'datetime_setup_complete', 'datetime_end')
+            enable=('datetime_start', 'datetime_setup_complete', 'datetime_end',
+                'reference_code')
         )
 
         edit_descriptions = FieldAccessLevel(
@@ -639,7 +642,7 @@ class InternalEventForm2019(FieldAccessForm):
 
         change_owner = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.adjust_event_owner', instance),
-            enable=('contact', 'org')
+            enable=('contact', 'org', 'reference_code')
         )
 
         change_type = FieldAccessLevel(
@@ -681,7 +684,9 @@ class InternalEventForm2019(FieldAccessForm):
         model = Event2019
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org',
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
-                  'datetime_end', 'sensitive', 'test_event', 'entered_into_workday', 'send_survey', 'allow_crew_to_check_equipment', 'max_crew')
+                  'datetime_end', 'sensitive', 'test_event',
+                  'entered_into_workday', 'send_survey', 'max_crew',
+                  'reference_code')
         widgets = {
             'description': PagedownWidget(),
             'internal_notes': PagedownWidget(),
@@ -700,6 +705,10 @@ class InternalEventForm2019(FieldAccessForm):
     datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
     max_crew = forms.IntegerField(label="Maximum Crew", help_text="Include this to enforce an occupancy limit",
                                   required=False)
+    # Regex will match valid 25Live reservation codes in the format
+    # `2022-ABNXQQ`
+    reference_code =forms.CharField(validators=[RegexValidator(regex=r"[0-9]{4}-[A-Z]{6}")],
+            required = False)
 
 
 class EventReviewForm(forms.ModelForm):
@@ -1936,343 +1945,3 @@ Note: Any riders or documentation provided to you from the artist/performer whic
 determine the technical needs of your event may be attached to this request once it is submitted by
 going to your LNL account and selecting "Previous Workorders".
 """
-
-
-# FormWizard Forms (Deprecated)
-# class ContactForm(forms.Form):
-#     def __init__(self, *args, **kwargs):
-#         self.helper = FormHelper()
-#         self.helper.form_method = 'post'
-#         self.helper.form_action = ''
-#         self.helper.form_tag = False
-#         self.helper.form_class = 'form-horizontal'
-#         self.helper.label_class = 'col-lg-2'
-#         self.helper.field_class = 'col-lg-8'
-#         self.helper.layout = Layout(
-#             'name',
-#             'email',
-#             Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
-#             HTML(
-#                 '<span class="text-muted">To avoid entering this information again, update your '
-#                 '<a target="_blank" href="%s">contact information</a></span>' % reverse(
-#                     'accounts:me')),
-#         )
-#         super(ContactForm, self).__init__(*args, **kwargs)
-#
-#     name = forms.CharField()
-#     email = forms.EmailField()
-#     phone = forms.CharField()
-#
-#
-# class OrgForm(forms.Form):
-#     def __init__(self, *args, **kwargs):
-#         user = kwargs.pop('user')
-#
-#         super(OrgForm, self).__init__(*args, **kwargs)
-#
-#         self.helper = FormHelper()
-#         self.helper.form_method = 'post'
-#         self.helper.form_action = ''
-#         self.helper.form_tag = False
-#         self.helper.form_class = 'form-horizontal'
-#         self.helper.label_class = 'col-lg-2'
-#         self.helper.field_class = 'col-lg-8'
-#         # If we ever decide to restrict organization selection to their members, remove the Q(archived=False)
-#         # the org nl, is a special org that everyone has access to and is not listed.
-#         self.fields['group'].queryset = Organization.objects.filter(
-#             Q(archived=False) | Q(user_in_charge=user) | Q(associated_users__in=[user.id]) | Q(
-#                 shortname="nl")).distinct()
-#         self.helper.layout = Layout(
-#             'group',
-#             HTML(
-#                 '<span class="text-muted">If the client account you are looking for does not show up in the list, '
-#                 'please select "NOT LISTED" or <a target="_blank" href="%s">request it be added</a>.</span> '
-#                 % reverse('my:org-request')),
-#         )
-#         # super(OrgForm,self).__init__(*args,**kwargs)
-#
-#     group = forms.ModelChoiceField(queryset=Organization.objects.all(), label="Organization to be Billed")
-#     # group = AutoCompleteSelectField('UserLimitedOrgs', required=True,
-#     #  plugin_options={'position':"{ my : \"right top\", at: \"right bottom\",
-#     # of: \"#id_person_name_text\"}",'minLength':2})
-#
-#
-# class SelectForm(forms.Form):
-#     def __init__(self, org=None, *args, **kwargs):
-#         super(SelectForm, self).__init__(*args, **kwargs)
-#         self.helper = FormHelper()
-#         self.helper.form_method = 'post'
-#         self.helper.form_action = ''
-#         self.helper.form_tag = False
-#         self.helper.form_class = 'form-horizontal'
-#         self.helper.label_class = 'col-lg-2'
-#         self.helper.field_class = 'col-lg-8'
-#         self.helper.layout = Layout(
-#             Fieldset(
-#                 'Name and Location',
-#                 Field('eventname', css_class="col-md-6"),
-#                 Field('location', css_class="col-md-6"),
-#                 Field('general_description', css_class="col-md-6"),
-#             ),
-#             Fieldset(
-#                 'Services',
-#                 InlineCheckboxes('eventtypes')
-#             )
-#         )
-#
-#     eventname = forms.CharField(
-#         label='Event Name',
-#         required=True
-#     )
-#
-#     # location = forms.Field(
-#     # queryset = Location.objects.filter(show_in_wo_form=True)
-#     # )
-#
-#     # soon to be a
-#     location = GroupedModelChoiceField(
-#         queryset=Location.objects.filter(show_in_wo_form=True)
-#             .select_related('building'),
-#         group_by_field="building",
-#         group_label=lambda group: group.name,
-#     )
-#
-#     eventtypes = forms.MultipleChoiceField(
-#         error_messages={'required': 'Please Select at least one service \n\r'},
-#         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
-#         choices=JOBTYPES,
-#         label="",
-#         required=True
-#
-#     )
-#     general_description = forms.CharField(
-#         widget=forms.Textarea(),
-#         help_text='Please use this space to provide general information or special request regarding your event such '
-#                   'as staging configuration or that there is an intermission or dinner at a specific time. '
-#                   'Specific requirements and/or requests for the Sound/Lights/Projection portion of your event '
-#                   'such as "We need 3 wireless handheld microphones." will be asked for on a later page.',
-#     )
-#
-#
-# class LightingForm(forms.Form):
-#     def __init__(self, *args, **kwargs):
-#         self.helper = FormHelper()
-#         self.helper.form_class = 'form-horizontal'
-#         self.helper.form_tag = False
-#         self.helper.label_class = 'col-lg-2'
-#         self.helper.field_class = 'col-lg-8'
-#         self.helper.layout = Layout(
-#             Fieldset(
-#                 'Basics',  # title
-#                 InlineRadios('lighting', title="test"),
-#                 Field('requirements', css_class="col-md-10"),
-#             ),
-#             Fieldset(
-#                 'Extras',  # title
-#                 *[DynamicFieldContainer("e_%s" % extra.id) for extra in LIGHT_EXTRAS.all()],
-#                 css_class="extra_fs"),
-#         )
-#         super(LightingForm, self).__init__(*args, **kwargs)
-#         for extra in LIGHT_EXTRAS:
-#             self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox,
-#                                                               disappear=extra.disappear,
-#                                                               label=extra.name, initial=0,
-#                                                               required=False)
-#
-#     lighting = forms.ModelChoiceField(
-#         empty_label=None,
-#         queryset=Lighting.objects.filter(enabled_event2012=True),
-#         widget=forms.RadioSelect(attrs={'class': 'radio itt'}),
-#     )
-#
-#     requirements = forms.CharField(
-#         widget=PagedownWidget(),
-#         # widget=BootstrapTextInput(prepend='P',),
-#         label="Lighting Requirements",
-#         help_text=SERVICE_INFO_HELP_TEXT,
-#         required=False,
-#     )
-#
-#     # extras = ExtraSelectorField(choices=LIGHT_EXTRAS.values_list('id','name'))
-#     # for extra in LIGHT_EXTRAS:
-#     # "e__{{0}}" % extra.id = ValueSelectField(extra)
-#
-#
-# class SoundForm(forms.Form):
-#     def __init__(self, *args, **kwargs):
-#         self.helper = FormHelper()
-#         self.helper.form_class = 'form-horizontal'
-#         self.helper.form_tag = False
-#         self.helper.label_class = 'col-lg-2'
-#         self.helper.field_class = 'col-lg-8'
-#         self.helper.layout = Layout(
-#             Fieldset(
-#                 'Basics',  # title
-#                 InlineRadios('sound'),
-#                 Field('requirements', css_class="col-md-10"),
-#             ),
-#             Fieldset(
-#                 'Extras',  # title
-#                 *[DynamicFieldContainer("e_%s" % extra.id) for extra in SOUND_EXTRAS.all()],
-#                 css_class="extra_fs"
-#             ),
-#         )
-#         super(SoundForm, self).__init__(*args, **kwargs)
-#         for extra in SOUND_EXTRAS:
-#             self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox, disappear=extra.disappear,
-#                                                               label=extra.name, initial=0, required=False)
-#
-#     sound = forms.ModelChoiceField(
-#         empty_label=None,
-#         queryset=Sound.objects.filter(enabled_event2012=True),
-#         widget=forms.RadioSelect(attrs={'class': 'radio itt'}),
-#     )
-#     requirements = forms.CharField(
-#         widget=PagedownWidget(),
-#         label="Sound Requirements",
-#         required=False,
-#         help_text=SERVICE_INFO_HELP_TEXT,
-#     )
-#
-#
-# class ProjectionForm(forms.Form):
-#     def __init__(self, *args, **kwargs):
-#         self.helper = FormHelper()
-#         self.helper.form_class = 'form-horizontal'
-#         self.helper.form_tag = False
-#         self.helper.label_class = 'col-lg-2'
-#         self.helper.field_class = 'col-lg-8'
-#         self.helper.layout = Layout(
-#             Fieldset(
-#                 'Basics',  # title
-#                 InlineRadios('projection'),
-#                 Field('requirements', css_class="col-md-10"),
-#             ),
-#             Fieldset(
-#                 'Extras',  # title
-#                 *[DynamicFieldContainer("e_%s" % extra.id) for extra in PROJ_EXTRAS.all()],
-#                 css_class="extra_fs"
-#             ),
-#
-#         )
-#         super(ProjectionForm, self).__init__(*args, **kwargs)
-#         for extra in PROJ_EXTRAS:
-#             self.fields["e_%s" % extra.id] = ValueSelectField(hidetext=extra.checkbox, disappear=extra.disappear,
-#                                                               label=extra.name, initial=0, required=False)
-#
-#     projection = forms.ModelChoiceField(
-#         empty_label=None,
-#         queryset=Projection.objects.filter(enabled_event2012=True),
-#         widget=forms.RadioSelect(attrs={'class': 'radio'}),
-#     )
-#     requirements = forms.CharField(
-#         widget=PagedownWidget(),
-#         label="Projection Requirements",
-#         required=False,
-#         help_text=SERVICE_INFO_HELP_TEXT,
-#     )
-#
-#
-# class ServiceForm(forms.Form):
-#     def __init__(self, *args, **kwargs):
-#         self.helper = FormHelper()
-#         self.helper.form_class = 'form-horizontal'
-#         self.helper.form_tag = False
-#         self.helper.label_class = 'col-lg-2'
-#         self.helper.field_class = 'col-lg-8'
-#         self.helper.layout = Layout(
-#             Fieldset(
-#                 'Basics',  # title
-#                 'services',
-#                 Field('otherservice_reqs', css_class="col-md-8"),
-#             ),
-#
-#         )
-#         super(ServiceForm, self).__init__(*args, **kwargs)
-#
-#     services = forms.ModelMultipleChoiceField(
-#         queryset=Service.objects.filter(category__name__in=["Misc", "Power"], enabled_event2012=True),
-#         widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
-#     )
-#     otherservice_reqs = forms.CharField(
-#         widget=PagedownWidget(),
-#         label="Additional Information",
-#     )
-#
-#
-# class ScheduleForm(forms.Form):
-#     def __init__(self, *args, **kwargs):
-#         self.helper = FormHelper()
-#         self.helper.form_class = 'form-horizontal'
-#         self.helper.form_tag = False
-#         self.helper.label_class = 'col-lg-2'
-#         self.helper.field_class = 'col-lg-5'
-#         self.helper.layout = Layout(
-#             Fieldset(
-#                 'Setup',  # title
-#                 # Field('setup_start',css_class="dtp"),
-#                 Div(
-#                     HTML(
-#                         '<div class="pull-left"><a class="btn btn-xs btn-primary" href="#" id="samedate">'
-#                         '<i class="glyphicon glyphicon-arrow-down icon-white"></i>&nbsp;'
-#                         '<i class="glyphicon glyphicon-calendar icon-white" title="Cascade"></i></a></div>'),
-#                     Field('setup_complete', css_class="dtp"),
-#
-#                 ),
-#             ),
-#             Fieldset(
-#                 'Event',  # title
-#                 Field('event_start', css_class="dtp"),
-#                 Field('event_end', css_class="dtp"),
-#             ),
-#         )
-#         super(ScheduleForm, self).__init__(*args, **kwargs)
-#
-#     today = datetime.datetime.today()
-#     noon = datetime.time(12)
-#     noontoday = datetime.datetime.combine(today, noon)
-#     # setup_start = forms.SplitDateTimeField(initial=timezone.now)
-#     setup_complete = forms.SplitDateTimeField(initial=noontoday, label="Setup Completed By", required=True)
-#     event_start = forms.SplitDateTimeField(initial=noontoday, label="Event Starts")
-#     event_end = forms.SplitDateTimeField(initial=noontoday, label="Event Ends")
-#
-#     def clean(self):
-#         cleaned_data = super(ScheduleForm, self).clean()
-#
-#         setup_complete = cleaned_data.get("setup_complete")
-#         event_start = cleaned_data.get("event_start")
-#         event_end = cleaned_data.get("event_end")
-#         if not setup_complete or not event_start or not event_end:
-#             raise ValidationError('Please enter in a valid time in each field')
-#         if event_start > event_end:
-#             raise ValidationError('You cannot start after you finish')
-#         if setup_complete > event_start:
-#             raise ValidationError('You cannot setup after you finish')
-#         if setup_complete < datetime.datetime.now(pytz.utc):
-#             raise ValidationError('Stop trying to time travel')
-#
-#         return cleaned_data
-#
-#
-# # helpers for the formwizard
-# named_event_forms = (
-#     ('contact', ContactForm),
-#     ('organization', OrgForm),
-#     ('select', SelectForm),
-#     ('lighting', LightingForm),
-#     ('sound', SoundForm),
-#     ('projection', ProjectionForm),
-#     ('other', ServiceForm),
-#     ('schedule', ScheduleForm),
-# )
-#
-# named_event_tmpls = {
-#     'organization': 'eventform/org.html',
-#     'contact': 'eventform/contact.html',
-#     'select': 'eventform/select.html',
-#     'lighting': 'eventform/lighting.html',
-#     'sound': 'eventform/sound.html',
-#     'projection': 'eventform/projection.html',
-#     'other': 'eventform/other.html',
-#     'schedule': 'eventform/schedule.html',
-# }

@@ -22,6 +22,7 @@
                 </tr>
                 {% endfor %}
             </table>
+            {% if name != "Meetings In Progress" %}
             <ul class="pager">
 
                 {% if mtgs.has_previous %}
@@ -50,6 +51,7 @@
                 </li>
 
             </ul>
+            {% endif %}
             </div>
         </div>
     {% endfor %}
