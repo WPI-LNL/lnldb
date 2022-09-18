@@ -461,7 +461,7 @@ def hours_prefill_self(request, id):
     if not event.ccinstances.exists():
         raise PermissionDenied
     if event.hours.filter(user=request.user).exists():
-        messages.add_message(request, messages.ERROR, 'You already have hours for this event.')
+        messages.add_message(request, messages.ERROR, 'You are already checked in to this event.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
         # return HttpResponseRedirect(reverse('events:crew-checkout'))
     if timezone.now() < min(event.ccinstances.values_list('setup_start', flat=True)):
@@ -504,7 +504,7 @@ def checkin(request):
 
     if request.user.event_records.filter(active=True).exists():
         context['page'] = {"title": "You are already checked into an event",
-                           "body": "<a href='" + reverse("events:crew-tracker") + "' class='btn btn-primary'>Back</a>"}
+                           "body": "<a href='" + reverse("events:crew-checkout") + "' class='btn btn-primary'>Go to Crew Checkout</a>"}
         return render(request, 'static_page.html', context)
 
     if request.method == 'POST':
