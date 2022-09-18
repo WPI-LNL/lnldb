@@ -469,6 +469,8 @@ class BaseEvent(PolymorphicModel):
             ("event_view_granular", "See debug data like ip addresses"),
             ("event_view_debug", "See debug events"),
             ("reopen_event", "Reopen a closed, declined, or cancelled event"),
+            ("edit_pull_list", "Edit the event pull list"),
+            ("check_in_out_pull_list", "Check equipment in and out of the event pull list"),
         )
         ordering = ['-datetime_start']
 
@@ -814,6 +816,8 @@ class Event2019(BaseEvent):
     )
     survey_sent = models.BooleanField(default=False, help_text='The post-event survey has been sent to the client')
 
+    allow_crew_to_check_equipment = models.BooleanField(default=True, help_text='Allow checked-in crew to check in or out equipment on the Pull List.', blank=True)
+
     # Added during COVID pandemic
     max_crew = models.PositiveIntegerField(null=True, blank=True)
 
@@ -960,6 +964,18 @@ class ExtraInstance(models.Model):
     @property
     def cost(self):
         return self.extra.cost
+
+@reversion.register()
+class PullListEquipmentInstance(models.Model):
+    """ An instance of a given extra attached to an event """
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE)
+    category = models.ForeignKey('Category', on_delete=models.PROTECT)
+    name = models.TextField()
+    details = models.TextField(blank=True, null=True)
+    snipe_id = models.PositiveIntegerField(blank=True, null=True) # ID from Snipe
+    quant = models.PositiveIntegerField(blank=True, null=True)
+    checked_out = models.BooleanField(default=False)
+    checked_in = models.BooleanField(default=False)
 
 
 @python_2_unicode_compatible

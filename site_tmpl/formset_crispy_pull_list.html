@@ -1,0 +1,77 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <style> input[type='text' i]{min-width:70%;} </style>
+    <div class="row">
+        <div class="col-md-12">
+                <h2> {{category}} {{msg }} for "<em>{{ event }}</em>"</h2>
+                <form method="post" action="" class="form-inline" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ formset.management_form }}
+                <table class="table table-striped" valign="top"> <tbody id="form_data">
+                    <tr>
+                        <th>Equipment Name</th>
+                        <th>Details</th>
+                        <th>Quantity </th>
+                        <th>Delete?</th>
+                    </tr>
+                {% for form in formset %}
+                    {% if form.errors %}
+                    <tr class="warning">
+                        <td>{% for e in form.name.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.details.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.quant.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td></td>
+                    </tr>
+                {% endif %}
+                    <tr>
+                        <td>{{ form.id }}{{ form.name }} </td>
+                        <td>{{ form.details }} </td>
+                        <td>{{ form.quant }} </td>
+                        <td>{{ form.DELETE }} </td>
+                    </tr>
+                {% endfor %}
+                </tbody></table>
+                    <input name="save" value="Save Changes" class="btn btn-primary" id="submit-id-save" type="submit">
+                    <input type="button" class="btn btn-success" value="Add Row" id="add_form">
+                </form>
+                
+        </div>
+        {% with formset.empty_form as form %}
+        <table style="display:none;"> <tbody id="empty_form">
+                <tr>
+                    <td>{{ form.id }}{{ form.name }} </td>
+                    <td>{{ form.details }} </td>
+                    <td>{{ form.quant }} </td>
+                    <td>{{ form.DELETE }} </td>
+                </tr>
+            </tbody>
+            </table>
+        {% endwith %}
+        <script>
+            function add_form(){
+                var form_idx = $('#id_pulllistequipmentinstance_set-TOTAL_FORMS').val();
+                $('#form_data').append($('#empty_form').html().replace(/__prefix__/g, form_idx));
+                console.log('Adding field ' + form_idx);
+                $('#id_pulllistequipmentinstance_set-TOTAL_FORMS').val(parseInt(form_idx) + 1);
+                $('#form_data>tr:last-child>td:first').find('input[type=text]').focus();
+            }
+            $('#add_form').click(function() {
+                add_form();
+            });
+            $('.table').keypress(function(e) {
+                if (e.which == 13) { add_form();}
+            });
+        </script>
+    </div>
+{% endblock %}
+
+{% block extras %}
+{{ formset.media }}
+{% include "js_datetimepick.tmpl" %}
+{% endblock %}
+
+{% block finalsay %}
+
+{% endblock %}

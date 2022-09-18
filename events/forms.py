@@ -16,7 +16,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db.models import Model, Q
-from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget
+from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget, CharField
 from django.utils import timezone
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
@@ -26,7 +26,7 @@ from events.fields import GroupedModelChoiceField
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail,
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
                            ExtraInstance, Hours, Lighting, Location, Organization, OrganizationTransfer,
-                           OrgBillingVerificationEvent, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
+                           OrgBillingVerificationEvent, PullListEquipmentInstance, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
                            Sound, PostEventSurvey, OfficeHour)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
@@ -576,6 +576,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'test_event',
                 'entered_into_workday',
                 'send_survey',
+                'allow_crew_to_check_equipment',
                 active=True
             ),
             Tab(
@@ -1394,6 +1395,26 @@ class ExtraForm(forms.ModelForm):
         group_label=lambda group: group.name,
     )
 
+class PullListForm(forms.ModelForm):
+
+    def __init__(self, category, *args, **kwargs):
+        self.category = category
+        super(PullListForm, self).__init__(*args, **kwargs)
+    
+    def save(self, commit=True):
+        obj = super(PullListForm, self).save(commit=False)
+        obj.category = self.category
+        if commit:
+            obj.save()
+        return obj
+
+    class Meta:
+        model = PullListEquipmentInstance
+        fields = ('name', 'details', 'quant')
+
+    name = CharField(max_length = 256)
+    details = CharField(max_length = 2048, required=False)
+    quant = forms.IntegerField(required=False)
 
 class ServiceInstanceForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):

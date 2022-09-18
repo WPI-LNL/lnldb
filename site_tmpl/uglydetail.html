@@ -174,6 +174,7 @@
                 <li class="active"><a href="#home" data-toggle="tab">Detail</a></li>
                 <li><a href="#schedule" data-toggle="tab">Schedule</a></li>
                 <li><a href="#services" data-toggle="tab">Services</a></li>
+                <li><a href="#pull_list" data-toggle="tab">Pull List</a></li>
                 <li><a href="#crew" data-toggle="tab">Crew</a></li>
                 {% permission request.user has 'events.view_event_reports' of event %}
                     <li><a href="#reports" data-toggle="tab">Reports</a></li>
@@ -482,6 +483,89 @@
                         {% endfor %}
                     {% endif %}
                     
+                </div>
+                <div id="pull_list" class="tab-pane">
+                    {% if categorized_services_and_extras %}
+                        {% for category_name, services_and_extras in categorized_services_and_extras.items %}
+                            <h3>
+                            {% permission request.user has 'events.edit_pull_list' of event %}
+                                <a class="btn btn-lg btn-info pull-right" href="{% url "events:pull_list" event.id category_name%}">Modify {{ category_name }} Pull List</a>
+                            {% endpermission %}
+                            {{ category_name }}</h3>
+                            <h5>
+                            {% if services_and_extras.0 %}
+                                {% for service_instance in services_and_extras.0 %}
+                                    {{service_instance.service}}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                (No services requested)
+                            {% endif %}</h5>
+                            {% if services_and_extras.1 %}
+                                <h5>Extras: 
+                                    {% for extra_instance in services_and_extras.1 %}
+                                        {{extra_instance.extra}} x{{ extra_instance.quant }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </h5>
+                            {% endif %}
+                            {% if services_and_extras.2 %}
+                                <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Out</th>
+                                        <th>In </th>
+                                        <th>Name</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for equipment_instance in services_and_extras.2 %}
+                                        <tr>
+                                            <form method="POST">
+                                            {% csrf_token %}
+                                            <td style="width:0"> <input type="checkbox" class="equipment_out" name="{{equipment_instance.id}}" 
+                                                {% if equipment_instance.checked_out %} checked="true"{% endif %} 
+                                                {% permission not request.user has 'events.check_in_out_pull_list' of event %} disabled{% endpermission %}> </td>
+                                            <td style="width:0"> <input type="checkbox" class="equipment_in" name="{{equipment_instance.id}}" 
+                                                {% if equipment_instance.checked_in %} checked="true"{% endif %} 
+                                                {% permission not request.user has 'events.check_in_out_pull_list' of event %} disabled{% endpermission %}> </td>
+                                            <td>{{ equipment_instance.name}} {% if equipment_instance.quant %}x<strong>{{ equipment_instance.quant }}</strong>{% endif %}</td>
+                                            <td>{{equipment_instance.details | markdown}}</td>
+                                            </form>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            (No equipment entries)
+                            {% endif %}
+                        {% endfor %}
+                        {% permission request.user has 'events.check_in_out_pull_list' of event %}
+                        <script type="text/javascript">
+                            $(document).ready(function() {           
+                                $('.equipment_in,.equipment_out').click(function() {                          
+                                        $.ajax({ 
+                                            data: {
+                                                'model_type':"PullListEquipmentInstance",
+                                                'id':$(this).prop('name'),
+                                                'event_id':{{ event.id }},
+                                                'field':$(this).prop('class'),
+                                                'checked':$(this).prop("checked"),
+                                                'csrfmiddlewaretoken': '{{ csrf_token }}',
+                                            }, 
+                                            type: "POST", 
+                                            url: '{% url "events:update" event.id %}', 
+                                            success: function(response) { 
+                                                $(this).checked = !$(this).checked; 
+                                            },
+                                            error: function(e, x, r) { 
+                                                console.log(e,x,r);                      
+                                            }
+                                        }); 
+                                }); 
+                            });
+                        </script>
+                        {% endpermission %}
+                    {% endif %}
                 </div>
                 <div id="crew" class="tab-pane">
                     {% if not event.closed %}
