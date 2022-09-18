@@ -3,3 +3,4 @@
 
 update: insecure
 label: security
+schedule: "every two weeks"

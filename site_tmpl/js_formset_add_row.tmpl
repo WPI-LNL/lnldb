@@ -24,8 +24,9 @@
     }
     $('#add_form').click(function() {
         add_form();
+        $(window).trigger('init-autocomplete');
     });
-    $('.table').keypress(function(e) {
-        if (e.which == 13) { add_form();}
-    });
+    //$('.table').keypress(function(e) {
+    //    if (e.which == 13) { add_form();}
+    //});
 </script>

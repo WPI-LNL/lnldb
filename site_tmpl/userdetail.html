@@ -105,7 +105,7 @@
                 </tr>
                 <tr>
                     <th>Phone</th>
-                    <td>{{ u.phone }}</td>
+                    <td>{% if u.phone is not None %} <a href="tel:{{ u.phone }}">{{ u.phone }}</a> {% else %} None {% endif %}</td>
                 </tr>
                 {% if u.addr %}
                 <tr>

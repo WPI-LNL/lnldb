@@ -2,6 +2,17 @@
 Updates 2022
 ============
 
+September
+=========
+
+This month brought a roll-up of updates from over the summer.
+
+- :commit:`02543fd0f494de70dfac60369417597484b0ee8a` Spotify integration
+- :commit:`2549976b9dd0b263f828400dcd6f6538f8172c9c` Fix autocomplete for "Add
+  new row"
+- :commit:`0681c6a856ce4aee0ba4a15cb3678afc96bebc1f` Place sensible bounds on
+  class year (no less than 1962, no more than $CURRENT_YEAR + 6)
+
 February
 ========
 This month brought in more bug fixes and minor improvements. We also started taking some initial steps toward a more
