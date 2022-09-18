@@ -1,3 +1,5 @@
+from unittest import skipIf
+import requests
 from data.tests.util import ViewTestCase
 from django.shortcuts import reverse
 from django.conf import settings
@@ -8,6 +10,7 @@ from accounts.models import UserPreferences
 
 
 class RTAPITests(ViewTestCase):
+    @skipIf(requests.head('https://lnl-rt.wpi.edu/rt/REST/2.0/ticket').status_code != 200, "RT is not reachable")
     def test_ticket_form(self):
         # Check that form loads ok
         self.assertOk(self.client.get(reverse("support:new-ticket")))
