@@ -682,7 +682,7 @@ class InternalEventForm2019(FieldAccessForm):
         )
 
         cancelled_reason_edit = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.event_view_sensitive') and \
+            lambda user, instance: user.has_perm('events.cancel_event') and \
                                    (instance is not None and instance.cancelled), enable=('cancelled_reason',)
         )
 
