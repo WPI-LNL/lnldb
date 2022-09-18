@@ -16,7 +16,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db.models import Model, Q
-from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget
+from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget, TextInput
 from django.utils import timezone
 # python multithreading bug workaround
 from pagedown.widgets import PagedownWidget
@@ -369,6 +369,7 @@ class EventDenialForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
             Field('cancelled_reason', label="Reason For Cancellation (optional)", css_class="col-md-6"),
+            HTML('Please note that the reason will be included in the cancellation email to the client. <p />'),
             FormActions(
                 Submit('save', 'Deny Event'),
             ),
@@ -570,6 +571,7 @@ class InternalEventForm2019(FieldAccessForm):
                 DynamicFieldContainer('internal_notes'),
                 HTML('<div style="width: 50%">'),
                 'max_crew',
+                'cancelled_reason',
                 HTML('</div>'),
                 'billed_in_bulk',
                 'sensitive',
@@ -679,16 +681,22 @@ class InternalEventForm2019(FieldAccessForm):
             exclude=('send_survey',)
         )
 
+        cancelled_reason_edit = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.cancel_event') and \
+                                   (instance is not None and instance.cancelled), enable=('cancelled_reason',)
+        )
+
     class Meta:
         model = Event2019
         fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org',
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'sensitive', 'test_event',
-                  'entered_into_workday', 'send_survey', 'max_crew',
+                  'entered_into_workday', 'send_survey', 'max_crew','cancelled_reason',
                   'reference_code')
         widgets = {
             'description': PagedownWidget(),
             'internal_notes': PagedownWidget(),
+            'cancelled_reason': TextInput(),
         }
 
     location = GroupedModelChoiceField(
@@ -704,6 +712,7 @@ class InternalEventForm2019(FieldAccessForm):
     datetime_end = forms.SplitDateTimeField(initial=timezone.now, label="Event End")
     max_crew = forms.IntegerField(label="Maximum Crew", help_text="Include this to enforce an occupancy limit",
                                   required=False)
+    cancelled_reason = forms.CharField(label="Reason for Cancellation", required=False),
     # Regex will match valid 25Live reservation codes in the format
     # `2022-ABNXQQ`
     reference_code =forms.CharField(validators=[RegexValidator(regex=r"[0-9]{4}-[A-Z]{6}")],
