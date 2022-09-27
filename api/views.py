@@ -646,7 +646,7 @@ class SpotifySessionViewSet(viewsets.GenericViewSet):
             return Response({'detail': 'Session already exists'}, status=status.HTTP_409_CONFLICT)
 
         serializer = SpotifySessionWriteSerializer(data=request.data)
-        if serializer.is_valid(True):
+        if serializer.is_valid(raise_exception=True):
             try:
                 with transaction.atomic():
                     session = serializer.save()
@@ -705,7 +705,7 @@ class SpotifySessionViewSet(viewsets.GenericViewSet):
                 raise PermissionDenied
 
         serializer = SpotifySessionWriteSerializer(session, data=request.data, partial=True)
-        if serializer.is_valid(True):
+        if serializer.is_valid(raise_exception=True):
             try:
                 with transaction.atomic():
                     session = serializer.save()
@@ -980,7 +980,7 @@ class SongRequestViewSet(viewsets.GenericViewSet):
             'phone': phone
         }
         serializer = SongRequestSerializer(data=song_request)
-        if serializer.is_valid(True):
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
         return Response({'estimated_wait': queue_estimate(session, True)}, status=status.HTTP_201_CREATED)
 
