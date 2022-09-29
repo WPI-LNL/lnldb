@@ -24,11 +24,11 @@
                 <!--{% if request.user.is_lnl %}
                     <a class="btn btn-info btn-lg" target="_blank" href="https://wpi0.sharepoint.com/sites/gr-lnl/Event%20Photos/Forms/Thumbnails.aspx?view=7&q={{ event.event_name|urlencode }}">Photos</a>
                 {% endif %}-->
-                {% if event.event_id %}
+                {% if event.reference_code %}
                         <tr>
                             <a class="btn btn-primary btn-lg" target="_blank" href="https://25live.collegenet.com/pro/wpi#!/home/event/{{ event.event_id }}/details">25Live</a>
                         </tr>
-                        {% endif %}
+                {% endif %}
                 {% if event.closed %}
                     {% permission request.user has 'events.reopen_event' of event %}
                         <a class="btn btn-default btn-lg" href="#reopenModal" role="button"
