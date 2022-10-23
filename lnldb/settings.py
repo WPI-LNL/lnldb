@@ -334,6 +334,7 @@ INSTALLED_APPS = (
     'rt',
     'slack',
     'spotify',
+    'hacka',
 
     'bootstrap3',
     'crispy_forms',

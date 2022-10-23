@@ -59,6 +59,7 @@ class User(AbstractUser):
     onboarded = BooleanField(default=False, verbose_name="Onboarding Complete")
 
     pronouns = CharField(max_length=32, null=True, blank=True, verbose_name="Pronouns")
+    hid_id   = CharField(max_length=32, null=True, blank=True, verbose_name="HID Swipe ID")
 
     def __str__(self):
         nick = '"%s" ' % self.nickname if self.nickname else ""
