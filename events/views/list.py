@@ -13,7 +13,7 @@ from django.urls.base import reverse
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 
-from helpers.mixins import HasPermMixin, LoginRequiredMixin
+from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from events.models import BaseEvent, Event2019, Category, MultiBilling, Workshop, WorkshopDate
 from events.forms import WorkshopForm, WorkshopDatesForm
 
@@ -974,7 +974,7 @@ def workshops_list(request):
     return render(request, 'workshops_list.html', {'workshops': workshops})
 
 
-class DeleteWorkshop(LoginRequiredMixin, HasPermMixin, DeleteView):
+class DeleteWorkshop(SetFormMsgMixin, LoginRequiredMixin, HasPermMixin, DeleteView):
     """ Delete a series of workshops """
     model = Workshop
     template_name = "form_delete_cbv.html"

@@ -143,11 +143,11 @@ class BulkUpdateView(SetFormMsgMixin, LoginRequiredMixin, HasPermMixin, FormView
         return super(BulkUpdateView, self).form_valid(form)
 
 
-class ProjectionistDelete(LoginRequiredMixin, HasPermMixin, DeleteView):
+class ProjectionistDelete(SetFormMsgMixin, LoginRequiredMixin, HasPermMixin, DeleteView):
     """ Remove a projectionist (does not remove the associated user) """
     model = Projectionist
     template_name = "form_delete_cbv.html"
-    msg = "Deleted Projectionist"
+    msg = "Delete Projectionist"
     perms = 'projection.edit_pits'
 
     def get_success_url(self):
