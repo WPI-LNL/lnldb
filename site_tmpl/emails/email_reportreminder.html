@@ -28,7 +28,7 @@
 
                 <p>Submit your crew chief report <a href="{% get_base_url %}{% url 'my:report' reminder.event.id %}">here</a>.</p>
 
-                <p>Submit crew hours <a href="{% get_base_url %}{% url 'my:hours-list' reminder.event.id %}">here</a>.</p>
+                <p>Submit crew hours <a href="{% get_base_url %}{% url 'events:add-bulk-crew' reminder.event.id %}">here</a>.</p>
 
                 <p>For your convenience, the Workorder PDF is attached.</p>
 

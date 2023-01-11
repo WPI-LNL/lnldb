@@ -18,12 +18,12 @@ from django.views.generic import CreateView, DeleteView, UpdateView
 from django.views.decorators.http import require_GET, require_POST
 from reversion.models import Version
 
-from accounts.models import UserPreferences
+from accounts.models import User, UserPreferences
 from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator, BillingEmailGenerator,
                                DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
 from slack.views import cc_report_reminder
 from slack.api import lookup_user, slack_post
-from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
+from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, EditHoursForm, MKSingleHoursForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
                           BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
@@ -445,6 +445,41 @@ def hours_bulk_admin(request, id):
             return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     else:
         formset = mk_hours_formset(instance=event)
+
+    context['formset'] = formset
+    return render(request, 'formset_hours_bulk.html', context)
+
+@login_required
+def hours_single_admin(request, id, user=None):
+    """ Update single crew member hours """
+    try:
+        user = User.objects.get(pk=user)
+        context = {'msg': "Update Crew Hours"}
+    except User.DoesNotExist:
+        context = {'msg': "Add Crew Hours"}
+    event = get_object_or_404(BaseEvent, pk=id)
+    if not event.reports_editable and not request.user.has_perm('events.edit_event_hours') and \
+            request.user.has_perm('events.edit_event_hours', event):
+        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
+    if not (request.user.has_perm('events.edit_event_hours') or
+            request.user.has_perm('events.edit_event_hours', event) and event.reports_editable):
+        raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    context['event'] = event
+    context['oldevent'] = isinstance(event, Event)
+
+    mk_hours_formset = inlineformset_factory(BaseEvent, Hours, exclude=[], extra=(0 if event.hours.filter(user=user).exists() else 1))
+    mk_hours_formset.form = curry_class(MKSingleHoursForm, event=event, user=user)
+
+    if request.method == 'POST':
+        formset = mk_hours_formset(request.POST, instance=event)
+        if formset.is_valid():
+            formset.save()
+            return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#reports")
+    else:
+        formset = mk_hours_formset(instance=event, queryset=Hours.objects.filter(user=user))
 
     context['formset'] = formset
     return render(request, 'formset_hours_bulk.html', context)

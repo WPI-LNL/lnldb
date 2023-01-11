@@ -591,7 +591,8 @@
                     {% endif %}
                     {% if not event.closed %}
                         {% permission request.user has 'events.edit_event_hours' of event %}
-                            <div class="pull-right">
+                            <div class="pull-right btn-group">
+                                <a class="btn btn-success btn-lg" href="{% url 'events:edit_single_crew_hours' event.id %}">Add New</a>
                                 <a class="btn btn-primary btn-lg" href="{% url 'events:add-bulk-crew' event.id %}">Edit</a>
                             </div>
                         {% endpermission %}
@@ -603,6 +604,7 @@
                             <th>Member</th>
                             <th>Hours</th>
                             <th>Category</th>
+                            <th></th>
                         </tr>
                         </thead>
                         {% for hour in event.hours.all %}
@@ -617,6 +619,11 @@
                                         {% endif %}
                                 </td>
                                 <td>{{ hour.category }}</td>
+                                <td>
+                                    {% if not event.closed %}{% permission request.user has 'events.edit_event_hours' of event %}
+                                        <a class="btn btn-primary btn-sm" href="{% url "events:edit_single_crew_hours" event.id hour.user.id %}">Edit</a>
+                                    {% endpermission %}{% endif %}
+                                </td>
                             </tr>
                         {% endfor %}
                     </table>
