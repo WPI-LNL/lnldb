@@ -963,6 +963,7 @@ def workshop_dates(request, pk):
             formset.save()
             return HttpResponseRedirect(reverse("events:workshops:list"))
     context['formset'] = formset
+    context['msg'] = "Workshop Dates for \"" + workshop.name + "\""
     return render(request, 'formset_workshop_dates.html', context)
 
 
