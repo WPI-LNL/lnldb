@@ -83,7 +83,7 @@ def projection_update(request, id):
     return render(request, 'form_crispy_projection.html', context)
 
 
-class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
+class ProjectionCreate(SetFormMsgMixin, LoginRequiredMixin, HasPermMixin, CreateView):
     """ Add a new projectionist """
     perms = 'projection.edit_pits'
 
@@ -116,6 +116,7 @@ class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
 
     model = Projectionist
     template_name = "form_crispy_projection.html"
+    msg = "Add Projectionist"
     form_class = ProjectionistForm
     # success_url = reverse("projection:list")
 
