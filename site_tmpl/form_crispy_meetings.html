@@ -1,6 +1,7 @@
 {% extends 'base_admin.html' %}
 {% load crispy_forms_tags %}
 
+{% block title %}{{ msg }} | Lens and Lights at WPI{% endblock %}
 {% block content %}
     <div class="row">
         <form method="post" action="" class="{{ form.helper.form_class }}" enctype="multipart/form-data">
