@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.generic.edit import CreateView, DeleteView, FormView
 from django.urls.base import reverse
 
-from helpers.mixins import HasPermMixin, LoginRequiredMixin
+from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from projection.forms import (BulkCreateForm, BulkUpdateForm, DateEntryFormSetBase, ProjectionistForm,
                               ProjectionistUpdateForm, PITRequestForm, PITRequestAdminForm, PITFormset)
 from projection.models import PITLevel, Projectionist, PitRequest, PitInstance
@@ -124,9 +124,10 @@ class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
         return reverse("projection:grid")
 
 
-class BulkUpdateView(LoginRequiredMixin, HasPermMixin, FormView):
+class BulkUpdateView(SetFormMsgMixin, LoginRequiredMixin, HasPermMixin, FormView):
     """ Update a PIT for multiple projectionists at the same time """
     template_name = "form_crispy_cbv.html"
+    msg = "Bulk Update Projectionists"
     form_class = BulkUpdateForm
     perms = 'projection.edit_pits'
 
