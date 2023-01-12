@@ -1,6 +1,7 @@
 
 {% extends 'base_admin.html' %}
 {% load permissionif %}
+{% block title %}{{h2}} | Lens and Lights at WPI{% endblock %}
 {% block content %}
 <div class="pull-right">
     <a class="btn btn-warning btn-lg" href="{% url "projection:list" %}"><i class="glyphicon glyphicon-th-large icon-white"></i>&nbsp;Standard List</a>
