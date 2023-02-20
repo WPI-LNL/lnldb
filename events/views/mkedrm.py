@@ -78,7 +78,7 @@ def eventnew(request, id=None):
                 if is_event2019 and obj.event_id is None:
                     if form.data.get('reference_code') != "": 
                         url = requests.get(f"https://25live.collegenet.com/25live/data/wpi/run/list/listdata.json?compsubject=event&obj_cache_accl=0&name={form.data.get('reference_code')}")
-                        text = url.text[6:]
+                        text = url.text
                         jsondata = json.loads(text)
                         obj.event_id = jsondata["rows"][0]["contextId"]
                         obj.save()

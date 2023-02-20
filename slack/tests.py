@@ -1,6 +1,7 @@
 import json
 import pytz
 import logging
+import requests
 from urllib.parse import urlencode
 from django.test import TestCase
 from data.tests.util import ViewTestCase
@@ -37,8 +38,9 @@ class SlackAPITests(ViewTestCase):
         }
 
         # Expect 500 since trigger will be expired (Launch from within Slack to test 200 response)
-        self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
-                                       content_type="application/x-www-form-urlencoded"), 500)
+        if requests.head("https://lnl-rt.wpi.edu/rt/Ticket/Display.html").status_code == 200:
+            self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
+                                        content_type="application/x-www-form-urlencoded"), 500)
 
         # Test TFed ticket submission (most unused fields omitted)
         submission_data = {
@@ -80,13 +82,14 @@ class SlackAPITests(ViewTestCase):
         data = {
             "payload": json.dumps(submission_data)
         }
-        if settings.SLACK_TOKEN not in ['', None]:
-            if settings.RT_TOKEN in ['', None]:  # Only run if RT token is not provided
+        if requests.head("https://lnl-rt.wpi.edu/rt/Ticket/Display.html").status_code == 200:
+            if settings.SLACK_TOKEN not in ['', None]:
+                if settings.RT_TOKEN in ['', None]:  # Only run if RT token is not provided
+                    self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
+                                                content_type="application/x-www-form-urlencoded"))
+            else:
+                # Should fail on user lookup
                 self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
-                                               content_type="application/x-www-form-urlencoded"))
-        else:
-            # Should fail on user lookup
-            self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
                                            content_type="application/x-www-form-urlencoded"), 500)
 
         # Test TFed ticket update form submission (unused fields omitted)
@@ -137,7 +140,7 @@ class SlackAPITests(ViewTestCase):
         data = {
             "payload": json.dumps(new_ticket_data)
         }
-        if settings.RT_TOKEN in [None, '']:
+        if settings.RT_TOKEN in [None, ''] and requests.head("https://lnl-rt.wpi.edu/rt/Ticket/Display.html").status_code == 200:
             self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
                                            content_type="application/x-www-form-urlencoded"))
 
@@ -173,8 +176,9 @@ class SlackAPITests(ViewTestCase):
         data = {
             "payload": json.dumps(action_data)
         }
-        self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
-                                       content_type="application/x-www-form-urlencoded"))
+        if requests.head("https://lnl-rt.wpi.edu/rt/Ticket/Display.html").status_code == 200:
+            self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
+                                        content_type="application/x-www-form-urlencoded"))
 
     def test_event_url_verification(self):
         # Slack may conduct a URL verification handshake to validate our server's identity
