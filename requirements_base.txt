@@ -67,5 +67,5 @@ filetype==1.0.7
 slack-sdk==3.9.1
 django-multiselectfield==0.1.12
 drf-spectacular==0.21.0
-spotipy==2.19.0
+spotipy==2.22.1
 qrcode==7.3.1
