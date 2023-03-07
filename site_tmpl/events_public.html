@@ -1,6 +1,8 @@
 {% extends 'base_admin.html' %}
 {% load bootstrap_calendar %}
 
+{% block title %}Ongoing and Future Events | Lens and Lights at WPI{% endblock %}
+
 {% block extras %}
 {% url 'cal:api-public' as bootcal_endpoint %}
 {% bootstrap_calendar_js events_url=bootcal_endpoint %}

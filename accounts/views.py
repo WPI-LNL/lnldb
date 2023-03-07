@@ -28,12 +28,13 @@ from . import forms
 from .models import Officer, ProfilePhoto, UserPreferences
 
 
-class UserAddView(mixins.HasPermMixin, generic.CreateView):
+class UserAddView(mixins.SetFormMsgMixin, mixins.HasPermMixin, generic.CreateView):
     """Add a new user manually (should rarely be used - LDAP does this for us)"""
     form_class = forms.UserAddForm
     model = get_user_model()
     perms = 'accounts.add_user'
     template_name = 'form_crispy.html'
+    msg = "Add User Manually"
 
     def get_success_url(self):
         return reverse('accounts:detail', args=(self.object.id,))
@@ -367,11 +368,12 @@ def shame(request):
     return render(request, 'users_shame.html', context)
 
 
-class PasswordSetView(generic.FormView):
+class PasswordSetView(mixins.SetFormMsgMixin, generic.FormView):
     """Set a non-SSO login password"""
     model = get_user_model()
     user = None
     template_name = 'form_crispy.html'
+    msg = "Set Non-SSO Login Password"
 
     def form_valid(self, form):
         form.save()
@@ -445,6 +447,7 @@ def user_preferences(request):
 def officer_photos(request, pk=None):
     """Update officer headshot (displayed on the main LNL website about page)"""
     context = {}
+    context['msg'] = "Update Officer Photo"
     if pk is None:
         pk = request.user.pk
     officer = get_object_or_404(get_user_model(), pk=pk)

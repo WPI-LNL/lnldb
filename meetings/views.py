@@ -16,7 +16,7 @@ from email.mime.base import MIMEBase
 from email.encoders import encode_base64
 from helpers.util import curry_class
 
-from helpers.mixins import HasPermMixin, LoginRequiredMixin
+from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from data.views import serve_file
 from emails.generators import generate_notice_cc_email, generate_notice_email, DefaultLNLEmailGenerator
 from events.forms import CCIForm
@@ -240,7 +240,7 @@ def newattendance(request):
     return render(request, 'form_crispy_meetings.html', context)
 
 
-class DeleteMeeting(LoginRequiredMixin, HasPermMixin, DeleteView):
+class DeleteMeeting(SetFormMsgMixin, LoginRequiredMixin, HasPermMixin, DeleteView):
     """ Delete a meeting """
     model = Meeting
     template_name = "form_delete_cbv.html"
