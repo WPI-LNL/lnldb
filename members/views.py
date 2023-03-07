@@ -65,7 +65,7 @@ def enter_training(request):
             return HttpResponseRedirect(reverse('members:training:list'))
     else:
         form = TrainingForm()
-    return render(request, 'form_crispy.html', {'form': form})
+    return render(request, 'form_crispy.html', {'form': form, 'msg': "Record a Training"})
 
 
 @login_required
@@ -84,7 +84,7 @@ def trainee_notes(request, pk):
             return HttpResponseRedirect(reverse('accounts:detail', args=(trainee.person.pk,)))
     else:
         form = TraineeNotesForm(instance=trainee)
-    return render(request, 'form_crispy.html', {'form': form})
+    return render(request, 'form_crispy.html', {'form': form, 'msg':"Edit Training Notes"})
 
 
 @login_required

@@ -142,6 +142,7 @@ def install_client(request):
             context['form'] = form
     else:
         context['form'] = ClientForm()
+    context['msg'] = "New Managed Device"
     return render(request, 'form_crispy.html', context)
 
 
@@ -697,6 +698,7 @@ def generate_profile(request, pk=0):
                                "if (this.value == 'default') {$('#div_id_removal_date').hide();" \
                                "$('#div_id_removal_period').hide();}else{$('#div_id_removal_date').show();" \
                                "$('#div_id_removal_period').show();}});$('#id_auto_remove').change();});"
+    context['msg'] = "Manage Configuration Profile"
     return render(request, 'form_crispy.html', context)
 
 
@@ -917,6 +919,7 @@ def add_app(request):
     else:
         form = NewAppForm(title=title, request_user=request.user)
     context['form'] = form
+    context['msg'] = title
     return render(request, 'form_crispy.html', context)
 
 
@@ -970,6 +973,7 @@ def update_app_info(request, pk):
     else:
         form = UpdateAppForm(instance=app)
     context['form'] = form
+    context['msg'] = "Application Info"
     return render(request, 'form_crispy.html', context)
 
 
@@ -1007,6 +1011,8 @@ def merge_app(request, pk):
     else:
         form = AppMergeForm(pk=pk)
     context['form'] = form
+    app_name = MacOSApp.objects.get(pk=pk).name
+    context['msg'] = 'Merge ' + app_name + ' into...'
     return render(request, 'form_crispy.html', context)
 
 

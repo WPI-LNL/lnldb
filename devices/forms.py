@@ -43,7 +43,7 @@ class ClientForm(forms.Form):
         self.helper.form_class = "form-horizontal col-md-6"
         self.helper.layout = Layout(
             Fieldset(
-                'New Managed Device',
+                '',   #leaving as empty string so page title can be provided by "msg" context variable in the crispy form
                 Div(
                     HTML('<p style="font-weight: bold"><span style="color: red">WARNING:</span> Please read the '
                          'following statements carefully. The MDM is designed for use with LNL equipment only. Failure '
@@ -1401,7 +1401,8 @@ class NewAppForm(FieldAccessForm):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal col-md-6"
         self.helper.layout = Layout(
-            Fieldset(title, 'name', 'version', 'developer', 'description', 'developer_website'),
+            #leaving first arg as empty string so page title can be provided by "msg" context variable in the crispy form:
+            Fieldset('', 'name', 'version', 'developer', 'description', 'developer_website'),
             FormActions(Submit('save', "Submit"))
         )
         super(NewAppForm, self).__init__(*args, **kwargs)
@@ -1436,7 +1437,7 @@ class UpdateAppForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal col-md-6"
         self.helper.layout = Layout(
             Fieldset(
-                'Application Info',
+                '',   #leaving as empty string so page title can be provided by "msg" context variable in the crispy form
                 Div(
                     'name',
                     'identifier',
@@ -1473,11 +1474,12 @@ class AppMergeForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         pk = kwargs.pop('pk')
-        app_name = MacOSApp.objects.get(pk=pk).name
+        #app_name = MacOSApp.objects.get(pk=pk).name
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal col-md-6"
         self.helper.layout = Layout(
-            Fieldset('Merge ' + app_name + ' into...', 'options'),
+            #leaving first arg as empty string so page title can be provided by "msg" context variable in the crispy form
+            Fieldset('', 'options'),
             FormActions(Submit('save', 'Merge'))
         )
         super(AppMergeForm, self).__init__(*args, **kwargs)

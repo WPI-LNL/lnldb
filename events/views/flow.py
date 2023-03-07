@@ -1149,7 +1149,7 @@ class CCRDelete(SetFormMsgMixin, HasPermOrTestMixin, LoginRequiredMixin, DeleteV
     """ Delete a crew chief report """
     model = CCReport
     template_name = "form_delete_cbv.html"
-    msg = "Deleted Crew Chief Report"
+    msg = "Delete Crew Chief Report"
     perms = 'events.delete_ccreport'
 
     def user_passes_test(self, request, *args, **kwargs):
@@ -1244,10 +1244,10 @@ class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateVie
         return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
 
 
-class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
+class BillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = Billing
     template_name = "form_delete_cbv.html"
-    msg = "Deleted Bill"
+    msg = "Delete Bill"
     perms = 'events.bill_event'
 
     def dispatch(self, request, *args, **kwargs):
@@ -1317,7 +1317,7 @@ class MultiBillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Upda
         return reverse("events:multibillings:list")
 
 
-class MultiBillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
+class MultiBillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = MultiBilling
     template_name = "form_delete_cbv.html"
     msg = "Delete MultiBill"

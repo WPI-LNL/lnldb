@@ -15,7 +15,6 @@ class TrainingForm(forms.Form):
         self.helper = FormHelper()
         self.helper.help_text_inline = True
         self.helper.layout = Layout(
-            HTML('<h1>Record a Training</h1>'),
             'training_type',
             'date',
             'trainer',
@@ -69,7 +68,7 @@ class TraineeNotesForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.help_text_inline = True
         self.helper.layout = Layout(
-            HTML('<h2>Edit notes on {} for {}</h2>'.format(self.instance.person, self.instance.training)),
+            HTML('<h4>Edit notes on {} for {}</h4>'.format(self.instance.person, self.instance.training)),
             'notes',
             FormActions(
                 Submit('save', 'Save'),

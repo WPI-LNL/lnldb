@@ -1,5 +1,6 @@
 {% extends 'base_admin.html' %}
 
+{% block title %}Checkin Receipt | Lens and Lights at WPI{% endblock %}
 {% block content %}
     <p style="float: right"><a href="{% url 'inventory:snipe_checkin' %}?checkin_from={{ checkin_from }}" class="btn btn-primary">Check in more items</a></p>
     <p>The information below has been emailed to you.</p>
