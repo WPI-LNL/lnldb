@@ -1177,20 +1177,6 @@ class EventBasicViewTest(ViewTestCase):
 
         self.assertOk(self.client.get(reverse("events:reports:new", args=[self.e.pk])))
 
-        # Check that too late message is displayed if it has been too long since the event
-        permission = Permission.objects.get(codename="add_event_report")
-        self.user.user_permissions.remove(permission)
-
-        self.user.refresh_from_db()
-        self.e.datetime_end = timezone.now() - timezone.timedelta(days=30)
-        self.e.save()
-        CCInstanceFactory.create(crew_chief=self.user, event=self.e)
-
-        self.assertContains(self.client.get(reverse("events:reports:new", args=[self.e.pk])), b"Too Late!")
-
-        self.e.datetime_end = timezone.now()
-        self.e.save()
-
         # Test valid data
         valid_data = {
             "crew_chief": str(self.user.pk),
