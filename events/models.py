@@ -22,7 +22,7 @@ import reversion
 if settings.CCR_DAY_DELTA:
     CCR_DELTA = settings.CCR_DAY_DELTA
 else:
-    CCR_DELTA = 7
+    CCR_DELTA = 30
 
 PROJECTIONS = (
     ('16', '16mm'),
@@ -335,6 +335,11 @@ class BaseEvent(PolymorphicModel):
         """ Returns false if too much time has elapsed since the end of the event """
         end_plus_time = self.datetime_end + datetime.timedelta(days=CCR_DELTA)
         return timezone.now() < end_plus_time
+    
+    @property
+    def has_attachment(self):
+        return self.attachments.all()
+    
     
     @cached_property
     def status(self):

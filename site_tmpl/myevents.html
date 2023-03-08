@@ -26,13 +26,13 @@
                         <div class="btn-group">
                             <a class="btn btn-default" href="{% url 'events:pdf' instance.event.id %}">Workorder
                                 PDF </a>
-                            {% if instance.event.reports_editable %}
+                            {% if instance.event.approved %} 
                                 <a class="btn btn-primary" href="{% url "my:report" instance.event.id %}">CC
                                     Report</a>
                                 <a class="btn btn-primary" href="{% url "my:hours-list" instance.event.id %}">Crew Hours</a>
                             {% endif %}
                             <a class="btn btn-success" target="_blank" href="https://wpi0.sharepoint.com/sites/gr-lnl/Event%20Photos/Forms/Thumbnails.aspx?view=7&q={{ instance.event.event_name|urlencode }}">Photos</a>
-                            {% if instance.event.attachments %}
+                            {% if instance.event.has_attachment %}
                                 <a class="btn btn-default" href="{% url "my:event-files" instance.event.id %}">Files</a>
                             {% endif %}
 
