@@ -7,6 +7,7 @@ from data.models import ResizedRedirect
 from pages.models import Page
 from spotify.models import Session, SpotifyUser, SongRequest
 from spotify.api import get_playback_state, queue_estimate
+from sats.models import Asset,AssetEvent
 
 from .models import TokenRequest
 
@@ -126,6 +127,15 @@ class CustomPageSerializer(serializers.ModelSerializer):
             'category': category
         }
 
+class AssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Asset
+        fields = ['asset_id', 'asset_display_name', 'asset_status', 'asset_position',  'asset_last_seen']
+
+class AssetEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetEvent
+        fields = ['event_id', 'event_type', 'asset_id', 'asset_position', 'event_datetime', 'user']
 
 class SpotifyUserSerializer(serializers.ModelSerializer):
     class Meta:

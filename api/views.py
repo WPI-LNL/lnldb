@@ -30,13 +30,14 @@ from accounts.forms import SMSOptInForm
 from emails.generators import generate_sms_email
 from events.models import OfficeHour, Event2019, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
+from sats.models import Asset, AssetEvent
 from pages.models import Page
 from spotify.models import Session, SpotifyUser, SongRequest
 from spotify.api import play, pause, skip, previous, get_available_devices, get_track, queue_estimate
 from .models import TokenRequest
 from .serializers import OfficerSerializer, HourSerializer, NotificationSerializer, EventSerializer, \
     AttendanceSerializer, RedirectSerializer, CustomPageSerializer, SpotifySessionReadOnlySerializer, \
-    SpotifySessionWriteSerializer, SongRequestSerializer, TokenRequestSerializer
+    SpotifySessionWriteSerializer, SongRequestSerializer, TokenRequestSerializer, AssetSerializer, AssetEventSerializer
 from . import examples
 
 
@@ -454,6 +455,23 @@ class SitemapViewSet(viewsets.ReadOnlyModelViewSet):
         elif link_type == 'redirect':
             return Page.objects.none(), redirects
         return pages, redirects
+
+class AssetViewSet(viewsets.ModelViewSet):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    queryset = Asset.objects.all().order_by('asset_id')
+    serializer_class = AssetSerializer
+
+
+class AssetEventViewSet(viewsets.ModelViewSet):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    queryset = AssetEvent.objects.all().order_by('event_id')
+    serializer_class = AssetEventSerializer
+
+
 
 
 class SpotifyUserViewSet(viewsets.GenericViewSet):
