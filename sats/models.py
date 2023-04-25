@@ -12,9 +12,9 @@ class Asset(models.Model):
                                     default="UNK")
     asset_position = models.IntegerField(null=True, blank=True)
     asset_user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                                   on_delete=models.CASCADE)
+                                   on_delete=models.CASCADE, null=True, blank=True)
 
-    asset_archived = models.BooleanField(null=False, blank=False)
+    asset_archived = models.BooleanField(null=False, blank=False, default=False)
     asset_last_seen = models.DateTimeField(null=False, blank=False)
 
 
