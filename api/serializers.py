@@ -131,6 +131,7 @@ class AssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         fields = ['asset_id', 'asset_display_name', 'asset_status', 'asset_position',  'asset_last_seen']
+        read_only_fields = ['asset_id']
 
 class AssetEventSerializer(serializers.ModelSerializer):
     class Meta:
