@@ -16,7 +16,7 @@ from rest_framework import viewsets, status, serializers
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, authentication_classes, action
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, DjangoModelPermissionsOrAnonReadOnly
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import NotFound, ParseError, AuthenticationFailed, PermissionDenied, NotAuthenticated
 from cryptography.fernet import Fernet
@@ -458,7 +458,7 @@ class SitemapViewSet(viewsets.ReadOnlyModelViewSet):
 
 class AssetViewSet(viewsets.ModelViewSet):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [DjangoModelPermissionsOrAnonReadOnly]
 
     queryset = Asset.objects.all().order_by('asset_id')
     serializer_class = AssetSerializer
@@ -466,7 +466,7 @@ class AssetViewSet(viewsets.ModelViewSet):
 
 class AssetEventViewSet(viewsets.ModelViewSet):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [DjangoModelPermissionsOrAnonReadOnly]
 
     queryset = AssetEvent.objects.all().order_by('event_id')
     serializer_class = AssetEventSerializer
