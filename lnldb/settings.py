@@ -75,6 +75,12 @@ INTERNAL_IPS = ['127.0.0.1']
 
 if env.str('EMAIL_URL', ""):
     vars().update(env.email_url("EMAIL_URL"))
+elif env.str("WPI_SMTP", ""):
+    EMAIL_HOST = 'smtp.office365.com'
+    EMAIL_HOST_USER = env.str("WPI_USERNAME")
+    EMAIL_HOST_PASSWORD = env.str("WPI_PASSWORD")
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
 elif env.str("SENDGRID_USERNAME", ""):
     EMAIL_HOST = 'smtp.sendgrid.net'
     EMAIL_HOST_USER = env.str("SENDGRID_USERNAME")
