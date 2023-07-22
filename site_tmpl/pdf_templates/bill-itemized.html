@@ -23,7 +23,7 @@
                     <li>Office: 508-831-5595</li>
                     <li><a href="mailto:lnl@wpi.edu" class="unstyled">lnl@wpi.edu</a></li>
                     {% if request %}
-                    <li><a href="{{ request.scheme }}://{{ request.get_host }}/" class="unstyled">{{ request.scheme }}://{{ request.get_host }}/</a></li>
+                    <li><a href="https://lnl.wpi.edu/" class="unstyled">https://lnl.wpi.edu/</a></li>
                     {% endif %}
                     <br>
                 </ul>
@@ -32,22 +32,28 @@
                 <td class="head">
                     <h1 class="megatext">{% if event_data.event.reviewed %}INVOICE{% else %}QUOTE{% endif %}</h1>
                     <h2 class="subtext">{{ event_data.event.event_name }}</h2>
-                    <h2 class="subtext"><b>Generated Date:</b> {% now "M. j, Y" %}</h2>
+                    <p class="subtext"><b>Generated Date:</b> {% now "M. j, Y" %}</h2>
                 </td>
                 </tr>
             </table>
             <table class="info" style="font-weight: normal">
                 <tr>
-                    <td width="200"><b>Sponsoring Organizations:</b></td>
-                    <td width="300">{{ event_data.event.org.all|join:", " }}</td>
-                    <td width="100"><b>Event Start:</b></td>
-                    <td width="200">{{ event_data.event.datetime_start|localtime|date }}</td>
+                    <td width="100"><b>Location:</b></td>
+                    <td width="300">{{ event_data.event.location }}</td>
+                    <td width="75"><b>Setup By:</b></td>
+                    <td width="200">{{ event_data.event.setupbytime|localtime }}</td>
+                </tr>
+                <tr>
+                    <td><b>Organization:</b></td>
+                    <td>{{ event_data.event.org.all|join:", " }}</td>
+                    <td><b>Event Start:</b></td>
+                    <td>{{ event_data.event.datetime_start|localtime }}</td>
                 </tr>
                 <tr>
                     <td><b>Billed Account:</b></td>
-                    <td>{{ event_data.event.worktag }}</td>
+                    <td>{{ event_data.event.worktag }}</td> 
                     <td><b>Event End:</b></td>
-                    <td>{{ event_data.event.datetime_end|localtime|date }}</td>
+                    <td>{{ event_data.event.datetime_end|localtime }}</td>
                 </tr>
             </table>
             <b class="info">Overview:</b> {{ event_data.event.description }}
@@ -123,11 +129,6 @@
     </td></tr>
     <tr><td><p>If you have any questions concerning this quote, contact our vice-president at <a class="unstyled" href="mailto:lnl-vp@wpi.edu">lnl-vp@wpi.edu</a>.</td></tr>
 {% endif %}
-    <tr>
-        <td>
-            <center>THANK YOU FOR YOUR BUSINESS!</center>
-        </td>
-    </tr>
 </table>
 </div>
 <div><pdf:nextpage /></div>
