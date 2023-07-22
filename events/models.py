@@ -336,11 +336,6 @@ class BaseEvent(PolymorphicModel):
         end_plus_time = self.datetime_end + datetime.timedelta(days=CCR_DELTA)
         return timezone.now() < end_plus_time
     
-    @property
-    def has_attachment(self):
-        return self.attachments.all()
-    
-    
     @cached_property
     def status(self):
         if self.cancelled:

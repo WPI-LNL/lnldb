@@ -32,9 +32,7 @@
                                 <a class="btn btn-primary" href="{% url "my:hours-list" instance.event.id %}">Crew Hours</a>
                             {% endif %}
                             <a class="btn btn-success" target="_blank" href="https://wpi0.sharepoint.com/sites/gr-lnl/Event%20Photos/Forms/Thumbnails.aspx?view=7&q={{ instance.event.event_name|urlencode }}">Photos</a>
-                            {% if instance.event.has_attachment %}
-                                <a class="btn btn-default" href="{% url "my:event-files" instance.event.id %}">Files</a>
-                            {% endif %}
+                            <a class="btn btn-default" href="{% url "my:event-files" instance.event.id %}">Files</a>
 
                         </div>
                     </td>
