@@ -440,7 +440,7 @@ class SurveyEmailGenerator(DefaultLNLEmailGenerator):
                  subject="Post-event survey for your recent event",
                  to_emails=settings.DEFAULT_TO_ADDR,
                  cc=None,
-                 bcc=[settings.EMAIL_TARGET_VP],
+                 bcc=[settings.EMAIL_TARGET_VP_DB],
                  from_email=settings.DEFAULT_FROM_ADDR,
                  reply_to=None,
                  context=None,

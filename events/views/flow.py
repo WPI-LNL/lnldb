@@ -85,7 +85,7 @@ def approval(request, id):
             if e.contact and e.contact.email:
                 email_body = 'Your event "%s" has been approved!' % event.event_name
                 email = DLEG(subject="Event Approved", to_emails=[e.contact.email], body=email_body,
-                             bcc=[settings.EMAIL_TARGET_VP])
+                             bcc=[settings.EMAIL_TARGET_VP_DB])
                 email.send()
             else:
                 messages.add_message(request, messages.INFO,
@@ -151,7 +151,7 @@ def denial(request, id):
                 email_body = 'Sorry, but your event "%s" has been denied. \n Reason: "%s"' % (
                     event.event_name, event.cancelled_reason)
                 email = DLEG(subject="Event Denied", to_emails=[e.contact.email], body=email_body,
-                             bcc=[settings.EMAIL_TARGET_VP])
+                             bcc=[settings.EMAIL_TARGET_VP_DB])
                 email.send()
             else:
                 messages.add_message(request, messages.INFO,
@@ -772,7 +772,7 @@ def assignattach(request, id):
             event.save()  # for revision to be created
             should_send_email = not event.test_event
             if should_send_email:
-                to = [settings.EMAIL_TARGET_VP]
+                to = [settings.EMAIL_TARGET_VP_DB]
                 if hasattr(event, 'projection') and event.projection \
                         or event.serviceinstance_set.filter(service__category__name='Projection').exists():
                     to.append(settings.EMAIL_TARGET_HP)
