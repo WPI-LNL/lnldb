@@ -22,7 +22,7 @@ import reversion
 if settings.CCR_DAY_DELTA:
     CCR_DELTA = settings.CCR_DAY_DELTA
 else:
-    CCR_DELTA = 7
+    CCR_DELTA = 30
 
 PROJECTIONS = (
     ('16', '16mm'),
