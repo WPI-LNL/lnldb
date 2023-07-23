@@ -493,6 +493,7 @@ DEFAULT_FROM_ADDR = 'WPI Lens and Lights <lnl@wpi.edu>'
 EMAIL_FROM_NOREPLY = "WPI Lens and Lights <lnl-no-reply@wpi.edu>"
 EMAIL_TARGET_P = "lnl-p@wpi.edu"
 EMAIL_TARGET_VP = "lnl-vp@wpi.edu"
+EMAIL_TARGET_VP_DB = "gr-lnl-vp-db@wpi.edu"
 EMAIL_TARGET_S = "lnl-s@wpi.edu"
 EMAIL_TARGET_T = "lnl-t@wpi.edu"
 EMAIL_TARGET_TD = "lnl-td@wpi.edu"

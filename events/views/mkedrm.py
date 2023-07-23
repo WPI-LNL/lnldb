@@ -54,7 +54,7 @@ def eventnew(request, id=None):
             # calculate whether an email should be sent based on the event information *before* saving the form.
             should_send_notification = not instance.test_event
             if should_send_notification:
-                bcc = [settings.EMAIL_TARGET_VP]
+                bcc = [settings.EMAIL_TARGET_VP_DB]
                 if instance.has_projection:
                     bcc.append(settings.EMAIL_TARGET_HP)
 
