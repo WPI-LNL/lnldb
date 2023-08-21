@@ -116,7 +116,7 @@ class BulkCreateForm(forms.Form):
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "GET"
         self.helper.layout = Layout(
-            Field('contact'),
+            Field('client_contact'),
             Field('billing'),
             Field('date_first', css_class="datepick", ),
             Field('date_second', css_class="datepick", ),
@@ -126,7 +126,7 @@ class BulkCreateForm(forms.Form):
         )
         super(BulkCreateForm, self).__init__(*args, **kwargs)
 
-    contact = AutoCompleteSelectField('Users', required=True, plugin_options={
+    client_contact = AutoCompleteSelectField('Users', required=True, plugin_options={
         'position': "{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
     billing = AutoCompleteSelectField('Orgs', required=True, plugin_options={
         'position': "{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
@@ -177,7 +177,7 @@ class DateEntryFormSetBase(forms.Form):
         cat, _ = Category.objects.get_or_create(name="Projection")
         kwargs = {
             'event_name': self.cleaned_data['name'],
-            'contact': contact,
+            'client_contact': client_contact,
             'submitted_by': user,
             'submitted_ip': ip,
             'location': Location.objects.get_or_create(name="Perreault Hall Upper", defaults={'building': building})[0],

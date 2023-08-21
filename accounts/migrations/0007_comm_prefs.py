@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='userpreferences',
             name='event_edited_field_subscriptions',
-            field=multiselectfield.db.fields.MultiSelectField(choices=[('event_name', 'Event name'), ('description', 'Description'), ('location', 'Location'), ('contact', 'Contact'), ('billing_org', 'Billing org'), ('datetime_setup_complete', 'Datetime setup complete'), ('datetime_start', 'Datetime start'), ('datetime_end', 'Datetime end'), ('internal_notes', 'Internal notes'), ('billed_in_bulk', 'Billed in bulk'), ('org', 'Client')], default=['location', 'datetime_setup_complete', 'datetime_start', 'datetime_end'], max_length=137),
+            field=multiselectfield.db.fields.MultiSelectField(choices=[('event_name', 'Event name'), ('description', 'Description'), ('location', 'Location'), ('lnl_contact', 'LNL Contact'), ('client_contact', 'Client Contact'), ('billing_org', 'Billing org'), ('datetime_setup_complete', 'Datetime setup complete'), ('datetime_start', 'Datetime start'), ('datetime_end', 'Datetime end'), ('internal_notes', 'Internal notes'), ('billed_in_bulk', 'Billed in bulk'), ('org', 'Client')], default=['location', 'datetime_setup_complete', 'datetime_start', 'datetime_end'], max_length=137),
         ),
         migrations.AddField(
             model_name='userpreferences',

@@ -418,6 +418,7 @@ class InternalEventForm(FieldAccessForm):
                 'event_name',
                 'location',
                 Field('description'),
+                'lnl_contact',
                 DynamicFieldContainer('internal_notes'),
                 'billed_in_bulk',
                 'sensitive',
@@ -425,8 +426,8 @@ class InternalEventForm(FieldAccessForm):
                 active=True
             ),
             Tab(
-                'Contact',
-                'contact',
+                'Client Contact',
+                'client_contact',
                 'org',
                 DynamicFieldContainer('billing_org'),
             ),
@@ -506,7 +507,7 @@ class InternalEventForm(FieldAccessForm):
 
         change_owner = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.adjust_event_owner', instance),
-            enable=('contact', 'org')
+            enable=('client_contact', 'org')
         )
 
         change_type = FieldAccessLevel(
@@ -531,7 +532,7 @@ class InternalEventForm(FieldAccessForm):
 
     class Meta:
         model = Event
-        fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org', 'billed_in_bulk', 'contact',
+        fields = ('event_name', 'location', 'description', 'lnl_contact', 'internal_notes', 'billing_org', 'billed_in_bulk', 'client_contact',
                   'org', 'datetime_setup_complete', 'datetime_start', 'datetime_end', 'lighting', 'lighting_reqs',
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs', 'sensitive',
                   'test_event')
@@ -549,7 +550,7 @@ class InternalEventForm(FieldAccessForm):
         group_by_field="building",
         group_label=lambda group: group.name,
     )
-    contact = AutoCompleteSelectField('Users', required=False)
+    client_contact = AutoCompleteSelectField('Users', required=False)
     org = CustomAutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
@@ -568,6 +569,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'location',
                 'reference_code',
                 Field('description'),
+                'lnl_contact',
                 DynamicFieldContainer('internal_notes'),
                 HTML('<div style="width: 50%">'),
                 'max_crew',
@@ -581,8 +583,8 @@ class InternalEventForm2019(FieldAccessForm):
                 active=True
             ),
             Tab(
-                'Contact',
-                'contact',
+                'Client Contact',
+                'client_contact',
                 'org',
                 DynamicFieldContainer('billing_org'),
             ),
@@ -643,7 +645,7 @@ class InternalEventForm2019(FieldAccessForm):
 
         change_owner = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.adjust_event_owner', instance),
-            enable=('contact', 'org', 'reference_code')
+            enable=('client_contact', 'org', 'reference_code')
         )
 
         change_type = FieldAccessLevel(
@@ -688,8 +690,8 @@ class InternalEventForm2019(FieldAccessForm):
 
     class Meta:
         model = Event2019
-        fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org',
-                  'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
+        fields = ('event_name', 'location', 'description', 'lnl_contact', 'internal_notes', 'billing_org',
+                  'billed_in_bulk', 'client_contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'sensitive', 'test_event',
                   'entered_into_workday', 'send_survey', 'max_crew','cancelled_reason',
                   'reference_code')
@@ -704,7 +706,7 @@ class InternalEventForm2019(FieldAccessForm):
         group_by_field="building",
         group_label=lambda group: group.name,
     )
-    contact = AutoCompleteSelectField('Users', required=False)
+    client_contact = AutoCompleteSelectField('Users', required=False)
     org = CustomAutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
@@ -1111,8 +1113,8 @@ class BillingEmailForm(forms.ModelForm):
         orgs = billing.event.org.all()
         self.fields["email_to_orgs"].queryset = orgs
         self.fields["email_to_orgs"].initial = orgs
-        if billing.event.contact:
-            self.fields["email_to_users"].initial = [billing.event.contact.pk]
+        if billing.event.client_contact:
+            self.fields["email_to_users"].initial = [billing.event.client_contact.pk]
         self.helper = FormHelper()
         self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
@@ -1172,7 +1174,7 @@ class MultiBillingEmailForm(forms.ModelForm):
         for orgset in orgsets:
             orgs |= orgset
         orgs = orgs.distinct()
-        contacts = map(lambda event: event.contact.pk, multibilling.events.filter(contact__isnull=False))
+        contacts = map(lambda event: event.client_contact.pk, multibilling.events.filter(client_contact__isnull=False))
         self.fields["email_to_orgs"].queryset = orgs
         self.fields["email_to_orgs"].initial = multibilling.org
         self.fields["email_to_users"].initial = contacts

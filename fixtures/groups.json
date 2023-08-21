@@ -982,7 +982,7 @@
   "model": "auth.group",
   "pk": 7,
   "fields": {
-    "name": "Contact",
+    "name": "Client Contact",
     "permissions": []
   }
 },
