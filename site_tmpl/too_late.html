@@ -1,18 +1,13 @@
 {% extends 'base_admin.html' %}
-{% block title %}Too Late! | Lens and Lights at WPI{% endblock %}
+{% block title %}Cannot Edit Report | Lens and Lights at WPI{% endblock %}
 {% block content %}
-<h1>Too Late!</h1>
+<h1>Cannot Edit Report</h1>
 <p>
-    It has been more than {{ days }} days since the end of {{ event.event_name }}, so the deadline for
-    entering crew chief reports and crew hours has passed. In the future, we encourage you to submit a crew chief
-    report shortly after an event while you still have all details of the event fresh in your mind. Delaying submitting
-    your crew chief report directly delays the billing of this event because your report allows those responsible for
-    billing the event to know what work was actually done and equipment was actually used, so that the event can be
-    billed accordingly.
+    It has been more than {{ days }} days since the end of {{ event.event_name }}, so the Vice President will have
+    already used existing crew cheif reports to evaluate the billing of this event. If you have edits you would like
+    to make to your report please contact the VP directly (at lnl-vp@wpi.edu) who can make the changes. 
 </p>
 <p>
-    Despite this, we still urge you to submit a crew chief report for this event! Please send it to a member of the
-    executive board (or to lnl@wpi.edu), who will upload it to the database for you. These reports are invaluable
-    to future LNL members, and we thank you in advance for filling one out and sending it to us!
+    These reports are invaluable to future LNL members, and we thank you for taking the time to write one!
 </p>
 {% endblock %}
