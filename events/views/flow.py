@@ -82,6 +82,7 @@ def approval(request, id):
                 set_revision_comment("Approved", form)
             # confirm with user and notify VP
             messages.add_message(request, messages.INFO, 'Approved Event: No longer auto notifying clients. Please give them the good news!')
+            email_body = '"%s" has been approved!' % event.event_name
             email = DLEG(subject="Event Approved", to_emails=[settings.EMAIL_TARGET_VP_DB], body=email_body)
             email.send()
                 
