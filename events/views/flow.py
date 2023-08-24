@@ -80,17 +80,11 @@ def approval(request, id):
                 e.org.get().associated_users.add(e.contact)
             else:
                 set_revision_comment("Approved", form)
-            # confirm with user
-            messages.add_message(request, messages.INFO, 'Approved Event')
-            if e.contact and e.contact.email:
-                email_body = 'Your event "%s" has been approved!' % event.event_name
-                email = DLEG(subject="Event Approved", to_emails=[e.contact.email], body=email_body,
-                             bcc=[settings.EMAIL_TARGET_VP_DB])
-                email.send()
-            else:
-                messages.add_message(request, messages.INFO,
-                                     'No contact info on file for approval. Please give them the good news!')
-
+            # confirm with user and notify VP
+            messages.add_message(request, messages.INFO, 'Approved Event: No longer auto notifying clients. Please give them the good news!')
+            email = DLEG(subject="Event Approved", to_emails=[settings.EMAIL_TARGET_VP_DB], body=email_body)
+            email.send()
+                
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
         else:
             context['form'] = form
