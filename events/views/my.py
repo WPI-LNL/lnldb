@@ -16,7 +16,7 @@ from django.template import loader
 from emails.generators import generate_selfservice_notice_email
 from events.forms import (EditHoursForm, InternalReportForm, MKHoursForm,
                           SelfServiceOrgRequestForm, PostEventSurveyForm, OfficeHoursForm)
-from events.models import CCReport, BaseEvent, Event, Hours, PostEventSurvey, CCR_DELTA, OfficeHour
+from events.models import CCReport, BaseEvent, Event, Hours, PostEventSurvey, OfficeHour
 from helpers.mixins import LoginRequiredMixin
 from helpers.revision import set_revision_comment
 from helpers.util import curry_class
@@ -118,8 +118,6 @@ def ccreport(request, eventid):
         return HttpResponse("This event must not have been yours, or is closed")
 
     event = uevent[0].event
-    if not event.reports_editable:
-        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
 
     # get event
     x = event.ccinstances.filter(crew_chief=user)
@@ -184,9 +182,6 @@ def hours_mk(request, eventid):
         # New event - redirect to bulk update tool instead
         return HttpResponseRedirect(reverse("my:hours-bulk", args=(event.id,)))
 
-    if not event.reports_editable:
-        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
-
     context['msg'] = "Hours for '%s'" % event.event_name
     if request.method == 'POST':
         formset = MKHoursForm(event, request.POST)
@@ -212,8 +207,6 @@ def hours_edit(request, eventid, userid):
         return HttpResponse("You must not have cc'd this event, or it's closed")
 
     event = uevent[0].event
-    if not event.reports_editable:
-        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
 
     hours = get_object_or_404(Hours, event=event, user_id=userid)
     u = get_object_or_404(get_user_model(), pk=userid)
@@ -242,9 +235,6 @@ def hours_bulk(request, eventid):
         return HttpResponse("You must not have cc'd this event, or it's closed")
 
     event = uevent[0].event
-    if not event.reports_editable:
-        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
-
     context['msg'] = "Bulk Hours Entry"
 
     context['event'] = event

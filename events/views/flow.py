@@ -84,16 +84,12 @@ def approval(request, id):
                 e.org.get().associated_users.add(e.client_contact)
             else:
                 set_revision_comment("Approved", form)
-            # confirm with user
-            messages.add_message(request, messages.INFO, 'Approved Event')
-            if e.client_contact and e.client_contact.email:
-                email_body = 'Your event "%s" has been approved!' % event.event_name
-                email = DLEG(subject="Event Approved", to_emails=[e.client_contact.email], body=email_body,
-                             bcc=[settings.EMAIL_TARGET_VP_DB])
-                email.send()
-            else:
-                messages.add_message(request, messages.INFO,
-                                     'No contact info on file for approval. Please give them the good news!')
+
+            # confirm with user and notify VP
+            messages.add_message(request, messages.INFO, 'Approved Event: No longer auto notifying clients. Please give them the good news!')
+            email_body = '"%s" has been approved!' % event.event_name
+            email = DLEG(subject="Event Approved", to_emails=[settings.EMAIL_TARGET_VP_DB], body=email_body)
+            email.send()
 
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
         else:
@@ -427,11 +423,8 @@ def hours_bulk_admin(request, id):
     context = {'msg': "Bulk Hours Entry"}
 
     event = get_object_or_404(BaseEvent, pk=id)
-    if not event.reports_editable and not request.user.has_perm('events.edit_event_hours') and \
-            request.user.has_perm('events.edit_event_hours', event):
-        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
     if not (request.user.has_perm('events.edit_event_hours') or
-            request.user.has_perm('events.edit_event_hours', event) and event.reports_editable):
+            request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
     if event.closed:
         messages.add_message(request, messages.ERROR, 'Event is closed.')
@@ -1102,13 +1095,10 @@ class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, Login
 
     def dispatch(self, request, *args, **kwargs):
         self.event = get_object_or_404(BaseEvent, pk=kwargs['event'])
-        if not self.event.reports_editable and not request.user.has_perm(self.perms) and \
-                request.user.has_perm(self.perms, self.event):
-            return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': self.event})
         return super(CCRCreate, self).dispatch(request, *args, **kwargs)
 
     def user_passes_test(self, request, *args, **kwargs):
-        return self.event.reports_editable and request.user.has_perm(self.perms, self.event)
+        return request.user.has_perm(self.perms, self.event)
 
     def get_form_kwargs(self):
         kwargs = super(CCRCreate, self).get_form_kwargs()
@@ -1123,7 +1113,7 @@ class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, Login
         return reverse("events:detail", args=(self.kwargs['event'],))
 
 
-class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
+class CCRUpdate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, LoginRequiredMixin, UpdateView):
     """ Update an existing crew chief report """
     model = CCReport
     form_class = InternalReportForm

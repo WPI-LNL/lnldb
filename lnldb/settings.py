@@ -484,8 +484,8 @@ SPECTACULAR_SETTINGS = {
 # Number of hours to show on the admin landing
 LANDING_TIMEDELTA = 72
 
-# Number of days to pass before crew chief reports are locked
-CCR_DAY_DELTA = 14
+# Number of days to pass before crew chief reports are no longer editable
+CCR_DAY_DELTA = 30
 
 # email stuff
 DEFAULT_TO_ADDR = "lnl@wpi.edu"

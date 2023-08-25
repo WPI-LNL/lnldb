@@ -80,17 +80,17 @@ class MyViewTest(ViewTestCase):
         l1 = Lighting.objects.create(shortname="L1", longname="Lighting", base_cost=1000.00, addtl_cost=1.00,
                                      category=category)
 
-        # Check if it is too late
+        # Check that lateness doesn't matter
         self.e.lighting = l1
         self.e.datetime_end = timezone.now() - timezone.timedelta(days=30)
         self.e.save()
 
-        self.assertContains(self.client.get(reverse("my:hours-new", args=[self.e.pk])), "Too Late")
+        self.assertNotContains(self.client.get(reverse("my:hours-new", args=[self.e.pk])), "Cannot Edit Report")
 
         self.e.datetime_end = timezone.now()
         self.e.save()
 
-        self.assertNotContains(self.client.get(reverse("my:hours-new", args=[self.e.pk])), "Too Late")
+        self.assertNotContains(self.client.get(reverse("my:hours-new", args=[self.e.pk])), "Cannot Edit Report")
 
         # Check valid post
         valid_data = {
@@ -114,17 +114,17 @@ class MyViewTest(ViewTestCase):
         l1 = Lighting.objects.create(shortname="L2", longname="More Lighting", base_cost=1000.00, addtl_cost=1.00,
                                      category=category)
 
-        # Check if it is too late
+        # Check that lateness doesn't matter
         self.e.lighting = l1
         self.e.datetime_end = timezone.now() - timezone.timedelta(days=30)
         self.e.save()
 
-        self.assertContains(self.client.get(reverse("my:hours-edit", args=[self.e.pk, self.user.pk])), "Too Late")
+        self.assertNotContains(self.client.get(reverse("my:hours-edit", args=[self.e.pk, self.user.pk])), "Cannot Edit Report")
 
         self.e.datetime_end = timezone.now()
         self.e.save()
 
-        self.assertNotContains(self.client.get(reverse("my:hours-edit", args=[self.e.pk, self.user.pk])), "Too Late")
+        self.assertNotContains(self.client.get(reverse("my:hours-edit", args=[self.e.pk, self.user.pk])), "Cannot Edit Report")
 
         # Check valid post
         valid_data = {"hours": 5.00, "save": "Save Changes"}
@@ -146,12 +146,12 @@ class MyViewTest(ViewTestCase):
         self.e.datetime_end = timezone.now() - timezone.timedelta(days=30)
         self.e.save()
 
-        self.assertContains(self.client.get(reverse("my:hours-bulk", args=[self.e.pk])), "Too Late")
+        self.assertNotContains(self.client.get(reverse("my:hours-bulk", args=[self.e.pk])), "Cannot Edit Report")
 
         self.e.datetime_end = timezone.now()
         self.e.save()
 
-        self.assertNotContains(self.client.get(reverse("my:hours-bulk", args=[self.e.pk])), "Too Late")
+        self.assertNotContains(self.client.get(reverse("my:hours-bulk", args=[self.e.pk])), "Cannot Edit Report")
 
         # Check valid post
         event_data = {

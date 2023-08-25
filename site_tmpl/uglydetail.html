@@ -217,7 +217,9 @@
                         </tr>
                         <tr>
                             <th>Event Contact Email</th>
-                            <td>{{ event.client_contact.email }}</td>
+
+                            <td><a href="mailto:{{ event.contact.email }}">{{ event.contact.email }}</a></td>
+
                         </tr>
                         <tr>
                             <th>Location</th>

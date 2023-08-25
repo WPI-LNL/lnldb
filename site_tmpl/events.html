@@ -173,7 +173,7 @@
 
                         {% elif field.name == 'tasks' %}
                             <td class="tasks">
-                                {% if event.approved and event.reports_editable %}
+                                {% if event.approved %}
                                     <span class="crewtask"><a href="{% url "events:add-crew" event.id %}">Crew</a></span>
                                 {% endif %}
                                 {% if event.approved and not event.reviewed and event.crew_needing_reports %}
