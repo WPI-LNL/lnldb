@@ -170,7 +170,7 @@ class EventManager(models.Manager):
 
         event = self.create(
             submitted_by=wiz.request.user,
-            contact=wiz.request.user,
+            client_contact=wiz.request.user,
             submitted_ip=wiz.request.META['REMOTE_ADDR'],
             event_name=event_name,
 
@@ -243,7 +243,7 @@ class BaseEvent(PolymorphicModel):
     event_name = models.CharField(max_length=128, db_index=True)
     description = models.TextField(null=True, blank=True)
     location = models.ForeignKey('Location', on_delete=models.PROTECT)
-    contact = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Contact", related_name="contact")
+    client_contact = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Client Contact", related_name="client_contact")
     org = models.ManyToManyField('Organization', blank=True, verbose_name="Client", related_name='events')
     billing_org = models.ForeignKey('Organization', on_delete=models.PROTECT, null=True, blank=True, related_name="billedevents")
 
@@ -523,23 +523,23 @@ class Event(BaseEvent):
 
     @property
     def contact_name(self):
-        if self.contact:
-            return str(self.contact)
+        if self.client_contact:
+            return str(self.client_contact)
 
     @property
     def contact_phone(self):
-        if self.contact:
-            return self.contact.phone
+        if self.client_contact:
+            return self.client_contact.phone
 
     @property
     def contact_email(self):
-        if self.contact:
-            return self.contact.email
+        if self.client_contact:
+            return self.client_contact.email
 
     @property
     def contact_addr(self):
-        if self.contact:
-            return self.contact.addr
+        if self.client_contact:
+            return self.client_contact.addr
 
             # def clean(self):
             # if self.datetime_start > self.datetime_end:

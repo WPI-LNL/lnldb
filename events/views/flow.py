@@ -23,11 +23,15 @@ from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator
                                DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
 from slack.views import cc_report_reminder
 from slack.api import lookup_user, slack_post
-from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
-                          MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
-                          EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
-                          BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
-                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm)
+from events.forms import (
+    # AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
+#                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
+#                           EventDenialForm, EventReviewForm, ExtraForm, 
+InternalReportForm
+# , MKHoursForm,
+#                           BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
+#                           CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm
+)
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
                            ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord)
@@ -74,18 +78,19 @@ def approval(request, id):
             if is_event2019:
                 services_formset.save()
             # Automatically add the event contact to the client (if the event has only one client)
-            if e.contact is not None and e.org.count() == 1 and e.contact not in e.org.get().associated_users.all():
+            if e.client_contact is not None and e.org.count() == 1 and e.client_contact not in e.org.get().associated_users.all():
                 set_revision_comment("Approved {}. Event contact {} automatically added to {}.".format(
-                    e.event_name, e.contact, e.org.get()), form)
-                e.org.get().associated_users.add(e.contact)
+                    e.event_name, e.client_contact, e.org.get()), form)
+                e.org.get().associated_users.add(e.client_contact)
             else:
                 set_revision_comment("Approved", form)
+
             # confirm with user and notify VP
             messages.add_message(request, messages.INFO, 'Approved Event: No longer auto notifying clients. Please give them the good news!')
             email_body = '"%s" has been approved!' % event.event_name
             email = DLEG(subject="Event Approved", to_emails=[settings.EMAIL_TARGET_VP_DB], body=email_body)
             email.send()
-                
+
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
         else:
             context['form'] = form
@@ -142,10 +147,10 @@ def denial(request, id):
             e.save()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Denied Event')
-            if e.contact and e.contact.email:
+            if e.client_contact and e.client_contact.email:
                 email_body = 'Sorry, but your event "%s" has been denied. \n Reason: "%s"' % (
                     event.event_name, event.cancelled_reason)
-                email = DLEG(subject="Event Denied", to_emails=[e.contact.email], body=email_body,
+                email = DLEG(subject="Event Denied", to_emails=[e.client_contact.email], body=email_body,
                              bcc=[settings.EMAIL_TARGET_VP_DB])
                 email.send()
             else:
@@ -326,8 +331,8 @@ def cancel(request, id):
     event.cancelled_on = timezone.now()
     event.save()
 
-    if event.contact and event.contact.email:
-        targets = [event.contact.email]
+    if event.client_contact and event.client_contact.email:
+        targets = [event.client_contact.email]
     else:
         targets = []
 

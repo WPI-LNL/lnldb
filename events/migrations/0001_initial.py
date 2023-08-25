@@ -432,8 +432,8 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='baseevent',
-            name='contact',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to=settings.AUTH_USER_MODEL, verbose_name='Contact'),
+            name='client_contact',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to=settings.AUTH_USER_MODEL, verbose_name='Client Contact'),
         ),
         migrations.AddField(
             model_name='baseevent',

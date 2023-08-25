@@ -200,18 +200,26 @@
                             <td>{{ event.description|markdown }}</td>
                         </tr>
                         <tr>
+                            <th>LNL Contact</th>
+                            <td>{% if event.lnl_contact %}
+                                <a href="{% url "accounts:detail" event.lnl_contact.id %}">{{ event.lnl_contact.get_full_name }}</a>
+                                {% else %}{{ event.lnl_contact }} {% endif %}</td>
+                        </tr>
+                        <tr>
                             <th>Event Contact Name</th>
-                            <td>{% if event.contact %}
-                                <a href="{% url "accounts:detail" event.contact.id %}">{{ event.contact.get_full_name }}</a>
-                                {% else %}{{ event.contact }} {% endif %}</td>
+                            <td>{% if event.client_contact %}
+                                <a href="{% url "accounts:detail" event.client_contact.id %}">{{ event.client_contact.get_full_name }}</a>
+                                {% else %}{{ event.client_contact }} {% endif %}</td>
                         </tr>
                         <tr>
                             <th>Event Contact Phone</th>
-                            <td>{{ event.contact.phone }}</td>
+                            <td>{{ event.client_contact.phone }}</td>
                         </tr>
                         <tr>
                             <th>Event Contact Email</th>
+
                             <td><a href="mailto:{{ event.contact.email }}">{{ event.contact.email }}</a></td>
+
                         </tr>
                         <tr>
                             <th>Location</th>

@@ -190,7 +190,7 @@ class EventBasicViewTest(ViewTestCase):
         self.assertTrue(self.e.cancelled)
 
         # Test with event contact
-        self.e.contact = self.user
+        self.e.client_contact = self.user
         self.e.save()
         self.assertRedirects(self.client.post(reverse("events:cancel", args=[self.e.pk])),
                              reverse("events:detail", args=[self.e.pk]))
@@ -242,7 +242,7 @@ class EventBasicViewTest(ViewTestCase):
         # Check with email
         self.e.cancelled = False
         self.e.closed = False
-        self.e.contact = self.user
+        self.e.client_contact = self.user
         self.e.save()
         self.assertRedirects(self.client.post(reverse("events:deny", args=[self.e.pk])),
                              reverse("events:detail", args=[self.e.pk]))
@@ -365,7 +365,7 @@ class EventBasicViewTest(ViewTestCase):
         self.assertTrue(self.e3.approved)
 
         self.e3.approved = False
-        self.e3.contact = self.user
+        self.e3.client_contact = self.user
         org = OrgFactory.create(name="LNL")
         org.delinquent = True
         valid_data['org'] = str(org.pk)

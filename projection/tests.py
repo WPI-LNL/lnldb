@@ -274,7 +274,7 @@ class ProjViewTest(ViewTestCase):
         self.assertOk(self.client.get(reverse("projection:add-movies")))
 
         invalid_details = {
-            'contact': '',
+            'client_contact': '',
             'billing': '',
             'date_first': '',
             'date_second': '',
@@ -289,7 +289,7 @@ class ProjViewTest(ViewTestCase):
         org.save()
 
         valid_details = {
-            'contact': str(self.user.pk),
+            'client_contact': str(self.user.pk),
             'billing': str(org.pk),
             'date_first': timezone.datetime.today().date(),
             'date_second': timezone.datetime.today().date() + timezone.timedelta(days=14),
@@ -356,7 +356,7 @@ class ProjViewTest(ViewTestCase):
         }
         empty_formset = formset(data=empty_data)
         for form in empty_formset:
-            output = form.save_objects(user=self.user, contact=self.user, org=org, ip=None)
+            output = form.save_objects(user=self.user, client_contact=self.user, org=org, ip=None)
             self.assertEqual(output, [])
 
         # Give permissions to approve event
