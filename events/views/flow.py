@@ -142,15 +142,17 @@ def denial(request, id):
             e.save()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Denied Event')
-            if e.contact and e.contact.email:
+            if e.contact and e.contact.email and form.cleaned_data['send_email']:
                 email_body = 'Sorry, but your event "%s" has been denied. \n Reason: "%s"' % (
                     event.event_name, event.cancelled_reason)
                 email = DLEG(subject="Event Denied", to_emails=[e.contact.email], body=email_body,
                              bcc=[settings.EMAIL_TARGET_VP_DB])
                 email.send()
-            else:
+            elif (not e.contact or not e.contact.email):
                 messages.add_message(request, messages.INFO,
-                                     'No contact info on file for denial. Please give them the bad news.')
+                                     'Event Denied. No contact info on file for denial. Please give them the bad news.')
+            else:
+                messages.add_message(request, messages.INFO, 'Event Denied. No email sent.')
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
     form = EventDenialForm(instance=event)
     context['form'] = form
