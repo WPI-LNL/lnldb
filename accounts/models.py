@@ -228,6 +228,7 @@ event_fields = [
     ('description', 'Description'),
     ('location', 'Location'),
     ('contact', 'Contact'),
+    ('lnl_contact', 'LNL contact'),
     ('billing_org', 'Billing org'),
     ('datetime_setup_complete', 'Datetime setup complete'),
     ('datetime_start', 'Datetime start'),
