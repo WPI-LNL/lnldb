@@ -16,8 +16,8 @@
             Ended: {{ event.datetime_end }}
         </h3>
         <h2>
-            Client Contact: {% if event.client_contact %}
-            <a href="{% url "accounts:detail" event.client_contact.id %}">{{ event.client_contact.get_full_name }}</a>
+            Client Contact: {% if event.contact %}
+            <a href="{% url "accounts:detail" event.contact.id %}">{{ event.contact.get_full_name }}</a>
             {% else %}No Client Contact Set {% endif %}
         </h2>
     </div>

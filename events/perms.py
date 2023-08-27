@@ -73,7 +73,7 @@ class CrewChiefSurveyPerms(AssocUsersCustomPermissionLogic):
 
 
 class EventContactPermLogic(AssocUsersCustomPermissionLogic):
-    field_name = 'client_contact'
+    field_name = 'contact'
     perms = ('events.view_events', 'events.event_images', 'events.cancel_event',
              'events.event_attachments', 'events.edit_event_times',
              'events.add_event_report', 'events.edit_event_text',

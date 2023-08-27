@@ -145,7 +145,7 @@ class EmailTestCase(ViewTestCase):
         self.event1.datetime_end = timezone.now() + timezone.timedelta(days=-1)
         self.event1.approved = True
         self.event1.send_survey = True
-        self.event1.client_contact = self.user
+        self.event1.contact = self.user
         self.event1.save()
 
         generators.send_survey_if_necessary(self.event1)

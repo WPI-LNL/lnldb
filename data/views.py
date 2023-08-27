@@ -132,7 +132,7 @@ def workorderwizard_submit(request):
     event = events_models.Event2019()
     event.submitted_by = request.user
     event.submitted_ip = request.META.get('REMOTE_ADDR')
-    event.client_contact = request.user
+    event.contact = request.user
     event.event_name = data['event_name']
     if 'description' in data:
         event.description = data['description']

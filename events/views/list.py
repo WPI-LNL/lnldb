@@ -722,7 +722,7 @@ def awaitingworkday(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['takes_param_projection'] = True
     context['cols'] = [FakeField('cost_total', verbose_name='Extended Amount'),
-                       FakeField('client_contact', verbose_name='Requester'),
+                       FakeField('contact', verbose_name='Requester'),
                        FakeExtendedField('datetime_start', verbose_name="Event Time"),
                        FakeField('workday_memo', verbose_name='Memo'), 'org', 'workday_fund', 'worktag',
                        'workday_form_comments', FakeField('bill'), FakeField('tasks')]
