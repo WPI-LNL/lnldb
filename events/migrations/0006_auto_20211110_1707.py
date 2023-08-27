@@ -16,6 +16,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='baseevent',
             name='contact',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='contact', to=settings.AUTH_USER_MODEL, verbose_name='Client Contact'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='contact', to=settings.AUTH_USER_MODEL, verbose_name='Contact'),
         ),
     ]

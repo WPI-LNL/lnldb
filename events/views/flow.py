@@ -24,13 +24,11 @@ from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator
 from slack.views import cc_report_reminder
 from slack.api import lookup_user, slack_post
 from events.forms import (
-    # AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
-#                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
-#                           EventDenialForm, EventReviewForm, ExtraForm, 
-InternalReportForm
-# , MKHoursForm,
-#                           BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
-#                           CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm
+    AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
+                          MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
+                          EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
+                          BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
+                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm
 )
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
