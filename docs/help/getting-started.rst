@@ -37,8 +37,6 @@ Depending on your level of involvement with LNL the following Quick Links may be
 +------------+------------------------------------------------+--------------------+
 | Snipe      | LNL's equipment inventory management system    | Active LNL members |
 +------------+------------------------------------------------+--------------------+
-| RT         | LNL's ticketing system for tracking repairs    | Executive Officers |
-+------------+------------------------------------------------+--------------------+
 
 
 Where to Find Help
