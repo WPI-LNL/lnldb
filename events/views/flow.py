@@ -23,11 +23,13 @@ from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator
                                DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
 from slack.views import cc_report_reminder
 from slack.api import lookup_user, slack_post
-from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
+from events.forms import (
+    AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
                           BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
-                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm)
+                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm
+)
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
                            ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord)
@@ -80,12 +82,13 @@ def approval(request, id):
                 e.org.get().associated_users.add(e.contact)
             else:
                 set_revision_comment("Approved", form)
+
             # confirm with user and notify VP
             messages.add_message(request, messages.INFO, 'Approved Event: No longer auto notifying clients. Please give them the good news!')
             email_body = '"%s" has been approved!' % event.event_name
             email = DLEG(subject="Event Approved", to_emails=[settings.EMAIL_TARGET_VP_DB], body=email_body)
             email.send()
-                
+
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
         else:
             context['form'] = form
