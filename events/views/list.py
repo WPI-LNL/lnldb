@@ -367,7 +367,7 @@ def openworkorders(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:open-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name', 'org', 'location', 'crew_chief',
+    context['cols'] = ['event_name', 'org', 'location', 'crew_chief', FakeField('lnl_contact', verbose_name='LNL Contact'),
                        FakeExtendedField('datetime_start', verbose_name="Starting At"),
                        FakeField('short_services', verbose_name="Services", sortable=False), FakeField('tasks')]
     response = generate_response(request, context, start, end, time_range_unspecified)
