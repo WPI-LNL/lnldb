@@ -1,5 +1,6 @@
 {% extends 'base_admin.html' %}
 {% load get_attribute %}
+{% load lnldb_tags %}
 {% load append_get %}
 {% load permissionif %}
 {% block extras %}
@@ -84,7 +85,7 @@
             <tr>
                 <td class="hide eventselect"></td>
                 {% for field in cols %}
-                    <th>{{ field.verbose_name | title }}
+                    <th>{{ field.verbose_name | title | lnl_caps}}
                         {% if field.favicon %}
                             <span class="glyphicon glyphicon-{{ field.favicon }}" aria-hidden="true"></span>
                         {% endif %}
