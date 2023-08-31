@@ -151,6 +151,14 @@
                                 {% endif %}
                             </td>
 
+                        {% elif field.name == 'lnl_contact' %}
+                            <td class="event-lnl_contact">
+                                {% if event.lnl_contact %}{% permission request.user has 'accounts.view_member' %} 
+                                    <a href="{% url "accounts:detail" event.lnl_contact.id %}">
+                                {% endpermission %}{% endif %}
+                                {{ event.lnl_contact.get_full_name }}
+                                {% if event.lnl_contact %}{% permission request.user has 'accounts.view_member' %} </a>{% endpermission %}{% endif %}
+                            </td>
                         {% elif field.name == 'lighting' %}
                             <td class="event-lighting">
                                 {% if event.lighting %} {{ event.lighting.shortname }} {% endif %}
