@@ -420,6 +420,7 @@ class InternalEventForm(FieldAccessForm):
                 'Name And Location',
                 'event_name',
                 'location',
+                'lnl_contact',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
                 'billed_in_bulk',
@@ -532,9 +533,14 @@ class InternalEventForm(FieldAccessForm):
             enable=('sensitive', 'test_event')
         )
 
+        change_lnl_contact = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_lnl_contact', instance),
+            enable=('lnl_contact')
+        )
+
     class Meta:
         model = Event
-        fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org', 'billed_in_bulk', 'contact',
+        fields = ('event_name', 'location', 'lnl_contact', 'description', 'internal_notes', 'billing_org', 'billed_in_bulk', 'contact',
                   'org', 'datetime_setup_complete', 'datetime_start', 'datetime_end', 'lighting', 'lighting_reqs',
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs', 'sensitive',
                   'test_event')
@@ -553,6 +559,7 @@ class InternalEventForm(FieldAccessForm):
         group_label=lambda group: group.name,
     )
     contact = AutoCompleteSelectField('Users', required=False)
+    lnl_contact = AutoCompleteSelectField('Members', required=False)
     org = CustomAutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
@@ -569,6 +576,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'Name And Location',
                 'event_name',
                 'location',
+                'lnl_contact',
                 'reference_code',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
@@ -669,6 +677,11 @@ class InternalEventForm2019(FieldAccessForm):
             enable=('sensitive', 'test_event')
         )
 
+        change_lnl_contact = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_lnl_contact', instance),
+            enable=('lnl_contact')
+        )
+
         change_entered_into_workday = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.bill_event', instance),
             enable=('entered_into_workday',)
@@ -691,7 +704,7 @@ class InternalEventForm2019(FieldAccessForm):
 
     class Meta:
         model = Event2019
-        fields = ('event_name', 'location', 'description', 'internal_notes', 'billing_org',
+        fields = ('event_name', 'location', 'lnl_contact', 'description', 'internal_notes', 'billing_org',
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'sensitive', 'test_event',
                   'entered_into_workday', 'send_survey', 'max_crew','cancelled_reason',
@@ -708,6 +721,7 @@ class InternalEventForm2019(FieldAccessForm):
         group_label=lambda group: group.name,
     )
     contact = AutoCompleteSelectField('Users', required=False)
+    lnl_contact = AutoCompleteSelectField('Members', label="LNL Contact (PM)", required=False)
     org = CustomAutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")

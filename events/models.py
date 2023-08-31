@@ -244,6 +244,7 @@ class BaseEvent(PolymorphicModel):
     description = models.TextField(null=True, blank=True)
     location = models.ForeignKey('Location', on_delete=models.PROTECT)
     contact = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Contact", related_name="contact")
+    lnl_contact = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, verbose_name="LNL Contact", related_name="lnl_contact")
     org = models.ManyToManyField('Organization', blank=True, verbose_name="Client", related_name='events')
     billing_org = models.ForeignKey('Organization', on_delete=models.PROTECT, null=True, blank=True, related_name="billedevents")
 
@@ -457,6 +458,7 @@ class BaseEvent(PolymorphicModel):
             ("adjust_event_owner", "Change the event contact and organization"),
             ("edit_event_hours", "Modify the time sheets"),
             ('edit_event_flags', 'Add flags to an event'),
+            ('edit_event_lnl_contact', 'Change the LNL contact for an event'),
             ("event_view_sensitive", "Show internal notes and other metadata marked as not public"),
             ("approve_event", "Accept an event"),
             ("decline_event", "Decline an event"),

@@ -126,6 +126,11 @@
         "baseevent"
       ],
       [
+        "edit_event_lnl_contact",
+        "events",
+        "baseevent"
+      ],
+      [
         "edit_event_fund",
         "events",
         "baseevent"

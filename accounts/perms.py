@@ -3,7 +3,7 @@ from events.perms import AssocUsersCustomPermissionLogic
 
 class EventUserPermLogic(AssocUsersCustomPermissionLogic):
     field_name = ['submitter__contact', 'submitter__crew_chief', 'submitter__ccinstances__crew_chief',
-                  'event__submitted_by', 'event__crew_chief', 'event__ccinstances__crew_chief',
+                  'event__submitted_by', 'event__lnl_contact', 'event__crew_chief', 'event__ccinstances__crew_chief',
                   'ccinstances__event__submitted_by', 'ccinstances__event__contact', 'ccinstances__event__crew_chief',
                   'crewchiefx__contact', 'crewchiefx__submitted_by', 'crewchiefx__ccinstances__crew_chief',
                   'contact__ccinstances__crew_chief', 'contact__crew_chief', 'contact__submitted_by']
