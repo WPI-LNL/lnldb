@@ -369,16 +369,19 @@ class EventDenialForm(forms.ModelForm):
         self.helper.form_class = "form-horizontal"
         self.helper.layout = Layout(
             Field('cancelled_reason', label="Reason For Cancellation (optional)", css_class="col-md-6"),
-            HTML('Please note that the reason will be included in the cancellation email to the client. <p />'),
+            Field('send_email', css_class=""),
+            HTML('Please note that the reason will be included in the cancellation email to the event contact. <p />'),
             FormActions(
                 Submit('save', 'Deny Event'),
             ),
         )
         super(EventDenialForm, self).__init__(*args, **kwargs)
 
+    send_email = forms.BooleanField(required=False, label="Send Cancellation Email to Event Contact")
+
     class Meta:
         model = BaseEvent
-        fields = ('cancelled_reason',)
+        fields = ['cancelled_reason', 'send_email']
         widgets = {
             'cancelled_reason': PagedownWidget()
         }

@@ -23,11 +23,13 @@ from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator
                                DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
 from slack.views import cc_report_reminder
 from slack.api import lookup_user, slack_post
-from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
+from events.forms import (
+    AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
                           BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
-                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm)
+                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm
+)
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
                            ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord)
@@ -80,12 +82,13 @@ def approval(request, id):
                 e.org.get().associated_users.add(e.contact)
             else:
                 set_revision_comment("Approved", form)
+
             # confirm with user and notify VP
             messages.add_message(request, messages.INFO, 'Approved Event: No longer auto notifying clients. Please give them the good news!')
             email_body = '"%s" has been approved!' % event.event_name
             email = DLEG(subject="Event Approved", to_emails=[settings.EMAIL_TARGET_VP_DB], body=email_body)
             email.send()
-                
+
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
         else:
             context['form'] = form
@@ -142,15 +145,17 @@ def denial(request, id):
             e.save()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Denied Event')
-            if e.contact and e.contact.email:
+            if e.contact and e.contact.email and form.cleaned_data['send_email']:
                 email_body = 'Sorry, but your event "%s" has been denied. \n Reason: "%s"' % (
                     event.event_name, event.cancelled_reason)
                 email = DLEG(subject="Event Denied", to_emails=[e.contact.email], body=email_body,
                              bcc=[settings.EMAIL_TARGET_VP_DB])
                 email.send()
-            else:
+            elif (not e.contact or not e.contact.email):
                 messages.add_message(request, messages.INFO,
-                                     'No contact info on file for denial. Please give them the bad news.')
+                                     'Event Denied. No contact info on file for denial. Please give them the bad news.')
+            else:
+                messages.add_message(request, messages.INFO, 'Event Denied. No email sent.')
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
     form = EventDenialForm(instance=event)
     context['form'] = form
@@ -326,18 +331,21 @@ def cancel(request, id):
     event.cancelled_on = timezone.now()
     event.save()
 
-    if event.contact and event.contact.email:
-        targets = [event.contact.email]
+    if request.POST.get('notify', '') == "on":
+        if event.contact and event.contact.email:
+            targets = [event.contact.email]
+            email_body = 'The event "%s" has been cancelled by %s. If this is incorrect, please contact our vice president ' \
+                    'at lnl-vp@wpi.edu.' % (event.event_name, str(request.user))
+            if request.user.email:
+                email_body = email_body[:-1]
+                email_body += " or try them at %s." % request.user.email
+            email = DLEG(subject="Event Cancelled", to_emails=targets, body=email_body, bcc=[settings.EMAIL_TARGET_VP])
+            email.send()
+            messages.add_message(request, messages.INFO, 'Event Closed and Client Notification Sent')
+        else:
+            messages.add_message(request, messages.INFO, 'Event Closed. Client email not found. Client has not been notified.')
     else:
-        targets = []
-
-    email_body = 'The event "%s" has been cancelled by %s. If this is incorrect, please contact our vice president ' \
-                 'at lnl-vp@wpi.edu.' % (event.event_name, str(request.user))
-    if request.user.email:
-        email_body = email_body[:-1]
-        email_body += " or try them at %s." % request.user.email
-    email = DLEG(subject="Event Cancelled", to_emails=targets, body=email_body, bcc=[settings.EMAIL_TARGET_VP])
-    email.send()
+        messages.add_message(request, messages.INFO, 'Event Closed. Client has not been notified.')
     return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
 

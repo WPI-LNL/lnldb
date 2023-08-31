@@ -131,10 +131,11 @@
                         setups/rentals were done.</p>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                    <button class="btn btn-default" style="float:left" data-dismiss="modal" aria-hidden="true">Go Back</button>
                     <form class="form-inline" action="{% url 'events:cancel' event.id %}" method="post">
                         {% csrf_token %}
-                        <button class="btn btn-primary" type="submit">Cancel Event</button>
+                        <input type="checkbox" name="notify" id="notify" /> <label for="notify">Notify event contact via email</label>
+                        <button class="btn btn-primary" type="submit" style="margin-left: 12px;">Cancel Event</button>
                     </form>
                 </div>
             </div>
@@ -217,7 +218,9 @@
                         </tr>
                         <tr>
                             <th>Event Contact Email</th>
+
                             <td><a href="mailto:{{ event.contact.email }}">{{ event.contact.email }}</a></td>
+
                         </tr>
                         <tr>
                             <th>Location</th>
