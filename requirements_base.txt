@@ -41,7 +41,7 @@ Markdown==3.3.3
 markdown2==2.4.10
 mechanize==0.4.8
 Paste==3.5.0
-Pillow==8.3.2
+Pillow==10.0.0
 #pisa==3.0.33
 pyPdf==1.13
 PyPDF2==1.26.0
