@@ -16,10 +16,10 @@ app_name = 'lnldb'
 # prefix: /db/events
 urlpatterns = [
     # list views
-    url(r'^upcoming/', generate_date_patterns(list_views.upcoming, name="upcoming")),
     url(r'^findchief/', generate_date_patterns(list_views.findchief, name="findchief")),
     url(r'^prerequest/', generate_date_patterns(list_views.prerequest, name="prerequest")),
     url(r'^prospective/', generate_date_patterns(list_views.prospective, name="prospective")),
+    url(r'^incoming/', generate_date_patterns(list_views.incoming, name="incoming")),
     url(r'^confirmed/', generate_date_patterns(list_views.confirmed, name="confirmed")),
     url(r'^open/', generate_date_patterns(list_views.openworkorders, name="open")),
     url(r'^unreviewed/', generate_date_patterns(list_views.unreviewed, name="unreviewed")),
@@ -36,6 +36,7 @@ urlpatterns = [
     url(r'^findchief/calendar/', generate_date_patterns(list_views.findchief_cal, name="findchief-cal")),
     url(r'^prerequest/calendar/', generate_date_patterns(list_views.prerequest_cal, name="prerequest-cal")),
     url(r'^prospective/calendar/', generate_date_patterns(list_views.prospective_cal, name="prospective-cal")),
+    url(r'^incoming/calendar/', generate_date_patterns(list_views.incoming_cal, name="incoming-cal")),
     url(r'^confirmed/calendar/', generate_date_patterns(list_views.confirmed_cal, name="confirmed-cal")),
     url(r'^open/calendar/', generate_date_patterns(list_views.openworkorders_cal, name="open-cal")),
     url(r'^unreviewed/calendar/', generate_date_patterns(list_views.unreviewed_cal, name="unreviewed-cal")),

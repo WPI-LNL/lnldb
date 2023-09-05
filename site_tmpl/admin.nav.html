@@ -50,7 +50,7 @@
                         <li><a href="{% url "events:findchief" %}">Needs a Chief</a></li>
                         {% endpermission %}
                         {% permission request.user has 'events.view_event' %}
-                        <li><a href="{% url "events:upcoming" %}">Upcoming Events</a></li>
+                        <li><a href="{% url "events:incoming" %}">Incoming Events</a></li>
                         <li><a href="{% url "events:confirmed" %}">Confirmed Events</a></li>
                         <li><a href="{% url "events:open" %}">Open Events</a></li>
                         <li><a href="{% url "events:closed" %}">Closed Events</a></li>
