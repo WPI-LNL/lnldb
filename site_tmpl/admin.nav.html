@@ -44,7 +44,7 @@
 
                         {% permission request.user has 'events.approve_event' %}
                         <li><a href="{% url "events:prerequest" %}">Pre-Requests</a></li>
-                        <li><a href="{% url "events:incoming" %}">Incoming Events</a></li>
+                        <li><a href="{% url "events:prospective" %}">Prospective Events</a></li>
                         {% endpermission %}
                         {% permission request.user has 'events.can_chief_event' %}
                         <li><a href="{% url "events:findchief" %}">Needs a Chief</a></li>

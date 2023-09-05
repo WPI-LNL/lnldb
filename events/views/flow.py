@@ -119,7 +119,7 @@ def approval(request, id):
 
 @login_required
 def denial(request, id):
-    """ Deny an incoming event (LNL will not provide services for the event) """
+    """ Deny an prospective event (LNL will not provide services for the event) """
     context = {'msg': "Deny Event"}
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.decline_event', event):
