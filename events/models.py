@@ -241,6 +241,7 @@ class BaseEvent(PolymorphicModel):
     submitted_on = models.DateTimeField(auto_now_add=True, db_index=True)
 
     event_name = models.CharField(max_length=128, db_index=True)
+    event_status = models.CharField(max_length=20, choices=settings.EVENT_STATUSES, default='Prospective')
     description = models.TextField(null=True, blank=True)
     location = models.ForeignKey('Location', on_delete=models.PROTECT)
     contact = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, verbose_name="Contact", related_name="contact")
@@ -455,10 +456,11 @@ class BaseEvent(PolymorphicModel):
             ("view_event_billing", "See financial info for event"),
             ("view_event_reports", "See reports for event"),
             ("edit_event_text", "Update any event descriptions"),
+            ("edit_event_status", "Change the status for an event"),
             ("adjust_event_owner", "Change the event contact and organization"),
             ("edit_event_hours", "Modify the time sheets"),
-            ('edit_event_flags', 'Add flags to an event'),
-            ('edit_event_lnl_contact', 'Change the LNL contact for an event'),
+            ("edit_event_flags", "Add flags to an event"),
+            ("edit_event_lnl_contact", "Change the LNL contact for an event"),
             ("event_view_sensitive", "Show internal notes and other metadata marked as not public"),
             ("approve_event", "Accept an event"),
             ("decline_event", "Decline an event"),

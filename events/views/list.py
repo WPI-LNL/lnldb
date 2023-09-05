@@ -237,6 +237,48 @@ def generate_response(request, context, start, end, time_range_unspecified):
 
 # ## EVENT VIEWS
 @login_required
+@permission_required('events.approve_event', raise_exception=True)
+def prerequest(request, start=None, end=None):
+    """ Lists all prerequest events (client hasn't reached out yet) """
+    context = {}
+
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:prerequest', args=(request.COOKIES.get('start'),
+                                                                         request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:prerequest', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:prerequest', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
+    if not start and not end:
+        today = datetime.date.today()
+        start = today - datetime.timedelta(days=365.25)
+        start = start.strftime('%Y-%m-%d')
+        end = today + datetime.timedelta(days=365.25)
+        end = end.strftime('%Y-%m-%d')
+
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+            and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+
+    events = BaseEvent.objects.filter(event_status="Pre-Request").exclude(Q(closed=True) | Q(cancelled=True)).distinct()
+    events, context = filter_events(request, context, events, start, end, sort='datetime_start')
+
+    context['h2'] = "Pre-Requests"
+    context['events'] = events
+    context['baseurl'] = reverse("events:prerequest")
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
+    context['calurl'] = reverse('events:prerequest-cal')
+    context['takes_param_projection'] = True
+    context['cols'] = ['event_name', 'org', 'location', FakeField('lnl_contact', verbose_name='LNL Contact'),
+                       'submitted_on', FakeExtendedField('datetime_start', verbose_name="Starts At"),
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    response = generate_response(request, context, start, end, time_range_unspecified)
+    return response
+
+@login_required
 @permission_required('events.view_events', raise_exception=True)
 def upcoming(request, start=None, end=None):
     """
@@ -325,6 +367,13 @@ def incoming(request, start=None, end=None):
     response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
+@login_required
+@permission_required('events.approve_event', raise_exception=True)
+def prerequest_cal(request, start=None, end=None):
+    """ Calendar view of prerequests """
+    context = {'h2': "Pre-Requests", 'listurl': reverse('events:prerequest'),
+               'bootcal_endpoint': reverse('cal:api-prerequest')}
+    return render(request, 'events_cal.html', context)
 
 @login_required
 @permission_required('events.approve_event', raise_exception=True)

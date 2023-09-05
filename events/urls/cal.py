@@ -12,6 +12,7 @@ urlpatterns = [
     url(r'^feed_light.ics$', cal.LightEventFeed(), name='feed-light'),
     url(r'^json/public(/*?.*)*$', cal.PublicFacingCalJsonView.as_view(), name="api-public"),
     url(r'^json/findchief(/*?.*)*$', cal.FindChiefCalJsonView.as_view(), name="api-findchief"),
+    url(r'^json/prerequest(/*?.*)*$', cal.IncomingCalJsonView.as_view(), name="api-prerequest"),
     url(r'^json/incoming(/*?.*)*$', cal.IncomingCalJsonView.as_view(), name="api-incoming"),
     url(r'^json/open(/*?.*)*$', cal.OpenCalJsonView.as_view(), name="api-open"),
     url(r'^json/unreviewed(/*?.*)*$', cal.UnreviewedCalJsonView.as_view(), name="api-unreviewed"),
