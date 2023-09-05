@@ -14,6 +14,7 @@ urlpatterns = [
     url(r'^json/findchief(/*?.*)*$', cal.FindChiefCalJsonView.as_view(), name="api-findchief"),
     url(r'^json/prerequest(/*?.*)*$', cal.IncomingCalJsonView.as_view(), name="api-prerequest"),
     url(r'^json/incoming(/*?.*)*$', cal.IncomingCalJsonView.as_view(), name="api-incoming"),
+    url(r'^json/confirmed(/*?.*)*$', cal.IncomingCalJsonView.as_view(), name="api-confirmed"),
     url(r'^json/open(/*?.*)*$', cal.OpenCalJsonView.as_view(), name="api-open"),
     url(r'^json/unreviewed(/*?.*)*$', cal.UnreviewedCalJsonView.as_view(), name="api-unreviewed"),
     url(r'^json/unbilled(/*?.*)*$', cal.UnbilledCalJsonView.as_view(), name="api-unbilled"),
