@@ -225,6 +225,7 @@ class PhoneVerificationCode(Model):
 
 event_fields = [
     ('event_name', 'Event name'),
+    ('event_status', 'Status'),
     ('description', 'Description'),
     ('location', 'Location'),
     ('contact', 'Contact'),

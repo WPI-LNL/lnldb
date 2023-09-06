@@ -146,6 +146,11 @@
         "baseevent"
       ],
       [
+        "edit_event_status",
+        "events",
+        "baseevent"
+      ],
+      [
         "edit_event_times",
         "events",
         "baseevent"

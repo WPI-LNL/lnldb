@@ -53,8 +53,10 @@
                         <hr>
                         <ul class="nav nav-pills">
                             <li class="disabled"><a href="#">View This Range as</a></li>
+                            <li><a href="{% url "events:prerequest" start end %}{% append_to_get page=1 %}">Pre-Requests</a></li>
+                            <li><a href="{% url "events:prospective" start end %}{% append_to_get page=1 %}">Prospective</a></li>
                             <li><a href="{% url "events:incoming" start end %}{% append_to_get page=1 %}">Incoming</a></li>
-                            <li><a href="{% url "events:upcoming" start end %}{% append_to_get page=1 %}">Upcoming</a></li>
+                            <li><a href="{% url "events:confirmed" start end %}{% append_to_get page=1 %}">Confirmed</a></li>
                             <li><a href="{% url "events:open" start end %}{% append_to_get page=1 %}">Open</a></li>
                             <li><a href="{% url "events:unreviewed" start end %}{% append_to_get page=1 %}">Unreviewed</a></li>
                             <li><a href="{% url "events:unbilled" start end %}{% append_to_get page=1 %}">Unbilled</a></li>

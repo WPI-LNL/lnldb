@@ -419,6 +419,7 @@ class InternalEventForm(FieldAccessForm):
             Tab(
                 'Name And Location',
                 'event_name',
+                'event_status',
                 'location',
                 'lnl_contact',
                 Field('description'),
@@ -537,10 +538,15 @@ class InternalEventForm(FieldAccessForm):
             lambda user, instance: user.has_perm('events.edit_event_lnl_contact', instance),
             enable=('lnl_contact')
         )
+        
+        change_event_status = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_status', instance),
+            enable=('event_status')
+        )
 
     class Meta:
         model = Event
-        fields = ('event_name', 'location', 'lnl_contact', 'description', 'internal_notes', 'billing_org', 'billed_in_bulk', 'contact',
+        fields = ('event_name', 'event_status', 'location', 'lnl_contact', 'description', 'internal_notes', 'billing_org', 'billed_in_bulk', 'contact',
                   'org', 'datetime_setup_complete', 'datetime_start', 'datetime_end', 'lighting', 'lighting_reqs',
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs', 'sensitive',
                   'test_event')
@@ -575,6 +581,7 @@ class InternalEventForm2019(FieldAccessForm):
             Tab(
                 'Name And Location',
                 'event_name',
+                'event_status',
                 'location',
                 'lnl_contact',
                 'reference_code',
@@ -681,6 +688,11 @@ class InternalEventForm2019(FieldAccessForm):
             lambda user, instance: user.has_perm('events.edit_event_lnl_contact', instance),
             enable=('lnl_contact')
         )
+        
+        change_event_status = FieldAccessLevel(
+            lambda user, instance: user.has_perm('events.edit_event_status', instance),
+            enable=('event_status')
+        )
 
         change_entered_into_workday = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.bill_event', instance),
@@ -704,7 +716,7 @@ class InternalEventForm2019(FieldAccessForm):
 
     class Meta:
         model = Event2019
-        fields = ('event_name', 'location', 'lnl_contact', 'description', 'internal_notes', 'billing_org',
+        fields = ('event_name', 'event_status', 'location', 'lnl_contact', 'description', 'internal_notes', 'billing_org',
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'sensitive', 'test_event',
                   'entered_into_workday', 'send_survey', 'max_crew','cancelled_reason',
