@@ -526,7 +526,7 @@ def findchief(request, start=None, end=None):
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:findchief-cal')
-    context['cols'] = ['event_name', 'org', 'location', FakeField('lnl_contact', verbose_name='LNL Contact'),
+    context['cols'] = ['event_name', 'org', 'location', 'event_status', FakeField('lnl_contact', verbose_name='LNL Contact'),
                        'crew_chief', FakeExtendedField('datetime_start', verbose_name="Starts At"),
                        FakeExtendedField('datetime_end', verbose_name="Ends At"),
                        'num_ccs', FakeField('eventcount', verbose_name="# Services"),
@@ -951,7 +951,7 @@ def all(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:all-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name', 'org', 'location', FakeField('lnl_contact', verbose_name='LNL Contact'), 'crew_chief',
+    context['cols'] = ['event_name', 'org', 'location', 'event_status', FakeField('lnl_contact', verbose_name='LNL Contact'), 'crew_chief',
                        FakeExtendedField('datetime_start', verbose_name="Event Start"),
                        FakeExtendedField('datetime_end', verbose_name="Event End"),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
