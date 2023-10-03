@@ -13,7 +13,7 @@ except:
 NAME_LENGTH = 30
 # the size of first_name and last_name fields
 
-server_pool = ldap3.ServerPool(('ldaps://ldapv2.wpi.edu', 'ldaps://vmldapalt.wpi.edu', 'ldaps://ldapv2back.wpi.edu'), pool_strategy=ldap3.FIRST, active=True, exhaust=True)
+server_pool = ldap3.ServerPool(('ldaps://admin.wpi.edu'), active=True, exhaust=True)
 
 
 def get_ldap_settings():
