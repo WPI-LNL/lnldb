@@ -91,7 +91,7 @@ fieldsets = (
         'fields': ('submitted_by', 'submitted_ip', 'submitted_on')
     }),
     ('Event And Contact Information', {
-        'fields': ('event_name', 'description', 'internal_notes', 'contact', 'org', 'billing_org')
+        'fields': ('event_name', 'event_status', 'lnl_contact', 'description', 'internal_notes', 'contact', 'org', 'billing_org')
     }),
     ('Scheduling & Location', {
         'fields': ('datetime_setup_complete', 'datetime_start', 'datetime_end',

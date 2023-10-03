@@ -225,9 +225,11 @@ class PhoneVerificationCode(Model):
 
 event_fields = [
     ('event_name', 'Event name'),
+    ('event_status', 'Status'),
     ('description', 'Description'),
     ('location', 'Location'),
     ('contact', 'Contact'),
+    ('lnl_contact', 'LNL contact'),
     ('billing_org', 'Billing org'),
     ('datetime_setup_complete', 'Datetime setup complete'),
     ('datetime_start', 'Datetime start'),

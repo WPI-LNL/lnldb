@@ -197,6 +197,18 @@
                 <div id="home" class="tab-pane active">
                     <table class="table">
                         <tr>
+                            <th>Event Status</th>
+                            <td>{{event.event_status}}</td>
+                        </tr>
+                        <tr>
+                            <th>LNL Contact (PM)</th>
+                            <td>
+                                {% if event.lnl_contact %}
+                                <a href="{% url "accounts:detail" event.lnl_contact.id %}">{{ event.lnl_contact.get_full_name }}</a>
+                                {% else %}{{ event.lnl_contact }}{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
                             <th>Posted Description</th>
                             <td>{{ event.description|markdown }}</td>
                         </tr>

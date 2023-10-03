@@ -1,3 +1,5 @@
+import re
+
 from django import template
 from django.utils.timezone import localtime
 from django.conf import settings
@@ -44,3 +46,8 @@ def minutes_seconds(millis):
     minutes = int(millis / 60000)
     seconds = (millis / 1000) - (minutes * 60)
     return "%i:%02d" % (minutes, seconds)
+
+@register.filter
+@template.defaultfilters.stringfilter
+def lnl_caps(text):
+    return re.sub(r'lnl', 'LNL', text, flags=re.IGNORECASE)

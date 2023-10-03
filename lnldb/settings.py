@@ -516,6 +516,15 @@ CAS_FORCE_POST_LOGIN = False
 
 AIRPLANE_MODE = True
 
+# event status options
+EVENT_STATUSES = (
+    ("Pre-Request", "Pre-Request"),
+    ("Prospective", "Prospective"),
+    ("Incoming", "Incoming"),
+    ("Confirmed", "Confirmed"),
+    ("Post Event", "Post Event"),
+)
+
 # crispy_forms
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
