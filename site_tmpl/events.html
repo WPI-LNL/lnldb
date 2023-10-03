@@ -1,10 +1,12 @@
 {% extends 'base_admin.html' %}
 {% load get_attribute %}
+{% load lnldb_tags %}
 {% load append_get %}
 {% load permissionif %}
 {% block extras %}
 {% include 'js_event_checkboxes.tmpl' %}
 {% endblock %}
+{% block title %}{{h2}} | Lens and Lights at WPI{% endblock %}
 {% block content %}
 <div class="row">
     <div class="col-md-12">
@@ -51,8 +53,10 @@
                         <hr>
                         <ul class="nav nav-pills">
                             <li class="disabled"><a href="#">View This Range as</a></li>
+                            <li><a href="{% url "events:prerequest" start end %}{% append_to_get page=1 %}">Pre-Requests</a></li>
+                            <li><a href="{% url "events:prospective" start end %}{% append_to_get page=1 %}">Prospective</a></li>
                             <li><a href="{% url "events:incoming" start end %}{% append_to_get page=1 %}">Incoming</a></li>
-                            <li><a href="{% url "events:upcoming" start end %}{% append_to_get page=1 %}">Upcoming</a></li>
+                            <li><a href="{% url "events:confirmed" start end %}{% append_to_get page=1 %}">Confirmed</a></li>
                             <li><a href="{% url "events:open" start end %}{% append_to_get page=1 %}">Open</a></li>
                             <li><a href="{% url "events:unreviewed" start end %}{% append_to_get page=1 %}">Unreviewed</a></li>
                             <li><a href="{% url "events:unbilled" start end %}{% append_to_get page=1 %}">Unbilled</a></li>
@@ -83,7 +87,7 @@
             <tr>
                 <td class="hide eventselect"></td>
                 {% for field in cols %}
-                    <th>{{ field.verbose_name | title }}
+                    <th>{{ field.verbose_name | title | lnl_caps}}
                         {% if field.favicon %}
                             <span class="glyphicon glyphicon-{{ field.favicon }}" aria-hidden="true"></span>
                         {% endif %}
@@ -150,6 +154,14 @@
                                 {% endif %}
                             </td>
 
+                        {% elif field.name == 'lnl_contact' %}
+                            <td class="event-lnl_contact">
+                                {% if event.lnl_contact %}{% permission request.user has 'accounts.view_member' %} 
+                                    <a href="{% url "accounts:detail" event.lnl_contact.id %}">
+                                {% endpermission %}{% endif %}
+                                {{ event.lnl_contact.get_full_name }}
+                                {% if event.lnl_contact %}{% permission request.user has 'accounts.view_member' %} </a>{% endpermission %}{% endif %}
+                            </td>
                         {% elif field.name == 'lighting' %}
                             <td class="event-lighting">
                                 {% if event.lighting %} {{ event.lighting.shortname }} {% endif %}
@@ -172,7 +184,7 @@
 
                         {% elif field.name == 'tasks' %}
                             <td class="tasks">
-                                {% if event.approved and event.reports_editable %}
+                                {% if event.approved %}
                                     <span class="crewtask"><a href="{% url "events:add-crew" event.id %}">Crew</a></span>
                                 {% endif %}
                                 {% if event.approved and not event.reviewed and event.crew_needing_reports %}

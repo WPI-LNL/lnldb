@@ -75,6 +75,12 @@ INTERNAL_IPS = ['127.0.0.1']
 
 if env.str('EMAIL_URL', ""):
     vars().update(env.email_url("EMAIL_URL"))
+elif env.str("WPI_SMTP_USERNAME", ""):
+    EMAIL_HOST = 'smtp.office365.com'
+    EMAIL_HOST_USER = env.str("WPI_SMTP_USERNAME")
+    EMAIL_HOST_PASSWORD = env.str("WPI_SMTP_PASSWORD")
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
 elif env.str("SENDGRID_USERNAME", ""):
     EMAIL_HOST = 'smtp.sendgrid.net'
     EMAIL_HOST_USER = env.str("SENDGRID_USERNAME")
@@ -478,8 +484,8 @@ SPECTACULAR_SETTINGS = {
 # Number of hours to show on the admin landing
 LANDING_TIMEDELTA = 72
 
-# Number of days to pass before crew chief reports are locked
-CCR_DAY_DELTA = 14
+# Number of days to pass before crew chief reports are no longer editable
+CCR_DAY_DELTA = 30
 
 # email stuff
 DEFAULT_TO_ADDR = "lnl@wpi.edu"
@@ -487,6 +493,7 @@ DEFAULT_FROM_ADDR = 'WPI Lens and Lights <lnl@wpi.edu>'
 EMAIL_FROM_NOREPLY = "WPI Lens and Lights <lnl-no-reply@wpi.edu>"
 EMAIL_TARGET_P = "lnl-p@wpi.edu"
 EMAIL_TARGET_VP = "lnl-vp@wpi.edu"
+EMAIL_TARGET_VP_DB = "gr-lnl-vp-db@wpi.edu"
 EMAIL_TARGET_S = "lnl-s@wpi.edu"
 EMAIL_TARGET_T = "lnl-t@wpi.edu"
 EMAIL_TARGET_TD = "lnl-td@wpi.edu"
@@ -508,6 +515,15 @@ LOGIN_REDIRECT_URL = "/db/"
 CAS_FORCE_POST_LOGIN = False
 
 AIRPLANE_MODE = True
+
+# event status options
+EVENT_STATUSES = (
+    ("Pre-Request", "Pre-Request"),
+    ("Prospective", "Prospective"),
+    ("Incoming", "Incoming"),
+    ("Confirmed", "Confirmed"),
+    ("Post Event", "Post Event"),
+)
 
 # crispy_forms
 CRISPY_TEMPLATE_PACK = 'bootstrap3'

@@ -1,6 +1,8 @@
 {% extends 'base_admin.html' %}
 
+{% block title %}{{msg}} | Lens and Lights at WPI{% endblock %}
 {% block content %}
+<h2>{{msg}}</h2>
 <h3>Are you sure you want to delete {{object}}?</h3>
 <form action="" method="post">{% csrf_token %}
 <input class="btn btn-danger btn-lg" type="submit" value="Yes!"/>  <input class="btn btn-info btn-lg" type="button" value="No..." onclick="window.history.go(-1);"/>

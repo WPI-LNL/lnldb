@@ -1,5 +1,6 @@
 {% extends 'base_admin.html' %}
 {% load permissionif %}
+{% block title %}Training List | Lens and Lights at WPI{% endblock %}
 {% block content %}
 <div class="pull-right">
     {% permission request.user has 'members.add_training' %}

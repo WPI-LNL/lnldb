@@ -23,11 +23,13 @@ from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator
                                DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
 from slack.views import cc_report_reminder
 from slack.api import lookup_user, slack_post
-from events.forms import (AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
+from events.forms import (
+    AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
                           BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
-                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm)
+                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm
+)
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
                            ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord)
@@ -80,16 +82,12 @@ def approval(request, id):
                 e.org.get().associated_users.add(e.contact)
             else:
                 set_revision_comment("Approved", form)
-            # confirm with user
-            messages.add_message(request, messages.INFO, 'Approved Event')
-            if e.contact and e.contact.email:
-                email_body = 'Your event "%s" has been approved!' % event.event_name
-                email = DLEG(subject="Event Approved", to_emails=[e.contact.email], body=email_body,
-                             bcc=[settings.EMAIL_TARGET_VP])
-                email.send()
-            else:
-                messages.add_message(request, messages.INFO,
-                                     'No contact info on file for approval. Please give them the good news!')
+
+            # confirm with user and notify VP
+            messages.add_message(request, messages.INFO, 'Approved Event: No longer auto notifying clients. Please give them the good news!')
+            email_body = '"%s" has been approved!' % event.event_name
+            email = DLEG(subject="Event Approved", to_emails=[settings.EMAIL_TARGET_VP_DB], body=email_body)
+            email.send()
 
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
         else:
@@ -121,7 +119,7 @@ def approval(request, id):
 
 @login_required
 def denial(request, id):
-    """ Deny an incoming event (LNL will not provide services for the event) """
+    """ Deny an prospective event (LNL will not provide services for the event) """
     context = {'msg': "Deny Event"}
     event = get_object_or_404(BaseEvent, pk=id)
     if not request.user.has_perm('events.decline_event', event):
@@ -147,15 +145,17 @@ def denial(request, id):
             e.save()
             # confirm with user
             messages.add_message(request, messages.INFO, 'Denied Event')
-            if e.contact and e.contact.email:
+            if e.contact and e.contact.email and form.cleaned_data['send_email']:
                 email_body = 'Sorry, but your event "%s" has been denied. \n Reason: "%s"' % (
                     event.event_name, event.cancelled_reason)
                 email = DLEG(subject="Event Denied", to_emails=[e.contact.email], body=email_body,
-                             bcc=[settings.EMAIL_TARGET_VP])
+                             bcc=[settings.EMAIL_TARGET_VP_DB])
                 email.send()
-            else:
+            elif (not e.contact or not e.contact.email):
                 messages.add_message(request, messages.INFO,
-                                     'No contact info on file for denial. Please give them the bad news.')
+                                     'Event Denied. No contact info on file for denial. Please give them the bad news.')
+            else:
+                messages.add_message(request, messages.INFO, 'Event Denied. No email sent.')
             return HttpResponseRedirect(reverse('events:detail', args=(e.id,)))
     form = EventDenialForm(instance=event)
     context['form'] = form
@@ -331,18 +331,21 @@ def cancel(request, id):
     event.cancelled_on = timezone.now()
     event.save()
 
-    if event.contact and event.contact.email:
-        targets = [event.contact.email]
+    if request.POST.get('notify', '') == "on":
+        if event.contact and event.contact.email:
+            targets = [event.contact.email]
+            email_body = 'The event "%s" has been cancelled by %s. If this is incorrect, please contact our vice president ' \
+                    'at lnl-vp@wpi.edu.' % (event.event_name, str(request.user))
+            if request.user.email:
+                email_body = email_body[:-1]
+                email_body += " or try them at %s." % request.user.email
+            email = DLEG(subject="Event Cancelled", to_emails=targets, body=email_body, bcc=[settings.EMAIL_TARGET_VP])
+            email.send()
+            messages.add_message(request, messages.INFO, 'Event Closed and Client Notification Sent')
+        else:
+            messages.add_message(request, messages.INFO, 'Event Closed. Client email not found. Client has not been notified.')
     else:
-        targets = []
-
-    email_body = 'The event "%s" has been cancelled by %s. If this is incorrect, please contact our vice president ' \
-                 'at lnl-vp@wpi.edu.' % (event.event_name, str(request.user))
-    if request.user.email:
-        email_body = email_body[:-1]
-        email_body += " or try them at %s." % request.user.email
-    email = DLEG(subject="Event Cancelled", to_emails=targets, body=email_body, bcc=[settings.EMAIL_TARGET_VP])
-    email.send()
+        messages.add_message(request, messages.INFO, 'Event Closed. Client has not been notified.')
     return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
 
@@ -423,11 +426,8 @@ def hours_bulk_admin(request, id):
     context = {'msg': "Bulk Hours Entry"}
 
     event = get_object_or_404(BaseEvent, pk=id)
-    if not event.reports_editable and not request.user.has_perm('events.edit_event_hours') and \
-            request.user.has_perm('events.edit_event_hours', event):
-        return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': event})
     if not (request.user.has_perm('events.edit_event_hours') or
-            request.user.has_perm('events.edit_event_hours', event) and event.reports_editable):
+            request.user.has_perm('events.edit_event_hours', event)):
         raise PermissionDenied
     if event.closed:
         messages.add_message(request, messages.ERROR, 'Event is closed.')
@@ -775,7 +775,7 @@ def assignattach(request, id):
             event.save()  # for revision to be created
             should_send_email = not event.test_event
             if should_send_email:
-                to = [settings.EMAIL_TARGET_VP]
+                to = [settings.EMAIL_TARGET_VP_DB]
                 if hasattr(event, 'projection') and event.projection \
                         or event.serviceinstance_set.filter(service__category__name='Projection').exists():
                     to.append(settings.EMAIL_TARGET_HP)
@@ -1098,13 +1098,10 @@ class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, Login
 
     def dispatch(self, request, *args, **kwargs):
         self.event = get_object_or_404(BaseEvent, pk=kwargs['event'])
-        if not self.event.reports_editable and not request.user.has_perm(self.perms) and \
-                request.user.has_perm(self.perms, self.event):
-            return render(request, 'too_late.html', {'days': CCR_DELTA, 'event': self.event})
         return super(CCRCreate, self).dispatch(request, *args, **kwargs)
 
     def user_passes_test(self, request, *args, **kwargs):
-        return self.event.reports_editable and request.user.has_perm(self.perms, self.event)
+        return request.user.has_perm(self.perms, self.event)
 
     def get_form_kwargs(self):
         kwargs = super(CCRCreate, self).get_form_kwargs()
@@ -1119,7 +1116,7 @@ class CCRCreate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, Login
         return reverse("events:detail", args=(self.kwargs['event'],))
 
 
-class CCRUpdate(SetFormMsgMixin, ConditionalFormMixin, HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
+class CCRUpdate(SetFormMsgMixin, HasPermOrTestMixin, ConditionalFormMixin, LoginRequiredMixin, UpdateView):
     """ Update an existing crew chief report """
     model = CCReport
     form_class = InternalReportForm
@@ -1149,7 +1146,7 @@ class CCRDelete(SetFormMsgMixin, HasPermOrTestMixin, LoginRequiredMixin, DeleteV
     """ Delete a crew chief report """
     model = CCReport
     template_name = "form_delete_cbv.html"
-    msg = "Deleted Crew Chief Report"
+    msg = "Delete Crew Chief Report"
     perms = 'events.delete_ccreport'
 
     def user_passes_test(self, request, *args, **kwargs):
@@ -1244,10 +1241,10 @@ class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateVie
         return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
 
 
-class BillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
+class BillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = Billing
     template_name = "form_delete_cbv.html"
-    msg = "Deleted Bill"
+    msg = "Delete Bill"
     perms = 'events.bill_event'
 
     def dispatch(self, request, *args, **kwargs):
@@ -1317,7 +1314,7 @@ class MultiBillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Upda
         return reverse("events:multibillings:list")
 
 
-class MultiBillingDelete(HasPermMixin, LoginRequiredMixin, DeleteView):
+class MultiBillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = MultiBilling
     template_name = "form_delete_cbv.html"
     msg = "Delete MultiBill"

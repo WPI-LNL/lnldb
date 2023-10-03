@@ -4,6 +4,7 @@
 {% load gpa_scale_emoji %}
 {% load spotify_tags %}
 
+{% block title %}{{event}} | Lens and Lights at WPI{% endblock %}
 {% block content %}
     <div class="jumbotron">
         <div class="clearfix">
@@ -130,10 +131,11 @@
                         setups/rentals were done.</p>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                    <button class="btn btn-default" style="float:left" data-dismiss="modal" aria-hidden="true">Go Back</button>
                     <form class="form-inline" action="{% url 'events:cancel' event.id %}" method="post">
                         {% csrf_token %}
-                        <button class="btn btn-primary" type="submit">Cancel Event</button>
+                        <input type="checkbox" name="notify" id="notify" /> <label for="notify">Notify event contact via email</label>
+                        <button class="btn btn-primary" type="submit" style="margin-left: 12px;">Cancel Event</button>
                     </form>
                 </div>
             </div>
@@ -195,6 +197,18 @@
                 <div id="home" class="tab-pane active">
                     <table class="table">
                         <tr>
+                            <th>Event Status</th>
+                            <td>{{event.event_status}}</td>
+                        </tr>
+                        <tr>
+                            <th>LNL Contact (PM)</th>
+                            <td>
+                                {% if event.lnl_contact %}
+                                <a href="{% url "accounts:detail" event.lnl_contact.id %}">{{ event.lnl_contact.get_full_name }}</a>
+                                {% else %}{{ event.lnl_contact }}{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
                             <th>Posted Description</th>
                             <td>{{ event.description|markdown }}</td>
                         </tr>
@@ -210,7 +224,9 @@
                         </tr>
                         <tr>
                             <th>Event Contact Email</th>
-                            <td>{{ event.contact.email }}</td>
+
+                            <td><a href="mailto:{{ event.contact.email }}">{{ event.contact.email }}</a></td>
+
                         </tr>
                         <tr>
                             <th>Location</th>

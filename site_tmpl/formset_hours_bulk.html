@@ -1,10 +1,11 @@
 {% extends 'base_admin.html' %}
 {% load crispy_forms_tags %}
 
+{% block title %}{{msg}} for "{{event}}" | Lens and Lights at WPI{% endblock %}
 {% block content %}
     <div class="row">
         <div class="col-md-12">
-                <h2> {{msg }} Crew Chiefs for "{{ event }}"</h2>
+                <h2> {{msg }} for "{{ event }}"</h2>
                 <form method="post" action="" class="form-inline" enctype="multipart/form-data">
                 {% csrf_token %}
                 {{ formset.management_form }}

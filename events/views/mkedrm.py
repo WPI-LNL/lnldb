@@ -54,7 +54,7 @@ def eventnew(request, id=None):
             # calculate whether an email should be sent based on the event information *before* saving the form.
             should_send_notification = not instance.test_event
             if should_send_notification:
-                bcc = [settings.EMAIL_TARGET_VP]
+                bcc = [settings.EMAIL_TARGET_VP_DB]
                 if instance.has_projection:
                     bcc.append(settings.EMAIL_TARGET_HP)
 
@@ -77,11 +77,14 @@ def eventnew(request, id=None):
                 # 25Live parsing
                 if is_event2019 and obj.event_id is None:
                     if form.data.get('reference_code') != "": 
-                        url = requests.get(f"https://25live.collegenet.com/25live/data/wpi/run/list/listdata.json?compsubject=event&obj_cache_accl=0&name={form.data.get('reference_code')}")
-                        text = url.text[6:]
-                        jsondata = json.loads(text)
-                        obj.event_id = jsondata["rows"][0]["contextId"]
-                        obj.save()
+                        try:
+                            url = requests.get(f"https://25live.collegenet.com/25live/data/wpi/run/list/listdata.json?compsubject=event&obj_cache_accl=0&name={form.data.get('reference_code')}")
+                            text = url.text
+                            jsondata = json.loads(text)
+                            obj.event_id = jsondata["rows"][0]["contextId"]
+                            obj.save()
+                        except requests.JSONDecodeError:
+                            pass
                     
                 if is_event2019:
                     services_formset.save()

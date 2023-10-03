@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.generic.edit import CreateView, DeleteView, FormView
 from django.urls.base import reverse
 
-from helpers.mixins import HasPermMixin, LoginRequiredMixin
+from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from projection.forms import (BulkCreateForm, BulkUpdateForm, DateEntryFormSetBase, ProjectionistForm,
                               ProjectionistUpdateForm, PITRequestForm, PITRequestAdminForm, PITFormset)
 from projection.models import PITLevel, Projectionist, PitRequest, PitInstance
@@ -83,7 +83,7 @@ def projection_update(request, id):
     return render(request, 'form_crispy_projection.html', context)
 
 
-class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
+class ProjectionCreate(SetFormMsgMixin, LoginRequiredMixin, HasPermMixin, CreateView):
     """ Add a new projectionist """
     perms = 'projection.edit_pits'
 
@@ -116,6 +116,7 @@ class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
 
     model = Projectionist
     template_name = "form_crispy_projection.html"
+    msg = "Add Projectionist"
     form_class = ProjectionistForm
     # success_url = reverse("projection:list")
 
@@ -124,9 +125,10 @@ class ProjectionCreate(LoginRequiredMixin, HasPermMixin, CreateView):
         return reverse("projection:grid")
 
 
-class BulkUpdateView(LoginRequiredMixin, HasPermMixin, FormView):
+class BulkUpdateView(SetFormMsgMixin, LoginRequiredMixin, HasPermMixin, FormView):
     """ Update a PIT for multiple projectionists at the same time """
     template_name = "form_crispy_cbv.html"
+    msg = "Bulk Update Projectionists"
     form_class = BulkUpdateForm
     perms = 'projection.edit_pits'
 
@@ -141,11 +143,11 @@ class BulkUpdateView(LoginRequiredMixin, HasPermMixin, FormView):
         return super(BulkUpdateView, self).form_valid(form)
 
 
-class ProjectionistDelete(LoginRequiredMixin, HasPermMixin, DeleteView):
+class ProjectionistDelete(SetFormMsgMixin, LoginRequiredMixin, HasPermMixin, DeleteView):
     """ Remove a projectionist (does not remove the associated user) """
     model = Projectionist
     template_name = "form_delete_cbv.html"
-    msg = "Deleted Projectionist"
+    msg = "Delete Projectionist"
     perms = 'projection.edit_pits'
 
     def get_success_url(self):

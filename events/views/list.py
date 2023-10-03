@@ -13,7 +13,7 @@ from django.urls.base import reverse
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 
-from helpers.mixins import HasPermMixin, LoginRequiredMixin
+from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from events.models import BaseEvent, Event2019, Category, MultiBilling, Workshop, WorkshopDate
 from events.forms import WorkshopForm, WorkshopDatesForm
 
@@ -237,56 +237,110 @@ def generate_response(request, context, start, end, time_range_unspecified):
 
 # ## EVENT VIEWS
 @login_required
-@permission_required('events.view_events', raise_exception=True)
-def upcoming(request, start=None, end=None):
-    """
-    Lists Upcoming Events
-
-    If start and end are both None, then it'll show all upcoming events for the next 15 days
-    """
+@permission_required('events.approve_event', raise_exception=True)
+def prerequest(request, start=None, end=None):
+    """ Lists all prerequest events (client hasn't reached out yet) """
     context = {}
 
     if not start and request.COOKIES.get('start'):
         if not end and request.COOKIES.get('end'):
-            return HttpResponseRedirect(reverse('events:upcoming',
-                                                args=(request.COOKIES.get('start'), request.COOKIES.get('end'))))
+            return HttpResponseRedirect(reverse('events:prerequest', args=(request.COOKIES.get('start'),
+                                                                         request.COOKIES.get('end'))))
         else:
-            return HttpResponseRedirect(reverse('events:upcoming', args=(request.COOKIES.get('start'), end)))
+            return HttpResponseRedirect(reverse('events:prerequest', args=(request.COOKIES.get('start'), end)))
     elif not end and request.COOKIES.get('end'):
-        return HttpResponseRedirect(reverse('events:upcoming', args=(start, request.COOKIES.get('end'))))
+        return HttpResponseRedirect(reverse('events:prerequest', args=(start, request.COOKIES.get('end'))))
     time_range_unspecified = not start and not end
     if not start and not end:
         today = datetime.date.today()
-        start = today - datetime.timedelta(days=1)
+        start = today - datetime.timedelta(days=365.25)
         start = start.strftime('%Y-%m-%d')
-        end = today + datetime.timedelta(days=15)
+        end = today + datetime.timedelta(days=365.25)
         end = end.strftime('%Y-%m-%d')
 
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
             and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
-    events = BaseEvent.objects.filter(Q(approved=True) & Q(closed=False) & Q(cancelled=False)).distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_cc=True, sort='datetime_start')
+    events = BaseEvent.objects.filter(event_status="Pre-Request").exclude(Q(closed=True) | Q(cancelled=True)).distinct()
+    events, context = filter_events(request, context, events, start, end, sort='datetime_start')
 
-    context['h2'] = "Upcoming Events"
+    context['h2'] = "Pre-Requests"
     context['events'] = events
-    context['baseurl'] = reverse("events:upcoming")
+    context['baseurl'] = reverse("events:prerequest")
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
-    context['calurl'] = reverse('cal:list')
+    context['calurl'] = reverse('events:prerequest-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name', 'org', 'location', 'crew_chief',
-                       FakeExtendedField('datetime_start', verbose_name="Starts At"),
+    context['cols'] = ['event_name', 'org', 'location', FakeField('lnl_contact', verbose_name='LNL Contact'),
+                       'submitted_on', FakeExtendedField('datetime_start', verbose_name="Starts At"),
                        FakeField('short_services', verbose_name="Services", sortable=False)]
     response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
+@login_required
+@permission_required('events.approve_event', raise_exception=True)
+def prerequest_cal(request, start=None, end=None):
+    """ Calendar view of prerequests """
+    context = {'h2': "Pre-Requests", 'listurl': reverse('events:prerequest'),
+               'bootcal_endpoint': reverse('cal:api-prerequest')}
+    return render(request, 'events_cal.html', context)
 
 @login_required
 @permission_required('events.approve_event', raise_exception=True)
+def prospective(request, start=None, end=None):
+    """ Lists all prospective events (not yet accepted) """
+    context = {}
+
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:prospective', args=(request.COOKIES.get('start'),
+                                                                         request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:prospective', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:prospective', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
+    if not start and not end:
+        today = datetime.date.today()
+        start = today - datetime.timedelta(days=365.25)
+        start = start.strftime('%Y-%m-%d')
+        end = today + datetime.timedelta(days=365.25)
+        end = end.strftime('%Y-%m-%d')
+
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+            and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+
+    events = BaseEvent.objects.filter(event_status="Prospective").exclude(Q(closed=True) | Q(cancelled=True)).distinct()
+    events, context = filter_events(request, context, events, start, end, sort='datetime_start')
+
+    context['h2'] = "Prospective Events"
+    context['events'] = events
+    context['baseurl'] = reverse("events:prospective")
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
+    context['calurl'] = reverse('events:prospective-cal')
+    context['takes_param_projection'] = True
+    context['cols'] = ['event_name', 'org', 'location', FakeField('lnl_contact', verbose_name='LNL Contact'),
+                       'crew_chief', FakeExtendedField('datetime_start', verbose_name="Starts At"),
+                       FakeExtendedField('datetime_end', verbose_name="Ends At"),
+                       FakeField('short_services', verbose_name="Services", sortable=False), FakeField('approval')]
+    response = generate_response(request, context, start, end, time_range_unspecified)
+    return response
+
+@login_required
+@permission_required('events.approve_event', raise_exception=True)
+def prospective_cal(request, start=None, end=None):
+    """ Calendar view of prospective events """
+    context = {'h2': "Prospective Events", 'listurl': reverse('events:prospective'),
+               'bootcal_endpoint': reverse('cal:api-prospective')}
+    return render(request, 'events_cal.html', context)
+
+@login_required
+@permission_required('events.view_events', raise_exception=True)
 def incoming(request, start=None, end=None):
-    """ Lists all incoming events (not yet approved) """
+    """ Lists all incoming events (accepted, but client has not confirmed yet) """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -309,7 +363,7 @@ def incoming(request, start=None, end=None):
             and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
-    events = BaseEvent.objects.filter(approved=False).exclude(Q(closed=True) | Q(cancelled=True)).distinct()
+    events = BaseEvent.objects.filter(event_status="Incoming").exclude(Q(closed=True) | Q(cancelled=True)).distinct()
     events, context = filter_events(request, context, events, start, end, sort='datetime_start')
 
     context['h2'] = "Incoming Events"
@@ -319,21 +373,71 @@ def incoming(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:incoming-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name', 'org', 'location', 'submitted_on',
-                       FakeExtendedField('datetime_start', verbose_name="Starts At"),
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    context['cols'] = ['event_name', 'org', 'location', FakeField('lnl_contact', verbose_name='LNL Contact'),
+                       'crew_chief', FakeExtendedField('datetime_start', verbose_name="Starts At"),
+                       FakeExtendedField('datetime_end', verbose_name="Ends At"),
+                       FakeField('short_services', verbose_name="Services", sortable=False), FakeField('approval')]
     response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
-
 @login_required
-@permission_required('events.approve_event', raise_exception=True)
+@permission_required('events.view_event', raise_exception=True)
 def incoming_cal(request, start=None, end=None):
     """ Calendar view of incoming events """
     context = {'h2': "Incoming Events", 'listurl': reverse('events:incoming'),
                'bootcal_endpoint': reverse('cal:api-incoming')}
     return render(request, 'events_cal.html', context)
 
+@login_required
+@permission_required('events.view_events', raise_exception=True)
+def confirmed(request, start=None, end=None):
+    """ Lists all confirmed events (client has confirmed the quote) """
+    context = {}
+
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:confirmed', args=(request.COOKIES.get('start'),
+                                                                         request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:confirmed', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:confirmed', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
+    if not start and not end:
+        today = datetime.date.today()
+        start = today - datetime.timedelta(days=365.25)
+        start = start.strftime('%Y-%m-%d')
+        end = today + datetime.timedelta(days=365.25)
+        end = end.strftime('%Y-%m-%d')
+
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+            and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+
+    events = BaseEvent.objects.filter(event_status="Confirmed").exclude(Q(closed=True) | Q(cancelled=True)).distinct()
+    events, context = filter_events(request, context, events, start, end, sort='datetime_start')
+
+    context['h2'] = "Confirmed Events"
+    context['events'] = events
+    context['baseurl'] = reverse("events:confirmed")
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
+    context['calurl'] = reverse('events:confirmed-cal')
+    context['takes_param_projection'] = True
+    context['cols'] = ['event_name', 'org', 'location', FakeField('lnl_contact', verbose_name='LNL Contact'),
+                       'crew_chief', FakeExtendedField('datetime_start', verbose_name="Starts At"),
+                       FakeExtendedField('datetime_end', verbose_name="Ends At"),
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    response = generate_response(request, context, start, end, time_range_unspecified)
+    return response
+
+@login_required
+@permission_required('events.view_event', raise_exception=True)
+def confirmed_cal(request, start=None, end=None):
+    """ Calendar view of confirmed events """
+    context = {'h2': "Confirmed Events", 'listurl': reverse('events:confirmed'),
+               'bootcal_endpoint': reverse('cal:api-confirmed')}
+    return render(request, 'events_cal.html', context)
 
 @login_required
 @permission_required('events.view_events', raise_exception=True)
@@ -367,7 +471,7 @@ def openworkorders(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:open-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name', 'org', 'location', 'crew_chief',
+    context['cols'] = ['event_name', 'org', 'location', 'crew_chief', FakeField('lnl_contact', verbose_name='LNL Contact'),
                        FakeExtendedField('datetime_start', verbose_name="Starting At"),
                        FakeField('short_services', verbose_name="Services", sortable=False), FakeField('tasks')]
     response = generate_response(request, context, start, end, time_range_unspecified)
@@ -385,7 +489,7 @@ def openworkorders_cal(request, start=None, end=None):
 @login_required
 @permission_required('events.view_events', raise_exception=True)
 def findchief(request, start=None, end=None):
-    """ Lists any events that have been approved and need crew chiefs """
+    """ Lists any events that are incoming or confirmed and have no crew chiefs """
     context = {}
 
     if not start and request.COOKIES.get('start'):
@@ -401,14 +505,14 @@ def findchief(request, start=None, end=None):
         today = datetime.date.today()
         start = today
         start = start.strftime('%Y-%m-%d')
-        end = today + datetime.timedelta(days=30.5)
+        end = today + datetime.timedelta(days=500)
         end = end.strftime('%Y-%m-%d')
 
     if (not request.GET.get('projection') and request.COOKIES.get('projection')
             and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
-    events = BaseEvent.objects.filter(approved=True).filter(closed=False).filter(cancelled=False)\
+    events = BaseEvent.objects.filter(Q(event_status="Incoming") | Q(event_status="Confirmed")).exclude(Q(closed=True) | Q(cancelled=True))\
         .annotate(num_ccs=Count('ccinstances'))\
         .filter(Q(Event___ccs_needed__gt=F('num_ccs')) |
                 Q(num_ccs__lt=Count('serviceinstance__service__category', distinct=True))).distinct()
@@ -422,9 +526,11 @@ def findchief(request, start=None, end=None):
     context['pdfurl_workorders'] = reverse('events:pdf-multi')
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:findchief-cal')
-    context['cols'] = ['event_name', 'org', 'location', FakeExtendedField('datetime_start', verbose_name="Starting At"),
-                       'submitted_on', 'num_ccs', FakeField('eventcount', verbose_name="# Services"),
-                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    context['cols'] = ['event_name', 'org', 'location', 'event_status', FakeField('lnl_contact', verbose_name='LNL Contact'),
+                       'crew_chief', FakeExtendedField('datetime_start', verbose_name="Starts At"),
+                       FakeExtendedField('datetime_end', verbose_name="Ends At"),
+                       'num_ccs', FakeField('eventcount', verbose_name="# Services"),
+                       FakeField('short_services', verbose_name="Services", sortable=False),FakeField('approval')]
     response = generate_response(request, context, start, end, time_range_unspecified)
     return response
 
@@ -477,7 +583,7 @@ def unreviewed(request, start=None, end=None):
     # context['calurl'] = reverse('events:unreviewed-cal')
     context['takes_param_projection'] = True
     context['cols'] = ['event_name', 'org', 'location', FakeExtendedField('datetime_start', verbose_name="Event Time"),
-                       'crew_chief',
+                       FakeField('lnl_contact', verbose_name='LNL Contact'), 'crew_chief',
                        FakeField('num_crew_needing_reports', sortable=True, verbose_name="Missing Reports"),
                        FakeField('short_services', verbose_name="Services", sortable=False), FakeField('tasks')]
     response = generate_response(request, context, start, end, time_range_unspecified)
@@ -845,10 +951,10 @@ def all(request, start=None, end=None):
     context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
     context['calurl'] = reverse('events:all-cal')
     context['takes_param_projection'] = True
-    context['cols'] = ['event_name', 'org', 'location', 'crew_chief',
+    context['cols'] = ['event_name', 'org', 'location', 'event_status', FakeField('lnl_contact', verbose_name='LNL Contact'), 'crew_chief',
                        FakeExtendedField('datetime_start', verbose_name="Event Start"),
                        FakeExtendedField('datetime_end', verbose_name="Event End"),
-                       FakeField('short_services', verbose_name="Services", sortable=False), FakeField('tasks')]
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
     if request.user.has_perm('events.approve_event'):
         context['cols'].append(FakeField('approval'))
     response = generate_response(request, context, start, end, time_range_unspecified)
@@ -963,6 +1069,7 @@ def workshop_dates(request, pk):
             formset.save()
             return HttpResponseRedirect(reverse("events:workshops:list"))
     context['formset'] = formset
+    context['msg'] = "Workshop Dates for \"" + workshop.name + "\""
     return render(request, 'formset_workshop_dates.html', context)
 
 
@@ -974,7 +1081,7 @@ def workshops_list(request):
     return render(request, 'workshops_list.html', {'workshops': workshops})
 
 
-class DeleteWorkshop(LoginRequiredMixin, HasPermMixin, DeleteView):
+class DeleteWorkshop(SetFormMsgMixin, LoginRequiredMixin, HasPermMixin, DeleteView):
     """ Delete a series of workshops """
     model = Workshop
     template_name = "form_delete_cbv.html"

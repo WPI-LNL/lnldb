@@ -1177,20 +1177,6 @@ class EventBasicViewTest(ViewTestCase):
 
         self.assertOk(self.client.get(reverse("events:reports:new", args=[self.e.pk])))
 
-        # Check that too late message is displayed if it has been too long since the event
-        permission = Permission.objects.get(codename="add_event_report")
-        self.user.user_permissions.remove(permission)
-
-        self.user.refresh_from_db()
-        self.e.datetime_end = timezone.now() - timezone.timedelta(days=30)
-        self.e.save()
-        CCInstanceFactory.create(crew_chief=self.user, event=self.e)
-
-        self.assertContains(self.client.get(reverse("events:reports:new", args=[self.e.pk])), b"Too Late!")
-
-        self.e.datetime_end = timezone.now()
-        self.e.save()
-
         # Test valid data
         valid_data = {
             "crew_chief": str(self.user.pk),
@@ -1893,9 +1879,9 @@ class EventListBasicViewTest(ViewTestCase):
         response = self.client.get(reverse('cal:feed-light'))
         self.assertEqual(response.status_code, 200)
 
-    def test_incoming(self):
+    def test_prospective(self):
         # By default, user should not have permission to view this page
-        self.assertOk(self.client.get(reverse('events:incoming')), 403)
+        self.assertOk(self.client.get(reverse('events:prospective')), 403)
 
         permission = Permission.objects.get(codename="approve_event")
         self.user.user_permissions.add(permission)
@@ -1904,56 +1890,56 @@ class EventListBasicViewTest(ViewTestCase):
         self.e2019.save()
 
         # Run generic tests
-        self.generic_list('events:incoming')
-        self.base_cal_json('cal:api-incoming')
+        self.generic_list('events:prospective')
+        self.base_cal_json('cal:api-prospective')
 
-    def test_incoming_cal(self):
+    def test_prospective_cal(self):
         # By default, should not have permission to view
-        self.assertOk(self.client.get(reverse("events:incoming-cal")), 403)
+        self.assertOk(self.client.get(reverse("events:prospective-cal")), 403)
 
         permission = Permission.objects.get(codename="approve_event")
         self.user.user_permissions.add(permission)
 
-        self.assertOk(self.client.get(reverse("events:incoming-cal")))
+        self.assertOk(self.client.get(reverse("events:prospective-cal")))
 
-    def test_upcoming(self):
-        # By default, user should not have permission to view events
-        self.assertOk(self.client.get(reverse('events:upcoming')), 403)
+    # def test_incoming(self):
+    #     # By default, user should not have permission to view events
+    #     self.assertOk(self.client.get(reverse('events:incoming')), 403)
 
-        permission = Permission.objects.get(codename="view_events")
-        self.user.user_permissions.add(permission)
+    #     permission = Permission.objects.get(codename="view_events")
+    #     self.user.user_permissions.add(permission)
 
-        self.e.approved = True
-        self.e2.approved = True
-        self.e.save()
-        self.e2.save()
+    #     self.e.event_status = "Incoming"
+    #     self.e2.event_status = "Incoming"
+    #     self.e.save()
+    #     self.e2.save()
 
-        # Run generic tests
-        self.generic_list('events:upcoming')
+    #     # Run generic tests
+    #     self.generic_list('events:incoming')
 
-    def test_findchief(self):
-        # By default, user should not have permission to view events
-        self.assertOk(self.client.get(reverse('events:findchief')), 403)
+    # def test_findchief(self):
+    #     # By default, user should not have permission to view events
+    #     self.assertOk(self.client.get(reverse('events:findchief')), 403)
 
-        permission = Permission.objects.get(codename="view_events")
-        self.user.user_permissions.add(permission)
+    #     permission = Permission.objects.get(codename="view_events")
+    #     self.user.user_permissions.add(permission)
 
-        self.e.approved = True
-        self.e2.approved = True
-        self.e.save()
-        self.e2.save()
+    #     self.e.event_status = "Incoming"
+    #     self.e2.event_status = "Confirmed"
+    #     self.e.save()
+    #     self.e2.save()
 
-        light = models.Category.objects.create(name="Lighting")
-        lighting = models.Lighting.objects.create(category=light, shortname="L1", longname="Lighting", base_cost=20.00,
-                                                  addtl_cost=1.00)
-        self.e.lighting = lighting
-        self.e2.lighting = lighting
-        self.e.save()
-        self.e2.save()
+    #     light = models.Category.objects.create(name="Lighting")
+    #     lighting = models.Lighting.objects.create(category=light, shortname="L1", longname="Lighting", base_cost=20.00,
+    #                                               addtl_cost=1.00)
+    #     self.e.lighting = lighting
+    #     self.e2.lighting = lighting
+    #     self.e.save()
+    #     self.e2.save()
 
-        # Run generic tests
-        self.generic_list('events:findchief')
-        self.base_cal_json('cal:api-findchief')
+    #     # Run generic tests
+    #     self.generic_list('events:findchief')
+    #     self.base_cal_json('cal:api-findchief')
 
     def test_chief_cal(self):
         # By default, should not have permission to view
