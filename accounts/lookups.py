@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 
 from . import ldap
+from . import graph
 
 
 class UserLookup(LookupChannel):
@@ -22,7 +23,7 @@ class UserLookup(LookupChannel):
         if (results or search_ldap is False):
             return results
 
-        results = ldap.search_or_create_users(q)
+        results = graph.search_or_create_users(q)
         if results:  # call the thing again to ensure any prefetches
             return self.get_query(q, request, search_ldap=False)
         return []
