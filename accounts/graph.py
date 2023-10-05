@@ -47,7 +47,6 @@ def search_users(q):
             '$search': "\"displayName:" + q + "\""
         }
     )
-    print(results.text)
     return results
 
 def search_or_create_users(q):
