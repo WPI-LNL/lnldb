@@ -17,7 +17,7 @@ def acquire_graph_access_token():
     # Firstly, looks up a token from cache
     # Since we are looking for token for the current app, NOT for an end user,
     # notice we give account parameter as None.
-    result = app.acquire_token_silent(settings.GRAPH_API_SCOPE, account=None)
+    result = app.acquire_token_silent([settings.GRAPH_API_SCOPE], account=None)
 
     if not result:
         print("No suitable token exists in cache. Let's get a new one from AAD.")
