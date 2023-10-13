@@ -7,8 +7,8 @@ from django.conf import settings
 
 
 app = msal.ConfidentialClientApplication(
-    settings.GRAPH-API_CLIENT_ID, authority=settings.GRAPH-API_AUTHORITY,
-    client_credential=settings.GRAPH-API_SECRET,
+    settings.GRAPH_API_CLIENT_ID, authority=settings.GRAPH_API_AUTHORITY,
+    client_credential=settings.GRAPH_API_SECRET,
 )
 
 def acquire_graph_access_token():
@@ -34,7 +34,7 @@ def acquire_graph_access_token():
 def search_users(q):
     token = acquire_graph_access_token()
     results = requests.get(
-        settings.GRAPH-API_ENDPOINT,
+        settings.GRAPH_API_ENDPOINT,
         headers={
             'Authorization': f'Bearer {token}',
             'ConsistencyLevel': 'eventual'
