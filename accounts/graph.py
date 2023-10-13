@@ -4,12 +4,10 @@ import msal
 
 from django.contrib.auth import get_user_model
 
-#!! Change this to load parameters from env
-config = json.load(open("parameters.json"))
 
 app = msal.ConfidentialClientApplication(
-    config["client_id"], authority=config["authority"],
-    client_credential=config["secret"],
+    GRAPH-API_CLIENT_ID, authority=GRAPH-API_AUTHORITY,
+    client_credential=GRAPH-API_SECRET,
 )
 
 def acquire_graph_access_token():
@@ -18,11 +16,11 @@ def acquire_graph_access_token():
     # Firstly, looks up a token from cache
     # Since we are looking for token for the current app, NOT for an end user,
     # notice we give account parameter as None.
-    result = app.acquire_token_silent(config["scope"], account=None)
+    result = app.acquire_token_silent(GRAPH_API_SCOPE, account=None)
 
     if not result:
         print("No suitable token exists in cache. Let's get a new one from AAD.")
-        result = app.acquire_token_for_client(scopes=config["scope"])
+        result = app.acquire_token_for_client(scopes=GRAPH_API_SCOPE)
 
     if "access_token" in result:
         return result['access_token']
@@ -35,8 +33,7 @@ def acquire_graph_access_token():
 def search_users(q):
     token = acquire_graph_access_token()
     results = requests.get(
-        #config["endpoint"],
-        "https://graph.microsoft.com/v1.0/users",
+        GRAPH-API_ENDPOINT,
         headers={
             'Authorization': f'Bearer {token}',
             'ConsistencyLevel': 'eventual'

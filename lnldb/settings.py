@@ -103,6 +103,12 @@ DATABASES = {
 CCC_PASS = env.str("CCC_PASS", "")
 SECRET_KEY = env.str("SECRET_KEY", "I am insecure.")
 
+GRAPH-API_AUTHORITY = env.str("GRAPH-API_AUTHORITY", "")
+GRAPH-API_CLIENT_ID = env.str("GRAPH-API_CLIENT_ID", "")
+GRAPH-API_SCOPE = env.str("GRAPH-API_SCOPE", "")
+GRAPH-API_SECRET = env.str("GRAPH-API_SECRET", "")
+GRAPH-API_ENDPOINT = env.str("GRAPH-API_ENDPOINT", "")
+
 SLACK_TOKEN = env.str('SLACK_BOT_TOKEN', None)
 
 # If True, the bot will automatically attempt to join new channels when they are created in Slack
