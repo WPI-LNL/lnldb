@@ -21,7 +21,7 @@ def acquire_graph_access_token():
 
     if not result:
         print("No suitable token exists in cache. Let's get a new one from AAD.")
-        result = app.acquire_token_for_client(scopes=settings.GRAPH_API_SCOPE)
+        result = app.acquire_token_for_client(scopes=[settings.GRAPH_API_SCOPE])
 
     if "access_token" in result:
         return result['access_token']
