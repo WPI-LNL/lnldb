@@ -6,8 +6,8 @@ from django.contrib.auth import get_user_model
 
 
 app = msal.ConfidentialClientApplication(
-    GRAPH-API_CLIENT_ID, authority=GRAPH-API_AUTHORITY,
-    client_credential=GRAPH-API_SECRET,
+    settings.GRAPH-API_CLIENT_ID, authority=settings.GRAPH-API_AUTHORITY,
+    client_credential=settings.GRAPH-API_SECRET,
 )
 
 def acquire_graph_access_token():
@@ -16,11 +16,11 @@ def acquire_graph_access_token():
     # Firstly, looks up a token from cache
     # Since we are looking for token for the current app, NOT for an end user,
     # notice we give account parameter as None.
-    result = app.acquire_token_silent(GRAPH_API_SCOPE, account=None)
+    result = app.acquire_token_silent(settings.GRAPH_API_SCOPE, account=None)
 
     if not result:
         print("No suitable token exists in cache. Let's get a new one from AAD.")
-        result = app.acquire_token_for_client(scopes=GRAPH_API_SCOPE)
+        result = app.acquire_token_for_client(scopes=settings.GRAPH_API_SCOPE)
 
     if "access_token" in result:
         return result['access_token']
@@ -33,7 +33,7 @@ def acquire_graph_access_token():
 def search_users(q):
     token = acquire_graph_access_token()
     results = requests.get(
-        GRAPH-API_ENDPOINT,
+        settings.GRAPH-API_ENDPOINT,
         headers={
             'Authorization': f'Bearer {token}',
             'ConsistencyLevel': 'eventual'
