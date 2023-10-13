@@ -34,7 +34,7 @@ def acquire_graph_access_token():
 def search_users(q):
     token = acquire_graph_access_token()
     results = requests.get(
-        "https://graph.microsoft.com/v1.0/users",
+        GRAPH_API_ENDPOINT,
         headers={
             'Authorization': f'Bearer {token}',
             'ConsistencyLevel': 'eventual'
