@@ -347,8 +347,8 @@ INSTALLED_APPS = (
     'slack',
     'spotify',
 
-    'bootstrap3',
     'crispy_forms',
+    'crispy_bootstrap5',
     'formtools',
     'semanticuiforms',
     'lineage',
@@ -532,7 +532,8 @@ EVENT_STATUSES = (
 )
 
 # crispy_forms
-CRISPY_TEMPLATE_PACK = 'bootstrap3'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 
 SYNC_STUDENT_ID = env.bool("STUDENT_AUTO_ID", False)
 
