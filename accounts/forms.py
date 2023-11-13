@@ -12,6 +12,8 @@ from meetings.models import MeetingType
 from .models import Officer, ProfilePhoto, carrier_choices, event_fields, UserPreferences
 from .ldap import get_student_id
 
+from PIL import Image
+
 
 class LoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
@@ -363,9 +365,69 @@ class OfficerPhotoForm(forms.ModelForm):
         )
         super(OfficerPhotoForm, self).__init__(*args, **kwargs)
 
+    def save(self):
+        photo = super(OfficerPhotoForm, self).save()
+        
+        image = Image.open(photo.img)
+
+        # Crop image to be 320x320
+        width, height = image.size
+
+        if width > 300 and height > 300:
+            # Shrink
+            image.thumbnail((width, height))
+
+        # Make square
+        if height < width:
+            # Equal amounts left and right
+            left = (width - height) / 2
+            right = (width + height) / 2
+            top = 0
+            bottom = height
+            image = image.crop((left, top, right, bottom))
+        elif width < height:
+            # Cut off bottom
+            left = 0
+            right = width
+            top = 0
+            bottom = width
+            image = image.crop((left, top, right, bottom))
+
+        if width > 300 and height > 300:
+            image.thumbnail((300, 300))
+
+        image.save(photo.img.path)
+        return photo
+
+
     class Meta:
         model = ProfilePhoto
         fields = ['img']
+
+class OfficerPhotoCropForm(forms.ModelForm):
+    x = forms.FloatField(widget=forms.HiddenInput)
+    y = forms.FloatField(widget=forms.HiddenInput)
+    width = forms.FloatField(widget=forms.HiddenInput)
+    height = forms.FloatField(widget=forms.HiddenInput)
+
+    class Meta:
+        model = OfficerImg
+        fields = ["img", "x", "y", "width", "height"]
+
+    def save(self):
+        photo = super(OfficerPhotoCropForm, self).save()
+
+        x = self.cleaned_data.get('x')
+        y = self.cleaned_data.get('y')
+        width = self.cleaned_data.get('width')
+        height = self.cleaned_data.get('height')
+
+        image = Image.open(photo.img)
+        cropped_image = image.crop((x, y, width+x, height+y))
+        resized_image = cropped_image.resize((200, 200), Image.ANTIALIAS)
+        resized_image.save(photo.img.path)
+
+        return photo
 
 
 class SMSOptInForm(forms.ModelForm):
