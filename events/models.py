@@ -872,7 +872,7 @@ class Event2019(BaseEvent):
     @property
     def discount_value(self):
         if self.discount_applied:
-            categories = ['Lighting', 'Sound']
+            categories = ['Lighting', 'Sound', 'Rigging', 'Power']
             categories = [Category.objects.get(name=name) for name in categories]
             discountable_total = decimal.Decimal(
                 self.serviceinstance_set.filter(service__category__in=categories).aggregate(Sum('service__base_cost'))[
