@@ -44,7 +44,7 @@ Paste==3.5.0
 Pillow==10.2.0
 #pisa==3.0.33
 pyPdf==4.0.2
-PyPDF2==1.26.0
+PyPDF2==3.0.1
 python-dateutil==2.8.1
 pytz==2020.4
 raven==6.10.0
