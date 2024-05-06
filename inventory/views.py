@@ -857,6 +857,6 @@ def snipe_credentials(request):
         'title': 'Snipe Login Credentials',
         'message': '<span style="font-size: 1.3em"><strong>Username:</strong> ' + settings.SNIPE_GENERAL_USER +
                    '<br><strong>Password:</strong> ' + settings.SNIPE_GENERAL_PASS + '</span><br><br>'
-                   '<a class="btn btn-primary" href="https://lnl-rt.wpi.edu/snipe" target="_blank">Login Now</a>'
+                   '<a class="btn btn-primary" href="https://lnl-rt.wpi.edu" target="_blank">Login Now</a>'
     }
     return render(request, 'default.html', context)
