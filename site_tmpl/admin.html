@@ -43,7 +43,7 @@
                         {% endif %}
                         <a class="btn btn-primary" href="https://wpilnl.slack.com/">Slack</a>
                         {% permission request.user has 'inventory.view_equipment' %}
-                            <a class="btn btn-primary" href="https://lnl-rt.wpi.edu/snipe/">Snipe</a>
+                            <a class="btn btn-primary" href="https://lnl-rt.wpi.edu/">Snipe</a>
                         {% endpermission %}
                         {% if request.user.is_superuser %}
                             <a class="btn btn-danger" href="../admin">Admin</a>
