@@ -356,7 +356,7 @@ def shame(request):
     on a leaderboard.
     """
     context = {}
-    worst_cc_report_forgetters = get_user_model().objects.annotate(Count('ccinstances', distinct=True)).annotate(
+    worst_cc_report_forgetters = get_user_model().objects.filter(groups__name='Active').annotate(Count('ccinstances', distinct=True)).annotate(
         did_ccreport_count=Count(Case(When(ccinstances__event__ccreport__crew_chief=F('pk'), then=F('ccinstances'))),
                                  distinct=True)).annotate(
         failed_to_do_ccreport_count=(F('ccinstances__count') - F('did_ccreport_count'))).annotate(
