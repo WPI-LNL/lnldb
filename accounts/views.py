@@ -361,7 +361,7 @@ def shame(request):
                                  distinct=True)).annotate(
         failed_to_do_ccreport_count=(F('ccinstances__count') - F('did_ccreport_count'))).annotate(
         failed_to_do_ccreport_percent=(F('failed_to_do_ccreport_count') * 100 / F('ccinstances__count'))).order_by(
-        '-failed_to_do_ccreport_count', '-failed_to_do_ccreport_percent')[:10]
+        '-failed_to_do_ccreport_percent', '-failed_to_do_ccreport_count')
 
     context['worst_cc_report_forgetters'] = worst_cc_report_forgetters
 
