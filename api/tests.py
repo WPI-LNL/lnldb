@@ -459,6 +459,37 @@ class APIViewTest(ViewTestCase):
         self.assertOk(self.client.get('/api/v1/sitemap', {'category': 'Events'}), 204)
         self.assertEqual(self.client.get('/api/v1/sitemap', {'category': 'test'}).content.decode('utf-8'), pages_only)
 
+    def test_sats(self):
+
+        # Create token
+        token, created = Token.objects.get_or_create(user=self.user)
+        self.assertOk(self.client.get("/api/v1/sats/assets/"), 200)
+
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)
+
+        permission = Permission.objects.get(codename="add_asset")
+        self.user.user_permissions.add(permission)
+
+        time1 = "2023-04-25T14:44:58.811209-04:00"
+
+        self.assertOk(client.post('/api/v1/sats/assets/', {"asset_display_name": "Asset1", "asset_last_seen": time1}), status_code=201)
+
+        oneAsset = '[{"asset_id":1,"asset_display_name":"Asset1","asset_status":"UNK","asset_position":null,"asset_last_seen":"%s"}]' % time1
+
+        self.assertEqual(self.client.get("/api/v1/sats/assets/").content.decode("utf-8"), oneAsset)
+
+        time2 = timezone.now()
+
+        checkedInAsset = '{"asset_id": 1, "asset_display_name: "Asset1", "asset_status" : "IN", "asset_last_seen": %s, "asset_position": 1}' % time2
+
+        self.assertEqual(client.put("/api/v1/sats/assets/1/", {"asset_status": "IN", "asset_position": 1, "asset_last_seen": time2}).content.decode("utf-8"), checkedInAsset)
+
+        
+        time3 = timezone.now()
+        checkedOutAsset = '{"asset_id": 1, "asset_display_name: "Asset1", "asset_status" : "IN", "asset_last_seen": %s, "asset_position": 1}' % time3
+
+        self.assertEqual(client.put("/api/v1/sats/assets/1/", {"asset_status": "OUT", "asset_last_seen": time3, "asset_position": None}).content.decode("utf-8"), checkedOutAsset)
 
 class SpotifyAPIViewTests(ViewTestCase):
     def setUp(self):
