@@ -1,4 +1,5 @@
-from django.conf.urls import include, url
+from django.conf.urls import include
+from django.urls import re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from . import views
 from .routers import ReadOnlyRouter, WriteOnlyRouter, SpotifyRouter
@@ -19,11 +20,11 @@ spotify_router.register(r'users', views.SpotifyUserViewSet, basename="Spotify Us
 spotify_router.register(r'requests', views.SongRequestViewSet, basename="Song Request")
 
 urlpatterns = [
-    url(r'v1/', include(router.urls)),
-    url(r'v1/', include(write_router.urls)),
-    url(r'v1/spotify/', include(spotify_router.urls)),
-    url(r'^token/request/(?P<client_id>.+)/$', views.request_token, name="request-token"),
-    url(r'^token/fetch/$', views.fetch_token, name="fetch-token"),
-    url(r'^schema/$', SpectacularAPIView.as_view(), name="schema"),
-    url(r'^schema/swagger/$', SpectacularSwaggerView.as_view(url_name='api:schema'), name='swagger')
+    re_path(r'v1/', include(router.urls)),
+    re_path(r'v1/', include(write_router.urls)),
+    re_path(r'v1/spotify/', include(spotify_router.urls)),
+    re_path(r'^token/request/(?P<client_id>.+)/$', views.request_token, name="request-token"),
+    re_path(r'^token/fetch/$', views.fetch_token, name="fetch-token"),
+    re_path(r'^schema/$', SpectacularAPIView.as_view(), name="schema"),
+    re_path(r'^schema/swagger/$', SpectacularSwaggerView.as_view(url_name='api:schema'), name='swagger')
 ]

@@ -327,7 +327,6 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'django.forms',
     'markdown_deux',
-    'django_cas_ng',
     'django_extensions',
 
     'accounts',
@@ -349,11 +348,11 @@ INSTALLED_APPS = (
 
     'bootstrap3',
     'crispy_forms',
+    'crispy_bootstrap3',
     'formtools',
     'semanticuiforms',
     'lineage',
     'django_bootstrap_calendar',
-    'multiselectfield',
     'ajax_select',
     'watson',
     'debug_toolbar',
@@ -362,7 +361,6 @@ INSTALLED_APPS = (
     'reversion',
     'hijack',
     'pagedown',
-    'compat',
     'polymorphic',
     'jchart',
     'rest_framework',

@@ -1449,7 +1449,7 @@ class ServiceInstanceForm(forms.ModelForm):
         model = ServiceInstance
         fields = ('service', 'detail')
         widgets = {
-            'detail': PagedownWidget(show_preview=False),
+            'detail': PagedownWidget(attrs={"show_preview":False}),
         }
 
     service = ModelChoiceField(queryset=Service.objects.filter(enabled_event2019=True))

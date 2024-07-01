@@ -1,4 +1,5 @@
-from django.conf.urls import include, url
+from django.conf.urls import include
+from django.urls import re_path
 from django.views.generic import RedirectView
 
 from .. import views
@@ -6,12 +7,12 @@ from .. import views
 app_name = 'lnldb'
 
 urlpatterns = [
-    url(r'^$', views.orgs.vieworgs, name="list"),
-    url(r'^add/$', views.orgs.addeditorgs, name="add"),
-    url(r'^(?P<org_id>[0-9]+)/', include([
-        url(r'^$', views.orgs.orgdetail, name="detail"),
-        url(r'^edit/$', views.orgs.addeditorgs, name="edit"),
-        url(r'^verify/$', views.orgs.OrgVerificationCreate.as_view(), name="verify"),
+    re_path(r'^$', views.orgs.vieworgs, name="list"),
+    re_path(r'^add/$', views.orgs.addeditorgs, name="add"),
+    re_path(r'^(?P<org_id>[0-9]+)/', include([
+        re_path(r'^$', views.orgs.orgdetail, name="detail"),
+        re_path(r'^edit/$', views.orgs.addeditorgs, name="edit"),
+        re_path(r'^verify/$', views.orgs.OrgVerificationCreate.as_view(), name="verify"),
     ])),
 
     # redirects {{{
@@ -23,7 +24,7 @@ urlpatterns = [
     #  - For every batch include the date, so we can remove it in ~3yrs
 
     # Oct 2016
-    url(r'^edit/(\d+)/$', RedirectView.as_view(pattern_name="orgs:edit", permanent=True))
+    re_path(r'^edit/(\d+)/$', RedirectView.as_view(pattern_name="orgs:edit", permanent=True))
 
     # }}}
 ]
