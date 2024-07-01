@@ -5,7 +5,8 @@ from django.db.models import (Model, BooleanField, CharField, IntegerField, BigI
                               SET_NULL, signals)
 from django.core.validators import MinValueValidator,MaxValueValidator
 from django.utils import timezone
-from multiselectfield import MultiSelectField
+from django.forms import MultipleChoiceField
+from django.forms.widgets import CheckboxSelectMultiple
 from django.conf import settings
 from six import python_2_unicode_compatible
 from django.dispatch import receiver
@@ -248,8 +249,8 @@ class UserPreferences(Model):
     rt_token = CharField(blank=True, null=True, verbose_name="RT Auth Token", max_length=256)
 
     # Communication Preferences
-    cc_add_subscriptions = MultiSelectField(choices=(('email', 'Email'), ('slack', 'Slack Notification')),
-                                            default='email', blank=True, null=True)
+    cc_add_subscriptions = MultipleChoiceField(choices=(('email', 'Email'), ('slack', 'Slack Notification')),
+                                            initial=['email'], widget=CheckboxSelectMultiple)                   # TODO CHECK AGAIN (MultipleChoiceField is new)
 
     cc_report_reminders = CharField(choices=(('email', 'Email'), ('slack', 'Slack Notification'), ('all', 'Both')),
                                     default='email', max_length=12)
@@ -260,10 +261,11 @@ class UserPreferences(Model):
         max_length=12
     )
 
-    event_edited_field_subscriptions = MultiSelectField(
+    event_edited_field_subscriptions = MultipleChoiceField(
         choices=event_fields,
-        default=['location', 'datetime_setup_complete', 'datetime_start', 'datetime_end']
-    )
+        initial=['location', 'datetime_setup_complete', 'datetime_start', 'datetime_end'],
+        widget=CheckboxSelectMultiple
+    )                                                                                                           # TODO CHECK AGAIN (MultipleChoiceField is new)
 
     ignore_user_action = BooleanField(
         default=False, help_text="Uncheck this to ignore notifications for actions triggered by the user"

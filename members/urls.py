@@ -1,12 +1,13 @@
-from django.conf.urls import include, url
+from django.conf.urls import include
+from django.urls import re_path
 
 from . import views
 
 urlpatterns = [
-    url(r'^db/members/training/', include(([
-        url(r'^list/$', views.training_list, name="list"),
-        url(r'^enter/$', views.enter_training, name="entry"),
-        url(r'^notes/(?P<pk>[0-9]+)/$', views.trainee_notes, name="traineenotes"),
-        url(r'^revoke/(?P<pk>[0-9]+)/$', views.revoke_training, name="revoke"),
+    re_path(r'^db/members/training/', include(([
+        re_path(r'^list/$', views.training_list, name="list"),
+        re_path(r'^enter/$', views.enter_training, name="entry"),
+        re_path(r'^notes/(?P<pk>[0-9]+)/$', views.trainee_notes, name="traineenotes"),
+        re_path(r'^revoke/(?P<pk>[0-9]+)/$', views.revoke_training, name="revoke"),
     ], 'members'), namespace="training")),
 ]

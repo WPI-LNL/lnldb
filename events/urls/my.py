@@ -1,4 +1,5 @@
-from django.conf.urls import include, url
+from django.conf.urls import include
+from django.urls import re_path
 from django.contrib.auth.decorators import login_required
 
 from .. import views
@@ -7,36 +8,36 @@ app_name = 'lnldb'
 
 # prefix: /my/
 urlpatterns = [
-    url(r'^workorders/$', views.my.mywo, name="workorders"),
-    url(r'^workorders/attach/(?P<id>[0-9]+)/$', views.flow.assignattach_external, name="event-attach"),
+    re_path(r'^workorders/$', views.my.mywo, name="workorders"),
+    re_path(r'^workorders/attach/(?P<id>[0-9]+)/$', views.flow.assignattach_external, name="event-attach"),
 
-    url(r'^office-hours/$', views.my.office_hours, name="office-hours"),
+    re_path(r'^office-hours/$', views.my.office_hours, name="office-hours"),
 
-    url(r'^orgs/', include([
-        url(r'^$', views.my.myorgs, name="orgs"),
-        url(r'^form/$', views.my.myorgform, name="org-request"),
-        url(r'^(?P<id>[0-9a-f]+)/$', views.orgs.orgedit, name="org-edit"),
-        url(r'^transfer/(?P<id>[0-9]+)/$', views.orgs.org_mkxfer, name="org-transfer"),
-        url(r'^transfer/(?P<idstr>[0-9a-f]+)/accept/$', views.orgs.org_acceptxfer,
+    re_path(r'^orgs/', include([
+        re_path(r'^$', views.my.myorgs, name="orgs"),
+        re_path(r'^form/$', views.my.myorgform, name="org-request"),
+        re_path(r'^(?P<id>[0-9a-f]+)/$', views.orgs.orgedit, name="org-edit"),
+        re_path(r'^transfer/(?P<id>[0-9]+)/$', views.orgs.org_mkxfer, name="org-transfer"),
+        re_path(r'^transfer/(?P<idstr>[0-9a-f]+)/accept/$', views.orgs.org_acceptxfer,
             name="org-accept"),
     ])),
 
-    url(r'^events/', include([
-        url(r'^$', views.my.myevents, name="events"),
+    re_path(r'^events/', include([
+        re_path(r'^$', views.my.myevents, name="events"),
 
         # TODO: merge these with their events equivalents.
-        url(r'^(?P<eventid>[0-9]+)/files/$', views.my.eventfiles, name="event-files"),
-        url(r'^(?P<eventid>[0-9]+)/report/$', views.my.ccreport, name="report"),
-        url(r'^(?P<eventid>[0-9]+)/hours/$', views.my.hours_list, name="hours-list"),
-        url(r'^(?P<eventid>[0-9]+)/hours/bulk/$', views.my.hours_bulk,
+        re_path(r'^(?P<eventid>[0-9]+)/files/$', views.my.eventfiles, name="event-files"),
+        re_path(r'^(?P<eventid>[0-9]+)/report/$', views.my.ccreport, name="report"),
+        re_path(r'^(?P<eventid>[0-9]+)/hours/$', views.my.hours_list, name="hours-list"),
+        re_path(r'^(?P<eventid>[0-9]+)/hours/bulk/$', views.my.hours_bulk,
             name="hours-bulk"),
-        url(r'^(?P<eventid>[0-9]+)/hours/mk/$', views.my.hours_mk,
+        re_path(r'^(?P<eventid>[0-9]+)/hours/mk/$', views.my.hours_mk,
             name="hours-new"),
-        url(r'^(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', views.my.hours_edit,
+        re_path(r'^(?P<eventid>[0-9]+)/hours/(?P<userid>[0-9]+)$', views.my.hours_edit,
             name="hours-edit"),
-        url(r'^(?P<eventid>[0-9]+)/survey/$', login_required(views.my.PostEventSurveyCreate.as_view()),
+        re_path(r'^(?P<eventid>[0-9]+)/survey/$', login_required(views.my.PostEventSurveyCreate.as_view()),
             name="post-event-survey"),
-        url(r'^survey/success/$', views.my.survey_success, name="survey-success"),
+        re_path(r'^survey/success/$', views.my.survey_success, name="survey-success"),
     ])),
 
 ]

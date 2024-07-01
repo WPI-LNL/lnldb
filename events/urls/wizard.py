@@ -1,5 +1,5 @@
 # from django.contrib.auth.decorators import login_required
-# from django.conf.urls import url
+# from django.urls import re_path
 #
 # from ..views import wizard
 # from .. import forms
@@ -19,6 +19,6 @@
 # )
 #
 # urlpatterns = [
-#     url(r'^(?P<step>.+)/$', login_required(event_wizard), name='step'),
-#     url(r'^$', login_required(event_wizard), name='start'),
+#     re_path(r'^(?P<step>.+)/$', login_required(event_wizard), name='step'),
+#     re_path(r'^$', login_required(event_wizard), name='start'),
 # ]
