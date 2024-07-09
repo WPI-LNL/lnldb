@@ -18,7 +18,12 @@
                             <a class="btn btn-danger btn-lg" href="" disabled>Account Disabled</a>
                         {% else %}
                             {% if request.user.is_superuser and request.user != u %}
-                                <a class="btn btn-danger btn-lg" href="{% url "hijack:login_with_id" u.id %}">Impersonate</a>
+                                <form action="{% url 'hijack:acquire' %}" method="POST">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="user_pk" value="{{ user.id }}">
+                                    <button type="submit" class="btn btn-danger btn-lg">Impersonate {{ another_user }}</button>
+                                    <input type="hidden" name="next" value="{{ request.path }}">
+                                </form>
                             {% endif %}
                             {% permission request.user has 'accounts.change_user' of u %}
                                 <a class="btn btn-info btn-lg" href="{% url "accounts:update" u.id %}">Modify</a>
