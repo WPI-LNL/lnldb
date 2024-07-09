@@ -286,7 +286,8 @@ TEMPLATES = [{
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
 DEBUG_TOOLBAR_CONFIG = {
-    'SHOW_TOOLBAR_CALLBACK': lambda x: DEBUG and x.META['SERVER_NAME'] != "testserver"
+    'SHOW_TOOLBAR_CALLBACK': lambda x: DEBUG and x.META['SERVER_NAME'] != "testserver",
+    'IS_RUNNING_TESTS': False
 }
 
 USE_WHITENOISE = env.bool("USE_WHITENOISE", default=False)
@@ -530,6 +531,7 @@ EVENT_STATUSES = (
 )
 
 # crispy_forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap3"
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
 SYNC_STUDENT_ID = env.bool("STUDENT_AUTO_ID", False)
