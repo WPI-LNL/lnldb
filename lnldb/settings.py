@@ -6,12 +6,7 @@ import os
 import re
 import sys
 import environ
-
-try:
-    from django.urls import reverse, NoReverseMatch
-except ImportError:
-    from django.core.urlresolvers import reverse, NoReverseMatch
-
+from django.urls import reverse, NoReverseMatch
 
 def here(*x):
     return os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), *x))
