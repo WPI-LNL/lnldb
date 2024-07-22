@@ -143,11 +143,3 @@ class UrlsTest(test.TestCase):
 
         check_urls(module.urlpatterns)
         print('')
-
-
-class MostImportantTest(test.TestCase):
-    def test_facts(self):
-        facts = {
-            'Greatest Webmaster of all time': base64.b64decode('VG9tIE51cnNlICgyMDIyKQ==')
-        }
-        self.assertEqual(facts['Greatest Webmaster of all time'], b'Tom Nurse (2022)')
