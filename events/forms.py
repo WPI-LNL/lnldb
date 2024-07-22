@@ -3,7 +3,6 @@ import decimal
 import re
 import uuid
 
-import pytz
 import six
 from ajax_select import make_ajax_field
 from ajax_select.fields import (AutoCompleteSelectField,
@@ -1559,7 +1558,7 @@ class WorkorderRepeatForm(forms.ModelForm):
             raise ValidationError('You cannot start after you finish')
         if setup_complete > event_start:
             raise ValidationError('You cannot setup after you finish')
-        if setup_complete < datetime.datetime.now(pytz.utc):
+        if setup_complete < datetime.datetime.now(timezone.utc):
             raise ValidationError('Stop trying to time travel')
 
         # service exists validation

@@ -1,5 +1,5 @@
 import logging
-import pytz
+import zoneinfo
 from django.urls import reverse
 from django.contrib.auth.models import Permission, Group
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -767,7 +767,7 @@ class EventBasicViewTest(ViewTestCase):
         self.assertContains(self.client.get(reverse("events:crew-checkout")), "Whoops!")
 
         # Check with EST because datepicker will localize
-        tz = pytz.timezone('US/Eastern')
+        tz = zoneinfo.ZoneInfo('US/Eastern')
         past_time = timezone.datetime.strptime('2020-01-01T00:00:00', '%Y-%m-%dT%H:%M:%S').replace(tzinfo=tz)
         setup_start = timezone.datetime.strptime('2020-01-01T01:00:00', '%Y-%m-%dT%H:%M:%S').replace(tzinfo=tz)
         checkin_time = timezone.datetime.strptime('2020-01-01T02:00:00', '%Y-%m-%dT%H:%M:%S').replace(tzinfo=tz)

@@ -1,5 +1,4 @@
 import json
-import pytz
 import icalendar
 from time import mktime
 
@@ -144,7 +143,7 @@ class PublicFacingCalJsonView(View):
 
     def get(self, request, *args, **kwargs):
         queryset = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False,
-                                            sensitive=False).filter(datetime_end__gte=timezone.datetime.now(pytz.utc))
+                                            sensitive=False).filter(datetime_end__gte=timezone.datetime.now(timezone.utc))
 
         from_date = request.GET.get('from', False)
         to_date = request.GET.get('to', False)
