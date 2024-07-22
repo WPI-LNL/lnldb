@@ -192,7 +192,7 @@ def org_acceptxfer(request, idstr):
         context['msgclass'] = "alert-info"
 
     elif transfer.is_expired:
-        context['msg'] = 'This transfer has expired, please make a new one (you had a week :-\)'
+        context['msg'] = 'This transfer has expired, please make a new one (you had a week :-\\)'
         context['status'] = 'Expired'
 
     elif not request.user == transfer.org.user_in_charge and request.user == transfer.initiator \
