@@ -54,6 +54,7 @@ sqlparse
 #tolerance
 -e git+https://github.com/WPI-LNL/tolerance@335211c974e5e1d85289e1a8745ce01794b05225#egg=tolerance
 xhtml2pdf
+python-bidi==0.4.2
 #django-cas-ng
 ldap3
 django-environ
