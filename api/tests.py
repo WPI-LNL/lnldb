@@ -18,7 +18,7 @@ from events.models import OfficeHour, Building, Location, CrewAttendanceRecord
 from data.models import Notification, Extension, ResizedRedirect
 from pages.models import Page
 from spotify.models import SpotifyUser, Session, SongRequest
-import pytz
+import zoneinfo
 import logging
 
 
@@ -207,8 +207,8 @@ class APIViewTest(ViewTestCase):
                          str(start_time.time()) + '","hour_end":"' + str(end_time.time()) + '"}]')
 
         # Test that we can get office hours that start at a certain time (exact match)
-        start_time = timezone.datetime.strptime('13:30', '%H:%M').replace(tzinfo=pytz.timezone('US/Eastern'))
-        end_time = timezone.datetime.strptime('15:30', '%H:%M').replace(tzinfo=pytz.timezone('US/Eastern'))
+        start_time = timezone.datetime.strptime('13:30', '%H:%M').replace(tzinfo=zoneinfo.ZoneInfo('US/Eastern'))
+        end_time = timezone.datetime.strptime('15:30', '%H:%M').replace(tzinfo=zoneinfo.ZoneInfo('US/Eastern'))
 
         # Ensure that only 1 result will appear in the tests below
         hour1.hour_start = start_time + timezone.timedelta(hours=3)
@@ -239,10 +239,10 @@ class APIViewTest(ViewTestCase):
         # Test that we get 204 response when no notifications exist
         self.assertOk(self.client.get("/api/v1/notifications?project_id=LNL&page_id=/"), 204)
 
-        expired = timezone.datetime.strptime("2020-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=pytz.UTC)
+        expired = timezone.datetime.strptime("2020-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.UTC)
         not_expired = timezone.now() + timezone.timedelta(days=15)
         not_expired = timezone.datetime.strptime(not_expired.strftime("%Y-%m-%dT%H:%M:%SZ"), "%Y-%m-%dT%H:%M:%SZ")\
-            .replace(tzinfo=pytz.UTC)
+            .replace(tzinfo=timezone.UTC)
 
         # Class I notification (see docs)
         Notification.objects.create(title="Test Notification", message="Some test text", format="notification",
