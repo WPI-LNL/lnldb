@@ -559,12 +559,12 @@ class MDMTestCase(ViewTestCase):
         os.remove(path1)
 
         # The removal_date should come before the date defined by the duration
-        expiration_date = timezone.datetime(2020, 1, 1, 16, 59, 0, 0, timezone.UTC)
+        expiration_date = timezone.datetime(2020, 1, 1, 16, 59, 0, 0, timezone.utc)
         metadata = views.get_profile_metadata(config, timestamp)
         self.assertEqual(metadata['expires'], expiration_date)
 
         # Ensure that the duration value will come before the expiration date
-        timestamp = timezone.datetime(2020, 1, 1, 10, 30, 0, 0, timezone.UTC)
+        timestamp = timezone.datetime(2020, 1, 1, 10, 30, 0, 0, timezone.utc)
         metadata = views.get_profile_metadata(config, timestamp)
         self.assertEqual(metadata['expires'], timestamp + timezone.timedelta(seconds=30))
 
