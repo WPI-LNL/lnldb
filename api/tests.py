@@ -106,7 +106,7 @@ class APIViewTest(ViewTestCase):
 
         # If codes do not match we should see invalid code error and attempts count should be decreased
         self.assertEqual(self.client.post(reverse("api:fetch-token"), data).data['detail'],
-                         "Invalid verification code. {} attempts remaining.".format(settings.TFV_ATTEMPTS - 1))
+                         "Invalid verification code. {} attempts remaining.".format(settings.TFV_ATTEMPTS - 2))
 
         data["code"] = token_request.code
 
