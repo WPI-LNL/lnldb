@@ -272,7 +272,7 @@ def install_confirmation(request):
     apps = data['apps'].split('#')
     for pk in profiles_installed:
         profile = get_object_or_404(ConfigurationProfile, pk=pk)
-        timestamp = datetime.datetime.strptime(data['timestamp'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+        timestamp = datetime.datetime.strptime(data['timestamp'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=datetime.timezone.utc)
         metadata = get_profile_metadata(profile, timestamp)
         expiration_date = metadata['expires']
         version = metadata['version']
@@ -358,7 +358,7 @@ def get_profile_metadata(config, timestamp):
         if context['data']['removal_date'] is not None:
             expires_on = timezone.make_aware(datetime.datetime.strptime(
                 context['data']['removal_date'], '%Y-%m-%dT%H:%M:%SZ')
-            ).astimezone(timezone.utc)
+            ).astimezone(datetime.timezone.utc)
         if context['data']['removal_period'] is not None:
             expires_after = timestamp + timezone.timedelta(seconds=context['data']['removal_period'])
         if expires_on is not None and expires_after is not None:

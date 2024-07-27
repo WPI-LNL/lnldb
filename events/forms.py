@@ -1558,7 +1558,7 @@ class WorkorderRepeatForm(forms.ModelForm):
             raise ValidationError('You cannot start after you finish')
         if setup_complete > event_start:
             raise ValidationError('You cannot setup after you finish')
-        if setup_complete < datetime.datetime.now(timezone.utc):
+        if setup_complete < datetime.datetime.now(datetime.timezone.utc):
             raise ValidationError('Stop trying to time travel')
 
         # service exists validation
