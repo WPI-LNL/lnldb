@@ -3,10 +3,9 @@ from django.contrib.auth.models import AbstractUser, _user_has_perm
 from django.db.models import (Model, BooleanField, CharField, IntegerField, BigIntegerField, PositiveIntegerField, Q,
                               TextField, DateField, DateTimeField, OneToOneField, ManyToManyField, ImageField, CASCADE,
                               SET_NULL, signals)
+from multiselectfield import MultiSelectField
 from django.core.validators import MinValueValidator,MaxValueValidator
 from django.utils import timezone
-from django.forms import MultipleChoiceField
-from django.forms.widgets import CheckboxSelectMultiple
 from django.conf import settings
 from six import python_2_unicode_compatible
 from django.dispatch import receiver
@@ -249,8 +248,8 @@ class UserPreferences(Model):
     rt_token = CharField(blank=True, null=True, verbose_name="RT Auth Token", max_length=256)
 
     # Communication Preferences
-    cc_add_subscriptions = MultipleChoiceField(choices=(('email', 'Email'), ('slack', 'Slack Notification')),
-                                            initial=['email'], widget=CheckboxSelectMultiple)                   # TODO CHECK AGAIN (MultipleChoiceField is new)
+    cc_add_subscriptions = MultiSelectField(choices=(('email', 'Email'), ('slack', 'Slack Notification')),
+                                            default=['email'], blank=True, null=True)
 
     cc_report_reminders = CharField(choices=(('email', 'Email'), ('slack', 'Slack Notification'), ('all', 'Both')),
                                     default='email', max_length=12)
@@ -261,10 +260,9 @@ class UserPreferences(Model):
         max_length=12
     )
 
-    event_edited_field_subscriptions = MultipleChoiceField(
+    event_edited_field_subscriptions = MultiSelectField(
         choices=event_fields,
-        initial=['location', 'datetime_setup_complete', 'datetime_start', 'datetime_end'],
-        widget=CheckboxSelectMultiple
+        default=['location', 'datetime_setup_complete', 'datetime_start', 'datetime_end']
     )                                                                                                           # TODO CHECK AGAIN (MultipleChoiceField is new)
 
     ignore_user_action = BooleanField(

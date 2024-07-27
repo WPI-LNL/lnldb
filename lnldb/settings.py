@@ -347,6 +347,7 @@ INSTALLED_APPS = (
     'semanticuiforms',
     'lineage',
     'django_bootstrap_calendar',
+    'multiselectfield',
     'ajax_select',
     'watson',
     'debug_toolbar',

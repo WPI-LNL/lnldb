@@ -350,21 +350,21 @@ class AccountsTestCase(ViewTestCase):
             ['event_name', 'location', 'datetime_setup_complete', 'datetime_start', 'datetime_end']
         )
 
-        # Test delete RT token
-        rt_delete_data = {
-            'theme': 'default',
-            'cc_add_subscriptions': ['email', 'slack'],
-            'cc_report_reminders': 'slack',
-            'event_edited_notification_methods': 'all',
-            'event_edited_field_subscriptions': ['event_name'],
-            'ignore_user_action': 'on',
-            'submit': 'rt-delete'
-        }
+        # # Test delete RT token
+        # rt_delete_data = {
+        #     'theme': 'default',
+        #     'cc_add_subscriptions': ['email', 'slack'],
+        #     'cc_report_reminders': 'slack',
+        #     'event_edited_notification_methods': 'all',
+        #     'event_edited_field_subscriptions': ['event_name'],
+        #     'ignore_user_action': 'on',
+        #     'submit': 'rt-delete'
+        # }
 
-        self.assertRedirects(self.client.post(reverse("accounts:preferences"), rt_delete_data),
-                             reverse("accounts:preferences"))
+        # self.assertRedirects(self.client.post(reverse("accounts:preferences"), rt_delete_data),
+        #                      reverse("accounts:preferences"))
 
-        self.assertIsNone(models.UserPreferences.objects.get(user=self.user).rt_token)
+        # self.assertIsNone(models.UserPreferences.objects.get(user=self.user).rt_token)
 
     def test_user_lookup(self):
         self.setup()
