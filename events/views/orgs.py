@@ -212,7 +212,7 @@ def org_acceptxfer(request, idstr):
                 transfer.org.user_in_charge, transfer.new_user_in_charge), None)
             transfer.org.user_in_charge = transfer.new_user_in_charge
             transfer.org.save()
-        transfer.completed_on = datetime.datetime.now(timezone.utc)
+        transfer.completed_on = datetime.datetime.now(datetime.timezone.utc)
         transfer.completed = True
         transfer.save()
         context['msg'] = 'Transfer Complete: %s is the new user in charge!' % transfer.new_user_in_charge

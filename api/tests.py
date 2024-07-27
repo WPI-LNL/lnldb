@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth.models import Group, Permission
 from django.contrib.sites.shortcuts import get_current_site
 from django.utils import timezone
+import datetime
 from rest_framework.test import APIClient, APIRequestFactory
 from rest_framework.authtoken.models import Token
 from . import models
@@ -239,10 +240,10 @@ class APIViewTest(ViewTestCase):
         # Test that we get 204 response when no notifications exist
         self.assertOk(self.client.get("/api/v1/notifications?project_id=LNL&page_id=/"), 204)
 
-        expired = timezone.datetime.strptime("2020-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        expired = timezone.datetime.strptime("2020-01-01T00:00:00Z", "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
         not_expired = timezone.now() + timezone.timedelta(days=15)
         not_expired = timezone.datetime.strptime(not_expired.strftime("%Y-%m-%dT%H:%M:%SZ"), "%Y-%m-%dT%H:%M:%SZ")\
-            .replace(tzinfo=timezone.utc)
+            .replace(tzinfo=datetime.timezone.utc)
 
         # Class I notification (see docs)
         Notification.objects.create(title="Test Notification", message="Some test text", format="notification",
