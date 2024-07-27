@@ -205,9 +205,9 @@ class DateEntryFormSetBase(forms.Form):
                 continue
 
             offset = self.time_offsets[offset_name]
-            kwargs['datetime_setup_complete'] = tz.localize(dt_setupcomplete + offset)
-            kwargs['datetime_start'] = tz.localize(dt_start + offset)
-            kwargs['datetime_end'] = tz.localize(dt_end + offset)
+            kwargs['datetime_setup_complete'] = dt_setupcomplete.astimezone(tz) + offset
+            kwargs['datetime_start'] = dt_start.astimezone(tz) + offset
+            kwargs['datetime_end'] = dt_end.astimezone(tz) + offset
 
             e = Event2019.objects.create(**kwargs)
             e.org.add(org)
