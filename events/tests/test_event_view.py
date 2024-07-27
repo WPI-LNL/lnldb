@@ -139,7 +139,7 @@ class EventBasicViewTest(ViewTestCase):
         CCInstanceFactory.create(crew_chief=self.user, event=self.e)
 
         # Bad input
-        self.assertOk(self.client.post(reverse('events:edit', args=[self.e.pk])))
+        self.assertOk(self.client.post(reverse('events:edit', args=[self.e.pk])), status_code=400)
 
         building = models.Building.objects.create(name="Fuller Laboratories", shortname="FL")
         booth = models.Location.objects.create(name="Booth", building=building)
@@ -2348,7 +2348,7 @@ class EventListBasicViewTest(ViewTestCase):
                 .encode('utf-8')
             end = timezone.make_aware(timezone.datetime(2020, 1, 1)).strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
         else:
-            tz = b'TZID=' + settings.TIME_ZONE.encode('utf-8') + b';'
+            tz = b'TZID=' + settings.TIME_ZONE.encode('utf-8')
             start = timezone.make_aware(timezone.datetime(2019, 12, 31, 11, 59)).strftime('%Y%m%dT%H%M%S')\
                 .encode('utf-8')
             end = timezone.make_aware(timezone.datetime(2020, 1, 1)).strftime('%Y%m%dT%H%M%S').encode('utf-8')
@@ -2356,8 +2356,8 @@ class EventListBasicViewTest(ViewTestCase):
         # Test with no attendees
         now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
         expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\n' \
-                   b'METHOD:PUBLISH\r\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART;' + tz + b'VALUE=DATE-TIME:' + \
-                   start + b'\r\nDTEND;' + tz + b'VALUE=DATE-TIME:' + end + b'\r\nDTSTAMP;VALUE=DATE-TIME:' + now + \
+                   b'METHOD:PUBLISH\r\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART;' + tz + b':' + \
+                   start + b'\r\nDTEND;' + tz + b':' + end + b'\r\nDTSTAMP:' + now + \
                    b'\r\nUID:event1@lnldb\r\nDESCRIPTION:Requested by \r\nLOCATION:\r\n' \
                    b'URL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
         output = cal.generate_ics([self.e], None)
@@ -2366,8 +2366,8 @@ class EventListBasicViewTest(ViewTestCase):
         # Test response when set to generate a request
         now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
         expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\n' \
-                   b'METHOD:REQUEST\r\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART;' + tz + b'VALUE=DATE-TIME:' + \
-                   start + b'\r\nDTEND;' + tz + b'VALUE=DATE-TIME:' + end + b'\r\nDTSTAMP;VALUE=DATE-TIME:' + now + \
+                   b'METHOD:REQUEST\r\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART;' + tz + b':' + \
+                   start + b'\r\nDTEND;' + tz + b':' + end + b'\r\nDTSTAMP:' + now + \
                    b'\r\nUID:event1@lnldb\r\nDESCRIPTION:Requested by \r\nLOCATION:\r\n' \
                    b'URL:http://lnl.wpi.edu/db/events/view/1/\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n'
         output = cal.generate_ics([self.e], None, True)
@@ -2382,8 +2382,8 @@ class EventListBasicViewTest(ViewTestCase):
         attendee3 = cal.EventAttendee(self.e2, self.user)
         now = timezone.now().strftime('%Y%m%dT%H%M%SZ').encode('utf-8')
         expected = b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//WPI Lens and Lights//LNLDB//EN\r\n' \
-                   b'METHOD:PUBLISH\r\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART;' + tz + b'VALUE=DATE-TIME:' + \
-                   start + b'\r\nDTEND;' + tz + b'VALUE=DATE-TIME:' + end + b'\r\nDTSTAMP;VALUE=DATE-TIME:' + now + \
+                   b'METHOD:PUBLISH\r\nBEGIN:VEVENT\r\nSUMMARY:Test Event\r\nDTSTART;' + tz + b':' + \
+                   start + b'\r\nDTEND;' + tz + b':' + end + b'\r\nDTSTAMP:' + now + \
                    b'\r\nUID:event1@lnldb\r\nATTENDEE;CN="Test User";ROLE=REQ-PARTICIPANT;' \
                    b'RSVP=FALSE:MAILTO:abc@foo.com\r\nATTENDEE;CN="Test User";ROLE=OPT-PARTICIPANT;' \
                    b'RSVP=FALSE:MAILTO:abc@foo.com\r\nDESCRIPTION:Requested by \r\nLOCATION:\r\n' \
