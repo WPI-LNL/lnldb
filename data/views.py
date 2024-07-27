@@ -52,7 +52,7 @@ def search(request):
 def serve_file(request, att_file, forced_name=None):
     statobj = os.stat(att_file.path)
     if not was_modified_since(request.META.get('HTTP_IF_MODIFIED_SINCE'),
-                              statobj.st_mtime, statobj.st_size):
+                              statobj.st_mtime):
         return HttpResponseNotModified()
     content_type, encoding = mimetypes.guess_type(att_file.path)
     content_type = content_type or 'application/octet-stream'
