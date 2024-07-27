@@ -8,3 +8,4 @@ django-test-without-migrations
 sphinx
 sphinx-rtd-theme
 sphinx-issues
+django-nose
