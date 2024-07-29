@@ -355,7 +355,7 @@ INSTALLED_APPS = (
     'permission',
     'reversion',
     'hijack',
-    'pagedown',
+    'simplemde',
     'polymorphic',
     'jchart',
     'rest_framework',
@@ -567,6 +567,14 @@ MARKDOWN_DEUX_STYLES = {
         "safe_mode": "escape",
     },
 }
+
+SIMPLEMDE_OPTIONS = {
+    'status': False,
+    'autosave': {
+        'enabled': True
+    }
+}
+
 # and for the html editor
 EXTENSIONS = ["newlines", "smart-strong", "strikethrough",
               "smartypants", "tables"]
