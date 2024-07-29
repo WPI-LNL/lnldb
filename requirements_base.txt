@@ -28,7 +28,7 @@ django-multiupload
 #django-natural-duration
 -e git+https://github.com/WPI-LNL/django-natural-duration.git#egg=django-natural-duration
 # django-simplemde
--e git+https://github.com/WPI-LNL/django-simplemde.git#egg=django-simplemde
+-e git+https://github.com/WPI-LNL/django-simplemde.git@easymde#egg=django-simplemde
 django-permission2
 django-reversion
 django-uuidfield
