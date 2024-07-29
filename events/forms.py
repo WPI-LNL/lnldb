@@ -347,7 +347,7 @@ class EventApprovalForm(forms.ModelForm):
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs']
         widgets = {
             'description': SimpleMDEEditor(),
-            'internal_notes': SimpleMDEEditor,
+            'internal_notes': SimpleMDEEditor(),
             'lighting_reqs': SimpleMDEEditor(),
             'sound_reqs': SimpleMDEEditor(),
             'proj_reqs': SimpleMDEEditor(),
@@ -551,7 +551,7 @@ class InternalEventForm(FieldAccessForm):
                   'test_event')
         widgets = {
             'description': SimpleMDEEditor(),
-            'internal_notes': SimpleMDEEditor,
+            'internal_notes': SimpleMDEEditor(),
             'lighting_reqs': SimpleMDEEditor(),
             'sound_reqs': SimpleMDEEditor(),
             'proj_reqs': SimpleMDEEditor(),
