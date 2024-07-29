@@ -18,7 +18,7 @@ from django.db.models import Model, Q
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget, TextInput
 from django.utils import timezone
 # python multithreading bug workaround
-from simplemde.widgets import SimpleMDEEditor
+from easymde.widgets import EasyMDEEditor
 
 from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
 from events.fields import GroupedModelChoiceField
@@ -223,7 +223,7 @@ class IOrgForm(FieldAccessForm):
     associated_orgs = AutoCompleteSelectMultipleField('Orgs', required=False)
     associated_users = AutoCompleteSelectMultipleField('Users', required=False)
     worktag = forms.CharField(required=False, help_text='Ends in -AG, -CC, -GF, -GR, or -DE')
-    notes = forms.CharField(widget=SimpleMDEEditor(), label="Internal Notes", required=False)
+    notes = forms.CharField(widget=EasyMDEEditor(), label="Internal Notes", required=False)
 
     class FieldAccess:
         def __init__(self):
@@ -346,12 +346,12 @@ class EventApprovalForm(forms.ModelForm):
                   'billed_in_bulk', 'datetime_setup_complete', 'lighting', 'lighting_reqs',
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs']
         widgets = {
-            'description': SimpleMDEEditor(),
-            'internal_notes': SimpleMDEEditor(),
-            'lighting_reqs': SimpleMDEEditor(),
-            'sound_reqs': SimpleMDEEditor(),
-            'proj_reqs': SimpleMDEEditor(),
-            'otherservice_reqs': SimpleMDEEditor()
+            'description': EasyMDEEditor(),
+            'internal_notes': EasyMDEEditor(),
+            'lighting_reqs': EasyMDEEditor(),
+            'sound_reqs': EasyMDEEditor(),
+            'proj_reqs': EasyMDEEditor(),
+            'otherservice_reqs': EasyMDEEditor()
         }
 
     org = AutoCompleteSelectMultipleField('Orgs', required=False, label='Client(s)')
@@ -382,7 +382,7 @@ class EventDenialForm(forms.ModelForm):
         model = BaseEvent
         fields = ['cancelled_reason', 'send_email']
         widgets = {
-            'cancelled_reason': SimpleMDEEditor()
+            'cancelled_reason': EasyMDEEditor()
         }
 
 
@@ -550,12 +550,12 @@ class InternalEventForm(FieldAccessForm):
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs', 'sensitive',
                   'test_event')
         widgets = {
-            'description': SimpleMDEEditor(),
-            'internal_notes': SimpleMDEEditor(),
-            'lighting_reqs': SimpleMDEEditor(),
-            'sound_reqs': SimpleMDEEditor(),
-            'proj_reqs': SimpleMDEEditor(),
-            'otherservice_reqs': SimpleMDEEditor()
+            'description': EasyMDEEditor(),
+            'internal_notes': EasyMDEEditor(),
+            'lighting_reqs': EasyMDEEditor(),
+            'sound_reqs': EasyMDEEditor(),
+            'proj_reqs': EasyMDEEditor(),
+            'otherservice_reqs': EasyMDEEditor()
         }
 
     location = GroupedModelChoiceField(
@@ -721,8 +721,8 @@ class InternalEventForm2019(FieldAccessForm):
                   'entered_into_workday', 'send_survey', 'max_crew','cancelled_reason',
                   'reference_code')
         widgets = {
-            'description': SimpleMDEEditor(),
-            'internal_notes': SimpleMDEEditor(),
+            'description': EasyMDEEditor(),
+            'internal_notes': EasyMDEEditor(),
             'cancelled_reason': TextInput(),
         }
 
@@ -769,7 +769,7 @@ class EventReviewForm(forms.ModelForm):
         model = Event
         fields = ('org', 'billing_org', 'internal_notes')
         widgets = {
-            'internal_notes': SimpleMDEEditor()
+            'internal_notes': EasyMDEEditor()
         }
 
     org = AutoCompleteSelectMultipleField('Orgs', required=True, label="Client(s)")
@@ -818,7 +818,7 @@ class InternalReportForm(FieldAccessForm):
         model = CCReport
         fields = ('crew_chief', 'report')
         widgets = {
-            'report': SimpleMDEEditor()
+            'report': EasyMDEEditor()
         }
 
     crew_chief = AutoCompleteSelectField('Members', required=False)
@@ -1448,7 +1448,7 @@ class ServiceInstanceForm(forms.ModelForm):
         model = ServiceInstance
         fields = ('service', 'detail')
         widgets = {
-            'detail': SimpleMDEEditor(attrs={"show_preview":False}),
+            'detail': EasyMDEEditor(attrs={"show_preview":False}),
         }
 
     service = ModelChoiceField(queryset=Service.objects.filter(enabled_event2019=True))

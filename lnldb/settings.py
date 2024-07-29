@@ -355,7 +355,7 @@ INSTALLED_APPS = (
     'permission',
     'reversion',
     'hijack',
-    'simplemde',
+    'easymde',
     'polymorphic',
     'jchart',
     'rest_framework',
@@ -568,7 +568,7 @@ MARKDOWN_DEUX_STYLES = {
     },
 }
 
-SIMPLEMDE_OPTIONS = {
+EASYMDE_OPTIONS = {
     'status': False,
     'forceSync': True,
     'parsingConfig' : { 'allowAtxHeaderWithoutSpace': True, },
