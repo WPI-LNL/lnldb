@@ -5,7 +5,7 @@ from crispy_forms.layout import Field, Layout, Submit, Div, HTML
 from django import forms
 from django.conf import settings
 from django.utils import timezone
-from pagedown.widgets import PagedownWidget
+from simplemde.widgets import SimpleMDEEditor
 
 from .models import SMSMessage, aliases
 from events.models import BaseEvent, ServiceInstance
@@ -13,7 +13,7 @@ from events.models import BaseEvent, ServiceInstance
 
 class SrvAnnounceSendForm(forms.Form):
     subject = forms.CharField(max_length=128)
-    message = forms.CharField(widget=PagedownWidget)
+    message = forms.CharField(widget=SimpleMDEEditor)
     email_to = forms.ChoiceField(choices=aliases)
     slack_channel = forms.ChoiceField(choices=(
         ('', 'No, email only'),

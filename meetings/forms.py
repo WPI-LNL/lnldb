@@ -10,7 +10,7 @@ from django.forms.fields import SplitDateTimeField
 from django.urls.base import reverse
 from multiupload.fields import MultiFileField
 from natural_duration import NaturalDurationField
-from pagedown.widgets import PagedownWidget
+from simplemde.widgets import SimpleMDEEditor
 
 from data.forms import FieldAccessForm, FieldAccessLevel
 from helpers.form_text import slack_channel_msgs
@@ -83,11 +83,11 @@ class MeetingAdditionForm(FieldAccessForm):
     attachments_private = MultiFileField(max_file_size=1024 * 1024 * 20,  # 20 MB
                                          label="Closed Attachments",
                                          required=False)
-    minutes = forms.CharField(widget=PagedownWidget(),
+    minutes = forms.CharField(widget=SimpleMDEEditor(),
                               required=False)
-    agenda = forms.CharField(widget=PagedownWidget(),
+    agenda = forms.CharField(widget=SimpleMDEEditor(),
                              required=False)
-    minutes_private = forms.CharField(widget=PagedownWidget(), label="Closed Minutes", required=False)
+    minutes_private = forms.CharField(widget=SimpleMDEEditor(), label="Closed Minutes", required=False)
 
     class Meta:
         model = Meeting
@@ -170,7 +170,7 @@ class AnnounceSendForm(forms.ModelForm):
         model = MeetingAnnounce
         fields = ('events', 'subject', 'message', 'email_to')
         widgets = {
-            'message': PagedownWidget(),
+            'message': SimpleMDEEditor(),
         }
 
     events = forms.ModelMultipleChoiceField(queryset=Event2019.objects.all(), required=False)
@@ -214,6 +214,6 @@ class AnnounceCCSendForm(forms.ModelForm):
         model = CCNoticeSend
         fields = ('events', 'addtl_message', 'email_to')
         widgets = {
-            'addtl_message': PagedownWidget()
+            'addtl_message': SimpleMDEEditor()
         }
         # events = forms.ModelMultipleChoiceField(queryset=Event.objects.all(),required=False)
