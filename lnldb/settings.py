@@ -570,9 +570,19 @@ MARKDOWN_DEUX_STYLES = {
 
 SIMPLEMDE_OPTIONS = {
     'status': False,
-    'autosave': {
-        'enabled': True
-    }
+    'forceSync': True,
+    'parsingConfig' : { 'allowAtxHeaderWithoutSpace': True, },
+    'promptURLs': True,
+    'spellChecker': False,
+    'inputStyle': 'contenteditable',
+    'nativeSpellcheck': True,
+    'hideIcons': ["fullscreen"],
+    'indentWithTabs': True,
+    'tabSize': 4,
+    'sideBySideFullscreen': False,
+    'minHeight': '80px',
+    'previewImagesInEditor': True,
+
 }
 
 # and for the html editor
