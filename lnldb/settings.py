@@ -546,12 +546,12 @@ def reverse_noexcept(url, args=None, kwargs=None):
 MARKDOWN_DEUX_STYLES = {
     "default": {
         "link_patterns": [
-            (re.compile("\B@([A-Za-z][A-Za-z0-9]*)"),
+            (re.compile(r"\B@([A-Za-z][A-Za-z0-9]*)"),
              lambda m: reverse_noexcept("accounts:by-name:detail",
                                         kwargs={'username': m.group(1)}
                                         )
              ),
-            (re.compile("\B@([0-9]+)"),
+            (re.compile(r"\B@([0-9]+)"),
              lambda m: reverse_noexcept("events:detail",
                                         args=[m.group(1)]
                                         )
