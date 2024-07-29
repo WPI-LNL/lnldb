@@ -580,6 +580,8 @@ CACHES = {
 
 MPTT_ADMIN_LEVEL_INDENT = 20
 
+REGISTER_CALENDAR_EVENTS_MODEL = False
+
 # CAS has been deprecated
 # if env.str("CAS_SERVER_URL", ""):
 #     CAS_SERVER_URL = env.str("CAS_SERVER_URL")
