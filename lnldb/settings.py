@@ -300,6 +300,7 @@ MIDDLEWARE = (
                  'debug_toolbar.middleware.DebugToolbarMiddleware',
                  'data.middleware.SwappableRedirectMiddleware',
                  'data.middleware.HttpResponseNotAllowedMiddleware',
+                 'wagtail.contrib.redirects.middleware.RedirectMiddleware',
              )
 
 ROOT_URLCONF = 'lnldb.urls'
@@ -360,7 +361,22 @@ INSTALLED_APPS = (
     'jchart',
     'rest_framework',
     'rest_framework.authtoken',
-    'drf_spectacular'
+    'drf_spectacular',
+
+    'wagtail.contrib.forms',
+    'wagtail.contrib.redirects',
+    'wagtail.embeds',
+    'wagtail.sites',
+    'wagtail.users',
+    'wagtail.snippets',
+    'wagtail.documents',
+    'wagtail.images',
+    'wagtail.search',
+    'wagtail.admin',
+    'wagtail',
+
+    'modelcluster',
+    'taggit',
 )
 if SAML2_ENABLED:
     INSTALLED_APPS += ('django_saml2_auth',)
@@ -612,3 +628,8 @@ if "MEDIA_ROOT" in locals() and not os.path.exists(MEDIA_ROOT):
 if os.path.exists(MEDIA_ROOT) and not os.path.exists(os.path.join(MEDIA_ROOT, 'profiles')):
     os.makedirs(os.path.join(MEDIA_ROOT, 'profiles'))
     os.makedirs(os.path.join(MEDIA_ROOT, 'software'))
+
+
+# Wagtail settings
+WAGTAIL_SITE_NAME = "LNLDB"
+WAGTAILADMIN_BASE_URL = "https://lnl.wpi.edu/db/"

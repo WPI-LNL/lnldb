@@ -73,3 +73,6 @@ spotipy
 qrcode
 levenshtein
 msal
+
+wagtail
+wagtail-advanced-form-builder

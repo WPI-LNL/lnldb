@@ -2,6 +2,7 @@ import debug_toolbar
 import permission
 from ajax_select import urls as ajax_select_urls
 from django.conf import settings
+from django.conf.urls.static import static
 from django.conf.urls import include
 from django.urls import re_path
 from django.contrib import admin
@@ -12,6 +13,10 @@ import data.views
 from events.views.indices import admin as db_home, index
 from events.views.indices import event_search, survey_dashboard, workshops
 from pages.views import page as view_page
+
+from wagtail.admin import urls as wagtailadmin_urls
+from wagtail import urls as wagtail_urls
+from wagtail.documents import urls as wagtaildocs_urls
 
 admin.autodiscover()
 permission.autodiscover()
@@ -75,6 +80,13 @@ urlpatterns += [
     re_path(r'^lnadmin/$', RedirectView.as_view(url="/db/", permanent=True)),
     re_path(r'^lnadmin/(?P<newpath>.+)$', RedirectView.as_view(url="/db/%(newpath)s", permanent=True)),
 
+    # Wagtail
+    re_path('cms/', include(wagtailadmin_urls)),
+    re_path('documents/', include(wagtaildocs_urls)),
+    re_path('pages/', include(wagtail_urls)),
+
     # This has to be at the end so that it doesn't mask other urls
     re_path(r'^(?P<slug>[-\w]+)/$', view_page, name="page"),
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
