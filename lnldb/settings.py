@@ -300,6 +300,7 @@ MIDDLEWARE = (
                  'debug_toolbar.middleware.DebugToolbarMiddleware',
                  'data.middleware.SwappableRedirectMiddleware',
                  'data.middleware.HttpResponseNotAllowedMiddleware',
+                 'hijack.middleware.HijackUserMiddleware',
              )
 
 ROOT_URLCONF = 'lnldb.urls'
