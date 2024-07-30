@@ -159,11 +159,6 @@ span.result-subtitle {
     display: inline-block;
 }
 
-/* Fix ugly permissions debugging notification */
-#hijacked-warning {
-    height: 35px;
-    position: static;
-}
 
 footer {
     margin-top: 2em;
@@ -273,6 +268,67 @@ td.checkbox {
     border-color: #eed3d7;
 }
 
-.hijacked-warning {
-    position: absolute !important;
+body>.djhj>.djhj-notification {
+    height: 35px;
+    background-size: 50px 50px;
+    background-color: #ffe761;
+    color: #000;
+    background-image: -webkit-linear-gradient(-45deg, rgba(0, 0, 0, .04) 25%, transparent 25%, transparent 50%, rgba(0, 0, 0, .04) 50%, rgba(0, 0, 0, .04) 75%, transparent 75%, transparent);
+    background-image: -moz-linear-gradient(-45deg, rgba(0, 0, 0, .04) 25%, transparent 25%, transparent 50%, rgba(0, 0, 0, .04) 50%, rgba(0, 0, 0, .04) 75%, transparent 75%, transparent);
+    background-image: linear-gradient(135deg, rgba(0, 0, 0, .04) 25%, transparent 25%, transparent 50%, rgba(0, 0, 0, .04) 50%, rgba(0, 0, 0, .04) 75%, transparent 75%, transparent);
+
+    z-index: 1000000;
+    font-weight: 600;
+    text-align: center;
+    position:fixed;
+    min-height: 50px;
+    height: auto;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    border-bottom: 2px solid #ae9e49;
+    font-size: 12px;
+    font-family: sans-serif;
+    margin: 0 25px 25px 0;
+    border-radius: 0;
 }
+
+body>.djhj>.djhj-notification>.djhj-actions {
+    display: block;
+}
+
+body>.djhj>.djhj-notification>.djhj-actions>.djhj-button {
+    -moz-box-shadow:inset 0px 1px 0px 0px #ffffff;
+	-webkit-box-shadow:inset 0px 1px 0px 0px #ffffff;
+	box-shadow:inset 0px 1px 0px 0px #ffffff;
+	background:-webkit-gradient(linear, left top, left bottom, color-stop(0.05, #ffffff), color-stop(1, #f6f6f6));
+	background:-moz-linear-gradient(top, #ffffff 5%, #f6f6f6 100%);
+	background:-webkit-linear-gradient(top, #ffffff 5%, #f6f6f6 100%);
+	background:-o-linear-gradient(top, #ffffff 5%, #f6f6f6 100%);
+	background:-ms-linear-gradient(top, #ffffff 5%, #f6f6f6 100%);
+	background:linear-gradient(to bottom, #ffffff 5%, #f6f6f6 100%);
+	filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff', endColorstr='#f6f6f6',GradientType=0);
+	background-color:#ffffff;
+	-moz-border-radius:6px;
+	-webkit-border-radius:6px;
+	border-radius:6px;
+	border:1px solid #dcdcdc;
+	display:inline-block;
+	cursor:pointer;
+	color:#666666;
+	font-family:Arial;
+	font-size:11px;
+	font-weight:bold;
+	padding:3px 12px;
+	text-decoration:none;
+	text-shadow:0px 1px 0px #ffffff;
+}
+
+.djhj {
+    position: unset !important;
+    bottom: unset !important;
+    left: unset !important;
+    transform: unset !important;
+    z-index: 1000 !important;
+}
+
