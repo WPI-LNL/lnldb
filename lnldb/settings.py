@@ -355,7 +355,7 @@ INSTALLED_APPS = (
     'permission',
     'reversion',
     'hijack',
-    'pagedown',
+    'easymde',
     'polymorphic',
     'jchart',
     'rest_framework',
@@ -567,6 +567,24 @@ MARKDOWN_DEUX_STYLES = {
         "safe_mode": "escape",
     },
 }
+
+EASYMDE_OPTIONS = {
+    'status': False,
+    'forceSync': True,
+    'parsingConfig' : { 'allowAtxHeaderWithoutSpace': True, },
+    'promptURLs': True,
+    'spellChecker': False,
+    'inputStyle': 'contenteditable',
+    'nativeSpellcheck': True,
+    'hideIcons': ["fullscreen"],
+    'indentWithTabs': True,
+    'tabSize': 4,
+    'sideBySideFullscreen': False,
+    'minHeight': '80px',
+    'previewImagesInEditor': True,
+
+}
+
 # and for the html editor
 EXTENSIONS = ["newlines", "smart-strong", "strikethrough",
               "smartypants", "tables"]
