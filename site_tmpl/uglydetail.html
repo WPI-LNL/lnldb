@@ -201,7 +201,7 @@
                             <td>{{event.event_status}}</td>
                         </tr>
                         <tr>
-                            <th>LNL Contact (PM)</th>
+                            <th>LNL Contact</th>
                             <td>
                                 {% if event.lnl_contact %}
                                 <a href="{% url "accounts:detail" event.lnl_contact.id %}">{{ event.lnl_contact.get_full_name }}</a>

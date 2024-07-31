@@ -733,7 +733,7 @@ class InternalEventForm2019(FieldAccessForm):
         group_label=lambda group: group.name,
     )
     contact = AutoCompleteSelectField('Users', required=False)
-    lnl_contact = AutoCompleteSelectField('Members', label="LNL Contact (PM)", required=False)
+    lnl_contact = AutoCompleteSelectField('Members', label="LNL Contact", required=False)
     org = CustomAutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
