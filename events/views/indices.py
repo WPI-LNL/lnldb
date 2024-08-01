@@ -283,7 +283,15 @@ def workshops(request):
         'workshops': Workshop.objects.all(),
         'title': "Workshops",
         'description': "Learn more about out our upcoming sound and lighting workshops.",
-        'styles': "strong {\n\tcolor: orange;\n}\npre {\n\tfont-size: 1rem;\n\tcolor: white;\n\tfont-family: "
-                  "Helvetica Neue, Helvetica, Arial, sans-serif;\n} "
+        'styles': """
+strong {
+    color: orange;
+}
+pre {
+    font-size: 1rem;
+    color: white;
+    font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+}
+"""
     }
     return render(request, 'workshops.html', context)

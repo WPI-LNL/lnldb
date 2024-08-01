@@ -528,8 +528,17 @@ def checkin(request):
 def checkout(request):
     """ Event checkout page for crew members """
     context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True, 'LIGHT_THEME': True,
-               'styles': ".control {\n\tpadding: .375rem .75rem;\n\tfont-size: 1rem;\n\tline-height: 1.5;\n\t"
-                         "border-radius: .25rem;\n\tborder: 1px solid #cde4da;\n\tbackground-clip: padding-box;}"}
+               'styles': """
+.control {
+    padding: .375rem .75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    border-radius: .25rem;
+    border: 1px solid #cde4da;
+    background-clip: padding-box;
+ }
+ """
+    }
 
     if not request.user.is_lnl:
         raise PermissionDenied

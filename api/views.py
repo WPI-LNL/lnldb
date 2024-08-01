@@ -1048,8 +1048,19 @@ def request_token(request, client_id):
     missing = True
     sent = False
     context = {'NO_FOOT': True, 'NO_NAV': True, 'NO_API': True,
-               'styles': "#main {\n\tbackground-color: white !important;\n\theight: 100vh;\n}\n.text-white {"
-                         "\n\tcolor: black !important;\n}\n.help-block {\n\tdisplay: none;\n}"}
+               'styles': """
+#main {
+    background-color: white !important;
+    height: 100vh;
+}
+.text-white {
+    color: black !important;
+}
+.help-block {
+    display: none;
+}
+"""
+    }
 
     # Verify Client ID and retrieve corresponding application record
     if not settings.CRYPTO_KEY:
