@@ -2,7 +2,6 @@
 
 import datetime
 
-import pytz
 # so that we can know to send Email
 from django.conf import settings
 from django.contrib import messages
@@ -193,7 +192,7 @@ def org_acceptxfer(request, idstr):
         context['msgclass'] = "alert-info"
 
     elif transfer.is_expired:
-        context['msg'] = 'This transfer has expired, please make a new one (you had a week :-\)'
+        context['msg'] = 'This transfer has expired, please make a new one (you had a week :-\\)'
         context['status'] = 'Expired'
 
     elif not request.user == transfer.org.user_in_charge and request.user == transfer.initiator \
@@ -213,7 +212,7 @@ def org_acceptxfer(request, idstr):
                 transfer.org.user_in_charge, transfer.new_user_in_charge), None)
             transfer.org.user_in_charge = transfer.new_user_in_charge
             transfer.org.save()
-        transfer.completed_on = datetime.datetime.now(pytz.utc)
+        transfer.completed_on = datetime.datetime.now(datetime.timezone.utc)
         transfer.completed = True
         transfer.save()
         context['msg'] = 'Transfer Complete: %s is the new user in charge!' % transfer.new_user_in_charge

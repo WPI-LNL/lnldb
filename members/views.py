@@ -14,7 +14,7 @@ from .models import TrainingType, Training, Trainee
 @login_required
 @permission_required('members.view_training', raise_exception=True)
 @require_GET
-def training_list(request):
+def training_list_all(request):
     """ List all members with valid training """
     context = {}
     training_types = TrainingType.objects.all()
@@ -42,8 +42,40 @@ def training_list(request):
         training_data.append((user, data))
     context['training_data'] = training_data
 
-    return render(request, 'traininglist.html', context)
+    return render(request, 'traininglist_all.html', context)
 
+@login_required
+@permission_required('members.view_training', raise_exception=True)
+@require_GET
+def training_list_active_only(request):
+    """ List all members with valid training """
+    context = {}
+    training_types = TrainingType.objects.all()
+    context['training_types'] = training_types
+    users = get_user_model().objects.filter(trainings__isnull=False, groups__name="Active").distinct()
+    training_data = []
+    for user in users:
+        data = []
+        for training_type in training_types:
+            training_of_reference = None
+            for training in user.trainings.filter(training__training_type=training_type).order_by('training__date'):
+                if training_of_reference is None:
+                    training_of_reference = training
+                else:
+                    if training.is_valid():
+                        if not training_of_reference.is_valid() or \
+                                training.training.expiration_date is None or \
+                                (training_of_reference.training.expiration_date is not None and \
+                                training.training.expiration_date >= training_of_reference.training.expiration_date):
+                            training_of_reference = training
+                    else:
+                        if not training_of_reference.is_valid():
+                            training_of_reference = training
+            data.append(training_of_reference)
+        training_data.append((user, data))
+    context['training_data'] = training_data
+
+    return render(request, 'traininglist_activeonly.html', context)
 
 @login_required
 @permission_required('members.add_training', raise_exception=True)

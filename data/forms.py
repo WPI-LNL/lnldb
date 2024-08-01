@@ -107,11 +107,11 @@ class DynamicFieldContainer(LayoutObject):
     def __init__(self, *fields):
         self.fields = fields
 
-    def render(self, form, form_style, context, template_pack=TEMPLATE_PACK):
+    def render(self, form, context, template_pack=TEMPLATE_PACK):
         fields = ''
         for field in self.fields:
             try:
-                fields += render_field(field, form, form_style, context, template_pack=template_pack)
+                fields += render_field(field, form, context, template_pack=template_pack)
             except Exception:
                 # I really wish dcf had better exception handling
                 continue

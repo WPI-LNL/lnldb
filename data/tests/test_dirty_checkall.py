@@ -58,7 +58,7 @@ class UrlsTest(test.TestCase):
             the client while testing, and login again
         Specify @default_kwargs to be used for patterns that expect keyword parameters,
             e.g. if you specify default_kwargs={'username': 'testuser'}, then
-            for pattern url(r'^accounts/(?P<username>[\.\w-]+)/$'
+            for pattern re_path(r'^accounts/(?P<username>[\.\w-]+)/$'
             the url /accounts/testuser/ will be tested.
         If @quiet=False, print all the urls checked. If status code of the response is not 200,
             print the status code.
@@ -143,11 +143,3 @@ class UrlsTest(test.TestCase):
 
         check_urls(module.urlpatterns)
         print('')
-
-
-class MostImportantTest(test.TestCase):
-    def test_facts(self):
-        facts = {
-            'Greatest Webmaster of all time': base64.b64decode('VG9tIE51cnNlICgyMDIyKQ==')
-        }
-        self.assertEqual(facts['Greatest Webmaster of all time'], b'Tom Nurse (2022)')

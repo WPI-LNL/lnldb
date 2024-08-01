@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
-from model_mommy import mommy
+from model_bakery import baker
 
 from data.tests.util import ViewTestCase
 from ..models import EventCCInstance, OfficeHour, Category, Lighting, Hours, ServiceInstance, OrganizationTransfer
@@ -350,16 +350,16 @@ class MyViewTest(ViewTestCase):
                              reverse("orgs:detail", args=[self.org.pk]))
 
     def test_cc_report_blank(self):
-        mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
+        baker.make(EventCCInstance, event=self.e, crew_chief=self.user)
         self.assertOk(self.client.get(reverse("my:report", args=[self.e.pk])))
 
     def test_cc_report_error_post(self):
-        mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
+        baker.make(EventCCInstance, event=self.e, crew_chief=self.user)
         self.assertOk(self.client.post(reverse("my:report", args=[self.e.pk]),))
         self.assertEqual(list(self.e.ccreport_set.filter(crew_chief=self.user)), [])
 
     def test_cc_report_post(self):
-        mommy.make(EventCCInstance, event=self.e, crew_chief=self.user)
+        baker.make(EventCCInstance, event=self.e, crew_chief=self.user)
         self.assertRedirects(self.client.post(
             reverse("my:report", args=[self.e.pk]),
             data={

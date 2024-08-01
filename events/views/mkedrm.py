@@ -152,12 +152,12 @@ def eventnew(request, id=None):
             context['services_formset'] = mk_serviceinstance_formset(instance=instance)
         else:
             context['form'] = InternalEventForm(request_user=request.user, instance=instance)
-        if instance:
-            context['msg'] = "Edit Event"
-        else:
-            context['msg'] = "New Event"
+    if instance:
+        context['msg'] = "Edit Event"
+    else:
+        context['msg'] = "New Event"
 
-    return render(request, 'form_crispy_event.html', context)
+    return render(request, 'form_crispy_event.html', context, status = 400 if request.method == 'POST' else 200)
 
 
 def clear_to_send(to, triggered_by, fields_edited):
