@@ -536,12 +536,12 @@ class InternalEventForm(FieldAccessForm):
 
         change_lnl_contact = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_lnl_contact', instance),
-            enable=('lnl_contact')
+            enable=('lnl_contact',)
         )
         
         change_event_status = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_status', instance),
-            enable=('event_status')
+            enable=('event_status',)
         )
 
     class Meta:
@@ -686,12 +686,12 @@ class InternalEventForm2019(FieldAccessForm):
 
         change_lnl_contact = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_lnl_contact', instance),
-            enable=('lnl_contact')
+            enable=('lnl_contact',)
         )
         
         change_event_status = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_status', instance),
-            enable=('event_status')
+            enable=('event_status',)
         )
 
         change_entered_into_workday = FieldAccessLevel(
