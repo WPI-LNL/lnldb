@@ -60,6 +60,9 @@ class User(AbstractUser):
 
     pronouns = CharField(max_length=32, null=True, blank=True, verbose_name="Pronouns")
 
+    current_badge_id = CharField(max_length=10, null=True, blank=True,
+                                 verbose_name="Current Badge ID")
+
     def __str__(self):
         nick = '"%s" ' % self.nickname if self.nickname else ""
         if self.first_name or self.last_name:
