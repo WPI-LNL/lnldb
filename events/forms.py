@@ -535,12 +535,12 @@ class InternalEventForm(FieldAccessForm):
 
         change_lnl_contact = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_lnl_contact', instance),
-            enable=('lnl_contact')
+            enable=('lnl_contact',)
         )
         
         change_event_status = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_status', instance),
-            enable=('event_status')
+            enable=('event_status',)
         )
 
     class Meta:
@@ -685,12 +685,12 @@ class InternalEventForm2019(FieldAccessForm):
 
         change_lnl_contact = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_lnl_contact', instance),
-            enable=('lnl_contact')
+            enable=('lnl_contact',)
         )
         
         change_event_status = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_status', instance),
-            enable=('event_status')
+            enable=('event_status',)
         )
 
         change_entered_into_workday = FieldAccessLevel(
@@ -732,7 +732,7 @@ class InternalEventForm2019(FieldAccessForm):
         group_label=lambda group: group.name,
     )
     contact = AutoCompleteSelectField('Users', required=False)
-    lnl_contact = AutoCompleteSelectField('Members', label="LNL Contact (PM)", required=False)
+    lnl_contact = AutoCompleteSelectField('Members', label="LNL Contact", required=False)
     org = CustomAutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
