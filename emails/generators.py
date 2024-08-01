@@ -257,9 +257,15 @@ def generate_poke_cc_email_content(services, message):
         else:
             when = start.strftime("%A (%-m/%-d) %-I:%M %p to ") + end.strftime("%A (%-m/%-d) %-I:%M %p")
         setup = timezone.localtime(event.datetime_setup_complete).strftime("%A (%-m/%-d) %-I:%M %p")
-        event_details += "<strong>CC's needed:</strong> %s\n<strong>Services:</strong> %s\n<strong>What:</strong> " \
-                         "<a href='%s'>%s</a>\n<strong>When:</strong> %s\n<strong>Setup by:</strong> %s\n" \
-                         "<strong>Where:</strong> %s\n<strong>Description:</strong> %s\n\n" % \
+        event_details += """<strong>CC's needed:</strong> %s
+<strong>Services:</strong> %s
+<strong>What:</strong> <a href='%s'>%s</a>
+<strong>When:</strong> %s
+<strong>Setup by:</strong> %s
+<strong>Where:</strong> %s
+<strong>Description:</strong> %s
+
+""" % \
                          (ccs_needed, service_details, link, event.event_name, when, setup, event.location.name,
                           event.description)
     body = message + "<hr>" + event_details
