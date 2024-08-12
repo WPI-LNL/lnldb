@@ -7,8 +7,6 @@ Django==4.2.13
 #django-ajax-selects
 -e git+https://github.com/SukiCZ/django-ajax-selects.git@9be8292263dc03e14eeba00031f56304dcf5f8fd#egg=django-ajax-selects
 django-appconf
-# -e git+https://github.com/jmerdich/django-bootstrap-calendar.git@fbe22d9dd0b2c99e8a6d3a3ad8d41063e791432c#egg=django_bootstrap_calendar-master
--e git+https://github.com/WPI-LNL/django-bootstrap-calendar.git#egg=django_bootstrap_calendar
 django-bootstrap3
 #-e git+https://github.com/WPI-lnl/django-cas2.git@6220bc8ba6eb4643e3ef58b4830616f37f1a1a8f#egg=django_cas-origin_HEAD
 django-compressor

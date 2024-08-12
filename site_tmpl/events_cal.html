@@ -1,12 +1,27 @@
 {% extends 'base_admin.html' %}
-{% load bootstrap_calendar %}
-
-{% block extras %}
-{% bootstrap_calendar_js events_url=bootcal_endpoint time_start='06:00' time_end='24:00' %}
-{% bootstrap_calendar_css %}
-{% endblock %}
 
 {% block title %}{{ h2 }} Calendar | Lens and Lights at WPI{% endblock %}
+
+{% block extras %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js'></script>
+    <script>
+
+      document.addEventListener('DOMContentLoaded', function() {
+        const calendarEl = document.getElementById('fullcalendar')
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'dayGridMonth',
+          eventSources: [
+            {
+              url: '{% url {{ bootcal_endpoint }} %}',
+              color: 'blue',
+              textColor: 'white'
+            }
+          ],
+        })
+        calendar.render()
+      })
+    </script>
+{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -22,8 +37,6 @@
         {% bootstrap_controls 'cal-ctl' %}
         <h3 id="cal-header-title" class="panel-title"></h3>
     </div>
-    <div class="panel-body">
-        {% bootstrap_calendar 'cal-body' %}
-    </div>
+    <div id="fullcalendar" class="panel-body"></div>
 </div>
 {% endblock %}
