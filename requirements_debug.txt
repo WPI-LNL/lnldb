@@ -3,8 +3,9 @@ coverage
 coveralls
 pep8
 factory_boy
-model_mommy
+model_bakery
 django-test-without-migrations
 sphinx
 sphinx-rtd-theme
 sphinx-issues
+django-nose

@@ -6,8 +6,9 @@ from django.urls.base import reverse
 from django.contrib.auth.models import Permission
 from django.conf import settings
 from django.utils import timezone
+import datetime
 from . import models, views, forms
-import json, os, logging, pytz
+import json, os, logging
 
 
 logging.disable(logging.WARNING)
@@ -559,12 +560,12 @@ class MDMTestCase(ViewTestCase):
         os.remove(path1)
 
         # The removal_date should come before the date defined by the duration
-        expiration_date = timezone.datetime(2020, 1, 1, 16, 59, 0, 0, pytz.UTC)
+        expiration_date = timezone.datetime(2020, 1, 1, 16, 59, 0, 0, datetime.timezone.utc)
         metadata = views.get_profile_metadata(config, timestamp)
         self.assertEqual(metadata['expires'], expiration_date)
 
         # Ensure that the duration value will come before the expiration date
-        timestamp = timezone.datetime(2020, 1, 1, 10, 30, 0, 0, pytz.UTC)
+        timestamp = timezone.datetime(2020, 1, 1, 10, 30, 0, 0, datetime.timezone.utc)
         metadata = views.get_profile_metadata(config, timestamp)
         self.assertEqual(metadata['expires'], timestamp + timezone.timedelta(seconds=30))
 

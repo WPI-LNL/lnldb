@@ -1,5 +1,5 @@
 import json
-import pytz
+import zoneinfo
 import logging
 import requests
 from urllib.parse import urlencode
@@ -232,7 +232,7 @@ class SlackViews(ViewTestCase):
         self.user.last_name = "User"
 
         # Create an event and CC instance
-        tz = pytz.timezone('US/Eastern')
+        tz = zoneinfo.ZoneInfo('US/Eastern')
         setup_start = timezone.datetime.strptime('2020-01-01T01:00:00', '%Y-%m-%dT%H:%M:%S').replace(tzinfo=tz)
         event_location = LocationFactory.create(name="Quad")
         category = CategoryFactory.create(name="Lighting")

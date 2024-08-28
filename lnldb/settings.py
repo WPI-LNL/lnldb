@@ -6,12 +6,7 @@ import os
 import re
 import sys
 import environ
-
-try:
-    from django.urls import reverse, NoReverseMatch
-except ImportError:
-    from django.core.urlresolvers import reverse, NoReverseMatch
-
+from django.urls import reverse, NoReverseMatch
 
 def here(*x):
     return os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), *x))
@@ -198,11 +193,9 @@ USE_I18N = False
 # If you set this to False, Django will not format dates, numbers and
 # calendars according to the current locale.
 USE_L10N = True
-TIME_FORMAT = "%I:%M %p"
-DATETIME_FORMAT = '%Y-%m-%d %H:%M'
-TIME_INPUT_FORMATS = ['%I:%M %p', '%I:%M:%S.%f %p', '%I:%M %p',
-                      '%I:%M%p', '%I:%M:%S.%f%p', '%I:%M%p',
-                      '%H:%M:%S', '%H:%M:%S.%f', '%H:%M']
+
+# Set the default formatting for localized input fields (i.e. time)
+FORMAT_MODULE_PATH = ['lnldb.formats']
 
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = True
@@ -286,7 +279,8 @@ TEMPLATES = [{
 FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
 DEBUG_TOOLBAR_CONFIG = {
-    'SHOW_TOOLBAR_CALLBACK': lambda x: DEBUG and x.META['SERVER_NAME'] != "testserver"
+    'SHOW_TOOLBAR_CALLBACK': lambda x: DEBUG and x.META['SERVER_NAME'] != "testserver",
+    'IS_RUNNING_TESTS': False
 }
 
 USE_WHITENOISE = env.bool("USE_WHITENOISE", default=False)
@@ -306,6 +300,7 @@ MIDDLEWARE = (
                  'debug_toolbar.middleware.DebugToolbarMiddleware',
                  'data.middleware.SwappableRedirectMiddleware',
                  'data.middleware.HttpResponseNotAllowedMiddleware',
+                 'hijack.middleware.HijackUserMiddleware',
              )
 
 ROOT_URLCONF = 'lnldb.urls'
@@ -327,7 +322,6 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'django.forms',
     'markdown_deux',
-    'django_cas_ng',
     'django_extensions',
 
     'accounts',
@@ -349,6 +343,7 @@ INSTALLED_APPS = (
 
     'bootstrap3',
     'crispy_forms',
+    'crispy_bootstrap3',
     'formtools',
     'semanticuiforms',
     'lineage',
@@ -361,8 +356,7 @@ INSTALLED_APPS = (
     'permission',
     'reversion',
     'hijack',
-    'pagedown',
-    'compat',
+    'easymde',
     'polymorphic',
     'jchart',
     'rest_framework',
@@ -532,6 +526,7 @@ EVENT_STATUSES = (
 )
 
 # crispy_forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap3"
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
 SYNC_STUDENT_ID = env.bool("STUDENT_AUTO_ID", False)
@@ -552,12 +547,12 @@ def reverse_noexcept(url, args=None, kwargs=None):
 MARKDOWN_DEUX_STYLES = {
     "default": {
         "link_patterns": [
-            (re.compile("\B@([A-Za-z][A-Za-z0-9]*)"),
+            (re.compile(r"\B@([A-Za-z][A-Za-z0-9]*)"),
              lambda m: reverse_noexcept("accounts:by-name:detail",
                                         kwargs={'username': m.group(1)}
                                         )
              ),
-            (re.compile("\B@([0-9]+)"),
+            (re.compile(r"\B@([0-9]+)"),
              lambda m: reverse_noexcept("events:detail",
                                         args=[m.group(1)]
                                         )
@@ -573,6 +568,24 @@ MARKDOWN_DEUX_STYLES = {
         "safe_mode": "escape",
     },
 }
+
+EASYMDE_OPTIONS = {
+    'status': False,
+    'forceSync': True,
+    'parsingConfig' : { 'allowAtxHeaderWithoutSpace': True, },
+    'promptURLs': True,
+    'spellChecker': False,
+    'inputStyle': 'contenteditable',
+    'nativeSpellcheck': True,
+    'hideIcons': ["fullscreen"],
+    'indentWithTabs': True,
+    'tabSize': 4,
+    'sideBySideFullscreen': False,
+    'minHeight': '80px',
+    'previewImagesInEditor': True,
+
+}
+
 # and for the html editor
 EXTENSIONS = ["newlines", "smart-strong", "strikethrough",
               "smartypants", "tables"]
@@ -585,6 +598,8 @@ CACHES = {
 }
 
 MPTT_ADMIN_LEVEL_INDENT = 20
+
+REGISTER_CALENDAR_EVENTS_MODEL = False
 
 # CAS has been deprecated
 # if env.str("CAS_SERVER_URL", ""):

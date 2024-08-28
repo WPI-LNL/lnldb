@@ -1,7 +1,6 @@
 import datetime
 import re
 
-import pytz
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Count, F, Q, Sum, Case, When, IntegerField
@@ -570,7 +569,7 @@ def unreviewed(request, start=None, end=None):
             and request.COOKIES['projection'] != 'show'):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
-    now = datetime.datetime.now(pytz.utc)
+    now = datetime.datetime.now(datetime.timezone.utc)
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False).filter(reviewed=False)\
         .filter(datetime_end__lte=now).distinct()
     events, context = filter_events(request, context, events, start, end, prefetch_cc=True, sort='datetime_start')
@@ -975,7 +974,7 @@ def public_facing(request):
     or test events)
     """
     context = {}
-    now = datetime.datetime.now(pytz.utc)
+    now = datetime.datetime.now(datetime.timezone.utc)
     events = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False, sensitive=False) \
         .filter(datetime_end__gte=now)
     events = events.order_by('datetime_start')

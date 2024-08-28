@@ -1,6 +1,5 @@
 import datetime
 
-import pytz
 from six import string_types
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -145,7 +144,7 @@ def generate_event_start_end_emails():
     subj_start = "Events Starting Now"
     subj_end = "Events Ending Now"
     # get the time
-    unstripped = datetime.datetime.now(pytz.utc)
+    unstripped = datetime.datetime.now(datetime.timezone.utc)
     # get rids of the zeroes
     now = unstripped.replace(second=0, microsecond=0)
 

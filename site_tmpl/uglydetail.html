@@ -379,23 +379,28 @@
                 </div>
                 <div id="schedule" class="tab-pane">
                     <table class="table">
+                        {% now "U" as now__unix_time %}
                         {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
                         <tr>
                             <th>Setup For {% if cc.service %}{{ cc.service }}{% else %}{{ cc.category }}{% endif %}</th>
-                            <td>{{cc.setup_start}}</td>
+                            <td>{{cc.setup_start|date:"D, N j Y, "}}<strong>{{cc.setup_start|date:"P"}}</strong>
+                                {% if cc.setup_start|date:"U" >= now__unix_time %} <i style="float:inline-end">({{cc.setup_start|timeuntil}})</i></td> {% endif %}
                         </tr>
                         {% endfor %}
                         <tr>
                             <th>Setup Completion</th>
-                            <td>{{event.datetime_setup_complete}}</td>
+                            <td>{{event.datetime_setup_complete|date:"D, N j Y, "}}<strong>{{event.datetime_setup_complete|date:"P"}}</strong>
+                                {% if event.datetime_setup_complete|date:"U" >= now__unix_time %} <i style="float:inline-end">({{event.datetime_setup_complete|timeuntil}})</i></td> {% endif %}
                         </tr>
                         <tr>
                             <th>Start</th>
-                            <td>{{event.datetime_start }}</td>
+                            <td>{{event.datetime_start|date:"D, N j Y, "}}<strong>{{event.datetime_start|date:"P"}}</strong>
+                                {% if event.datetime_start|date:"U" >= now__unix_time %} <i style="float:inline-end">({{event.datetime_start|timeuntil}})</i></td> {% endif %}
                         </tr>
                         <tr>
                             <th>End</th>
-                            <td>{{event.datetime_end}}</td>
+                            <td>{{event.datetime_end|date:"D, N j Y, "}}<strong>{{event.datetime_end|date:"P"}}</strong>
+                                {% if event.datetime_end|date:"U" >= now__unix_time %} <i style="float:inline-end">({{event.datetime_end|timeuntil}})</i></td> {% endif %}
                         </tr>
                     </table>
                 </div>
