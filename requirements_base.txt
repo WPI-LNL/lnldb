@@ -50,7 +50,7 @@ pytz==2020.4
 raven==6.10.0
 reportlab==4.2.5
 six==1.15.0
-sqlparse==0.4.2
+sqlparse==0.5.1
 #tolerance==0.1.2
 -e git+https://github.com/WPI-LNL/tolerance@335211c974e5e1d85289e1a8745ce01794b05225#egg=tolerance
 xhtml2pdf==0.2.5
