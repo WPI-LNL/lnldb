@@ -13,6 +13,7 @@ htmlcov/*
 tags
 .env
 env/
+.venv/
 venv/
 docs/_build/*
 .DS_Store
