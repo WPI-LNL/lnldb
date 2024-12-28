@@ -14,6 +14,8 @@ from django.utils.html import conditional_escape
 from django.views.generic.base import View
 from django.views.decorators.cache import cache_page
 from django_ical.views import ICalFeed
+from django.utils.timezone import localtime
+
 
 from events.models import BaseEvent, Category, EventCCInstance
 from meetings.models import Meeting

@@ -1,5 +1,4 @@
 {% extends 'base_admin.html' %}
-{% load bootstrap_calendar %}
 
 {% block title %}Ongoing and Future Events | Lens and Lights at WPI{% endblock %}
 
@@ -15,6 +14,7 @@
         calendar.render()
       })
     </script>
+    
 {% endblock %}
 
 {% block modals %}
@@ -60,7 +60,6 @@
         <a role="button" class="btn btn-success" data-target="#calInfoModal"
            data-toggle="modal">Subscribe</a>
     </div>
-    {% bootstrap_controls 'cal-ctl' %}
     <h3 id="cal-header-title" class="panel-title"></h3>
 </div>
 <div id="fullcalendar" class="panel-body"></div>
