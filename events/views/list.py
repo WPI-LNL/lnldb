@@ -282,7 +282,7 @@ def prerequest(request, start=None, end=None):
 def prerequest_cal(request, start=None, end=None):
     """ Calendar view of prerequests """
     context = {'h2': "Pre-Requests", 'listurl': reverse('events:prerequest'),
-               'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-prerequest'))}
+               'bootcal_endpoint': reverse('cal:api-prerequest')}
     return render(request, 'events_cal.html', context)
 
 @login_required
@@ -333,7 +333,7 @@ def prospective(request, start=None, end=None):
 def prospective_cal(request, start=None, end=None):
     """ Calendar view of prospective events """
     context = {'h2': "Prospective Events", 'listurl': reverse('events:prospective'),
-               'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-prospective'))}
+               'bootcal_endpoint': reverse('cal:api-prospective')}
     return render(request, 'events_cal.html', context)
 
 @login_required
@@ -384,7 +384,7 @@ def incoming(request, start=None, end=None):
 def incoming_cal(request, start=None, end=None):
     """ Calendar view of incoming events """
     context = {'h2': "Incoming Events", 'listurl': reverse('events:incoming'),
-               'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-incoming'))}
+               'bootcal_endpoint': reverse('cal:api-incoming')}
     return render(request, 'events_cal.html', context)
 
 @login_required
@@ -435,7 +435,7 @@ def confirmed(request, start=None, end=None):
 def confirmed_cal(request, start=None, end=None):
     """ Calendar view of confirmed events """
     context = {'h2': "Confirmed Events", 'listurl': reverse('events:confirmed'),
-               'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-confirmed'))}
+               'bootcal_endpoint': reverse('cal:api-confirmed')}
     return render(request, 'events_cal.html', context)
 
 @login_required
@@ -481,7 +481,7 @@ def openworkorders(request, start=None, end=None):
 @permission_required('events.view_events', raise_exception=True)
 def openworkorders_cal(request, start=None, end=None):
     """ Calendar view for open events """
-    context = {'h2': "Open Events", 'listurl': reverse('events:open'), 'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-open'))}
+    context = {'h2': "Open Events", 'listurl': reverse('events:open'), 'bootcal_endpoint': reverse('cal:api-open')}
     return render(request, 'events_cal.html', context)
 
 
@@ -539,7 +539,7 @@ def findchief(request, start=None, end=None):
 def findchief_cal(request, start=None, end=None):
     """ Calendar view for events that need crew chiefs """
     context = {'h2': "Needs a Crew Chief", 'listurl': reverse('events:findchief'),
-               'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-findchief'))}
+               'bootcal_endpoint': reverse('cal:api-findchief')}
     return render(request, 'events_cal.html', context)
 
 
@@ -594,7 +594,7 @@ def unreviewed(request, start=None, end=None):
 def unreviewed_cal(request, start=None, end=None):
     """ Calendar view for events that are ready to be reviewed for billing """
     context = {'h2': "Events Pending Billing Review", 'listurl': reverse('events:unreviewed'),
-               'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-unreviewed'))}
+               'bootcal_endpoint': reverse('cal:api-unreviewed')}
     return render(request, 'events_cal.html', context)
 
 
@@ -642,7 +642,7 @@ def unbilled(request, start=None, end=None):
 def unbilled_cal(request, start=None, end=None):
     """ Calendar view for events that have yet to be billed """
     context = {'h2': "Events to be Billed", 'listurl': reverse('events:unbilled'),
-               'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-unbilled'))}
+               'bootcal_endpoint': reverse('cal:api-unbilled')}
     return render(request, 'events_cal.html', context)
 
 
@@ -690,7 +690,7 @@ def unbilled_semester(request, start=None, end=None):
 def unbilled_semester_cal(request, start=None, end=None):
     """ Calendar view for events that have yet to be billed and are set to be billed in bulk """
     context = {'h2': "Events to be Billed in Bulk", 'listurl': reverse('events:unbilled-semester'),
-               'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-unbilled-semester'))}
+               'bootcal_endpoint': reverse('cal:api-unbilled-semester')}
     return render(request, 'events_cal.html', context)
 
 
@@ -740,7 +740,7 @@ def paid(request, start=None, end=None):
 @permission_required('events.close_event', raise_exception=True)
 def paid_cal(request, start=None, end=None):
     """ Calendar view for events that have already been paid """
-    context = {'h2': "Paid Events", 'listurl': reverse('events:paid'), 'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-paid'))}
+    context = {'h2': "Paid Events", 'listurl': reverse('events:paid'), 'bootcal_endpoint': reverse('cal:api-paid')}
     return render(request, 'events_cal.html', context)
 
 
@@ -790,7 +790,7 @@ def unpaid(request, start=None, end=None):
 def unpaid_cal(request, start=None, end=None):
     """ Calendar view for events that have unpaid bills """
     context = {'h2': "Pending Payments", 'listurl': reverse('events:unpaid'),
-               'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-unpaid'))}
+               'bootcal_endpoint': reverse('cal:api-unpaid')}
     return render(request, 'events_cal.html', context)
 
 
@@ -914,7 +914,7 @@ def closed(request, start=None, end=None):
 def closed_cal(request, start=None, end=None):
     """ Calendar view for closed events """
     context = {'h2': "Closed Events", 'listurl': reverse('events:closed'),
-               'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-closed'))}
+               'bootcal_endpoint': reverse('cal:api-closed')}
     return render(request, 'events_cal.html', context)
 
 
@@ -964,7 +964,7 @@ def all(request, start=None, end=None):
 @permission_required('events.view_events', raise_exception=True)
 def all_cal(request, start=None, end=None):
     """ Calendar view for all events """
-    context = {'h2': "All Events", 'listurl': reverse('events:all'), 'bootcal_endpoint': request.build_absolute_uri(reverse('cal:api-all'))}
+    context = {'h2': "All Events", 'listurl': reverse('events:all'), 'bootcal_endpoint': reverse('cal:api-all')}
     return render(request, 'events_cal.html', context)
 
 
