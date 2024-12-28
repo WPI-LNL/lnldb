@@ -326,20 +326,9 @@ def timestamp_to_datetime(timestamp):
         return ""
 
 
-def datetime_to_timestamp(date):
-    """
-    Converts datetime to timestamp
-    with json fix
-    """
-    if isinstance(date, timezone.datetime):
-
-        timestamp = mktime(date.timetuple())
-        json_timestamp = int(timestamp) * 1000
-
-        return '{0}'.format(json_timestamp)
-    else:
-        return ""
-
+def datetime_to_timestamp(dt):
+    """Converts a datetime object to a UNIX timestamp in milliseconds."""
+    return int(dt.timestamp() * 1000) 
 
 class EventAttendee(object):
     """
