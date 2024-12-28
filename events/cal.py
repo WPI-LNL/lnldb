@@ -300,14 +300,13 @@ def generate_cal_json(queryset, from_date=None, to_date=None):
                 "id": event.cal_guid(),
                 "title": conditional_escape(event.cal_name()),
                 "url": reverse('events:detail', args=[event.id]),
-                "class": 'cal-status-' + slugify(event.status),
+                "className": 'cal-status-' + slugify(event.status),
                 "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
                 "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5))
             }
             objects_body.append(field)
 
-        objects_head = {"success": 1, "result": objects_body}
-        return json.dumps(objects_head)
+        return json.dumps(objects_body)
 
 
 def timestamp_to_datetime(timestamp):

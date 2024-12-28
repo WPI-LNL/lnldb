@@ -12,7 +12,7 @@
           initialView: 'dayGridMonth',
           eventSources: [
             {
-              url: '{% url {{ bootcal_endpoint }} %}',
+              url: '{{ bootcal_endpoint }}',
               color: 'blue',
               textColor: 'white'
             }
@@ -28,15 +28,9 @@
     <div class="col-md-12">
         <h2>{{h2}}</h2>
     </div>
+    <!--<a href="{{listurl}}" class="btn btn-primary float-left">View List</a>-->
 </div>
 <div class="panel panel-default">
-    <div class="row cal-ctl panel-heading">
-        <div class="btn-group cal-ctl">
-            <a href="{{listurl}}" class="btn btn-primary">View List</a>
-        </div>
-        {% bootstrap_controls 'cal-ctl' %}
-        <h3 id="cal-header-title" class="panel-title"></h3>
-    </div>
     <div id="fullcalendar" class="panel-body"></div>
 </div>
 {% endblock %}
