@@ -3,13 +3,24 @@
 {% block title %}{{ h2 }} Calendar | Lens and Lights at WPI{% endblock %}
 
 {% block extras %}
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js'></script>
-    <script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.js'></script>
+<style>
+  .fc-daygrid-block-event .fc-event-time, .fc-daygrid-block-event .fc-event-title {
+    padding-left: 5px !important;
+}
 
+.fc-view-harness.fc-view-harness-active {
+    overflow: visible;
+    height: 70vh !important;
+}
+</style>
+
+    <script>
+      var calendar;
       document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('fullcalendar')
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-          initialView: 'dayGridMonth',
+        calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: $(window).width() < 765 ? 'listMonth':'dayGridMonth',
           eventSources: [
             {
               url: '{{ bootcal_endpoint }}',
@@ -17,6 +28,24 @@
               textColor: 'white'
             }
           ],
+          aspectRatio: 3,
+          customButtons: {
+            viewListButton: {
+              text: 'View List',
+              click: function() {
+                window.location.href = "{{listurl}}"; // Redirect to list view
+              }
+            }
+          },
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay viewListButton'
+          },
+          eventDisplay: 'block',
+          views: {
+            dayGrid: { displayEventTime: false,}
+          },
         })
         calendar.render()
       })
@@ -28,7 +57,6 @@
     <div class="col-md-12">
         <h2>{{h2}}</h2>
     </div>
-    <!--<a href="{{listurl}}" class="btn btn-primary float-left">View List</a>-->
 </div>
 <div class="panel panel-default">
     <div id="fullcalendar" class="panel-body"></div>
