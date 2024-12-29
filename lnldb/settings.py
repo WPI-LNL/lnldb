@@ -123,7 +123,7 @@ SPOTIFY_CLIENT_SECRET = env.str('SPOTIFY_SECRET', '')
 SPOTIFY_REDIRECT_URI = env.str('SPOTIFY_CALLBACK_URI', '')
 
 SAML2_AUTH = {
-    'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://samltest.id/saml/idp'),
+    'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL'),
     'DEFAULT_NEXT_URL': '/db/',
     'CREATE_USER': True,
     'NEW_USER_PROFILE': {
