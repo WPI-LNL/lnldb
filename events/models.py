@@ -299,7 +299,7 @@ class BaseEvent(PolymorphicModel):
             desc = desc[:-2] + ".\n"  # removes trailing comma
         if self.description:
             desc += self.description[0:50] + "..." if (len(self.description) > 50) else self.description
-            desc += self.description + "\n"
+            desc += "\n"
         return desc
 
     def cal_location(self):
