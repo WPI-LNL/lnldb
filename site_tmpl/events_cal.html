@@ -17,6 +17,11 @@
     overflow: visible;
     height: 70vh !important;
 }
+
+.fc-header-toolbar .fc-subscribeButton-button  { background-color: green; }
+.fc-header-toolbar .fc-subscribeButton-button:hover  { background-color: darkgreen; }
+
+.fc-header-toolbar .fc-viewListButton-button  { background-color: darkblue; }
 </style>
 
 <script>
@@ -34,17 +39,23 @@
       ],
       aspectRatio: 3,
       customButtons: {
-        viewListButton: {
-          text: 'View List',
-          click: function () {
-            window.location.href = "{{listurl}}"; // Redirect to list view
+          viewListButton: {
+            text: 'Jump to List',
+            click: function () {
+              window.location.href = "#event-list"; // Redirect to list view
+            },
+          },
+          subscribeButton: {
+            text: 'Subscribe',
+            click: function () {
+              $('#calInfoModal').modal("show"); // Redirect to list view
+            },
           },
         },
-      },
       headerToolbar: {
         left: 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay viewListButton',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay viewListButton,subscribeButton',
       },
       eventDisplay: 'block',
       views: {
@@ -66,6 +77,35 @@
   });
 </script>
 
+{% endblock %}
+
+{% block modals %}
+    <!-- calInfoModal -->
+        <div id="calInfoModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="calInfoModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                        <h3 id="calInfoModalLabel">How to Subscribe</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Get instant access to event information with your existing calendar! Simply copy the url from
+                            the box below and put it into Outlook, Google Calendar, your phone, or any ICS-compatible
+                            program (look for 'Add by URL' or 'Internet Calendar').</p>
+                        <div class="input-group">
+                            <input class="form-control" id="cal_url" type="text" readonly onclick="$(this).select();"
+                                   value="{{ request.scheme }}://{{ request.get_host }}{% url 'cal:feed' %}" >
+                            <span class="input-group-btn">
+                                <button class="btn btn-default" type="button"
+                                        onclick="$('#cal_url').select();document.execCommand('copy');">
+                                    Copy</button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 {% endblock %}
 
 {% block content %}

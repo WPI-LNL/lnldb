@@ -982,6 +982,7 @@ def public_facing(request):
         .prefetch_related('ccinstances__crew_chief')
     context['h2'] = "Active Events"
     context['events'] = events
+    context['bootcal_endpoint'] = reverse('cal:api-public')
 
     return render(request, "events_public.html", context)
 

@@ -3,17 +3,77 @@
 {% block title %}Ongoing and Future Events | Lens and Lights at WPI{% endblock %}
 
 {% block extras %}
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js'></script>
-    <script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.js'></script>
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
 
-      document.addEventListener('DOMContentLoaded', function() {
-        const calendarEl = document.getElementById('fullcalendar')
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-          initialView: 'dayGridMonth'
-        })
-        calendar.render()
-      })
-    </script>
+<style>
+    .fc-daygrid-block-event .fc-event-time, .fc-daygrid-block-event .fc-event-title {
+      padding-left: 5px !important;
+  }
+  
+  .fc-view-harness.fc-view-harness-active {
+      overflow: visible;
+      height: 70vh !important;
+  }
+  .fc-header-toolbar .fc-subscribeButton-button  { background-color: green; }
+  .fc-header-toolbar .fc-subscribeButton-button:hover  { background-color: darkgreen; }
+
+  .fc-header-toolbar .fc-viewListButton-button  { background-color: darkblue; }
+</style>
+<script>
+    var calendar;
+    document.addEventListener('DOMContentLoaded', function () {
+      const calendarEl = document.getElementById('fullcalendar');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: $(window).width() < 765 ? 'listMonth' : 'dayGridMonth',
+        eventSources: [
+          {
+            url: '{{ bootcal_endpoint }}',
+            color: 'blue',
+            textColor: 'white',
+          },
+        ],
+        aspectRatio: 3,
+        customButtons: {
+          viewListButton: {
+            text: 'Jump to List',
+            click: function () {
+              window.location.href = "#event-list"; // Redirect to list view
+            },
+          },
+          subscribeButton: {
+            text: 'Subscribe',
+            click: function () {
+              $('#calInfoModal').modal("show"); // Redirect to list view
+            },
+          },
+        },
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay viewListButton,subscribeButton',
+        },
+        eventDisplay: 'block',
+        views: {
+          dayGrid: { displayEventTime: false },
+        },
+        eventDidMount: function (info) {
+          // Use Tippy.js to create a tooltip
+          tippy(info.el, {
+            content: info.event.extendedProps.description, // Set the tooltip content to the event calendar description
+            theme: 'light',
+            placement: 'top',
+            arrow: true,
+            animation: 'shift-away',
+          });
+          console.log(info.event);
+        },
+      });
+      calendar.render();
+    });
+  </script>
     
 {% endblock %}
 
@@ -55,17 +115,10 @@
 </div>
 
 <div class="panel panel-default">
-<div class="row cal-ctl panel-heading">
-    <div class="btn-group cal-ctl">
-        <a role="button" class="btn btn-success" data-target="#calInfoModal"
-           data-toggle="modal">Subscribe</a>
-    </div>
-    <h3 id="cal-header-title" class="panel-title"></h3>
-</div>
-<div id="fullcalendar" class="panel-body"></div>
+    <div id="fullcalendar" class="panel-body"></div>
 </div>
 
-<div class="row">
+<div class="row" id="event-list">
     <div class="col-md-12">
         <table class="table table-striped table-bordered">
             <tr>
