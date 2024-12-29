@@ -23,7 +23,6 @@ dictor==0.1.12
 Django==4.2.13
 -e git+https://github.com/SukiCZ/django-ajax-selects.git@9be8292263dc03e14eeba00031f56304dcf5f8fd#egg=django_ajax_selects
 django-appconf==1.0.6
--e git+https://github.com/WPI-LNL/django-bootstrap-calendar.git@1b980daabee2a7cc1b2023f9dcf08ad1d2f7dcbe#egg=django_bootstrap_calendar
 django-bootstrap3==24.3
 django-compressor==4.5.1
 django-crispy-forms==2.3

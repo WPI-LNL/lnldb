@@ -14,6 +14,8 @@ from django.utils.html import conditional_escape
 from django.views.generic.base import View
 from django.views.decorators.cache import cache_page
 from django_ical.views import ICalFeed
+from django.utils.timezone import localtime
+
 
 from events.models import BaseEvent, Category, EventCCInstance
 from meetings.models import Meeting
@@ -268,14 +270,14 @@ def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):
         for event in queryset:
             field = {
                 "title": conditional_escape(event.cal_name()),
-                "url": "#" + str(event.id),
+                "url": reverse('events:detail', args=[event.id]),
                 "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
-                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5))
+                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5)),
+                "description": event.location.name + " (" + event.location.building.shortname + "). " + conditional_escape(event.cal_desc()),
             }
             objects_body.append(field)
 
-        objects_head = {"success": 1, "result": objects_body}
-        return json.dumps(objects_head)
+        return json.dumps(objects_body)
 
 
 def generate_cal_json(queryset, from_date=None, to_date=None):
@@ -300,14 +302,14 @@ def generate_cal_json(queryset, from_date=None, to_date=None):
                 "id": event.cal_guid(),
                 "title": conditional_escape(event.cal_name()),
                 "url": reverse('events:detail', args=[event.id]),
-                "class": 'cal-status-' + slugify(event.status),
+                "className": 'cal-status-' + slugify(event.status),
                 "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
-                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5))
+                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5)),
+                "description": event.location.name + " (" + event.location.building.shortname + "). " + conditional_escape(event.cal_desc()),
             }
             objects_body.append(field)
 
-        objects_head = {"success": 1, "result": objects_body}
-        return json.dumps(objects_head)
+        return json.dumps(objects_body)
 
 
 def timestamp_to_datetime(timestamp):
@@ -325,20 +327,9 @@ def timestamp_to_datetime(timestamp):
         return ""
 
 
-def datetime_to_timestamp(date):
-    """
-    Converts datetime to timestamp
-    with json fix
-    """
-    if isinstance(date, timezone.datetime):
-
-        timestamp = mktime(date.timetuple())
-        json_timestamp = int(timestamp) * 1000
-
-        return '{0}'.format(json_timestamp)
-    else:
-        return ""
-
+def datetime_to_timestamp(dt):
+    """Converts a datetime object to a UNIX timestamp in milliseconds."""
+    return int(dt.timestamp() * 1000) 
 
 class EventAttendee(object):
     """
