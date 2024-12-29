@@ -32,7 +32,7 @@
   border-color:rgb(42, 42, 42) !important
 }
 
-.cal-status-awaiting-review { background-color: #f09c4e!important; border-color:#ab6f36 !important}
+.cal-status-awaiting-review { background-color: #e39c2b!important; border-color:#87572a !important}
 </style>
 
 <script>
@@ -126,5 +126,13 @@
 </div>
 <div class="panel panel-default">
     <div id="fullcalendar" class="panel-body"></div>
+    <h4 class="well" style="margin: 15px;">
+      <span class="label" style="color:black">Event Color Key</span>
+      <span class="label cal-status-awaiting-approval">Awaiting Approval</span>
+      <span class="label cal-status-approved">Confirmed</span>
+      <span class="label cal-status-awaiting-review">Awaiting Billing Review</span>
+      <span class="label cal-status-paid">To be billed, Awaiting payment, Paid, Cancelled, or Closed</span> <!-- .cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed -->
+      <span class="label" style="background-color: blue; border: darkblue;">Other/Unknown</span>
+    </h4>
 </div>
 {% endblock %}
