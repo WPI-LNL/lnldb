@@ -27,9 +27,12 @@
 
 .cal-status-approved { background-color: #309f30!important; border-color:#1f6c1f !important}
 
-.cal-status-paid { background-color: #545454!important; border-color:rgb(42, 42, 42) !important}
+.cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed { 
+  background-color: #545454!important; 
+  border-color:rgb(42, 42, 42) !important
+}
 
-.cal-status-awaiting-review { background-color: #f09c4e!important; border-color:#ab6f36 !important}
+.cal-status-awaiting-review { background-color: #e39c2b!important; border-color:#87572a !important}
 </style>
 
 <script>
@@ -48,9 +51,9 @@
       aspectRatio: 3,
       customButtons: {
           viewListButton: {
-            text: 'Jump to List',
+            text: 'View List',
             click: function () {
-              window.location.href = "#event-list"; // Redirect to list view
+              window.location.href = "{{listurl}}"; // Redirect to list view
             },
           },
           subscribeButton: {
@@ -63,9 +66,16 @@
       headerToolbar: {
         left: 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay viewListButton,subscribeButton',
+        right: 'dayGridYear,dayGridMonth,timeGridWeek viewListButton,subscribeButton',
       },
       eventDisplay: 'block',
+      firstDay: 1,
+      timeZone: 'America/New_York',
+      businessHours: {
+        daysOfWeek: [1, 2, 3, 4, 5], // Monday - Friday
+        startTime: '00:00',
+        endTime: '24:00',
+      },
       views: {
         dayGrid: { displayEventTime: false },
       },
@@ -123,5 +133,13 @@
 </div>
 <div class="panel panel-default">
     <div id="fullcalendar" class="panel-body"></div>
+    <h4 class="well" style="margin: 15px;">
+      <span class="label" style="color:black">Event Color Key</span>
+      <span class="label cal-status-awaiting-approval">Awaiting Approval</span>
+      <span class="label cal-status-approved">Confirmed</span>
+      <span class="label cal-status-awaiting-review">Awaiting Billing Review</span>
+      <span class="label cal-status-paid">To be billed, Awaiting payment, Paid, Cancelled, or Closed</span> <!-- .cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed -->
+      <span class="label" style="background-color: blue; border: darkblue;">Other/Unknown</span>
+    </h4>
 </div>
 {% endblock %}

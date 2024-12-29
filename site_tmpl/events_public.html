@@ -21,6 +21,17 @@
   .fc-header-toolbar .fc-subscribeButton-button:hover  { background-color: darkgreen; }
 
   .fc-header-toolbar .fc-viewListButton-button  { background-color: darkblue; }
+
+  .cal-status-awaiting-approval { background-color: #f04e4e !important; border-color:#b03737 !important}
+
+  .cal-status-approved { background-color: #309f30!important; border-color:#1f6c1f !important}
+
+  .cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed { 
+    background-color: #545454!important; 
+    border-color:rgb(42, 42, 42) !important
+  }
+
+  .cal-status-awaiting-review { background-color: #e39c2b!important; border-color:#87572a !important}
 </style>
 <script>
     var calendar;
@@ -53,9 +64,17 @@
         headerToolbar: {
           left: 'prev,next today',
           center: 'title',
-          right: 'dayGridMonth,timeGridWeek,timeGridDay viewListButton,subscribeButton',
+          right: 'dayGridYear,dayGridMonth,timeGridWeek viewListButton,subscribeButton',
         },
         eventDisplay: 'block',
+        firstDay: 1,
+        timeZone: 'America/New_York',
+        businessHours: {
+            daysOfWeek: [1, 2, 3, 4, 5], // Monday - Friday
+            startTime: '00:00',
+            endTime: '24:00',
+        },
+        
         views: {
           dayGrid: { displayEventTime: false },
         },
