@@ -1,5 +1,6 @@
 -r requirements_base.txt
 psycopg2
+mysqlclient
 gunicorn
 whitenoise
 django-storages
