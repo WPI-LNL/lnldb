@@ -1,8 +1,8 @@
 # LNLDB
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy) [![Django CI](https://github.com/WPI-LNL/lnldb/actions/workflows/django-ci.yml/badge.svg)](https://github.com/WPI-LNL/lnldb/actions/workflows/django-ci.yml) [![Coverage Status](https://coveralls.io/repos/WPI-LNL/lnldb/badge.svg?branch=master&service=github)](https://coveralls.io/github/WPI-LNL/lnldb?branch=master) [![Documentation](https://readthedocs.org/projects/lnldb/badge/?version=latest&style=flat)](https://lnldb.readthedocs.io/en/latest/)
+[![Django CI](https://github.com/WPI-LNL/lnldb/actions/workflows/django-ci.yml/badge.svg)](https://github.com/WPI-LNL/lnldb/actions/workflows/django-ci.yml) [![Coverage Status](https://coveralls.io/repos/WPI-LNL/lnldb/badge.svg?branch=master&service=github)](https://coveralls.io/github/WPI-LNL/lnldb?branch=master) [![Documentation](https://readthedocs.org/projects/lnldb/badge/?version=latest&style=flat)](https://lnldb.readthedocs.io/en/latest/)
 
 ## Intro
-LNLDB now runs under Python3.x and Django 2.2 or later.
+LNLDB now runs under Python3.12 and Django 4.2 or later.
 
 ## To Install (Testing)
 ##### Install required system packages
@@ -36,9 +36,9 @@ This uses a lot of library functionalities in the form of plugins. We will make 
 from the system Python installation (ie. don't need root), and install our packages directly to the `env` folder.
 
 ```
-virtualenv env
+python3 -m venv env
 source env/bin/activate
-pip install -r requirements_debug.txt
+pip install -r requirements.txt
 ```
 
 ##### Initialize the database
@@ -68,41 +68,14 @@ python manage.py test
 
 ##### Run it!
 `python manage.py runserver` or `python manage.py shell_plus`
-Note that in future sessions, you must first call `source env/bin/activate` to set up the local path
+Note that in future sessions, you must first call `source env/bin/activate` to set enter your Python virtual environment.
 
 ## Notes
 
 - All server-specific keys, directories, etc. haven't and won't be included. The app checks for a file at
     `lnldb/local_settings.py`, where those and any platform-specific options can be included.
 
-## Installing on heroku
+## Server Notes
+- To update static files from the apps to the webserver directory, run `python manage.py collectstatic`
+-  django-saml2-auth requires the Linux packages `xmlsec1` and `xmlsec1-openssl` to be installed on the host
 
-You can now deploy a test server using one button! Well.... almost. You still need to figure out s3, and make a login.
-
-1. Fill in the allowed_hosts field with eg. 'yourappname.herokuapp.com,yourcustomdomain.com'
-2. (Not required unless storing uploads) Make an [S3 bucket](https://console.aws.amazon.com/s3/home). Just leave everything disabled. Copy the bucket name and region id (eg. us-east-1) into the form.
-3. (Not required unless storing uploads) Make an [IAM identity](https://console.aws.amazon.com/iam/home) to log in under. Copy the id and secret key into the form.
-4. (Not required unless storing uploads) Add a IAM Inline Policy to grant permission to read/write on the bucket. A good base is below.
-5. Hit deploy and wait.
-6. `heroku run python manage.py createsuperuser`
-
-Minimal IAM Policy
-```
-{
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "s3:GetObject",
-                "s3:PutObject",
-                "s3:PutObjectAcl",
-                "s3:ListBucket"
-            ],
-            "Resource": [
-                "arn:aws:s3:::yourbucket",
-                "arn:aws:s3:::yourbucket/*"
-            ]
-        }
-    ]
-}
-```
