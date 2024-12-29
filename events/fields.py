@@ -42,7 +42,7 @@ class GroupedModelChoiceField(forms.ModelChoiceField):
             return self._choices
         return GroupedModelChoiceIterator(self)
 
-    choices = property(_get_choices, forms.ModelChoiceField._set_choices)
+    choices = property(_get_choices, forms.ModelChoiceField.choices)
 
 
 class GroupedModelChoiceIterator(forms.models.ModelChoiceIterator):

@@ -2,7 +2,6 @@ import datetime
 import decimal
 import hashlib
 
-import pytz
 from django import forms
 # from events.managers import EventManager
 # noinspection PyUnresolvedReferences
@@ -344,7 +343,7 @@ class BaseEvent(PolymorphicModel):
             return "Cancelled"
         elif self.closed:
             return "Closed"
-        elif self.approved and self.datetime_setup_complete > datetime.datetime.now(pytz.utc) and not self.reviewed:
+        elif self.approved and self.datetime_setup_complete > datetime.datetime.now(datetime.timezone.utc) and not self.reviewed:
             return "Approved"
         elif not self.approved:
             return "Awaiting Approval"
@@ -370,7 +369,7 @@ class BaseEvent(PolymorphicModel):
 
     @property
     def over(self):
-        return self.datetime_end < datetime.datetime.now(pytz.utc)
+        return self.datetime_end < datetime.datetime.now(datetime.timezone.utc)
 
     @property
     def late(self):
@@ -550,7 +549,7 @@ class Event(BaseEvent):
             # raise ValidationError('You cannot start after you finish')
             # if self.datetime_setup_complete > self.datetime_start:
             # raise ValidationError('You cannot setup after you finish')
-            # if self.datetime_setup_complete < datetime.datetime.now(pytz.utc):
+            # if self.datetime_setup_complete < datetime.datetime.now(datetime.timezone.utc):
             # raise ValidationError('Stop trying to time travel')
 
     # implementing calendars
@@ -1232,7 +1231,7 @@ class OrganizationTransfer(models.Model):
     def is_expired(self):
         if self.completed:
             return True
-        elif datetime.datetime.now(pytz.utc) > self.expiry:
+        elif datetime.datetime.now(datetime.timezone.utc) > self.expiry:
             return True
         return False
 

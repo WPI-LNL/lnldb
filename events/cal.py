@@ -1,5 +1,4 @@
 import json
-import pytz
 import icalendar
 from time import mktime
 
@@ -9,6 +8,7 @@ from django.http import HttpResponse
 from django.template.defaultfilters import slugify
 from django.urls.base import reverse
 from django.utils import timezone
+import datetime
 from django.utils.decorators import method_decorator
 from django.utils.html import conditional_escape
 from django.views.generic.base import View
@@ -144,7 +144,7 @@ class PublicFacingCalJsonView(View):
 
     def get(self, request, *args, **kwargs):
         queryset = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False,
-                                            sensitive=False).filter(datetime_end__gte=timezone.datetime.now(pytz.utc))
+                                            sensitive=False).filter(datetime_end__gte=datetime.datetime.now(datetime.timezone.utc))
 
         from_date = request.GET.get('from', False)
         to_date = request.GET.get('to', False)
