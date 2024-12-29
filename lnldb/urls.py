@@ -24,9 +24,12 @@ handler500 = 'data.views.err500'
 urlpatterns = []
 
 if settings.SAML2_ENABLED:
+    import django_saml2_auth.views
     urlpatterns += [
         re_path(r'^saml2_auth/', include('django_saml2_auth.urls', namespace='djangosaml2')),
     ]
+
+    
 
 urlpatterns += [
     # Examples:
