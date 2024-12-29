@@ -4,6 +4,10 @@
 
 {% block extras %}
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.js'></script>
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
+
 <style>
   .fc-daygrid-block-event .fc-event-time, .fc-daygrid-block-event .fc-event-title {
     padding-left: 5px !important;
@@ -15,41 +19,53 @@
 }
 </style>
 
-    <script>
-      var calendar;
-      document.addEventListener('DOMContentLoaded', function() {
-        const calendarEl = document.getElementById('fullcalendar')
-        calendar = new FullCalendar.Calendar(calendarEl, {
-          initialView: $(window).width() < 765 ? 'listMonth':'dayGridMonth',
-          eventSources: [
-            {
-              url: '{{ bootcal_endpoint }}',
-              color: 'blue',
-              textColor: 'white'
-            }
-          ],
-          aspectRatio: 3,
-          customButtons: {
-            viewListButton: {
-              text: 'View List',
-              click: function() {
-                window.location.href = "{{listurl}}"; // Redirect to list view
-              }
-            }
+<script>
+  var calendar;
+  document.addEventListener('DOMContentLoaded', function () {
+    const calendarEl = document.getElementById('fullcalendar');
+    calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: $(window).width() < 765 ? 'listMonth' : 'dayGridMonth',
+      eventSources: [
+        {
+          url: '{{ bootcal_endpoint }}',
+          color: 'blue',
+          textColor: 'white',
+        },
+      ],
+      aspectRatio: 3,
+      customButtons: {
+        viewListButton: {
+          text: 'View List',
+          click: function () {
+            window.location.href = "{{listurl}}"; // Redirect to list view
           },
-          headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay viewListButton'
-          },
-          eventDisplay: 'block',
-          views: {
-            dayGrid: { displayEventTime: false,}
-          },
-        })
-        calendar.render()
-      })
-    </script>
+        },
+      },
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay viewListButton',
+      },
+      eventDisplay: 'block',
+      views: {
+        dayGrid: { displayEventTime: false },
+      },
+      eventDidMount: function (info) {
+        // Use Tippy.js to create a tooltip
+        tippy(info.el, {
+          content: info.event.extendedProps.description, // Set the tooltip content to the event calendar description
+          theme: 'light',
+          placement: 'top',
+          arrow: true,
+          animation: 'shift-away',
+        });
+        console.log(info.event);
+      },
+    });
+    calendar.render();
+  });
+</script>
+
 {% endblock %}
 
 {% block content %}
