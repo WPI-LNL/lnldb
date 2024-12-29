@@ -22,6 +22,14 @@
 .fc-header-toolbar .fc-subscribeButton-button:hover  { background-color: darkgreen; }
 
 .fc-header-toolbar .fc-viewListButton-button  { background-color: darkblue; }
+
+.cal-status-awaiting-approval { background-color: #f04e4e !important; border-color:#b03737 !important}
+
+.cal-status-approved { background-color: #309f30!important; border-color:#1f6c1f !important}
+
+.cal-status-paid { background-color: #545454!important; border-color:rgb(42, 42, 42) !important}
+
+.cal-status-awaiting-review { background-color: #f09c4e!important; border-color:#ab6f36 !important}
 </style>
 
 <script>
@@ -70,7 +78,6 @@
           arrow: true,
           animation: 'shift-away',
         });
-        console.log(info.event);
       },
     });
     calendar.render();
