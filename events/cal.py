@@ -132,8 +132,9 @@ class BaseCalJsonView(HasPermMixin, View):
         elif projection == 'only':
             queryset = queryset.filter(Q(Event___projection__isnull=False)
                                        | Q(serviceinstance__service__category__name='Projection'))
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
+        from_date = request.GET.get('start', False)
+        to_date = request.GET.get('end', False)
+        print(from_date, to_date)
         response = HttpResponse(generate_cal_json(queryset, from_date, to_date))
         if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
             response.set_cookie('projection', request.GET['projection'])
@@ -148,8 +149,8 @@ class PublicFacingCalJsonView(View):
         queryset = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False,
                                             sensitive=False).filter(datetime_end__gte=datetime.datetime.now(datetime.timezone.utc))
 
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
+        from_date = request.GET.get('start', False)
+        to_date = request.GET.get('end', False)
         return HttpResponse(generate_cal_json_publicfacing(queryset, from_date, to_date))
 
 
@@ -322,7 +323,10 @@ def timestamp_to_datetime(timestamp):
         if len(timestamp) == 13:
             timestamp = int(timestamp) / 1000
 
-        return timezone.make_aware(timezone.datetime.fromtimestamp(float(timestamp)))
+        try:
+            return timezone.make_aware(timezone.datetime.fromtimestamp(float(timestamp)))
+        except ValueError:
+            return datetime.datetime.fromisoformat(timestamp)
     else:
         return ""
 
