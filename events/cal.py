@@ -272,6 +272,7 @@ def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):
             field = {
                 "title": conditional_escape(event.cal_name()),
                 "url": reverse('events:detail', args=[event.id]),
+                "className": 'cal-status-' + slugify(event.status),
                 "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
                 "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5)),
                 "description": event.location.name + " (" + event.location.building.shortname + "). " + conditional_escape(event.cal_desc()),
