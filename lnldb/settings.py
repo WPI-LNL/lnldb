@@ -133,14 +133,19 @@ SAML2_AUTH = {
         'SUPERUSER_STATUS': False,
     },
     'ATTRIBUTES_MAP': {
-        'email': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
-        'username': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name',
-        'first_name': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
-        'last_name': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
+        'email': 'emailAddress',
+        'username': 'name',
+        'first_name': 'givenName',
+        'last_name': 'surname',
     },
-    'ENTITY_ID': 'https://{}/sso/acs/'.format(ALLOWED_HOSTS[0]),
+    'ENTITY_ID': 'https://{}/saml2_auth/acs/'.format(ALLOWED_HOSTS[0]),
     'NAME_ID_FORMAT': 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
     'USE_JWT': False,
+    'AUTHN_REQUESTS_SIGNED': False,
+    'LOGOUT_REQUESTS_SIGNED': False,
+    'WANT_ASSERTIONS_SIGNED': False,
+    'WANT_RESPONSE_SIGNED': False,
+    'TOKEN_REQUIRED': False,
 }
 
 LOGIN_BACKGROUND = env.str('LOGIN_BACKGROUND', None)
