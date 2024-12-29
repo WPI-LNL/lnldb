@@ -249,6 +249,13 @@ class AllCalJsonView(BaseCalJsonView):
         if not request.user.has_perm('events.approve_event'):
             queryset = queryset.exclude(approved=False)
         return super(AllCalJsonView, self).get(request, queryset)
+    
+class AllFutureCalJsonView(BaseCalJsonView):
+    def get(self, request, *args, **kwargs):
+        queryset = BaseEvent.objects.distinct()
+        if not request.user.has_perm('events.approve_event'):
+            queryset = queryset.exclude(approved=False)
+        return super(AllCalJsonView, self).get(request, queryset)
 
 
 def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):

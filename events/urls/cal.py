@@ -24,4 +24,5 @@ urlpatterns = [
     re_path(r'^json/unpaid(/*?.*)*$', cal.UnpaidCalJsonView.as_view(), name="api-unpaid"),
     re_path(r'^json/closed(/*?.*)*$', cal.ClosedCalJsonView.as_view(), name="api-closed"),
     re_path(r'^json/all(/*?.*)*$', cal.AllCalJsonView.as_view(), name="api-all"),
+    re_path(r'^json/allfuture(/*?.*)*$', cal.AllFutureCalJsonView.as_view(), name="api-all-future"),
 ]

@@ -967,6 +967,55 @@ def all_cal(request, start=None, end=None):
     context = {'h2': "All Events", 'listurl': reverse('events:all'), 'bootcal_endpoint': reverse('cal:api-all')}
     return render(request, 'events_cal.html', context)
 
+@login_required
+@permission_required('events.view_events', raise_exception=True)
+def allfuture(request, start=None, end=None):
+    """ Lists all future events """
+    context = {}
+
+    if not start and request.COOKIES.get('start'):
+        if not end and request.COOKIES.get('end'):
+            return HttpResponseRedirect(reverse('events:allfuture', args=(request.COOKIES.get('start'),
+                                                                    request.COOKIES.get('end'))))
+        else:
+            return HttpResponseRedirect(reverse('events:allfuture', args=(request.COOKIES.get('start'), end)))
+    elif not end and request.COOKIES.get('end'):
+        return HttpResponseRedirect(reverse('events:allfuture', args=(start, request.COOKIES.get('end'))))
+    time_range_unspecified = not start and not end
+    if not start and not end:
+        start = datetime.date.today().strftime('%Y-%m-%d')
+        end = (datetime.date.today() + datetime.timedelta(days=3652.5)).strftime('%Y-%m-%d')
+
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+            and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
+
+    events = BaseEvent.objects.distinct()
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, hide_unapproved=not request.user.has_perm('events.approve_event'), sort='datetime_start')
+
+    context['h2'] = "All Future Events"
+    context['events'] = events
+    context['baseurl'] = reverse("events:allfuture")
+    context['pdfurl_workorders'] = reverse('events:pdf-multi')
+    context['pdfurl_bills'] = reverse('events:bill-pdf-multi')
+    context['calurl'] = reverse('events:all-future-cal')
+    context['takes_param_projection'] = True
+    context['cols'] = ['event_name', 'org', 'location', 'event_status', FakeField('lnl_contact', verbose_name='LNL Contact'), 'crew_chief',
+                       FakeExtendedField('datetime_start', verbose_name="Event Start"),
+                       FakeExtendedField('datetime_end', verbose_name="Event End"),
+                       FakeField('short_services', verbose_name="Services", sortable=False)]
+    if request.user.has_perm('events.approve_event'):
+        context['cols'].append(FakeField('approval'))
+    response = generate_response(request, context, start, end, time_range_unspecified)
+    return response
+
+@login_required()
+@permission_required('events.view_events', raise_exception=True)
+def allfuture_cal(request, start=None, end=None):
+    """ Calendar view for all future events """
+    context = {'h2': "All Future Events", 'listurl': reverse('events:allfuture'), 'bootcal_endpoint': reverse('cal:api-all-future')}
+    return render(request, 'events_cal.html', context)
+
 
 def public_facing(request):
     """
