@@ -25,21 +25,10 @@ urlpatterns = []
 
 if settings.SAML2_ENABLED:
     import django_saml2_auth.views
-    #urlpatterns += [
-    #    re_path(r'^saml2_auth/', include('django_saml2_auth.urls', namespace='djangosaml2')),
-    #]
-    # These are the SAML2 related URLs. (required)
-    re_path(r'^sso/', include('django_saml2_auth.urls')),
+    urlpatterns += [
+        re_path(r'^sso/', include('django_saml2_auth.urls', namespace='djangosaml2')),
+    ]
 
-    # The following line will replace the default user login with SAML2 (optional)
-    # If you want to specific the after-login-redirect-URL, use parameter "?next=/the/path/you/want"
-    # with this view.
-    re_path(r'^accounts/login/$', django_saml2_auth.views.signin),
-
-    # The following line will replace the admin login with SAML2 (optional)
-    # If you want to specific the after-login-redirect-URL, use parameter "?next=/the/path/you/want"
-    # with this view.
-    re_path(r'^admin/login/$', django_saml2_auth.views.signin),
     
 
 urlpatterns += [

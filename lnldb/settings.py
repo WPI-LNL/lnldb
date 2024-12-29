@@ -138,7 +138,7 @@ SAML2_AUTH = {
         'first_name': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
         'last_name': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
     },
-    'ENTITY_ID': 'https://{}/saml2_auth/acs/'.format(ALLOWED_HOSTS[0]),
+    'ENTITY_ID': 'https://{}/sso/acs/'.format(ALLOWED_HOSTS[0]),
     'NAME_ID_FORMAT': 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
     'USE_JWT': False,
 }
