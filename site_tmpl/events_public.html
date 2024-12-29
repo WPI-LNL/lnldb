@@ -67,6 +67,14 @@
           right: 'dayGridYear,dayGridMonth,timeGridWeek viewListButton,subscribeButton',
         },
         eventDisplay: 'block',
+        firstDay: 1,
+        timeZone: 'America/New_York',
+        businessHours: {
+            daysOfWeek: [1, 2, 3, 4, 5], // Monday - Friday
+            startTime: '00:00',
+            endTime: '24:00',
+        },
+        
         views: {
           dayGrid: { displayEventTime: false },
         },
