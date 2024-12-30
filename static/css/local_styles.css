@@ -332,3 +332,6 @@ body>.djhj>.djhj-notification>.djhj-actions>.djhj-button {
     z-index: 1000 !important;
 }
 
+.tippy-content {
+    white-space: pre-wrap;
+}
