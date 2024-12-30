@@ -32,6 +32,7 @@ urlpatterns = [
     re_path(r'^unpaidworkday/', generate_date_patterns(list_views.unpaid_workday, name="unpaid-workday")),
     re_path(r'^closed/', generate_date_patterns(list_views.closed, name="closed")),
     re_path(r'^all/', generate_date_patterns(list_views.all, name="all")),
+    re_path(r'^allfuture/', generate_date_patterns(list_views.allfuture, name="allfuture")),
 
     # calendar views corresponding to the list views
     re_path(r'^findchief/calendar/', generate_date_patterns(list_views.findchief_cal, name="findchief-cal")),
@@ -48,6 +49,7 @@ urlpatterns = [
     re_path(r'^unpaid/calendar/', generate_date_patterns(list_views.unpaid_cal, name="unpaid-cal")),
     re_path(r'^closed/calendar/', generate_date_patterns(list_views.closed_cal, name="closed-cal")),
     re_path(r'^all/calendar/', generate_date_patterns(list_views.all_cal, name="all-cal")),
+    re_path(r'^allfuture/calendar/', generate_date_patterns(list_views.allfuture_cal, name="all-future-cal")),
 
     # Actual event pages
 
