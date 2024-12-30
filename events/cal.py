@@ -251,7 +251,7 @@ class AllCalJsonView(BaseCalJsonView):
     
 class AllFutureCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
-        queryset = BaseEvent.objects.distinct().filter(datetime_end__lte=timezone.now())
+        queryset = BaseEvent.objects.distinct().filter(datetime_end__gte=timezone.now())
         if not request.user.has_perm('events.approve_event'):
             queryset = queryset.exclude(approved=False)
         return super(AllFutureCalJsonView, self).get(request, queryset)
