@@ -134,7 +134,6 @@ class BaseCalJsonView(HasPermMixin, View):
                                        | Q(serviceinstance__service__category__name='Projection'))
         from_date = request.GET.get('start', False)
         to_date = request.GET.get('end', False)
-        print(from_date, to_date)
         response = HttpResponse(generate_cal_json(queryset, from_date, to_date))
         if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
             response.set_cookie('projection', request.GET['projection'])
@@ -252,10 +251,10 @@ class AllCalJsonView(BaseCalJsonView):
     
 class AllFutureCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
-        queryset = BaseEvent.objects.distinct()
+        queryset = BaseEvent.objects.distinct().filter(datetime_end__lte=timezone.now())
         if not request.user.has_perm('events.approve_event'):
             queryset = queryset.exclude(approved=False)
-        return super(AllCalJsonView, self).get(request, queryset)
+        return super(AllFutureCalJsonView, self).get(request, queryset)
 
 
 def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):
