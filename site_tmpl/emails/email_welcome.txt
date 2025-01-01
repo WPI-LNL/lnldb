@@ -1,25 +1,31 @@
-Hi {{ new_member }},
+Hey {{ new_member }},
 
-I hope you had a good time at your first LNL meeting or event! I want to let you know about a few helpful resources available to you as you begin your journey with us.
+I hope you had a good time at your first LNL event or meeting! I want to let you know about some helpful resources to introduce you to LNL:
 
-You can find some basic information for new members at https://lnl.wpi.edu/join. Additionally, our upcoming event calendar can be found at http://when2lnl.com. This has the setup times and locations for each of our events. You can add this calendar to your favorite calendar app, such as Outlook or Google Calendar, by pressing the "Subscribe" button at the top of the page.
+Slack: Please join our Slack at https://lnl.wpi.edu/join-slack! On Slack, we announce events, share funny things, and have a good time together.
 
-Our mailing lists and our Slack workspace are our primary means of communication. You can join our Slack workspace by visiting https://join.slack.com/t/wpilnl/signup. You will be added to our mailing list around the time you are receiving this email. Before each event you will usually get an email from the person in charge of setup (the crew chief) with more details about the when, where, and what of setup for that event. Feel free to show up to any event to help.
+Meetings: 
+- General Body Meetings (GBMs): Wednesdays at 5pm in AK 219
+- Open Executive Board Meetings (Exec): Mondays at 5pm in CC Chairs
 
-While most of the tasks you might perform in LNL don’t require training, there are a few that do. If you ever have questions about whether or not you need training to do something, don’t be afraid to ask!
+Events Calendar: Our calendar (with setup times and locations) can be found at https://lnl.wpi.edu/list. You can add this calendar to your Outlook from the "Subscribe" button at the top of the page. 
 
-You can access our member website and database by visiting https://lnl.wpi.edu/db. This website serves as your home base for everything LNL related and is where you will find event details and meeting information. It takes 3 meetings and 5 events to become an active member, and once that happens you can serve as the crew chief for an event - if you want to. The 5 events must include one from each of our service categories: sound, lighting and projection.
+Work Announcements: Before each event, the person in charge of setup (the crew chief, AKA CC) will send out an email and/or a Slack message in #work-announcements with more details. Feel free to show up to any event to help.
 
-Our general body meetings are Wednesdays at 5 PM in AK233 and our Executive Board meetings are Mondays at 5 PM in the CC Chair's room of the Campus Center. Attending either of these meetings counts towards the activation requirements.
+LNLDB: Our member website and database https://lnl.wpi.edu/db serves as the home base for everything LNL related. This is where you can find event details and meeting information.
 
-We often refer to the following locations in work announcements:
-- Alden Sub(basement): Take the elevator in Alden down to the "SB" floor. We keep all our lighting equipment down there.
-- CC Office: On the third floor of the CC, if you walk all the way towards the elevator it is on your right. Our sound equipment is in there.
-- The Projection Booth: In Fuller Labs near the Upper Perreault Hall door. This is where our projectors live.
+Active Membership: Active members can be crew chiefs for events and vote at meetings. To become an active member, attend 3 meetings and participate in 5 events (including at least one sound, lighting and projection event). Before your first projection event, reach out to our head projectionist at lnl-hp@wpi.edu to schedule a projection booth training (PIT1).
+
+Event Sign-in: Make sure to sign in and out of events at https://lnl.wpi.edu/crew to count them towards activation. If you have any questions, ask any active member to help you.
+
+Common Locations:
+- CC Office: On the third floor of the Campus Center, walk all the way past the Odeum and turn right at the elevator. Our sound equipment is in there, and you’ll probably find us hanging out!
+- Alden Sub(basement): Take the elevator in Alden down to the "SB" floor. We store our lighting equipment down here.
+- Fuller Projection Booth: In Fuller Labs directly next to the Upper Perreault Hall door. This is where we operate our film projectors.
 
 If you have any other questions about anything, please email the Secretary at lnl-s@wpi.edu!
 
-We hope to see you soon!
+Look out for more on Slack, and we hope to see you again soon!
 
 Secretary
 WPI Lens and Lights

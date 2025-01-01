@@ -14,6 +14,8 @@ from django.utils.html import conditional_escape
 from django.views.generic.base import View
 from django.views.decorators.cache import cache_page
 from django_ical.views import ICalFeed
+from django.utils.timezone import localtime
+
 
 from events.models import BaseEvent, Category, EventCCInstance
 from meetings.models import Meeting
@@ -130,8 +132,8 @@ class BaseCalJsonView(HasPermMixin, View):
         elif projection == 'only':
             queryset = queryset.filter(Q(Event___projection__isnull=False)
                                        | Q(serviceinstance__service__category__name='Projection'))
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
+        from_date = request.GET.get('start', False)
+        to_date = request.GET.get('end', False)
         response = HttpResponse(generate_cal_json(queryset, from_date, to_date))
         if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
             response.set_cookie('projection', request.GET['projection'])
@@ -146,8 +148,8 @@ class PublicFacingCalJsonView(View):
         queryset = BaseEvent.objects.filter(approved=True, closed=False, cancelled=False, test_event=False,
                                             sensitive=False).filter(datetime_end__gte=datetime.datetime.now(datetime.timezone.utc))
 
-        from_date = request.GET.get('from', False)
-        to_date = request.GET.get('to', False)
+        from_date = request.GET.get('start', False)
+        to_date = request.GET.get('end', False)
         return HttpResponse(generate_cal_json_publicfacing(queryset, from_date, to_date))
 
 
@@ -246,6 +248,13 @@ class AllCalJsonView(BaseCalJsonView):
         if not request.user.has_perm('events.approve_event'):
             queryset = queryset.exclude(approved=False)
         return super(AllCalJsonView, self).get(request, queryset)
+    
+class AllFutureCalJsonView(BaseCalJsonView):
+    def get(self, request, *args, **kwargs):
+        queryset = BaseEvent.objects.distinct().filter(datetime_end__gte=timezone.now())
+        if not request.user.has_perm('events.approve_event'):
+            queryset = queryset.exclude(approved=False)
+        return super(AllFutureCalJsonView, self).get(request, queryset)
 
 
 def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):
@@ -268,14 +277,15 @@ def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):
         for event in queryset:
             field = {
                 "title": conditional_escape(event.cal_name()),
-                "url": "#" + str(event.id),
+                "url": reverse('events:detail', args=[event.id]),
+                "className": 'cal-status-' + slugify(event.status),
                 "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
-                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5))
+                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5)),
+                "description": event.location.name + " (" + event.location.building.shortname + "). " + conditional_escape(event.cal_desc()),
             }
             objects_body.append(field)
 
-        objects_head = {"success": 1, "result": objects_body}
-        return json.dumps(objects_head)
+        return json.dumps(objects_body)
 
 
 def generate_cal_json(queryset, from_date=None, to_date=None):
@@ -298,16 +308,16 @@ def generate_cal_json(queryset, from_date=None, to_date=None):
         for event in queryset:
             field = {
                 "id": event.cal_guid(),
-                "title": conditional_escape(event.cal_name()),
+                "title": event.cal_name(),
                 "url": reverse('events:detail', args=[event.id]),
-                "class": 'cal-status-' + slugify(event.status),
+                "className": 'cal-status-' + slugify(event.status),
                 "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
-                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5))
+                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5)),
+                "description": event.location.name + " (" + event.location.building.shortname + "). " + event.cal_desc(),
             }
             objects_body.append(field)
 
-        objects_head = {"success": 1, "result": objects_body}
-        return json.dumps(objects_head)
+        return json.dumps(objects_body)
 
 
 def timestamp_to_datetime(timestamp):
@@ -320,25 +330,17 @@ def timestamp_to_datetime(timestamp):
         if len(timestamp) == 13:
             timestamp = int(timestamp) / 1000
 
-        return timezone.make_aware(timezone.datetime.fromtimestamp(float(timestamp)))
+        try:
+            return timezone.make_aware(timezone.datetime.fromtimestamp(float(timestamp)))
+        except ValueError:
+            return datetime.datetime.fromisoformat(timestamp)
     else:
         return ""
 
 
-def datetime_to_timestamp(date):
-    """
-    Converts datetime to timestamp
-    with json fix
-    """
-    if isinstance(date, timezone.datetime):
-
-        timestamp = mktime(date.timetuple())
-        json_timestamp = int(timestamp) * 1000
-
-        return '{0}'.format(json_timestamp)
-    else:
-        return ""
-
+def datetime_to_timestamp(dt):
+    """Converts a datetime object to a UNIX timestamp in milliseconds."""
+    return int(dt.timestamp() * 1000) 
 
 class EventAttendee(object):
     """

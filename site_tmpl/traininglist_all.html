@@ -3,11 +3,13 @@
 {% block title %}Training List | Lens and Lights at WPI{% endblock %}
 {% block content %}
 <div class="pull-right">
+    <a class="btn btn-lg btn-success" href="{% url 'members:training:list' %}">View Active Only</a>
     {% permission request.user has 'members.add_training' %}
         <a class="btn btn-lg btn-primary" href="{% url 'members:training:entry' %}">Enter Training</a>
     {% endpermission %}
 </div>
-<h2> Training </h2>
+<h2> Training</h2>
+<h4> All Members</h4>
 <table class="table table-striped table-bordered table-condensed">
     <tr> 
         <th> User Name </th>

@@ -298,7 +298,8 @@ class BaseEvent(PolymorphicModel):
                 desc += cc.crew_chief.get_full_name() + " [" + (cc.service.shortname if cc.service else cc.category.name) + "], "
             desc = desc[:-2] + ".\n"  # removes trailing comma
         if self.description:
-            desc += self.description + "\n"
+            desc += self.description[0:50] + "..." if (len(self.description) > 50) else self.description
+            desc += "\n"
         return desc
 
     def cal_location(self):

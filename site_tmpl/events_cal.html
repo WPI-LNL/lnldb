@@ -1,12 +1,129 @@
 {% extends 'base_admin.html' %}
-{% load bootstrap_calendar %}
-
-{% block extras %}
-{% bootstrap_calendar_js events_url=bootcal_endpoint time_start='06:00' time_end='24:00' %}
-{% bootstrap_calendar_css %}
-{% endblock %}
 
 {% block title %}{{ h2 }} Calendar | Lens and Lights at WPI{% endblock %}
+
+{% block extras %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar/index.global.js'></script>
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
+
+<style>
+  .fc-daygrid-block-event .fc-event-time, .fc-daygrid-block-event .fc-event-title {
+    padding-left: 5px !important;
+}
+
+.fc-view-harness.fc-view-harness-active {
+    overflow: visible;
+    height: 70vh !important;
+}
+
+.fc-header-toolbar .fc-subscribeButton-button  { background-color: green; }
+.fc-header-toolbar .fc-subscribeButton-button:hover  { background-color: darkgreen; }
+
+.fc-header-toolbar .fc-viewListButton-button  { background-color: darkblue; }
+
+.cal-status-awaiting-approval { background-color: #f04e4e !important; border-color:#b03737 !important}
+
+.cal-status-approved { background-color: #309f30!important; border-color:#1f6c1f !important}
+
+.cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed { 
+  background-color: #545454!important; 
+  border-color:rgb(42, 42, 42) !important
+}
+
+.cal-status-awaiting-review { background-color: #e39c2b!important; border-color:#87572a !important}
+</style>
+
+<script>
+  var calendar;
+  document.addEventListener('DOMContentLoaded', function () {
+    const calendarEl = document.getElementById('fullcalendar');
+    calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: $(window).width() < 765 ? 'listMonth' : 'dayGridMonth',
+      eventSources: [
+        {
+          url: '{{ bootcal_endpoint }}',
+          color: 'blue',
+          textColor: 'white',
+        },
+      ],
+      aspectRatio: 3,
+      customButtons: {
+          viewListButton: {
+            text: 'View List',
+            click: function () {
+              window.location.href = "{{listurl}}"; // Redirect to list view
+            },
+          },
+          subscribeButton: {
+            text: 'Subscribe',
+            click: function () {
+              $('#calInfoModal').modal("show"); // Redirect to list view
+            },
+          },
+        },
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridYear,dayGridMonth,timeGridWeek viewListButton,subscribeButton',
+      },
+      eventDisplay: 'block',
+      firstDay: 1,
+      timeZone: 'America/New_York',
+      businessHours: {
+        daysOfWeek: [1, 2, 3, 4, 5], // Monday - Friday
+        startTime: '00:00',
+        endTime: '24:00',
+      },
+      views: {
+        dayGrid: { displayEventTime: false },
+      },
+      eventDidMount: function (info) {
+        // Use Tippy.js to create a tooltip
+        tippy(info.el, {
+          content: info.event.extendedProps.description, // Set the tooltip content to the event calendar description
+          theme: 'light',
+          placement: 'top',
+          arrow: true,
+          animation: 'shift-away',
+        });
+      },
+    });
+    calendar.render();
+  });
+</script>
+
+{% endblock %}
+
+{% block modals %}
+    <!-- calInfoModal -->
+        <div id="calInfoModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="calInfoModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                        <h3 id="calInfoModalLabel">How to Subscribe</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Get instant access to event information with your existing calendar! Simply copy the url from
+                            the box below and put it into Outlook, Google Calendar, your phone, or any ICS-compatible
+                            program (look for 'Add by URL' or 'Internet Calendar').</p>
+                        <div class="input-group">
+                            <input class="form-control" id="cal_url" type="text" readonly onclick="$(this).select();"
+                                   value="{{ request.scheme }}://{{ request.get_host }}{% url 'cal:feed' %}" >
+                            <span class="input-group-btn">
+                                <button class="btn btn-default" type="button"
+                                        onclick="$('#cal_url').select();document.execCommand('copy');">
+                                    Copy</button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -15,15 +132,14 @@
     </div>
 </div>
 <div class="panel panel-default">
-    <div class="row cal-ctl panel-heading">
-        <div class="btn-group cal-ctl">
-            <a href="{{listurl}}" class="btn btn-primary">View List</a>
-        </div>
-        {% bootstrap_controls 'cal-ctl' %}
-        <h3 id="cal-header-title" class="panel-title"></h3>
-    </div>
-    <div class="panel-body">
-        {% bootstrap_calendar 'cal-body' %}
-    </div>
+    <div id="fullcalendar" class="panel-body"></div>
+    <h4 class="well" style="margin: 15px;">
+      <span class="label" style="color:black">Event Color Key</span>
+      <span class="label cal-status-awaiting-approval">Awaiting Approval</span>
+      <span class="label cal-status-approved">Confirmed</span>
+      <span class="label cal-status-awaiting-review">Awaiting Billing Review</span>
+      <span class="label cal-status-paid">To be billed, Awaiting payment, Paid, Cancelled, or Closed</span> <!-- .cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed -->
+      <span class="label" style="background-color: blue; border: darkblue;">Other/Unknown</span>
+    </h4>
 </div>
 {% endblock %}

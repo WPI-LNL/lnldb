@@ -18,7 +18,7 @@ from django.db.models import Model, Q
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget, TextInput
 from django.utils import timezone
 # python multithreading bug workaround
-from pagedown.widgets import PagedownWidget
+from easymde.widgets import EasyMDEEditor
 
 from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
 from events.fields import GroupedModelChoiceField
@@ -223,7 +223,7 @@ class IOrgForm(FieldAccessForm):
     associated_orgs = AutoCompleteSelectMultipleField('Orgs', required=False)
     associated_users = AutoCompleteSelectMultipleField('Users', required=False)
     worktag = forms.CharField(required=False, help_text='Ends in -AG, -CC, -GF, -GR, or -DE')
-    notes = forms.CharField(widget=PagedownWidget(), label="Internal Notes", required=False)
+    notes = forms.CharField(widget=EasyMDEEditor(), label="Internal Notes", required=False)
 
     class FieldAccess:
         def __init__(self):
@@ -346,12 +346,12 @@ class EventApprovalForm(forms.ModelForm):
                   'billed_in_bulk', 'datetime_setup_complete', 'lighting', 'lighting_reqs',
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs']
         widgets = {
-            'description': PagedownWidget(),
-            'internal_notes': PagedownWidget,
-            'lighting_reqs': PagedownWidget(),
-            'sound_reqs': PagedownWidget(),
-            'proj_reqs': PagedownWidget(),
-            'otherservice_reqs': PagedownWidget()
+            'description': EasyMDEEditor(),
+            'internal_notes': EasyMDEEditor(),
+            'lighting_reqs': EasyMDEEditor(),
+            'sound_reqs': EasyMDEEditor(),
+            'proj_reqs': EasyMDEEditor(),
+            'otherservice_reqs': EasyMDEEditor()
         }
 
     org = AutoCompleteSelectMultipleField('Orgs', required=False, label='Client(s)')
@@ -382,7 +382,7 @@ class EventDenialForm(forms.ModelForm):
         model = BaseEvent
         fields = ['cancelled_reason', 'send_email']
         widgets = {
-            'cancelled_reason': PagedownWidget()
+            'cancelled_reason': EasyMDEEditor()
         }
 
 
@@ -535,12 +535,12 @@ class InternalEventForm(FieldAccessForm):
 
         change_lnl_contact = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_lnl_contact', instance),
-            enable=('lnl_contact')
+            enable=('lnl_contact',)
         )
         
         change_event_status = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_status', instance),
-            enable=('event_status')
+            enable=('event_status',)
         )
 
     class Meta:
@@ -550,12 +550,12 @@ class InternalEventForm(FieldAccessForm):
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs', 'sensitive',
                   'test_event')
         widgets = {
-            'description': PagedownWidget(),
-            'internal_notes': PagedownWidget,
-            'lighting_reqs': PagedownWidget(),
-            'sound_reqs': PagedownWidget(),
-            'proj_reqs': PagedownWidget(),
-            'otherservice_reqs': PagedownWidget()
+            'description': EasyMDEEditor(),
+            'internal_notes': EasyMDEEditor(),
+            'lighting_reqs': EasyMDEEditor(),
+            'sound_reqs': EasyMDEEditor(),
+            'proj_reqs': EasyMDEEditor(),
+            'otherservice_reqs': EasyMDEEditor()
         }
 
     location = GroupedModelChoiceField(
@@ -685,12 +685,12 @@ class InternalEventForm2019(FieldAccessForm):
 
         change_lnl_contact = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_lnl_contact', instance),
-            enable=('lnl_contact')
+            enable=('lnl_contact',)
         )
         
         change_event_status = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_status', instance),
-            enable=('event_status')
+            enable=('event_status',)
         )
 
         change_entered_into_workday = FieldAccessLevel(
@@ -721,8 +721,8 @@ class InternalEventForm2019(FieldAccessForm):
                   'entered_into_workday', 'send_survey', 'max_crew','cancelled_reason',
                   'reference_code')
         widgets = {
-            'description': PagedownWidget(),
-            'internal_notes': PagedownWidget(),
+            'description': EasyMDEEditor(),
+            'internal_notes': EasyMDEEditor(),
             'cancelled_reason': TextInput(),
         }
 
@@ -732,7 +732,7 @@ class InternalEventForm2019(FieldAccessForm):
         group_label=lambda group: group.name,
     )
     contact = AutoCompleteSelectField('Users', required=False)
-    lnl_contact = AutoCompleteSelectField('Members', label="LNL Contact (PM)", required=False)
+    lnl_contact = AutoCompleteSelectField('Members', label="LNL Contact", required=False)
     org = CustomAutoCompleteSelectMultipleField('Orgs', required=False, label="Client(s)")
     billing_org = AutoCompleteSelectField('Orgs', required=False, label="Client to bill")
     datetime_setup_complete = forms.SplitDateTimeField(initial=timezone.now, label="Setup Completed")
@@ -769,7 +769,7 @@ class EventReviewForm(forms.ModelForm):
         model = Event
         fields = ('org', 'billing_org', 'internal_notes')
         widgets = {
-            'internal_notes': PagedownWidget()
+            'internal_notes': EasyMDEEditor()
         }
 
     org = AutoCompleteSelectMultipleField('Orgs', required=True, label="Client(s)")
@@ -818,7 +818,7 @@ class InternalReportForm(FieldAccessForm):
         model = CCReport
         fields = ('crew_chief', 'report')
         widgets = {
-            'report': PagedownWidget()
+            'report': EasyMDEEditor()
         }
 
     crew_chief = AutoCompleteSelectField('Members', required=False)
@@ -1448,7 +1448,7 @@ class ServiceInstanceForm(forms.ModelForm):
         model = ServiceInstance
         fields = ('service', 'detail')
         widgets = {
-            'detail': PagedownWidget(attrs={"show_preview":False}),
+            'detail': EasyMDEEditor(attrs={"show_preview":False}),
         }
 
     service = ModelChoiceField(queryset=Service.objects.filter(enabled_event2019=True))

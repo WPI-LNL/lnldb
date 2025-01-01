@@ -123,7 +123,7 @@ SPOTIFY_CLIENT_SECRET = env.str('SPOTIFY_SECRET', '')
 SPOTIFY_REDIRECT_URI = env.str('SPOTIFY_CALLBACK_URI', '')
 
 SAML2_AUTH = {
-    'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://samltest.id/saml/idp'),
+    'METADATA_AUTO_CONF_URL': env.str('SAML2_IDP_METADATA_URL', 'https://example.com'),
     'DEFAULT_NEXT_URL': '/db/',
     'CREATE_USER': True,
     'NEW_USER_PROFILE': {
@@ -133,14 +133,19 @@ SAML2_AUTH = {
         'SUPERUSER_STATUS': False,
     },
     'ATTRIBUTES_MAP': {
-        'email': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
-        'username': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name',
-        'first_name': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
-        'last_name': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
+        'email': 'emailAddress',
+        'username': 'name',
+        'first_name': 'givenName',
+        'last_name': 'surname',
     },
     'ENTITY_ID': 'https://{}/saml2_auth/acs/'.format(ALLOWED_HOSTS[0]),
     'NAME_ID_FORMAT': 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
     'USE_JWT': False,
+    'AUTHN_REQUESTS_SIGNED': False,
+    'LOGOUT_REQUESTS_SIGNED': False,
+    'WANT_ASSERTIONS_SIGNED': False,
+    'WANT_RESPONSE_SIGNED': False,
+    'TOKEN_REQUIRED': False,
 }
 
 LOGIN_BACKGROUND = env.str('LOGIN_BACKGROUND', None)
@@ -300,6 +305,7 @@ MIDDLEWARE = (
                  'debug_toolbar.middleware.DebugToolbarMiddleware',
                  'data.middleware.SwappableRedirectMiddleware',
                  'data.middleware.HttpResponseNotAllowedMiddleware',
+                 'hijack.middleware.HijackUserMiddleware',
              )
 
 ROOT_URLCONF = 'lnldb.urls'
@@ -346,7 +352,6 @@ INSTALLED_APPS = (
     'formtools',
     'semanticuiforms',
     'lineage',
-    'django_bootstrap_calendar',
     'multiselectfield',
     'ajax_select',
     'watson',
@@ -355,7 +360,7 @@ INSTALLED_APPS = (
     'permission',
     'reversion',
     'hijack',
-    'pagedown',
+    'easymde',
     'polymorphic',
     'jchart',
     'rest_framework',
@@ -546,12 +551,12 @@ def reverse_noexcept(url, args=None, kwargs=None):
 MARKDOWN_DEUX_STYLES = {
     "default": {
         "link_patterns": [
-            (re.compile("\B@([A-Za-z][A-Za-z0-9]*)"),
+            (re.compile(r"\B@([A-Za-z][A-Za-z0-9]*)"),
              lambda m: reverse_noexcept("accounts:by-name:detail",
                                         kwargs={'username': m.group(1)}
                                         )
              ),
-            (re.compile("\B@([0-9]+)"),
+            (re.compile(r"\B@([0-9]+)"),
              lambda m: reverse_noexcept("events:detail",
                                         args=[m.group(1)]
                                         )
@@ -567,6 +572,24 @@ MARKDOWN_DEUX_STYLES = {
         "safe_mode": "escape",
     },
 }
+
+EASYMDE_OPTIONS = {
+    'status': False,
+    'forceSync': True,
+    'parsingConfig' : { 'allowAtxHeaderWithoutSpace': True, },
+    'promptURLs': True,
+    'spellChecker': False,
+    'inputStyle': 'contenteditable',
+    'nativeSpellcheck': True,
+    'hideIcons': ["fullscreen"],
+    'indentWithTabs': True,
+    'tabSize': 4,
+    'sideBySideFullscreen': False,
+    'minHeight': '80px',
+    'previewImagesInEditor': True,
+
+}
+
 # and for the html editor
 EXTENSIONS = ["newlines", "smart-strong", "strikethrough",
               "smartypants", "tables"]
@@ -579,6 +602,8 @@ CACHES = {
 }
 
 MPTT_ADMIN_LEVEL_INDENT = 20
+
+REGISTER_CALENDAR_EVENTS_MODEL = False
 
 # CAS has been deprecated
 # if env.str("CAS_SERVER_URL", ""):
