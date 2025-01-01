@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import permission_required, login_required
 from django.shortcuts import reverse, render, get_object_or_404
 from django.http import HttpResponseRedirect
 
-from .models import ReportedMessage
+from .models import Channel, ReportedMessage
 from .api import lookup_user, user_profile, message_link, channel_info
 
 

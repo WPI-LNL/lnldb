@@ -1,4 +1,6 @@
+import datetime
 from django.db import models
+from .api import channel_info, channel_members, channel_latest_message
 
 
 # Create your models here.
