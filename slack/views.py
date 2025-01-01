@@ -7,6 +7,26 @@ from .api import lookup_user, user_profile, message_link, channel_info
 
 
 # Slack Management Views
+
+@login_required
+@permission_required('slack.view_channel', raise_exception=True)
+def channel_list(request):
+    """
+    View a list of all Slack channels
+    """
+    channels = Channel.objects.all()
+    return render(request, 'slack/slack_channel_list.html', {'h2': 'Slack Channels', 'channels': channels})
+
+@login_required
+@permission_required('slack.view_channel', raise_exception=True)
+def channel_detail(request, id):
+    """
+    View details for a specific Slack channel
+    """
+    channel = get_object_or_404(Channel, id=id)
+    return render(request, 'slack/slack_channel_detail.html', {'h2': "#"+channel.name+' Details', 'channel': channel})
+    
+
 @login_required
 @permission_required('slack.view_reportedmessage', raise_exception=True)
 def report_list(request):

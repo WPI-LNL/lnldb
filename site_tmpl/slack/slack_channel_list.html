@@ -1,0 +1,28 @@
+{% extends 'base_admin.html' %}
+{% load permissionif %}
+{% block title %}{{h2}} | Lens and Lights at WPI{% endblock %}
+{% block content %}
+<h2> {{ h2 }} </h2>
+
+<table class="table table-striped table-bordered">
+    <tr> 
+        <th>Channel Name</th>
+        <th>Archived</th>
+        <th>Members</th>
+        <th>Last Updated</th>
+        <th>Groups Allowed</th>
+        <th>Groups Required</th>
+    </tr>
+    {% for channel in channels %}
+            <tr>
+                <td><a href="{% url 'slack:channel' channel.id %}">{% if channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ channel.name }}</a></td>
+                <td><span class="glyphicon {% if channel.archived %}glyphicon-folder-open{% else %}glyphicon-remove-circle{% endif %}"></span></td>
+                <td>{{ channel.num_members }}</td>
+                <td>{{ channel.last_updated }}</td>
+                <td>{{ channel.groups_allowed }}</td>
+                <td>{{ channel.groups_required }}</td>
+            </tr>
+    {% endfor %}
+</table>
+<div><b>Total:{{ channels | length }}</b></div>
+{% endblock %}

@@ -35,3 +35,72 @@ class ReportedMessage(models.Model):
     reported_by = models.CharField(max_length=12)
     reported_on = models.DateTimeField(auto_now_add=True)
     resolved = models.BooleanField(default=False)
+
+class Channel(models.Model):
+    """
+    Used to store Slack channel ID and retrieve common information about Slack channels
+    """
+    id = models.CharField(max_length=256, unique=True, primary_key=True)
+
+    def __str__(self):
+        return self.name
+    
+    @property
+    def name(self) -> str:
+        try:
+            info = channel_info(self.id)
+            if 'name' in info:
+                return channel_info(self.id)['name']
+        except:
+            pass
+        return "Unknown ("+str(self.id)+")"
+    
+    @property
+    def private(self) -> bool:
+        try:
+            info = channel_info(self.id)
+            return 'is_private' in info and channel_info(self.id)['is_private']
+        except:
+            return True
+    
+    @property
+    def archived(self) -> bool:
+        try:
+            info = channel_info(self.id)
+            return 'is_archived' in info and channel_info(self.id)['is_archived']
+        except:
+            return True
+    
+    @property
+    def num_members(self) -> int:
+        try:
+            info = channel_info(self.id, num_members=True)
+            return info['num_members']
+        except:
+            return None
+
+    @property
+    def members(self) -> list:
+        try:
+            return channel_members(self.id)
+        except:
+            return []
+    
+    @property
+    def last_updated(self) -> datetime.datetime:
+        try:
+            msg = channel_latest_message(self.id)
+            return datetime.datetime.fromtimestamp(msg['ts'])
+        except:
+            return None
+    
+    @property
+    def created(self) -> datetime.datetime:
+        try:
+            info = channel_info(self.id)
+            return datetime.datetime.fromtimestamp(info['created'])
+        except:
+            return None
+
+    class Meta:
+        permissions = ()

@@ -1,0 +1,20 @@
+{% extends 'base_admin.html' %}
+{% load permissionif %}
+{% block title %}{{h2}} | Lens and Lights at WPI{% endblock %}
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="jumbotron" style="padding-bottom: 2%">
+                <h1> {% if channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ channel.name }} </h1>
+		        <div class="row">
+			        <div class="col-md-8 col-lg-9">
+				        <h3>{{ channel.num_members }} members</h3>
+                        <h4>Last Updated: {{ channel.last_updated }}</h4>
+                        Created: {{ channel.created }}
+
+			        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
