@@ -20,6 +20,7 @@ def channel_list(request):
     return render(request, 'slack/slack_channel_list.html', 
                   {'h2': 'Slack Channels', 
                    'channels': channels,
+                   'slack_base_url': settings.SLACK_BASE_URL+'/archives/'})
 
 @login_required
 @permission_required('slack.view_channel', raise_exception=True)
@@ -32,6 +33,7 @@ def channel_detail(request, id):
                   {'h2': "#"+channel.name+' Details', 
                    'channel': channel,
                    'creator_name': channel.creator.get_full_name() if channel.creator else None,
+                   'slack_base_url': settings.SLACK_BASE_URL+'/archives/',
                    'groups_allowed': channel.allowed_groups.all(), # TODO: Fix implementation
                    'groups_required': channel.required_groups.all()}) # TODO: Fix implementation
 

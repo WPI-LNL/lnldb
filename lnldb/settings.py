@@ -104,6 +104,7 @@ GRAPH_API_SCOPE = env.str('GRAPH_API_SCOPE', '')
 GRAPH_API_SECRET = env.str('GRAPH_API_SECRET', '')
 GRAPH_API_ENDPOINT = env.str('GRAPH_API_ENDPOINT', '')
 
+SLACK_BASE_URL = env.str('SLACK_BASE_URL', 'https://wpilnl.slack.com')
 SLACK_TOKEN = env.str('SLACK_BOT_TOKEN', None)
 
 # If True, the bot will automatically attempt to join new channels when they are created in Slack
