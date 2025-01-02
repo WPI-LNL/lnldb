@@ -5,16 +5,67 @@
     <div class="row">
         <div class="col-md-12">
             <div class="jumbotron" style="padding-bottom: 2%">
-                <h1> {% if channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ channel.name }} </h1>
+                
+                <h1> <a href=""></a>{% if channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ channel.name }} </a></h1>
+                
 		        <div class="row">
 			        <div class="col-md-8 col-lg-9">
 				        <h3>{{ channel.num_members }} members</h3>
                         <h4>Last Updated: {{ channel.last_updated }}</h4>
-                        Created: {{ channel.created }}
-
 			        </div>
+
+                    <a href="{{ slack_base_url }}{{ channel.id }}" target="_blank" class="btn btn-info btn-xl pull-right"><span class="glyphicon glyphicon-link"></span> Open in Slack</a>
+                    
                 </div>
+                
             </div>
         </div>
     </div>
+    <!--<div class="container">
+        <div class="alert alert-warning">BIG WARNING GOES HERE.</div>
+    </div>-->
+    <h2>Channel Configuration</h2>
+    <table class="table">
+        <tr>
+            <th>Groups Allowed</th>
+            <td>{{ channel.groups_allowed }}</td>
+        </tr>
+        <tr>
+            <th>Groups Required</th>
+            <td>{{ channel.groups_required }}</td>
+        </tr>
+    </table>
+    <h2>Channel Details</h2>
+    <table class="table">
+        <tr>
+            <th>Visibility</th>
+            <td>{% if channel.private != None %}{% if channel.private %}<span class="glyphicon glyphicon-lock"></span> Private{% else %}Public{% endif %}{% endif %}</td>
+        </tr>
+        <tr>
+            <th>Archived</th>
+            <td>{{ channel.archived }}</td>
+        </tr>
+        <tr>
+            <th>Topic</th>
+            <td>{{ channel.info.topic.value}}</td>
+        </tr>
+        <tr>
+            <th>Purpose</th>
+            <td>{{ channel.info.purpose.value}}</td>
+        </tr>
+        <tr>
+            <th>Created by</th>
+            <td>{% if creator_name %}<a href="{% url 'accounts:detail' channel.creator %}">{{ creator_name }}</a>{% endif %}</td>
+        </tr>
+        <tr>
+            <th>Created on </th>
+            <td>{{ channel.created_on }}</td>
+        </tr>
+        <tr>
+            <th>Previous Names</th>
+            <td>{{ channel.info.previous_names }}</td>
+        </tr>
+    </table>
+ 
+
 {% endblock %}

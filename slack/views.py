@@ -24,7 +24,13 @@ def channel_detail(request, id):
     View details for a specific Slack channel
     """
     channel = get_object_or_404(Channel, id=id)
-    return render(request, 'slack/slack_channel_detail.html', {'h2': "#"+channel.name+' Details', 'channel': channel})
+    return render(request, 'slack/slack_channel_detail.html', 
+                  {'h2': "#"+channel.name+' Details', 
+                   'channel': channel,
+                   'creator_name': channel.creator.get_full_name() if channel.creator else None,
+                   'groups_allowed': channel.allowed_groups.all(), # TODO: Fix implementation
+                   'groups_required': channel.required_groups.all()}) # TODO: Fix implementation
+
     
 
 @login_required

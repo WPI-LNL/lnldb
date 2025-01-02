@@ -1,6 +1,7 @@
 import datetime
 from django.db import models
-from .api import channel_info, channel_members, channel_latest_message
+from django.contrib.auth import get_user_model
+from .api import channel_info, channel_members, channel_latest_message, user_profile
 
 
 # Create your models here.
@@ -61,7 +62,7 @@ class Channel(models.Model):
             info = channel_info(self.id)
             return 'is_private' in info and channel_info(self.id)['is_private']
         except:
-            return True
+            return None
     
     @property
     def archived(self) -> bool:
@@ -69,7 +70,7 @@ class Channel(models.Model):
             info = channel_info(self.id)
             return 'is_archived' in info and channel_info(self.id)['is_archived']
         except:
-            return True
+            return None
     
     @property
     def num_members(self) -> int:
@@ -95,10 +96,28 @@ class Channel(models.Model):
             return None
     
     @property
-    def created(self) -> datetime.datetime:
+    def created_on(self) -> datetime.datetime:
         try:
             info = channel_info(self.id)
             return datetime.datetime.fromtimestamp(info['created'])
+        except:
+            return None
+    
+    @property
+    def creator(self) -> str:
+        try:
+            slack_user_id = channel_info(self.id)['creator']
+            slack_user = user_profile(slack_user_id)
+            if slack_user['ok']:
+                username = slack_user['user']['profile'].get('email', '').split('@')[0]
+                return get_user_model().objects.filter(username=username).first()
+        except:
+            return None
+    
+    @property
+    def info(self) -> dict:
+        try:
+            return channel_info(self.id)
         except:
             return None
 
