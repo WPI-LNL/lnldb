@@ -2,6 +2,8 @@ from django.contrib.auth.decorators import permission_required, login_required
 from django.shortcuts import reverse, render, get_object_or_404
 from django.http import HttpResponseRedirect
 
+from lnldb import settings
+
 from .models import Channel, ReportedMessage
 from .api import lookup_user, user_profile, message_link, channel_info
 
@@ -15,7 +17,9 @@ def channel_list(request):
     View a list of all Slack channels
     """
     channels = Channel.objects.all()
-    return render(request, 'slack/slack_channel_list.html', {'h2': 'Slack Channels', 'channels': channels})
+    return render(request, 'slack/slack_channel_list.html', 
+                  {'h2': 'Slack Channels', 
+                   'channels': channels,
 
 @login_required
 @permission_required('slack.view_channel', raise_exception=True)

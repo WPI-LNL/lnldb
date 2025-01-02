@@ -15,8 +15,9 @@
     </tr>
     {% for channel in channels %}
             <tr>
-                <td><a href="{% url 'slack:channel' channel.id %}">{% if channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ channel.name }}</a></td>
-                <td><span class="glyphicon {% if channel.archived %}glyphicon-folder-open{% else %}glyphicon-remove-circle{% endif %}"></span></td>
+                <td><a href="{% url 'slack:channel' channel.id %}">{% if channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ channel.name }}</a><a href="{{ slack_base_url }}{{ channel.id }}" target="_blank" class="btn btn-info btn-xs pull-right"><span class="glyphicon glyphicon-link"></span> Open in Slack</a></td>
+                <td><span class="glyphicon {% if channel.archived %}glyphicon-folder-open{% else %}glyphicon-remove-circle{% endif %}"></span>
+                </td>
                 <td>{{ channel.num_members }}</td>
                 <td>{{ channel.last_updated }}</td>
                 <td>{{ channel.groups_allowed }}</td>
