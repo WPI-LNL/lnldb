@@ -15,7 +15,7 @@ from slack_sdk.errors import SlackApiError
 from accounts.models import UserPreferences
 from data.decorators import process_in_thread
 from rt import api as rt_api
-from slack.api import slack_post, user_profile, open_modal, post_ephemeral, retrieve_message, replace_message, \
+from slack.api import slack_post, user_add, user_profile, open_modal, post_ephemeral, retrieve_message, replace_message, \
     channel_info, join_channel, message_react
 
 from .models import Channel, SlackMessage, ReportedMessage
@@ -51,6 +51,13 @@ def handle_event(request):
             #     channel.required_groups.add(*Group.objects.filter(name="Officer"))
             if event['channel']['name'].startswith("ext"):
                 channel.allowed_groups.add(*Group.objects.filter(name__in=["Officer"]))
+        elif event['type'] == 'member_left_channel':
+            slack_user = user_profile(event['user'])
+            if slack_user['ok']:
+                username = slack_user['user']['profile'].get('email', '').split('@')[0]
+                user = get_user_model().objects.filter(username=username).first()
+                if channel.required_groups.filter(name_in=user.groups.all()).exists():
+                    user_add(event['channel'], event['user'])
         return HttpResponse()
     return HttpResponse("Not implemented")
 
