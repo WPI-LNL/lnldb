@@ -9,10 +9,8 @@ from . import api, views, event_handlers
 app_name = "Slack"
 
 urlpatterns = [
-    re_path(r'^interactive-endpoint/$', event_handlers.handle_interaction, name="interactive-endpoint"),
-    re_path(r'^events/$', event_handlers.handle_event, name="event-endpoint"),
-    re_path(r'^db/moderate/$', views.report_list, name="moderate"),
-    re_path(r'^db/moderate/(?P<pk>\d+)/$', views.view_report, name="report"),
-    re_path(r'^db/channels/$', views.channel_list, name="channel-list"),
-    re_path(r'^db/channel/(?P<id>[^/]+)/$', views.channel_detail, name="channel"),
+    re_path(r'^moderate/$', views.report_list, name="moderate"),
+    re_path(r'^moderate/(?P<pk>\d+)/$', views.view_report, name="report"),
+    re_path(r'^channels/$', views.channel_list, name="channel-list"),
+    re_path(r'^channel/(?P<id>[^/]+)/$', views.channel_detail, name="channel"),
 ]
