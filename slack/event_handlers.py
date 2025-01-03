@@ -8,6 +8,7 @@ from django.http import HttpResponse, HttpResponseNotFound, HttpResponseServerEr
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
@@ -17,7 +18,7 @@ from rt import api as rt_api
 from slack.api import slack_post, user_profile, open_modal, post_ephemeral, retrieve_message, replace_message, \
     channel_info, join_channel, message_react
 
-from .models import SlackMessage, ReportedMessage
+from .models import Channel, SlackMessage, ReportedMessage
 from . import views
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,13 @@ def handle_event(request):
         elif event['type'] == "channel_created":
             if settings.SLACK_AUTO_JOIN:
                 join_channel(event['channel']['id'])
+            channel = Channel.objects.create(id=event['channel']['id'])
+            if event['channel']['name'].startswith("active"):
+                channel.required_groups.add(*Group.objects.filter(name__in=["Active", "Officer"]))
+            # if event['channel']['name'].startswith("exec"): # Need to remove advisor from "Officers" before enabling
+            #     channel.required_groups.add(*Group.objects.filter(name="Officer"))
+            if event['channel']['name'].startswith("ext"):
+                channel.allowed_groups.add(*Group.objects.filter(name__in=["Officer"]))
         return HttpResponse()
     return HttpResponse("Not implemented")
 
