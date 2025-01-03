@@ -21,8 +21,8 @@ def slack(value):
     for m in it:
         r = m.groupdict()
         channel = r['channel_id']
-        new_value = new_value.replace(m.group(), '[#%s]('+settings.SLACK_BASE_URL+'/app_redirect?channel=%s)' %
-                                      (channel, channel))
+        new_value = new_value.replace(m.group(), '[#%s](%s/app_redirect?channel=%s)' %
+                                      (channel, settings.SLACK_BASE_URL, channel))
     return new_value
 
 
