@@ -70,7 +70,7 @@ class Channel(models.Model):
             info = channel_info(self.id)
             return 'is_archived' in info and channel_info(self.id)['is_archived']
         except:
-            return None
+            return ""
     
     @property
     def num_members(self) -> int:
@@ -101,7 +101,7 @@ class Channel(models.Model):
             info = channel_info(self.id)
             return datetime.datetime.fromtimestamp(info['created'])
         except:
-            return None
+            return ""
     
     @property
     def creator(self) -> str:
