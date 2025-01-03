@@ -1,3 +1,5 @@
+from ajax_select.fields import AutoCompleteSelectMultipleField
+from django import forms
 from django.contrib.auth.decorators import permission_required, login_required
 from django.shortcuts import reverse, render, get_object_or_404
 from django.http import HttpResponseRedirect
@@ -22,20 +24,36 @@ def channel_list(request):
                    'channels': channels,
                    'slack_base_url': settings.SLACK_BASE_URL+'/archives/'})
 
+class ChannelAssignGroupForm(forms.ModelForm):
+    allowed_groups = AutoCompleteSelectMultipleField('Groups', required=False)
+    required_groups = AutoCompleteSelectMultipleField('Groups', required=False)
+    class Meta:
+        model = Channel
+        fields = ('allowed_groups', 'required_groups')
+
 @login_required
 @permission_required('slack.view_channel', raise_exception=True)
-def channel_detail(request, id):
+def channel_detail_edit(request, id):
+    return channel_detail(request, id, edit=True)
+
+@login_required
+@permission_required('slack.view_channel', raise_exception=True)
+def channel_detail(request, id, edit=False):
     """
     View details for a specific Slack channel
     """
     channel = get_object_or_404(Channel, id=id)
+    if request.method == 'POST':
+        form = ChannelAssignGroupForm(data=request.POST, instance=channel)
+        if form.is_valid():
+            form.save(commit=True)
+            return HttpResponseRedirect(reverse('slack:channel', args=[id]))
     return render(request, 'slack/slack_channel_detail.html', 
                   {'h2': "#"+channel.name+' Details', 
                    'channel': channel,
-                   'creator_name': channel.creator.get_full_name() if channel.creator else None,
+                   #'creator_name': channel.creator.get_full_name() if channel.creator else None,
                    'slack_base_url': settings.SLACK_BASE_URL+'/archives/',
-                   'groups_allowed': channel.allowed_groups.all(), # TODO: Fix implementation
-                   'groups_required': channel.required_groups.all()}) # TODO: Fix implementation
+                   'form': ChannelAssignGroupForm(instance=channel) if edit else None})
 
     
 

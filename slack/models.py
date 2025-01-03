@@ -1,6 +1,7 @@
 import datetime
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from .api import channel_info, channel_members, channel_latest_message, user_profile
 
 
@@ -42,6 +43,18 @@ class Channel(models.Model):
     Used to store Slack channel ID and retrieve common information about Slack channels
     """
     id = models.CharField(max_length=256, unique=True, primary_key=True)
+    allowed_groups = models.ManyToManyField(
+        Group,
+        verbose_name="Allowed Groups",
+        related_name="allowed_channels",
+        blank=True,
+    )
+    required_groups = models.ManyToManyField(
+        Group,
+        verbose_name="Required Groups",
+        related_name="required_channels",
+        blank=True,
+    )
 
     def __str__(self):
         return self.name

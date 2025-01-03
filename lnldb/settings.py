@@ -444,6 +444,7 @@ AJAX_SELECT_BOOTSTRAP = True
 
 AJAX_LOOKUP_CHANNELS = {
     'Users': ('accounts.lookups', 'UserLookup'),
+    'Groups': ('accounts.lookups', 'GroupLookup'),
     'Orgs': ('events.lookups', 'OrgLookup'),
     'UserLimitedOrgs': ('events.lookups', 'UserLimitedOrgLookup'),
     'Officers': ('accounts.lookups', 'OfficerLookup'),

@@ -15,7 +15,7 @@
 			        </div>
 
                     <a href="{{ slack_base_url }}{{ channel.id }}" target="_blank" class="btn btn-info btn-xl pull-right"><span class="glyphicon glyphicon-link"></span> Open in Slack</a>
-                    
+
                 </div>
                 
             </div>
@@ -24,17 +24,53 @@
     <!--<div class="container">
         <div class="alert alert-warning">BIG WARNING GOES HERE.</div>
     </div>-->
-    <h2>Channel Configuration</h2>
+    <h2>Channel Configuration
+        {% if form == None %}
+        <a href="{% url 'slack:channel-edit' channel.id %}" class="btn btn-info pull-right"><span class="glyphicon glyphicon-pencil"></span> Edit Groups</a>
+        {% endif %}
+    </h2>
+{% if form %}
+<form method="post">
+{% csrf_token %}
+{{ form.media }}
+{% endif %}
     <table class="table">
         <tr>
             <th>Groups Allowed</th>
-            <td>{{ channel.groups_allowed }}</td>
+            <td>
+                {% if form %}
+                    {{ form.allowed_groups }}
+                    {% for error in form.username.errors  %}
+                        <span style='color:red;'>{{error}}</span>
+                    {% endfor %}
+                {% else %}
+                    {% for group in channel.allowed_groups.all %}
+                        <span class="label label-default">{{ group.name }}</span>
+                    {% endfor %}
+                {% endif %}
+            </td>
         </tr>
         <tr>
             <th>Groups Required</th>
-            <td>{{ channel.groups_required }}</td>
+            <td>
+                {% if form %}
+                    {{ form.required_groups }}
+                    {% for error in form.username.errors  %}
+                        <span style='color:red;'>{{error}}</span>
+                    {% endfor %}
+
+                {% else %}
+                    {% for group in channel.required_groups.all %}
+                        <span class="label label-default">{{ group.name }}</span>
+                    {% endfor %}
+                {% endif %}
+            </td>
         </tr>
     </table>
+    {% if form %}
+    <input name="save" value="Save Changes" class="btn btn-primary" type="submit">
+</form>
+    {% endif %}
     <h2>Channel Details</h2>
     <table class="table">
         <tr>
@@ -55,7 +91,7 @@
         </tr>
         <tr>
             <th>Created by</th>
-            <td>{% if creator_name %}<a href="{% url 'accounts:detail' channel.creator %}">{{ creator_name }}</a>{% endif %}</td>
+            <td>{% if channel.creator %}<a href="{% url 'accounts:detail' channel.creator %}">{{ channel.creator.get_full_name }}</a>{% endif %}</td>
         </tr>
         <tr>
             <th>Created on </th>

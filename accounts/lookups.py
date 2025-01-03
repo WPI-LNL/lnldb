@@ -1,6 +1,7 @@
 from ajax_select import LookupChannel
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.contrib.auth.models import Group
 
 from . import ldap
 from . import graph
@@ -37,6 +38,25 @@ class UserLookup(LookupChannel):
                 (self.get_result(obj), ", ".join(map(str, obj.groups.all())))
         return '&nbsp;<strong>%s</strong>' % self.get_result(obj)
 
+class GroupLookup(LookupChannel):
+    model = Group
+
+    def check_auth(self, request):
+        if request.user.groups.filter(Q(name="Alumni") | Q(name="Active") | Q(name="Officer")).exists():
+            return True
+
+    def get_query(self, q, request, search_ldap=True):
+        qs = Q()
+        for term in q.split():
+            qs &= Q(name__icontains=term)
+        return Group.objects.filter(qs).distinct().all()
+
+    def format_match(self, obj):
+        return self.format_item_display(obj)
+
+    def format_item_display(self, obj):
+        return '&nbsp;<strong>%s</strong> <i>(%s users)</i>' % \
+            (self.get_result(obj), obj.user_set.count())
 
 class OfficerLookup(LookupChannel):
     model = get_user_model()

@@ -20,8 +20,16 @@
                 </td>
                 <td>{{ channel.num_members }}</td>
                 <td>{{ channel.last_updated }}</td>
-                <td>{{ channel.groups_allowed }}</td>
-                <td>{{ channel.groups_required }}</td>
+                <td>
+                    {% for group in channel.allowed_groups.all %}
+                        <span class="label label-default">{{ group.name }}</span>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for group in channel.required_groups.all %}
+                        <span class="label label-default">{{ group.name }}</span>
+                    {% endfor %}
+                </td>
             </tr>
     {% endfor %}
 </table>
