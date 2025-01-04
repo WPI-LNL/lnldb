@@ -20,11 +20,9 @@ def channel_list(request):
     """
     View a list of all Slack channels
     """
-    channels = Channel.objects.all()
     return render(request, 'slack/slack_channel_list.html', 
                   {'h2': 'Slack Channels', 
-                   'channels': channels,
-                   'slack_base_url': settings.SLACK_BASE_URL+'/archives/'})
+                   'channels': Channel.objects.all()})
 
 class ChannelAssignGroupForm(forms.ModelForm):
     allowed_groups = AutoCompleteSelectMultipleField('Groups', required=False)
@@ -70,7 +68,6 @@ def channel_detail(request, id, edit=False):
                   {'h2': "#"+channel.name+' Details', 
                    'channel': channel,
                    #'creator_name': channel.creator.get_full_name() if channel.creator else None,
-                   'slack_base_url': settings.SLACK_BASE_URL+'/archives/',
                    'form': ChannelAssignGroupForm(instance=channel) if edit else None})
 
 @login_required

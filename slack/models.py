@@ -161,6 +161,10 @@ class Channel(models.Model):
             return channel_info(self.id)
         except:
             return None
+    
+    @property
+    def link(self) -> str:
+        return settings.SLACK_BASE_URL+"/archives/"+self.id+"/"
 
     class Meta:
         permissions = ()
