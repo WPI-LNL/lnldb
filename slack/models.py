@@ -2,7 +2,13 @@ import datetime
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from .api import channel_info, channel_members, channel_latest_message, user_profile
+from django.forms import ValidationError
+
+from lnldb import settings
+from .api import channel_info, channel_members, channel_latest_message, get_id_from_name, user_profile, validate_channel
+import re
+
+SLACK_CHANNEL_ID_REGEX = r'/(C0\w+)'
 
 
 # Create your models here.
@@ -58,6 +64,28 @@ class Channel(models.Model):
 
     def __str__(self):
         return self.name
+    
+    @staticmethod
+    def get_or_create(channel_id):
+        if type(channel_id) == Channel:
+            return channel_id
+        if (match := re.search(SLACK_CHANNEL_ID_REGEX, channel_id)):
+            channel_id = match.group(1)
+        try:
+            return Channel.objects.get(id=channel_id)
+        except Channel.DoesNotExist:
+            if True: #validate_channel(channel_id): #TODO: Test validation logic
+                return Channel.objects.create(id=channel_id)
+            elif (channel_id := get_id_from_name(channel_id.removeprefix("#"))):
+                return Channel.get_or_create(channel_id)
+            else:
+                return None
+    
+    @staticmethod
+    def validate_field(value):
+        pass
+        # if not Channel.get_or_create(value): # TODO: Test channel validation
+        #     raise ValidationError("Invalid channel ID")
     
     @property
     def name(self) -> str:

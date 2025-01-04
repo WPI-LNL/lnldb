@@ -1,5 +1,6 @@
 from ajax_select.fields import AutoCompleteSelectMultipleField
 from django import forms
+from django.db.models import Value
 from django.contrib.auth.decorators import permission_required, login_required
 from django.shortcuts import reverse, render, get_object_or_404
 from django.http import HttpResponseRedirect
@@ -8,7 +9,7 @@ from events.models import BaseEvent, Organization
 from lnldb import settings
 
 from .models import Channel, ReportedMessage
-from .api import lookup_user, user_profile, message_link, channel_info
+from .api import lookup_user, user_add, user_profile, message_link, channel_info
 
 
 # Slack Management Views
@@ -72,7 +73,32 @@ def channel_detail(request, id, edit=False):
                    'slack_base_url': settings.SLACK_BASE_URL+'/archives/',
                    'form': ChannelAssignGroupForm(instance=channel) if edit else None})
 
-    
+@login_required
+@permission_required('slack.view_channel', raise_exception=True)
+def channel_directory(request, error=None):
+    """
+    View a directory of all Slack channels
+    """
+    channels = ( Channel.objects.filter(allowed_groups__in=request.user.groups.all()).annotate(order=Value(1)) | 
+                 Channel.objects.filter(required_groups__in=request.user.groups.all()).annotate(order=Value(2)) ).distinct().order_by('order')
+    return render(request, 'slack/slack_channel_directory.html', {'h2': 'Slack Channel Directory', 'channels': channels, 'error': error})
+
+@login_required
+@permission_required('slack.view_channel', raise_exception=True)
+def channel_join_and_redirect(request, id):
+    """
+    Join a Slack channel and redirect to the Slack workspace
+    """
+    channel = get_object_or_404(Channel, id=id)
+    if channel not in (channels := ( Channel.objects.filter(allowed_groups__in=request.user.groups.all()) | 
+                                     Channel.objects.filter(required_groups__in=request.user.groups.all()) ).distinct()):
+        return channel_directory(request, error='You do not have permission to join %s' % channel.name)
+    else:
+        response = user_add(channel.id, request.user.username)
+        if response['ok']:
+            return HttpResponseRedirect(channel.link)
+        else:
+            return channel_directory(request, error="Error joining #%s: %s" % (channel.name, response['error']))
 
 @login_required
 @permission_required('slack.view_reportedmessage', raise_exception=True)

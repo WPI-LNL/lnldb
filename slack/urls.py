@@ -14,4 +14,7 @@ urlpatterns = [
     re_path(r'^channels/$', views.channel_list, name="channel-list"),
     re_path(r'^channel/(?P<id>[^/]+)/edit/$', views.channel_detail_edit, name="channel-edit"),
     re_path(r'^channel/(?P<id>[^/]+)/$', views.channel_detail, name="channel"),
+    re_path(r'^directory/$', views.channel_directory, name="channel-directory"),
+    re_path(r'^join/(?P<id>[^/]+)/$', views.channel_join_and_redirect, name="channel-join"),
+    
 ]
