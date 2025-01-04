@@ -19,6 +19,9 @@
             <h3>Status: <b>{{ event.status }}</b></h3>
 
             <div class="btn-group">
+                {% if request.user.is_lnl and event.slack_channel %}
+                    <a class="btn btn-primary btn-lg" target="_blank" href="{{ event.slack_channel.link }}">Open Slack</a>
+                {% endif %}
                 {% permission request.user has 'events.view_event_reports' of event %}
                     <a class="btn btn-info btn-lg" href="{% url "events:pdf" event.id %}">PDF</a>
                 {% endpermission %}
@@ -232,6 +235,14 @@
                             <th>Location</th>
                             <td>{{event.location}} <em>({{ event.location.building }})</em></td>
                         </tr>
+                        {% if request.user.is_lnl and event.slack_channel %}
+                        <tr>
+                            <th>Slack Channel</th>
+                            <td> 
+                                <a href="{{ event.slack_channel.link }}" target="_blank">{% if event.slack_channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ event.slack_channel.name }}</a> 
+                            </td> 
+                        </td>
+                        {% endif %} 
                         <tr>
                             <th>Submitted by</th>
                             <td>

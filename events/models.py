@@ -257,6 +257,8 @@ class BaseEvent(PolymorphicModel):
     sensitive = models.BooleanField(default=False, help_text="Nobody besides those directly involved should know about this event")
     test_event = models.BooleanField(default=False, help_text="Check to lower the VP's blood pressure after they see the short-notice S4/L4")
     
+    slack_channel = models.ForeignKey('slack.Channel', on_delete=models.PROTECT, null=True, blank=True, related_name='event', help_text="Slack Channel ID, i.e. C4HB02R6H")
+
     # Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True, blank=True)
@@ -1180,6 +1182,8 @@ class Organization(models.Model):
     archived = models.BooleanField(default=False)
 
     locked = models.BooleanField(default=False, blank=True)
+
+    slack_channel = models.ForeignKey('slack.Channel', on_delete=models.PROTECT, null=True, blank=True, related_name='organization', help_text="Slack Channel ID, i.e. C4HB02R6H")
 
     def __str__(self):
         return self.name

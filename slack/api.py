@@ -63,6 +63,61 @@ def channel_info(id, num_members=False):
         assert e.response['ok'] is False
         return None
     
+def validate_channel(id):
+    """
+    Checks if a channel exists
+
+    :param id: The ID of the channel
+    :return: True if the channel exists, False otherwise
+    """
+
+    if not settings.SLACK_TOKEN:
+        return False
+
+    client = WebClient(token=settings.SLACK_TOKEN)
+
+    try:
+        response = client.conversations_info(channel=id)
+        assert response['ok'] is True
+        return True
+    except SlackApiError or AssertionError as e:
+        return False
+
+def get_id_from_name(name):
+    """
+    Retrieves the ID of a channel by its name
+
+    :param name: The name of the channel
+    :return: The ID of the channel
+    """
+
+    if not settings.SLACK_TOKEN:
+        return None
+
+    client = WebClient(token=settings.SLACK_TOKEN)
+
+    try:
+        response = client.conversations_list(limit=200)
+        assert response['ok'] is True
+
+        if response['response_metadata']['next_cursor']:
+            cursor = response['response_metadata']['next_cursor']
+            channels = response['channels']
+            for channel in channels:
+                if channel['name'] == name:
+                    return channel['id']
+            while cursor:
+                response = client.conversations_members(channel=id, cursor=cursor)
+                assert response['ok'] is True
+                channels = response['channels']
+                for channel in channels:
+                    if channel['name'] == name:
+                        return channel['id']
+                cursor = response['response_metadata']['next_cursor']
+    except SlackApiError as e:
+        assert e.response['ok'] is False
+        return None
+
 def channel_latest_message(id):
     """
     Retrieves the latest message in a channel
