@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import permission_required, login_required
 from django.shortcuts import reverse, render, get_object_or_404
 from django.http import HttpResponseRedirect
 
+from events.models import BaseEvent, Organization
 from lnldb import settings
 
 from .models import Channel, ReportedMessage
@@ -27,12 +28,22 @@ def channel_list(request):
 class ChannelAssignGroupForm(forms.ModelForm):
     allowed_groups = AutoCompleteSelectMultipleField('Groups', required=False)
     required_groups = AutoCompleteSelectMultipleField('Groups', required=False)
+    event = AutoCompleteSelectMultipleField('Events', required=False)
+    organization = AutoCompleteSelectMultipleField('Orgs', required=False)
+
+    def __init__(self, *args, **kwargs):
+        super(ChannelAssignGroupForm, self).__init__(*args, **kwargs)
+        self.fields['allowed_groups'].initial = kwargs['instance'].allowed_groups.all()
+        self.fields['required_groups'].initial = kwargs['instance'].required_groups.all()
+        self.fields['event'].initial = kwargs['instance'].event.all()
+        self.fields['organization'].initial = kwargs['instance'].organization.all()
+
     class Meta:
         model = Channel
-        fields = ('allowed_groups', 'required_groups')
+        fields = ('allowed_groups', 'required_groups', 'event', 'organization')
 
 @login_required
-@permission_required('slack.view_channel', raise_exception=True)
+@permission_required('slack.change_channel', raise_exception=True)
 def channel_detail_edit(request, id):
     return channel_detail(request, id, edit=True)
 
@@ -47,6 +58,12 @@ def channel_detail(request, id, edit=False):
         form = ChannelAssignGroupForm(data=request.POST, instance=channel)
         if form.is_valid():
             form.save(commit=True)
+            for event in ( (event_set := BaseEvent.objects.filter(pk__in=form.cleaned_data['event'])) | channel.event.all() ).distinct():
+                event.slack_channel = channel if event in event_set else None
+                event.save()
+            for org in ( (org_set := Organization.objects.filter(pk__in=form.cleaned_data['organization'])) | channel.organization.all() ).distinct():
+                org.slack_channel = channel if org in org_set else None
+                org.save()
             return HttpResponseRedirect(reverse('slack:channel', args=[id]))
     return render(request, 'slack/slack_channel_detail.html', 
                   {'h2': "#"+channel.name+' Details', 

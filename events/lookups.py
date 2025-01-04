@@ -2,8 +2,29 @@ from ajax_select import LookupChannel
 from django.db.models import Q
 from django.utils.html import escape
 
-from events.models import Organization
+from events.models import BaseEvent, Organization
 
+
+class EventLookup(LookupChannel):
+    model = BaseEvent
+
+    def check_auth(self, request):
+        return request.user.is_authenticated
+
+    def get_query(self, q, request):
+        if request.user.groups.filter(name="Officer").exists():
+            return BaseEvent.objects.filter(Q(event_name__icontains=q) | Q(description__icontains=q)).distinct()
+        return BaseEvent.objects.filter(Q(event_name__icontains=q) | Q(description__icontains=q)).\
+            filter(approved=True, closed=False, cancelled=False, test_event=False, sensitive=False).distinct()
+
+    def get_result(self, obj):
+        return obj.event_name
+
+    def format_match(self, obj):
+        return self.format_item_display(obj)
+
+    def format_item_display(self, obj: BaseEvent):
+        return '&nbsp;<strong>%s</strong> (%s)' % (escape(obj.event_name), escape(obj.status))
 
 class OrgLookup(LookupChannel):
     model = Organization

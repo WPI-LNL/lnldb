@@ -12,6 +12,8 @@
         <th>Last Updated</th>
         <th>Groups Allowed</th>
         <th>Groups Required</th>
+        <th>Event</th>
+        <th>Organizations</th>
     </tr>
     {% for channel in channels %}
             <tr>
@@ -30,6 +32,15 @@
                         <span class="label label-default">{{ group.name }}</span>
                     {% endfor %}
                 </td>
+                <td>
+                    {% for event in channel.event.all %}
+                        <a href="{% url 'events:detail' event.id %}">{{ event.event_name }}</a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for org in channel.organization.all %}
+                        <a href="{% url 'orgs:detail' org.id %}">{{ org }}</a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
             </tr>
     {% endfor %}
 </table>

@@ -26,7 +26,7 @@
     </div>-->
     <h2>Channel Configuration
         {% if form == None %}
-        <a href="{% url 'slack:channel-edit' channel.id %}" class="btn btn-info pull-right"><span class="glyphicon glyphicon-pencil"></span> Edit Groups</a>
+        <a href="{% url 'slack:channel-edit' channel.id %}" class="btn btn-info pull-right"><span class="glyphicon glyphicon-pencil"></span> Edit Configuration</a>
         {% endif %}
     </h2>
 {% if form %}
@@ -40,9 +40,7 @@
             <td>
                 {% if form %}
                     {{ form.allowed_groups }}
-                    {% for error in form.username.errors  %}
-                        <span style='color:red;'>{{error}}</span>
-                    {% endfor %}
+                    {% for error in form.allowed_groups.errors %}<span style='color:red;'>{{error}}</span>{% endfor %}
                 {% else %}
                     {% for group in channel.allowed_groups.all %}
                         <span class="label label-default">{{ group.name }}</span>
@@ -55,13 +53,38 @@
             <td>
                 {% if form %}
                     {{ form.required_groups }}
-                    {% for error in form.username.errors  %}
-                        <span style='color:red;'>{{error}}</span>
-                    {% endfor %}
-
+                    {% for error in form.required_groups.errors %}<span style='color:red;'>{{error}}</span>{% endfor %}
                 {% else %}
                     {% for group in channel.required_groups.all %}
                         <span class="label label-default">{{ group.name }}</span>
+                    {% endfor %}
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Linked Event{% if channel.event.count > 1 %}s{%endif%}</th>
+            <td>
+                {% if form %}
+                    {{ form.event }}
+                    {% for error in form.event.errors %}<span style='color:red;'>{{error}}</span>{% endfor %}
+                {% else %}
+                    {% for event in channel.event.all %}
+                        <a href="{% url 'events:detail' event.id %}">{{ event.event_name }}</a> 
+                        {% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Linked Organization{% if channel.organization.count > 1 %}s{%endif%}</th>
+            <td>
+                {% if form %}
+                    {{ form.organization }}
+                    {% for error in form.organization.errors %}<span style='color:red;'>{{error}}</span>{% endfor %}
+                {% else %}
+                    {% for org in channel.organization.all %}
+                        <a href="{% url 'orgs:detail' org.id %}">{{ org }}</a>
+                        {% if not forloop.last %}, {% endif %}
                     {% endfor %}
                 {% endif %}
             </td>
