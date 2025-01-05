@@ -1,12 +1,15 @@
 import datetime
+import re
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.forms import ValidationError
+from django.dispatch import receiver
+from django.db.models.signals import pre_save
 
 from lnldb import settings
-from .api import channel_info, channel_members, channel_latest_message, get_id_from_name, user_profile, validate_channel
-import re
+from django.forms import ValidationError
+from .api import channel_info, channel_members, channel_latest_message, get_id_from_name, user_add, user_profile
 
 SLACK_CHANNEL_ID_REGEX = r'/(C0\w+)'
 
@@ -168,3 +171,18 @@ class Channel(models.Model):
 
     class Meta:
         permissions = ()
+
+@receiver(pre_save, sender=Channel)
+def update_channel_members_on_save(sender, instance:Channel, *args, **kwargs):
+    try:
+        channel = sender.objects.get(pk=instance.pk)
+    except sender.DoesNotExist:
+        pass # Object is new
+    else:
+        if not channel.required_groups == instance.required_groups:
+            for group in instance.required_groups.all().exclude(pk__in=channel.required_groups.all()):
+                usernames = group.user_set.all().values_list('username', flat=True)
+                response = user_add(channel.id, usernames)
+                if not response['ok']:
+                    raise Exception(response)
+        super().save(*args, **kwargs)
