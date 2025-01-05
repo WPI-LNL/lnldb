@@ -10,7 +10,7 @@ from django.urls.base import reverse
 from accounts.models import UserPreferences
 from emails.generators import EventEmailGenerator
 from slack.views import event_edited_notification
-from slack.api import slack_post, lookup_user
+from slack.api import slack_post, lookup_user, user_add
 from events.forms import InternalEventForm, InternalEventForm2019, ServiceInstanceForm
 from events.models import BaseEvent, Event2019, ServiceInstance
 from helpers.revision import set_revision_comment
@@ -72,7 +72,7 @@ def eventnew(request, id=None):
             if instance:
                 set_revision_comment('Edited', form)
 
-                obj = form.save()
+                obj:BaseEvent = form.save()
 
                 # 25Live parsing
                 if is_event2019 and obj.event_id is None:
@@ -85,6 +85,11 @@ def eventnew(request, id=None):
                             obj.save()
                         except requests.JSONDecodeError:
                             pass
+                if obj.slack_channel and obj.slack_channel.channel_id:
+                    usernames = obj.ccinstances.all().values_list('username', flat=True)
+                    response = user_add(obj.slack_channel.channel_id, usernames)
+                    if not response['ok']:
+                        raise Exception(response)
                     
                 if is_event2019:
                     services_formset.save()

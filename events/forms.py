@@ -30,6 +30,7 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 from helpers.util import curry_class
+from slack.api import user_add
 from slack.models import Channel
 
 LIGHT_EXTRAS = Extra.objects.exclude(disappear=True).filter(category__name="Lighting")
@@ -1386,6 +1387,10 @@ class CCIForm(forms.ModelForm):
         obj.event = self.event
         if commit:
             obj.save()
+            usernames = obj.ccinstances.all().values_list('username', flat=True)
+            response = user_add(obj.slack_channel.id, usernames)
+            if not response['ok']:
+                raise Exception(response)
         return obj
 
     class Meta:
