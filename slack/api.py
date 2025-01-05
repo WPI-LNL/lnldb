@@ -512,6 +512,28 @@ def user_profile(user_id):
         assert e.response['ok'] is False
         return e.response
 
+def user_profile_image(user_id, size='original'):
+    """
+    Get user profile image
+
+    :param user_id: The identifier for the user in Slack (i.e. U123456789)
+    :param size: The size of the image to retrieve (original, 24, 32, 48, 72, 192, 512)
+    :return: URL of the user's profile image
+    """
+
+    if not settings.SLACK_TOKEN:
+        return None
+
+    client = WebClient(token=settings.SLACK_TOKEN)
+
+    try:
+        response = client.users_info(user=user_id)
+        assert response['ok'] is True
+        return response['user']['profile']['image_'+size]
+    except SlackApiError as e:
+        assert e.response['ok'] is False
+        return None
+
 
 def lookup_user(email):
     """
