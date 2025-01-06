@@ -9,7 +9,7 @@ from django.db.models.signals import pre_save
 
 from lnldb import settings
 from django.forms import ValidationError
-from .api import channel_info, channel_members, channel_latest_message, get_id_from_name, lookup_user, user_add, user_profile
+from .api import channel_info, channel_members, channel_latest_message, get_id_from_name, lookup_user, set_channel_topic, user_add, user_profile
 
 SLACK_CHANNEL_ID_REGEX = r'/(C0\w+)'
 
@@ -78,7 +78,12 @@ class Channel(models.Model):
             return Channel.objects.get(id=channel_id)
         except Channel.DoesNotExist:
             if True: #validate_channel(channel_id): #TODO: Test validation logic
-                return Channel.objects.create(id=channel_id)
+                channel = Channel.objects.create(id=channel_id)
+                if settings.SLACK_CHANNEL_TOPIC_FOOTER:
+                    topic:str = channel_info(channel_id)['topic']['value']
+                    topic = topic.replace("\n"+settings.SLACK_CHANNEL_TOPIC_FOOTER, "")
+                    set_channel_topic(channel_id, topic+"\n"+settings.SLACK_CHANNEL_TOPIC_FOOTER)
+                return channel
             elif (channel_id := get_id_from_name(channel_id.removeprefix("#"))):
                 return Channel.get_or_create(channel_id)
             else:

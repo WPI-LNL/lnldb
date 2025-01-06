@@ -264,6 +264,28 @@ def create_channel(name, is_private=False):
         assert e.response['ok'] is False
         return e.response
 
+def set_channel_topic(channel, topic):
+    """
+    Set the topic of a channel
+
+    :param channel: The identifier of the Slack channel
+    :param topic: The new topic to set, 250 characters max
+    :returns: Response object (Dictionary)
+    """
+
+    if not settings.SLACK_TOKEN:
+        return {'ok': False, 'error': 'config_error'}
+
+    client = WebClient(token=settings.SLACK_TOKEN)
+
+    try:
+        response = client.conversations_setTopic(channel=channel, topic=topic)
+        assert response['ok'] is True
+        return {'ok': True, 'topic': response['topic']}
+    except SlackApiError as e:
+        assert e.response['ok'] is False
+        return e.response
+
 def slack_post(channel, thread=None, text=None, content=None, username=None, icon_url=None, attachment=None):
     """
     Post a message on Slack

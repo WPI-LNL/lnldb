@@ -106,6 +106,7 @@ GRAPH_API_ENDPOINT = env.str('GRAPH_API_ENDPOINT', '')
 
 SLACK_BASE_URL = env.str('SLACK_BASE_URL', 'https://wpilnl.slack.com')
 SLACK_TOKEN = env.str('SLACK_BOT_TOKEN', None)
+SLACK_CHANNEL_TOPIC_FOOTER = env.str('SLACK_CHANNEL_TOPIC_FOOTER', ":warning: :ln: This channel is managed by LNLDB :ln: :warning:")
 
 # If True, the bot will automatically attempt to join new channels when they are created in Slack
 SLACK_AUTO_JOIN = env.bool('SLACK_AUTO_JOIN', default=False)
