@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Avg, Count
@@ -387,6 +388,7 @@ def createchannel(request, id):
             messages.add_message(request, messages.ERROR, 'Error creating channel. (Slack error: %s)' % response['error'])
         else:
             event.slack_channel = Channel.get_or_create(response['channel']['id'])
+            event.slack_channel.add_group_to_channel(get_object_or_404(Group, name='Officer'))
             messages.add_message(request, messages.INFO, 'Slack channel #%s created and added to event.' % channel_name)
     if event.slack_channel:
         if event.ccinstances.exists():
