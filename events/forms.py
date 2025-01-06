@@ -1376,7 +1376,7 @@ class CCIForm(forms.ModelForm):
         return cleaned_data
 
     def save(self, commit=True):
-        obj = super(CCIForm, self).save(commit=False)
+        obj:EventCCInstance = super(CCIForm, self).save(commit=False)
         try:
             obj.category
         except Category.DoesNotExist:
@@ -1387,7 +1387,7 @@ class CCIForm(forms.ModelForm):
         obj.event = self.event
         if commit:
             obj.save()
-            usernames = obj.ccinstances.all().values_list('username', flat=True)
+            usernames = obj.event.ccinstances.all().values_list('username', flat=True)
             response = user_add(obj.slack_channel.id, usernames)
             if not response['ok']:
                 raise Exception(response)
