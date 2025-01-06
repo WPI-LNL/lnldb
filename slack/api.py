@@ -242,6 +242,27 @@ def upload(attachment, filename, title=None, message=None, channels=None):
         assert e.response['ok'] is False
         return e.response
 
+def create_channel(name, is_private=False):
+    """
+    Create a new channel in Slack
+
+    :param name: The name of the new channel
+    :param is_private: Boolean - Create a private channel
+    :returns: Response object (Dictionary)
+    """
+
+    if not settings.SLACK_TOKEN:
+        return {'ok': False, 'error': 'config_error'}
+
+    client = WebClient(token=settings.SLACK_TOKEN)
+
+    try:
+        response = client.conversations_create(name=name, is_private=is_private)
+        assert response['ok'] is True
+        return {'ok': True, 'channel': response['channel']}
+    except SlackApiError as e:
+        assert e.response['ok'] is False
+        return e.response
 
 def slack_post(channel, thread=None, text=None, content=None, username=None, icon_url=None, attachment=None):
     """

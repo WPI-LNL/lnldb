@@ -9,7 +9,7 @@ from django.db.models.signals import pre_save
 
 from lnldb import settings
 from django.forms import ValidationError
-from .api import channel_info, channel_members, channel_latest_message, get_id_from_name, user_add, user_profile
+from .api import channel_info, channel_members, channel_latest_message, get_id_from_name, lookup_user, user_add, user_profile
 
 SLACK_CHANNEL_ID_REGEX = r'/(C0\w+)'
 
@@ -168,6 +168,14 @@ class Channel(models.Model):
     @property
     def link(self) -> str:
         return settings.SLACK_BASE_URL+"/archives/"+self.id+"/"
+    
+    def add_ccs_to_channel(self):
+        for event in self.events.all():
+            slack_ids = [lookup_user(cci.crew_chief) for cci in event.ccinstances.all()]
+            response = user_add(self.id, slack_ids)
+            if not response['ok']:
+                # raise Exception(response) # TODO: Add exception catching for Slack channel member updates
+                pass
 
     class Meta:
         permissions = ()

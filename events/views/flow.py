@@ -21,8 +21,9 @@ from reversion.models import Version
 from accounts.models import UserPreferences
 from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator, BillingEmailGenerator,
                                DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
+from slack.models import Channel
 from slack.views import cc_report_reminder
-from slack.api import lookup_user, slack_post
+from slack.api import create_channel, get_id_from_name, lookup_user, slack_post, validate_channel
 from events.forms import (
     AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
@@ -367,6 +368,33 @@ def reopen(request, id):
 
     return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
+@login_required
+@require_POST
+def createchannel(request, id):
+    """ Create new Slack channel for event. POST only. """
+    event = get_object_or_404(BaseEvent, pk=id)
+    channel_name = request.POST.get('channel_name', '')
+    if not request.user.has_perm('slack.change_channel', event):
+        raise PermissionDenied
+    if not channel_name:
+        messages.add_message(request, messages.ERROR, 'No channel name provided.')
+    if validate_channel(channel_name):
+        event.slack_channel = Channel.get_or_create(get_id_from_name(channel_name))
+        messages.add_message(request, messages.INFO, 'Slack channel #%s found and added to event.' % channel_name)
+    else:
+        response = create_channel(name=channel_name) #test: {'ok':True,'channel':{'id':'C4GHVAZRP'}}
+        if not response['ok']:
+            messages.add_message(request, messages.ERROR, 'Error creating channel. (Slack error: %s)' % response['error'])
+        else:
+            event.slack_channel = Channel.get_or_create(response['channel']['id'])
+            messages.add_message(request, messages.INFO, 'Slack channel #%s created and added to event.' % channel_name)
+    if event.slack_channel:
+        if event.ccinstances.exists():
+            event.slack_channel.add_ccs_to_channel()
+            messages.add_message(request, messages.INFO, 'Event CCs added to channel.' % channel_name)
+        event.save()
+
+    return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
 @login_required
 def rmcrew(request, id, user):

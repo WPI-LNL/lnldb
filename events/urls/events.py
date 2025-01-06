@@ -71,6 +71,7 @@ urlpatterns = [
     re_path(r'^close/(?P<id>[0-9a-f]+)/$', flow_views.close, name="close"),
     re_path(r'^cancel/(?P<id>[0-9a-f]+)/$', flow_views.cancel, name="cancel"),
     re_path(r'^reopen/(?P<id>[0-9a-f]+)/$', flow_views.reopen, name="reopen"),
+    re_path(r'^createchannel/(?P<id>[0-9a-f]+)/$', flow_views.createchannel, name="create-channel"),
     re_path(r'^crew/(?P<id>[0-9a-f]+)/$', flow_views.assigncrew, name="add-crew"),
     re_path(r'^rmcrew/(?P<id>[0-9a-f]+)/(?P<user>[0-9a-f]+)/$',
         flow_views.rmcrew, name="remove-crew"),
