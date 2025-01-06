@@ -435,6 +435,7 @@ class InternalEventForm(FieldAccessForm):
                 'billed_in_bulk',
                 'sensitive',
                 'test_event',
+                'notifications_in_slack_channel',
                 active=True
             ),
             Tab(
@@ -557,7 +558,7 @@ class InternalEventForm(FieldAccessForm):
         fields = ('event_name', 'event_status', 'location', 'lnl_contact', 'description', 'internal_notes', 'billing_org', 'billed_in_bulk', 'contact',
                   'org', 'datetime_setup_complete', 'datetime_start', 'datetime_end', 'lighting', 'lighting_reqs',
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs', 'sensitive',
-                  'test_event')
+                  'test_event', 'notifications_in_slack_channel')
         widgets = {
             'description': EasyMDEEditor(),
             'internal_notes': EasyMDEEditor(),
@@ -603,6 +604,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'billed_in_bulk',
                 'sensitive',
                 'test_event',
+                'notifications_in_slack_channel',
                 'entered_into_workday',
                 'send_survey',
                 active=True
@@ -727,7 +729,7 @@ class InternalEventForm2019(FieldAccessForm):
         model = Event2019
         fields = ('event_name', 'event_status', 'location', 'lnl_contact', 'description', 'internal_notes', 'billing_org',
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
-                  'datetime_end', 'sensitive', 'test_event',
+                  'datetime_end', 'sensitive', 'test_event','notifications_in_slack_channel',
                   'entered_into_workday', 'send_survey', 'max_crew','cancelled_reason',
                   'reference_code','slack_channel',)
         widgets = {

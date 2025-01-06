@@ -104,6 +104,9 @@ def eventnew(request, id=None):
                             slack_user = lookup_user(ccinstance.crew_chief)
                             if slack_user:
                                 slack_post(slack_user, text="%s was just edited" % obj.event_name, content=blocks)
+                    if obj.notifications_in_slack_channel:
+                        blocks = event_edited_notification(obj, request.user, form.changed_data)
+                        slack_post(obj.slack_channel, text="%s was just edited" % obj.event_name, content=blocks)
                     if obj.reviewed:
                         subject = "Reviewed Event Edited"
                         email_body = "The following event was edited by %s after the event was reviewed for billing." \

@@ -22,7 +22,7 @@ from accounts.models import UserPreferences
 from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator, BillingEmailGenerator,
                                DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
 from slack.models import Channel
-from slack.views import cc_report_reminder
+from slack.views import cc_report_reminder, event_edited_notification
 from slack.api import create_channel, get_id_from_name, lookup_user, slack_post, validate_channel
 from events.forms import (
     AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
@@ -805,6 +805,9 @@ def assignattach(request, id):
             event.save()  # for revision to be created
             should_send_email = not event.test_event
             if should_send_email:
+                if event.notifications_in_slack_channel:
+                        blocks = event_edited_notification(event, request.user, 'attachments')
+                        slack_post(event.slack_channel, text="The attachments for %s were just edited" % event.event_name, content=blocks)
                 to = [settings.EMAIL_TARGET_VP_DB]
                 if hasattr(event, 'projection') and event.projection \
                         or event.serviceinstance_set.filter(service__category__name='Projection').exists():
