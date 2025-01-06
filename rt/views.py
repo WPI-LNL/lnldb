@@ -33,7 +33,7 @@ def new_ticket(request):
                 messages.success(request, "Your ticket has been submitted. Thank you!")
 
                 # Send Slack notification
-                slack_user = lookup_user(request.user.email)
+                slack_user = lookup_user(request.user)
                 if not slack_user:
                     slack_user = request.user.username
                 ticket_info = {

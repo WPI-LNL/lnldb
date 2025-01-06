@@ -876,7 +876,7 @@ def event_edited_notification(event, triggered_by, fields_changed):
     """
 
     user = triggered_by.get_full_name()
-    slack_user = user_profile(lookup_user(triggered_by.email))
+    slack_user = user_profile(lookup_user(triggered_by))
     if slack_user['ok']:
         user = "@" + slack_user['user']['name']
 

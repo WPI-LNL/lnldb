@@ -10,7 +10,7 @@ from django.urls.base import reverse
 from accounts.models import UserPreferences
 from emails.generators import EventEmailGenerator
 from slack.views import event_edited_notification
-from slack.api import slack_post, lookup_user, user_add
+from slack.api import lookup_user, slack_post, user_add
 from events.forms import InternalEventForm, InternalEventForm2019, ServiceInstanceForm
 from events.models import BaseEvent, Event2019, ServiceInstance
 from helpers.revision import set_revision_comment
@@ -85,11 +85,12 @@ def eventnew(request, id=None):
                             obj.save()
                         except requests.JSONDecodeError:
                             pass
-                if obj.slack_channel and obj.slack_channel.channel_id:
-                    usernames = obj.ccinstances.all().values_list('username', flat=True)
-                    response = user_add(obj.slack_channel.channel_id, usernames)
+                if obj.slack_channel:
+                    slack_ids = [lookup_user(cci.crew_chief) for cci in obj.ccinstances.all()]
+                    response = user_add(obj.slack_channel.id, slack_ids)
                     if not response['ok']:
-                        raise Exception(response)
+                        messages.add_message(request, messages.WARNING, "There was an error adding the crew chiefs "
+                                                                      "to the Slack channel. (Slack error: %s)" % response['error'])
                     
                 if is_event2019:
                     services_formset.save()
@@ -101,7 +102,7 @@ def eventnew(request, id=None):
                             bcc.append(ccinstance.crew_chief.email)
                         if 'slack' in methods:
                             blocks = event_edited_notification(obj, request.user, form.changed_data)
-                            slack_user = lookup_user(ccinstance.crew_chief.email)
+                            slack_user = lookup_user(ccinstance.crew_chief)
                             if slack_user:
                                 slack_post(slack_user, text="%s was just edited" % obj.event_name, content=blocks)
                     if obj.reviewed:

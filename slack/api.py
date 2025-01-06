@@ -1,7 +1,10 @@
 import logging
+from typing import Iterable
 from django.conf import settings
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+
+from accounts.models import User
 
 
 logger = logging.getLogger(__name__)
@@ -535,7 +538,7 @@ def user_profile_image(user_id, size='original'):
         return None
 
 
-def lookup_user(email):
+def lookup_user_by_email(email):
     """
     Will search for a user in the Slack workspace using their email address
 
@@ -555,6 +558,40 @@ def lookup_user(email):
     except SlackApiError as e:
         assert e.response['ok'] is False
         return None
+
+def lookup_user(user:User):
+    """
+    Will search for a user in the Slack workspace using their email address
+
+    :param user: User object
+    :return: The identifier for the user in Slack (`None` if the search returns nothing)
+    """
+    lookup_user_by_email(user.email)
+
+def lookup_users(users: Iterable[User]):
+    """
+    Will search for a list of users in the Slack workspace using their email addresses
+
+    :param users: A list of User objects
+    :return: A dictionary mapping email addresses to user IDs
+    """
+
+    if not settings.SLACK_TOKEN:
+        return []
+
+    client = WebClient(token=settings.SLACK_TOKEN)
+
+    user_ids = []
+    for user in users:
+        try:
+            response = client.users_lookupByEmail(email=user.email)
+            assert response['ok'] is True
+            user_ids.append(response['user']['id'])
+        except SlackApiError as e:
+            assert e.response['ok'] is False
+
+    return user_ids
+
 
 
 def check_presence(user):
