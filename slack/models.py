@@ -175,7 +175,7 @@ class Channel(models.Model):
         
         :return: True if successful, False if not
         '''
-        for event in self.events.all():
+        for event in self.event.all():
             slack_ids = [lookup_user(cci.crew_chief) for cci in event.ccinstances.all()]
             response = user_add(self.id, slack_ids)
             if not response['ok']:
