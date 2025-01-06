@@ -184,5 +184,6 @@ def update_channel_members_on_save(sender, instance:Channel, *args, **kwargs):
                 usernames = group.user_set.all().values_list('username', flat=True)
                 response = user_add(channel.id, usernames)
                 if not response['ok']:
-                    raise Exception(response)
+                    # raise Exception(response) # TODO: Add exception catching for Slack channel member updates
+                    pass
         super().save(*args, **kwargs)

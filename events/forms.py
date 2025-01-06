@@ -1391,7 +1391,8 @@ class CCIForm(forms.ModelForm):
                 slack_ids = [lookup_user(cci.crew_chief) for cci in obj.event.ccinstances.all()]
                 response = user_add(obj.event.slack_channel.id, slack_ids)
             if not response['ok']:
-                raise Exception(response)
+                #raise ValidationError(f"Slack Error: {response['error']}") # TODO: Add error catching for slack channel adding CCs
+                pass
         return obj
 
     class Meta:
