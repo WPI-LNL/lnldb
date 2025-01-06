@@ -182,6 +182,20 @@ class Channel(models.Model):
                 # raise Exception(response) # TODO: Add exception catching for Slack channel member updates
                 pass
         return True
+    
+    def add_group_to_channel(self, group:Group) -> bool:
+        '''
+        Adds all members of a group to the channel
+        
+        :param group: Group to add
+        :return: True if successful, False if not
+        '''
+        slack_ids = [lookup_user(user) for user in group.user_set.all()]
+        response = user_add(self.id, slack_ids)
+        if not response['ok']:
+            # raise Exception(response) # TODO: Add exception catching for Slack channel member updates
+            pass
+        return True
 
     class Meta:
         permissions = ()
@@ -195,9 +209,5 @@ def update_channel_members_on_save(sender, instance:Channel, *args, **kwargs):
     else:
         if not channel.required_groups == instance.required_groups:
             for group in instance.required_groups.all().exclude(pk__in=channel.required_groups.all()):
-                usernames = group.user_set.all().values_list('username', flat=True)
-                response = user_add(channel.id, usernames)
-                if not response['ok']:
-                    # raise Exception(response) # TODO: Add exception catching for Slack channel member updates
-                    pass
+                channel.add_group_to_channel(group)
         super().save(*args, **kwargs)
