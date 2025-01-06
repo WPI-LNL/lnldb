@@ -1,6 +1,7 @@
 import math
 from datetime import timedelta
 from decimal import Decimal
+import re
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -24,7 +25,7 @@ from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator
                                DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
 from slack.models import Channel
 from slack.views import cc_report_reminder, event_edited_notification
-from slack.api import create_channel, get_id_from_name, lookup_user, slack_post, validate_channel
+from slack.api import channel_info, create_channel, get_id_from_name, lookup_user, slack_post, validate_channel
 from events.forms import (
     AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
@@ -394,6 +395,9 @@ def createchannel(request, id):
         if event.ccinstances.exists():
             event.slack_channel.add_ccs_to_channel()
             messages.add_message(request, messages.INFO, 'Event CCs added to channel.' % channel_name)
+        topic = channel_info(event.slack_channel.id)['topic']['value']
+        topic = re.sub(r'https:\/\/lnl\.wpi\.edu\/db\/events\/view\/\d+\/', '', topic)
+        event.slack_channel.set_channel_topic(reverse('events:detail', args=(event.id,))+topic)
         event.save()
 
     return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
