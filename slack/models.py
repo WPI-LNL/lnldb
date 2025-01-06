@@ -169,13 +169,19 @@ class Channel(models.Model):
     def link(self) -> str:
         return settings.SLACK_BASE_URL+"/archives/"+self.id+"/"
     
-    def add_ccs_to_channel(self):
+    def add_ccs_to_channel(self) -> bool:
+        '''
+        Adds all crew chiefs for events in this channel to the channel
+        
+        :return: True if successful, False if not
+        '''
         for event in self.events.all():
             slack_ids = [lookup_user(cci.crew_chief) for cci in event.ccinstances.all()]
             response = user_add(self.id, slack_ids)
             if not response['ok']:
                 # raise Exception(response) # TODO: Add exception catching for Slack channel member updates
                 pass
+        return True
 
     class Meta:
         permissions = ()

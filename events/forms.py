@@ -30,7 +30,6 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 from helpers.util import curry_class
-from slack.api import lookup_user, user_add
 from slack.models import Channel
 
 LIGHT_EXTRAS = Extra.objects.exclude(disappear=True).filter(category__name="Lighting")
@@ -1388,11 +1387,7 @@ class CCIForm(forms.ModelForm):
         if commit:
             obj.save()
             if obj.event.slack_channel:
-                slack_ids = [lookup_user(cci.crew_chief) for cci in obj.event.ccinstances.all()]
-                response = user_add(obj.event.slack_channel.id, slack_ids)
-            if not response['ok']:
-                #raise ValidationError(f"Slack Error: {response['error']}") # TODO: Add error catching for slack channel adding CCs
-                pass
+                obj.event.slack_channel.add_ccs_to_channel()
         return obj
 
     class Meta:

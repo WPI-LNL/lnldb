@@ -10,7 +10,7 @@ from django.urls.base import reverse
 from accounts.models import UserPreferences
 from emails.generators import EventEmailGenerator
 from slack.views import event_edited_notification
-from slack.api import lookup_user, slack_post, user_add
+from slack.api import lookup_user, slack_post
 from events.forms import InternalEventForm, InternalEventForm2019, ServiceInstanceForm
 from events.models import BaseEvent, Event2019, ServiceInstance
 from helpers.revision import set_revision_comment
@@ -86,11 +86,10 @@ def eventnew(request, id=None):
                         except requests.JSONDecodeError:
                             pass
                 if obj.slack_channel:
-                    slack_ids = [lookup_user(cci.crew_chief) for cci in obj.ccinstances.all()]
-                    response = user_add(obj.slack_channel.id, slack_ids)
-                    if not response['ok']:
+                    success = obj.slack_channel.add_ccs_to_channel()
+                    if not success:
                         messages.add_message(request, messages.WARNING, "There was an error adding the crew chiefs "
-                                                                      "to the Slack channel. (Slack error: %s)" % response['error'])
+                                                                      "to the Slack channel. (Slack error: %s)" % None) # response['error'])
                     
                 if is_event2019:
                     services_formset.save()
