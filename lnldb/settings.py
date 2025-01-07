@@ -134,7 +134,7 @@ SAML2_AUTH = {
     },
     'ATTRIBUTES_MAP': {
         'email': 'emailAddress',
-        'username': 'name',
+        'username': 'username',
         'first_name': 'givenName',
         'last_name': 'surname',
     },
