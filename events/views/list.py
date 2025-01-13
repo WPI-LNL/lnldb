@@ -991,7 +991,7 @@ def allfuture(request, start=None, end=None):
         return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
 
     events = BaseEvent.objects.distinct()
-    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, hide_unapproved=not request.user.has_perm('events.approve_event'), sort='datetime_start')
+    events, context = filter_events(request, context, events, start, end, prefetch_billing=True, hide_unapproved=True, sort='datetime_start')
 
     context['h2'] = "All Future Events"
     context['events'] = events
