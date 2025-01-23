@@ -1,4 +1,5 @@
 {% extends 'base_admin.html' %}
+{% load append_get %}
 
 {% block title %}{{ h2 }} Calendar | Lens and Lights at WPI{% endblock %}
 
@@ -141,5 +142,27 @@
       <span class="label cal-status-paid">To be billed, Awaiting payment, Paid, Cancelled, or Closed</span> <!-- .cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed -->
       <span class="label" style="background-color: blue; border: darkblue;">Other/Unknown</span>
     </h4>
+    <h5 class="well" style="margin: 15px;">
+      <ul class="nav nav-pills">
+        <li class="disabled"><a href="#">View This Range as</a></li>
+        <li><a href="{% url "events:prerequest-cal" %}">Pre-Requests</a></li>
+        <li><a href="{% url "events:prospective-cal" %}">Prospective</a></li>
+        <li><a href="{% url "events:incoming-cal" %}">Incoming</a></li>
+        <li><a href="{% url "events:confirmed-cal" %}">Confirmed</a></li>
+        <li><a href="{% url "events:open-cal" %}">Open</a></li>
+        <li><a href="{% url "events:unreviewed-cal" %}">Unreviewed</a></li>
+        <li><a href="{% url "events:unbilled-cal" %}">Unbilled</a></li>
+        <li><a href="{% url "events:unpaid-cal" %}">Billed/UnPaid</a></li>
+        <li><a href="{% url "events:paid-cal" %}">Paid</a></li>
+        <li><a href="{% url "events:closed-cal" %}">Closed</a></li>
+        <li><a href="{% url "events:all-cal" %}">All</a></li>
+        <li><a href="{% url "events:all-future-cal" %}">All Future</a></li>
+    </ul>
+      <div class="btn-group" role="group" aria-label="Projection filter">
+        <a class="btn btn-default{% if request.GET.projection == 'hide' %} active{% endif %}" href="{% append_to_get page=1 projection='hide' %}">Hide Projection</a>
+        <a class="btn btn-default{% if not request.GET.projection or request.GET.projection == 'show' %} active{% endif %}" href="{% append_to_get page=1 projection='show' %}">Show Projection</a>
+        <a class="btn btn-default{% if request.GET.projection == 'only' %} active{% endif %}" href="{% append_to_get page=1 projection='only' %}">Show Only Projection</a>
+    </div>
+    </h5>
 </div>
 {% endblock %}
