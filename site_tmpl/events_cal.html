@@ -129,40 +129,44 @@
 {% block content %}
 <div class="row">
     <div class="col-md-12">
-        <h2>{{h2}}</h2>
+        <h2>{{h2}} {{request.resolver_match.url_name}}</h2>
     </div>
 </div>
 <div class="panel panel-default">
     <div id="fullcalendar" class="panel-body"></div>
-    <h4 class="well" style="margin: 15px;">
-      <span class="label" style="color:black">Event Color Key</span>
-      <span class="label cal-status-awaiting-approval">Awaiting Approval</span>
-      <span class="label cal-status-approved">Confirmed</span>
-      <span class="label cal-status-awaiting-review">Awaiting Billing Review</span>
-      <span class="label cal-status-paid">To be billed, Awaiting payment, Paid, Cancelled, or Closed</span> <!-- .cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed -->
-      <span class="label" style="background-color: blue; border: darkblue;">Other/Unknown</span>
-    </h4>
-    <h5 class="well" style="margin: 15px;">
-      <ul class="nav nav-pills">
-        <li class="disabled"><a href="#">View This Range as</a></li>
-        <li><a href="{% url "events:prerequest-cal" %}">Pre-Requests</a></li>
-        <li><a href="{% url "events:prospective-cal" %}">Prospective</a></li>
-        <li><a href="{% url "events:incoming-cal" %}">Incoming</a></li>
-        <li><a href="{% url "events:confirmed-cal" %}">Confirmed</a></li>
-        <li><a href="{% url "events:open-cal" %}">Open</a></li>
-        <li><a href="{% url "events:unreviewed-cal" %}">Unreviewed</a></li>
-        <li><a href="{% url "events:unbilled-cal" %}">Unbilled</a></li>
-        <li><a href="{% url "events:unpaid-cal" %}">Billed/UnPaid</a></li>
-        <li><a href="{% url "events:paid-cal" %}">Paid</a></li>
-        <li><a href="{% url "events:closed-cal" %}">Closed</a></li>
-        <li><a href="{% url "events:all-cal" %}">All</a></li>
-        <li><a href="{% url "events:all-future-cal" %}">All Future</a></li>
-    </ul>
+    <h4 class="well" style="margin: 10px 15px;">
+      <span class="label" style="color:black">View This Range as</span>
+      <div class="btn-group">
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'prerequest-cal' %}active{% endif %}" href="{% url "events:prerequest-cal" %}">Pre-Requests</a>
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'prospective-cal' %}active{% endif %}" href="{% url "events:prospective-cal" %}">Prospective</a>
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'incoming-cal' %}active{% endif %}" href="{% url "events:incoming-cal" %}">Incoming</a>
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'confirmed-cal' %}active{% endif %}" href="{% url "events:confirmed-cal" %}">Confirmed</a>
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'open-cal' %}active{% endif %}" href="{% url "events:open-cal" %}">Open</a>
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'unreviewed-cal' %}active{% endif %}" href="{% url "events:unreviewed-cal" %}">Unreviewed</a>
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'unbilled-cal' %}active{% endif %}" href="{% url "events:unbilled-cal" %}">Unbilled</a>
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'unpaid-cal' %}active{% endif %}" href="{% url "events:unpaid-cal" %}">Billed/UnPaid</a>
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'paid-cal' %}active{% endif %}" href="{% url "events:paid-cal" %}">Paid</a>
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'closed-cal' %}active{% endif %}" href="{% url "events:closed-cal" %}">Closed</a>
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'all-cal' %}active{% endif %}" href="{% url "events:all-cal" %}">All</a>
+        <a type="button" class="btn btn-default {% if request.resolver_match.url_name == 'all-future-cal' %}active{% endif %}" href="{% url "events:all-future-cal" %}">All Future</a>
+      </div>
+  </h4>
+    <h4 class="well" style="margin: 10px 15px;">
+      <span class="label" style="color:black">Filter Projection Events</span>
       <div class="btn-group" role="group" aria-label="Projection filter">
         <a class="btn btn-default{% if request.GET.projection == 'hide' %} active{% endif %}" href="{% append_to_get page=1 projection='hide' %}">Hide Projection</a>
         <a class="btn btn-default{% if not request.GET.projection or request.GET.projection == 'show' %} active{% endif %}" href="{% append_to_get page=1 projection='show' %}">Show Projection</a>
         <a class="btn btn-default{% if request.GET.projection == 'only' %} active{% endif %}" href="{% append_to_get page=1 projection='only' %}">Show Only Projection</a>
     </div>
-    </h5>
+  </h4>
+  <h4 class="well" style="margin: 10px 15px;">
+    <span class="label" style="color:black">Event Color Key</span>
+    <span class="label cal-status-awaiting-approval">Awaiting Approval</span>
+    <span class="label cal-status-approved">Confirmed</span>
+    <span class="label cal-status-awaiting-review">Awaiting Billing Review</span>
+    <span class="label cal-status-paid">To be billed, Awaiting payment, Paid, Cancelled, or Closed</span> <!-- .cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed -->
+    <span class="label" style="background-color: blue; border: darkblue;">Other/Unknown</span>
+  </h4>
 </div>
+
 {% endblock %}
