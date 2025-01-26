@@ -154,9 +154,9 @@
     <h4 class="well" style="margin: 10px 15px;">
       <span class="label" style="color:black">Filter Projection Events</span>
       <div class="btn-group" role="group" aria-label="Projection filter">
-        <a class="btn btn-default{% if request.GET.projection == 'hide' %} active{% endif %}" href="{% append_to_get page=1 projection='hide' %}">Hide Projection</a>
-        <a class="btn btn-default{% if not request.GET.projection or request.GET.projection == 'show' %} active{% endif %}" href="{% append_to_get page=1 projection='show' %}">Show Projection</a>
-        <a class="btn btn-default{% if request.GET.projection == 'only' %} active{% endif %}" href="{% append_to_get page=1 projection='only' %}">Show Only Projection</a>
+        <a class="btn btn-default{% if request.GET.projection == 'hide' or request.COOKIES.projection == 'hide' %} active{% endif %}" href="{% append_to_get projection='hide' %}">Hide Projection</a>
+        <a class="btn btn-default{% if request.GET.projection == 'show' or request.COOKIES.projection == 'show' or not request.COOKIES.projection %} active{% endif %}" href="{% append_to_get projection='show' %}">Show Projection</a>
+        <a class="btn btn-default{% if request.GET.projection == 'only'  or request.COOKIES.projection == 'only' %} active{% endif %}" href="{% append_to_get projection='only' %}">Show Only Projection</a>
     </div>
   </h4>
   <h4 class="well" style="margin: 10px 15px;">

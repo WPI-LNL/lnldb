@@ -233,6 +233,10 @@ def generate_response(request, context, start, end, time_range_unspecified):
         response.set_cookie('end', end, max_age=DATEFILTER_COOKIE_MAX_AGE)
     return response
 
+def set_projection_filter_cookie(request, response):
+    if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
+        response.set_cookie('projection', request.GET['projection'])
+    return response
 
 # ## EVENT VIEWS
 @login_required
@@ -283,7 +287,8 @@ def prerequest_cal(request, start=None, end=None):
     """ Calendar view of prerequests """
     context = {'h2': "Pre-Requests", 'listurl': reverse('events:prerequest'),
                'bootcal_endpoint': reverse('cal:api-prerequest')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 @login_required
 @permission_required('events.approve_event', raise_exception=True)
@@ -334,7 +339,8 @@ def prospective_cal(request, start=None, end=None):
     """ Calendar view of prospective events """
     context = {'h2': "Prospective Events", 'listurl': reverse('events:prospective'),
                'bootcal_endpoint': reverse('cal:api-prospective')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 @login_required
 @permission_required('events.view_events', raise_exception=True)
@@ -385,7 +391,8 @@ def incoming_cal(request, start=None, end=None):
     """ Calendar view of incoming events """
     context = {'h2': "Incoming Events", 'listurl': reverse('events:incoming'),
                'bootcal_endpoint': reverse('cal:api-incoming')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 @login_required
 @permission_required('events.view_events', raise_exception=True)
@@ -436,7 +443,8 @@ def confirmed_cal(request, start=None, end=None):
     """ Calendar view of confirmed events """
     context = {'h2': "Confirmed Events", 'listurl': reverse('events:confirmed'),
                'bootcal_endpoint': reverse('cal:api-confirmed')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 @login_required
 @permission_required('events.view_events', raise_exception=True)
@@ -482,7 +490,8 @@ def openworkorders(request, start=None, end=None):
 def openworkorders_cal(request, start=None, end=None):
     """ Calendar view for open events """
     context = {'h2': "Open Events", 'listurl': reverse('events:open'), 'bootcal_endpoint': reverse('cal:api-open')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 
 @login_required
@@ -540,7 +549,8 @@ def findchief_cal(request, start=None, end=None):
     """ Calendar view for events that need crew chiefs """
     context = {'h2': "Needs a Crew Chief", 'listurl': reverse('events:findchief'),
                'bootcal_endpoint': reverse('cal:api-findchief')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 
 @login_required
@@ -595,7 +605,8 @@ def unreviewed_cal(request, start=None, end=None):
     """ Calendar view for events that are ready to be reviewed for billing """
     context = {'h2': "Events Pending Billing Review", 'listurl': reverse('events:unreviewed'),
                'bootcal_endpoint': reverse('cal:api-unreviewed')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 
 @login_required
@@ -643,7 +654,8 @@ def unbilled_cal(request, start=None, end=None):
     """ Calendar view for events that have yet to be billed """
     context = {'h2': "Events to be Billed", 'listurl': reverse('events:unbilled'),
                'bootcal_endpoint': reverse('cal:api-unbilled')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 
 @login_required
@@ -691,7 +703,8 @@ def unbilled_semester_cal(request, start=None, end=None):
     """ Calendar view for events that have yet to be billed and are set to be billed in bulk """
     context = {'h2': "Events to be Billed in Bulk", 'listurl': reverse('events:unbilled-semester'),
                'bootcal_endpoint': reverse('cal:api-unbilled-semester')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 
 @login_required
@@ -741,7 +754,8 @@ def paid(request, start=None, end=None):
 def paid_cal(request, start=None, end=None):
     """ Calendar view for events that have already been paid """
     context = {'h2': "Paid Events", 'listurl': reverse('events:paid'), 'bootcal_endpoint': reverse('cal:api-paid')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 
 @login_required
@@ -791,7 +805,8 @@ def unpaid_cal(request, start=None, end=None):
     """ Calendar view for events that have unpaid bills """
     context = {'h2': "Pending Payments", 'listurl': reverse('events:unpaid'),
                'bootcal_endpoint': reverse('cal:api-unpaid')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 
 @login_required
@@ -915,7 +930,8 @@ def closed_cal(request, start=None, end=None):
     """ Calendar view for closed events """
     context = {'h2': "Closed Events", 'listurl': reverse('events:closed'),
                'bootcal_endpoint': reverse('cal:api-closed')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 
 @login_required
@@ -965,7 +981,8 @@ def all(request, start=None, end=None):
 def all_cal(request, start=None, end=None):
     """ Calendar view for all events """
     context = {'h2': "All Events", 'listurl': reverse('events:all'), 'bootcal_endpoint': reverse('cal:api-all')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 @login_required
 @permission_required('events.view_events', raise_exception=True)
@@ -1014,7 +1031,8 @@ def allfuture(request, start=None, end=None):
 def allfuture_cal(request, start=None, end=None):
     """ Calendar view for all future events """
     context = {'h2': "All Future Events", 'listurl': reverse('events:allfuture'), 'bootcal_endpoint': reverse('cal:api-all-future')}
-    return render(request, 'events_cal.html', context)
+    response = render(request, 'events_cal.html', context)
+    return set_projection_filter_cookie(request, response)
 
 
 def public_facing(request):
