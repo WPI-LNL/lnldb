@@ -236,6 +236,9 @@ def generate_response(request, context, start, end, time_range_unspecified):
 def set_projection_filter_cookie(request, response):
     if request.GET.get('projection') and request.GET['projection'] != request.COOKIES.get('projection'):
         response.set_cookie('projection', request.GET['projection'])
+    if (not request.GET.get('projection') and request.COOKIES.get('projection')
+            and request.COOKIES['projection'] != 'show'):
+        return build_redirect(request, projection=request.COOKIES['projection'], **request.GET.dict())
     return response
 
 # ## EVENT VIEWS
