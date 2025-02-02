@@ -42,19 +42,46 @@
                         {% endpermission %}
 
                         {% permission request.user has 'events.approve_event' %}
-                        <li><a href="{% url "events:prerequest" %}">Pre-Requests</a></li>
-                        <li><a href="{% url "events:prospective" %}">Prospective Events</a></li>
+                        <li>
+                            <a href="{% url "events:prerequest" %}">Pre-Requests</a>
+                            <a href="{% url "events:prerequest-cal" %}" class="glyphicon glyphicon-calendar"></a> 
+                        </li>
+                        <li>
+                            <a href="{% url "events:prospective" %}">Prospective Events</a>
+                            <a href="{% url "events:prospective-cal" %}" class="glyphicon glyphicon-calendar"></a> 
+                        </li>
                         {% endpermission %}
                         {% permission request.user has 'events.can_chief_event' %}
-                        <li><a href="{% url "events:findchief" %}">Needs a Chief</a></li>
+                        <li>
+                            <a href="{% url "events:findchief" %}">Needs a Chief</a>
+                            <a href="{% url "events:findchief-cal" %}" class="glyphicon glyphicon-calendar"></a>
+                        </li>
                         {% endpermission %}
                         {% permission request.user has 'events.view_event' %}
-                        <li><a href="{% url "events:incoming" %}">Incoming Events</a></li>
-                        <li><a href="{% url "events:confirmed" %}">Confirmed Events</a></li>
-                        <li><a href="{% url "events:open" %}">Open Events</a></li>
-                        <li><a href="{% url "events:closed" %}">Closed Events</a></li>
-                        <li><a href="{% url "events:all" %}">All Events</a></li>
-                        <li><a href="{% url "events:allfuture" %}">All Future Events</a></li>
+                        <li>
+                            <a href="{% url "events:incoming" %}">Incoming Events</a>
+                            <a href="{% url "events:incoming-cal" %}" class="glyphicon glyphicon-calendar"></a> 
+                        </li>
+                        <li>
+                            <a href="{% url "events:confirmed" %}">Confirmed Events</a>
+                            <a href="{% url "events:confirmed-cal" %}" class="glyphicon glyphicon-calendar"></a> 
+                        </li>
+                        <li>
+                            <a href="{% url "events:open" %}">Open Events</a>
+                            <a href="{% url "events:open-cal" %}" class="glyphicon glyphicon-calendar"></a> 
+                        </li>
+                        <li>
+                            <a href="{% url "events:closed" %}">Closed Events</a>
+                            <a href="{% url "events:closed-cal" %}" class="glyphicon glyphicon-calendar"></a> 
+                        </li>
+                        <li>
+                            <a href="{% url "events:all" %}">All Events</a>
+                            <a href="{% url "events:all-cal" %}" class="glyphicon glyphicon-calendar"></a> 
+                        </li>
+                        <li>
+                            <a href="{% url "events:allfuture" %}">All Future Events </a>
+                            <a href="{% url "events:all-future-cal" %}" class="glyphicon glyphicon-calendar"></a> 
+                        </li>
                         {% endpermission %}
 
 

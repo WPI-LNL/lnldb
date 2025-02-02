@@ -80,6 +80,10 @@ ul.ui-autocomplete {
     display: block;
 }
 
+ul.dropdown-menu > li {
+    display: flex;
+}
+
 .navbar-nav .open .dropdown-menu {
     background-color: white;
 }
@@ -98,6 +102,11 @@ ul.ui-autocomplete {
 ul.nav ul.dropdown-menu li a,
 .navbar-inverse .navbar-nav .open .dropdown-menu>li>a {
     color: #111;
+    display:inline-flex;
+}
+ul.nav ul.dropdown-menu li >:first-child,
+.navbar-inverse .navbar-nav .open .dropdown-menu>li >:first-child {
+    flex:1;
 }
 
 /* Search */
