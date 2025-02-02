@@ -104,7 +104,9 @@ GRAPH_API_SCOPE = env.str('GRAPH_API_SCOPE', '')
 GRAPH_API_SECRET = env.str('GRAPH_API_SECRET', '')
 GRAPH_API_ENDPOINT = env.str('GRAPH_API_ENDPOINT', '')
 
+SLACK_BASE_URL = env.str('SLACK_BASE_URL', 'https://wpilnl.slack.com')
 SLACK_TOKEN = env.str('SLACK_BOT_TOKEN', None)
+SLACK_CHANNEL_TOPIC_FOOTER = env.str('SLACK_CHANNEL_TOPIC_FOOTER', None)#":warning: :ln: This channel is managed by LNLDB :ln: :warning:")
 
 # If True, the bot will automatically attempt to join new channels when they are created in Slack
 SLACK_AUTO_JOIN = env.bool('SLACK_AUTO_JOIN', default=False)
@@ -443,6 +445,8 @@ AJAX_SELECT_BOOTSTRAP = True
 
 AJAX_LOOKUP_CHANNELS = {
     'Users': ('accounts.lookups', 'UserLookup'),
+    'Groups': ('accounts.lookups', 'GroupLookup'),
+    'Events': ('events.lookups', 'EventLookup'),
     'Orgs': ('events.lookups', 'OrgLookup'),
     'UserLimitedOrgs': ('events.lookups', 'UserLimitedOrgLookup'),
     'Officers': ('accounts.lookups', 'OfficerLookup'),

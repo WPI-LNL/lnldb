@@ -21,6 +21,9 @@
                     ({{ org.shortname }})
                 {% endif %}
                 <div class="btn-group">
+                    {% if request.user.is_lnl and org.slack_channel %}
+                        <a class="btn btn-primary btn-lg" target="_blank" href="{{ org.slack_channel.link }}">Open Slack</a>
+                    {% endif %}
                     {% permission user has 'events.edit_org' %}
                         <a class="btn btn-lg btn-warning" href="{% url "orgs:edit" org.id %}">Edit</a>
                         {% if user.is_superuser %}
@@ -42,6 +45,12 @@
         <div class="col-md-3">
             <h3>Contact</h3>
             <table class="table">
+                {% if request.user.is_lnl and org.slack_channel %}
+                <tr>
+                    <th>Slack Channel</th>
+                    <td> <a href="{{ org.slack_channel.link }}" target="_blank">{% if org.slack_channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ org.slack_channel.name }}</a> </td> 
+                </td>
+                {% endif %} 
                 <tr>
                     <th>Address</th>
                     <td>{{org.address}}</td>

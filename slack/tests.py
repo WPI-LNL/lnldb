@@ -24,7 +24,7 @@ class SlackAPITests(ViewTestCase):
         # NOTE: Running this test could send messages to the LNL Laptop. That is ok.
 
         # Check that GET requests are not permitted
-        self.assertOk(self.client.get(reverse("slack:interactive-endpoint")), 405)
+        self.assertOk(self.client.get(reverse("slackapp:interactive-endpoint")), 405)
 
         # Test TFed global shortcut (unused fields omitted)
         shortcut_data = {
@@ -39,7 +39,7 @@ class SlackAPITests(ViewTestCase):
 
         # Expect 500 since trigger will be expired (Launch from within Slack to test 200 response)
         if requests.head("https://lnl-rt.wpi.edu/rt/Ticket/Display.html").status_code == 200:
-            self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
+            self.assertOk(self.client.post(reverse("slackapp:interactive-endpoint"), urlencode(data),
                                         content_type="application/x-www-form-urlencoded"), 500)
 
         # Test TFed ticket submission (most unused fields omitted)
@@ -85,11 +85,11 @@ class SlackAPITests(ViewTestCase):
         if requests.head("https://lnl-rt.wpi.edu/rt/Ticket/Display.html").status_code == 200:
             if settings.SLACK_TOKEN not in ['', None]:
                 if settings.RT_TOKEN in ['', None]:  # Only run if RT token is not provided
-                    self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
+                    self.assertOk(self.client.post(reverse("slackapp:interactive-endpoint"), urlencode(data),
                                                 content_type="application/x-www-form-urlencoded"))
             else:
                 # Should fail on user lookup
-                self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
+                self.assertOk(self.client.post(reverse("slackapp:interactive-endpoint"), urlencode(data),
                                            content_type="application/x-www-form-urlencoded"), 500)
 
         # Test TFed ticket update form submission (unused fields omitted)
@@ -141,7 +141,7 @@ class SlackAPITests(ViewTestCase):
             "payload": json.dumps(new_ticket_data)
         }
         if settings.RT_TOKEN in [None, ''] and requests.head("https://lnl-rt.wpi.edu/rt/Ticket/Display.html").status_code == 200:
-            self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
+            self.assertOk(self.client.post(reverse("slackapp:interactive-endpoint"), urlencode(data),
                                            content_type="application/x-www-form-urlencoded"))
 
         # Test TFed ticket message button actions (unused fields omitted)
@@ -177,7 +177,7 @@ class SlackAPITests(ViewTestCase):
             "payload": json.dumps(action_data)
         }
         if requests.head("https://lnl-rt.wpi.edu/rt/Ticket/Display.html").status_code == 200:
-            self.assertOk(self.client.post(reverse("slack:interactive-endpoint"), urlencode(data),
+            self.assertOk(self.client.post(reverse("slackapp:interactive-endpoint"), urlencode(data),
                                         content_type="application/x-www-form-urlencoded"))
 
     def test_event_url_verification(self):
@@ -189,9 +189,9 @@ class SlackAPITests(ViewTestCase):
         }
 
         # GET requests should not be permitted
-        self.assertOk(self.client.get(reverse("slack:event-endpoint")), 405)
+        self.assertOk(self.client.get(reverse("slackapp:event-endpoint")), 405)
 
-        resp = self.client.post(reverse("slack:event-endpoint"), validation_info, content_type="application/json")
+        resp = self.client.post(reverse("slackapp:event-endpoint"), validation_info, content_type="application/json")
         self.assertOk(resp)
         self.assertJSONEqual(
             str(resp.content, 'utf-8'),
@@ -211,7 +211,7 @@ class SlackAPITests(ViewTestCase):
             }
         }
 
-        self.assertOk(self.client.post(reverse("slack:event-endpoint"), event_info, content_type="application/json"))
+        self.assertOk(self.client.post(reverse("slackapp:event-endpoint"), event_info, content_type="application/json"))
 
 
 class SlackTemplateTags(TestCase):

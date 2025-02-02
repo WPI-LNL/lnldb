@@ -1,0 +1,130 @@
+{% extends 'base_admin.html' %}
+{% load permissionif %}
+{% block title %}{{h2}} | Lens and Lights at WPI{% endblock %}
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="jumbotron" style="padding-bottom: 2%">
+                
+                <h1> <a href=""></a>{% if channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ channel.name }} </a></h1>
+                
+		        <div class="row">
+			        <div class="col-md-8 col-lg-9">
+				        <h3>{{ channel.num_members }} members</h3>
+                        <h4>Last Updated: {{ channel.last_updated | date:"D, N j Y"}}</h4>
+			        </div>
+
+                    <a href="{{ channel.link }}" target="_blank" class="btn btn-info btn-xl pull-right"><span class="glyphicon glyphicon-link"></span> Open in Slack</a>
+
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <!--<div class="container">
+        <div class="alert alert-warning">BIG WARNING GOES HERE.</div>
+    </div>-->
+    <h2>Channel Configuration
+        {% if form == None %}
+        <a href="{% url 'slack:channel-edit' channel.id %}" class="btn btn-info pull-right"><span class="glyphicon glyphicon-pencil"></span> Edit Configuration</a>
+        {% endif %}
+    </h2>
+{% if form %}
+<form method="post">
+{% csrf_token %}
+{{ form.media }}
+{% endif %}
+    <table class="table">
+        <tr>
+            <th>Groups Allowed</th>
+            <td>
+                {% if form %}
+                    {{ form.allowed_groups }}
+                    {% for error in form.allowed_groups.errors %}<span style='color:red;'>{{error}}</span>{% endfor %}
+                {% else %}
+                    {% for group in channel.allowed_groups.all %}
+                        <span class="label label-default">{{ group.name }}</span>
+                    {% endfor %}
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Groups Required</th>
+            <td>
+                {% if form %}
+                    {{ form.required_groups }}
+                    {% for error in form.required_groups.errors %}<span style='color:red;'>{{error}}</span>{% endfor %}
+                {% else %}
+                    {% for group in channel.required_groups.all %}
+                        <span class="label label-default">{{ group.name }}</span>
+                    {% endfor %}
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Linked Event{% if channel.event.count > 1 %}s{%endif%}</th>
+            <td>
+                {% if form %}
+                    {{ form.event }}
+                    {% for error in form.event.errors %}<span style='color:red;'>{{error}}</span>{% endfor %}
+                {% else %}
+                    {% for event in channel.event.all %}
+                        <a href="{% url 'events:detail' event.id %}">{{ event.event_name }}</a> 
+                        {% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Linked Organization{% if channel.organization.count > 1 %}s{%endif%}</th>
+            <td>
+                {% if form %}
+                    {{ form.organization }}
+                    {% for error in form.organization.errors %}<span style='color:red;'>{{error}}</span>{% endfor %}
+                {% else %}
+                    {% for org in channel.organization.all %}
+                        <a href="{% url 'orgs:detail' org.id %}">{{ org }}</a>
+                        {% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+    {% if form %}
+    <input name="save" value="Save Changes" class="btn btn-primary" type="submit">
+</form>
+    {% endif %}
+    <h2>Channel Details</h2>
+    <table class="table">
+        <tr>
+            <th>Visibility</th>
+            <td>{% if channel.private != None %}{% if channel.private %}<span class="glyphicon glyphicon-lock"></span> Private{% else %}Public{% endif %}{% endif %}</td>
+        </tr>
+        <tr>
+            <th>Archived</th>
+            <td>{{ channel.archived }}</td>
+        </tr>
+        <tr>
+            <th>Topic</th>
+            <td>{{ channel.info.topic.value}}</td>
+        </tr>
+        <tr>
+            <th>Purpose</th>
+            <td>{{ channel.info.purpose.value}}</td>
+        </tr>
+        <tr>
+            <th>Created by</th>
+            <td>{% if channel.creator %}<a href="{% url 'accounts:detail' channel.creator %}">{{ channel.creator.get_full_name }}</a>{% endif %}</td>
+        </tr>
+        <tr>
+            <th>Created on </th>
+            <td>{{ channel.created_on }}</td>
+        </tr>
+        <tr>
+            <th>Previous Names</th>
+            <td>{{ channel.info.previous_names }}</td>
+        </tr>
+    </table>
+ 
+
+{% endblock %}
