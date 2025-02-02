@@ -43,7 +43,7 @@
     {% for trainee in batten_users %}
         <tr>
             <td>
-                <a href="{% url 'accounts:detail' user.pk %}"><strong>{{ user.name }}</strong></a>{% if user.pronouns %} ({{ user.pronouns }}){% endif %}
+                <a href="{% url 'accounts:detail' trainee.person.pk %}"><strong>{{ trainee.person.name }}</strong></a>{% if trainee.person.pronouns %} ({{ trainee.person.pronouns }}){% endif %}
             </td>
             <td>
                 {% if trainee.person.exec_position %}{{ trainee.person.exec_position.title }}
