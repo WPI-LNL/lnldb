@@ -1178,5 +1178,21 @@
       ]
     ]
   }
+},
+{
+  "model": "auth.group",
+  "pk": 10,
+  "fields": {
+    "name": "Facilities Liason",
+    "permissions": []
+  }
+},
+{
+  "model": "auth.group",
+  "pk": 11,
+  "fields": {
+    "name": "Authorized Caller",
+    "permissions": []
+  }
 }
 ]

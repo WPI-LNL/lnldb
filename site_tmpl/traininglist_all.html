@@ -6,6 +6,7 @@
     <a class="btn btn-lg btn-success" href="{% url 'members:training:list' %}">View Active Only</a>
     {% permission request.user has 'members.add_training' %}
         <a class="btn btn-lg btn-primary" href="{% url 'members:training:entry' %}">Enter Training</a>
+        <a class="btn btn-lg btn-info" href="{% url 'members:authorization' %}">Authorized Members (for CPD)</a>
     {% endpermission %}
 </div>
 <h2> Training</h2>
