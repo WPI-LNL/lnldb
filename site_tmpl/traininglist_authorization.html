@@ -24,7 +24,7 @@
                 {% elif user.exec_position %}{{ user.exec_position.title }}
                 {% else %}Active Member and Authorized Caller{% endif %}
             </td>
-            <td>{{ user.phone_number }}</td>
+            <td>{{ user.phone|default_if_none:"" }}</td>
             <td>{{ user.email }}</td>
         </tr>
     {% endfor %}
@@ -46,11 +46,11 @@
                 <a href="{% url 'accounts:detail' trainee.person.pk %}"><strong>{{ trainee.person.name }}</strong></a>{% if trainee.person.pronouns %} ({{ trainee.person.pronouns }}){% endif %}
             </td>
             <td>
-                {% if trainee.person.exec_position %}{{ trainee.person.exec_position.title }}
-                {% elif trainee.is_fl %}Facilities Liaison
+                {% if trainee.is_fl %}Facilities Liaison{% if trainee.person.exec_position %} and {{ trainee.person.exec_position.title }}{%endif%}
+                {% elif trainee.person.exec_position %}{{ trainee.person.exec_position.title }}
                 {% else %}Authorized Member{% endif %}
             </td>
-            <td>{{ trainee.person.phone_number }}</td>
+            <td>{{ trainee.person.phone|default_if_none:"" }}</td>
             <td>{{ trainee.person.email }}</td>
             <td>{{ trainee.training.date }}</td>
         </tr>
