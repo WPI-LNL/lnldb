@@ -146,9 +146,10 @@ def authorization(request):
     context = {}
     trainees = Trainee.objects.get_queryset().filter(training__training_type__name__contains="Batten")
     trainees_ids = [trainee.id for trainee in trainees if trainee.is_valid()]
-    context['batten_users'] = Trainee.objects.get_queryset().filter(id__in=trainees_ids).distinct().annotate(is_fl=Case(When(person__groups__name__contains="Facilities Liaison", then=Value(True)), default=Value(False)))
+    context['batten_users'] = Trainee.objects.get_queryset().filter(id__in=trainees_ids)
     context['callers'] = get_user_model().objects.filter(Q(is_active=True, groups__name="Officer") | 
                                                          Q(is_active=True, groups__name__contains="Facilities Liaison") |
                                                          Q(is_active=True, groups__name__contains="Authorized Caller")
-                                                         ).distinct().annotate(is_fl=Case(When(groups__name__contains="Facilities Liaison", then=Value(True)), default=Value(False)))
+                                                         ).distinct()
+    context['fl'] = get_user_model().objects.filter(is_active=True, groups__name__contains="Facilities Liaison").distinct()
     return render(request, 'traininglist_authorization.html', context)

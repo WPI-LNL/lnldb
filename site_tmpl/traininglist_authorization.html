@@ -20,7 +20,7 @@
                 <a href="{% url 'accounts:detail' user.pk %}"><strong>{{ user.name }}</strong></a><!--{% if user.pronouns %} ({{ user.pronouns }}){% endif %}-->
             </td>
             <td>
-                {% if user.is_fl %}Facilities Liaison{% if user.exec_position %} and {{ user.exec_position.title }}{%endif%}
+                {% if user in fl %}Facilities Liaison{% if user.exec_position %} and {{ user.exec_position.title }}{%endif%}
                 {% elif user.exec_position %}{{ user.exec_position.title }}
                 {% else %}Active Member and Authorized Caller{% endif %}
             </td>
@@ -46,7 +46,7 @@
                 <a href="{% url 'accounts:detail' trainee.person.pk %}"><strong>{{ trainee.person.name }}</strong></a><!--{% if trainee.person.pronouns %} ({{ trainee.person.pronouns }}){% endif %}-->
             </td>
             <td>
-                {% if trainee.is_fl %}Facilities Liaison{% if trainee.person.exec_position %} and {{ trainee.person.exec_position.title }}{%endif%}
+                {% if trainee.person in fl %}Facilities Liaison{% if trainee.person.exec_position %} and {{ trainee.person.exec_position.title }}{%endif%}
                 {% elif trainee.person.exec_position %}{{ trainee.person.exec_position.title }}
                 {% else %}Authorized Member{% endif %}
             </td>
