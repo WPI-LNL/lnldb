@@ -11,6 +11,5 @@ urlpatterns = [
         re_path(r'^notes/(?P<pk>[0-9]+)/$', views.trainee_notes, name="traineenotes"),
         re_path(r'^revoke/(?P<pk>[0-9]+)/$', views.revoke_training, name="revoke"),
     ], 'members'), namespace="training")),
-    re_path(r'db/members/authorization/', views.authorization, name="listauthorization"),
-    re_path(r'authorization/', views.authorization, name="authorization"),
+    re_path(r'db/members/authorization/', views.authorization, name="authorization"),
 ]
