@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
+from django.db.models import Q, Value, Case, When
 
 from .forms import TrainingForm, TraineeNotesForm
 from .models import TrainingType, Training, Trainee
@@ -136,3 +137,19 @@ def revoke_training(request, pk):
     trainee.revoked_on = timezone.now()
     trainee.save()
     return HttpResponseRedirect(reverse('accounts:detail', args=(trainee.person.pk,)))
+
+@login_required
+#@permission_required('members.view_authorization', raise_exception=True)
+@require_GET
+def authorization(request):
+    """ List all members with officer permissions and all members with valid batten training """
+    context = {}
+    trainees = Trainee.objects.get_queryset().filter(training__training_type__name__contains="Batten")
+    trainees_ids = [trainee.id for trainee in trainees if trainee.is_valid()]
+    context['batten_users'] = Trainee.objects.get_queryset().filter(id__in=trainees_ids)
+    context['callers'] = get_user_model().objects.filter(Q(is_active=True, groups__name="Officer") | 
+                                                         Q(is_active=True, groups__name__contains="Facilities Liaison") |
+                                                         Q(is_active=True, groups__name__contains="Authorized Caller")
+                                                         ).distinct()
+    context['fl'] = get_user_model().objects.filter(is_active=True, groups__name__contains="Facilities Liaison").distinct()
+    return render(request, 'traininglist_authorization.html', context)
