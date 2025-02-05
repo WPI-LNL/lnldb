@@ -19,7 +19,14 @@
     {% for user in callers %}
         <tr>
             <td>
-                <a href="{% url 'accounts:detail' user.pk %}"><strong>{{ user.name }}</strong></a><!--{% if user.pronouns %} ({{ user.pronouns }}){% endif %}-->
+                {% permission request.user has 'accounts.view_user' or request.user has 'accounts.view_member' %}
+                <a href="{% url 'accounts:detail' user.pk %}">
+                {% endpermission %}
+                    <strong>{{ user.name }}</strong>
+                {% permission request.user has 'accounts.view_user' or request.user has 'accounts.view_member' %}
+                </a>
+                {% endpermission %}
+                <!--{% if user.pronouns %} ({{ user.pronouns }}){% endif %}-->
             </td>
             <td>
                 {% if user in fl %}Facilities Liaison{% if user.exec_position %} and {{ user.exec_position.title }}{%endif%}
