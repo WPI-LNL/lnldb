@@ -1,12 +1,102 @@
+from ajax_select.fields import AutoCompleteSelectMultipleField
+from django import forms
+from django.db.models import Value
 from django.contrib.auth.decorators import permission_required, login_required
 from django.shortcuts import reverse, render, get_object_or_404
 from django.http import HttpResponseRedirect
 
-from .models import ReportedMessage
-from .api import lookup_user, user_profile, message_link, channel_info
+from events.models import BaseEvent, Organization
+from lnldb import settings
+
+from .models import Channel, ReportedMessage
+from .api import lookup_user, user_add, user_profile, message_link, channel_info
 
 
 # Slack Management Views
+
+@login_required
+@permission_required('slack.view_channel', raise_exception=True)
+def channel_list(request):
+    """
+    View a list of all Slack channels
+    """
+    return render(request, 'slack/slack_channel_list.html', 
+                  {'h2': 'Slack Channels', 
+                   'channels': Channel.objects.all()})
+
+class ChannelAssignGroupForm(forms.ModelForm):
+    allowed_groups = AutoCompleteSelectMultipleField('Groups', required=False)
+    required_groups = AutoCompleteSelectMultipleField('Groups', required=False)
+    event = AutoCompleteSelectMultipleField('Events', required=False)
+    organization = AutoCompleteSelectMultipleField('Orgs', required=False)
+
+    def __init__(self, *args, **kwargs):
+        super(ChannelAssignGroupForm, self).__init__(*args, **kwargs)
+        self.fields['allowed_groups'].initial = kwargs['instance'].allowed_groups.all()
+        self.fields['required_groups'].initial = kwargs['instance'].required_groups.all()
+        self.fields['event'].initial = kwargs['instance'].event.all()
+        self.fields['organization'].initial = kwargs['instance'].organization.all()
+
+    class Meta:
+        model = Channel
+        fields = ('allowed_groups', 'required_groups', 'event', 'organization')
+
+@login_required
+@permission_required('slack.change_channel', raise_exception=True)
+def channel_detail_edit(request, id):
+    return channel_detail(request, id, edit=True)
+
+@login_required
+@permission_required('slack.view_channel', raise_exception=True)
+def channel_detail(request, id, edit=False):
+    """
+    View details for a specific Slack channel
+    """
+    channel = get_object_or_404(Channel, id=id)
+    if request.method == 'POST':
+        form = ChannelAssignGroupForm(data=request.POST, instance=channel)
+        if form.is_valid():
+            form.save(commit=True)
+            for event in ( (event_set := BaseEvent.objects.filter(pk__in=form.cleaned_data['event'])) | channel.event.all() ).distinct():
+                event.slack_channel = channel if event in event_set else None
+                event.save()
+            for org in ( (org_set := Organization.objects.filter(pk__in=form.cleaned_data['organization'])) | channel.organization.all() ).distinct():
+                org.slack_channel = channel if org in org_set else None
+                org.save()
+            return HttpResponseRedirect(reverse('slack:channel', args=[id]))
+    return render(request, 'slack/slack_channel_detail.html', 
+                  {'h2': "#"+channel.name+' Details', 
+                   'channel': channel,
+                   #'creator_name': channel.creator.get_full_name() if channel.creator else None,
+                   'form': ChannelAssignGroupForm(instance=channel) if edit else None})
+
+@login_required
+@permission_required('slack.view_channel', raise_exception=True)
+def channel_directory(request, error=None):
+    """
+    View a directory of all Slack channels
+    """
+    channels = ( Channel.objects.filter(allowed_groups__in=request.user.groups.all()).annotate(order=Value(1)) | 
+                 Channel.objects.filter(required_groups__in=request.user.groups.all()).annotate(order=Value(2)) ).distinct().order_by('order')
+    return render(request, 'slack/slack_channel_directory.html', {'h2': 'Slack Channel Directory', 'channels': channels, 'error': error})
+
+@login_required
+@permission_required('slack.view_channel', raise_exception=True)
+def channel_join_and_redirect(request, id):
+    """
+    Join a Slack channel and redirect to the Slack workspace
+    """
+    channel = get_object_or_404(Channel, id=id)
+    if channel not in (channels := ( Channel.objects.filter(allowed_groups__in=request.user.groups.all()) | 
+                                     Channel.objects.filter(required_groups__in=request.user.groups.all()) ).distinct()):
+        return channel_directory(request, error='You do not have permission to join %s' % channel.name)
+    else:
+        response = user_add(channel.id, request.user.username)
+        if response['ok']:
+            return HttpResponseRedirect(channel.link)
+        else:
+            return channel_directory(request, error="Error joining #%s: %s" % (channel.name, response['error']))
+
 @login_required
 @permission_required('slack.view_reportedmessage', raise_exception=True)
 def report_list(request):
@@ -786,7 +876,7 @@ def event_edited_notification(event, triggered_by, fields_changed):
     """
 
     user = triggered_by.get_full_name()
-    slack_user = user_profile(lookup_user(triggered_by.email))
+    slack_user = user_profile(lookup_user(triggered_by))
     if slack_user['ok']:
         user = "@" + slack_user['user']['name']
 

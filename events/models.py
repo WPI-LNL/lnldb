@@ -256,7 +256,10 @@ class BaseEvent(PolymorphicModel):
     billed_in_bulk = models.BooleanField(default=False, db_index=True, help_text="Check if billing of this event will be deferred so that it can be combined with other events in a single invoice")
     sensitive = models.BooleanField(default=False, help_text="Nobody besides those directly involved should know about this event")
     test_event = models.BooleanField(default=False, help_text="Check to lower the VP's blood pressure after they see the short-notice S4/L4")
+    notifications_in_slack_channel = models.BooleanField(default=True, help_text="Check to send event edited notifications to the event slack channel", verbose_name="Send edit notifications to Slack channel")
     
+    slack_channel = models.ForeignKey('slack.Channel', on_delete=models.PROTECT, null=True, blank=True, related_name='event', help_text="Slack Channel ID, i.e. C4HB02R6H")
+
     # Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True, blank=True)
@@ -1180,6 +1183,8 @@ class Organization(models.Model):
     archived = models.BooleanField(default=False)
 
     locked = models.BooleanField(default=False, blank=True)
+
+    slack_channel = models.ForeignKey('slack.Channel', on_delete=models.PROTECT, null=True, blank=True, related_name='organization', help_text="Slack Channel ID, i.e. C4HB02R6H")
 
     def __str__(self):
         return self.name

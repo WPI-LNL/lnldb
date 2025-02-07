@@ -34,6 +34,7 @@
                             {% endpermission %}
                             {% if request.user == u and request.user.is_lnl %}
                                 <a class="btn btn-default btn-lg" href="{% url "accounts:preferences" %}">Preferences</a>
+                                <a class="btn btn-info btn-lg" href="{% url 'slack:channel-directory' %}">Channel Directory</a>
                             {% endif %}
                         {% endif %}
                     </div>

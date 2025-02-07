@@ -19,6 +19,14 @@
             <h3>Status: <b>{{ event.status }}</b></h3>
 
             <div class="btn-group">
+                {% if request.user.is_lnl and event.slack_channel %}
+                    <a class="btn btn-primary btn-lg" target="_blank" href="{{ event.slack_channel.link }}">Open Slack</a>
+                {% endif %}
+                {% permission request.user has 'slack.change_channel' %}
+                    {% if not event.slack_channel %}
+                        <a class="btn btn-warning btn-lg" href="#newEventSlackChannelModal" role="button" data-toggle="modal">Create Slack Channel</a>
+                    {% endif %}
+                {% endpermission %}
                 {% permission request.user has 'events.view_event_reports' of event %}
                     <a class="btn btn-info btn-lg" href="{% url "events:pdf" event.id %}">PDF</a>
                 {% endpermission %}
@@ -169,6 +177,36 @@
     </div>
     {% endpermission %}
 
+    {% permission request.user has 'events.reopen_event' of event %}
+    <!-- newEventSlackChannelModal -->
+    <div id="newEventSlackChannelModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="newEventSlackChannelModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h3 id="newEventSlackChannelLabel">Create Slack Channel</h3>
+                </div>
+                <form class="form-inline" method="post" action="{% url 'events:create-channel' event.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>Channel name: (i.e. <code>#-a{% now "y" %}_short-event-name</code>) </p>
+                    <div class="input-group">
+                        <div class="input-group-addon">#</div>
+                        <input type="text" name="channel_name" class="form-control" pattern="[a-z0-9_-]*$" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-default" data-dismiss="modal" aria-hidden="true">Go Back</button>
+                    <button class="btn btn-primary" type="submit">Create Channel</button>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+    {% endpermission %}
+
+
 
     <div class="container-fluid">
         <div class="col-md-12">
@@ -232,6 +270,14 @@
                             <th>Location</th>
                             <td>{{event.location}} <em>({{ event.location.building }})</em></td>
                         </tr>
+                        {% if request.user.is_lnl and event.slack_channel %}
+                        <tr>
+                            <th>Slack Channel</th>
+                            <td> 
+                                <a href="{{ event.slack_channel.link }}" target="_blank">{% if event.slack_channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ event.slack_channel.name }}</a> 
+                            </td> 
+                        </td>
+                        {% endif %} 
                         <tr>
                             <th>Submitted by</th>
                             <td>

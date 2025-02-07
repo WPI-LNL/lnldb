@@ -84,12 +84,12 @@ class UserUpdateView(mixins.HasPermOrTestMixin, mixins.ConditionalFormMixin, gen
                     officer_info.save()
 
                 # Kick user from exec chat in Slack (if applicable)
-                slack_user = lookup_user(self.object.email)
+                slack_user = lookup_user(self.object)
                 if slack_user and exec_group in oldgroups:
                     user_kick(settings.SLACK_TARGET_EXEC, slack_user)
             elif exec_group not in oldgroups:
                 # Attempt to add user to exec chat in Slack
-                slack_user = lookup_user(self.object.email)
+                slack_user = lookup_user(self.object)
                 if slack_user:
                     user_add(settings.SLACK_TARGET_EXEC, slack_user)
 
@@ -127,7 +127,7 @@ class UserDetailView(mixins.HasPermOrTestMixin, generic.DetailView):
         context['hour_total'] = u.hours.aggregate(hours=Sum('hours'))
         context['ccs'] = u.ccinstances.select_related('event').all()
 
-        slack_id = lookup_user(u.email)
+        slack_id = lookup_user(u)
         slack_profile = user_profile(slack_id)
         if slack_profile['ok']:
             context['slack_id'] = slack_id

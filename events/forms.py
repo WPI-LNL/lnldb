@@ -30,6 +30,7 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 from helpers.util import curry_class
+from slack.models import Channel
 
 LIGHT_EXTRAS = Extra.objects.exclude(disappear=True).filter(category__name="Lighting")
 LIGHT_EXTRAS_ID_NAME = LIGHT_EXTRAS.values_list('id', 'name')
@@ -178,6 +179,7 @@ class IOrgForm(FieldAccessForm):
                 'Contact',
                 Field('name', css_class=read_only),
                 'exec_email',
+                'slack_channel',
                 'address',
                 Field('phone', css_class="bfh-phone", data_format="(ddd) ddd dddd"),
             ),
@@ -211,10 +213,16 @@ class IOrgForm(FieldAccessForm):
             raise ValidationError('What you entered is not a valid worktag. Here are some examples of what a worktag '
                                   'looks like: 1234-CC, 123-AG')
         return self.cleaned_data['worktag']
+    
+    def clean_slack_channel(self):
+        if self.cleaned_data['slack_channel'] is not None and self.cleaned_data['slack_channel'] != '':
+            return Channel.get_or_create(self.cleaned_data['slack_channel'])
+        return None
+
 
     class Meta:
         model = Organization
-        fields = ('name', 'exec_email', 'address', 'phone', 'associated_orgs', 'personal',
+        fields = ('name', 'exec_email', 'address', 'phone', 'associated_orgs', 'personal', 'slack_channel',
                   'workday_fund', 'worktag', 'user_in_charge', 'associated_users', 'notes', 'delinquent')
 
     # associated_orgs = make_ajax_field(Organization,'associated_orgs','Orgs',plugin_options = {'minLength':2})
@@ -224,6 +232,7 @@ class IOrgForm(FieldAccessForm):
     associated_users = AutoCompleteSelectMultipleField('Users', required=False)
     worktag = forms.CharField(required=False, help_text='Ends in -AG, -CC, -GF, -GR, or -DE')
     notes = forms.CharField(widget=EasyMDEEditor(), label="Internal Notes", required=False)
+    slack_channel = forms.CharField(required=False, label="Slack Channel", validators=[Channel.validate_field], help_text="Slack Channel ID, i.e. C4HB02R6H")
 
     class FieldAccess:
         def __init__(self):
@@ -426,6 +435,7 @@ class InternalEventForm(FieldAccessForm):
                 'billed_in_bulk',
                 'sensitive',
                 'test_event',
+                'notifications_in_slack_channel',
                 active=True
             ),
             Tab(
@@ -548,7 +558,7 @@ class InternalEventForm(FieldAccessForm):
         fields = ('event_name', 'event_status', 'location', 'lnl_contact', 'description', 'internal_notes', 'billing_org', 'billed_in_bulk', 'contact',
                   'org', 'datetime_setup_complete', 'datetime_start', 'datetime_end', 'lighting', 'lighting_reqs',
                   'sound', 'sound_reqs', 'projection', 'proj_reqs', 'otherservices', 'otherservice_reqs', 'sensitive',
-                  'test_event')
+                  'test_event', 'notifications_in_slack_channel')
         widgets = {
             'description': EasyMDEEditor(),
             'internal_notes': EasyMDEEditor(),
@@ -584,6 +594,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'location',
                 'lnl_contact',
                 'reference_code',
+                'slack_channel',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
                 HTML('<div style="width: 50%">'),
@@ -593,6 +604,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'billed_in_bulk',
                 'sensitive',
                 'test_event',
+                'notifications_in_slack_channel',
                 'entered_into_workday',
                 'send_survey',
                 active=True
@@ -717,9 +729,9 @@ class InternalEventForm2019(FieldAccessForm):
         model = Event2019
         fields = ('event_name', 'event_status', 'location', 'lnl_contact', 'description', 'internal_notes', 'billing_org',
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
-                  'datetime_end', 'sensitive', 'test_event',
+                  'datetime_end', 'sensitive', 'test_event','notifications_in_slack_channel',
                   'entered_into_workday', 'send_survey', 'max_crew','cancelled_reason',
-                  'reference_code')
+                  'reference_code','slack_channel',)
         widgets = {
             'description': EasyMDEEditor(),
             'internal_notes': EasyMDEEditor(),
@@ -745,6 +757,12 @@ class InternalEventForm2019(FieldAccessForm):
     # `2022-ABNXQQ`
     reference_code =forms.CharField(validators=[RegexValidator(regex=r"[0-9]{4}-[A-Z]{6}")],
             required = False)
+    slack_channel = forms.CharField(required=False, label="Slack Channel", validators=[Channel.validate_field], help_text="Slack Channel ID, i.e. C4HB02R6H")
+    
+    def clean_slack_channel(self):
+        if self.cleaned_data['slack_channel'] is not None and self.cleaned_data['slack_channel'] != '':
+            return Channel.get_or_create(self.cleaned_data['slack_channel'])
+        return None
 
 
 class EventReviewForm(forms.ModelForm):
@@ -1359,7 +1377,7 @@ class CCIForm(forms.ModelForm):
         return cleaned_data
 
     def save(self, commit=True):
-        obj = super(CCIForm, self).save(commit=False)
+        obj:EventCCInstance = super(CCIForm, self).save(commit=False)
         try:
             obj.category
         except Category.DoesNotExist:
@@ -1370,6 +1388,8 @@ class CCIForm(forms.ModelForm):
         obj.event = self.event
         if commit:
             obj.save()
+            if obj.event.slack_channel:
+                obj.event.slack_channel.add_ccs_to_channel()
         return obj
 
     class Meta:
