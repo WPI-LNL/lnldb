@@ -357,6 +357,27 @@ class BaseEvent(PolymorphicModel):
                 return "Awaiting Payment"
             else:
                 return "To Be Billed"  # used to be "Open" git #245
+    
+    @property
+    def icon(self):
+        if self.status == "Cancelled":
+            return "glyphicon-ban-circle"
+        elif self.status == "Closed":
+            return "glyphicon-ok-circle"
+        elif self.status == "Approved":
+            return "glyphicon-ok-sign"
+        elif self.status == "Awaiting Approval":
+            return "glyphicon-time"
+        elif self.status == "Awaiting Review":
+            return "glyphicon-exclamation-sign"
+        elif self.status == "Paid":
+            return "glyphicon-check"
+        elif self.status == "To Be Billed":
+            return "glyphicon-send"
+        elif self.status == "Awaiting Payment":
+            return "glyphicon-usd"
+        else:
+            return "glyphicon-question-sign"
 
     @property
     def unpaid(self):
