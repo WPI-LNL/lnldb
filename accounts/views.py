@@ -11,6 +11,7 @@ from django.contrib.auth.models import Group
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.db.models import F, Q, Count, Case, When, Sum
+from django.db.models.functions import Substr
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
@@ -303,6 +304,21 @@ def mdc_raw(request):
 
     response = render(request, 'users_mdc_raw.csv', context)
     response['Content-Disposition'] = 'attachment; filename="lnl_mdc.csv"'
+    response['Content-Type'] = 'text/csv'
+    return response
+
+@login_required
+@permission_required('accounts.view_member', raise_exception=True)
+def mdc_xpr_raw(request):
+    """Downloads a CSV file containing the radio MDCs of LNL members formatted for importing into CPS2"""
+    context = {}
+    users = get_user_model().objects.exclude(mdc__isnull=True) \
+        .exclude(mdc='').order_by('first_name')
+
+    context['users'] = users
+
+    response = render(request, 'users_mdc_xpr_raw.csv', context)
+    response['Content-Disposition'] = 'attachment; filename="lnl_xpr_mdc.csv"'
     response['Content-Type'] = 'text/csv'
     return response
 
