@@ -2,9 +2,11 @@
 {% load permissionif %}
 {% block title %}LNL Authorized Members | Lens and Lights at WPI{% endblock %}
 {% block content %}
+{% permission request.user has 'accounts.view_user' or request.user has 'accounts.view_member' %}
 <div class="pull-right">
     <a class="btn btn-lg btn-success" href="{% url 'members:training:list' %}">View All Trainings</a>
 </div>
+{% endpermission %}
 <h2> LNL Authorized Members</h2>
 <h4> Authorized Callers</h4>
 <table class="table table-striped table-bordered table-condensed">
@@ -17,7 +19,14 @@
     {% for user in callers %}
         <tr>
             <td>
-                <a href="{% url 'accounts:detail' user.pk %}"><strong>{{ user.name }}</strong></a><!--{% if user.pronouns %} ({{ user.pronouns }}){% endif %}-->
+                {% permission request.user has 'accounts.view_user' or request.user has 'accounts.view_member' %}
+                <a href="{% url 'accounts:detail' user.pk %}">
+                {% endpermission %}
+                    <strong>{{ user.name }}</strong>
+                {% permission request.user has 'accounts.view_user' or request.user has 'accounts.view_member' %}
+                </a>
+                {% endpermission %}
+                <!--{% if user.pronouns %} ({{ user.pronouns }}){% endif %}-->
             </td>
             <td>
                 {% if user in fl %}Facilities Liaison{% if user.exec_position %} and {{ user.exec_position.title }}{%endif%}
@@ -42,7 +51,14 @@
     {% for trainee in batten_users %}
         <tr>
             <td>
-                <a href="{% url 'accounts:detail' trainee.person.pk %}"><strong>{{ trainee.person.name }}</strong></a><!--{% if trainee.person.pronouns %} ({{ trainee.person.pronouns }}){% endif %}-->
+                {% permission request.user has 'accounts.view_user' or request.user has 'accounts.view_member' %}
+                <a href="{% url 'accounts:detail' trainee.person.pk %}">
+                {% endpermission %}
+                    <strong>{{ trainee.person.name }}</strong>
+                {% permission request.user has 'accounts.view_user' or request.user has 'accounts.view_member' %}
+                </a>
+                {% endpermission %}
+                <!--{% if trainee.person.pronouns %} ({{ trainee.person.pronouns }}){% endif %}-->
             </td>
             <td>
                 {% if trainee.person in fl %}Facilities Liaison{% if trainee.person.exec_position %} and {{ trainee.person.exec_position.title }}{%endif%}
