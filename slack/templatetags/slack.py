@@ -1,7 +1,9 @@
 import re
 
 from django import template
+from lnldb import settings
 from django.template.defaultfilters import stringfilter
+from django.contrib.auth import get_user_model
 
 from ..api import user_profile, channel_info
 
@@ -19,8 +21,8 @@ def slack(value):
     for m in it:
         r = m.groupdict()
         channel = r['channel_id']
-        new_value = new_value.replace(m.group(), '[#%s](https://wpilnl.slack.com/app_redirect?channel=%s)' %
-                                      (channel, channel))
+        new_value = new_value.replace(m.group(), '[#%s](%s/app_redirect?channel=%s)' %
+                                      (channel, settings.SLACK_BASE_URL, channel))
     return new_value
 
 
@@ -32,6 +34,16 @@ def id_to_name(identifier):
     if slack_user['ok']:
         return slack_user['user']['profile']['real_name']
     return identifier
+
+@register.filter
+@stringfilter
+def id_to_user_pk(identifier):
+    """ Attempts to replace a Slack user's ID with their user pk """
+    slack_user = user_profile(identifier)
+    if slack_user['ok']:
+        username = slack_user['user']['profile'].get('email', '').split('@')[0]
+        return get_user_model().objects.filter(username=username).first().pk
+    return None
 
 
 @register.filter

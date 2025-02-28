@@ -1,0 +1,41 @@
+{% extends 'base_admin.html' %}
+{% load permissionif %}
+{% block title %}{{h2}} | Lens and Lights at WPI{% endblock %}
+{% block content %}
+<h2 style="margin-bottom: 20px;"> {{ h2 }} </h2>
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+<div style="display: flex; flex-wrap: wrap;">
+    {% for channel in channels %}
+
+    <div class="panel panel-default" style="padding-left: 0; padding-right: 0;margin-right: 10px; width: auto;float:none;">
+        <div class="panel-heading">
+            <h3 style="margin:0;"><a href="{% url 'slack:channel-join' channel.id %}">{% if channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ channel.name }}</a></h3>
+            <p style="margin-bottom:0;margin-top:5px;">{{ channel.topic | truncatechars_html:25}}</p>
+        </div>
+        <div class="panel-body">
+            {{ channel.num_members }} members, last updated {{ channel.last_updated | date:"D, N j Y, P"}}{% if channel.archived %}, <span class="glyphicon glyphicon-remove-circle"></span> Archived{% endif %}
+        </div>
+        <div class="panel-footer">    
+            {% if channel.allowed_groups.exists %}
+            Can join: 
+            {% for group in channel.allowed_groups.all %}
+                <span class="label label-default">{{ group.name }}</span>
+            {% endfor %}
+            {% endif %}
+            {% if channel.allowed_groups.exists and channel.required_groups.exists %}, {% endif %}
+            {% if channel.required_groups.exists %}
+            Required: 
+            {% for group in channel.required_groups.all %}
+                <span class="label label-default">{{ group.name }}</span>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    {% endfor %}
+</div>
+<hr class="col-md-12">
+<div class="col-md-12"><b>Total: {{ channels | length }}</b></div>
+{% endblock %}

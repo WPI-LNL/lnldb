@@ -59,7 +59,7 @@ def email_cc_notification(sender, instance, created, raw=False, **kwargs):
             e.send()
         if 'Slack Notification' in str(prefs.cc_add_subscriptions).split(', '):
             blocks = cc_add_notification(instance)
-            slack_user = lookup_user(instance.crew_chief.email)
+            slack_user = lookup_user(instance.crew_chief)
             if slack_user:
                 message = "You've been added as a crew chief for the event %s." % instance.event.event_name
                 slack_post(slack_user, text=message, content=blocks)

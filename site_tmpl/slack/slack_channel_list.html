@@ -1,0 +1,48 @@
+{% extends 'base_admin.html' %}
+{% load permissionif %}
+{% block title %}{{h2}} | Lens and Lights at WPI{% endblock %}
+{% block content %}
+<h2> {{ h2 }} </h2>
+
+<table class="table table-striped table-bordered">
+    <tr> 
+        <th>Channel Name</th>
+        <th>Archived</th>
+        <th>Members</th>
+        <th>Last Updated</th>
+        <th>Groups Allowed</th>
+        <th>Groups Required</th>
+        <th>Event</th>
+        <th>Organizations</th>
+    </tr>
+    {% for channel in channels %}
+            <tr>
+                <td><a href="{% url 'slack:channel' channel.id %}">{% if channel.private %}<span class="glyphicon glyphicon-lock"></span> {% else %}#{% endif %}{{ channel.name }}</a><a href="{{ channel.link }}" target="_blank" class="btn btn-info btn-xs pull-right"><span class="glyphicon glyphicon-link"></span> Open in Slack</a></td>
+                <td><span class="glyphicon {% if channel.archived %}glyphicon-folder-open{% else %}glyphicon-remove-circle{% endif %}"></span>
+                </td>
+                <td>{{ channel.num_members }}</td>
+                <td>{{ channel.last_updated | date:"D, N j Y, P" }}</td>
+                <td>
+                    {% for group in channel.allowed_groups.all %}
+                        <span class="label label-default">{{ group.name }}</span>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for group in channel.required_groups.all %}
+                        <span class="label label-default">{{ group.name }}</span>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for event in channel.event.all %}
+                        <a href="{% url 'events:detail' event.id %}">{{ event.event_name }}</a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for org in channel.organization.all %}
+                        <a href="{% url 'orgs:detail' org.id %}">{{ org }}</a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+            </tr>
+    {% endfor %}
+</table>
+<div><b>Total:{{ channels | length }}</b></div>
+{% endblock %}

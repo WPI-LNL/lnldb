@@ -10,7 +10,7 @@ from django.urls.base import reverse
 from accounts.models import UserPreferences
 from emails.generators import EventEmailGenerator
 from slack.views import event_edited_notification
-from slack.api import slack_post, lookup_user
+from slack.api import lookup_user, slack_post
 from events.forms import InternalEventForm, InternalEventForm2019, ServiceInstanceForm
 from events.models import BaseEvent, Event2019, ServiceInstance
 from helpers.revision import set_revision_comment
@@ -72,7 +72,7 @@ def eventnew(request, id=None):
             if instance:
                 set_revision_comment('Edited', form)
 
-                obj = form.save()
+                obj:BaseEvent = form.save()
 
                 # 25Live parsing
                 if is_event2019 and obj.event_id is None:
@@ -85,6 +85,11 @@ def eventnew(request, id=None):
                             obj.save()
                         except requests.JSONDecodeError:
                             pass
+                if obj.slack_channel:
+                    success = obj.slack_channel.add_ccs_to_channel()
+                    if not success:
+                        messages.add_message(request, messages.WARNING, "There was an error adding the crew chiefs "
+                                                                      "to the Slack channel. (Slack error: %s)" % None) # response['error'])
                     
                 if is_event2019:
                     services_formset.save()
@@ -96,9 +101,12 @@ def eventnew(request, id=None):
                             bcc.append(ccinstance.crew_chief.email)
                         if 'slack' in methods:
                             blocks = event_edited_notification(obj, request.user, form.changed_data)
-                            slack_user = lookup_user(ccinstance.crew_chief.email)
+                            slack_user = lookup_user(ccinstance.crew_chief)
                             if slack_user:
                                 slack_post(slack_user, text="%s was just edited" % obj.event_name, content=blocks)
+                    if obj.notifications_in_slack_channel:
+                        blocks = event_edited_notification(obj, request.user, form.changed_data)
+                        slack_post(obj.slack_channel, text="%s was just edited" % obj.event_name, content=blocks)
                     if obj.reviewed:
                         subject = "Reviewed Event Edited"
                         email_body = "The following event was edited by %s after the event was reviewed for billing." \

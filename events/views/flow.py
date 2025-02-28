@@ -1,9 +1,11 @@
 import math
 from datetime import timedelta
 from decimal import Decimal
+import re
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Avg, Count
@@ -21,8 +23,9 @@ from reversion.models import Version
 from accounts.models import UserPreferences
 from emails.generators import (ReportReminderEmailGenerator, EventEmailGenerator, BillingEmailGenerator,
                                DefaultLNLEmailGenerator as DLEG, send_survey_if_necessary)
-from slack.views import cc_report_reminder
-from slack.api import lookup_user, slack_post
+from slack.models import Channel
+from slack.views import cc_report_reminder, event_edited_notification
+from slack.api import channel_info, create_channel, get_id_from_name, lookup_user, slack_post, validate_channel
 from events.forms import (
     AttachmentForm, BillingForm, BillingUpdateForm, MultiBillingForm,
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
@@ -245,7 +248,7 @@ def reviewremind(request, id, uid):
         if send_notification and prefs.cc_report_reminders in ['slack', 'all']:
             message = "This is a reminder that you have a pending crew chief report for %s." % event.event_name
             blocks = cc_report_reminder(cci)
-            slack_user = lookup_user(cci.crew_chief.email)
+            slack_user = lookup_user(cci.crew_chief)
             if slack_user:
                 slack_post(slack_user, text=message, content=blocks)
         messages.add_message(request, messages.INFO, 'Reminder Sent')
@@ -288,7 +291,7 @@ def remindall(request, id):
         if prefs.cc_report_reminders in ['slack', 'all']:
             message = "This is a reminder that you have a pending crew chief report for %s." % event.event_name
             blocks = cc_report_reminder(cci)
-            slack_user = lookup_user(cci.crew_chief.email)
+            slack_user = lookup_user(cci.crew_chief)
             if slack_user:
                 slack_post(slack_user, text=message, content=blocks)
 
@@ -367,6 +370,37 @@ def reopen(request, id):
 
     return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
+@login_required
+@require_POST
+def createchannel(request, id):
+    """ Create new Slack channel for event. POST only. """
+    event = get_object_or_404(BaseEvent, pk=id)
+    channel_name = request.POST.get('channel_name', '')
+    if not request.user.has_perm('slack.change_channel', event):
+        raise PermissionDenied
+    if not channel_name:
+        messages.add_message(request, messages.ERROR, 'No channel name provided.')
+    if validate_channel(channel_name):
+        event.slack_channel = Channel.get_or_create(get_id_from_name(channel_name))
+        messages.add_message(request, messages.INFO, 'Slack channel #%s found and added to event.' % channel_name)
+    else:
+        response = create_channel(name=channel_name) #test: {'ok':True,'channel':{'id':'C4GHVAZRP'}}
+        if not response['ok']:
+            messages.add_message(request, messages.ERROR, 'Error creating channel. (Slack error: %s)' % response['error'])
+        else:
+            event.slack_channel = Channel.get_or_create(response['channel']['id'])
+            event.slack_channel.add_group_to_channel(get_object_or_404(Group, name='Officer'))
+            messages.add_message(request, messages.INFO, 'Slack channel #%s created and added to event.' % channel_name)
+    if event.slack_channel:
+        if event.ccinstances.exists():
+            event.slack_channel.add_ccs_to_channel()
+            messages.add_message(request, messages.INFO, 'Event CCs added to channel.' % channel_name)
+        topic = channel_info(event.slack_channel.id)['topic']['value']
+        topic = re.sub(r'https:\/\/lnl\.wpi\.edu\/db\/events\/view\/\d+\/', '', topic)
+        event.slack_channel.set_channel_topic(reverse('events:detail', args=(event.id,))+topic)
+        event.save()
+
+    return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
 
 @login_required
 def rmcrew(request, id, user):
@@ -777,6 +811,9 @@ def assignattach(request, id):
             event.save()  # for revision to be created
             should_send_email = not event.test_event
             if should_send_email:
+                if event.notifications_in_slack_channel:
+                        blocks = event_edited_notification(event, request.user, 'attachments')
+                        slack_post(event.slack_channel, text="The attachments for %s were just edited" % event.event_name, content=blocks)
                 to = [settings.EMAIL_TARGET_VP_DB]
                 if hasattr(event, 'projection') and event.projection \
                         or event.serviceinstance_set.filter(service__category__name='Projection').exists():

@@ -148,7 +148,9 @@
                         {% permission request.user has 'emails.send' or request.user has 'events.edit_event_hours' %}
                         <li><a href="{% url "emails:dispatch" %}">Send Message...</a></li>
                         {% permission request.user has 'slack.view_reportedmessage' %}
-                        <li><a href="{% url "slack:moderate" %}">Moderate Slack</a></li>
+                        <li class="divider"></li>
+                        <li><a href="{% url "slack:channel-list" %}">Slack Channels</a></li>
+                        <li><a href="{% url "slack:moderate" %}">Slack Moderation</a></li>
                         {% endpermission %}
                         <li class="divider"></li>
                         {% endpermission %}
