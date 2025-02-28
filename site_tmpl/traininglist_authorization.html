@@ -36,7 +36,6 @@
     <tr> 
         <th>Full Name</th>
         <th>LNL Position</th>
-        <th>Phone Number</th>
         <th>Email</th>
         <th>Training Date</th>
     </tr>
@@ -50,7 +49,6 @@
                 {% elif trainee.person.exec_position %}{{ trainee.person.exec_position.title }}
                 {% else %}Authorized Member{% endif %}
             </td>
-            <td>{{ trainee.person.phone|default_if_none:"" }}</td>
             <td>{{ trainee.person.email }}</td>
             <td>{{ trainee.training.date }}</td>
         </tr>
