@@ -1183,7 +1183,7 @@
   "model": "auth.group",
   "pk": 10,
   "fields": {
-    "name": "Facilities Liason",
+    "name": "Facilities Liaison",
     "permissions": []
   }
 },
