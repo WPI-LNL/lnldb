@@ -20,7 +20,7 @@ cssselect2==0.7.0
 dealer==2.1.0
 defusedxml==0.7.1
 dictor==0.1.12
-Django==4.2.13
+Django==5.1.6
 -e git+https://github.com/SukiCZ/django-ajax-selects.git@9be8292263dc03e14eeba00031f56304dcf5f8fd#egg=django_ajax_selects
 django-appconf==1.0.6
 django-bootstrap3==24.3
