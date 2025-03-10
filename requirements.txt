@@ -14,16 +14,19 @@ charset-normalizer==3.4.1
 click==8.1.8
 coverage==7.6.10
 coveralls==4.0.1
-crispy-bootstrap3==2024.1
+#crispy-bootstrap3==2024.1
+crispy-bootstrap5
 cryptography==44.0.0
 cssselect2==0.7.0
 dealer==2.1.0
 defusedxml==0.7.1
 dictor==0.1.12
 Django==4.2.13
--e git+https://github.com/SukiCZ/django-ajax-selects.git@9be8292263dc03e14eeba00031f56304dcf5f8fd#egg=django_ajax_selects
+#-e git+https://github.com/SukiCZ/django-ajax-selects.git@9be8292263dc03e14eeba00031f56304dcf5f8fd#egg=django_ajax_selects
+django-ajax-selects
 django-appconf==1.0.6
-django-bootstrap3==24.3
+#django-bootstrap3==24.3
+django-bootstrap5
 django-compressor==4.5.1
 django-crispy-forms==2.3
 django-debug-toolbar==4.4.6

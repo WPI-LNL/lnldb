@@ -346,9 +346,9 @@ INSTALLED_APPS = (
     'slack',
     'spotify',
 
-    'bootstrap3',
+    'django_bootstrap5',
     'crispy_forms',
-    'crispy_bootstrap3',
+    'crispy_bootstrap5',
     'formtools',
     'semanticuiforms',
     'lineage',
@@ -518,7 +518,7 @@ LOGIN_REDIRECT_URL = "/db/"
 
 CAS_FORCE_POST_LOGIN = False
 
-AIRPLANE_MODE = True
+AIRPLANE_MODE = False
 
 # event status options
 EVENT_STATUSES = (
@@ -530,8 +530,8 @@ EVENT_STATUSES = (
 )
 
 # crispy_forms
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap3"
-CRISPY_TEMPLATE_PACK = 'bootstrap3'
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 SYNC_STUDENT_ID = env.bool("STUDENT_AUTO_ID", False)
 
