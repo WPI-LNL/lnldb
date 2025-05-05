@@ -15,7 +15,7 @@ click==8.1.8
 coverage==7.6.10
 coveralls==4.0.1
 crispy-bootstrap3==2024.1
-cryptography==44.0.0
+cryptography==44.0.3
 cssselect2==0.7.0
 dealer==2.1.0
 defusedxml==0.7.1
