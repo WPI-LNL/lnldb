@@ -319,7 +319,7 @@ def secretary_dashboard(request):
 
     context = {}
     num_active = get_user_model().objects.filter(groups__name='Active').count()
-    simple_majority = int(math.ceil(num_active / 2.0)) + 1
+    simple_majority = int(math.floor(num_active / 2.0)) + 1
     two_thirds_majority = int(math.ceil(num_active * 2 / 3.0))
     members_to_activate = get_user_model().objects.filter(groups__name='Associate') \
         .annotate(hours_count=Count(Case(When(hours__event__datetime_start__gte=semester_ago, then=F('hours'))),
