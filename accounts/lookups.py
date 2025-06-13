@@ -1,10 +1,13 @@
 from ajax_select import LookupChannel
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import Q, Count
 
 from . import ldap
 from . import graph
 
+
+# if anyone else is looking, apparently these lookup channels are registered and named under
+# settings.AJAX_LOOKUP_CHANNELS in lnldb/settings.py
 
 class UserLookup(LookupChannel):
     model = get_user_model()
@@ -19,6 +22,8 @@ class UserLookup(LookupChannel):
             qs &= (Q(username__icontains=term) | Q(first_name__icontains=term) |
                    Q(nickname__icontains=term) | Q(last_name__icontains=term))
         results = get_user_model().objects.filter(qs).\
+            annotate(is_prioritized=Count("groups", filter=Q(groups__name="Active"))).\
+            order_by("-is_prioritized", "last_name", "first_name", "class_year").\
             prefetch_related('groups').distinct().all()
         if (results or search_ldap is False):
             return results
