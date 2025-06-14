@@ -20,7 +20,7 @@ import requests, json
 
 
 @login_required
-def eventnew(request, id=None):
+def eventnew(request, id=None, initial={}):
     """
     Create or edit an event
 
@@ -148,8 +148,8 @@ def eventnew(request, id=None):
                 context['services_formset'] = services_formset
     else:
         if is_event2019:
-            context['form'] = InternalEventForm2019(request_user=request.user, instance=instance)
-            context['services_formset'] = mk_serviceinstance_formset(instance=instance)
+            context['form'] = InternalEventForm2019(request_user=request.user, instance=instance, initial=initial)
+            context['services_formset'] = mk_serviceinstance_formset(instance=instance, initial=initial.get("services", []))
         else:
             context['form'] = InternalEventForm(request_user=request.user, instance=instance)
     if instance:
@@ -159,6 +159,28 @@ def eventnew(request, id=None):
 
     return render(request, 'form_crispy_event.html', context, status = 400 if request.method == 'POST' else 200)
 
+@login_required
+def duplicate_event(request, id):
+    perms = ['events.add_raw_event']
+    if not request.user.has_perms(perms):
+        raise PermissionDenied
+
+    original = get_object_or_404(BaseEvent, pk=id)
+    if not isinstance(original, Event2019):
+        raise Http404("Cannot duplicate this event")
+
+    initial = {
+        "contact": original.contact.pk,
+        "org": original.org.all(),
+        "billing_org": original.billing_org.pk,
+        "services": [
+            {
+                "service": s.service,
+                "detail": s.detail
+            } for s in original.serviceinstance_set.all()
+        ]
+    }
+    return eventnew(request, id=None, initial=initial)
 
 def clear_to_send(to, triggered_by, fields_edited):
     """
