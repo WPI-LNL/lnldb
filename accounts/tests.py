@@ -265,7 +265,7 @@ class AccountsTestCase(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("accounts:secretary_dashboard")))
-        
+
         # test that with 3 active users, quorum is 2
         for _ in range(3):
             active_user = UserFactory.create()
