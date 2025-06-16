@@ -61,6 +61,7 @@ class AccountsTestCase(ViewTestCase):
     def setup(self):
         self.user2 = UserFactory.create(password="123")
         self.associate = Group.objects.create(name="Associate")
+        self.active = Group.objects.create(name="Active")
         self.officer = Group.objects.create(name="Officer")
         self.request_factory = RequestFactory()
 
@@ -265,6 +266,23 @@ class AccountsTestCase(ViewTestCase):
 
         self.assertOk(self.client.get(reverse("accounts:secretary_dashboard")))
 
+        # test that with 3 active users, quorum is 2
+        for _ in range(3):
+            active_user = UserFactory.create()
+            self.active.user_set.add(active_user)
+        self.assertContains(self.client.get(reverse("accounts:secretary_dashboard")), "<td>Quorum</td><td>2</td>", html=True)
+
+        # test that with 4 active users, quorum is 3
+        active_user = UserFactory.create()
+        self.active.user_set.add(active_user)
+        self.assertContains(self.client.get(reverse("accounts:secretary_dashboard")), "<td>Quorum</td><td>3</td>", html=True)
+
+        # test that with 5 active users, quorum is 3
+        active_user = UserFactory.create()
+        self.active.user_set.add(active_user)
+        self.assertContains(self.client.get(reverse("accounts:secretary_dashboard")), "<td>Quorum</td><td>3</td>", html=True)
+
+
     def test_shame(self):
         self.setup()
 
@@ -386,6 +404,18 @@ class AccountsTestCase(ViewTestCase):
         self.officer.user_set.remove(self.user)
         # Test format_match with non-associated member
         self.assertEqual(lookup.format_match(self.user), "&nbsp;<strong>[testuser]</strong>")
+        
+        # Test that active members show up before non-active members in the list
+        inactive_user = UserFactory.create(username="alphabetically_first", first_name="Adam", last_name="Adamson")
+        self.associate.user_set.add(inactive_user)
+        active_user = UserFactory.create(username="last_alphabetically", first_name="Alice", last_name="Anderson")
+        self.associate.user_set.add(active_user)
+        # Before "active_user" becomes active, they should show up second
+        self.assertEqual([inactive_user, active_user], list(lookup.get_query("A", request, False)))
+        # After "active_user" becomes active, they should jump to the front
+        self.associate.user_set.remove(active_user)
+        self.active.user_set.add(active_user)
+        self.assertEqual([active_user, inactive_user], list(lookup.get_query("A", request, False)))
 
     def test_specific_lookups(self):
         self.setup()
@@ -630,3 +660,32 @@ class HelpersTestCase(ViewTestCase):
         # Test with officer
         Group.objects.create(name="Officer").user_set.add(self.user)
         self.assertTrue(is_officer(self.user))
+
+class AdminTestCase(ViewTestCase):
+    def test_superuser_permissions(self):
+        self.user.is_staff = False
+        self.user.user_permissions.add(Permission.objects.get(codename="view_user"))
+        self.user.save()
+
+        # normal users can't access any admin pages
+        self.assertOk(self.client.get(reverse("admin:accounts_user_changelist")), 302)
+
+        # staff can access the "User" admin page
+        self.user.is_staff = True
+        self.user.save()
+        self.assertOk(self.client.get(reverse("admin:accounts_user_changelist")))
+
+        # but not the "Superuser" page
+        self.assertOk(self.client.get(reverse("admin:accounts_superuser_changelist")), 403)
+        
+        # superusers can access the "Superuser" page
+        self.user.is_superuser = True
+        self.user.save()
+        self.assertOk(self.client.get(reverse("admin:accounts_superuser_changelist")))
+        
+        # superusers can't change their own superuser status
+        self.assertOk(self.client.post(reverse("admin:accounts_superuser_change", args=(self.user.pk,)), {}), 403)
+        
+        # but they can change other people's
+        user2 = UserFactory.create()
+        self.assertOk(self.client.post(reverse("admin:accounts_superuser_change", args=(user2.pk,)), {}), 302)
