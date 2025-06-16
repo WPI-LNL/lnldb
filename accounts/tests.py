@@ -266,6 +266,23 @@ class AccountsTestCase(ViewTestCase):
 
         self.assertOk(self.client.get(reverse("accounts:secretary_dashboard")))
 
+        # test that with 3 active users, quorum is 2
+        for _ in range(3):
+            active_user = UserFactory.create()
+            self.active.user_set.add(active_user)
+        self.assertContains(self.client.get(reverse("accounts:secretary_dashboard")), "<td>Quorum</td><td>2</td>", html=True)
+
+        # test that with 4 active users, quorum is 3
+        active_user = UserFactory.create()
+        self.active.user_set.add(active_user)
+        self.assertContains(self.client.get(reverse("accounts:secretary_dashboard")), "<td>Quorum</td><td>3</td>", html=True)
+
+        # test that with 5 active users, quorum is 3
+        active_user = UserFactory.create()
+        self.active.user_set.add(active_user)
+        self.assertContains(self.client.get(reverse("accounts:secretary_dashboard")), "<td>Quorum</td><td>3</td>", html=True)
+
+
     def test_shame(self):
         self.setup()
 
