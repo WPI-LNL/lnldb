@@ -630,3 +630,32 @@ class HelpersTestCase(ViewTestCase):
         # Test with officer
         Group.objects.create(name="Officer").user_set.add(self.user)
         self.assertTrue(is_officer(self.user))
+
+class AdminTestCase(ViewTestCase):
+    def test_superuser_permissions(self):
+        self.user.is_staff = False
+        self.user.user_permissions.add(Permission.objects.get(codename="view_user"))
+        self.user.save()
+
+        # normal users can't access any admin pages
+        self.assertOk(self.client.get(reverse("admin:accounts_user_changelist")), 302)
+
+        # staff can access the "User" admin page
+        self.user.is_staff = True
+        self.user.save()
+        self.assertOk(self.client.get(reverse("admin:accounts_user_changelist")))
+
+        # but not the "Superuser" page
+        self.assertOk(self.client.get(reverse("admin:accounts_superuser_changelist")), 403)
+        
+        # superusers can access the "Superuser" page
+        self.user.is_superuser = True
+        self.user.save()
+        self.assertOk(self.client.get(reverse("admin:accounts_superuser_changelist")))
+        
+        # superusers can't change their own superuser status
+        self.assertOk(self.client.post(reverse("admin:accounts_superuser_change", args=(self.user.pk,)), {}), 403)
+        
+        # but they can change other people's
+        user2 = UserFactory.create()
+        self.assertOk(self.client.post(reverse("admin:accounts_superuser_change", args=(user2.pk,)), {}), 302)
