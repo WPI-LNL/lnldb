@@ -118,7 +118,7 @@ def generate_projection_pdf(request):
     # prepare data
     levels = PITLevel.objects.exclude(name_short__in=['PP', 'L']).order_by('ordering')
     unlicensed_users = Projectionist.objects.exclude(pitinstances__pit_level__name_short__in=['PP', 'L'])
-    licensed_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP', 'L']).exclude(
+    licensed_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['L']).exclude(
         user__groups__name="Alumni")
     alumni_users = Projectionist.objects.filter(pitinstances__pit_level__name_short__in=['PP', 'L']).filter(
         user__groups__name="Alumni").distinct()
