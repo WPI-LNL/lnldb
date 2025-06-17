@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.forms.models import inlineformset_factory
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, Http404
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 
@@ -170,9 +170,9 @@ def duplicate_event(request, id):
         raise Http404("Cannot duplicate this event")
 
     initial = {
-        "contact": original.contact.pk,
+        "contact": original.contact.pk if original.contact else None,
         "org": original.org.all(),
-        "billing_org": original.billing_org.pk,
+        "billing_org": original.billing_org.pk if original.billing_org else None,
         "services": [
             {
                 "service": s.service,
