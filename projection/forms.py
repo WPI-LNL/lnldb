@@ -187,6 +187,7 @@ class DateEntryFormSetBase(forms.Form):
         }
         # if it's possible to approve the event, do so (since there is no bulk approve)
         if user.has_perm('events.approve_event'):
+            kwargs['event_status'] = 'Confirmed'
             kwargs['approved_by'] = user
             kwargs['approved_on'] = timezone.now()
             kwargs['approved'] = True
