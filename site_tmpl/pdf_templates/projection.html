@@ -46,12 +46,15 @@
         {% endfor %}
         
     </table>
-        <h3> Licensed Projectionists </h3>
-    <ul>
-    {% for user in licensed_users %}
-    <li>{{ user }}</li>
-    {% endfor %}
-    </ul>
+
+    {% if licensed_users %}
+            <h3> Licensed Projectionists </h3>
+        <ul>
+        {% for user in licensed_users %}
+        <li>{{ user }}</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
 
     <h3> Alumni Projectionists </h3>
     <ul>
