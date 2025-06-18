@@ -30,6 +30,10 @@
                             <a class="btn btn-primary btn-lg" target="_blank" href="https://25live.collegenet.com/pro/wpi#!/home/event/{{ event.event_id }}/details">25Live</a>
                         </tr>
                 {% endif %}
+                {% permission request.user has 'events.add_raw_event' %}
+                    <a class="btn btn-success btn-lg"
+                       href="{% url "events:duplicate" event.id %}">Duplicate</a>
+                {% endpermission %}
                 {% if event.closed %}
                     {% permission request.user has 'events.reopen_event' of event %}
                         <a class="btn btn-default btn-lg" href="#reopenModal" role="button"

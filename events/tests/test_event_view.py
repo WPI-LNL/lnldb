@@ -12,7 +12,7 @@ from data.tests.util import ViewTestCase
 from django.utils import timezone
 
 from .generators import CCReportFactory, EventFactory, Event2019Factory, UserFactory, OrgFactory, CCInstanceFactory, \
-    ServiceFactory, LocationFactory
+    ServiceFactory, LocationFactory, ServiceInstanceFactory
 from .. import models, lookups, cal
 from ..templatetags import append_get, at_event_linking, gpa_scale_emoji
 
@@ -166,6 +166,67 @@ class EventBasicViewTest(ViewTestCase):
 
         self.e.refresh_from_db()
         self.assertEqual(self.e.event_name, "Edited event")
+    
+    def test_duplicate_event(self):
+        self.setup()
+        
+        # an unauthenticated user should get a permission denied error
+        self.assertOk(self.client.get(reverse('events:duplicate', args=[self.e.pk])), 403)
+
+        # grant the correct permission
+        permission = Permission.objects.get(codename="add_raw_event")
+        self.user.user_permissions.add(permission)
+
+        # should be unable to duplicate old events (pre-Event19)
+        self.assertOk(self.client.get(reverse('events:duplicate', args=[self.e.pk])), 404)
+
+        # should be able to duplicate an Event2019
+        self.assertOk(self.client.get(reverse('events:duplicate', args=[self.e3.pk])))
+
+        # create a new service instance
+        category = models.Category.objects.create(name="Test Category")
+        service = ServiceFactory.create(category=category, longname="Test Service")
+        service_instance = ServiceInstanceFactory.create(event=self.e3, service=service, detail="An instance of a test service.")
+        
+        # make sure said service instance shows up correctly in the duplicated form
+        self.assertEqual(self.client.get(reverse('events:duplicate', args=[self.e3.pk])).context['services_formset'][0].initial['service'], service)
+        self.assertEqual(self.client.get(reverse('events:duplicate', args=[self.e3.pk])).context['services_formset'][0].initial['detail'], 'An instance of a test service.')
+        
+        # should be able to post to events:duplicate just like you would events:new
+        self.user.user_permissions.add(Permission.objects.get(codename="edit_event_times"))
+        self.user.user_permissions.add(Permission.objects.get(codename="edit_event_text"))
+        building = models.Building.objects.create(name="Fuller Laboratories", shortname="FL")
+        booth = models.Location.objects.create(name="Booth", building=building)
+        valid_data = {
+            "event_name": "New Event",
+            "location": str(booth.pk),
+            "description": "A new test event for stuff",
+            "internal_notes": "",
+            "max_crew": 1,
+            "billed_in_bulk": False,
+            "sensitive": False,
+            "test_event": True,
+            "entered_into_workday": False,
+            "send_survey": True,
+            "org": "|",
+            "reference_code": "",
+            "datetime_setup_complete_0": timezone.now().date(),
+            "datetime_setup_complete_1": timezone.now().time(),
+            "datetime_start_0": timezone.now().date(),
+            "datetime_start_1": timezone.now().time(),
+            "datetime_end_0": timezone.now().date(),
+            "datetime_end_1": timezone.now().time(),
+            "serviceinstance_set-TOTAL_FORMS": 1,
+            "serviceinstance_set-INITIAL_FORMS": 0,
+            "serviceinstance_set-MIN_NUM_FORMS": 0,
+            "serviceinstance_set-MAX_NUM_FORMS": 1000,
+            "serviceinstance_set-0-id": '',
+            "serviceinstance_set-0-service": str(service.pk),
+            "serviceinstance_set-0-detail": "Services for things and stuff",
+            "save": "Save Changes"
+        }
+        self.assertRedirects(self.client.post(reverse("events:duplicate", args=[self.e3.pk]), valid_data), reverse("events:detail", args=[4]))
+        self.assertTrue(models.Event2019.objects.filter(event_name="New Event").exists())
 
     def test_cancel(self):
         self.setup()

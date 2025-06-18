@@ -7,7 +7,7 @@ from factory import Faker, Sequence, SubFactory
 from factory.django import DjangoModelFactory
 
 from events.models import (Building, CCReport, Event, Event2019, Location, Category, Organization,
-                           EventCCInstance, Service)
+                           EventCCInstance, Service, ServiceInstance)
 
 __author__ = 'jmerdich'
 
@@ -78,6 +78,13 @@ class Event2019Factory(DjangoModelFactory):
     location = SubFactory(LocationFactory)
     submitted_by = SubFactory(UserFactory)
     submitted_ip = '127.0.0.1'
+
+
+class ServiceInstanceFactory(DjangoModelFactory):
+    class Meta:
+        model = ServiceInstance
+    service = SubFactory(ServiceFactory)
+    event = SubFactory(Event2019Factory)
 
 
 class CCInstanceFactory(DjangoModelFactory):
