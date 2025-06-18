@@ -117,6 +117,7 @@ class BulkCreateForm(forms.Form):
         self.helper.form_method = "GET"
         if user and user.has_perm('events.approve_event'):
             self.helper.layout = Layout(
+                HTML('<div class="alert alert-info">Create movies for all weekends containing Saturdays in the specified range.</div>'),
                 Field('contact'),
                 Field('billing'),
                 Field('date_first', css_class="datepick", ),
@@ -128,6 +129,7 @@ class BulkCreateForm(forms.Form):
             )
         else:
             self.helper.layout = Layout(
+                HTML('<div class="alert alert-info">Create movies for all weekends containing Saturdays in the specified range.</div>'),
                 Field('contact'),
                 Field('billing'),
                 Field('date_first', css_class="datepick", ),
