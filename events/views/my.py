@@ -90,6 +90,7 @@ def myevents(request):
     """ Lists events that a user has CC'd or been involved with """
     context = {'user': request.user, 'now': datetime.datetime.now(timezone.get_current_timezone()),
                'ccinstances': request.user.ccinstances.select_related('event__location').all(),
+               'did_cc_report': request.user.ccinstances.filter(event__ccreport__crew_chief=request.user.pk).all(),
                'orgs': request.user.all_orgs.prefetch_related('events__location'),
                'submitted_events': request.user.submitter.select_related('location').all(),
                'hours': request.user.hours.select_related('event__location').all()}
