@@ -1,0 +1,60 @@
+{% extends 'base_admin.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Links for "{{event}}" | Lens and Lights at WPI{% endblock %}
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+                <h2>Links for "{{ event }}"</h2>
+                <form method="post" action="" class="form-inline" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ formset.management_form }}
+                <table class="table table-striped" valign="top"> <tbody id="form_data">
+                    <tr>
+                        <th width="30%"">Name</th>
+                        <th width="60%">URL</th>
+                        <th width="10%">Delete?</th>
+                    </tr>
+                {% for form in formset %}
+                    {% if form.errors %}
+                    <tr class="warning">
+                        <td>{% for e in form.note.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.url.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td>{% for e in form.DELETE.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td>{{ form.id }}{{ form.note }}</td>
+                        <td>{{ form.url }} </td>
+                        <td>{{ form.DELETE }} </td>
+                    </tr>
+                {% endfor %}
+                </tbody></table>
+                
+                <div class="form-actions"><input name="save" value="Save Changes" class="btn btn-primary" id="submit-id-save" type="submit"> 
+                <input type="button" class="btn btn-success" value="Add Row" id="add_form"></div>
+                </form>
+                
+        </div>
+    </div>
+    {% include "js_formset_add_row.tmpl" %}
+    {% with formset.empty_form as form %}
+        <table style="display:none;"> <tbody id="empty_form">
+                <tr>
+                    <td>{{ form.id }}{{ form.note }}</td>
+                    <td>{{ form.url }} </td>
+                    <td>{{ form.DELETE }} </td>
+                </tr>
+            </tbody>
+        </table>
+    {% endwith %}
+{% endblock %}
+
+{% block extras %}
+{{ formset.media }}
+{% include "js_datetimepick.tmpl" %}
+{% endblock %}
+
+{% block finalsay %}
+
+{% endblock %}
