@@ -102,7 +102,8 @@ def get_multibill_data(multibilling):
 def get_extras(event):
     event_data = {
         'event': event,
-        'extras': {}
+        'extras': {},
+        'is_event2019': isinstance(event, Event2019)
     }
     for cat in Category.objects.all():
         e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)

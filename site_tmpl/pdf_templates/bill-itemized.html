@@ -65,12 +65,21 @@
                 </tr>
                 </table><hr>
             <table class="line-items">
-                {% for service in event_data.event.eventservices %}
-                <tr>
-                    <td>{{service}}</td>
-                    <td class="align-right" width="50">$ {{ service.base_cost|floatformat:2 }}</td>
-                </tr>
-                {% endfor %}
+                {% if event_data.is_event2019 %}
+                    {% for service in event_data.event.eventservices %}
+                    <tr>
+                        <td>{{service}}</td>
+                        <td class="align-right" width="50">$ {{ service.base_cost|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    {% for service_instance in event_data.event.serviceinstance_set.all %}
+                    <tr>
+                        <td>{{service}}</td>
+                        <td class="align-right" width="50">$ {{ service_instance.cost|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                {% endif %}
 
                 {% for cat, cat_e in event_data.extras.items %}
                 <tr>

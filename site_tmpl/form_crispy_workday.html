@@ -93,7 +93,7 @@
                             {% for service_instance in object.serviceinstance_set.all %}
                                 <tr>
                                     <td>{{ service_instance.service }}</td>
-                                    <td class="tdra">${{ service_instance.service.base_cost }}</td>
+                                    <td class="tdra">${{ service_instance.cost }}</td>
                                 </tr>
                             {% endfor %}
                             {% for extra_instance in object.extrainstance_set.all %}

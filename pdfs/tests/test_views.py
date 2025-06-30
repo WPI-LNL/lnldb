@@ -73,6 +73,7 @@ class PdfViewTest(TestCase):
     def test_get_extras(self):
         event_data = {
             'event': self.e,
+            'is_event2019': False,
             'extras': {}
         }
         response = views.get_extras(self.e)

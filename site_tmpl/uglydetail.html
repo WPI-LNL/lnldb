@@ -747,7 +747,7 @@
                             {% for service_instance in event.serviceinstance_set.all %}
                                 <tr>
                                     <td>{{ service_instance.service }}</td>
-                                    <td class="tdra">${{ service_instance.service.base_cost }}</td>
+                                    <td class="tdra">${{ service_instance.cost }}</td>
                                 </tr>
                             {% endfor %}
                             {% for extra_instance in event.extrainstance_set.all %}

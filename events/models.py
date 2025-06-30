@@ -256,7 +256,7 @@ class BaseEvent(PolymorphicModel):
     billed_in_bulk = models.BooleanField(default=False, db_index=True, help_text="Check if billing of this event will be deferred so that it can be combined with other events in a single invoice")
     sensitive = models.BooleanField(default=False, help_text="Nobody besides those directly involved should know about this event")
     test_event = models.BooleanField(default=False, help_text="Check to lower the VP's blood pressure after they see the short-notice S4/L4")
-    
+
     # Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True, blank=True)
@@ -281,7 +281,7 @@ class BaseEvent(PolymorphicModel):
     def cal_name(self):
         """ Title to display on calendars """
         return self.event_name
-    
+
     def cal_desc(self):
         """ Event description used by calendars """
         desc = ""
@@ -337,7 +337,7 @@ class BaseEvent(PolymorphicModel):
         """ Returns false if too much time has elapsed since the end of the event """
         end_plus_time = self.datetime_end + datetime.timedelta(days=CCR_DELTA)
         return timezone.now() < end_plus_time
-    
+
     @cached_property
     def status(self):
         if self.cancelled:
@@ -375,7 +375,7 @@ class BaseEvent(PolymorphicModel):
     @property
     def late(self):
         return self.datetime_setup_complete - self.submitted_on < datetime.timedelta(weeks=2)
-    
+
     @property
     def oneoffs(self):
         return self.arbitraryfees.all()
@@ -383,7 +383,7 @@ class BaseEvent(PolymorphicModel):
     @property
     def oneoff_total(self):
         return sum([x.totalcost for x in self.oneoffs])
-    
+
     @property
     def org_to_be_billed(self):
         if not self.billing_org:
@@ -496,7 +496,7 @@ class Event(BaseEvent):
 
     # Dates & Times
     datetime_setup_start = models.DateTimeField(null=True, blank=True, db_index=True)  # DEPRECATED
-    
+
     # service levels
     lighting = models.ForeignKey('Lighting', on_delete=models.PROTECT, null=True, blank=True, related_name='lighting')
     sound = models.ForeignKey('Sound', on_delete=models.PROTECT, null=True, blank=True, related_name='sound')
@@ -823,9 +823,9 @@ class Event2019(BaseEvent):
 
     # 25live integration
     reference_code = models.CharField(max_length=12, null=True, blank=True,
-            help_text="The 25Live reference code, found on the event page")
-    event_id = models.IntegerField(null=True, blank=True, 
-        help_text="The 25Live event ID. If not provided, it will be generated from the reference code.")
+                                      help_text="The 25Live reference code, found on the event page")
+    event_id = models.IntegerField(null=True, blank=True,
+                                   help_text="The 25Live event ID. If not provided, it will be generated from the reference code.")
 
     @property
     def has_projection(self):
@@ -846,8 +846,7 @@ class Event2019(BaseEvent):
 
     @property
     def services_total(self):
-        services_cost = self.serviceinstance_set.aggregate(Sum('service__base_cost'))['service__base_cost__sum']
-        return services_cost if services_cost is not None else 0
+        return sum(si.cost for si in self.serviceinstance_set.all())
 
     @property
     def extras_total(self):
@@ -874,9 +873,7 @@ class Event2019(BaseEvent):
         if self.discount_applied:
             categories = ['Lighting', 'Sound', 'Rigging', 'Power']
             categories = [Category.objects.get(name=name) for name in categories]
-            discountable_total = decimal.Decimal(
-                self.serviceinstance_set.filter(service__category__in=categories).aggregate(Sum('service__base_cost'))[
-                    'service__base_cost__sum']) + self.extras_total
+            discountable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=categories)) + self.extras_total
             return discountable_total * decimal.Decimal(".15")
         else:
             return decimal.Decimal("0.0")
@@ -895,7 +892,7 @@ class Event2019(BaseEvent):
             str(self.org_to_be_billed.pk if self.org_to_be_billed is not None else None) +
             str(self.workday_fund) +
             str(self.worktag)
-            ).encode('utf-8')).hexdigest()
+        ).encode('utf-8')).hexdigest()
 
     # Service glyphicon for templates
     @property
@@ -914,7 +911,7 @@ class Event2019(BaseEvent):
     class Meta:
         verbose_name = '2019 Event'
 
-    
+
 @python_2_unicode_compatible
 class Building(models.Model):
     """ Used to group locations together in forms """
@@ -1020,6 +1017,33 @@ class Service(models.Model):
         return self.longname
 
 
+class Pricelist(models.Model):
+    """ A set of prices that can apply to services """
+    name = models.CharField(max_length=20)
+    services = models.ManyToManyField(Service, through="ServicePrice", related_name="pricelists")
+
+    def __str__(self):
+        return self.name
+
+
+class ServicePrice(models.Model):
+    """ a many to many table between services and pricelists """
+
+    service = models.ForeignKey("Service", on_delete=models.CASCADE)
+    pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
+    cost = models.DecimalField(max_digits=8, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["service", "pricelist"], name="unique_service_pricelist"
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.pricelist} price for {self.service}'
+
+
 # No longer used in Event2019
 class Lighting(Service):
     pass
@@ -1044,10 +1068,18 @@ class ServiceInstance(models.Model):
     service = models.ForeignKey('Service', on_delete=models.PROTECT)
     event = models.ForeignKey('BaseEvent', on_delete=models.CASCADE)
     detail = models.TextField(blank=True)
+    # null pricelist corresponds to the default price attached to the service directly
+    pricelist = models.ForeignKey('Pricelist', null=True, on_delete=models.PROTECT)
+
+    @property
+    def cost(self):
+        if self.pricelist:
+            return ServicePrice.objects.get(service=self.service, pricelist=self.pricelist).cost
+        return self.service.base_cost
 
     def __str__(self):
         return '{} for {}'.format(str(self.service), str(self.event))
-    
+
 
 @python_2_unicode_compatible
 class Billing(models.Model):
@@ -1081,7 +1113,7 @@ class MultiBilling(models.Model):
     amount = models.DecimalField(max_digits=8, decimal_places=2)
 
     def __str__(self):
-        out = 'MultiBill for ' + ', '.join(map(lambda event : event.event_name, self.events.all()))
+        out = 'MultiBill for ' + ', '.join(map(lambda event: event.event_name, self.events.all()))
         if self.date_paid:
             out += ' (PAID)'
         return out
@@ -1118,7 +1150,7 @@ class MultiBillingEmail(models.Model):
     def __str__(self):
         return 'MultiBilling email sent %s for %s' % (
             self.sent_at if self.sent_at is not None else 'never',
-            ', '.join(map(lambda event : event.event_name, self.multibilling.events.all())))
+            ', '.join(map(lambda event: event.event_name, self.multibilling.events.all())))
 
 
 @python_2_unicode_compatible
