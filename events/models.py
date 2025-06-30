@@ -827,6 +827,9 @@ class Event2019(BaseEvent):
     event_id = models.IntegerField(null=True, blank=True,
                                    help_text="The 25Live event ID. If not provided, it will be generated from the reference code.")
 
+    # null pricelist corresponds to the default price attached to the service directly
+    pricelist = models.ForeignKey("Pricelist", null=True, blank=True, on_delete=models.PROTECT, help_text="Which pricelist this event will be billed using.")
+
     @property
     def has_projection(self):
         return self.serviceinstance_set.filter(service__category__name='Projection').exists()
@@ -871,8 +874,8 @@ class Event2019(BaseEvent):
     @property
     def discount_value(self):
         if self.discount_applied:
-            categories = ['Lighting', 'Sound', 'Rigging', 'Power']
-            categories = [Category.objects.get(name=name) for name in categories]
+            category_names = ['Lighting', 'Sound', 'Rigging', 'Power']
+            categories = Category.objects.filter(name__in=category_names)
             discountable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=categories)) + self.extras_total
             return discountable_total * decimal.Decimal(".15")
         else:
@@ -1068,13 +1071,11 @@ class ServiceInstance(models.Model):
     service = models.ForeignKey('Service', on_delete=models.PROTECT)
     event = models.ForeignKey('BaseEvent', on_delete=models.CASCADE)
     detail = models.TextField(blank=True)
-    # null pricelist corresponds to the default price attached to the service directly
-    pricelist = models.ForeignKey('Pricelist', null=True, on_delete=models.PROTECT)
 
     @property
     def cost(self):
-        if self.pricelist:
-            return ServicePrice.objects.get(service=self.service, pricelist=self.pricelist).cost
+        if self.event.pricelist and ServicePrice.objects.filter(service=self.service, pricelist=self.event.pricelist).exists():
+            return ServicePrice.objects.get(service=self.service, pricelist=self.event.pricelist).cost
         return self.service.base_cost
 
     def __str__(self):

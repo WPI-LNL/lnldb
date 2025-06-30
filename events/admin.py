@@ -67,6 +67,9 @@ class EventHoursInline(admin.TabularInline):
 class ServiceInstanceInline(admin.TabularInline):
     model = models.ServiceInstance
 
+class ServicePriceInline(admin.TabularInline):
+    model = models.ServicePrice
+
 
 class EventAdmin(PolymorphicChildModelAdmin, VersionAdmin):
     inlines = [EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline]
@@ -84,6 +87,11 @@ class Event2019Admin(PolymorphicChildModelAdmin, VersionAdmin):
 
 class BaseEventAdmin(VersionAdmin, PolymorphicParentModelAdmin):
     child_models = models.Event, models.Event2019
+    
+
+class PricelistAdmin(admin.ModelAdmin):
+    inlines = [ServicePriceInline]
+    search_fields = ['name']
 
 
 fieldsets = (
@@ -170,3 +178,4 @@ admin.site.register(models.Service)
 admin.site.register(models.PostEventSurvey)
 admin.site.register(models.Workshop, WorkshopAdmin)
 admin.site.register(models.OfficeHour)
+admin.site.register(models.Pricelist, PricelistAdmin)

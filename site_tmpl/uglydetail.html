@@ -341,6 +341,12 @@
                                 <th>Billed in bulk</th>
                                 <td> {{ event.billed_in_bulk }} </td>
                             </tr>
+                            {% if event.pricelist %}
+                                <tr>
+                                    <th>Pricelist</th>
+                                    <td> {{ event.pricelist }} </td>
+                                </tr>
+                            {% endif %}
                         {% endpermission %}
                         {% permission request.user has 'events.view_posteventsurveyresults' of event.surveys.first %}
                             <tr>

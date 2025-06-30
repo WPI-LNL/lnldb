@@ -12,7 +12,7 @@ from emails.generators import EventEmailGenerator
 from slack.views import event_edited_notification
 from slack.api import slack_post, lookup_user
 from events.forms import InternalEventForm, InternalEventForm2019, ServiceInstanceForm
-from events.models import BaseEvent, Event2019, ServiceInstance
+from events.models import BaseEvent, Event2019, ServiceInstance, Pricelist
 from helpers.revision import set_revision_comment
 from helpers.util import curry_class
 
@@ -148,6 +148,8 @@ def eventnew(request, id=None, initial={}):
                 context['services_formset'] = services_formset
     else:
         if is_event2019:
+            if not instance and 'pricelist' not in initial:
+                initial['pricelist'] = Pricelist.objects.last()
             context['form'] = InternalEventForm2019(request_user=request.user, instance=instance, initial=initial)
             context['services_formset'] = mk_serviceinstance_formset(instance=instance, initial=initial.get("services", []))
         else:
