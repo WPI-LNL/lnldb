@@ -865,11 +865,7 @@ class Event2019(BaseEvent):
     @property
     def discount_applied(self):
         categories = ['Lighting', 'Sound']
-        categories = [Category.objects.get(name=name) for name in categories]
-        for category in categories:
-            if not self.serviceinstance_set.filter(service__category=category).exists():
-                return False
-        return True
+        return all(self.serviceinstance_set.filter(service__category__name=category).exists() for category in categories)
 
     @property
     def discount_value(self):
@@ -877,7 +873,8 @@ class Event2019(BaseEvent):
             category_names = ['Lighting', 'Sound', 'Rigging', 'Power']
             categories = Category.objects.filter(name__in=category_names)
             discountable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=categories)) + self.extras_total
-            return discountable_total * decimal.Decimal(".15")
+            discount = discountable_total * decimal.Decimal(".15")
+            return discount.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
         else:
             return decimal.Decimal("0.0")
 
