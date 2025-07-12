@@ -28,11 +28,11 @@ from events.forms import (
                           MultiBillingUpdateForm, CCIForm, CrewAssign, EventApprovalForm,
                           EventDenialForm, EventReviewForm, ExtraForm, InternalReportForm, MKHoursForm,
                           BillingEmailForm, MultiBillingEmailForm, ServiceInstanceForm, WorkdayForm, CrewCheckinForm,
-                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm
+                          CrewCheckoutForm, CheckoutHoursForm, BulkCheckinForm, ResourceLinkForm
 )
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
-                           Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
-                           ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord)
+                           Event2019, EventArbitrary, EventAttachment, EventResourceLink, EventCCInstance, ExtraInstance,
+                           Hours, ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord)
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
 from helpers.challenges import is_officer
@@ -832,6 +832,52 @@ def assignattach_external(request, id):
     context['formset'] = formset
 
     return render(request, 'formset_crispy_attachments.html', context)
+
+@login_required
+def event_resources(request, id):
+    """ Update resources for an event (links to useful files) """
+    context = {}
+
+    event = get_object_or_404(BaseEvent, pk=id)
+    if not (request.user.has_perm('events.event_attachments') or
+            request.user.has_perm('events.event_attachments', event)):
+        raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    context['event'] = event
+
+    links_formset = inlineformset_factory(BaseEvent, EventResourceLink, extra=2, exclude=[])
+    links_formset.form = curry_class(ResourceLinkForm, event=event)
+
+    if request.method == 'POST':
+        set_revision_comment("Edited attachments", None)
+        formset = links_formset(request.POST, request.FILES, instance=event)
+        if formset.is_valid():
+            formset.save()
+            event.save()  # for revision to be created
+            should_send_email = not event.test_event
+            if should_send_email:
+                to = [settings.EMAIL_TARGET_VP_DB]
+                if hasattr(event, 'projection') and event.projection \
+                        or event.serviceinstance_set.filter(service__category__name='Projection').exists():
+                    to.append(settings.EMAIL_TARGET_HP)
+                for ccinstance in event.ccinstances.all():
+                    if ccinstance.crew_chief.email:
+                        prefs, created = UserPreferences.objects.get_or_create(user=ccinstance.crew_chief)
+                        if not prefs.ignore_user_action or ccinstance.crew_chief != request.user:
+                            to.append(ccinstance.crew_chief.email)
+                subject = "Event Attachments"
+                email_body = "Attachments for the following event were modified by %s." % request.user.get_full_name()
+                email = EventEmailGenerator(event=event, subject=subject, to_emails=to, body=email_body)
+                email.send()
+            return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    else:
+        formset = links_formset(instance=event)
+
+    context['formset'] = formset
+
+    return render(request, 'formset_crispy_event_resource_links.html', context)
 
 
 @login_required

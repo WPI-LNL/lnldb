@@ -1128,6 +1128,46 @@ class EventBasicViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("events:files", args=[self.e.pk]), valid_data),
                              reverse("events:detail", args=[self.e.pk]))
 
+    def test_event_resources(self):
+        self.setup()
+
+        # By default, should not have permission to modify resource links
+        self.assertOk(self.client.get(reverse("events:resource-links", args=[self.e.pk])), 403)
+
+        permission = Permission.objects.get(codename="event_attachments")
+        self.user.user_permissions.add(permission)
+
+        # Will need view_event permission for redirect
+        permission = Permission.objects.get(codename="view_events")
+        self.user.user_permissions.add(permission)
+
+        # Check that we redirect to detail page if event is closed
+        self.e.closed = True
+        self.e.save()
+
+        self.assertRedirects(self.client.get(reverse("events:resource-links", args=[self.e.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+
+        self.e.closed = False
+        self.e.save()
+
+        # Everything should load ok
+        self.assertOk(self.client.get(reverse("events:resource-links", args=[self.e.pk])))
+
+        valid_data = {
+            "links-TOTAL_FORMS": 1,
+            "links-INITIAL_FORMS": 0,
+            "links-MIN_NUM_FORMS": 0,
+            "links-MAX_NUM_FORMS": 1000,
+            "links-0-note": "test note",
+            "links-0-url": "https://www.wikipedia.org"
+        }
+
+        # Check that we can add attachment ok
+        self.assertRedirects(self.client.post(reverse("events:resource-links", args=[self.e.pk]), valid_data),
+                             reverse("events:detail", args=[self.e.pk]))
+        self.assertTrue(models.EventResourceLink.objects.filter(event=self.e).exists())
+
     def test_ics_download(self):
         self.setup()
 

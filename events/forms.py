@@ -15,7 +15,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db.models import Model, Q
-from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget, TextInput
+from django.forms import ModelChoiceField, ModelMultipleChoiceField, ModelForm, SelectDateWidget, TextInput, URLInput
 from django.utils import timezone
 # python multithreading bug workaround
 from easymde.widgets import EasyMDEEditor
@@ -23,7 +23,7 @@ from easymde.widgets import EasyMDEEditor
 from data.forms import DynamicFieldContainer, FieldAccessForm, FieldAccessLevel
 from events.fields import GroupedModelChoiceField
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail,
-                           Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
+                           Category, CCReport, Event, Event2019, EventAttachment, EventResourceLink, EventCCInstance, Extra,
                            ExtraInstance, Hours, Lighting, Location, Organization, OrganizationTransfer,
                            OrgBillingVerificationEvent, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
                            Sound, PostEventSurvey, OfficeHour)
@@ -1418,6 +1418,36 @@ class AttachmentForm(forms.ModelForm):
     class Meta:
         model = EventAttachment
         fields = ('for_service', 'attachment', 'note')
+
+class ResourceLinkForm(forms.ModelForm):
+    def __init__(self, event, *args, **kwargs):
+        self.event = event
+        self.helper = FormHelper()
+        self.helper.form_class = "form-inline"
+        self.helper.template = 'bootstrap/table_inline_formset.html'
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            Field('note'),
+            Field('url'),
+            HTML('<hr>'),
+        )
+        super(ResourceLinkForm, self).__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        obj = super(ResourceLinkForm, self).save(commit=False)
+        obj.event = self.event
+        if commit:
+            obj.save()
+            self.save_m2m()
+        return obj
+
+    class Meta:
+        model = EventResourceLink
+        fields = ('note', 'url')
+        widgets = {
+            'note': TextInput(attrs={"style": "width: 100%"}),
+            'url': URLInput(attrs={"style": "width: 100%"}),
+        }
 
 
 class ExtraForm(forms.ModelForm):
