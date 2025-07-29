@@ -830,6 +830,7 @@ class Event2019(BaseEvent):
     # null pricelist corresponds to the default price attached to the service directly
     pricelist = models.ForeignKey("Pricelist", null=True, blank=True, on_delete=models.PROTECT, help_text="Which pricelist this event will be billed using.")
     
+    uses_new_discounts = models.BooleanField(default=False, help_text="Whether or not this event uses the new discount system.")
     applied_fees = models.ManyToManyField("Fee", blank=True, help_text="Which fees will be applied to this event.")
     applied_discounts = models.ManyToManyField("Discount", blank=True, help_text="Which discounts will be applied to this event.")
 
@@ -856,10 +857,7 @@ class Event2019(BaseEvent):
 
     @property
     def extras_total(self):
-        total = 0
-        for extra_instance in self.extrainstance_set.all():
-            total += extra_instance.totalcost
-        return total
+        return sum(ei.totalcost for ei in self.extrainstance_set.all())
 
     @property
     def cost_total_pre_discount(self):
@@ -867,6 +865,9 @@ class Event2019(BaseEvent):
 
     @property
     def discount_applied(self):
+        if self.uses_new_discounts:
+            return False
+
         categories = ['Lighting', 'Sound']
         return all(self.serviceinstance_set.filter(service__category__name=category).exists() for category in categories)
 
@@ -880,10 +881,39 @@ class Event2019(BaseEvent):
             return discount.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
         else:
             return decimal.Decimal("0.0")
+    
+    @property
+    def discount_values(self):
+        if not self.uses_new_discounts: return {}
+        
+        values = {}
+        for discount in self.applied_discounts.all():
+            if self.event.pricelist and DiscountPrice.objects.filter(discount=discount, pricelist=self.pricelist).exists():
+                percentage = DiscountPrice.objects.get(pricelist=self.pricelist, discount=discount).percent
+                discountable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=discount.categories))
+                discount_value = discountable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
+                values[discount] = discount_value.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
+        return values
+
+    @property
+    def fee_values(self):
+        if not self.uses_new_discounts: return {}
+        
+        values = {}
+        for fee in self.applied_fees.all():
+            if self.event.pricelist and FeePrice.objects.filter(fee=fee, pricelist=self.pricelist).exists():
+                percentage = DiscountPrice.objects.get(pricelist=self.pricelist, fee=fee).percent
+                applicable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=fee.categories))
+                value = applicable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
+                values[fee] = value.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
+        return values
 
     @property
     def cost_total(self):
-        return self.cost_total_pre_discount - self.discount_value
+        if self.uses_new_discounts:
+            return self.cost_total_pre_discount - sum(self.discount_values.values()) + sum(self.fee_values.values())
+        else:
+            return self.cost_total_pre_discount - self.discount_value
 
     @property
     def workday_form_hash(self):
@@ -1050,7 +1080,6 @@ class Pricelist(models.Model):
 
 class ServicePrice(models.Model):
     """ a many to many table between services and pricelists """
-
     service = models.ForeignKey("Service", on_delete=models.CASCADE)
     pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
     cost = models.DecimalField(max_digits=8, decimal_places=2)

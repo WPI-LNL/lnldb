@@ -19,14 +19,12 @@ from helpers.util import curry_class
 import requests, json
 
 def check_automatic_discounts(event):
-    if not isinstance(event, Event2019):
-        return
-    
-    for discount in Discount.objects.all():
-        if discount.required_categories.exists() and \
-            all(event.serviceinstance_set.filter(service__category__name=category).exists() 
-                for category in discount.required_categories.all()):
-            event.applied_discounts.add(discount)
+    if isinstance(event, Event2019) and event.uses_new_discounts:
+        for discount in Discount.objects.all():
+            if discount.required_categories.exists() and \
+                all(event.serviceinstance_set.filter(service__category__name=category).exists() 
+                    for category in discount.required_categories.all()):
+                event.applied_discounts.add(discount)
 
 @login_required
 def eventnew(request, id=None, initial={}):
@@ -143,6 +141,7 @@ def eventnew(request, id=None, initial={}):
                 obj = form.save(commit=False)
                 obj.submitted_by = request.user
                 obj.submitted_ip = request.META.get('REMOTE_ADDR')
+                obj.uses_new_discounts = True
                 obj.save()
                 form.save_m2m()
                 if is_event2019:

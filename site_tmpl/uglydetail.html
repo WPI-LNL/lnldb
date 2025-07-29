@@ -784,6 +784,25 @@
                         </tr>
                         {% endif %}
                         
+                        {% if event.uses_new_discounts %}
+                        <tr class="warning">
+                            <td> Pre Discount Total </td>
+                            <td class="tdra">${{ event.cost_total_pre_discount }} </td>
+                        </tr>
+                        {% for discount, value in event.fee_values.items %}
+                            <tr class="warning">
+                                <td>{{ fee.name }}</td>
+                                <td class="tdra">-${{ value|floatformat:2}}</td>
+                            </tr>
+                        {% endfor %}
+                        {% for discount, value in event.discount_values.items %}
+                            <tr class="warning">
+                                <td>{{ discount.name }}</td>
+                                <td style="color:red;" class="tdra">-${{ value|floatformat:2}}</td>
+                            </tr>
+                        {% endfor %}
+                        {% endif %}
+                        
                         <tr class="info">
                             <td>Total</td>
                             <td>${{ event.cost_total|floatformat:2 }}</td>
