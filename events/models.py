@@ -830,8 +830,8 @@ class Event2019(BaseEvent):
     # null pricelist corresponds to the default price attached to the service directly
     pricelist = models.ForeignKey("Pricelist", null=True, blank=True, on_delete=models.PROTECT, help_text="Which pricelist this event will be billed using.")
     
-    applied_fees = models.ManyToManyField("Fee")
-    applied_discounts = models.ManyToManyField("Discount")
+    applied_fees = models.ManyToManyField("Fee", blank=True, help_text="Which fees will be applied to this event.")
+    applied_discounts = models.ManyToManyField("Discount", blank=True, help_text="Which discounts will be applied to this event.")
 
     @property
     def has_projection(self):

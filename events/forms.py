@@ -26,7 +26,7 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
                            ExtraInstance, Hours, Lighting, Location, Organization, OrganizationTransfer,
                            OrgBillingVerificationEvent, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
-                           Sound, PostEventSurvey, OfficeHour)
+                           Sound, PostEventSurvey, OfficeHour, Fee, Discount)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 from helpers.util import curry_class
@@ -584,6 +584,8 @@ class InternalEventForm2019(FieldAccessForm):
                 'location',
                 'lnl_contact',
                 'pricelist',
+                'applied_fees',
+                'applied_discounts',
                 'reference_code',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
@@ -671,12 +673,12 @@ class InternalEventForm2019(FieldAccessForm):
 
         billing_edit = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_fund', instance),
-            enable=('billing_org', 'billed_in_bulk', 'pricelist')
+            enable=('billing_org', 'billed_in_bulk', 'pricelist', 'applied_fees', 'applied_discounts')
         )
 
         billing_view = FieldAccessLevel(
             lambda user, instance: not user.has_perm('events.view_event_billing', instance),
-            exclude=('billing_org', 'billed_in_bulk', 'entered_into_workday', 'pricelist')
+            exclude=('billing_org', 'billed_in_bulk', 'entered_into_workday', 'pricelist', 'applied_fees', 'applied_discounts')
         )
 
         change_flags = FieldAccessLevel(
@@ -720,7 +722,7 @@ class InternalEventForm2019(FieldAccessForm):
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'sensitive', 'test_event',
                   'entered_into_workday', 'send_survey', 'max_crew','cancelled_reason',
-                  'reference_code', 'pricelist')
+                  'reference_code', 'pricelist', 'applied_fees', 'applied_discounts')
         widgets = {
             'description': EasyMDEEditor(),
             'internal_notes': EasyMDEEditor(),
@@ -744,8 +746,17 @@ class InternalEventForm2019(FieldAccessForm):
     cancelled_reason = forms.CharField(label="Reason for Cancellation", required=False),
     # Regex will match valid 25Live reservation codes in the format
     # `2022-ABNXQQ`
-    reference_code =forms.CharField(validators=[RegexValidator(regex=r"[0-9]{4}-[A-Z]{6}")],
-            required = False)
+    reference_code = forms.CharField(validators=[RegexValidator(regex=r"[0-9]{4}-[A-Z]{6}")], required = False)
+    applied_fees = ModelMultipleChoiceField(
+        queryset=Fee.objects.all(),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
+        required=False
+    )
+    applied_discounts = ModelMultipleChoiceField(
+        queryset=Discount.objects.all(),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
+        required=False
+    )
 
 
 class EventReviewForm(forms.ModelForm):

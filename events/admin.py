@@ -86,7 +86,7 @@ class EventAdmin(PolymorphicChildModelAdmin, VersionAdmin):
 
 class Event2019Admin(PolymorphicChildModelAdmin, VersionAdmin):
     inlines = [ServiceInstanceInline, EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline]
-    filter_horizontal = ('org',)
+    filter_horizontal = ('org', 'applied_fees', 'applied_discounts')
     search_fields = ['event_name']
     readonly_fields = ['submitted_on']
 
