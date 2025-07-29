@@ -789,15 +789,15 @@
                             <td> Pre Discount Total </td>
                             <td class="tdra">${{ event.cost_total_pre_discount }} </td>
                         </tr>
-                        {% for fee, value in event.fee_values.items %}
+                        {% for fee_percent, value in event.fee_values.items %}
                             <tr class="warning">
-                                <td>{{ fee.name }}</td>
+                                <td>{{ fee_percent.0.name }} ({{ fee_percent.1|floatformat }}% of {{ fee_percent.0.categories.all|join:", " }})</td>
                                 <td class="tdra">${{ value|floatformat:2}}</td>
                             </tr>
                         {% endfor %}
-                        {% for discount, value in event.discount_values.items %}
+                        {% for discount_percent, value in event.discount_values.items %}
                             <tr class="warning">
-                                <td>{{ discount.name }}</td>
+                                <td>{{ discount_percent.0.name }} ({{ discount_percent.1|floatformat }}% of {{ discount_percent.0.categories.all|join:", " }})</td>
                                 <td style="color:red;" class="tdra">-${{ value|floatformat:2}}</td>
                             </tr>
                         {% endfor %}
