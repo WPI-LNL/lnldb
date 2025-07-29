@@ -829,6 +829,9 @@ class Event2019(BaseEvent):
 
     # null pricelist corresponds to the default price attached to the service directly
     pricelist = models.ForeignKey("Pricelist", null=True, blank=True, on_delete=models.PROTECT, help_text="Which pricelist this event will be billed using.")
+    
+    applied_fees = models.ManyToManyField("Fee")
+    applied_discounts = models.ManyToManyField("Discount")
 
     @property
     def has_projection(self):
@@ -1017,10 +1020,29 @@ class Service(models.Model):
         return self.longname
 
 
+class Fee(models.Model):
+    name = models.CharField(max_length=64)
+    categories = models.ManyToManyField(Category, help_text="Which categories of services this fee will apply to")
+
+    def __str__(self):
+        return self.name
+
+
+class Discount(models.Model):
+    name = models.CharField(max_length=64)
+    categories = models.ManyToManyField(Category, related_name="possible_discounts", help_text="Which categories this discount applies to")
+    required_categories = models.ManyToManyField(Category, blank=True, related_name="discounts_that_require_this_category", help_text="Which categories must exist in an event for this discount to automatically apply")
+
+    def __str__(self):
+        return self.name
+
+
 class Pricelist(models.Model):
     """ A set of prices that can apply to services """
     name = models.CharField(max_length=20)
     services = models.ManyToManyField(Service, through="ServicePrice", related_name="pricelists")
+    fees = models.ManyToManyField(Fee, through="FeePrice", related_name="pricelists")
+    discounts = models.ManyToManyField(Discount, through="DiscountPrice", related_name="pricelists")
 
     def __str__(self):
         return self.name
@@ -1042,6 +1064,39 @@ class ServicePrice(models.Model):
 
     def __str__(self):
         return f'{self.pricelist} price for {self.service}'
+
+class FeePrice(models.Model):
+    """ a many to many table between services and fees """
+    fee = models.ForeignKey("Fee", on_delete=models.CASCADE)
+    pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
+    percent = models.DecimalField(max_digits=8, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["fee", "pricelist"], name="unique_service_fee"
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.pricelist} price for {self.fee}'
+
+
+class DiscountPrice(models.Model):
+    """ a many to many table between services and discount """
+    discount = models.ForeignKey("Discount", on_delete=models.CASCADE)
+    pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
+    percent = models.DecimalField(max_digits=8, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["discount", "pricelist"], name="unique_service_discount"
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.pricelist} price for {self.discount}'
 
 
 # No longer used in Event2019

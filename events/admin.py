@@ -70,6 +70,12 @@ class ServiceInstanceInline(admin.TabularInline):
 class ServicePriceInline(admin.TabularInline):
     model = models.ServicePrice
 
+class FeePriceInline(admin.TabularInline):
+    model = models.FeePrice
+
+class DiscountPriceInline(admin.TabularInline):
+    model = models.DiscountPrice
+
 
 class EventAdmin(PolymorphicChildModelAdmin, VersionAdmin):
     inlines = [EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline]
@@ -90,7 +96,7 @@ class BaseEventAdmin(VersionAdmin, PolymorphicParentModelAdmin):
     
 
 class PricelistAdmin(admin.ModelAdmin):
-    inlines = [ServicePriceInline]
+    inlines = [ServicePriceInline, FeePriceInline, DiscountPriceInline]
     search_fields = ['name']
 
 
@@ -179,3 +185,5 @@ admin.site.register(models.PostEventSurvey)
 admin.site.register(models.Workshop, WorkshopAdmin)
 admin.site.register(models.OfficeHour)
 admin.site.register(models.Pricelist, PricelistAdmin)
+admin.site.register(models.Fee)
+admin.site.register(models.Discount)
