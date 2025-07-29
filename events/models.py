@@ -888,9 +888,9 @@ class Event2019(BaseEvent):
         
         values = {}
         for discount in self.applied_discounts.all():
-            if self.event.pricelist and DiscountPrice.objects.filter(discount=discount, pricelist=self.pricelist).exists():
+            if self.pricelist and DiscountPrice.objects.filter(discount=discount, pricelist=self.pricelist).exists():
                 percentage = DiscountPrice.objects.get(pricelist=self.pricelist, discount=discount).percent
-                discountable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=discount.categories))
+                discountable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=discount.categories.all()))
                 discount_value = discountable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
                 values[discount] = discount_value.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
         return values
@@ -901,9 +901,9 @@ class Event2019(BaseEvent):
         
         values = {}
         for fee in self.applied_fees.all():
-            if self.event.pricelist and FeePrice.objects.filter(fee=fee, pricelist=self.pricelist).exists():
-                percentage = DiscountPrice.objects.get(pricelist=self.pricelist, fee=fee).percent
-                applicable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=fee.categories))
+            if self.pricelist and FeePrice.objects.filter(fee=fee, pricelist=self.pricelist).exists():
+                percentage = FeePrice.objects.get(pricelist=self.pricelist, fee=fee).percent
+                applicable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=fee.categories.all()))
                 value = applicable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
                 values[fee] = value.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
         return values

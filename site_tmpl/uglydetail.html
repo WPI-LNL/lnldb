@@ -789,10 +789,10 @@
                             <td> Pre Discount Total </td>
                             <td class="tdra">${{ event.cost_total_pre_discount }} </td>
                         </tr>
-                        {% for discount, value in event.fee_values.items %}
+                        {% for fee, value in event.fee_values.items %}
                             <tr class="warning">
                                 <td>{{ fee.name }}</td>
-                                <td class="tdra">-${{ value|floatformat:2}}</td>
+                                <td class="tdra">${{ value|floatformat:2}}</td>
                             </tr>
                         {% endfor %}
                         {% for discount, value in event.discount_values.items %}
