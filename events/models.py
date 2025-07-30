@@ -1264,6 +1264,7 @@ class Hours(models.Model):
 
     class Meta:
         unique_together = ('event', 'user', 'service')
+        ordering = ('event',)
 
 
 class EventCCInstance(models.Model):
