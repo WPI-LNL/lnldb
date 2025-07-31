@@ -203,7 +203,7 @@ class Event2019PropertyTests(TestCase):
         self.assertEqual(sum(self.event.discount_values.values()), Decimal('18.20'))
         self.assertEqual(self.event.cost_total, Decimal('126.47'))
 
-        # extras don't get discounted
+        # extras in the wrong categories don't get discounted
         models.ExtraInstance.objects.create(event=self.event, extra=self.extra2, quant=1)
         self.assertEqual(sum(self.event.discount_values.values()), Decimal('18.20'))
         self.assertEqual(self.event.cost_total, Decimal('128.46'))
@@ -225,6 +225,11 @@ class Event2019PropertyTests(TestCase):
         ServiceInstanceFactory(service=projection_service, event=self.event)
         self.assertEqual(sum(self.event.discount_values.values()), Decimal('26.47'))
         self.assertEqual(self.event.cost_total, Decimal('185.31'))
+
+        # extras in applicable categories get discounted
+        models.ExtraInstance.objects.create(event=self.event, extra=self.extra, quant=3)
+        self.assertEqual(sum(self.event.discount_values.values()), Decimal('2051.91'))
+        self.assertEqual(self.event.cost_total, Decimal('11662.84'))
     
     def test_fees(self):
         self.setup()
@@ -259,4 +264,22 @@ class Event2019PropertyTests(TestCase):
         self.event.applied_discounts.add(test_discount)
         models.DiscountPrice.objects.create(pricelist=self.pricelist, discount=test_discount, percent=10)
         self.assertEqual(self.event.cost_total, Decimal('105.94'))
+        
+        # fees don't apply to services in the wrong categories
+        sound_service = ServiceFactory(category=self.sound, base_cost=9.02)
+        ServiceInstanceFactory(service=sound_service, event=self.event)
+        self.assertEqual(self.event.cost_total, Decimal('114.96'))
+        
+        # fees correctly lookup service prices in the pricelist
+        models.ServicePrice.objects.create(pricelist=self.pricelist, service=lighting_service, cost=921.2)
+        self.assertEqual(sum(self.event.fee_values.values()), Decimal('230.30'))
+        self.assertEqual(self.event.cost_total, Decimal('1068.4'))
+        
+        # fees don't apply to extras in the wrong categories
+        models.ExtraInstance.objects.create(event=self.event, extra=self.extra2, quant=1)
+        self.assertEqual(self.event.cost_total, Decimal('1070.39'))
+
+        # fees apply to extras in the right categories
+        models.ExtraInstance.objects.create(event=self.event, extra=self.extra, quant=1)
+        self.assertEqual(self.event.cost_total, Decimal('6246.53'))
        
