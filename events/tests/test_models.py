@@ -282,4 +282,8 @@ class Event2019PropertyTests(TestCase):
         # fees apply to extras in the right categories
         models.ExtraInstance.objects.create(event=self.event, extra=self.extra, quant=1)
         self.assertEqual(self.event.cost_total, Decimal('6246.53'))
+        
+        # extras handle pricelists correctly
+        models.ExtraPrice.objects.create(pricelist=self.pricelist, extra=self.extra, cost=123.45)
+        self.assertEqual(self.event.cost_total, Decimal('1212.36'))
        
