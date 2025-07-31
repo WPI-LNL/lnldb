@@ -70,6 +70,9 @@ class ServiceInstanceInline(admin.TabularInline):
 class ServicePriceInline(admin.TabularInline):
     model = models.ServicePrice
 
+class ExtraPriceInline(admin.TabularInline):
+    model = models.ExtraPrice
+
 class FeePriceInline(admin.TabularInline):
     model = models.FeePrice
 
@@ -96,7 +99,7 @@ class BaseEventAdmin(VersionAdmin, PolymorphicParentModelAdmin):
     
 
 class PricelistAdmin(admin.ModelAdmin):
-    inlines = [ServicePriceInline, FeePriceInline, DiscountPriceInline]
+    inlines = [ServicePriceInline, ExtraPriceInline, FeePriceInline, DiscountPriceInline]
     search_fields = ['name']
 
 

@@ -829,7 +829,7 @@ class Event2019(BaseEvent):
 
     # null pricelist corresponds to the default price attached to the service directly
     pricelist = models.ForeignKey("Pricelist", null=True, blank=True, on_delete=models.PROTECT, help_text="Which pricelist this event will be billed using.")
-    
+
     uses_new_discounts = models.BooleanField(default=False, help_text="Whether or not this event uses the new discount system.")
     applied_fees = models.ManyToManyField("Fee", blank=True, help_text="Which fees will be applied to this event.")
     applied_discounts = models.ManyToManyField("Discount", blank=True, help_text="Which discounts will be applied to this event.")
@@ -881,31 +881,35 @@ class Event2019(BaseEvent):
             return discount.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
         else:
             return decimal.Decimal("0.0")
-    
+
     @property
     def discount_values(self):
-        if not self.uses_new_discounts: return {}
-        
+        if not self.uses_new_discounts:
+            return {}
+
         values = {}
         for discount in self.applied_discounts.all():
             if self.pricelist and DiscountPrice.objects.filter(discount=discount, pricelist=self.pricelist).exists():
                 percentage = DiscountPrice.objects.get(pricelist=self.pricelist, discount=discount).percent
                 discountable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=discount.categories.all()))
-                if discountable_total == 0: continue
+                if discountable_total == 0:
+                    continue
                 discount_value = discountable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
                 values[(discount, percentage)] = discount_value.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
         return values
 
     @property
     def fee_values(self):
-        if not self.uses_new_discounts: return {}
-        
+        if not self.uses_new_discounts:
+            return {}
+
         values = {}
         for fee in self.applied_fees.all():
             if self.pricelist and FeePrice.objects.filter(fee=fee, pricelist=self.pricelist).exists():
                 percentage = FeePrice.objects.get(pricelist=self.pricelist, fee=fee).percent
                 applicable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=fee.categories.all()))
-                if applicable_total == 0: continue
+                if applicable_total == 0:
+                    continue
                 value = applicable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
                 values[(fee, percentage)] = value.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
         return values
@@ -991,10 +995,12 @@ class ExtraInstance(models.Model):
 
     @property
     def totalcost(self):
-        return self.quant * self.extra.cost
+        return self.quant * self.cost
 
     @property
     def cost(self):
+        if isinstance(self.event, Event2019) and self.event.pricelist and ExtraPrice.objects.filter(extra=self.extra, pricelist=self.event.pricelist).exists():
+            return ExtraPrice.objects.get(extra=self.extra, pricelist=self.event.pricelist).cost
         return self.extra.cost
 
 
@@ -1096,6 +1102,24 @@ class ServicePrice(models.Model):
     def __str__(self):
         return f'{self.pricelist} price for {self.service}'
 
+
+class ExtraPrice(models.Model):
+    """ a many to many table between extras and pricelists """
+    extra = models.ForeignKey("Extra", on_delete=models.CASCADE)
+    pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
+    cost = models.DecimalField(max_digits=8, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["extra", "pricelist"], name="unique_extra_pricelist"
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.pricelist} price for {self.extra}'
+
+
 class FeePrice(models.Model):
     """ a many to many table between services and fees """
     fee = models.ForeignKey("Fee", on_delete=models.CASCADE)
@@ -1157,7 +1181,7 @@ class ServiceInstance(models.Model):
 
     @property
     def cost(self):
-        if self.event.pricelist and ServicePrice.objects.filter(service=self.service, pricelist=self.event.pricelist).exists():
+        if isinstance(self.event, Event2019) and self.event.pricelist and ServicePrice.objects.filter(service=self.service, pricelist=self.event.pricelist).exists():
             return ServicePrice.objects.get(service=self.service, pricelist=self.event.pricelist).cost
         return self.service.base_cost
 
