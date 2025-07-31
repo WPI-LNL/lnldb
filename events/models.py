@@ -892,6 +892,7 @@ class Event2019(BaseEvent):
             if self.pricelist and DiscountPrice.objects.filter(discount=discount, pricelist=self.pricelist).exists():
                 percentage = DiscountPrice.objects.get(pricelist=self.pricelist, discount=discount).percent
                 discountable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=discount.categories.all()))
+                discountable_total += sum(decimal.Decimal(ei.totalcost) for ei in self.extrainstance_set.filter(extra__category__in=discount.categories.all()))
                 if discountable_total == 0:
                     continue
                 discount_value = discountable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
@@ -908,6 +909,7 @@ class Event2019(BaseEvent):
             if self.pricelist and FeePrice.objects.filter(fee=fee, pricelist=self.pricelist).exists():
                 percentage = FeePrice.objects.get(pricelist=self.pricelist, fee=fee).percent
                 applicable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=fee.categories.all()))
+                applicable_total += sum(decimal.Decimal(ei.totalcost) for ei in self.extrainstance_set.filter(extra__category__in=fee.categories.all()))
                 if applicable_total == 0:
                     continue
                 value = applicable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
