@@ -1003,6 +1003,9 @@ class ExtraInstance(models.Model):
             return ExtraPrice.objects.get(extra=self.extra, pricelist=self.event.pricelist).cost
         return self.extra.cost
 
+    def __str__(self):
+        return "%s ($%s)" % (self.extra.name, self.cost)
+
 
 @python_2_unicode_compatible
 class Extra(models.Model):
@@ -1016,7 +1019,7 @@ class Extra(models.Model):
     checkbox = models.BooleanField(default=False, help_text="Use a checkbox instead of an integer entry")
 
     def __str__(self):
-        return "%s ($%s)" % (self.name, self.cost)
+        return self.name
 
     @property
     def formfield(self):

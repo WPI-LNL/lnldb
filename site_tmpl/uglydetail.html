@@ -432,7 +432,7 @@
                         <h3>Extras:</h3>
                             <ul>
                                 {% for e in event.extras_lighting %}
-                                    <li>{{ e.extra }} x{{ e.quant }}</li>
+                                    <li>{{ e }} x{{ e.quant }}</li>
                                 {% endfor %}
                             </ul>
                         {% endif %}
@@ -448,7 +448,7 @@
                         <h3>Extras:</h3>
                             <ul>
                                 {% for e in event.extras_sound %}
-                                    <li>{{ e.extra }} x{{ e.quant }}</li>
+                                    <li>{{ e }} x{{ e.quant }}</li>
                                 {% endfor %}
                             </ul>
                         {% endif %}
@@ -464,7 +464,7 @@
                         <h3>Extras:</h3>
                             <ul>
                                 {% for e in event.extras_projection %}
-                                    <li>{{ e.extra }} x{{ e.quant }}</li>
+                                    <li>{{ e }} x{{ e.quant }}</li>
                                 {% endfor %}
                             </ul>
                         {% endif %}
@@ -486,7 +486,7 @@
                         <h3>Additional Extras:</h3>
                             <ul>
                                 {% for e in event.extras_other %}
-                                    <li>{{ e.extra }} x{{ e.quant }}</li>
+                                    <li>{{ e }} x{{ e.quant }}</li>
                                 {% endfor %}
                             </ul>
                     {% endif %}
@@ -518,7 +518,7 @@
                                 <h4>Extras</h4>
                                 <ul>
                                 {% for extra_instance in services_and_extras.1 %}
-                                    <li>{{ extra_instance.extra }} x{{ extra_instance.quant }}</li>
+                                    <li>{{ extra_instance }} x{{ extra_instance.quant }}</li>
                                 {% endfor %}
                                 </ul>
                             {% endif %}
@@ -698,7 +698,7 @@
                         {% if event.extras_lighting.exists %}
                         {% for extra in event.extras_lighting %}
                         <tr>
-                            <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
+                            <td>{{ extra }} <strong>x{{extra.quant}} </strong></td>
                             <td class="tdra">${{ extra.totalcost }}</td>
                         </tr>
                         {% endfor %}
@@ -713,7 +713,7 @@
                         {% if event.extras_sound.exists %}
                         {% for extra in event.extras_sound %}
                         <tr>
-                            <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
+                            <td>{{ extra }} <strong>x{{extra.quant}} </strong></td>
                             <td class="tdra">${{ extra.totalcost }}</td>
                         </tr>
                         {% endfor %}
@@ -728,7 +728,7 @@
 
                         {% for extra in event.extras_projection %}
                         <tr>
-                            <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
+                            <td>{{ extra }} <strong>x{{extra.quant}} </strong></td>
                             <td class="tdra">${{ extra.totalcost }}</td>
                         </tr>
                         {% endfor %}
@@ -744,7 +744,7 @@
                         
                         {% for e in event.extras_other %}
                         <tr>
-                            <td>{{ e.extra }} <strong>x{{ e.quant }}</strong></td>
+                            <td>{{ e }} <strong>x{{ e.quant }}</strong></td>
                             <td class="tdra">${{ e.totalcost }}</td>
                         </tr>
                         {% endfor %}
@@ -758,7 +758,7 @@
                             {% endfor %}
                             {% for extra_instance in event.extrainstance_set.all %}
                                 <tr>
-                                    <td>{{ extra_instance.extra }} <strong>x{{ extra_instance.quant }}</strong></td>
+                                    <td>{{ extra_instance }} <strong>x{{ extra_instance.quant }}</strong></td>
                                     <td class="tdra">${{ extra_instance.totalcost }}</td>
                                 </tr>
                             {% endfor %}

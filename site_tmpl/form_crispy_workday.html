@@ -98,7 +98,7 @@
                             {% endfor %}
                             {% for extra_instance in object.extrainstance_set.all %}
                                 <tr>
-                                    <td>{{ extra_instance.extra }} <strong>x{{ extra_instance.quant }}</strong></td>
+                                    <td>{{ extra_instance }} <strong>x{{ extra_instance.quant }}</strong></td>
                                     <td class="tdra">${{ extra_instance.totalcost }}</td>
                                 </tr>
                             {% endfor %}
