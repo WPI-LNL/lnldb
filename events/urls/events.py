@@ -84,6 +84,7 @@ urlpatterns = [
         name="files"),
     re_path(r'^extras/(?P<id>[0-9a-f]+)/$', flow_views.extras, name="extras"),
     re_path(r'^oneoff/(?P<id>[0-9a-f]+)/$', flow_views.oneoff, name="oneoffs"),
+    re_path(r'^rentals/(?P<id>[0-9a-f]+)/$', flow_views.rentals, name="rentals"),
     re_path(r'^enter-worktag/(?P<pk>[0-9a-f]+)/$', flow_views.WorkdayEntry.as_view(), name="worktag-form"),
     re_path(r'^workday-entered/(?P<id>[0-9a-f]+)/$', flow_views.mark_entered_into_workday, name="workday-entered"),
 

@@ -658,6 +658,9 @@
                     {% if not event.closed %}
                         {% permission request.user has 'events.adjust_event_charges' of event %}
                             <div class="pull-right btn-group">
+                                {% if event.uses_new_discounts %}
+                                    <a class="btn btn-lg btn-warning" href="{% url "events:rentals" event.id %}">Modify Rentals</a>
+                                {% endif %}
                                 <a class="btn btn-lg btn-primary" href="{% url "events:extras" event.id %}">Modify Extras</a>
                                 <a class="btn btn-lg btn-info" href="{% url "events:oneoffs" event.id %}">Add OneOff
                                     Charges</a>

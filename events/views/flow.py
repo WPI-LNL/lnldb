@@ -32,7 +32,7 @@ from events.forms import (
 )
 from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, MultiBillingEmail, Category, CCReport, Event,
                            Event2019, EventArbitrary, EventAttachment, EventCCInstance, ExtraInstance, Hours,
-                           ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord)
+                           ReportReminder, ServiceInstance, PostEventSurvey, CCR_DELTA, CrewAttendanceRecord, Rental)
 from helpers.mixins import (ConditionalFormMixin, HasPermMixin, HasPermOrTestMixin,
                             LoginRequiredMixin, SetFormMsgMixin)
 from helpers.challenges import is_officer
@@ -913,6 +913,44 @@ def oneoff(request, id):
     context['formset'] = formset
 
     return render(request, 'formset_crispy_arbitrary.html', context)
+
+
+@login_required
+def rentals(request, id):
+    """ This form is for adding rentals to an event """
+    context = {'msg': "Rentals"}
+
+    event = get_object_or_404(BaseEvent, pk=id)
+    context['event'] = event
+
+    if not (request.user.has_perm('events.adjust_event_charges') or
+            request.user.has_perm('events.adjust_event_charges', event)):
+        raise PermissionDenied
+    if event.closed:
+        messages.add_message(request, messages.ERROR, 'Event is closed.')
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    if not isinstance(event, Event2019):
+        messages.add_message(request, messages.ERROR, "Can't add rentals to 2012 events")
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    if not event.uses_new_discounts:
+        messages.add_message(request, messages.ERROR, "Can't add rentals to an event that doesn't have the new discounts and fees enabled")
+        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+
+    mk_rental_formset = inlineformset_factory(BaseEvent, Rental, extra=3, exclude=[])
+
+    if request.method == 'POST':
+        set_revision_comment("Edited rental charges", None)
+        formset = mk_rental_formset(request.POST, request.FILES, instance=event)
+        if formset.is_valid():
+            formset.save()
+            event.save()  # for revision to be created
+            return HttpResponseRedirect(reverse('events:detail', args=(event.id,)) + "#billing")
+    else:
+        formset = mk_rental_formset(instance=event)
+
+    context['formset'] = formset
+
+    return render(request, 'formset_crispy_rentals.html', context)
 
 
 @login_required

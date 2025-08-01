@@ -867,8 +867,8 @@ class Event2019(BaseEvent):
     def rental_fee_total(self):
         percent = self.pricelist.rental_fee_percentage
         applicable_total = sum(decimal.Decimal(rental.totalcost) for rental in self.rentals.filter(rental_fee_applied=True))
-        discount = discountable_total * decimal.Decimal(percent) / decimal.Decimal("100")
-        return discount.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
+        total = applicable_total * decimal.Decimal(percent) / decimal.Decimal("100")
+        return total.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
 
     @property
     def cost_total_pre_discount(self):
