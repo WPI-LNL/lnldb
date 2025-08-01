@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from xhtml2pdf import pisa
 
-from events.models import Category, BaseEvent, Event2019, ExtraInstance, MultiBilling
+from events.models import Category, BaseEvent, Event2019, ExtraInstance, MultiBilling, Quote
 from projection.models import PITLevel, Projectionist
 
 
@@ -175,11 +175,27 @@ def generate_event_bill_pdf(request, event):
     event_data = get_extras(event)
     data['events_data'] = [event_data]
 
-    resp = generate_pdf(data, 'pdf_templates/bill-itemized.html', request)
-    if event.reviewed:
-        resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
+    html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
+    quote = Quote.objects.create(event=event, html=html, is_invoice=event.reviewed)
+
+    return view_quote(request, quote.pk)
+
+
+def view_quote(request, id):
+    quote = get_object_or_404(Quote, pk=id)
+    html = quote.html
+
+    if 'raw' in request.GET and bool(request.GET['raw']):
+        resp = HttpResponse(html)
     else:
-        resp['Content-Disposition'] = 'inline; filename="%s-quote.pdf"' % slugify(event.event_name)
+        pdf_file = BytesIO()
+        pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+        resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
+
+    if quote.is_invoice:
+        resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(quote.event.event_name)
+    else:
+        resp['Content-Disposition'] = 'inline; filename="%s-quote.pdf"' % slugify(quote.event.event_name)
     return resp
 
 
@@ -194,6 +210,7 @@ def generate_event_bill_pdf_standalone(event, request=None):
     data['events_data'] = [event_data]
     # Render html content through html template with context
     html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
+    Quote.objects.create(event=event, html=html, is_invoice=event.reviewed)
 
     # Write PDF to file
     pdf_file = BytesIO()

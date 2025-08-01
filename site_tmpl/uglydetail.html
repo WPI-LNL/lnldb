@@ -694,7 +694,6 @@
                             the information on this page reflects the information entered into the website by the client and has not been reviewed by Lens and Lights for accuracy.
                         </p>
                     {% endif %}
-                    <h2> Bills </h2>
                     {% if event.reviewed %}
                         <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Invoice</a>
                     {% elif event.approved %}
@@ -704,7 +703,22 @@
                             <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Quote</a>
                         {% endpermission %}
                     {% endif %}
-                    {% if event.billings or event.multibillings %}
+
+                    {% permission request.user has 'events.bill_event' of event %}
+                        {% if event.quotes.exists %}
+                            <h3> Previous Quotes </h3>
+                            <table class="table">
+                                {% for quote in event.quotes.all %}
+                                    <tr>
+                                        <td><a href="{% url "events:view-quote" quote.id %}">{{ quote.date_generated }}</a></td>
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        {% endif %}
+                    {% endpermission %}
+
+                    {% if event.billings.exists or event.multibillings.exists %}
+                        <h2> Bills </h2>
                         <table class="table">
                             <thead>
                             <tr>
@@ -774,8 +788,6 @@
                                 </tr>
                             {% endfor %}
                         </table>
-                    {% else %}
-                        <h2> No Bills Posted </h2>
                     {% endif %}
 
                     {% permission request.user has 'events.event_view_sensitive' of event %}

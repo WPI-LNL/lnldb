@@ -1222,6 +1222,20 @@ class ServiceInstance(models.Model):
         return '{} for {}'.format(str(self.service), str(self.event))
 
 
+class Quote(models.Model):
+    """ A saved quote that was generated for an event """
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="quotes")
+    date_generated = models.DateTimeField(default=timezone.now)
+    html = models.TextField()
+    is_invoice = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'Quote for {self.event}'
+
+    class Meta:
+        ordering = ("-date_generated",)
+
+
 @python_2_unicode_compatible
 class Billing(models.Model):
     """
