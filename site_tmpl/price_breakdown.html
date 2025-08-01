@@ -102,17 +102,17 @@
     
     {% if event.uses_new_discounts %}
         <tr class="warning">
-            <td> Pre Discount Total </td>
+            <td> LNL Services Subtotal </td>
             <td class="tdra">${{ event.cost_total_pre_discount }} </td>
         </tr>
         {% for fee_percent, value in event.fee_values.items %}
-            <tr class="warning">
+            <tr class="active">
                 <td>{{ fee_percent.0.name }} ({{ fee_percent.1|floatformat }}% of {{ fee_percent.0.categories.all|join:", " }})</td>
                 <td class="tdra">${{ value|floatformat:2}}</td>
             </tr>
         {% endfor %}
         {% for discount_percent, value in event.discount_values.items %}
-            <tr class="warning">
+            <tr class="active">
                 <td>{{ discount_percent.0.name }} ({{ discount_percent.1|floatformat }}% of {{ discount_percent.0.categories.all|join:", " }})</td>
                 <td style="color:red;" class="tdra">-${{ value|floatformat:2}}</td>
             </tr>
@@ -128,7 +128,7 @@
                         </tr>
                     {% endif %}
                 {% endfor %}
-                <tr class="warning">
+                <tr class="active">
                     <td>LNL Rental Fee ({{ event.pricelist.rental_fee_percentage|floatformat }}%)</td>
                     <td class="tdra">${{ event.rental_fee_total|floatformat:2}}</td>
                 </tr>
@@ -141,6 +141,10 @@
                     </tr>
                 {% endif %}
             {% endfor %}
+            <tr class="warning">
+                <td> Rental Subtotal </td>
+                <td class="tdra">${{ event.rentals_total }} </td>
+            </tr>
         {% endif %}
     {% endif %}
     
