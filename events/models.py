@@ -860,8 +860,19 @@ class Event2019(BaseEvent):
         return sum(ei.totalcost for ei in self.extrainstance_set.all())
 
     @property
+    def rentals_total(self):
+        return sum(rental.totalcost for rental in self.rentals.all())
+
+    @property
+    def rental_fee_total(self):
+        percent = self.pricelist.rental_fee_percentage
+        applicable_total = sum(decimal.Decimal(rental.totalcost) for rental in self.rentals.filter(rental_fee_applied=True))
+        discount = discountable_total * decimal.Decimal(percent) / decimal.Decimal("100")
+        return discount.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
+
+    @property
     def cost_total_pre_discount(self):
-        return self.services_total + self.extras_total + self.oneoff_total
+        return self.services_total + self.extras_total + self.oneoff_total + self.rentals_total
 
     @property
     def discount_applied(self):
@@ -919,9 +930,9 @@ class Event2019(BaseEvent):
     @property
     def cost_total(self):
         if self.uses_new_discounts:
-            return self.cost_total_pre_discount - sum(self.discount_values.values()) + sum(self.fee_values.values())
+            return self.cost_total_pre_discount - sum(self.discount_values.values()) + sum(self.fee_values.values()) + self.rental_fee_total
         else:
-            return self.cost_total_pre_discount - self.discount_value
+            return self.cost_total_pre_discount - self.discount_value + self.rental_fee_total
 
     @property
     def workday_form_hash(self):
@@ -1031,6 +1042,22 @@ class Extra(models.Model):
             return forms.IntegerField(min_value=0, ),
 
 
+class Rental(models.Model):
+    """ External rentals for events """
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="rentals")
+    name = models.CharField(max_length=64)
+    cost = models.DecimalField(max_digits=8, decimal_places=2)
+    quantity = models.PositiveSmallIntegerField(default=1)
+    rental_fee_applied = models.BooleanField(default=True)
+
+    @property
+    def totalcost(self):
+        return self.cost * self.quantity
+
+    def __str__(self):
+        return f'{self.name} rental for {self.event}'
+
+
 @python_2_unicode_compatible
 class Category(models.Model):
     """ A category """
@@ -1086,6 +1113,7 @@ class Pricelist(models.Model):
     services = models.ManyToManyField(Service, through="ServicePrice", related_name="pricelists")
     fees = models.ManyToManyField(Fee, through="FeePrice", related_name="pricelists")
     discounts = models.ManyToManyField(Discount, through="DiscountPrice", related_name="pricelists")
+    rental_fee_percentage = models.DecimalField(max_digits=8, decimal_places=2)
 
     def __str__(self):
         return self.name
