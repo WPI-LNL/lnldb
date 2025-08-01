@@ -1,0 +1,151 @@
+<table class="table {% if condensed %}table-condensed{% endif %}">
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Cost</th>
+        </tr>
+    </thead>
+    {% if event.lighting %}
+    <tr class="success">
+        <td>{{event.lighting}}</td>
+        <td class="tdra">${{ event.lighting.base_cost }}</td>
+    </tr>
+    {% endif %}
+    {% if event.extras_lighting.exists %}
+    {% for extra in event.extras_lighting %}
+    <tr>
+        <td>{{ extra }} <strong>x{{extra.quant}} </strong></td>
+        <td class="tdra">${{ extra.totalcost }}</td>
+    </tr>
+    {% endfor %}
+    {% endif %}
+    
+    {% if event.sound %}
+    <tr class="success">
+        <td>{{event.sound}}</td>
+        <td class="tdra">${{ event.sound.base_cost }}</td>
+    </tr>
+    {% endif %}
+    {% if event.extras_sound.exists %}
+    {% for extra in event.extras_sound %}
+    <tr>
+        <td>{{ extra }} <strong>x{{extra.quant}} </strong></td>
+        <td class="tdra">${{ extra.totalcost }}</td>
+    </tr>
+    {% endfor %}
+    {% endif %}
+    
+    {% if event.projection %}
+    <tr class="success">
+        <td>{{event.projection}}</td>
+        <td class="tdra">${{ event.projection.base_cost }}</td>
+    </tr>
+    {% endif %}
+
+    {% for extra in event.extras_projection %}
+    <tr>
+        <td>{{ extra }} <strong>x{{extra.quant}} </strong></td>
+        <td class="tdra">${{ extra.totalcost }}</td>
+    </tr>
+    {% endfor %}
+
+    {% if event.otherservices.exists %}
+        {% for service in event.otherservices.all %}
+            <tr class="success">
+                <td>{{ service }}</td>
+                <td class="tdra">${{ service.base_cost }}</td>
+            </tr>
+        {% endfor %}
+    {% endif %}
+    
+    {% for e in event.extras_other %}
+    <tr>
+        <td>{{ e }} <strong>x{{ e.quant }}</strong></td>
+        <td class="tdra">${{ e.totalcost }}</td>
+    </tr>
+    {% endfor %}
+    
+    {% if event.serviceinstance_set.exists %}
+        {% for service_instance in event.serviceinstance_set.all %}
+            <tr>
+                <td>{{ service_instance.service }}</td>
+                <td class="tdra">${{ service_instance.cost }}</td>
+            </tr>
+        {% endfor %}
+        {% for extra_instance in event.extrainstance_set.all %}
+            <tr>
+                <td>{{ extra_instance }} <strong>x{{ extra_instance.quant }}</strong></td>
+                <td class="tdra">${{ extra_instance.totalcost }}</td>
+            </tr>
+        {% endfor %}
+    {% endif %}
+
+    {% for oo in event.oneoffs %}
+    <tr>
+        <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
+        <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
+            {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
+        </td>
+    </tr>
+    {% endfor %}
+    
+    {% if event.discount_applied %}
+    <tr class="warning">
+        <td> Pre Discount Total </td>
+        <td class="tdra">${{ event.cost_total_pre_discount }} </td>
+    </tr>
+    <tr class="warning">
+        <td>Lighting/Sound Combo Discount Applied</td>
+        <td style="color:red;" class="tdra">-${{ event.discount_value|floatformat:2}}</td>
+    </tr>
+    {% endif %}
+    
+    {% if event.uses_new_discounts %}
+        <tr class="warning">
+            <td> Pre Discount Total </td>
+            <td class="tdra">${{ event.cost_total_pre_discount }} </td>
+        </tr>
+        {% for fee_percent, value in event.fee_values.items %}
+            <tr class="warning">
+                <td>{{ fee_percent.0.name }} ({{ fee_percent.1|floatformat }}% of {{ fee_percent.0.categories.all|join:", " }})</td>
+                <td class="tdra">${{ value|floatformat:2}}</td>
+            </tr>
+        {% endfor %}
+        {% for discount_percent, value in event.discount_values.items %}
+            <tr class="warning">
+                <td>{{ discount_percent.0.name }} ({{ discount_percent.1|floatformat }}% of {{ discount_percent.0.categories.all|join:", " }})</td>
+                <td style="color:red;" class="tdra">-${{ value|floatformat:2}}</td>
+            </tr>
+        {% endfor %}
+
+        {% if event.rentals.exists %}
+            {% if event.rental_fee_total > 0 %}
+                {% for rental in event.rentals.all %}
+                    {% if rental.rental_fee_applied %}
+                        <tr>
+                            <td>{{ rental.name }} ({{ rental.cost }}) <strong>x{{ rental.quantity }}</strong></td>
+                            <td class="tdra">${{ rental.totalcost }}</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+                <tr class="warning">
+                    <td>LNL Rental Fee ({{ event.pricelist.rental_fee_percentage|floatformat }}%)</td>
+                    <td class="tdra">${{ event.rental_fee_total|floatformat:2}}</td>
+                </tr>
+            {% endif %}
+            {% for rental in event.rentals.all %}
+                {% if not rental.rental_fee_applied %}
+                    <tr>
+                        <td>{{ rental.name }} ({{ rental.cost }}) <strong>x{{ rental.quantity }}</strong></td>
+                        <td class="tdra">${{ rental.totalcost }}</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endif %}
+    
+    <tr class="info">
+        <td>Total</td>
+        <td>${{ event.cost_total|floatformat:2 }}</td>
+    </tr>
+</table>

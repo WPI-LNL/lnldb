@@ -970,10 +970,6 @@ def viewevent(request, id):
     context['history'] = Version.objects.get_for_object(event)
     if isinstance(event, Event2019):
         context['crew_count'] = event.crew_attendance.filter(active=True).values('user').count()
-
-        if event.uses_new_discounts and event.rentals.exists():
-            context['rentals_by_fee_applied'] = (event.rentals.filter(rental_fee_applied=True),
-                                                 event.rentals.filter(rental_fee_applied=False))
  
     if event.serviceinstance_set.exists():
         context['categorized_services_and_extras'] = {}

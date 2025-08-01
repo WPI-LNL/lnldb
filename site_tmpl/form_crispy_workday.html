@@ -81,54 +81,7 @@
             <div class="row">
                 <div class="col-md-12">
                     <h2>Price Breakdown</h2>
-                    <style> .tdra { text-align: right; }</style>
-                    <table class="table table-condensed">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Cost</th>
-                            </tr>
-                        </thead>
-                        {% if object.serviceinstance_set.exists %}
-                            {% for service_instance in object.serviceinstance_set.all %}
-                                <tr>
-                                    <td>{{ service_instance.service }}</td>
-                                    <td class="tdra">${{ service_instance.cost }}</td>
-                                </tr>
-                            {% endfor %}
-                            {% for extra_instance in object.extrainstance_set.all %}
-                                <tr>
-                                    <td>{{ extra_instance }} <strong>x{{ extra_instance.quant }}</strong></td>
-                                    <td class="tdra">${{ extra_instance.totalcost }}</td>
-                                </tr>
-                            {% endfor %}
-                        {% endif %}
-
-                        {% for oo in object.oneoffs %}
-                        <tr>
-                            <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
-                            <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
-                                {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
-                            </td>
-                        </tr>
-                        {% endfor %}
-
-                        {% if object.discount_applied %}
-                        <tr class="warning">
-                            <td> Pre Discount Total </td>
-                            <td class="tdra">${{ object.cost_total_pre_discount }} </td>
-                        </tr>
-                        <tr class="warning">
-                                    <td>15% Discount Applied</td>
-                                    <td style="color:red;" class="tdra">-${{ object.discount_value|floatformat:2}}</td>
-                                </tr>
-                        {% endif %}
-
-                        <tr class="info">
-                            <td>Total</td>
-                            <td class="tdra">${{ object.cost_total|floatformat:2 }}</td>
-                        </tr>
-                    </table>
+                    {% include "price_breakdown.html" with event=object condensed=True only %}
                 </div>
             </div>
         </div>
