@@ -1,0 +1,388 @@
+{% load static %}
+{% load tz %}
+{% load humanize %}
+<html>
+
+<head>
+    <style>
+        @page {
+            size: letter;
+            margin: .75in;
+        }
+
+        table {
+            width: 100%;
+            border-spacing: 0;
+        }
+
+        #logo-table {
+            padding-top: 35px;
+        }
+
+        #logo {
+            text-align: right;
+        }
+
+        #logo-img {
+            width: 120px;
+        }
+
+        #lnl-contact {
+            font-size: 8pt;
+            vertical-align: top;
+        }
+
+        #contact-name {
+            font-size: 18pt;
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+
+        #quote-box {
+            font-size: 18pt;
+            border: 1px solid black;
+            display: inline-block;
+            text-align: center;
+            padding-left: 25px;
+            padding-right: 25px;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            margin-bottom: 20px;
+        }
+
+        ul.list-unstyled {
+            list-style-type: none;
+            margin-top: 0;
+            padding-top: 0;
+            padding-left: 10px;
+        }
+
+        a.unstyled {
+            text-decoration: none;
+            color: black;
+        }
+
+        #event-info {
+            font-size: 9pt;
+        }
+
+        #event-info td:nth-child(1) {
+            font-weight: bold;
+            text-align: right;
+            padding-right: 5px;
+        }
+
+        #event-info td:nth-child(2) {
+            text-align: left;
+        }
+
+        .centered {
+            text-align: center;
+        }
+
+        hr.double {
+            border-width: 0px;
+            border-top: 1px solid black;
+            border-bottom: 1px solid black;
+            height: 2px;
+            margin: 0;
+            clear: both;
+        }
+
+        td.double {
+            border-width: 0px;
+            border-top: 1px solid black;
+            border-bottom: 1px solid black;
+            height: 0px;
+        }
+
+        #event-name {
+            font-size: 18pt;
+            margin: 0;
+        }
+
+        .left {
+            float: left;
+        }
+
+        .right {
+            float: right;
+        }
+
+        .expiry-date {
+            font-size: 11pt;
+            font-style: italic;
+        }
+
+        div.category-header {
+            clear: both;
+        }
+
+        span.category-header {
+            font-size: 14pt;
+            font-weight: bold;
+            padding-top: 20px;
+        }
+
+        table.category th {
+            font-size: 8pt;
+        }
+
+        table.category td {
+            font-size: 10pt;
+        }
+
+        table.category th:nth-child(1),
+        table.category td:nth-child(1) {
+            text-align: center;
+        }
+
+        table.category td:nth-child(3),
+        table.category th:nth-child(3),
+        table.category td:nth-child(4),
+        table.category th:nth-child(4) {
+            text-align: right;
+        }
+
+        div.grand-total {
+            clear: both;
+            border-top: 2px solid black;
+            border-bottom: 2px solid black;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        span.grand-total {
+            font-size: 14pt;
+            font-weight: bold;
+        }
+
+        .disclaimer {
+            font-size: 8pt;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <table id="logo-table">
+                        <tr>
+                            <td id="logo"><img id="logo-img" src="{% static 'img/pdf-lnl-logo.png' %}"></td>
+                            <td id="lnl-contact">
+                                <ul class="list-unstyled">
+                                    <h2 id="contact-name">WPI&nbsp;Lens&nbsp;and&nbsp;Lights</h2>
+                                    <li>100 Institute Road</li>
+                                    <li>Worcester, MA 01609</li>
+                                    <li><a href="mailto:lnl@wpi.edu" class="unstyled">lnl@wpi.edu</a></li>
+                                    <br>
+                                </ul>
+                            </td>
+
+                        </tr>
+                    </table>
+                </td>
+                <td>
+                    <table>
+                        <tr>
+                            <td>
+                                <table id="event-info">
+                                    <tr>
+                                        <td></td>
+                                        <td class="centered">
+                                            <h1 id="quote-box">{% if event.reviewed %}INVOICE{% else %}QUOTE{% endif %}
+                                            </h1>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Setup By:</td>
+                                        <td>{{ event.datetime_setup_complete|localtime|date:"D, N j, Y P" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Event Start:</td>
+                                        <td>{{ event.datetime_start|localtime|date:"D, N j, Y P" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Event End:</td>
+                                        <td>{{ event.datetime_end|localtime|date:"D, N j, Y P" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Location:</td>
+                                        <td>{{ event.location }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Organization:</td>
+                                        <td>{{ event.org.all|join:", " }}</td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+        <p id="event-name">{{ event.event_name }}</p>
+        <hr class="double">
+        <div class="expiry-date">
+            <span class="left expiry-date">Expires on: {{ expiry_date|localtime|date:"F j, Y" }}</span>
+            <span class="right expiry-date">Generated on: {% now "F j, Y" %}</span>
+        </div>
+
+        {% for category in categories %}
+        <div class="category-header">
+            <span class="left category-header">{{ category.category }}</span>
+            <span class="right category-header">${{ category.total|floatformat:2|intcomma }}</span>
+        </div>
+        <hr class="double">
+        <table class="category">
+            <tr>
+                <th>Quantity</th>
+                <th>Item/Package</th>
+                <th>Unit Price/Percent</th>
+                <th>Total Price</th>
+            </tr>
+            <tr>
+                <td colspan="4" class="double"></td>
+            </tr>
+
+            {% for si in category.service_instances %}
+            <tr>
+                <td>1</td>
+                <td>{{ si.service }}</td>
+                <td>${{ si.cost|floatformat:2|intcomma }}</td>
+                <td>${{ si.cost|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endfor %}
+
+            {% for ei in category.extra_instances %}
+            <tr>
+                <td>{{ ei.quant|intcomma }}</td>
+                <td>{{ ei.extra }}</td>
+                <td>${{ ei.cost|floatformat:2|intcomma }}</td>
+                <td>${{ ei.totalcost|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endfor %}
+
+            {% if category.discounts or category.fees %}
+            <tr>
+                <td></td>
+            </tr>
+            {% for discount_percent, value in category.discounts.items %}
+            <tr>
+                <td>-</td>
+                <td>{{ discount_percent.0.name }}</td>
+                <td>-{{ discount_percent.1|floatformat }}%</td>
+                <td>-${{ value|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endfor %}
+            {% for fee_percent, value in category.fees.items %}
+            <tr>
+                <td>-</td>
+                <td>{{ fee_percent.0.name }}</td>
+                <td>{{ fee_percent.1|floatformat }}%</td>
+                <td>${{ value|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endfor %}
+            {% endif %}
+        </table>
+        {% endfor %}
+
+        {% if event.rentals.exists %}
+        <div class="category-header">
+            <span class="left category-header">Rentals</span>
+            <span class="right category-header">${{ event.rentals_total|floatformat:2|intcomma }}</span>
+        </div>
+        <hr class="double">
+        <table class="category">
+            <tr>
+                <th>Quantity</th>
+                <th>Item/Package</th>
+                <th>Unit Price/Percent</th>
+                <th>Total Price</th>
+            </tr>
+            <tr>
+                <td colspan="4" class="double"></td>
+            </tr>
+            {% if event.rental_fee_total > 0 %}
+            {% for rental in event.rentals.all %}
+            {% if rental.rental_fee_applied %}
+            <tr>
+                <td>{{ rental.quantity|intcomma }}</td>
+                <td>{{ rental.name }}</td>
+                <td>${{ rental.cost|floatformat:2|intcomma }}</td>
+                <td>${{ rental.totalcost|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            <tr>
+                <td>-</td>
+                <td>LNL Rental Fee</td>
+                <td>{{ event.pricelist.rental_fee_percentage|floatformat }}%</td>
+                <td>${{ event.rental_fee_total|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endif %}
+
+            {% for rental in event.rentals.all %}
+            {% if not rental.rental_fee_applied %}
+            <tr>
+                <td>{{ rental.quantity|intcomma }}</td>
+                <td>{{ rental.name }}</td>
+                <td>${{ rental.cost|floatformat:2|intcomma }}</td>
+                <td>${{ rental.totalcost|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if event.oneoffs.exists %}
+        <div class="category-header">
+            <span class="left category-header">Additional Fees</span>
+            <span class="right category-header">${{ event.oneoff_total|floatformat:2|intcomma }}</span>
+        </div>
+        <hr class="double">
+        <table class="category">
+            <tr>
+                <th>Quantity</th>
+                <th>Item/Package</th>
+                <th>Unit Price/Percent</th>
+                <th>Total Price</th>
+            </tr>
+            <tr>
+                <td colspan="4" class="double"></td>
+            </tr>
+            {% for oo in event.oneoffs.all %}
+            <tr>
+                <td>{{ oo.key_quantity|intcomma }}</td>
+                <td>{{ oo.key_name }}</td>
+                <td>${{ oo.key_value|floatformat:2|intcomma }}</td>
+                <td>${{ oo.totalcost|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        <div class="grand-total">
+            <span class="left grand-total">Grand Total</span>
+            <span class="right grand-total">${{ event.cost_total|floatformat:2|intcomma }}</span>
+        </div>
+
+        {% if event.reviewed %}
+        <p class="disclaimer">If you have any questions concerning this invoice, contact our treasurer at
+            <a class="unstyled" href="mailto:lnl-t@wpi.edu">lnl-t@wpi.edu</a>.</p>
+        {% else %}
+        <p class="disclaimer">This is a quote of the expected charges based on the current information from the client.
+        Charges may change based on a variety of factors, including additional requests or information from
+        the client, even those received day-of at the event.
+        We will do our best to inform the listed contact of any charges in advance, but this is not
+        guaranteed.</p>
+        <p class="disclaimer">If you have any questions concerning this quote, contact our vice-president at
+            <a class="unstyled" href="mailto:lnl-vp@wpi.edu">lnl-vp@wpi.edu</a>.</p>
+        {% endif %}
+    </div>
+</body>
+
+</html>

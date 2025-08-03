@@ -874,6 +874,12 @@ class Event2019(BaseEvent):
     def cost_total_pre_discount(self):
         return self.services_total + self.extras_total + self.oneoff_total
 
+    def category_subtotal(self, category):
+        return sum(si.cost for si in self.serviceinstance_set.filter(service__category=category)) + \
+               sum(ei.totalcost for ei in self.extrainstance_set.filter(extra__category=category)) - \
+               sum(self.get_discount_values(category=category).values()) + \
+               sum(self.get_fee_values(category=category).values())
+
     @property
     def discount_applied(self):
         if self.uses_new_discounts:
@@ -893,8 +899,7 @@ class Event2019(BaseEvent):
         else:
             return decimal.Decimal("0.0")
 
-    @property
-    def discount_values(self):
+    def get_discount_values(self, category=None):
         if not self.uses_new_discounts:
             return {}
 
@@ -902,16 +907,30 @@ class Event2019(BaseEvent):
         for discount in self.applied_discounts.all():
             if self.pricelist and DiscountPrice.objects.filter(discount=discount, pricelist=self.pricelist).exists():
                 percentage = DiscountPrice.objects.get(pricelist=self.pricelist, discount=discount).percent
-                discountable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=discount.categories.all()))
-                discountable_total += sum(decimal.Decimal(ei.totalcost) for ei in self.extrainstance_set.filter(extra__category__in=discount.categories.all()))
+                if category:
+                    discountable_total = sum(decimal.Decimal(si.cost)
+                                                for si in self.serviceinstance_set.filter(
+                                                    service__category__in=discount.categories.all(),
+                                                    service__category=category))
+                    discountable_total += sum(decimal.Decimal(ei.totalcost)
+                                                for ei in self.extrainstance_set.filter(
+                                                    extra__category__in=discount.categories.all(),
+                                                    extra__category=category))
+                else:
+                    discountable_total = sum(decimal.Decimal(si.cost)
+                                                for si in self.serviceinstance_set.filter(
+                                                    service__category__in=discount.categories.all()))
+                    discountable_total += sum(decimal.Decimal(ei.totalcost)
+                                                for ei in self.extrainstance_set.filter(
+                                                    extra__category__in=discount.categories.all()))
                 if discountable_total == 0:
                     continue
                 discount_value = discountable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
                 values[(discount, percentage)] = discount_value.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
         return values
+    discount_values = property(get_discount_values)
 
-    @property
-    def fee_values(self):
+    def get_fee_values(self, category=None):
         if not self.uses_new_discounts:
             return {}
 
@@ -919,13 +938,28 @@ class Event2019(BaseEvent):
         for fee in self.applied_fees.all():
             if self.pricelist and FeePrice.objects.filter(fee=fee, pricelist=self.pricelist).exists():
                 percentage = FeePrice.objects.get(pricelist=self.pricelist, fee=fee).percent
-                applicable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=fee.categories.all()))
-                applicable_total += sum(decimal.Decimal(ei.totalcost) for ei in self.extrainstance_set.filter(extra__category__in=fee.categories.all()))
+                if category:
+                    applicable_total = sum(decimal.Decimal(si.cost)
+                                            for si in self.serviceinstance_set.filter(
+                                                service__category__in=fee.categories.all(),
+                                                service__category=category))
+                    applicable_total += sum(decimal.Decimal(ei.totalcost)
+                                            for ei in self.extrainstance_set.filter(
+                                                extra__category__in=fee.categories.all(),
+                                                extra__category=category))
+                else:
+                    applicable_total = sum(decimal.Decimal(si.cost)
+                                            for si in self.serviceinstance_set.filter(
+                                                service__category__in=fee.categories.all()))
+                    applicable_total += sum(decimal.Decimal(ei.totalcost)
+                                            for ei in self.extrainstance_set.filter(
+                                                extra__category__in=fee.categories.all()))
                 if applicable_total == 0:
                     continue
                 value = applicable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
                 values[(fee, percentage)] = value.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
         return values
+    fee_values = property(get_fee_values)
 
     @property
     def cost_total(self):

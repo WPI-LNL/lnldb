@@ -1,3 +1,5 @@
+import datetime
+
 from django.urls import reverse
 from django.test import TestCase
 from django.utils import timezone
@@ -74,12 +76,17 @@ class PdfViewTest(TestCase):
         event_data = {
             'event': self.e,
             'is_event2019': False,
-            'extras': {}
+            'extras': {},
+            'categories': [],
+            'expiry_date': timezone.now() + datetime.timedelta(days=7)
         }
-        response = views.get_extras(self.e)
+        response = views.get_quote_data(self.e)
+        self.assertTrue(abs(response['expiry_date'] - event_data['expiry_date']) < datetime.timedelta(minutes=1))
+        response.pop('expiry_date')
+        event_data.pop('expiry_date')
         self.assertEqual(response, event_data)
 
-        response = views.get_extras(self.e4)
+        response = views.get_quote_data(self.e4)
         self.assertEqual(list(response['extras'][self.category]), [self.extra_instance])
 
     def test_event_pdf(self):
@@ -142,7 +149,7 @@ class PdfViewTest(TestCase):
         html_response = self.client.get(reverse('events:bill-pdf-multi', args=["%s,%s" % (self.e.pk, self.e2.pk)]),
                                         {'raw': True})
         self.assertEqual(html_response.status_code, 200)
-        self.assertContains(html_response, "QUOTE")
+        self.assertTrue(b'QUOTE' in html_response.content)
 
         # Test with no ids
         response = self.client.get(reverse('events:bill-pdf-multi'))

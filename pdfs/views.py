@@ -13,7 +13,12 @@ from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.text import slugify
+
 from xhtml2pdf import pisa
+from weasyprint import HTML
+from weasyprint.logger import capture_logs
+import logging
+from pypdf import PdfWriter, PdfReader
 
 from events.models import Category, BaseEvent, Event2019, ExtraInstance, MultiBilling, Quote
 from projection.models import PITLevel, Projectionist
@@ -40,6 +45,17 @@ def link_callback(uri, rel):
     if not os.path.isfile(path):
         raise Exception('media URI must start with %s or %s' % (surl, murl))
     return path
+
+
+def url_fetcher(url):
+    """ a callback for weasyprint to fetch static files """
+    if url.startswith("file://"):
+        path = link_callback(url[7:], "")
+        data = {}
+        data['file_obj'] = open(path, 'rb')
+        return data
+    else:
+        raise Exception('Non-local files are not implemented for safety reasons')
 
 
 def generate_pdf(context, template, request):
@@ -99,16 +115,33 @@ def get_multibill_data(multibilling):
     return data
 
 
-def get_extras(event):
+def get_quote_data(event):
+    is_event2019 = isinstance(event, Event2019)
     event_data = {
         'event': event,
         'extras': {},
-        'is_event2019': isinstance(event, Event2019)
+        'categories': [],
+        'is_event2019': is_event2019,
+        'expiry_date': timezone.now() + datetime.timedelta(days=7)
     }
-    for cat in Category.objects.all():
-        e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
-        if len(e_for_cat) > 0:
-            event_data['extras'][cat] = e_for_cat
+    if is_event2019 and event.uses_new_discounts:
+        for category in Category.objects.all():
+            service_instances = event.serviceinstance_set.filter(service__category=category)
+            extra_instances = event.extrainstance_set.filter(extra__category=category)
+            if service_instances or extra_instances:
+                event_data['categories'].append({
+                    'category': category,
+                    'service_instances': service_instances,
+                    'extra_instances': extra_instances,
+                    'discounts': event.get_discount_values(category=category),
+                    'fees': event.get_fee_values(category=category),
+                    'total': event.category_subtotal(category)
+                })
+    else:
+        for cat in Category.objects.all():
+            e_for_cat = ExtraInstance.objects.filter(event=event).filter(extra__category=cat)
+            if len(e_for_cat) > 0:
+                event_data['extras'][cat] = e_for_cat
     return event_data
 
 
@@ -171,11 +204,12 @@ def generate_event_bill_pdf(request, event):
         raise PermissionDenied
     if not event.approved and not request.user.has_perm('events.bill_event', event):
         raise PermissionDenied
-    data = {}
-    event_data = get_extras(event)
-    data['events_data'] = [event_data]
+    data = get_quote_data(event)
 
-    html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
+    if isinstance(event, Event2019) and event.uses_new_discounts:
+        html = render_to_string('pdf_templates/bill-itemized-2025.html', context=data, request=request)
+    else:
+        html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
     quote = Quote.objects.create(event=event, html=html, is_invoice=event.reviewed)
 
     return view_quote(request, quote.pk)
@@ -189,7 +223,14 @@ def view_quote(request, id):
         resp = HttpResponse(html)
     else:
         pdf_file = BytesIO()
-        pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+
+        if isinstance(quote.event, Event2019) and quote.event.uses_new_discounts:
+            with capture_logs(level=logging.DEBUG) as logs:
+                HTML(string=html, url_fetcher=url_fetcher, base_url="/").write_pdf(pdf_file)
+            print(logs)
+        else:
+            pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+
         resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
 
     if quote.is_invoice:
@@ -199,23 +240,30 @@ def view_quote(request, id):
     return resp
 
 
-def generate_event_bill_pdf_standalone(event, request=None):
+def generate_event_bill_pdf_standalone(event, request=None, return_stream=False):
     """
     Generate event bill PDF without HttpResponse
 
     :returns: PDF file
     """
-    data = {}
-    event_data = get_extras(event)
-    data['events_data'] = [event_data]
+    data = get_quote_data(event)
     # Render html content through html template with context
-    html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
+    if isinstance(event, Event2019) and event.uses_new_discounts:
+        html = render_to_string('pdf_templates/bill-itemized-2025.html', context=data, request=request)
+    else:
+        html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
     Quote.objects.create(event=event, html=html, is_invoice=event.reviewed)
 
     # Write PDF to file
     pdf_file = BytesIO()
-    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 
+    if isinstance(event, Event2019) and event.uses_new_discounts:
+        HTML(string=html, url_fetcher=url_fetcher, base_url="/").write_pdf(pdf_file)
+    else:
+        pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+
+    if return_stream:
+        return pdf_file
     return pdf_file.getvalue()
 
 
@@ -313,13 +361,18 @@ def generate_event_bill_pdf_multi(request, ids=None):
         return HttpResponse("Should probably give some ids to return pdfs for.")
     # Prepare IDs
     idlist = ids.split(',')
-    # Prepare context
-    data = {'events_data': []}
     events = BaseEvent.objects.filter(pk__in=idlist)
-    for event in events:
-        event_data = get_extras(event)
-        data['events_data'].append(event_data)
+    if not events:
+        raise Http404("Could not find any matching events.")
 
-    resp = generate_pdf(data, 'pdf_templates/bill-itemized.html', request)
-    resp['Content-Disposition'] = 'inline; filename="%s-bill.pdf"' % slugify(event.event_name)
+    writer = PdfWriter()
+    for event in events:
+        pdf = generate_event_bill_pdf_standalone(event, request=request, return_stream=True)
+        writer.append(pdf)
+    
+    output_file = BytesIO()
+    writer.write(output_file)
+
+    resp = HttpResponse(output_file.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = 'inline; filename="multi-event-bill.pdf"'
     return resp
