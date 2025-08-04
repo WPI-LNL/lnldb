@@ -341,7 +341,7 @@ def generate_event_pdf_multi(request, ids=None):
     idlist = ids.split(',')
     # Prepare context
     data = {}
-    events = BaseEvent.objects.filter(pk__in=idlist)
+    events = BaseEvent.objects.filter(pk__in=idlist).order_by("datetime_start")
     data['events_data'] = []
     for event in events:
         event_data = get_category_data(event)
@@ -361,7 +361,7 @@ def generate_event_bill_pdf_multi(request, ids=None):
         return HttpResponse("Should probably give some ids to return pdfs for.")
     # Prepare IDs
     idlist = ids.split(',')
-    events = BaseEvent.objects.filter(pk__in=idlist)
+    events = BaseEvent.objects.filter(pk__in=idlist).order_by("datetime_start")
     if not events:
         raise Http404("Could not find any matching events.")
 
