@@ -1620,8 +1620,11 @@ class EventOccurrence(models.Model):
         """ Unique event id used by calendars """
         return 'eventoccurrence' + str(self.id) + '@lnldb'
 
+    def __str__(self):
+        return f'{self.name} for {self.event.event_name}'
+
     class Meta:
-        ordering = ('-start',)
+        ordering = ('start',)
 
 
 @python_2_unicode_compatible

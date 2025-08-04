@@ -389,6 +389,18 @@
                 </div>
                 <div id="schedule" class="tab-pane">
                     <table class="table">
+                        {% for occurrence in event.occurrences.all %}
+                        <tr>
+                            <th>{{ occurrence.name }}</th>
+                            <td>{{ occurrence.start|date:"D, N j Y, " }}
+                                {% if occurrence.start|date:"D, N j Y, " == occurrence.end|date:"D, N j Y, " %}
+                                <strong>{{ occurrence.start|date:"P"}}</strong> - <strong>{{ occurrence.end|date:"P" }}</strong>
+                                {% else %}
+                                <strong>{{ occurrence.start|date:"P"}}</strong> - 
+                                {{ occurrence.end|date:"D, N j Y, " }}<strong>{{ occurrence.end|date:"P"}}</strong>
+                                {% endif %}
+                        </tr>
+                        {% endfor %}
                         {% now "U" as now__unix_time %}
                         {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
                         <tr>

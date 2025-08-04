@@ -79,16 +79,19 @@ class FeePriceInline(admin.TabularInline):
 class DiscountPriceInline(admin.TabularInline):
     model = models.DiscountPrice
 
+class EventOccurrenceInline(admin.TabularInline):
+    model = models.EventOccurrence
+
 
 class EventAdmin(PolymorphicChildModelAdmin, VersionAdmin):
-    inlines = [EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline]
+    inlines = [EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline, EventOccurrenceInline]
     filter_horizontal = ('crew', 'crew_chief', 'org')
     search_fields = ['event_name']
     readonly_fields = ['submitted_on']
 
 
 class Event2019Admin(PolymorphicChildModelAdmin, VersionAdmin):
-    inlines = [ServiceInstanceInline, EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline]
+    inlines = [ServiceInstanceInline, EventCCInline, EventHoursInline, EventAttachmentInline, EventBillingInline, EventOccurrenceInline]
     filter_horizontal = ('org', 'applied_fees', 'applied_discounts')
     search_fields = ['event_name']
     readonly_fields = ['submitted_on']
