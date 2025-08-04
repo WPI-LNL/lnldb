@@ -48,6 +48,7 @@
             padding-top: 2px;
             padding-bottom: 2px;
             margin-bottom: 20px;
+            background-color: #f3f3f3;
         }
 
         ul.list-unstyled {
@@ -122,14 +123,37 @@
             font-size: 14pt;
             font-weight: bold;
             padding-top: 20px;
+            break-after: avoid;
+        }
+        
+        table.category {
+            break-before: avoid;
+            break-inside: avoid;
         }
 
         table.category th {
             font-size: 8pt;
+            font-weight: normal;
         }
 
         table.category td {
             font-size: 10pt;
+        }
+        
+        table.category th:nth-child(1) {
+            width: 10%;
+        }
+
+        table.category th:nth-child(2) {
+            width: 55%;
+        }
+
+        table.category th:nth-child(3) {
+            width: 20%;
+        }
+
+        table.category th:nth-child(4) {
+            width: 15%;
         }
 
         table.category th:nth-child(1),
@@ -138,12 +162,20 @@
         }
 
         table.category td:nth-child(3),
-        table.category th:nth-child(3),
-        table.category td:nth-child(4),
-        table.category th:nth-child(4) {
+        table.category th:nth-child(3) {
             text-align: right;
         }
 
+        table.category td:nth-child(4),
+        table.category th:nth-child(4) {
+            text-align: right;
+            padding-right: 5px;
+        }
+        
+        table.category tr:nth-child(2n+4) {
+            background-color: #f3f3f3;
+        }
+        
         div.grand-total {
             clear: both;
             border-top: 2px solid black;
@@ -267,9 +299,6 @@
             {% endfor %}
 
             {% if category.discounts or category.fees %}
-            <tr>
-                <td></td>
-            </tr>
             {% for discount_percent, value in category.discounts.items %}
             <tr>
                 <td>-</td>
