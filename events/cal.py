@@ -317,6 +317,19 @@ def generate_cal_json(queryset, from_date=None, to_date=None):
             }
             objects_body.append(field)
 
+            for occurrence in event.occurrences.all():
+                if occurrence.display_on_cal:
+                    field = {
+                        "id": occurrence.cal_guid(),
+                        "title": occurrence.cal_name(),
+                        "url": reverse('events:detail', args=[occurrence.event.id]),
+                        "className": 'cal-status-' + slugify(occurrence.event.status),
+                        "start": datetime_to_timestamp(occurrence.cal_start() + timezone.timedelta(hours=-5)),
+                        "end": datetime_to_timestamp(occurrence.cal_end() + timezone.timedelta(hours=-5)),
+                        "description": occurrence.cal_desc(),
+                    }
+                    objects_body.append(field)
+
         return json.dumps(objects_body)
 
 

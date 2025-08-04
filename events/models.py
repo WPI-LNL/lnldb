@@ -1598,7 +1598,7 @@ class EventOccurrence(models.Model):
 
     def cal_desc(self):
         """ Description used by calendars """
-        return self.event.cal_desc
+        return self.event.cal_desc()
 
     def cal_location(self):
         """ Location used by calendars """
