@@ -388,6 +388,14 @@
 
                 </div>
                 <div id="schedule" class="tab-pane">
+                    {% if not event.closed %}
+                        {% permission request.user has 'events.adjust_event_charges' of event %}
+                            <div class="pull-right">
+                                <a class="btn btn-lg btn-info" href="{% url "events:occurrences" event.id %}">Modify Occurrences</a>
+                            </div>
+                        {% endpermission %}
+                    {% endif %}
+
                     <table class="table">
                         {% for occurrence in event.occurrences.all %}
                         <tr>

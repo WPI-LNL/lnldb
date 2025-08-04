@@ -26,7 +26,7 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
                            ExtraInstance, Hours, Lighting, Location, Organization, OrganizationTransfer,
                            OrgBillingVerificationEvent, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
-                           Sound, PostEventSurvey, OfficeHour, Fee, Discount)
+                           Sound, PostEventSurvey, OfficeHour, Fee, Discount, EventOccurrence)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 from helpers.util import curry_class
@@ -1464,6 +1464,14 @@ class ServiceInstanceForm(forms.ModelForm):
         }
 
     service = ModelChoiceField(queryset=Service.objects.filter(enabled_event2019=True))
+
+class EventOccurrenceForm(forms.ModelForm):
+    class Meta:
+        model = EventOccurrence
+        fields = ('name', 'start', 'end', 'display_on_cal')
+
+    start = forms.SplitDateTimeField()
+    end = forms.SplitDateTimeField()
 
 
 # CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3,form=CCIForm, exclude=[])
