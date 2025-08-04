@@ -1585,6 +1585,45 @@ class EventArbitrary(models.Model):
         return abs(self.totalcost)
 
 
+class EventOccurrence(models.Model):
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name='occurrences')
+    name = models.CharField(max_length=64)
+    start = models.DateTimeField()
+    end = models.DateTimeField()
+    display_on_cal = models.BooleanField(default=True)
+
+    def cal_name(self):
+        """ Title used by calendars """
+        return f'{self.name} for {self.event.event_name}'
+
+    def cal_desc(self):
+        """ Description used by calendars """
+        return self.event.cal_desc
+
+    def cal_location(self):
+        """ Location used by calendars """
+        return self.setup_location.name
+
+    def cal_start(self):
+        """ Start time used by calendars (setup) """
+        return self.start
+
+    def cal_end(self):
+        """ End time used by calendars """
+        return self.end
+
+    def cal_link(self):
+        """ Link to display on calendars """
+        return get_host() + reverse('events:detail', args=[self.event.id])
+
+    def cal_guid(self):
+        """ Unique event id used by calendars """
+        return 'eventoccurrence' + str(self.id) + '@lnldb'
+
+    class Meta:
+        ordering = ('-start',)
+
+
 @python_2_unicode_compatible
 class PostEventSurvey(models.Model):
     """ Survey sent to clients after an event to collect their feedback """
