@@ -1602,7 +1602,7 @@ class EventOccurrence(models.Model):
 
     def cal_location(self):
         """ Location used by calendars """
-        return self.setup_location.name
+        return self.event.location
 
     def cal_start(self):
         """ Start time used by calendars (setup) """
