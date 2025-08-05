@@ -56,7 +56,7 @@ class ConfigurationProfile(models.Model):
     JSON file.
     """
     name = models.CharField(max_length=100)
-    profile = models.FilePathField(path=os.path.join(settings.MEDIA_ROOT, "profiles"), match=".*\.json$")
+    profile = models.FilePathField(path=os.path.join(settings.MEDIA_ROOT, "profiles"), match=r".*\.json$")
     scope = models.CharField(choices=(('System', 'System'), ('User', 'User')), max_length=6, default='System')
     created_on = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
