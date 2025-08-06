@@ -173,6 +173,7 @@ class OnboardingWizard(SessionWizardView, LoginRequiredMixin):
 @require_GET
 def recruitment_page(request):
     """ Serve LNL's join page with list of upcoming or ongoing events """
+    # MOVED TO THE STATIC SITE - THIS VERSION NO LONGER IN USE
     now = timezone.now()
     five_days_from_now = now + datetime.timedelta(days=5)
     events = BaseEvent.objects\
