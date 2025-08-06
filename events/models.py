@@ -256,7 +256,7 @@ class BaseEvent(PolymorphicModel):
     billed_in_bulk = models.BooleanField(default=False, db_index=True, help_text="Check if billing of this event will be deferred so that it can be combined with other events in a single invoice")
     sensitive = models.BooleanField(default=False, help_text="Nobody besides those directly involved should know about this event")
     test_event = models.BooleanField(default=False, help_text="Check to lower the VP's blood pressure after they see the short-notice S4/L4")
-    
+
     # Status Indicators
     approved = models.BooleanField(default=False)
     approved_on = models.DateTimeField(null=True, blank=True)
@@ -281,7 +281,7 @@ class BaseEvent(PolymorphicModel):
     def cal_name(self):
         """ Title to display on calendars """
         return self.event_name
-    
+
     def cal_desc(self):
         """ Event description used by calendars """
         desc = ""
@@ -337,7 +337,7 @@ class BaseEvent(PolymorphicModel):
         """ Returns false if too much time has elapsed since the end of the event """
         end_plus_time = self.datetime_end + datetime.timedelta(days=CCR_DELTA)
         return timezone.now() < end_plus_time
-    
+
     @cached_property
     def status(self):
         if self.cancelled:
@@ -375,7 +375,7 @@ class BaseEvent(PolymorphicModel):
     @property
     def late(self):
         return self.datetime_setup_complete - self.submitted_on < datetime.timedelta(weeks=2)
-    
+
     @property
     def oneoffs(self):
         return self.arbitraryfees.all()
@@ -383,7 +383,7 @@ class BaseEvent(PolymorphicModel):
     @property
     def oneoff_total(self):
         return sum([x.totalcost for x in self.oneoffs])
-    
+
     @property
     def org_to_be_billed(self):
         if not self.billing_org:
@@ -496,7 +496,7 @@ class Event(BaseEvent):
 
     # Dates & Times
     datetime_setup_start = models.DateTimeField(null=True, blank=True, db_index=True)  # DEPRECATED
-    
+
     # service levels
     lighting = models.ForeignKey('Lighting', on_delete=models.PROTECT, null=True, blank=True, related_name='lighting')
     sound = models.ForeignKey('Sound', on_delete=models.PROTECT, null=True, blank=True, related_name='sound')
@@ -823,9 +823,16 @@ class Event2019(BaseEvent):
 
     # 25live integration
     reference_code = models.CharField(max_length=12, null=True, blank=True,
-            help_text="The 25Live reference code, found on the event page")
-    event_id = models.IntegerField(null=True, blank=True, 
-        help_text="The 25Live event ID. If not provided, it will be generated from the reference code.")
+                                      help_text="The 25Live reference code, found on the event page")
+    event_id = models.IntegerField(null=True, blank=True,
+                                   help_text="The 25Live event ID. If not provided, it will be generated from the reference code.")
+
+    # null pricelist corresponds to the default price attached to the service directly
+    pricelist = models.ForeignKey("Pricelist", null=True, blank=True, on_delete=models.PROTECT, help_text="Which pricelist this event will be billed using.")
+
+    uses_new_discounts = models.BooleanField(default=False, help_text="Whether or not this event uses the new discount system.")
+    applied_fees = models.ManyToManyField("Fee", blank=True, help_text="Which fees will be applied to this event.")
+    applied_discounts = models.ManyToManyField("Discount", blank=True, help_text="Which discounts will be applied to this event.")
 
     @property
     def has_projection(self):
@@ -846,44 +853,120 @@ class Event2019(BaseEvent):
 
     @property
     def services_total(self):
-        services_cost = self.serviceinstance_set.aggregate(Sum('service__base_cost'))['service__base_cost__sum']
-        return services_cost if services_cost is not None else 0
+        return sum(si.cost for si in self.serviceinstance_set.all())
 
     @property
     def extras_total(self):
-        total = 0
-        for extra_instance in self.extrainstance_set.all():
-            total += extra_instance.totalcost
-        return total
+        return sum(ei.totalcost for ei in self.extrainstance_set.all())
+
+    @property
+    def rental_fee_total(self):
+        percent = self.pricelist.rental_fee_percentage if self.pricelist else 15
+        applicable_total = sum(decimal.Decimal(rental.totalcost) for rental in self.rentals.filter(rental_fee_applied=True))
+        total = applicable_total * decimal.Decimal(percent) / decimal.Decimal("100")
+        return total.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
+
+    @property
+    def rentals_total(self):
+        return sum(rental.totalcost for rental in self.rentals.all()) + self.rental_fee_total
 
     @property
     def cost_total_pre_discount(self):
         return self.services_total + self.extras_total + self.oneoff_total
 
+    def category_subtotal(self, category):
+        return sum(si.cost for si in self.serviceinstance_set.filter(service__category=category)) + \
+               sum(ei.totalcost for ei in self.extrainstance_set.filter(extra__category=category)) - \
+               sum(self.get_discount_values(category=category).values()) + \
+               sum(self.get_fee_values(category=category).values())
+
     @property
     def discount_applied(self):
+        if self.uses_new_discounts:
+            return False
+
         categories = ['Lighting', 'Sound']
-        categories = [Category.objects.get(name=name) for name in categories]
-        for category in categories:
-            if not self.serviceinstance_set.filter(service__category=category).exists():
-                return False
-        return True
+        return all(self.serviceinstance_set.filter(service__category__name=category).exists() for category in categories)
 
     @property
     def discount_value(self):
         if self.discount_applied:
-            categories = ['Lighting', 'Sound', 'Rigging', 'Power']
-            categories = [Category.objects.get(name=name) for name in categories]
-            discountable_total = decimal.Decimal(
-                self.serviceinstance_set.filter(service__category__in=categories).aggregate(Sum('service__base_cost'))[
-                    'service__base_cost__sum']) + self.extras_total
-            return discountable_total * decimal.Decimal(".15")
+            category_names = ['Lighting', 'Sound', 'Rigging', 'Power']
+            categories = Category.objects.filter(name__in=category_names)
+            discountable_total = sum(decimal.Decimal(si.cost) for si in self.serviceinstance_set.filter(service__category__in=categories)) + self.extras_total
+            discount = discountable_total * decimal.Decimal(".15")
+            return discount.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
         else:
             return decimal.Decimal("0.0")
 
+    def get_discount_values(self, category=None):
+        if not self.uses_new_discounts:
+            return {}
+
+        values = {}
+        for discount in self.applied_discounts.all():
+            if self.pricelist and DiscountPrice.objects.filter(discount=discount, pricelist=self.pricelist).exists():
+                percentage = DiscountPrice.objects.get(pricelist=self.pricelist, discount=discount).percent
+                if category:
+                    discountable_total = sum(decimal.Decimal(si.cost)
+                                                for si in self.serviceinstance_set.filter(
+                                                    service__category__in=discount.categories.all(),
+                                                    service__category=category))
+                    discountable_total += sum(decimal.Decimal(ei.totalcost)
+                                                for ei in self.extrainstance_set.filter(
+                                                    extra__category__in=discount.categories.all(),
+                                                    extra__category=category))
+                else:
+                    discountable_total = sum(decimal.Decimal(si.cost)
+                                                for si in self.serviceinstance_set.filter(
+                                                    service__category__in=discount.categories.all()))
+                    discountable_total += sum(decimal.Decimal(ei.totalcost)
+                                                for ei in self.extrainstance_set.filter(
+                                                    extra__category__in=discount.categories.all()))
+                if discountable_total == 0:
+                    continue
+                discount_value = discountable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
+                values[(discount, percentage)] = discount_value.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
+        return values
+    discount_values = property(get_discount_values)
+
+    def get_fee_values(self, category=None):
+        if not self.uses_new_discounts:
+            return {}
+
+        values = {}
+        for fee in self.applied_fees.all():
+            if self.pricelist and FeePrice.objects.filter(fee=fee, pricelist=self.pricelist).exists():
+                percentage = FeePrice.objects.get(pricelist=self.pricelist, fee=fee).percent
+                if category:
+                    applicable_total = sum(decimal.Decimal(si.cost)
+                                            for si in self.serviceinstance_set.filter(
+                                                service__category__in=fee.categories.all(),
+                                                service__category=category))
+                    applicable_total += sum(decimal.Decimal(ei.totalcost)
+                                            for ei in self.extrainstance_set.filter(
+                                                extra__category__in=fee.categories.all(),
+                                                extra__category=category))
+                else:
+                    applicable_total = sum(decimal.Decimal(si.cost)
+                                            for si in self.serviceinstance_set.filter(
+                                                service__category__in=fee.categories.all()))
+                    applicable_total += sum(decimal.Decimal(ei.totalcost)
+                                            for ei in self.extrainstance_set.filter(
+                                                extra__category__in=fee.categories.all()))
+                if applicable_total == 0:
+                    continue
+                value = applicable_total * decimal.Decimal(percentage) / decimal.Decimal("100")
+                values[(fee, percentage)] = value.quantize(decimal.Decimal('.01'), rounding=decimal.ROUND_DOWN)
+        return values
+    fee_values = property(get_fee_values)
+
     @property
     def cost_total(self):
-        return self.cost_total_pre_discount - self.discount_value
+        if self.uses_new_discounts:
+            return self.cost_total_pre_discount - sum(self.discount_values.values()) + sum(self.fee_values.values()) + self.rentals_total
+        else:
+            return self.cost_total_pre_discount - self.discount_value
 
     @property
     def workday_form_hash(self):
@@ -895,7 +978,7 @@ class Event2019(BaseEvent):
             str(self.org_to_be_billed.pk if self.org_to_be_billed is not None else None) +
             str(self.workday_fund) +
             str(self.worktag)
-            ).encode('utf-8')).hexdigest()
+        ).encode('utf-8')).hexdigest()
 
     # Service glyphicon for templates
     @property
@@ -914,7 +997,7 @@ class Event2019(BaseEvent):
     class Meta:
         verbose_name = '2019 Event'
 
-    
+
 @python_2_unicode_compatible
 class Building(models.Model):
     """ Used to group locations together in forms """
@@ -959,11 +1042,16 @@ class ExtraInstance(models.Model):
 
     @property
     def totalcost(self):
-        return self.quant * self.extra.cost
+        return self.quant * self.cost
 
     @property
     def cost(self):
+        if isinstance(self.event, Event2019) and self.event.pricelist and ExtraPrice.objects.filter(extra=self.extra, pricelist=self.event.pricelist).exists():
+            return ExtraPrice.objects.get(extra=self.extra, pricelist=self.event.pricelist).cost
         return self.extra.cost
+
+    def __str__(self):
+        return "%s ($%s)" % (self.extra.name, self.cost)
 
 
 @python_2_unicode_compatible
@@ -978,7 +1066,7 @@ class Extra(models.Model):
     checkbox = models.BooleanField(default=False, help_text="Use a checkbox instead of an integer entry")
 
     def __str__(self):
-        return "%s ($%s)" % (self.name, self.cost)
+        return self.name
 
     @property
     def formfield(self):
@@ -986,6 +1074,22 @@ class Extra(models.Model):
             return forms.BooleanField(),
         else:
             return forms.IntegerField(min_value=0, ),
+
+
+class Rental(models.Model):
+    """ External rentals for events """
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="rentals")
+    name = models.CharField(max_length=64)
+    cost = models.DecimalField(max_digits=8, decimal_places=2)
+    quantity = models.PositiveSmallIntegerField(default=1)
+    rental_fee_applied = models.BooleanField(default=True)
+
+    @property
+    def totalcost(self):
+        return self.cost * self.quantity
+
+    def __str__(self):
+        return f'{self.name} rental for {self.event}'
 
 
 @python_2_unicode_compatible
@@ -1020,6 +1124,103 @@ class Service(models.Model):
         return self.longname
 
 
+class Fee(models.Model):
+    name = models.CharField(max_length=64)
+    categories = models.ManyToManyField(Category, help_text="Which categories of services this fee will apply to")
+
+    def __str__(self):
+        return self.name
+
+
+class Discount(models.Model):
+    name = models.CharField(max_length=64)
+    categories = models.ManyToManyField(Category, related_name="possible_discounts", help_text="Which categories this discount applies to")
+    required_categories = models.ManyToManyField(Category, blank=True, related_name="discounts_that_require_this_category", help_text="Which categories must exist in an event for this discount to automatically apply")
+
+    def __str__(self):
+        return self.name
+
+
+class Pricelist(models.Model):
+    """ A set of prices that can apply to services """
+    name = models.CharField(max_length=20)
+    services = models.ManyToManyField(Service, through="ServicePrice", related_name="pricelists")
+    fees = models.ManyToManyField(Fee, through="FeePrice", related_name="pricelists")
+    discounts = models.ManyToManyField(Discount, through="DiscountPrice", related_name="pricelists")
+    rental_fee_percentage = models.DecimalField(default=15, max_digits=8, decimal_places=2)
+
+    def __str__(self):
+        return self.name
+
+
+class ServicePrice(models.Model):
+    """ a many to many table between services and pricelists """
+    service = models.ForeignKey("Service", on_delete=models.CASCADE)
+    pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
+    cost = models.DecimalField(max_digits=8, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["service", "pricelist"], name="unique_service_pricelist"
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.pricelist} price for {self.service}'
+
+
+class ExtraPrice(models.Model):
+    """ a many to many table between extras and pricelists """
+    extra = models.ForeignKey("Extra", on_delete=models.CASCADE)
+    pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
+    cost = models.DecimalField(max_digits=8, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["extra", "pricelist"], name="unique_extra_pricelist"
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.pricelist} price for {self.extra}'
+
+
+class FeePrice(models.Model):
+    """ a many to many table between services and fees """
+    fee = models.ForeignKey("Fee", on_delete=models.CASCADE)
+    pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
+    percent = models.DecimalField(max_digits=8, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["fee", "pricelist"], name="unique_service_fee"
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.pricelist} price for {self.fee}'
+
+
+class DiscountPrice(models.Model):
+    """ a many to many table between services and discount """
+    discount = models.ForeignKey("Discount", on_delete=models.CASCADE)
+    pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
+    percent = models.DecimalField(max_digits=8, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["discount", "pricelist"], name="unique_service_discount"
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.pricelist} price for {self.discount}'
+
+
 # No longer used in Event2019
 class Lighting(Service):
     pass
@@ -1045,9 +1246,29 @@ class ServiceInstance(models.Model):
     event = models.ForeignKey('BaseEvent', on_delete=models.CASCADE)
     detail = models.TextField(blank=True)
 
+    @property
+    def cost(self):
+        if isinstance(self.event, Event2019) and self.event.pricelist and ServicePrice.objects.filter(service=self.service, pricelist=self.event.pricelist).exists():
+            return ServicePrice.objects.get(service=self.service, pricelist=self.event.pricelist).cost
+        return self.service.base_cost
+
     def __str__(self):
         return '{} for {}'.format(str(self.service), str(self.event))
-    
+
+
+class Quote(models.Model):
+    """ A saved quote that was generated for an event """
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="quotes")
+    date_generated = models.DateTimeField(default=timezone.now)
+    html = models.TextField()
+    is_invoice = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'Quote for {self.event}'
+
+    class Meta:
+        ordering = ("-date_generated",)
+
 
 @python_2_unicode_compatible
 class Billing(models.Model):
@@ -1081,7 +1302,7 @@ class MultiBilling(models.Model):
     amount = models.DecimalField(max_digits=8, decimal_places=2)
 
     def __str__(self):
-        out = 'MultiBill for ' + ', '.join(map(lambda event : event.event_name, self.events.all()))
+        out = 'MultiBill for ' + ', '.join(map(lambda event: event.event_name, self.events.all()))
         if self.date_paid:
             out += ' (PAID)'
         return out
@@ -1118,7 +1339,7 @@ class MultiBillingEmail(models.Model):
     def __str__(self):
         return 'MultiBilling email sent %s for %s' % (
             self.sent_at if self.sent_at is not None else 'never',
-            ', '.join(map(lambda event : event.event_name, self.multibilling.events.all())))
+            ', '.join(map(lambda event: event.event_name, self.multibilling.events.all())))
 
 
 @python_2_unicode_compatible
@@ -1363,6 +1584,48 @@ class EventArbitrary(models.Model):
     @property
     def abs_cost(self):
         return abs(self.totalcost)
+
+
+class EventOccurrence(models.Model):
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name='occurrences')
+    name = models.CharField(max_length=64)
+    start = models.DateTimeField()
+    end = models.DateTimeField()
+    display_on_cal = models.BooleanField(default=True)
+
+    def cal_name(self):
+        """ Title used by calendars """
+        return f'{self.name} for {self.event.event_name}'
+
+    def cal_desc(self):
+        """ Description used by calendars """
+        return self.event.cal_desc()
+
+    def cal_location(self):
+        """ Location used by calendars """
+        return self.event.location
+
+    def cal_start(self):
+        """ Start time used by calendars (setup) """
+        return self.start
+
+    def cal_end(self):
+        """ End time used by calendars """
+        return self.end
+
+    def cal_link(self):
+        """ Link to display on calendars """
+        return get_host() + reverse('events:detail', args=[self.event.id])
+
+    def cal_guid(self):
+        """ Unique event id used by calendars """
+        return 'eventoccurrence' + str(self.id) + '@lnldb'
+
+    def __str__(self):
+        return f'{self.name} for {self.event.event_name}'
+
+    class Meta:
+        ordering = ('start',)
 
 
 @python_2_unicode_compatible

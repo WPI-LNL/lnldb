@@ -17,7 +17,7 @@ from django_ical.views import ICalFeed
 from django.utils.timezone import localtime
 
 
-from events.models import BaseEvent, Category, EventCCInstance
+from events.models import BaseEvent, Category, EventOccurrence
 from meetings.models import Meeting
 from helpers.mixins import HasPermMixin
 
@@ -70,13 +70,13 @@ class EventFeed(BaseFeed):
                 Q(test_event=True) |
                 Q(sensitive=True)
             ).order_by('datetime_start').all()) + \
-            list(EventCCInstance.objects.filter(event__approved=True)\
+            list(EventOccurrence.objects.filter(display_on_cal=True, event__approved=True)\
             .exclude(
                 Q(event__closed=True) |
                 Q(event__cancelled=True) |
                 Q(event__test_event=True) |
                 Q(event__sensitive=True)
-            ).order_by('setup_start').all()) + \
+            ).order_by('start').all()) + \
             list(Meeting.objects.order_by('datetime').all())
 
 
@@ -88,12 +88,12 @@ class FullEventFeed(BaseFeed):
                 Q(test_event=True) |
                 Q(sensitive=True)
             ).order_by('datetime_start').all()) + \
-            list(EventCCInstance.objects.exclude(
+            list(EventOccurrence.objects.filter(display_on_cal=True).exclude(\
                 Q(event__closed=True) |
                 Q(event__cancelled=True) |
                 Q(event__test_event=True) |
                 Q(event__sensitive=True)
-            ).order_by('setup_start').all()) + \
+            ).order_by('start').all()) + \
             list(Meeting.objects.order_by('datetime').all())
 
 
@@ -316,6 +316,19 @@ def generate_cal_json(queryset, from_date=None, to_date=None):
                 "description": event.location.name + " (" + event.location.building.shortname + "). " + event.cal_desc(),
             }
             objects_body.append(field)
+
+            for occurrence in event.occurrences.all():
+                if occurrence.display_on_cal:
+                    field = {
+                        "id": occurrence.cal_guid(),
+                        "title": occurrence.cal_name(),
+                        "url": reverse('events:detail', args=[occurrence.event.id]),
+                        "className": 'cal-status-' + slugify(occurrence.event.status),
+                        "start": datetime_to_timestamp(occurrence.cal_start() + timezone.timedelta(hours=-5)),
+                        "end": datetime_to_timestamp(occurrence.cal_end() + timezone.timedelta(hours=-5)),
+                        "description": occurrence.cal_desc(),
+                    }
+                    objects_body.append(field)
 
         return json.dumps(objects_body)
 

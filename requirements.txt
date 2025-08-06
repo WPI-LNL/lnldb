@@ -16,7 +16,7 @@ coverage==7.6.10
 coveralls==4.0.1
 crispy-bootstrap3==2024.1
 cryptography==44.0.0
-cssselect2==0.7.0
+cssselect2==0.8.0
 dealer==2.1.0
 defusedxml==0.7.1
 dictor==0.1.12
@@ -139,6 +139,7 @@ uritemplate==4.1.1
 uritools==4.0.3
 urllib3==2.3.0
 webencodings==0.5.1
+weasyprint==66
 whitenoise==6.8.2
 xhtml2pdf==0.2.16
 xmlschema==2.5.1
