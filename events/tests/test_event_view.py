@@ -1301,6 +1301,54 @@ class EventBasicViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("events:oneoffs", args=[self.e.pk]), valid_data),
                              reverse("events:detail", args=[self.e.pk]) + "#billing")
 
+    def test_rentals(self):
+        self.setup()
+
+        # By default, user should not have permission to adjust one-offs
+        self.assertOk(self.client.get(reverse("events:rentals", args=[self.e3.pk])), 403)
+
+        # Will need view_event permission for redirects
+        permission = Permission.objects.get(codename="view_events")
+        self.user.user_permissions.add(permission)
+
+        permission = Permission.objects.get(codename="adjust_event_charges")
+        self.user.user_permissions.add(permission)
+
+        # Check that we redirect to detail page for 2012 events
+        self.assertRedirects(self.client.get(reverse("events:rentals", args=[self.e.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+
+        # Check that we redirect to detail page when event is closed
+        self.e3.closed = True
+        self.e3.save()
+        self.assertRedirects(self.client.get(reverse("events:rentals", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+        self.e3.closed = False
+        self.e3.save()
+
+        # Check that we redirect to detail page for 2019 events that don't have the new discounts enabled
+        self.assertRedirects(self.client.get(reverse("events:rentals", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+        # Check that page loads ok
+        self.e3.uses_new_discounts = True
+        self.e3.save()
+        self.assertOk(self.client.get(reverse("events:rentals", args=[self.e3.pk])))
+
+        valid_data = {
+            "rentals-TOTAL_FORMS": 1,
+            "rentals-INITIAL_FORMS": 0,
+            "rentals-MIN_NUM_FORMS": 0,
+            "rentals-MAX_NUM_FORMS": 1000,
+            "rentals-0-name": "Lights",
+            "rentals-0-cost": 50.00,
+            "rentals-0-quantity": 10,
+            "rentals-0-rental_fee_enabled": True,
+        }
+
+        self.assertRedirects(self.client.post(reverse("events:rentals", args=[self.e3.pk]), valid_data),
+                             reverse("events:detail", args=[self.e3.pk]) + "#billing")
+
     def test_ccr_add(self):
         self.setup()
 
