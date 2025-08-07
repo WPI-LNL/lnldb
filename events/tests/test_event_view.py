@@ -119,6 +119,84 @@ class EventBasicViewTest(ViewTestCase):
 
         self.assertTrue(models.Event2019.objects.filter(event_name="New Event").exists())
 
+    def test_automatic_combo_discount(self):
+        self.setup()
+        self.assertOk(self.client.get(reverse("events:new")), 403)
+
+        permission = Permission.objects.get(codename="add_raw_event")
+        self.user.user_permissions.add(permission)
+
+        # Will also need the following for adjusting required fields
+        permission = Permission.objects.get(codename="edit_event_times")
+        self.user.user_permissions.add(permission)
+
+        permission = Permission.objects.get(codename="edit_event_text")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:new")))
+
+        building = models.Building.objects.create(name="Fuller Laboratories", shortname="FL")
+        booth = models.Location.objects.create(name="Booth", building=building)
+
+        lighting = models.Category.objects.create(name="Lighting")
+        lighting_service = ServiceFactory.create(category=lighting)
+        sound = models.Category.objects.create(name="Sound")
+        sound_service = ServiceFactory.create(category=sound)
+
+        combo_discount = models.Discount.objects.create(name="Combo Discount")
+        combo_discount.categories.add(lighting)
+        combo_discount.categories.add(sound)
+        combo_discount.required_categories.add(lighting)
+        combo_discount.required_categories.add(sound)
+
+        pricelist = models.Pricelist.objects.create(name="test pricelist")
+        models.DiscountPrice.objects.create(pricelist=pricelist, discount=combo_discount, percent=10)
+
+        valid_data = {
+            "event_name": "New Event",
+            "location": str(booth.pk),
+            "description": "A new test event for stuff",
+            "internal_notes": "",
+            "max_crew": 1,
+            "billed_in_bulk": False,
+            "sensitive": False,
+            "test_event": True,
+            "entered_into_workday": False,
+            "send_survey": True,
+            "org": "|",
+            "reference_code": "",
+            "datetime_setup_complete_0": timezone.now().date(),
+            "datetime_setup_complete_1": timezone.now().time(),
+            "datetime_start_0": timezone.now().date(),
+            "datetime_start_1": timezone.now().time(),
+            "datetime_end_0": timezone.now().date(),
+            "datetime_end_1": timezone.now().time(),
+            "serviceinstance_set-TOTAL_FORMS": 1,
+            "serviceinstance_set-INITIAL_FORMS": 0,
+            "serviceinstance_set-MIN_NUM_FORMS": 0,
+            "serviceinstance_set-MAX_NUM_FORMS": 1000,
+            "serviceinstance_set-0-id": '',
+            "serviceinstance_set-0-service": str(lighting_service.pk),
+            "serviceinstance_set-0-detail": "Services for things and stuff",
+            "pricelist": str(pricelist.pk),
+            "save": "Save Changes"
+        }
+
+        # discount requires both sound and lighting, but only lighting so far, so no automatic discount
+        self.assertRedirects(self.client.post(reverse("events:new"), valid_data), reverse("events:detail", args=[4]))
+        self.assertTrue(models.Event2019.objects.filter(event_name="New Event").exists())
+        self.assertFalse(models.Event2019.objects.get(event_name="New Event").applied_discounts.exists())
+        
+        valid_data["event_name"] = "Second New Event"
+        valid_data["serviceinstance_set-TOTAL_FORMS"] = 2
+        valid_data["serviceinstance_set-1-service"] = str(sound_service.pk)
+        valid_data["serviceinstance_set-1-detail"] = "sound service"
+
+        # event now has services in all of the required categories, so the discount should automatically apply
+        self.assertRedirects(self.client.post(reverse("events:new"), valid_data), reverse("events:detail", args=[5]))
+        self.assertTrue(models.Event2019.objects.filter(event_name="Second New Event").exists())
+        self.assertTrue(combo_discount in models.Event2019.objects.get(event_name="Second New Event").applied_discounts.all())
+
     def test_edit(self):
         self.setup()
 
