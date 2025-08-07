@@ -286,4 +286,26 @@ class Event2019PropertyTests(TestCase):
         # extras handle pricelists correctly
         models.ExtraPrice.objects.create(pricelist=self.pricelist, extra=self.extra, cost=123.45)
         self.assertEqual(self.event.cost_total, Decimal('1212.36'))
-       
+
+    def test_rentals(self):
+        self.setup()
+
+        self.assertEqual(self.event.rental_fee_total, 0)
+        self.assertEqual(self.event.rentals_total, 0)
+
+        models.Rental.objects.create(event=self.event, name="rental lights", cost=43, quantity=4, rental_fee_applied=True)
+        self.assertEqual(self.event.rental_fee_total, Decimal("25.8"))
+        self.assertEqual(self.event.rentals_total, Decimal("197.8"))
+
+        models.Rental.objects.create(event=self.event, name="rental transportation", cost=72, quantity=1, rental_fee_applied=False)
+        self.assertEqual(self.event.rental_fee_total, Decimal("25.8"))
+        self.assertEqual(self.event.rentals_total, Decimal("269.8"))
+
+        self.pricelist.rental_fee_percentage = 25
+        self.pricelist.save()
+        self.event.pricelist = self.pricelist
+        self.event.uses_new_discounts = True
+        self.event.save()
+        self.assertEqual(self.event.rentals_total, Decimal("287"))
+
+        self.assertEqual(self.event.cost_total, Decimal("287"))
