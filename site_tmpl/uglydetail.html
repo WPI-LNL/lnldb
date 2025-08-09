@@ -883,11 +883,33 @@
                 <div id="files" class="tab-pane">
                     {% if not event.closed %}
                         {% permission request.user has 'events.event_attachments' of event %}
-                            <div class="pull-right">
-                                <a class="btn btn-warning" href="{% url "events:files" event.id %}">Edit</a>
+                            <div class="button-group">
+                                <div class="pull-right">
+                                    <a class="btn btn-info" href="{% url "events:resource-links" event.id %}">Edit Links</a>
+                                    <a class="btn btn-warning" href="{% url "events:files" event.id %}">Edit Attachments</a>
+                                </div>
                             </div>
                         {% endpermission %}
                     {% endif %}
+
+                    <h2> Links </h2> 
+                    <table class="table">
+                        <tr>
+                            <th>Name</th>
+                            <th>URL</th>
+                            <th></th>
+                        </tr>
+                        {% for a in event.links.all %}
+                        <tr>
+                            <td>{{ a.note }}</td>
+                            <td><a href="{{ a.url }}">{{ a.url }}</a></td>
+                        </tr>
+
+                        {% empty %}
+                        <tr><td colspan="4">No links have been submitted</td></tr>
+                        {% endfor %}
+                    </table>
+
                     <h2> Files </h2> 
                     <table class="table">
                         <tr>

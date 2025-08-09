@@ -1342,6 +1342,12 @@ class EventAttachment(models.Model):
     externally_uploaded = models.BooleanField(default=False)
 
 
+class EventResourceLink(models.Model):
+    event = models.ForeignKey(BaseEvent, on_delete=models.CASCADE, related_name="links")
+    note = models.TextField(null=True, blank=True, default="")
+    url = models.URLField()
+
+
 @reversion.register()
 class EventArbitrary(models.Model):
     """ Additional "OneOff" charges (i.e. rentals, additional fees) """
