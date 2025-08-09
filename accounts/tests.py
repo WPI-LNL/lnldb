@@ -255,6 +255,17 @@ class AccountsTestCase(ViewTestCase):
 
         self.assertOk(self.client.get(reverse("accounts:mdc_raw")))
 
+    def test_mdc_xpr_raw(self):
+        self.setup()
+
+        # By default should not have permission
+        self.assertOk(self.client.get(reverse("accounts:mdc_xpr_raw")), 403)
+
+        permission = Permission.objects.get(codename="view_member")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("accounts:mdc_xpr_raw")))
+
     def test_secretary_dashboard(self):
         self.setup()
 
