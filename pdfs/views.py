@@ -16,9 +16,7 @@ from django.utils.text import slugify
 
 from xhtml2pdf import pisa
 from weasyprint import HTML
-from weasyprint.logger import capture_logs
-import logging
-from pypdf import PdfWriter, PdfReader
+from pypdf import PdfWriter
 
 from events.models import Category, BaseEvent, Event2019, ExtraInstance, MultiBilling, Quote
 from projection.models import PITLevel, Projectionist
@@ -225,9 +223,7 @@ def view_quote(request, id):
         pdf_file = BytesIO()
 
         if isinstance(quote.event, Event2019) and quote.event.uses_new_discounts:
-            with capture_logs(level=logging.DEBUG) as logs:
-                HTML(string=html, url_fetcher=url_fetcher, base_url="/").write_pdf(pdf_file)
-            print(logs)
+            HTML(string=html, url_fetcher=url_fetcher, base_url="/").write_pdf(pdf_file)
         else:
             pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
 

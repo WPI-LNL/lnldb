@@ -195,7 +195,7 @@ class EventBasicViewTest(ViewTestCase):
         # event now has services in all of the required categories, so the discount should automatically apply
         self.assertRedirects(self.client.post(reverse("events:new"), valid_data), reverse("events:detail", args=[5]))
         self.assertTrue(models.Event2019.objects.filter(event_name="Second New Event").exists())
-        self.assertTrue(combo_discount in models.Event2019.objects.get(event_name="Second New Event").applied_discounts.all())
+        self.assertTrue(models.Event2019.objects.get(event_name="Second New Event").applied_discounts.contains(combo_discount))
 
     def test_edit(self):
         self.setup()

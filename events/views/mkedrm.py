@@ -141,7 +141,8 @@ def eventnew(request, id=None, initial={}):
                 obj = form.save(commit=False)
                 obj.submitted_by = request.user
                 obj.submitted_ip = request.META.get('REMOTE_ADDR')
-                obj.uses_new_discounts = True
+                if is_event2019:
+                    obj.uses_new_discounts = True
                 obj.save()
                 form.save_m2m()
                 if is_event2019:
