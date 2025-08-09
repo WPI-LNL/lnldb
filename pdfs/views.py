@@ -213,9 +213,13 @@ def generate_event_bill_pdf(request, event):
     return view_quote(request, quote.pk)
 
 
+@login_required
 def view_quote(request, id):
     quote = get_object_or_404(Quote, pk=id)
     html = quote.html
+
+    if not request.user.has_perm('events.view_event_billing', quote.event):
+        raise PermissionDenied
 
     if 'raw' in request.GET and bool(request.GET['raw']):
         resp = HttpResponse(html)

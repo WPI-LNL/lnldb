@@ -9,7 +9,7 @@ from io import BytesIO
 
 from events.tests.generators import EventFactory, Event2019Factory, UserFactory, ServiceFactory
 from events.models import ExtraInstance, Extra, Category, MultiBilling, Organization, Lighting, ServiceInstance, \
-    Pricelist, Discount, Fee, DiscountPrice, FeePrice, Rental
+    Pricelist, Discount, Fee, DiscountPrice, FeePrice, Rental, Quote
 from .. import views
 
 
@@ -228,3 +228,58 @@ class PdfViewTest(TestCase):
         self.assertTrue("First 2019 Test Event" in text)
         self.assertTrue("Another 2019 Test Event" in text)
         self.assertTrue("New Discounts Test" in text)
+
+    def test_quote_logging(self):
+        response = self.client.get(reverse("events:bills:pdf", args=[self.e.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Quote.objects.get(event=self.e))
+
+        response = self.client.get(reverse("events:bills:pdf", args=[self.e5.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Quote.objects.get(event=self.e5))
+
+        # test that the standalone view still saves a quote
+        self.assertIsNotNone(views.generate_event_bill_pdf_standalone(event=self.e4))
+        self.assertTrue(Quote.objects.get(event=self.e4))
+
+        # test that the bill pdf multi view saves quotes for each of its events
+        response = self.client.get(reverse('events:bill-pdf-multi', args=["%s,%s" % (self.e2.pk, self.e3.pk)]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Quote.objects.get(event=self.e2))
+        self.assertTrue(Quote.objects.get(event=self.e3))
+
+    def test_view_quote(self):
+        # make a quote
+        response = self.client.get(reverse("events:bills:pdf", args=[self.e.pk]))
+        self.assertEqual(response.status_code, 200)
+        # extract the text from the quote
+        pdf = PdfReader(BytesIO(response.content))
+        original_text = ''.join(page.extract_text() for page in pdf.pages)
+
+        # retrieve the saved quote
+        pk = Quote.objects.get(event=self.e).pk
+        response = self.client.get(reverse("events:view-quote", args=[pk]))
+        self.assertEqual(response.status_code, 200)
+        # extract its text
+        pdf = PdfReader(BytesIO(response.content))
+        quote_text = ''.join(page.extract_text() for page in pdf.pages)
+        # make sure the original and the saved version are the same
+        self.assertMultiLineEqual(original_text, quote_text)
+
+
+        # test with the new quote template as well
+        response = self.client.get(reverse("events:bills:pdf", args=[self.e5.pk]))
+        self.assertEqual(response.status_code, 200)
+        # extract the text from the quote
+        pdf = PdfReader(BytesIO(response.content))
+        original_text = ''.join(page.extract_text() for page in pdf.pages)
+
+        # retrieve the saved quote
+        pk = Quote.objects.get(event=self.e5).pk
+        response = self.client.get(reverse("events:view-quote", args=[pk]))
+        self.assertEqual(response.status_code, 200)
+        # extract its text
+        pdf = PdfReader(BytesIO(response.content))
+        quote_text = ''.join(page.extract_text() for page in pdf.pages)
+        # make sure the original and the saved version are the same
+        self.assertMultiLineEqual(original_text, quote_text)
