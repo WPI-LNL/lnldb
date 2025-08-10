@@ -1349,6 +1349,47 @@ class EventBasicViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("events:rentals", args=[self.e3.pk]), valid_data),
                              reverse("events:detail", args=[self.e3.pk]) + "#billing")
 
+    def test_occurrences(self):
+        self.setup()
+
+        # By default, user should not have permission to adjust event occurrences
+        self.assertOk(self.client.get(reverse("events:occurrences", args=[self.e3.pk])), 403)
+
+        # Will need view_event permission for redirects
+        permission = Permission.objects.get(codename="view_events")
+        self.user.user_permissions.add(permission)
+
+        permission = Permission.objects.get(codename="edit_event_times")
+        self.user.user_permissions.add(permission)
+
+        # Check that we redirect to detail page when event is closed
+        self.e3.closed = True
+        self.e3.save()
+        self.assertRedirects(self.client.get(reverse("events:occurrences", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+        self.e3.closed = False
+        self.e3.save()
+
+        # Check that page loads ok
+        self.assertOk(self.client.get(reverse("events:occurrences", args=[self.e3.pk])))
+
+        valid_data = {
+            "occurrences-TOTAL_FORMS": 1,
+            "occurrences-INITIAL_FORMS": 0,
+            "occurrences-MIN_NUM_FORMS": 0,
+            "occurrences-MAX_NUM_FORMS": 1000,
+            "occurrences-0-name": "Lights",
+            "occurrences-0-start_0": "2025-08-03",
+            "occurrences-0-start_1": "02:00 PM",
+            "occurrences-0-end_0": "2025-08-03",
+            "occurrences-0-end_1": "05:00 PM",
+            "occurrences-0-display_on_cal": True,
+        }
+
+        self.assertRedirects(self.client.post(reverse("events:occurrences", args=[self.e3.pk]), valid_data),
+                             reverse("events:detail", args=[self.e3.pk]) + "#schedule")
+        self.assertTrue(models.EventOccurrence.objects.get(event=self.e3))
+
     def test_ccr_add(self):
         self.setup()
 
