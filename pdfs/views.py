@@ -15,7 +15,8 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from xhtml2pdf import pisa
-from weasyprint import HTML
+from weasyprint import HTML, CSS
+from weasyprint.text.fonts import FontConfiguration
 from pypdf import PdfWriter
 
 from events.models import Category, BaseEvent, Event2019, ExtraInstance, MultiBilling, Quote
@@ -212,6 +213,25 @@ def generate_event_bill_pdf(request, event):
 
     return view_quote(request, quote.pk)
 
+def render_quote_to_pdf(quote) -> BytesIO:
+    pdf_file = BytesIO()
+
+    if isinstance(quote.event, Event2019) and quote.event.uses_new_discounts:
+        font_config = FontConfiguration()
+        font_string = """
+        @font-face {
+            font-family: 'Helvetica-Neue';
+            src: local('static/fonts/HelveticaNeue.ttf');
+        }
+        """
+        HTML(string=quote.html, url_fetcher=url_fetcher, base_url="/").write_pdf(
+            pdf_file,
+            stylesheets=[CSS(string=font_string, font_config=font_config)],
+            font_config=font_config)
+    else:
+        pisa.CreatePDF(quote.html, dest=pdf_file, link_callback=link_callback)
+
+    return pdf_file
 
 @login_required
 def view_quote(request, id):
@@ -224,13 +244,7 @@ def view_quote(request, id):
     if 'raw' in request.GET and bool(request.GET['raw']):
         resp = HttpResponse(html)
     else:
-        pdf_file = BytesIO()
-
-        if isinstance(quote.event, Event2019) and quote.event.uses_new_discounts:
-            HTML(string=html, url_fetcher=url_fetcher, base_url="/").write_pdf(pdf_file)
-        else:
-            pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
-
+        pdf_file = render_quote_to_pdf(quote)
         resp = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
 
     if quote.is_invoice:
@@ -252,15 +266,10 @@ def generate_event_bill_pdf_standalone(event, request=None, return_stream=False)
         html = render_to_string('pdf_templates/bill-itemized-2025.html', context=data, request=request)
     else:
         html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
-    Quote.objects.create(event=event, html=html, is_invoice=event.reviewed)
+    quote = Quote.objects.create(event=event, html=html, is_invoice=event.reviewed)
 
     # Write PDF to file
-    pdf_file = BytesIO()
-
-    if isinstance(event, Event2019) and event.uses_new_discounts:
-        HTML(string=html, url_fetcher=url_fetcher, base_url="/").write_pdf(pdf_file)
-    else:
-        pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
+    pdf_file = render_quote_to_pdf(quote)
 
     if return_stream:
         return pdf_file
