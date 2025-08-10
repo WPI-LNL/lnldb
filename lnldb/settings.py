@@ -518,7 +518,7 @@ LOGIN_REDIRECT_URL = "/db/"
 
 CAS_FORCE_POST_LOGIN = False
 
-AIRPLANE_MODE = False
+AIRPLANE_MODE = True
 
 # event status options
 EVENT_STATUSES = (
