@@ -1448,7 +1448,7 @@ class ServiceInstanceForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
         self.event = event
         super(ServiceInstanceForm, self).__init__(*args, **kwargs)
-        if self.event.pricelist:
+        if self.event and self.event.pricelist:
             self.fields['service'].queryset = Service.objects.filter(enabled_event2019=True, serviceprice__service__in=self.event.pricelist.services.all())
 
     def save(self, commit=True):
