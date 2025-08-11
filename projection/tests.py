@@ -364,12 +364,12 @@ class ProjViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         # Test posting of data (invalid and valid)
-        resp = self.client.post("%s?contact=%s&billing=1&date_first=2020-01-01&date_second=2020-01-08&save=Continue" %
+        resp = self.client.post("%s?contact=%s&billing=1&date_first=2020-01-01&date_second=2020-01-08&auto_approve=True&save=Continue" %
                                 (reverse("projection:add-movies"), self.user.pk), invalid_data)
         self.assertNotContains(resp, "Events Added")
         self.assertOk(resp)
 
-        resp = self.client.post("%s?contact=%s&billing=1&date_first=2020-01-01&date_second=2020-01-08&save=Continue" %
+        resp = self.client.post("%s?contact=%s&billing=1&date_first=2020-01-01&date_second=2020-01-08&auto_approve=True&save=Continue" %
                                 (reverse("projection:add-movies"), self.user.pk), valid_data)
         self.assertContains(resp, "Events Added")
         self.assertOk(resp)
@@ -380,12 +380,40 @@ class ProjViewTest(ViewTestCase):
             datetime_start=timezone.make_aware(datetime.datetime.combine(datetime.date(2020, 1, 4), datetime.time(20)))
         )
         self.assertTrue(movie.approved)
+        self.assertEqual(movie.event_status, "Confirmed")
 
         # Check for both saturday and sunday events in output
         self.assertTrue(Event2019.objects.filter(
             event_name="Test Movie",
             datetime_start=timezone.make_aware(datetime.datetime.combine(datetime.date(2020, 1, 5),
                                                                          datetime.time(20)))).exists())
+
+        # test that events don't automatically get approved if we tell them not to
+        valid_data['form-0-name'] = "Test Movie 3"
+        resp = self.client.post("%s?contact=%s&billing=1&date_first=2020-01-01&date_second=2020-01-08&auto_approve=False&save=Continue" %
+                                (reverse("projection:add-movies"), self.user.pk), valid_data)
+        self.assertContains(resp, "Events Added")
+        self.assertOk(resp)
+        movie = Event2019.objects.get(
+            event_name="Test Movie 3",
+            datetime_start=timezone.make_aware(datetime.datetime.combine(datetime.date(2020, 1, 4), datetime.time(20)))
+        )
+        self.assertFalse(movie.approved)
+        self.assertEqual(movie.event_status, "Prospective")
+        
+        # test that events don't automatically get approved without the correct permissions
+        self.user.user_permissions.remove(permission)
+        valid_data['form-0-name'] = "Test Movie 2"
+        resp = self.client.post("%s?contact=%s&billing=1&date_first=2020-01-01&date_second=2020-01-08&auto_approve=True&save=Continue" %
+                                (reverse("projection:add-movies"), self.user.pk), valid_data)
+        self.assertContains(resp, "Events Added")
+        self.assertOk(resp)
+        movie = Event2019.objects.get(
+            event_name="Test Movie 2",
+            datetime_start=timezone.make_aware(datetime.datetime.combine(datetime.date(2020, 1, 4), datetime.time(20)))
+        )
+        self.assertFalse(movie.approved)
+        self.assertEqual(movie.event_status, "Prospective")
 
     def test_get_saturdays_for_range(self):
         # Test no Saturday in range

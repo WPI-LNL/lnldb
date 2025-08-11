@@ -154,7 +154,7 @@ class AnnounceSendForm(forms.ModelForm):
             'email_to',
             Field('events', css_class="col-md-6", size="15"),
             FormActions(
-                Submit('save', 'Save Changes'),
+                Submit('save', 'Submit'),
             )
         )
 

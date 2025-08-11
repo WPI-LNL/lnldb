@@ -111,19 +111,33 @@ PITFormset = inlineformset_factory(Projectionist, PitInstance, extra=1, form=Ins
 
 # ITS TIME FOR A WIZAAAAAAARD
 class BulkCreateForm(forms.Form):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         self.helper = FormHelper()
         self.helper.form_class = "form-horizontal"
         self.helper.form_method = "GET"
-        self.helper.layout = Layout(
-            Field('contact'),
-            Field('billing'),
-            Field('date_first', css_class="datepick", ),
-            Field('date_second', css_class="datepick", ),
-            FormActions(
-                Submit('save', 'Continue'),
+        if user and user.has_perm('events.approve_event'):
+            self.helper.layout = Layout(
+                HTML('<div class="alert alert-info">Create movies for all weekends containing Saturdays in the specified range.</div>'),
+                Field('contact'),
+                Field('billing'),
+                Field('date_first', css_class="datepick", ),
+                Field('date_second', css_class="datepick", ),
+                Field('auto_approve'),
+                FormActions(
+                    Submit('save', 'Continue'),
+                )
             )
-        )
+        else:
+            self.helper.layout = Layout(
+                HTML('<div class="alert alert-info">Create movies for all weekends containing Saturdays in the specified range.</div>'),
+                Field('contact'),
+                Field('billing'),
+                Field('date_first', css_class="datepick", ),
+                Field('date_second', css_class="datepick", ),
+                FormActions(
+                    Submit('save', 'Continue'),
+                )
+            )
         super(BulkCreateForm, self).__init__(*args, **kwargs)
 
     contact = AutoCompleteSelectField('Users', required=True, plugin_options={
@@ -132,6 +146,7 @@ class BulkCreateForm(forms.Form):
         'position': "{ my : \"right top\", at: \"right bottom\", of: \"#id_person_name_text\"},'minlength':4"})
     date_first = forms.DateField(label="Date of first movie")
     date_second = forms.DateField(label="Date of last movie")
+    auto_approve = forms.BooleanField(label="Auto-approve events", initial=True, required=False)
 
 
 class DateEntryFormSetBase(forms.Form):
@@ -164,7 +179,7 @@ class DateEntryFormSetBase(forms.Form):
     saturday = forms.BooleanField(required=False, initial=True)
     sunday = forms.BooleanField(required=False, initial=True)
 
-    def save_objects(self, user, contact, org, ip=None):
+    def save_objects(self, user, contact, org, ip=None, approve=False):
         out = []
         tz = timezone.get_current_timezone()
         # don't count this week if not filled out
@@ -186,7 +201,8 @@ class DateEntryFormSetBase(forms.Form):
             'send_survey': False
         }
         # if it's possible to approve the event, do so (since there is no bulk approve)
-        if user.has_perm('events.approve_event'):
+        if approve and user.has_perm('events.approve_event'):
+            kwargs['event_status'] = 'Confirmed'
             kwargs['approved_by'] = user
             kwargs['approved_on'] = timezone.now()
             kwargs['approved'] = True

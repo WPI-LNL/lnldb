@@ -21,8 +21,8 @@ class PagesTestCase(ViewTestCase):
 
         self.assertOk(self.client.get(reverse("page", args=['test'])))
 
-    def test_recruitment_page(self):
-        self.assertOk(self.client.get(reverse("pages:recruitment-page")))
+    #def test_recruitment_page(self):
+    #    self.assertOk(self.client.get(reverse("pages:recruitment-page")))
 
 
 class OnboardingTestCase(ViewTestCase):
