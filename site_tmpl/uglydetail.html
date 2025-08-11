@@ -341,6 +341,12 @@
                                 <th>Billed in bulk</th>
                                 <td> {{ event.billed_in_bulk }} </td>
                             </tr>
+                            {% if event.pricelist %}
+                                <tr>
+                                    <th>Pricelist</th>
+                                    <td> {{ event.pricelist }} </td>
+                                </tr>
+                            {% endif %}
                         {% endpermission %}
                         {% permission request.user has 'events.view_posteventsurveyresults' of event.surveys.first %}
                             <tr>
@@ -382,7 +388,27 @@
 
                 </div>
                 <div id="schedule" class="tab-pane">
+                    {% if not event.closed %}
+                        {% permission request.user has 'events.adjust_event_charges' of event %}
+                            <div class="pull-right">
+                                <a class="btn btn-lg btn-info" href="{% url "events:occurrences" event.id %}">Modify Occurrences</a>
+                            </div>
+                        {% endpermission %}
+                    {% endif %}
+
                     <table class="table">
+                        {% for occurrence in event.occurrences.all %}
+                        <tr>
+                            <th>{{ occurrence.name }}</th>
+                            <td>{{ occurrence.start|date:"D, N j Y, " }}
+                                {% if occurrence.start|date:"D, N j Y, " == occurrence.end|date:"D, N j Y, " %}
+                                <strong>{{ occurrence.start|date:"P"}}</strong> - <strong>{{ occurrence.end|date:"P" }}</strong>
+                                {% else %}
+                                <strong>{{ occurrence.start|date:"P"}}</strong> - 
+                                {{ occurrence.end|date:"D, N j Y, " }}<strong>{{ occurrence.end|date:"P"}}</strong>
+                                {% endif %}
+                        </tr>
+                        {% endfor %}
                         {% now "U" as now__unix_time %}
                         {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
                         <tr>
@@ -426,7 +452,7 @@
                         <h3>Extras:</h3>
                             <ul>
                                 {% for e in event.extras_lighting %}
-                                    <li>{{ e.extra }} x{{ e.quant }}</li>
+                                    <li>{{ e }} x{{ e.quant }}</li>
                                 {% endfor %}
                             </ul>
                         {% endif %}
@@ -442,7 +468,7 @@
                         <h3>Extras:</h3>
                             <ul>
                                 {% for e in event.extras_sound %}
-                                    <li>{{ e.extra }} x{{ e.quant }}</li>
+                                    <li>{{ e }} x{{ e.quant }}</li>
                                 {% endfor %}
                             </ul>
                         {% endif %}
@@ -458,7 +484,7 @@
                         <h3>Extras:</h3>
                             <ul>
                                 {% for e in event.extras_projection %}
-                                    <li>{{ e.extra }} x{{ e.quant }}</li>
+                                    <li>{{ e }} x{{ e.quant }}</li>
                                 {% endfor %}
                             </ul>
                         {% endif %}
@@ -480,7 +506,7 @@
                         <h3>Additional Extras:</h3>
                             <ul>
                                 {% for e in event.extras_other %}
-                                    <li>{{ e.extra }} x{{ e.quant }}</li>
+                                    <li>{{ e }} x{{ e.quant }}</li>
                                 {% endfor %}
                             </ul>
                     {% endif %}
@@ -512,7 +538,7 @@
                                 <h4>Extras</h4>
                                 <ul>
                                 {% for extra_instance in services_and_extras.1 %}
-                                    <li>{{ extra_instance.extra }} x{{ extra_instance.quant }}</li>
+                                    <li>{{ extra_instance }} x{{ extra_instance.quant }}</li>
                                 {% endfor %}
                                 </ul>
                             {% endif %}
@@ -652,6 +678,9 @@
                     {% if not event.closed %}
                         {% permission request.user has 'events.adjust_event_charges' of event %}
                             <div class="pull-right btn-group">
+                                {% if event.uses_new_discounts %}
+                                    <a class="btn btn-lg btn-warning" href="{% url "events:rentals" event.id %}">Modify Rentals</a>
+                                {% endif %}
                                 <a class="btn btn-lg btn-primary" href="{% url "events:extras" event.id %}">Modify Extras</a>
                                 <a class="btn btn-lg btn-info" href="{% url "events:oneoffs" event.id %}">Add OneOff
                                     Charges</a>
@@ -676,120 +705,15 @@
                             the information on this page reflects the information entered into the website by the client and has not been reviewed by Lens and Lights for accuracy.
                         </p>
                     {% endif %}
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Cost</th>
-                            </tr>
-                        </thead>
-                        {% if event.lighting %}
-                        <tr class="success">
-                            <td>{{event.lighting}}</td>
-                            <td class="tdra">${{ event.lighting.base_cost }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if event.extras_lighting.exists %}
-                        {% for extra in event.extras_lighting %}
-                        <tr>
-                            <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
-                            <td class="tdra">${{ extra.totalcost }}</td>
-                        </tr>
-                        {% endfor %}
-                        {% endif %}
-                        
-                        {% if event.sound %}
-                        <tr class="success">
-                            <td>{{event.sound}}</td>
-                            <td class="tdra">${{ event.sound.base_cost }}</td>
-                        </tr>
-                        {% endif %}
-                        {% if event.extras_sound.exists %}
-                        {% for extra in event.extras_sound %}
-                        <tr>
-                            <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
-                            <td class="tdra">${{ extra.totalcost }}</td>
-                        </tr>
-                        {% endfor %}
-                        {% endif %}
-                        
-                        {% if event.projection %}
-                        <tr class="success">
-                            <td>{{event.projection}}</td>
-                            <td class="tdra">${{ event.projection.base_cost }}</td>
-                        </tr>
-                        {% endif %}
 
-                        {% for extra in event.extras_projection %}
-                        <tr>
-                            <td>{{ extra.extra }} <strong>x{{extra.quant}} </strong></td>
-                            <td class="tdra">${{ extra.totalcost }}</td>
-                        </tr>
-                        {% endfor %}
+                    {% include "price_breakdown.html" with event=event only %}
 
-                        {% if event.otherservices.exists %}
-                            {% for service in event.otherservices.all %}
-                                <tr class="success">
-                                    <td>{{ service }}</td>
-                                    <td class="tdra">${{ service.base_cost }}</td>
-                                </tr>
-                            {% endfor %}
-                        {% endif %}
-                        
-                        {% for e in event.extras_other %}
-                        <tr>
-                            <td>{{ e.extra }} <strong>x{{ e.quant }}</strong></td>
-                            <td class="tdra">${{ e.totalcost }}</td>
-                        </tr>
-                        {% endfor %}
-                        
-                        {% if event.serviceinstance_set.exists %}
-                            {% for service_instance in event.serviceinstance_set.all %}
-                                <tr>
-                                    <td>{{ service_instance.service }}</td>
-                                    <td class="tdra">${{ service_instance.service.base_cost }}</td>
-                                </tr>
-                            {% endfor %}
-                            {% for extra_instance in event.extrainstance_set.all %}
-                                <tr>
-                                    <td>{{ extra_instance.extra }} <strong>x{{ extra_instance.quant }}</strong></td>
-                                    <td class="tdra">${{ extra_instance.totalcost }}</td>
-                                </tr>
-                            {% endfor %}
-                        {% endif %}
-
-                        {% for oo in event.oneoffs %}
-                        <tr>
-                            <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
-                            <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
-                                {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        
-                        {% if event.discount_applied %}
-                        <tr class="warning">
-                            <td> Pre Discount Total </td>
-                            <td class="tdra">${{ event.cost_total_pre_discount }} </td>
-                        </tr>
-                        <tr class="warning">
-                            <td>Lighting/Sound Combo Discount Applied</td>
-                            <td style="color:red;" class="tdra">-${{ event.discount_value|floatformat:2}}</td>
-                        </tr>
-                        {% endif %}
-                        
-                        <tr class="info">
-                            <td>Total</td>
-                            <td>${{ event.cost_total|floatformat:2 }}</td>
-                        </tr>
-                    </table>
                     {% if not event.approved %}
                         <p style="color:red;">
                             This is NOT a quote. Until you have received an email saying that the event is approved (which you haven't),
                             the information on this page reflects the information entered into the website by the client and has not been reviewed by Lens and Lights for accuracy.
                         </p>
                     {% endif %}
-                    <h2> Bills </h2>
                     {% if event.reviewed %}
                         <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Invoice</a>
                     {% elif event.approved %}
@@ -799,7 +723,22 @@
                             <a class="btn btn-primary" href="{% url "events:bills:pdf" event.id %}">Download Quote</a>
                         {% endpermission %}
                     {% endif %}
-                    {% if event.billings or event.multibillings %}
+
+                    {% permission request.user has 'events.bill_event' of event %}
+                        {% if event.quotes.exists %}
+                            <h3> Previous Quotes </h3>
+                            <table class="table">
+                                {% for quote in event.quotes.all %}
+                                    <tr>
+                                        <td><a href="{% url "events:view-quote" quote.id %}">{{ quote.date_generated }}</a></td>
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        {% endif %}
+                    {% endpermission %}
+
+                    {% if event.billings.exists or event.multibillings.exists %}
+                        <h2> Bills </h2>
                         <table class="table">
                             <thead>
                             <tr>
@@ -869,8 +808,6 @@
                                 </tr>
                             {% endfor %}
                         </table>
-                    {% else %}
-                        <h2> No Bills Posted </h2>
                     {% endif %}
 
                     {% permission request.user has 'events.event_view_sensitive' of event %}

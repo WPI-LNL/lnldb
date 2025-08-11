@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.contrib.auth.models import Permission, Group
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from django.conf import settings
 from django.http import QueryDict
 from django.test import TestCase
@@ -118,6 +119,84 @@ class EventBasicViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("events:new"), valid_data), reverse("events:detail", args=[4]))
 
         self.assertTrue(models.Event2019.objects.filter(event_name="New Event").exists())
+
+    def test_automatic_combo_discount(self):
+        self.setup()
+        self.assertOk(self.client.get(reverse("events:new")), 403)
+
+        permission = Permission.objects.get(codename="add_raw_event")
+        self.user.user_permissions.add(permission)
+
+        # Will also need the following for adjusting required fields
+        permission = Permission.objects.get(codename="edit_event_times")
+        self.user.user_permissions.add(permission)
+
+        permission = Permission.objects.get(codename="edit_event_text")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("events:new")))
+
+        building = models.Building.objects.create(name="Fuller Laboratories", shortname="FL")
+        booth = models.Location.objects.create(name="Booth", building=building)
+
+        lighting = models.Category.objects.create(name="Lighting")
+        lighting_service = ServiceFactory.create(category=lighting)
+        sound = models.Category.objects.create(name="Sound")
+        sound_service = ServiceFactory.create(category=sound)
+
+        combo_discount = models.Discount.objects.create(name="Combo Discount")
+        combo_discount.categories.add(lighting)
+        combo_discount.categories.add(sound)
+        combo_discount.required_categories.add(lighting)
+        combo_discount.required_categories.add(sound)
+
+        pricelist = models.Pricelist.objects.create(name="test pricelist")
+        models.DiscountPrice.objects.create(pricelist=pricelist, discount=combo_discount, percent=10)
+
+        valid_data = {
+            "event_name": "New Event",
+            "location": str(booth.pk),
+            "description": "A new test event for stuff",
+            "internal_notes": "",
+            "max_crew": 1,
+            "billed_in_bulk": False,
+            "sensitive": False,
+            "test_event": True,
+            "entered_into_workday": False,
+            "send_survey": True,
+            "org": "|",
+            "reference_code": "",
+            "datetime_setup_complete_0": timezone.now().date(),
+            "datetime_setup_complete_1": timezone.now().time(),
+            "datetime_start_0": timezone.now().date(),
+            "datetime_start_1": timezone.now().time(),
+            "datetime_end_0": timezone.now().date(),
+            "datetime_end_1": timezone.now().time(),
+            "serviceinstance_set-TOTAL_FORMS": 1,
+            "serviceinstance_set-INITIAL_FORMS": 0,
+            "serviceinstance_set-MIN_NUM_FORMS": 0,
+            "serviceinstance_set-MAX_NUM_FORMS": 1000,
+            "serviceinstance_set-0-id": '',
+            "serviceinstance_set-0-service": str(lighting_service.pk),
+            "serviceinstance_set-0-detail": "Services for things and stuff",
+            "pricelist": str(pricelist.pk),
+            "save": "Save Changes"
+        }
+
+        # discount requires both sound and lighting, but only lighting so far, so no automatic discount
+        self.assertRedirects(self.client.post(reverse("events:new"), valid_data), reverse("events:detail", args=[4]))
+        self.assertTrue(models.Event2019.objects.filter(event_name="New Event").exists())
+        self.assertFalse(models.Event2019.objects.get(event_name="New Event").applied_discounts.exists())
+        
+        valid_data["event_name"] = "Second New Event"
+        valid_data["serviceinstance_set-TOTAL_FORMS"] = 2
+        valid_data["serviceinstance_set-1-service"] = str(sound_service.pk)
+        valid_data["serviceinstance_set-1-detail"] = "sound service"
+
+        # event now has services in all of the required categories, so the discount should automatically apply
+        self.assertRedirects(self.client.post(reverse("events:new"), valid_data), reverse("events:detail", args=[5]))
+        self.assertTrue(models.Event2019.objects.filter(event_name="Second New Event").exists())
+        self.assertTrue(models.Event2019.objects.get(event_name="Second New Event").applied_discounts.contains(combo_discount))
 
     def test_edit(self):
         self.setup()
@@ -1223,6 +1302,95 @@ class EventBasicViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("events:oneoffs", args=[self.e.pk]), valid_data),
                              reverse("events:detail", args=[self.e.pk]) + "#billing")
 
+    def test_rentals(self):
+        self.setup()
+
+        # By default, user should not have permission to adjust one-offs
+        self.assertOk(self.client.get(reverse("events:rentals", args=[self.e3.pk])), 403)
+
+        # Will need view_event permission for redirects
+        permission = Permission.objects.get(codename="view_events")
+        self.user.user_permissions.add(permission)
+
+        permission = Permission.objects.get(codename="adjust_event_charges")
+        self.user.user_permissions.add(permission)
+
+        # Check that we redirect to detail page for 2012 events
+        self.assertRedirects(self.client.get(reverse("events:rentals", args=[self.e.pk])),
+                             reverse("events:detail", args=[self.e.pk]))
+
+        # Check that we redirect to detail page when event is closed
+        self.e3.closed = True
+        self.e3.save()
+        self.assertRedirects(self.client.get(reverse("events:rentals", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+        self.e3.closed = False
+        self.e3.save()
+
+        # Check that we redirect to detail page for 2019 events that don't have the new discounts enabled
+        self.assertRedirects(self.client.get(reverse("events:rentals", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+
+        # Check that page loads ok
+        self.e3.uses_new_discounts = True
+        self.e3.save()
+        self.assertOk(self.client.get(reverse("events:rentals", args=[self.e3.pk])))
+
+        valid_data = {
+            "rentals-TOTAL_FORMS": 1,
+            "rentals-INITIAL_FORMS": 0,
+            "rentals-MIN_NUM_FORMS": 0,
+            "rentals-MAX_NUM_FORMS": 1000,
+            "rentals-0-name": "Lights",
+            "rentals-0-cost": 50.00,
+            "rentals-0-quantity": 10,
+            "rentals-0-rental_fee_enabled": True,
+        }
+
+        self.assertRedirects(self.client.post(reverse("events:rentals", args=[self.e3.pk]), valid_data),
+                             reverse("events:detail", args=[self.e3.pk]) + "#billing")
+
+    def test_occurrences(self):
+        self.setup()
+
+        # By default, user should not have permission to adjust event occurrences
+        self.assertOk(self.client.get(reverse("events:occurrences", args=[self.e3.pk])), 403)
+
+        # Will need view_event permission for redirects
+        permission = Permission.objects.get(codename="view_events")
+        self.user.user_permissions.add(permission)
+
+        permission = Permission.objects.get(codename="edit_event_times")
+        self.user.user_permissions.add(permission)
+
+        # Check that we redirect to detail page when event is closed
+        self.e3.closed = True
+        self.e3.save()
+        self.assertRedirects(self.client.get(reverse("events:occurrences", args=[self.e3.pk])),
+                             reverse("events:detail", args=[self.e3.pk]))
+        self.e3.closed = False
+        self.e3.save()
+
+        # Check that page loads ok
+        self.assertOk(self.client.get(reverse("events:occurrences", args=[self.e3.pk])))
+
+        valid_data = {
+            "occurrences-TOTAL_FORMS": 1,
+            "occurrences-INITIAL_FORMS": 0,
+            "occurrences-MIN_NUM_FORMS": 0,
+            "occurrences-MAX_NUM_FORMS": 1000,
+            "occurrences-0-name": "Lights",
+            "occurrences-0-start_0": "2025-08-03",
+            "occurrences-0-start_1": "02:00 PM",
+            "occurrences-0-end_0": "2025-08-03",
+            "occurrences-0-end_1": "05:00 PM",
+            "occurrences-0-display_on_cal": True,
+        }
+
+        self.assertRedirects(self.client.post(reverse("events:occurrences", args=[self.e3.pk]), valid_data),
+                             reverse("events:detail", args=[self.e3.pk]) + "#schedule")
+        self.assertTrue(models.EventOccurrence.objects.get(event=self.e3))
+
     def test_ccr_add(self):
         self.setup()
 
@@ -1817,6 +1985,27 @@ class EventListBasicViewTest(ViewTestCase):
         service = ServiceFactory.create(category=proj, base_cost=100.00)
         models.ServiceInstance.objects.create(service=service, event=self.e2019)
 
+        # all the filtering gets done by the date of the event, so it shouldn't matter that the occurences are in completely different years
+        models.EventOccurrence.objects.create(event=self.e, name="first e occurrence",
+                                              start=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=9)),
+                                              end=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=11)),
+                                              display_on_cal=True)
+
+        models.EventOccurrence.objects.create(event=self.e, name="second e occurrence",
+                                              start=timezone.make_aware(timezone.datetime(2025, 8, 12, hour=8)),
+                                              end=timezone.make_aware(timezone.datetime(2025, 8, 12, hour=10)),
+                                              display_on_cal=False)
+
+        models.EventOccurrence.objects.create(event=self.e2, name="e2 occurrence",
+                                              start=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=9)),
+                                              end=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=11)),
+                                              display_on_cal=True)
+
+        models.EventOccurrence.objects.create(event=self.e2019, name="e2019 occurrence",
+                                              start=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=9)),
+                                              end=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=11)),
+                                              display_on_cal=True)
+
     def generic_list(self, url):
         # Check that page loads ok (should not include either event)
         resp = self.client.get(reverse(url))
@@ -1879,17 +2068,24 @@ class EventListBasicViewTest(ViewTestCase):
         resp = self.client.get(reverse(url))
         self.assertOk(resp)
         self.assertNotContains(resp, "Test Event")
+        self.assertNotContains(resp, "first e occurrence")
         self.assertNotContains(resp, "Other Event")
+        self.assertNotContains(resp, "e2 occurrence")
 
         # Check that even with proper date range we don't see sensitive or test events unless we have permission
         # Note we use Epoch timestamps here
         self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600&projection=show'),
                                "Test Event")
+        self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600&projection=show'),
+                               "first e occurrence")
 
         self.e.sensitive = False
         self.e.save()
 
         self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Test Event")
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "first e occurrence")
+        # make sure we still don't see the occurrence that has display_on_cal=False
+        self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "second e occurrence")
 
         self.e.sensitive = True
         self.e.save()
@@ -1899,13 +2095,17 @@ class EventListBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Test Event")
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "first e occurrence")
+        self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "second e occurrence")
 
         self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Other Event")
+        self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "e2 occurrence")
 
         self.e2.test_event = False
         self.e2.save()
 
         self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Other Event")
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "e2 occurrence")
 
         self.e2.test_event = True
         self.e2.save()
@@ -1915,16 +2115,20 @@ class EventListBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Other Event")
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "e2 occurrence")
 
         # Test projection cookies
         resp = self.client.get(reverse(url) + '?from=1577664000&to=1580601600&projection=hide')
         self.assertOk(resp)
         self.assertNotContains(resp, "2019 Event")
+        self.assertNotContains(resp, "e2019 occurrence")
 
         resp = self.client.get(reverse(url) + '?from=1577664000&to=1580601600&projection=only')
         self.assertOk(resp)
         self.assertContains(resp, "2019 Event")
+        self.assertContains(resp, "e2019 occurrence")
         self.assertNotContains(resp, "Test Event")
+        self.assertNotContains(resp, "first e occurrence")
 
     def test_public(self):
         response = self.client.get(reverse('cal:list'))
@@ -1932,13 +2136,52 @@ class EventListBasicViewTest(ViewTestCase):
         response = self.client.get(reverse('cal:api-public'))
         self.assertEqual(response.status_code, 200)
 
-    def test_cal(self):
+    def test_cal_feed(self):
         response = self.client.get(reverse('cal:feed'))
         self.assertEqual(response.status_code, 200)
-        response = self.client.get(reverse('cal:feed-full'))
-        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Test Event")
+        self.assertNotContains(response, "first e occurrence")
+        self.assertNotContains(response, "Other Event")
+        self.assertNotContains(response, "e2 occurrence")
+        self.assertContains(response, "2019 Event")
+        self.assertContains(response, "e2019 occurrence")
+
+    def test_cal_feed_full_base(self):
+        # Check that feed loads ok (should not include either event)
+        resp = self.client.get(reverse('cal:feed-full'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "Test Event")
+        self.assertNotContains(resp, "first e occurrence")
+        self.assertNotContains(resp, "Other Event")
+        self.assertNotContains(resp, "e2 occurrence")
+
+    def test_cal_feed_full_no_sensitive(self):
+        cache.clear()
+        self.e.sensitive = False
+        self.e.save()
+
+        self.assertContains(self.client.get(reverse('cal:feed-full')), "Test Event")
+        self.assertContains(self.client.get(reverse('cal:feed-full')), "first e occurrence")
+        # make sure we still don't see the occurrence that has display_on_cal=False
+        self.assertNotContains(self.client.get(reverse('cal:feed-full')), "second e occurrence")
+
+    def test_cal_feed_full_no_test_event(self):
+        cache.clear()
+        self.e2.test_event = False
+        self.e2.save()
+
+        self.assertContains(self.client.get(reverse('cal:feed-full')), "Other Event")
+        self.assertContains(self.client.get(reverse('cal:feed-full')), "e2 occurrence")
+
+    def test_cal_feed_light(self):
         response = self.client.get(reverse('cal:feed-light'))
         self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Test Event")
+        self.assertNotContains(response, "first e occurrence")
+        self.assertNotContains(response, "Other Event")
+        self.assertNotContains(response, "e2 occurrence")
+        self.assertContains(response, "2019 Event")
+        self.assertNotContains(response, "e2019 occurrence")
 
     def test_prospective(self):
         # By default, user should not have permission to view this page

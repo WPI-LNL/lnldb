@@ -26,7 +26,7 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
                            ExtraInstance, Hours, Lighting, Location, Organization, OrganizationTransfer,
                            OrgBillingVerificationEvent, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
-                           Sound, PostEventSurvey, OfficeHour)
+                           Sound, PostEventSurvey, OfficeHour, Fee, Discount, EventOccurrence)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 from helpers.util import curry_class
@@ -583,6 +583,9 @@ class InternalEventForm2019(FieldAccessForm):
                 'event_status',
                 'location',
                 'lnl_contact',
+                'pricelist',
+                'applied_fees',
+                'applied_discounts',
                 'reference_code',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
@@ -665,17 +668,17 @@ class InternalEventForm2019(FieldAccessForm):
 
         change_type = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.adjust_event_charges', instance),
-            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_in_bulk')
+            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_in_bulk', 'pricelist')
         )
 
         billing_edit = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_fund', instance),
-            enable=('billing_org', 'billed_in_bulk')
+            enable=('billing_org', 'billed_in_bulk', 'pricelist', 'applied_fees', 'applied_discounts')
         )
 
         billing_view = FieldAccessLevel(
             lambda user, instance: not user.has_perm('events.view_event_billing', instance),
-            exclude=('billing_org', 'billed_in_bulk', 'entered_into_workday')
+            exclude=('billing_org', 'billed_in_bulk', 'entered_into_workday', 'pricelist', 'applied_fees', 'applied_discounts')
         )
 
         change_flags = FieldAccessLevel(
@@ -719,7 +722,7 @@ class InternalEventForm2019(FieldAccessForm):
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'sensitive', 'test_event',
                   'entered_into_workday', 'send_survey', 'max_crew','cancelled_reason',
-                  'reference_code')
+                  'reference_code', 'pricelist', 'applied_fees', 'applied_discounts')
         widgets = {
             'description': EasyMDEEditor(),
             'internal_notes': EasyMDEEditor(),
@@ -743,8 +746,17 @@ class InternalEventForm2019(FieldAccessForm):
     cancelled_reason = forms.CharField(label="Reason for Cancellation", required=False),
     # Regex will match valid 25Live reservation codes in the format
     # `2022-ABNXQQ`
-    reference_code =forms.CharField(validators=[RegexValidator(regex=r"[0-9]{4}-[A-Z]{6}")],
-            required = False)
+    reference_code = forms.CharField(validators=[RegexValidator(regex=r"[0-9]{4}-[A-Z]{6}")], required = False)
+    applied_fees = ModelMultipleChoiceField(
+        queryset=Fee.objects.all(),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
+        required=False
+    )
+    applied_discounts = ModelMultipleChoiceField(
+        queryset=Discount.objects.all(),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'checkbox'}),
+        required=False
+    )
 
 
 class EventReviewForm(forms.ModelForm):
@@ -1436,6 +1448,8 @@ class ServiceInstanceForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
         self.event = event
         super(ServiceInstanceForm, self).__init__(*args, **kwargs)
+        if self.event and self.event.pricelist:
+            self.fields['service'].queryset = Service.objects.filter(enabled_event2019=True, serviceprice__service__in=self.event.pricelist.services.all())
 
     def save(self, commit=True):
         obj = super(ServiceInstanceForm, self).save(commit=False)
@@ -1452,6 +1466,14 @@ class ServiceInstanceForm(forms.ModelForm):
         }
 
     service = ModelChoiceField(queryset=Service.objects.filter(enabled_event2019=True))
+
+class EventOccurrenceForm(forms.ModelForm):
+    class Meta:
+        model = EventOccurrence
+        fields = ('name', 'start', 'end', 'display_on_cal')
+
+    start = forms.SplitDateTimeField()
+    end = forms.SplitDateTimeField()
 
 
 # CrewChiefFS = inlineformset_factory(Event,EventCCInstance,extra=3,form=CCIForm, exclude=[])

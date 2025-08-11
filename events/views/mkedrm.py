@@ -12,12 +12,19 @@ from emails.generators import EventEmailGenerator
 from slack.views import event_edited_notification
 from slack.api import slack_post, lookup_user
 from events.forms import InternalEventForm, InternalEventForm2019, ServiceInstanceForm
-from events.models import BaseEvent, Event2019, ServiceInstance
+from events.models import BaseEvent, Event2019, ServiceInstance, Pricelist, Discount
 from helpers.revision import set_revision_comment
 from helpers.util import curry_class
 
 import requests, json
 
+def check_automatic_discounts(event):
+    if isinstance(event, Event2019) and event.uses_new_discounts:
+        for discount in Discount.objects.all():
+            if discount.required_categories.exists() and \
+                all(event.serviceinstance_set.filter(service__category__name=category).exists() 
+                    for category in discount.required_categories.all()):
+                event.applied_discounts.add(discount)
 
 @login_required
 def eventnew(request, id=None, initial={}):
@@ -88,6 +95,10 @@ def eventnew(request, id=None, initial={}):
                     
                 if is_event2019:
                     services_formset.save()
+
+                    check_automatic_discounts(obj)
+                    obj.save()
+
                 if should_send_notification:
                     # BCC the crew chiefs
                     for ccinstance in obj.ccinstances.all():
@@ -130,6 +141,8 @@ def eventnew(request, id=None, initial={}):
                 obj = form.save(commit=False)
                 obj.submitted_by = request.user
                 obj.submitted_ip = request.META.get('REMOTE_ADDR')
+                if is_event2019:
+                    obj.uses_new_discounts = True
                 obj.save()
                 form.save_m2m()
                 if is_event2019:
@@ -137,6 +150,9 @@ def eventnew(request, id=None, initial={}):
                     services_formset = mk_serviceinstance_formset(request.POST, request.FILES, instance=instance)
                     services_formset.is_valid()
                     services_formset.save()
+
+                    check_automatic_discounts(obj)
+                    obj.save()
             return HttpResponseRedirect(reverse('events:detail', args=(obj.id,)))
         else:
             context['e'] = form.errors
@@ -148,6 +164,8 @@ def eventnew(request, id=None, initial={}):
                 context['services_formset'] = services_formset
     else:
         if is_event2019:
+            if not instance and 'pricelist' not in initial:
+                initial['pricelist'] = Pricelist.objects.last()
             context['form'] = InternalEventForm2019(request_user=request.user, instance=instance, initial=initial)
             context['services_formset'] = mk_serviceinstance_formset(instance=instance, initial=initial.get("services", []))
         else:

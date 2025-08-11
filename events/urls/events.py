@@ -59,6 +59,7 @@ urlpatterns = [
     re_path(r'^bills-pdf/(?P<ids>\d+(,\d+)*)?/?$', pdf_views.generate_event_bill_pdf_multi,
         name="bill-pdf-multi"),
     re_path(r'^view/(?P<id>[0-9a-f]+)/pdf/$', pdf_views.generate_event_pdf, name="pdf"),
+    re_path(r'^quote/(?P<id>[0-9]+)/$', pdf_views.view_quote, name="view-quote"),
     # re_path(r'^db/events/mk/$', 'events.views.mkedrm.eventnew', name="event-new"),
     re_path(r'^mk/$', mkedrm_views.eventnew, name="new"),
     re_path(r'^edit/(?P<id>[0-9a-f]+)/$', mkedrm_views.eventnew, name="edit"),
@@ -84,6 +85,8 @@ urlpatterns = [
         name="files"),
     re_path(r'^extras/(?P<id>[0-9a-f]+)/$', flow_views.extras, name="extras"),
     re_path(r'^oneoff/(?P<id>[0-9a-f]+)/$', flow_views.oneoff, name="oneoffs"),
+    re_path(r'^rentals/(?P<id>[0-9a-f]+)/$', flow_views.rentals, name="rentals"),
+    re_path(r'^occurrences/(?P<id>[0-9a-f]+)/$', flow_views.occurrences, name="occurrences"),
     re_path(r'^enter-worktag/(?P<pk>[0-9a-f]+)/$', flow_views.WorkdayEntry.as_view(), name="worktag-form"),
     re_path(r'^workday-entered/(?P<id>[0-9a-f]+)/$', flow_views.mark_entered_into_workday, name="workday-entered"),
 

@@ -25,6 +25,10 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+    - name: Install weasyprint dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 libharfbuzz-subset0
     - name: Run Tests
       run: coverage run --omit="*/migrations/*","slack/api.py","rt/api.py","inventory/*","src/*" manage.py test
     - name: Upload Coverage

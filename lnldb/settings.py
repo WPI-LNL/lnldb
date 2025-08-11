@@ -365,7 +365,8 @@ INSTALLED_APPS = (
     'jchart',
     'rest_framework',
     'rest_framework.authtoken',
-    'drf_spectacular'
+    'drf_spectacular',
+    'django.contrib.humanize'
 )
 if SAML2_ENABLED:
     INSTALLED_APPS += ('django_saml2_auth',)
