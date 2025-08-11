@@ -163,7 +163,6 @@ class PdfViewTest(TestCase):
 
         pdf = PdfReader(BytesIO(response.content))
         text = ''.join(page.extract_text() for page in pdf.pages)
-        print(text) # TEMPORARY TO FIGURE OUT WHAT'S WRONG WITH GITHUB TESTS
         self.assertTrue("QUOTE" in text)
         self.assertTrue("New Discounts Test" in text)
         self.assertTrue("First Lighting Service" in text)
