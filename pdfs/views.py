@@ -221,12 +221,31 @@ def render_quote_to_pdf(quote) -> BytesIO:
         font_string = """
         @font-face {
             font-family: 'Helvetica-Neue';
-            src: local('static/fonts/HelveticaNeue.ttf');
+            src: url('file:///static/fonts/HelveticaNeue.ttf');
+        }
+
+        @font-face {
+            font-family: 'Helvetica-Neue';
+            src: url('file:///static/fonts/HelveticaNeueBold.ttf');
+            font-weight: bold;
+        }
+
+        @font-face {
+            font-family: 'Helvetica-Neue';
+            src: url('file:///static/fonts/HelveticaNeueItalic.ttf');
+            font-style: italic;
+        }
+
+        @font-face {
+            font-family: 'Helvetica-Neue';
+            src: url('file:///static/fonts/HelveticaNeueBoldItalic.ttf');
+            font-weight: bold;
+            font-style: italic;
         }
         """
         HTML(string=quote.html, url_fetcher=url_fetcher, base_url="/").write_pdf(
             pdf_file,
-            stylesheets=[CSS(string=font_string, font_config=font_config)],
+            stylesheets=[CSS(string=font_string, font_config=font_config, url_fetcher=url_fetcher)],
             font_config=font_config)
     else:
         pisa.CreatePDF(quote.html, dest=pdf_file, link_callback=link_callback)
