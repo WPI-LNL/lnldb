@@ -1984,6 +1984,27 @@ class EventListBasicViewTest(ViewTestCase):
         service = ServiceFactory.create(category=proj, base_cost=100.00)
         models.ServiceInstance.objects.create(service=service, event=self.e2019)
 
+        # all the filtering gets done by the date of the event, so it shouldn't matter that the occurences are in completely different years
+        models.EventOccurrence.objects.create(event=self.e, name="first e occurrence",
+                                              start=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=9)),
+                                              end=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=11)),
+                                              display_on_cal=True)
+
+        models.EventOccurrence.objects.create(event=self.e, name="second e occurrence",
+                                              start=timezone.make_aware(timezone.datetime(2025, 8, 12, hour=8)),
+                                              end=timezone.make_aware(timezone.datetime(2025, 8, 12, hour=10)),
+                                              display_on_cal=False)
+
+        models.EventOccurrence.objects.create(event=self.e2, name="e2 occurrence",
+                                              start=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=9)),
+                                              end=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=11)),
+                                              display_on_cal=True)
+
+        models.EventOccurrence.objects.create(event=self.e2019, name="e2019 occurrence",
+                                              start=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=9)),
+                                              end=timezone.make_aware(timezone.datetime(2025, 8, 11, hour=11)),
+                                              display_on_cal=True)
+
     def generic_list(self, url):
         # Check that page loads ok (should not include either event)
         resp = self.client.get(reverse(url))
@@ -2046,17 +2067,24 @@ class EventListBasicViewTest(ViewTestCase):
         resp = self.client.get(reverse(url))
         self.assertOk(resp)
         self.assertNotContains(resp, "Test Event")
+        self.assertNotContains(resp, "first e occurrence")
         self.assertNotContains(resp, "Other Event")
+        self.assertNotContains(resp, "e2 occurrence")
 
         # Check that even with proper date range we don't see sensitive or test events unless we have permission
         # Note we use Epoch timestamps here
         self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600&projection=show'),
                                "Test Event")
+        self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600&projection=show'),
+                               "first e occurrence")
 
         self.e.sensitive = False
         self.e.save()
 
         self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Test Event")
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "first e occurrence")
+        # make sure we still don't see the occurrence that has display_on_cal=False
+        self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "second e occurrence")
 
         self.e.sensitive = True
         self.e.save()
@@ -2066,13 +2094,17 @@ class EventListBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Test Event")
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "first e occurrence")
+        self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "second e occurrence")
 
         self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Other Event")
+        self.assertNotContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "e2 occurrence")
 
         self.e2.test_event = False
         self.e2.save()
 
         self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Other Event")
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "e2 occurrence")
 
         self.e2.test_event = True
         self.e2.save()
@@ -2082,16 +2114,20 @@ class EventListBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "Other Event")
+        self.assertContains(self.client.get(reverse(url) + '?from=1577664000&to=1580601600'), "e2 occurrence")
 
         # Test projection cookies
         resp = self.client.get(reverse(url) + '?from=1577664000&to=1580601600&projection=hide')
         self.assertOk(resp)
         self.assertNotContains(resp, "2019 Event")
+        self.assertNotContains(resp, "e2019 occurrence")
 
         resp = self.client.get(reverse(url) + '?from=1577664000&to=1580601600&projection=only')
         self.assertOk(resp)
         self.assertContains(resp, "2019 Event")
+        self.assertContains(resp, "e2019 occurrence")
         self.assertNotContains(resp, "Test Event")
+        self.assertNotContains(resp, "first e occurrence")
 
     def test_public(self):
         response = self.client.get(reverse('cal:list'))
