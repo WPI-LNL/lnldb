@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.contrib.auth.models import Permission, Group
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from django.conf import settings
 from django.http import QueryDict
 from django.test import TestCase
@@ -2135,13 +2136,52 @@ class EventListBasicViewTest(ViewTestCase):
         response = self.client.get(reverse('cal:api-public'))
         self.assertEqual(response.status_code, 200)
 
-    def test_cal(self):
+    def test_cal_feed(self):
         response = self.client.get(reverse('cal:feed'))
         self.assertEqual(response.status_code, 200)
-        response = self.client.get(reverse('cal:feed-full'))
-        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Test Event")
+        self.assertNotContains(response, "first e occurrence")
+        self.assertNotContains(response, "Other Event")
+        self.assertNotContains(response, "e2 occurrence")
+        self.assertContains(response, "2019 Event")
+        self.assertContains(response, "e2019 occurrence")
+
+    def test_cal_feed_full_base(self):
+        # Check that feed loads ok (should not include either event)
+        resp = self.client.get(reverse('cal:feed-full'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "Test Event")
+        self.assertNotContains(resp, "first e occurrence")
+        self.assertNotContains(resp, "Other Event")
+        self.assertNotContains(resp, "e2 occurrence")
+
+    def test_cal_feed_full_no_sensitive(self):
+        cache.clear()
+        self.e.sensitive = False
+        self.e.save()
+
+        self.assertContains(self.client.get(reverse('cal:feed-full')), "Test Event")
+        self.assertContains(self.client.get(reverse('cal:feed-full')), "first e occurrence")
+        # make sure we still don't see the occurrence that has display_on_cal=False
+        self.assertNotContains(self.client.get(reverse('cal:feed-full')), "second e occurrence")
+
+    def test_cal_feed_full_no_test_event(self):
+        cache.clear()
+        self.e2.test_event = False
+        self.e2.save()
+
+        self.assertContains(self.client.get(reverse('cal:feed-full')), "Other Event")
+        self.assertContains(self.client.get(reverse('cal:feed-full')), "e2 occurrence")
+
+    def test_cal_feed_light(self):
         response = self.client.get(reverse('cal:feed-light'))
         self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Test Event")
+        self.assertNotContains(response, "first e occurrence")
+        self.assertNotContains(response, "Other Event")
+        self.assertNotContains(response, "e2 occurrence")
+        self.assertContains(response, "2019 Event")
+        self.assertNotContains(response, "e2019 occurrence")
 
     def test_prospective(self):
         # By default, user should not have permission to view this page
