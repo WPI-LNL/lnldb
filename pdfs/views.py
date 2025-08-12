@@ -16,7 +16,10 @@ from django.utils.text import slugify
 
 from xhtml2pdf import pisa
 from weasyprint import HTML, CSS
-from weasyprint.text.fonts import FontConfiguration
+try:
+    from weasyprint.text.fonts import FontConfiguration
+except ModuleNotFoundError:
+    from weasyprint.fonts import FontConfiguration
 from pypdf import PdfWriter
 
 from events.models import Category, BaseEvent, Event2019, ExtraInstance, MultiBilling, Quote
