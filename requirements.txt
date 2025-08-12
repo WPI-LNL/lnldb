@@ -139,7 +139,7 @@ uritemplate==4.1.1
 uritools==4.0.3
 urllib3==2.3.0
 webencodings==0.5.1
-weasyprint==66
+weasyprint==52.5
 whitenoise==6.8.2
 xhtml2pdf==0.2.16
 xmlschema==2.5.1
