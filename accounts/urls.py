@@ -42,6 +42,7 @@ urlpatterns = [
     re_path(r'^db/members/all/$', views.AllMembersList.as_view(), name="allmembers"),
     re_path(r'^db/members/unsorted/$', views.LimboList.as_view(), name="limbo"),
 
+    re_path(r'^db/members/mdc/xpr-raw/$', views.mdc_xpr_raw, name='mdc_xpr_raw'),
     re_path(r'^db/members/mdc/raw/$', views.mdc_raw, name='mdc_raw'),
     re_path(r'^db/members/mdc/$', views.mdc, name='mdc'),
     re_path(r'^db/members/secretary/$', views.secretary_dashboard, name='secretary_dashboard'),
