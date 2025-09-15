@@ -113,7 +113,7 @@ requests==2.32.5
 rjsmin==1.2.2
 rpds-py==0.22.3
 s3transfer==0.10.4
-setuptools==75.6.0
+setuptools==80.9.0
 six==1.17.0
 slack_sdk==3.34.0
 snowballstemmer==2.2.0
