@@ -95,7 +95,7 @@ pyHanko==0.25.3
 pyhanko-certvalidator==0.26.5
 PyJWT==2.10.1
 pyOpenSSL==24.3.0
-pypdf==5.1.0
+pypdf==6.0.0
 PyPDF2==3.0.1
 pysaml2==7.5.0
 python-bidi==0.4.2
