@@ -1,12 +1,12 @@
 import math
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Q
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
@@ -463,8 +463,9 @@ def hours_prefill_self(request, id):
     if not event.ccinstances.exists():
         raise PermissionDenied
     if event.hours.filter(user=request.user).exists():
-        messages.add_message(request, messages.ERROR, 'You already have hours for this event.')
+        messages.add_message(request, messages.ERROR, 'You are already checked in to this event.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+        # return HttpResponseRedirect(reverse('events:crew-checkout'))
     if timezone.now() < min(event.ccinstances.values_list('setup_start', flat=True)):
         messages.add_message(request, messages.ERROR, 'You cannot use this feature until the event setup has started.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
@@ -505,7 +506,7 @@ def checkin(request):
 
     if request.user.event_records.filter(active=True).exists():
         context['page'] = {"title": "You are already checked into an event",
-                           "body": "<a href='" + reverse("events:crew-tracker") + "' class='btn btn-primary'>Back</a>"}
+                           "body": "<a href='" + reverse("events:crew-checkout") + "' class='btn btn-primary'>Go to Crew Checkout</a>"}
         return render(request, 'static_page.html', context)
 
     if request.method == 'POST':
@@ -1156,6 +1157,10 @@ def viewevent(request, id):
                 session.save()
 
     context['apps'] = apps
+
+    context['can_selfcrew'] = request.user.is_lnl & BaseEvent.objects.filter(
+        Q(closed=False) & Q(cancelled=False), id=event.id, ccinstances__setup_start__lte=timezone.now(),
+        datetime_end__gte=(timezone.now() - timedelta(hours=3))).exists()
 
     return render(request, 'uglydetail.html', context)
 

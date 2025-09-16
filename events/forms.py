@@ -1287,6 +1287,8 @@ class MKHoursForm(forms.ModelForm):
         if isinstance(event, Event2019):
             self.fields['category'].queryset = Category.objects.filter(
                 pk__in=event.serviceinstance_set.values_list('service__category', flat=True))
+            if len(self.fields['category'].queryset) == 1:
+                self.fields['category'].initial = self.fields['category'].queryset.first()
 
     def clean(self):
         super(MKHoursForm, self).clean()
@@ -1359,6 +1361,8 @@ class CCIForm(forms.ModelForm):
         if isinstance(event, Event2019):
             self.fields['category'].queryset = Category.objects.filter(
                 pk__in=event.serviceinstance_set.values_list('service__category', flat=True))
+            if len(self.fields['category'].queryset) == 1:
+                self.fields['category'].initial = self.fields['category'].queryset.first()
         self.fields['setup_start'].initial = self.fields['setup_start'].prepare_value(
             self.event.datetime_setup_complete.replace(second=0, microsecond=0)
         )
@@ -1847,6 +1851,8 @@ class CrewCheckinForm(forms.Form):
                 options.append((event.pk, " %s" % event.event_name))
 
         self.fields['event'] = forms.ChoiceField(choices=options, label="Select Event", widget=forms.RadioSelect)
+        if len(options) == 1:
+            self.fields['event'].initial = options[0][0]
 
 
 class CrewCheckoutForm(forms.Form):
@@ -1906,6 +1912,8 @@ class CheckoutHoursForm(forms.Form):
                                                                          min_value=0)
             hour_set.fields.append(Column('hours_%s' % category.name, css_class="mx-2"))
         hour_set.fields.append(Column('total', css_class="mx-2"))
+        if len(categories) == 1:
+            self.fields['hours_%s' % categories[0].name].initial = self.total_hrs
 
     def clean(self):
         cleaned_data = super(CheckoutHoursForm, self).clean()
