@@ -677,9 +677,9 @@ def cc_add_notification(cci):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": "You've been added as a crew chief to the event *%s*. Your setup is currently scheduled for "
+                "text": "You've been added as a crew chief to the event *%s*." + "Your setup is currently scheduled for "
                         "*%s* in the *%s*." % (cci.event.event_name, cci.setup_start.strftime('%b %-d, %Y at %-I:%M %p'),
-                                               cci.setup_location.name.strip())
+                                               cci.setup_location.name.strip()) if cci.setup_start and cci.setup_location else ""
             }
         },
         {

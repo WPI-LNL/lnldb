@@ -155,12 +155,16 @@
                         <td>{{event.location}} ({{event.location.building }})</td>
                         <td>
                             {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
+                            {% if cc.setup_location %}
                             <strong>{{cc.service.shortname }}</strong> {{cc.setup_location }}  <br />
+                            {% endif %}
                             {% endfor %}
                         </td>
                         <td>
                             {% for cc in event.ccinstances.all|dictsort:"setup_start" %}
+                            {% if cc.setup_start %}
                             {{cc.setup_start }}  <br />
+                            {% endif %}
                             {% endfor %}
                         </td>
                         <td>

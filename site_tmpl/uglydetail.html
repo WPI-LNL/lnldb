@@ -556,23 +556,31 @@
                     <table class="table">
                         <tr>
                             <th>Name</th>
-                            <th>Setup Location</th>
-                            <th>Setup Time</th>
+                            {% if has_cc_setup_times_or_locations %}
+                                <th>Setup Location</th>
+                                <th>Setup Time</th>
+                            {% endif %}
                             <th>Category</th>
+                            <th>Position</th>
                         </tr>
                         {% for cc in event.ccinstances.all %}
                         <tr>
                             <td>
                                 <a href="{% url "accounts:detail" cc.crew_chief.id %}">{{ cc.crew_chief.get_full_name }}</a>
                             </td>
-                            <td>
-                                {{ cc.setup_location }}
-                            </td>
-                            <td>
-                                {{ cc.setup_start }}
-                            </td>
+                            {% if has_cc_setup_times_or_locations %}
+                                <td>
+                                    {{ cc.setup_location }}
+                                </td>
+                                <td>
+                                    {{ cc.setup_start }}
+                                </td>
+                            {% endif %}
                             <td>
                                 {{ cc.category }}
+                            </td>
+                            <td>
+                                {{ cc.position }}
                             </td>
                         {% endfor %}
                     </table>
