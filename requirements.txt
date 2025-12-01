@@ -137,7 +137,7 @@ tzdata==2024.2
 tzlocal==5.2
 uritemplate==4.1.1
 uritools==4.0.3
-urllib3==2.3.0
+urllib3==2.5.0
 webencodings==0.5.1
 weasyprint==52.5
 whitenoise==6.8.2
