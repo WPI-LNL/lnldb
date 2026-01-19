@@ -88,7 +88,7 @@ packaging==24.2
 Paste==3.10.1
 pep8==1.7.1
 pillow==11.0.0
-pyasn1==0.6.1
+pyasn1==0.6.2
 pycparser==2.22
 Pygments==2.18.0
 pyHanko==0.25.3
