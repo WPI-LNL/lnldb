@@ -8,7 +8,7 @@ from django import forms
 from django.conf import settings
 # Create your models here.
 from django.core.validators import MinLengthValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Count, Sum
 from django.urls.base import reverse
 from django.utils import timezone
@@ -1148,6 +1148,16 @@ class Pricelist(models.Model):
     fees = models.ManyToManyField(Fee, through="FeePrice", related_name="pricelists")
     discounts = models.ManyToManyField(Discount, through="DiscountPrice", related_name="pricelists")
     rental_fee_percentage = models.DecimalField(default=15, max_digits=8, decimal_places=2)
+    default_pricelist = models.BooleanField(default=False)
+
+    # ensure only one default at a time
+    def save(self, *args, **kwargs):
+        if self.default_pricelist:
+            with transaction.atomic():
+                Pricelist.objects.filter(default_pricelist=True).update(default_pricelist=False)
+            return super(Pricelist, self).save(*args, **kwargs)
+        else:
+            return super(Pricelist, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.name
