@@ -12,7 +12,6 @@ from six import StringIO
 from data.tests.util import ViewTestCase
 from events.tests.generators import UserFactory, OrgFactory, Event2019Factory
 from events.models import EventCCInstance, Category, Service, Location, Building
-from .forms import UserEditForm
 from helpers.challenges import is_officer
 from .templatetags import at_user_linking
 from . import ldap, models, lookups
