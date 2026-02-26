@@ -12,6 +12,7 @@ from six import StringIO
 from data.tests.util import ViewTestCase
 from events.tests.generators import UserFactory, OrgFactory, Event2019Factory
 from events.models import EventCCInstance, Category, Service, Location, Building
+from .forms import UserEditForm
 from helpers.challenges import is_officer
 from .templatetags import at_user_linking
 from . import ldap, models, lookups
@@ -154,6 +155,12 @@ class AccountsTestCase(ViewTestCase):
         self.assertOk(self.client.get(reverse("accounts:update", args=[2])))
         # Should not redirect as class year is required
         self.assertOk(self.client.post(reverse("accounts:update", args=[2]), member_data))
+
+        member_data['class_year'] = timezone.localdate().year + 7
+        
+        # max year is 6 years in the future
+        self.assertContains(self.client.post(reverse("accounts:update", args=[2]), member_data),
+                             "Class year must be no greater than 6 years in the future")
 
         member_data['class_year'] = '1962'
 
