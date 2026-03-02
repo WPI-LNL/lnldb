@@ -1155,7 +1155,7 @@ class Pricelist(models.Model):
         if self.default_pricelist:
             with transaction.atomic():
                 Pricelist.objects.filter(default_pricelist=True).update(default_pricelist=False)
-            return super(Pricelist, self).save(*args, **kwargs)
+                return super(Pricelist, self).save(*args, **kwargs)
         else:
             return super(Pricelist, self).save(*args, **kwargs)
 
