@@ -276,7 +276,8 @@ def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):
         objects_body = []
         for event in queryset:
             field = {
-                "title": conditional_escape(event.cal_name()),
+                "title": conditional_escape("%icon% "+event.cal_name()),
+                "icon": '<span class="glyphicon '+event.icon+'" aria-hidden="true"></span>',
                 "url": reverse('events:detail', args=[event.id]),
                 "className": 'cal-status-' + slugify(event.status),
                 "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
@@ -309,6 +310,7 @@ def generate_cal_json(queryset, from_date=None, to_date=None):
             field = {
                 "id": event.cal_guid(),
                 "title": event.cal_name(),
+                "icon": '<span class="glyphicon '+event.icon+'" aria-hidden="true"></span>' + ('<span class="glyphicon glyphicon-film" aria-hidden="true"></span>' if event.has_projection else ''),
                 "url": reverse('events:detail', args=[event.id]),
                 "className": 'cal-status-' + slugify(event.status),
                 "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
