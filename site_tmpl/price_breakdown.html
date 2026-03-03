@@ -72,6 +72,8 @@
                 <td class="tdra">${{ service_instance.cost }}</td>
             </tr>
         {% endfor %}
+    {% endif %}
+    {% if event.extrainstance_set.exists %}
         {% for extra_instance in event.extrainstance_set.all %}
             <tr>
                 <td>{{ extra_instance }} <strong>x{{ extra_instance.quant }}</strong></td>

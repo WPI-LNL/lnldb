@@ -556,23 +556,31 @@
                     <table class="table">
                         <tr>
                             <th>Name</th>
-                            <th>Setup Location</th>
-                            <th>Setup Time</th>
+                            {% if has_cc_setup_times_or_locations %}
+                                <th>Setup Location</th>
+                                <th>Setup Time</th>
+                            {% endif %}
                             <th>Category</th>
+                            <th>Position</th>
                         </tr>
                         {% for cc in event.ccinstances.all %}
                         <tr>
                             <td>
                                 <a href="{% url "accounts:detail" cc.crew_chief.id %}">{{ cc.crew_chief.get_full_name }}</a>
                             </td>
-                            <td>
-                                {{ cc.setup_location }}
-                            </td>
-                            <td>
-                                {{ cc.setup_start }}
-                            </td>
+                            {% if has_cc_setup_times_or_locations %}
+                                <td>
+                                    {{ cc.setup_location }}
+                                </td>
+                                <td>
+                                    {{ cc.setup_start }}
+                                </td>
+                            {% endif %}
                             <td>
                                 {{ cc.category }}
+                            </td>
+                            <td>
+                                {{ cc.position }}
                             </td>
                         {% endfor %}
                     </table>
@@ -593,13 +601,11 @@
                 </div>
                 {% permission request.user has 'events.view_event_reports' of event %}
                 <div id="reports" class="tab-pane">
-                    {% if not event.closed %}
-                        {% permission request.user has 'events.add_event_report' of event %}
-                            <div class="pull-right">
-                                <a class="btn btn-primary btn-lg" href="{% url "events:reports:new" event.id%}">New</a>
-                            </div>
-                        {% endpermission %}
-                    {% endif %}
+                    {% permission request.user has 'events.add_event_report' of event %}
+                        <div class="pull-right">
+                            <a class="btn btn-primary btn-lg" href="{% url "events:reports:new" event.id%}">New</a>
+                        </div>
+                    {% endpermission %}
                     <h2>Reports</h2>
                     {% for report in event.ccreport_set.all %}
                         <h4>Report by {{report.crew_chief }}</h4> 
@@ -608,14 +614,12 @@
                             {% if report.created_on != report.updated_on %}
                                 Last Updated: {{ report.updated_on }}
                             {% endif %}
-                            {% if not event.closed %}
-                                {% permission request.user has 'events.change_ccreport' of report %}
-                                    [<a href="{% url "events:reports:edit" event.id report.id %}">Edit</a>]
-                                {% endpermission %}
-                                {% permission request.user has 'events.delete_ccreport' of report %}
-                                    [<a href="{% url "events:reports:remove" event.id report.id %}">Delete</a>]
-                                {% endpermission %}
-                            {% endif %}
+                            {% permission request.user has 'events.change_ccreport' of report %}
+                                [<a href="{% url "events:reports:edit" event.id report.id %}">Edit</a>]
+                            {% endpermission %}
+                            {% permission request.user has 'events.delete_ccreport' of report %}
+                                [<a href="{% url "events:reports:remove" event.id report.id %}">Delete</a>]
+                            {% endpermission %}
                         </em>
                         
                         <blockquote>
