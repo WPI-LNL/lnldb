@@ -43,7 +43,7 @@ django-multiupload==0.6.1
 -e git+https://github.com/WPI-LNL/django-natural-duration.git@ea6d19a2a7dae82543a78ecf3abf5b83c12688dd#egg=django_natural_duration
 django-nose==1.4.7
 django-permission2==2.1.0
-django-polymorphic==3.1.0
+django-polymorphic==4.11.2
 django-recurrence==1.11.1
 django-reversion==5.1.0
 django-semanticui-forms==1.6.5
