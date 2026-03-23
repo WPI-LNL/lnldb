@@ -89,7 +89,7 @@ class EventBasicViewTest(ViewTestCase):
         # Verify pricelist defaults
         self.assertEqual(self.client.get(reverse("events:new")).context['form'].initial['pricelist'], pricelist2)
 
-        pricelist1.default_pricelist = True
+        pricelist1.is_default_pricelist = True
         pricelist1.save()
         self.assertEqual(self.client.get(reverse("events:new")).context['form'].initial['pricelist'], pricelist1)
 
@@ -261,7 +261,7 @@ class EventBasicViewTest(ViewTestCase):
 
         pricelist1 = models.Pricelist.objects.create(name="FY26")
         pricelist2 = models.Pricelist.objects.create(name="FY27")
-        pricelist1.default_pricelist = True
+        pricelist1.is_default_pricelist = True
         pricelist1.save()
 
         self.e3.pricelist = pricelist2

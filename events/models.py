@@ -1148,13 +1148,13 @@ class Pricelist(models.Model):
     fees = models.ManyToManyField(Fee, through="FeePrice", related_name="pricelists")
     discounts = models.ManyToManyField(Discount, through="DiscountPrice", related_name="pricelists")
     rental_fee_percentage = models.DecimalField(default=15, max_digits=8, decimal_places=2)
-    default_pricelist = models.BooleanField(default=False)
+    is_default_pricelist = models.BooleanField(default=False)
 
     # ensure only one default at a time
     def save(self, *args, **kwargs):
-        if self.default_pricelist:
+        if self.is_default_pricelist:
             with transaction.atomic():
-                Pricelist.objects.filter(default_pricelist=True).update(default_pricelist=False)
+                Pricelist.objects.filter(is_default_pricelist=True).update(is_default_pricelist=False)
                 return super(Pricelist, self).save(*args, **kwargs)
         else:
             return super(Pricelist, self).save(*args, **kwargs)

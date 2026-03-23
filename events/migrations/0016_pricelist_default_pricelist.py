@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='pricelist',
-            name='default_pricelist',
+            name='is_default_pricelist',
             field=models.BooleanField(default=False),
         ),
     ]

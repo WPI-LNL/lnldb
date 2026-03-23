@@ -57,17 +57,17 @@ class Event2019PropertyTests(TestCase):
     def test_pricelist(self):
         self.setup()
         pricelist2  = models.Pricelist.objects.create(name="test pricelist 2")
-        self.pricelist.default_pricelist = True
+        self.pricelist.is_default_pricelist = True
         self.pricelist.save()
         self.pricelist.refresh_from_db()
-        self.assertTrue(self.pricelist.default_pricelist)
+        self.assertTrue(self.pricelist.is_default_pricelist)
 
-        pricelist2.default_pricelist = True
+        pricelist2.is_default_pricelist = True
         pricelist2.save()
         pricelist2.refresh_from_db()
         self.pricelist.refresh_from_db()
-        self.assertTrue(pricelist2.default_pricelist)
-        self.assertFalse(self.pricelist.default_pricelist)
+        self.assertTrue(pricelist2.is_default_pricelist)
+        self.assertFalse(self.pricelist.is_default_pricelist)
         
     def test_services_total(self):
         self.setup()

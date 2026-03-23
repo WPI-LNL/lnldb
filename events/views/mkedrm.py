@@ -37,7 +37,7 @@ def eventnew(request, id=None, initial=None):
     context = {}
 
     # prevent unsafe dict as default value
-    if initial == None:
+    if initial is None:
         initial = {}
 
     # get instance if id is passed in
@@ -171,8 +171,8 @@ def eventnew(request, id=None, initial=None):
         if is_event2019:
             if not instance and 'pricelist' not in initial:
                 try: 
-                    initial['pricelist'] = Pricelist.objects.get(default_pricelist=True)
-                except Pricelist.DoesNotExist:
+                    initial['pricelist'] = Pricelist.objects.get(is_default_pricelist=True)
+                except (Pricelist.DoesNotExist, Pricelist.MultipleObjectsReturned):
                     initial['pricelist'] = Pricelist.objects.last()
             context['form'] = InternalEventForm2019(request_user=request.user, instance=instance, initial=initial)
             context['services_formset'] = mk_serviceinstance_formset(instance=instance, initial=initial.get("services", []))
