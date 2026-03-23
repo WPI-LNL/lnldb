@@ -206,15 +206,32 @@ FORMAT_MODULE_PATH = ['lnldb.formats']
 USE_TZ = True
 
 if env.str("AWS_ACCESS_KEY_ID", ""):
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    AWS_ACCESS_KEY_ID = env.str('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = env.str('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = env.str('AWS_STORAGE_BUCKET_NAME')
-    AWS_S3_REGION_NAME = env.str("AWS_S3_REGION_NAME")
-    # if env.str("AWS_S3_HOST", ""):
-    #     AWS_S3_HOST = env.str("AWS_S3_HOST")
-    S3_USE_SIGV4 = True
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "access_key": env.str("AWS_ACCESS_KEY_ID"),
+                "secret_key": env.str('AWS_SECRET_ACCESS_KEY'),
+                "bucket_name": env.str('AWS_STORAGE_BUCKET_NAME'),
+                "region_name": env.str("AWS_S3_REGION_NAME")
+                # if env.str("AWS_S3_HOST", ""):
+                #     AWS_S3_HOST = env.str("AWS_S3_HOST")
+                # S3_USE_SIGV4 = True
+            }
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        }
+    }
 else:
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        }
+    }
     # Absolute filesystem path to the directory that will hold user-uploaded files.
     # Example: "/home/media/media.lawrence.com/media/"
     # noinspection PyUnresolvedReferences
@@ -399,6 +416,18 @@ LOGGING = {
     'filters': {
         'require_debug_false': {
             '()': 'django.utils.log.RequireDebugFalse'
+        },
+        # 'suppress_permission_debug': {
+        #     '()': 'django.utils.log.CallbackFilter',
+        #     'callback': lambda record: '.perms' not in record.getMessage() and record.level != 10,
+        # },
+        'test_mode': {
+            '()': 'django.utils.log.CallbackFilter',
+            'callback': lambda response: 'test' in sys.argv,
+        },
+        'not_test_mode': {
+            '()': 'django.utils.log.CallbackFilter',
+            'callback': lambda response: 'test' not in sys.argv,
         }
     },
     'formatters': {
@@ -429,8 +458,14 @@ LOGGING = {
         },
         'events.perms': {
             'level': 'DEBUG' if DEBUG else 'INFO',
-            'handlers': ['console']
+            # 'handlers': ['console'],
+            # 'filters': ['not_test_mode']
         },
+        # '': {
+        #     'level': 'WARNING',
+        #     'handlers': ['console'],
+        #     'filters': ['test_mode']
+        # }
     }
 }
 

@@ -53,4 +53,4 @@ def qr_code(context, session, dark_mode=False):
         img = code.make_image()
     img.save(stream, format="PNG")
     data = base64.b64encode(stream.getvalue()).decode()
-    return format_html("<img style='width: 100&#37;' src='data:image/png;base64,%s' draggable='false'/>" % data)
+    return format_html("<img style='width: 100&#37;' src='data:image/png;base64,{}s' draggable='false'/>", data)

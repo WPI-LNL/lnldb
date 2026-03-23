@@ -157,9 +157,9 @@ class UserAddForm(UserCreationForm):
         super(UserAddForm, self).__init__(*args, **kwargs)
 
     # the rest is to make passwords optional.
-    def clean_password2(self):
+    def validate_passwords(self):
         if self.cleaned_data['password1'] or self.cleaned_data['password2']:
-            return super(UserAddForm, self).clean_password2()
+            return super().validate_passwords()
         else:
             return ""
 

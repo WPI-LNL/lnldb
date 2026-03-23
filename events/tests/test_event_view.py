@@ -2147,6 +2147,7 @@ class EventListBasicViewTest(ViewTestCase):
         self.assertContains(response, "e2019 occurrence")
 
     def test_cal_feed_full_base(self):
+        cache.clear()
         # Check that feed loads ok (should not include either event)
         resp = self.client.get(reverse('cal:feed-full'))
         self.assertEqual(resp.status_code, 200)

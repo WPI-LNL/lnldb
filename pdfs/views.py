@@ -8,7 +8,7 @@ from django.contrib.humanize.templatetags.humanize import intcomma
 from django.contrib.staticfiles import finders
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -16,10 +16,11 @@ from django.utils.text import slugify
 
 from xhtml2pdf import pisa
 from weasyprint import HTML, CSS
+from weasyprint.urls import URLFetcher, URLFetcherResponse
 try:
     from weasyprint.text.fonts import FontConfiguration
 except ModuleNotFoundError:
-    from weasyprint.fonts import FontConfiguration
+    from weasyprint.text.fonts import FontConfiguration
 from pypdf import PdfWriter
 
 from events.models import Category, BaseEvent, Event2019, ExtraInstance, MultiBilling, Quote
@@ -48,16 +49,13 @@ def link_callback(uri, rel):
         raise Exception('media URI must start with %s or %s' % (surl, murl))
     return path
 
-
-def url_fetcher(url):
-    """ a callback for weasyprint to fetch static files """
-    if url.startswith("file://"):
-        path = link_callback(url[7:], "")
-        data = {}
-        data['file_obj'] = open(path, 'rb')
-        return data
-    else:
-        raise Exception('Non-local files are not implemented for safety reasons')
+class LocalFetcher(URLFetcher):
+    """ custom weasyprint URLFetcher for fetchin django static files """
+    def fetch(self, url, headers=None):
+        if url.startswith("file://"):
+            return super().fetch(link_callback(url), headers)
+        else:
+            raise Exception('Non-local files are not implemented for safety reasons')            
 
 
 def generate_pdf(context, template, request):
@@ -246,9 +244,9 @@ def render_quote_to_pdf(quote) -> BytesIO:
             font-style: italic;
         }
         """
-        HTML(string=quote.html, url_fetcher=url_fetcher, base_url="/").write_pdf(
+        HTML(string=quote.html, url_fetcher=LocalFetcher()).write_pdf(
             pdf_file,
-            stylesheets=[CSS(string=font_string, font_config=font_config, url_fetcher=url_fetcher)],
+            stylesheets=[CSS(string=font_string, font_config=font_config, url_fetcher=LocalFetcher())],
             font_config=font_config)
     else:
         pisa.CreatePDF(quote.html, dest=pdf_file, link_callback=link_callback)
