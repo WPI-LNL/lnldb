@@ -1506,8 +1506,10 @@ class EventCCInstance(models.Model):
 
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='ccinstances')
     service = models.ForeignKey(Service, on_delete=models.PROTECT, null=True, related_name='ccinstances')
-    setup_location = models.ForeignKey(Location, on_delete=models.PROTECT, related_name='ccinstances')
+    setup_location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, related_name='ccinstances')
     setup_start = models.DateTimeField(null=True, blank=True)
+
+    position = models.CharField(max_length=128, default="", blank=True)
 
     def cal_name(self):
         """ Title used by calendars """
@@ -1528,11 +1530,15 @@ class EventCCInstance(models.Model):
 
     def cal_location(self):
         """ Location used by calendars """
-        return self.setup_location.name
+        if self.setup_location:
+            return self.setup_location.name
+        return ""
 
     def cal_start(self):
         """ Start time used by calendars (setup) """
-        return self.setup_start
+        if self.setup_start:
+            return self.setup_start
+        return ""
 
     def cal_end(self):
         """ End time used by calendars """

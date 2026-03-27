@@ -1348,8 +1348,9 @@ class CCIForm(forms.ModelForm):
         self.helper.layout = Layout(
             Field('crew_chief', placeholder="Crew Chief", title=""),
             Field('service' if isinstance(event, Event) else 'category'),
-            Field('setup_location'),
-            Field('setup_start', css_class="dtp"),
+            #Field('setup_location'),
+            #Field('setup_start', css_class="dtp"),
+            Field('position'),
             HTML('<hr>'),
         )
         super(CCIForm, self).__init__(*args, **kwargs)
@@ -1359,9 +1360,9 @@ class CCIForm(forms.ModelForm):
         if isinstance(event, Event2019):
             self.fields['category'].queryset = Category.objects.filter(
                 pk__in=event.serviceinstance_set.values_list('service__category', flat=True))
-        self.fields['setup_start'].initial = self.fields['setup_start'].prepare_value(
-            self.event.datetime_setup_complete.replace(second=0, microsecond=0)
-        )
+        #self.fields['setup_start'].initial = self.fields['setup_start'].prepare_value(
+        #    self.event.datetime_setup_complete.replace(second=0, microsecond=0)
+        #)
 
     def clean(self):
         cleaned_data = super(CCIForm, self).clean()
@@ -1386,15 +1387,16 @@ class CCIForm(forms.ModelForm):
 
     class Meta:
         model = EventCCInstance
-        fields = ('category', 'crew_chief', 'service', 'setup_location', 'setup_start')
+        #fields = ('category', 'crew_chief', 'service', 'setup_location', 'setup_start')
+        fields = ('category', 'crew_chief', 'service', 'position')
 
     crew_chief = AutoCompleteSelectField('Members', required=True)
-    setup_start = forms.SplitDateTimeField(initial=timezone.now)
-    setup_location = GroupedModelChoiceField(
-        queryset=Location.objects.filter(setup_only=True).select_related('building'),
-        group_by_field="building",
-        group_label=lambda group: group.name,
-    )
+    #setup_start = forms.SplitDateTimeField(initial=timezone.now)
+    #setup_location = GroupedModelChoiceField(
+    #    queryset=Location.objects.filter(setup_only=True).select_related('building'),
+    #    group_by_field="building",
+    #    group_label=lambda group: group.name,
+    #)
     category = ModelChoiceField(queryset=Category.objects.all(), required=False)
     service = ModelChoiceField(queryset=Service.objects.all(), required=False)  # queryset gets changed in constructor
 
