@@ -76,7 +76,7 @@ ldap3==2.9.1
 Levenshtein==0.26.1
 line_profiler==4.2.0
 lxml==6.1.0
-Markdown==3.7
+Markdown==3.10.2
 markdown2==2.5.2
 MarkupSafe==3.0.2
 mechanize==0.4.10
