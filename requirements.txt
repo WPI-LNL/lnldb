@@ -93,7 +93,7 @@ pycparser==2.22
 Pygments==2.18.0
 pyHanko==0.25.3
 pyhanko-certvalidator==0.26.5
-PyJWT==2.10.1
+PyJWT==2.12.1
 pyOpenSSL==24.3.0
 pypdf==5.1.0
 PyPDF2==3.0.1
