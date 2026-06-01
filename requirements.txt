@@ -64,7 +64,7 @@ grafana-django-saml2-auth==3.18.1
 gunicorn==23.0.0
 html5lib==1.1
 icalendar==6.1.0
-idna==3.10
+idna==3.17
 imagesize==1.4.1
 inflection==0.5.1
 Jinja2==3.1.5
