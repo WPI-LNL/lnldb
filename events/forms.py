@@ -26,7 +26,7 @@ from events.models import (BaseEvent, Billing, MultiBilling, BillingEmail, Multi
                            Category, CCReport, Event, Event2019, EventAttachment, EventCCInstance, Extra,
                            ExtraInstance, Hours, Lighting, Location, Organization, OrganizationTransfer,
                            OrgBillingVerificationEvent, Workshop, WorkshopDate, Projection, Service, ServiceInstance,
-                           Sound, PostEventSurvey, OfficeHour, Fee, Discount, EventOccurrence)
+                           Sound, PostEventSurvey, OfficeHour, Fee, Discount, EventOccurrence, Pricelist)
 from events.widgets import ValueSelectField
 from helpers.form_text import markdown_at_msgs
 from helpers.util import curry_class
@@ -584,6 +584,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'location',
                 'lnl_contact',
                 'pricelist',
+                HTML('<div class="alert alert-warning">Save changes before continuing if not using the default pricelist.</div>'),
                 'applied_fees',
                 'applied_discounts',
                 'is_sga_funded',
@@ -635,6 +636,21 @@ class InternalEventForm2019(FieldAccessForm):
         self.helper.form_tag = False
         self.helper.include_media = False
         self.helper.layout = Layout(*tabs)
+
+        instance = kwargs.get('instance', None)
+        pricelist = None
+        if not instance:
+            try:
+                pricelist = Pricelist.objects.get(is_default_pricelist=True)
+            except (Pricelist.DoesNotExist, Pricelist.MultipleObjectsReturned):
+                pricelist = Pricelist.objects.last()
+        elif instance and instance.pricelist:
+            pricelist = instance.pricelist
+
+        if pricelist:
+            self.fields['applied_fees'].queryset = pricelist.fees.all()
+            self.fields['applied_discounts'].queryset = pricelist.discounts.all()
+
 
     class FieldAccess:
         def __init__(self):
@@ -1449,8 +1465,18 @@ class ServiceInstanceForm(forms.ModelForm):
     def __init__(self, event, *args, **kwargs):
         self.event = event
         super(ServiceInstanceForm, self).__init__(*args, **kwargs)
-        if self.event and self.event.pricelist:
-            self.fields['service'].queryset = self.event.pricelist.services.all()
+
+        pricelist = None
+        if not self.event:
+            try:
+                pricelist = Pricelist.objects.get(is_default_pricelist=True)
+            except (Pricelist.DoesNotExist, Pricelist.MultipleObjectsReturned):
+                pricelist = Pricelist.objects.last()
+        elif self.event and self.event.pricelist:
+            pricelist = self.event.pricelist
+
+        if pricelist:
+            self.fields['service'].queryset = pricelist.services.all()
 
     def save(self, commit=True):
         obj = super(ServiceInstanceForm, self).save(commit=False)

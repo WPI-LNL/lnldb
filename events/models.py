@@ -1214,7 +1214,7 @@ class ExtraPrice(models.Model):
 
 
 class FeePrice(models.Model):
-    """ a many to many table between services and fees """
+    """ a many to many table between pricelists and fees """
     fee = models.ForeignKey("Fee", on_delete=models.CASCADE)
     pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
     percent = models.DecimalField(max_digits=8, decimal_places=2)
@@ -1231,7 +1231,7 @@ class FeePrice(models.Model):
 
 
 class DiscountPrice(models.Model):
-    """ a many to many table between services and discount """
+    """ a many to many table between pricelists and discount """
     discount = models.ForeignKey("Discount", on_delete=models.CASCADE)
     pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
     percent = models.DecimalField(max_digits=8, decimal_places=2)
