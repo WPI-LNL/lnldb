@@ -834,6 +834,8 @@ class Event2019(BaseEvent):
     applied_fees = models.ManyToManyField("Fee", blank=True, help_text="Which fees will be applied to this event.")
     applied_discounts = models.ManyToManyField("Discount", blank=True, help_text="Which discounts will be applied to this event.")
 
+    is_sga_funded = models.BooleanField(default=False, verbose_name="Is SGA-funded", help_text="Whether or not this event is fully funded by SGA and the client should be charged $0.")
+
     @property
     def has_projection(self):
         return self.serviceinstance_set.filter(service__category__name='Projection').exists()
@@ -962,11 +964,25 @@ class Event2019(BaseEvent):
     fee_values = property(get_fee_values)
 
     @property
-    def cost_total(self):
+    def lnl_services_subtotal(self):
+        if self.uses_new_discounts:
+            return self.services_total + self.extras_total - sum(self.discount_values.values()) + sum(self.fee_values.values())
+        else:
+            return self.services_total + self.extras_total - self.discount_value
+
+    @property
+    def cost_total_pre_sga(self):
         if self.uses_new_discounts:
             return self.cost_total_pre_discount - sum(self.discount_values.values()) + sum(self.fee_values.values()) + self.rentals_total
         else:
             return self.cost_total_pre_discount - self.discount_value
+
+    @property
+    def cost_total(self):
+        if self.is_sga_funded:
+            return self.cost_total_pre_sga - self.lnl_services_subtotal - self.rental_fee_total
+        else:
+            return self.cost_total_pre_sga
 
     @property
     def workday_form_hash(self):

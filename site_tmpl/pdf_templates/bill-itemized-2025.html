@@ -202,6 +202,24 @@
             font-size: 8pt;
             text-align: center;
         }
+
+        #sga-funded {
+            margin-top: 10px;
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        #sga-funded td:nth-child(1) {
+            text-align: left;
+        }
+
+        #sga-funded td:nth-child(2) {
+            text-align: right;
+        }
+
+        #sga-funded tr {
+            background-color: #f3f3f3;
+        }
     </style>
 </head>
 
@@ -405,8 +423,46 @@
 
         <div class="grand-total">
             <span class="left grand-total">Grand Total</span>
+            <span class="right grand-total">${{ event.cost_total_pre_sga|floatformat:2|intcomma }}</span>
+        </div>
+
+        {% if event.is_sga_funded %}
+        <div class="category-header">
+            <span class="left category-header">SGA-funded</span>
+            <span class="right category-header"></span>
+        </div>
+        <hr class="double">
+        <table class="category">
+            <tr>
+                <th>Quantity</th>
+                <th>Item/Package</th>
+                <th>Unit Price/Percent</th>
+                <th>Total Price</th>
+            </tr>
+            <tr>
+                <td colspan="4" class="double"></td>
+            </tr>
+            <tr>
+                <td>-</td>
+                <td>LNL Services</td>
+                <td>-100%</td>
+                <td>-${{ event.lnl_services_subtotal|floatformat:2|intcomma }}</td>
+            </tr>
+            {% if event.rental_fee_total > 0 %}
+            <tr>
+                <td>-</td>
+                <td>LNL Rental Fee</td>
+                <td>-100%</td>
+                <td>-${{ event.rental_fee_total|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endif %}
+        </table>
+
+        <div class="grand-total">
+            <span class="left grand-total">You Owe</span>
             <span class="right grand-total">${{ event.cost_total|floatformat:2|intcomma }}</span>
         </div>
+        {% endif %}
 
         {% if event.reviewed %}
         <p class="disclaimer">If you have any questions concerning this invoice, contact our treasurer at

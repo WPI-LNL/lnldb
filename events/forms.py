@@ -586,6 +586,7 @@ class InternalEventForm2019(FieldAccessForm):
                 'pricelist',
                 'applied_fees',
                 'applied_discounts',
+                'is_sga_funded',
                 'reference_code',
                 Field('description'),
                 DynamicFieldContainer('internal_notes'),
@@ -673,12 +674,12 @@ class InternalEventForm2019(FieldAccessForm):
 
         billing_edit = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_fund', instance),
-            enable=('billing_org', 'billed_in_bulk', 'pricelist', 'applied_fees', 'applied_discounts')
+            enable=('billing_org', 'billed_in_bulk', 'pricelist', 'applied_fees', 'applied_discounts', 'is_sga_funded')
         )
 
         billing_view = FieldAccessLevel(
             lambda user, instance: not user.has_perm('events.view_event_billing', instance),
-            exclude=('billing_org', 'billed_in_bulk', 'entered_into_workday', 'pricelist', 'applied_fees', 'applied_discounts')
+            exclude=('billing_org', 'billed_in_bulk', 'entered_into_workday', 'pricelist', 'applied_fees', 'applied_discounts', 'is_sga_funded')
         )
 
         change_flags = FieldAccessLevel(
@@ -722,7 +723,7 @@ class InternalEventForm2019(FieldAccessForm):
                   'billed_in_bulk', 'contact', 'org', 'datetime_setup_complete', 'datetime_start',
                   'datetime_end', 'sensitive', 'test_event',
                   'entered_into_workday', 'send_survey', 'max_crew','cancelled_reason',
-                  'reference_code', 'pricelist', 'applied_fees', 'applied_discounts')
+                  'reference_code', 'pricelist', 'applied_fees', 'applied_discounts', 'is_sga_funded')
         widgets = {
             'description': EasyMDEEditor(),
             'internal_notes': EasyMDEEditor(),
