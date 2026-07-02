@@ -69,6 +69,9 @@ class EventBasicViewTest(ViewTestCase):
 
     def test_new_event(self):
         self.setup()
+        pricelist1 = models.Pricelist.objects.create(name="FY26")
+        pricelist2 = models.Pricelist.objects.create(name="FY27")
+
         self.assertOk(self.client.get(reverse("events:new")), 403)
 
         permission = Permission.objects.get(codename="add_raw_event")
@@ -82,6 +85,13 @@ class EventBasicViewTest(ViewTestCase):
         self.user.user_permissions.add(permission)
 
         self.assertOk(self.client.get(reverse("events:new")))
+
+        # Verify pricelist defaults
+        self.assertEqual(self.client.get(reverse("events:new")).context['form'].initial['pricelist'], pricelist2)
+
+        pricelist1.is_default_pricelist = True
+        pricelist1.save()
+        self.assertEqual(self.client.get(reverse("events:new")).context['form'].initial['pricelist'], pricelist1)
 
         building = models.Building.objects.create(name="Fuller Laboratories", shortname="FL")
         booth = models.Location.objects.create(name="Booth", building=building)
@@ -245,6 +255,72 @@ class EventBasicViewTest(ViewTestCase):
 
         self.e.refresh_from_db()
         self.assertEqual(self.e.event_name, "Edited event")
+    
+    def test_edit_2019(self):
+        self.setup()
+
+        pricelist1 = models.Pricelist.objects.create(name="FY26")
+        pricelist2 = models.Pricelist.objects.create(name="FY27")
+        pricelist1.is_default_pricelist = True
+        pricelist1.save()
+
+        self.e3.pricelist = pricelist2
+        self.e3.save()
+
+        self.assertOk(self.client.get(reverse('events:edit', args=[self.e3.pk])), 403)
+
+        permission = Permission.objects.get(codename="view_events")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse('events:edit', args=[self.e3.pk])))
+
+        # Verify pricelist is not changed in initial form
+        self.assertEqual(self.client.get(reverse("events:edit", args=[self.e3.pk])).context['form'].instance.pricelist, pricelist2)
+
+
+        CCInstanceFactory.create(crew_chief=self.user, event=self.e3)
+
+        # Bad input
+        self.assertOk(self.client.post(reverse('events:edit', args=[self.e3.pk])), status_code=400)
+
+        building = models.Building.objects.create(name="Fuller Laboratories", shortname="FL")
+        booth = models.Location.objects.create(name="Booth", building=building)
+        category = models.Category.objects.create(name="Lighting")
+        service = ServiceFactory.create(category=category)
+        valid_data = {
+            "event_name": "Edited Event",
+            "location": str(booth.pk),
+            "description": "A new test event for stuff",
+            "internal_notes": "",
+            "max_crew": 1,
+            "billed_in_bulk": False,
+            "sensitive": False,
+            "test_event": True,
+            "entered_into_workday": False,
+            "send_survey": True,
+            "org": "|",
+            "reference_code": "",
+            "datetime_setup_complete_0": timezone.now().date(),
+            "datetime_setup_complete_1": timezone.now().time(),
+            "datetime_start_0": timezone.now().date(),
+            "datetime_start_1": timezone.now().time(),
+            "datetime_end_0": timezone.now().date(),
+            "datetime_end_1": timezone.now().time(),
+            "serviceinstance_set-TOTAL_FORMS": 1,
+            "serviceinstance_set-INITIAL_FORMS": 0,
+            "serviceinstance_set-MIN_NUM_FORMS": 0,
+            "serviceinstance_set-MAX_NUM_FORMS": 1000,
+            "serviceinstance_set-0-id": '',
+            "serviceinstance_set-0-service": str(service.pk),
+            "serviceinstance_set-0-detail": "Services for things and stuff",
+            "save": "Save Changes"
+        }
+
+        self.assertRedirects(self.client.post(reverse('events:edit', args=[self.e3.pk]), valid_data),
+                             reverse('events:detail', args=[self.e3.pk]))
+
+        self.e3.refresh_from_db()
+        self.assertEqual(self.e3.event_name, "Edited Event")
     
     def test_duplicate_event(self):
         self.setup()

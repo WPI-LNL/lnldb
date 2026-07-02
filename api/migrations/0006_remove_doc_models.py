@@ -18,13 +18,13 @@ class Migration(migrations.Migration):
             name='Option',
         ),
         migrations.DeleteModel(
-            name='Parameter',
-        ),
-        migrations.DeleteModel(
             name='RequestParameter',
         ),
         migrations.DeleteModel(
             name='ResponseKey',
+        ),
+        migrations.DeleteModel(
+            name='Parameter',
         ),
         migrations.DeleteModel(
             name='Endpoint',

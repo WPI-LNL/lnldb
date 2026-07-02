@@ -27,7 +27,7 @@ def check_automatic_discounts(event):
                 event.applied_discounts.add(discount)
 
 @login_required
-def eventnew(request, id=None, initial={}):
+def eventnew(request, id=None, initial=None):
     """
     Create or edit an event
 
@@ -35,6 +35,11 @@ def eventnew(request, id=None, initial={}):
     to edit
     """
     context = {}
+
+    # prevent unsafe dict as default value
+    if initial is None:
+        initial = {}
+
     # get instance if id is passed in
     if id:
         instance = get_object_or_404(BaseEvent, pk=id)
@@ -165,7 +170,10 @@ def eventnew(request, id=None, initial={}):
     else:
         if is_event2019:
             if not instance and 'pricelist' not in initial:
-                initial['pricelist'] = Pricelist.objects.last()
+                try: 
+                    initial['pricelist'] = Pricelist.objects.get(is_default_pricelist=True)
+                except (Pricelist.DoesNotExist, Pricelist.MultipleObjectsReturned):
+                    initial['pricelist'] = Pricelist.objects.last()
             context['form'] = InternalEventForm2019(request_user=request.user, instance=instance, initial=initial)
             context['services_formset'] = mk_serviceinstance_formset(instance=instance, initial=initial.get("services", []))
         else:
