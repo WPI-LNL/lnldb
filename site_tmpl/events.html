@@ -147,7 +147,11 @@
                                         {% permission request.user has 'accounts.view_member' %}
                                             <a href="{% url 'accounts:detail' cc.crew_chief.id %}">
                                         {% endpermission %}
-                                        {{ cc.crew_chief }}{% permission request.user has 'accounts.view_member' %}</a>{% endpermission %}{% if not forloop.last %},{% endif %}
+                                        {% if cc.position_is_bold %}<b>{% endif %}<!--
+                                        -->{{ cc.crew_chief }}<!--
+                                        -->{% if cc.position_is_bold %}</b>{% endif %}<!--
+                                        -->{% permission request.user has 'accounts.view_member' %}</a>{% endpermission %}<!--
+                                        -->{% if not forloop.last %},{% endif %}
                                     {% endfor %}
                                 {% else %}
                                     None Assigned
