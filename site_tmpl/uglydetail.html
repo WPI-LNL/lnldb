@@ -564,7 +564,7 @@
                             <th>Position</th>
                         </tr>
                         {% for cc in event.ccinstances.all %}
-                        <tr>
+                        <tr {% if cc.position_is_bold %} style="font-weight: bold;" {% endif %}>
                             <td>
                                 <a href="{% url "accounts:detail" cc.crew_chief.id %}">{{ cc.crew_chief.get_full_name }}</a>
                             </td>

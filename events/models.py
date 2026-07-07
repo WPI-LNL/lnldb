@@ -1510,6 +1510,7 @@ class EventCCInstance(models.Model):
     setup_start = models.DateTimeField(null=True, blank=True)
 
     position = models.CharField(max_length=128, default="", blank=True)
+    position_is_bold = models.BooleanField(default=False)
 
     def cal_name(self):
         """ Title used by calendars """

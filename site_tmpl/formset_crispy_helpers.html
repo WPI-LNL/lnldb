@@ -20,6 +20,7 @@
                             <th>Category</th>
                         {% endif %}
                         <th>Position</th>
+                        <th>Bold?</th>
                         <th>Delete?</th>
                     </tr>
                 {% for form in formset %}
@@ -34,6 +35,7 @@
                             <td>{% for e in form.category.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                         {% endif %}
                         <td></td>{% for e in form.position.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
+                        <td></td>{% for e in form.position_is_bold.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                         <td>{% for e in form.DELETE.errors %} {{ e }} <i class="glyphicon glyphicon-chevron-down"></i> {% endfor %}</td>
                     </tr>
                     {% endif %}
@@ -47,6 +49,7 @@
                             <td>{{ form.category }}</td>
                         {% endif %}
                         <td>{{ form.position }} </td>
+                        <td>{{ form.position_is_bold }} </td>
                         <td>{{ form.DELETE }} </td>
                     </tr>
                 {% endfor %}
@@ -71,6 +74,7 @@
                     <td>{{ form.category }}</td>
                 {% endif %}
                 <td>{{ form.position }} </td>
+                <td>{{ form.position_is_bold }} </td>
                 <td>{{ form.DELETE }} </td>
             </tr>
         </tbody> </table>

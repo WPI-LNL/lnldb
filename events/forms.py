@@ -1351,6 +1351,7 @@ class CCIForm(forms.ModelForm):
             #Field('setup_location'),
             #Field('setup_start', css_class="dtp"),
             Field('position'),
+            Field('position_is_bold'),
             HTML('<hr>'),
         )
         super(CCIForm, self).__init__(*args, **kwargs)
@@ -1388,7 +1389,7 @@ class CCIForm(forms.ModelForm):
     class Meta:
         model = EventCCInstance
         #fields = ('category', 'crew_chief', 'service', 'setup_location', 'setup_start')
-        fields = ('category', 'crew_chief', 'service', 'position')
+        fields = ('category', 'crew_chief', 'service', 'position', 'position_is_bold')
 
     crew_chief = AutoCompleteSelectField('Members', required=True)
     #setup_start = forms.SplitDateTimeField(initial=timezone.now)
