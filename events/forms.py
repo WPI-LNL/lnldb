@@ -647,7 +647,7 @@ class InternalEventForm2019(FieldAccessForm):
         elif instance and instance.pricelist:
             pricelist = instance.pricelist
 
-        if pricelist:
+        if pricelist and 'applied_fees' in self.fields and 'applied_discounts' in self.fields:
             self.fields['applied_fees'].queryset = pricelist.fees.all()
             self.fields['applied_discounts'].queryset = pricelist.discounts.all()
 
