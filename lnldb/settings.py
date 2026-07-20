@@ -345,6 +345,7 @@ INSTALLED_APPS = (
     'rt',
     'slack',
     'spotify',
+    'pdfs',
 
     'bootstrap3',
     'crispy_forms',

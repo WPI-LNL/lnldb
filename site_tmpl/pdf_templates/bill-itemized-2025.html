@@ -1,6 +1,7 @@
 {% load static %}
 {% load tz %}
 {% load humanize %}
+{% load subtract %}
 <html>
 
 <head>
@@ -203,22 +204,17 @@
             text-align: center;
         }
 
-        #sga-funded {
+        div.sga-funded {
             margin-top: 10px;
             font-size: 14px;
             font-style: italic;
-        }
-
-        #sga-funded td:nth-child(1) {
-            text-align: left;
-        }
-
-        #sga-funded td:nth-child(2) {
             text-align: right;
+            color: green;
         }
 
-        #sga-funded tr {
-            background-color: #f3f3f3;
+        tr.sga-funded {
+            font-style: italic;
+            color: green;
         }
     </style>
 </head>
@@ -293,7 +289,11 @@
         {% for category in categories %}
         <div class="category-header">
             <span class="left category-header">{{ category.category }}</span>
+            {% if event.is_sga_funded %}
+            <span class="right category-header">$0.00</span>
+            {% else %}
             <span class="right category-header">${{ category.total|floatformat:2|intcomma }}</span>
+            {% endif %}
         </div>
         <hr class="double">
         <table class="category">
@@ -343,13 +343,26 @@
             </tr>
             {% endfor %}
             {% endif %}
+
+            {% if event.is_sga_funded %}
+            <tr class="sga-funded">
+                <td>-</td>
+                <td>SGA-funded Student Organization</td>
+                <td>-100%</td>
+                <td>${{ category.total|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endif %}
         </table>
         {% endfor %}
 
         {% if event.rentals.exists %}
         <div class="category-header">
             <span class="left category-header">Rentals</span>
+            {% if event.is_sga_funded %}
+            <span class="right category-header">${{ event.rentals_total|sub:event.rental_fee_total|floatformat:2|intcomma }}</span>
+            {% else %}
             <span class="right category-header">${{ event.rentals_total|floatformat:2|intcomma }}</span>
+            {% endif %}
         </div>
         <hr class="double">
         <table class="category">
@@ -379,6 +392,14 @@
                 <td>{{ event.pricelist.rental_fee_percentage|floatformat }}%</td>
                 <td>${{ event.rental_fee_total|floatformat:2|intcomma }}</td>
             </tr>
+            {% if event.is_sga_funded %}
+            <tr class="sga-funded">
+                <td>-</td>
+                <td>SGA-funded Student Organization [Applies to Rental Fee]</td>
+                <td>-{{ event.pricelist.rental_fee_percentage|floatformat }}%</td>
+                <td>${{ event.rental_fee_total|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endif %}
             {% endif %}
 
             {% for rental in event.rentals.all %}
@@ -421,48 +442,19 @@
         </table>
         {% endif %}
 
-        <div class="grand-total">
-            <span class="left grand-total">Grand Total</span>
-            <span class="right grand-total">${{ event.cost_total_pre_sga|floatformat:2|intcomma }}</span>
-        </div>
-
         {% if event.is_sga_funded %}
-        <div class="category-header">
-            <span class="left category-header">SGA-funded</span>
-            <span class="right category-header"></span>
-        </div>
-        <hr class="double">
-        <table class="category">
-            <tr>
-                <th>Quantity</th>
-                <th>Item/Package</th>
-                <th>Unit Price/Percent</th>
-                <th>Total Price</th>
-            </tr>
-            <tr>
-                <td colspan="4" class="double"></td>
-            </tr>
-            <tr>
-                <td>-</td>
-                <td>LNL Services</td>
-                <td>-100%</td>
-                <td>-${{ event.lnl_services_subtotal|floatformat:2|intcomma }}</td>
-            </tr>
-            {% if event.rental_fee_total > 0 %}
-            <tr>
-                <td>-</td>
-                <td>LNL Rental Fee</td>
-                <td>-100%</td>
-                <td>-${{ event.rental_fee_total|floatformat:2|intcomma }}</td>
-            </tr>
-            {% endif %}
-        </table>
-
-        <div class="grand-total">
-            <span class="left grand-total">You Owe</span>
-            <span class="right grand-total">${{ event.cost_total|floatformat:2|intcomma }}</span>
+        <div class="sga-funded">
+            <p>
+                Total Saved via SGA-funded Student Organization: ${{ event.lnl_services_subtotal|add:event.rental_fee_total|floatformat:2|intcomma }}
+            </p>
         </div>
         {% endif %}
+
+        <div class="grand-total">
+            <span class="left grand-total">Grand Total</span>
+            <span class="right grand-total">${{ event.cost_total|floatformat:2|intcomma }}</span>
+        </div>
+
 
         {% if event.reviewed %}
         <p class="disclaimer">If you have any questions concerning this invoice, contact our treasurer at
