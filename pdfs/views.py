@@ -17,6 +17,7 @@ from django.utils.text import slugify
 from xhtml2pdf import pisa
 from weasyprint import HTML, CSS
 from weasyprint.urls import URLFetcher, URLFetcherResponse
+from django_weasyprint.utils import DjangoURLFetcher
 try:
     from weasyprint.text.fonts import FontConfiguration
 except ModuleNotFoundError:
@@ -49,13 +50,11 @@ def link_callback(uri, rel):
         raise Exception('media URI must start with %s or %s' % (surl, murl))
     return path
 
-class LocalFetcher(URLFetcher):
-    """ custom weasyprint URLFetcher for fetchin django static files """
-    def fetch(self, url, headers=None):
-        if url.startswith("file://"):
-            return super().fetch(link_callback(url), headers)
-        else:
-            raise Exception('Non-local files are not implemented for safety reasons')            
+# class LocalFetcher(URLFetcher):
+#     """ custom weasyprint URLFetcher for fetchin django static files """
+#     def fetch(self, url, headers=None):
+#         print("hi again again")
+#         return super().fetch(link_callback(url), headers)
 
 
 def generate_pdf(context, template, request):
@@ -208,6 +207,7 @@ def generate_event_bill_pdf(request, event):
 
     if isinstance(event, Event2019) and event.uses_new_discounts:
         html = render_to_string('pdf_templates/bill-itemized-2025.html', context=data, request=request)
+        print(html)
     else:
         html = render_to_string('pdf_templates/bill-itemized.html', context=data, request=request)
     quote = Quote.objects.create(event=event, html=html, is_invoice=event.reviewed)
@@ -217,8 +217,10 @@ def generate_event_bill_pdf(request, event):
 def render_quote_to_pdf(quote) -> BytesIO:
     pdf_file = BytesIO()
 
+    print("hi")
     if isinstance(quote.event, Event2019) and quote.event.uses_new_discounts:
         font_config = FontConfiguration()
+        print("hi again")
         font_string = """
         @font-face {
             font-family: 'Helvetica-Neue';
@@ -244,9 +246,9 @@ def render_quote_to_pdf(quote) -> BytesIO:
             font-style: italic;
         }
         """
-        HTML(string=quote.html, url_fetcher=LocalFetcher()).write_pdf(
+        HTML(string=quote.html, url_fetcher=DjangoURLFetcher(), base_url="file://").write_pdf(
             pdf_file,
-            stylesheets=[CSS(string=font_string, font_config=font_config, url_fetcher=LocalFetcher())],
+            stylesheets=[CSS(string=font_string, font_config=font_config, url_fetcher=DjangoURLFetcher())],
             font_config=font_config)
     else:
         pisa.CreatePDF(quote.html, dest=pdf_file, link_callback=link_callback)
