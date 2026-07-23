@@ -584,7 +584,6 @@ class InternalEventForm2019(FieldAccessForm):
                 'location',
                 'lnl_contact',
                 'pricelist',
-                HTML('<div class="alert alert-warning">Save changes before continuing if not using the default pricelist.</div>'),
                 'applied_fees',
                 'applied_discounts',
                 'is_sga_funded',
@@ -636,20 +635,6 @@ class InternalEventForm2019(FieldAccessForm):
         self.helper.form_tag = False
         self.helper.include_media = False
         self.helper.layout = Layout(*tabs)
-
-        instance = kwargs.get('instance', None)
-        pricelist = None
-        if not instance:
-            try:
-                pricelist = Pricelist.objects.get(is_default_pricelist=True)
-            except (Pricelist.DoesNotExist, Pricelist.MultipleObjectsReturned):
-                pricelist = Pricelist.objects.last()
-        elif instance and instance.pricelist:
-            pricelist = instance.pricelist
-
-        if pricelist and 'applied_fees' in self.fields and 'applied_discounts' in self.fields:
-            self.fields['applied_fees'].queryset = pricelist.fees.all()
-            self.fields['applied_discounts'].queryset = pricelist.discounts.all()
 
 
     class FieldAccess:
@@ -1450,6 +1435,23 @@ class AttachmentForm(forms.ModelForm):
 
 
 class ExtraForm(forms.ModelForm):
+    def __init__(self, event, *args, **kwargs):
+        self.event = event
+        super(ExtraForm, self).__init__(*args, **kwargs)
+
+        if isinstance(self.event, Event2019):
+            pricelist = None
+            if not self.event:
+                try:
+                    pricelist = Pricelist.objects.get(is_default_pricelist=True)
+                except (Pricelist.DoesNotExist, Pricelist.MultipleObjectsReturned):
+                    pricelist = Pricelist.objects.last()
+            elif self.event and self.event.pricelist:
+                pricelist = self.event.pricelist
+
+            if pricelist:
+                self.fields['extra'].queryset = pricelist.extras.all()
+
     class Meta:
         model = ExtraInstance
         fields = ('extra', 'quant')

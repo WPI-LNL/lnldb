@@ -1163,6 +1163,7 @@ class Pricelist(models.Model):
     services = models.ManyToManyField(Service, through="ServicePrice", related_name="pricelists")
     fees = models.ManyToManyField(Fee, through="FeePrice", related_name="pricelists")
     discounts = models.ManyToManyField(Discount, through="DiscountPrice", related_name="pricelists")
+    extras = models.ManyToManyField(Extra, through="ExtraPrice", related_name="pricelists")
     rental_fee_percentage = models.DecimalField(default=15, max_digits=8, decimal_places=2)
     is_default_pricelist = models.BooleanField(default=False)
 
