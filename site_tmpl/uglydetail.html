@@ -40,7 +40,7 @@
                            data-toggle="modal">Reopen</a>
                     {% endpermission %}
                 {% else %}
-                    {% permission request.user has 'events.edit_event_text' of event or request.user has 'events.edit_event_times' of event %}
+                    {% permission request.user has 'events.change_baseevent' of event %}
                         <a class="btn btn-warning btn-lg"
                            href="{% url "events:edit" event.id %}">Edit</a>
                     {% endpermission %}
@@ -389,7 +389,7 @@
                 </div>
                 <div id="schedule" class="tab-pane">
                     {% if not event.closed %}
-                        {% permission request.user has 'events.adjust_event_charges' of event %}
+                        {% permission request.user has 'events.edit_event_times' of event %}
                             <div class="pull-right">
                                 <a class="btn btn-lg btn-info" href="{% url "events:occurrences" event.id %}">Modify Occurrences</a>
                             </div>

@@ -497,11 +497,6 @@ class InternalEventForm(FieldAccessForm):
             exclude=('internal_notes',)
         )
 
-        event_times = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.edit_event_times', instance),
-            enable=('datetime_start', 'datetime_setup_complete', 'datetime_end')
-        )
-
         edit_descriptions = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_text', instance),
             enable=('event_name', 'location', 'description',
@@ -651,12 +646,6 @@ class InternalEventForm2019(FieldAccessForm):
             exclude=('internal_notes',)
         )
 
-        event_times = FieldAccessLevel(
-            lambda user, instance: user.has_perm('events.edit_event_times', instance),
-            enable=('datetime_start', 'datetime_setup_complete', 'datetime_end',
-                'reference_code')
-        )
-
         edit_descriptions = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.edit_event_text', instance),
             enable=('event_name', 'location', 'description',
@@ -670,7 +659,7 @@ class InternalEventForm2019(FieldAccessForm):
 
         change_type = FieldAccessLevel(
             lambda user, instance: user.has_perm('events.adjust_event_charges', instance),
-            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_in_bulk', 'pricelist')
+            enable=('lighting', 'sound', 'projection', 'otherservices', 'billed_in_bulk')
         )
 
         billing_edit = FieldAccessLevel(
@@ -1339,9 +1328,10 @@ class EditHoursForm(forms.ModelForm):
         fields = ('hours',)
 
 
-class CCIForm(forms.ModelForm):
+class CCIForm(FieldAccessForm):
     """ Crew Chief Instance form """
-    def __init__(self, event, *args, **kwargs):
+    def __init__(self, request_user, event, *args, **kwargs):
+        super(CCIForm, self).__init__(request_user, *args, **kwargs)
         self.event = event
         self.helper = FormHelper()
         self.helper.form_class = "form-inline"
@@ -1354,7 +1344,6 @@ class CCIForm(forms.ModelForm):
             Field('setup_start', css_class="dtp"),
             HTML('<hr>'),
         )
-        super(CCIForm, self).__init__(*args, **kwargs)
 
         # x = self.instance.event.lighting
         self.fields['service'].queryset = get_qs_from_event(event)
@@ -1364,6 +1353,7 @@ class CCIForm(forms.ModelForm):
         self.fields['setup_start'].initial = self.fields['setup_start'].prepare_value(
             self.event.datetime_setup_complete.replace(second=0, microsecond=0)
         )
+        print("Lets see: " + str(EventCCInstance._permission_logics))
 
     def clean(self):
         cleaned_data = super(CCIForm, self).clean()
@@ -1385,6 +1375,20 @@ class CCIForm(forms.ModelForm):
         if commit:
             obj.save()
         return obj
+
+    class FieldAccess:
+        def __init__(self):
+            pass
+
+        modify_crew_chiefs = FieldAccessLevel(
+            lambda user, instance: user.has_perm("events.add_eventccinstance", instance),
+            enable=('crew_chief', 'category', 'DELETE', 'service')
+        )
+
+        change_setup = FieldAccessLevel(
+            lambda user, instance: user.has_perm("events.change_eventccinstance", instance),
+            enable=('setup_location', 'setup_start')
+        )
 
     class Meta:
         model = EventCCInstance

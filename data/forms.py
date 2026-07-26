@@ -86,9 +86,10 @@ class FieldAccessForm(forms.ModelForm):
 
             # ignore errors and don't store values if a field is disabled
             if getattr(field, 'disabled', False):
-                continue
+                value = self.get_initial_for_field(field, name)
+            else:
+                value = field.widget.value_from_datadict(self.data, self.files, self.add_prefix(name))
 
-            value = field.widget.value_from_datadict(self.data, self.files, self.add_prefix(name))
             try:
                 if isinstance(field, FileField):
                     initial = self.initial.get(name, field.initial)

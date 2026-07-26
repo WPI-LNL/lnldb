@@ -59,18 +59,20 @@ class AssocUsersCustomPermissionLogic(PermissionLogic):
 
 class CrewChiefPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'ccinstances__crew_chief'
-    perms = ('events.view_events', 'events.event_images', 'events.cancel_event',
-             'events.event_attachments', 'events.edit_event_times',
-             'events.add_event_report', 'events.edit_event_text',
-             'events.view_hidden_event', 'events.edit_event_fund',
-             'events.view_event_billing', 'events.adjust_event_charges',
-             'events.edit_event_hours', 'events.event_view_sensitive')
+    perms = ('events.view_events', 'events.event_images', 
+             'events.event_attachments', 'events.add_event_report', 
+             'events.view_hidden_event', 'events.view_event_billing', 
+             'events.edit_event_hours', 'events.event_view_sensitive',
+             'events.edit_event_times')
 
 
 class CrewChiefSurveyPerms(AssocUsersCustomPermissionLogic):
     field_name = 'event__ccinstances__crew_chief'
     perms = ('events.view_posteventsurveyresults')
 
+class CrewChiefInstancePermLogic(AssocUsersCustomPermissionLogic):
+    field_name = 'event__ccinstances__crew_chief'
+    perms = ('events.change_eventccinstance',)
 
 class EventContactPermLogic(AssocUsersCustomPermissionLogic):
     field_name = 'contact'
@@ -144,4 +146,5 @@ PERMISSION_LOGICS = (
     ('events.Organization', OrgOwnerPermLogic()),
     ('events.CCReport', ReportAuthorPermLogic()),
     ('events.PostEventSurvey', CrewChiefSurveyPerms()),
+    ('events.EventCCInstance', CrewChiefInstancePermLogic()),
 )

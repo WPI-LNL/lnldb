@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseRedirect, Http404, JsonResponse
@@ -44,7 +44,7 @@ def eventnew(request, id=None, initial=None):
     if id:
         instance = get_object_or_404(BaseEvent, pk=id)
         context['new'] = False
-        perms = ['events.view_events']
+        perms = ['events.change_baseevent']
         if not (request.user.has_perms(perms) or
                 request.user.has_perms(perms, instance)):
             raise PermissionDenied
@@ -186,6 +186,7 @@ def eventnew(request, id=None, initial=None):
     return render(request, 'form_crispy_event.html', context, status = 400 if request.method == 'POST' else 200)
 
 @login_required
+@permission_required('events.edit_event_fund')
 def load_pricelist(request):
     pricelist_id = request.GET.get('pricelist')
     if pricelist_id:

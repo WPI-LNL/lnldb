@@ -399,7 +399,7 @@ def assigncrew(request, id):
 
     # The new events model doesn't really use this anymore
     if isinstance(event, Event2019):
-        return HttpResponseRedirect(reverse('events:detail', args=[event.id]) + "#crew")
+        return HttpResponseRedirect(reverse('events:detail', args=[event.id]) + "#reports")
 
     if not (request.user.has_perm('events.edit_event_hours') or
             request.user.has_perm('events.edit_event_hours', event)):
@@ -710,8 +710,8 @@ def rmcc(request, id, user):
     :param user: The primary key value of the user
     """
     event = get_object_or_404(Event, pk=id)
-    if not (request.user.has_perm('events.edit_event_hours') or
-            request.user.has_perm('events.edit_event_hours', event)):
+    if not (request.user.has_perm('events.change_baseevent') or
+            request.user.has_perm('events.change_baseevent', event)):
         raise PermissionDenied
     if event.closed:
         messages.add_message(request, messages.ERROR, 'Event is closed.')
@@ -726,9 +726,10 @@ def assigncc(request, id):
     context = {}
 
     event = get_object_or_404(BaseEvent, pk=id)
+    print("Event: " + str(event))
 
-    if not (request.user.has_perm('events.edit_event_hours') or
-            request.user.has_perm('events.edit_event_hours', event)):
+    if not (request.user.has_perm('events.edit_event_times') or
+            request.user.has_perm('events.edit_event_times', event)):
         raise PermissionDenied
     if event.closed:
         messages.add_message(request, messages.ERROR, 'Event is closed.')
@@ -736,8 +737,12 @@ def assigncc(request, id):
     context['event'] = event
     context['oldevent'] = isinstance(event, Event)
 
-    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[])
-    cc_formset.form = curry_class(CCIForm, event=event)
+    if request.user.has_perm('events.change_baseevent') or request.user.has_perm('events.change_baseevent'):
+        can_delete = True
+    else:
+        can_delete = False
+    cc_formset = inlineformset_factory(Event, EventCCInstance, extra=3, exclude=[], can_delete=can_delete)
+    cc_formset.form = curry_class(CCIForm, request_user=request.user, event=event)
 
     if request.method == 'POST':
         formset = cc_formset(request.POST, instance=event)
