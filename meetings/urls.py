@@ -7,6 +7,7 @@ app_name = 'meetings'
 
 urlpatterns = [
     re_path(r'^new/$', views.newattendance, name="new"),
+    re_path(r'^bulk/$', views.bulk_new_attendance, name="bulk"),
     re_path(r'^$', views.listattendance, name="list"),
     re_path(r'^page/(?P<page>\d+)/$', views.listattendance, name="list_bypage"),
     re_path(r'^(?P<mtg_id>\d+)/', include([
