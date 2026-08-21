@@ -1,0 +1,91 @@
+{# Edit a funding request header and its line items together, as one formset. #}
+{% extends 'finance/base_finance.html' %}
+{% load crispy_forms_tags %}
+{% load finance_extras %}
+{% load static %}
+
+{% block fin_content %}
+    <div class="fin-panel">
+        <div class="fin-panel-head">{{ h2 }}</div>
+        <div class="fin-panel-body">
+            <form method="post" id="fin-fr-form">
+                {% csrf_token %}
+                {% crispy form %}
+
+                <h4>Line Items</h4>
+                <p class="fin-muted">
+                    Each line burns down independently. Refunds charged against a line
+                    restore its balance automatically. Add as many lines as the request needs.
+                </p>
+
+                {{ formset.management_form }}
+                <div class="fin-table-wrap">
+                    <table class="table fin-table" id="fin-fr-lines">
+                        <thead>
+                            <tr>
+                                <th style="min-width:150px;">Name</th>
+                                <th style="min-width:200px;">Description</th>
+                                <th style="width:140px;">Amount awarded</th>
+                                <th>Expected category</th>
+                                <th>Project</th>
+                                <th style="width:80px;">Order</th>
+                                <th style="width:60px;">Remove</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for f in formset %}
+                                <tr class="fin-fr-row">
+                                    {{ f.id }}
+                                    <td>{{ f.name }}</td>
+                                    <td>{{ f.description }}</td>
+                                    <td>{{ f.amount_awarded }}</td>
+                                    <td>{{ f.lnl_spend_category }}</td>
+                                    <td>{{ f.project_tag }}</td>
+                                    <td>{{ f.sort_order }}</td>
+                                    {% comment %}
+                                        Saved and unsaved lines get the same X. A saved line
+                                        cannot simply vanish from the DOM -- Django needs its
+                                        DELETE flag set to actually remove the row -- so the
+                                        checkbox is still here, hidden, and the X drives it.
+                                    {% endcomment %}
+                                    <td class="fin-fr-remove">
+                                        {% if f.instance.pk %}
+                                            <span class="fin-fr-delete-flag">{{ f.DELETE }}</span>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-xs btn-link text-danger fin-fr-drop"
+                                                title="Remove this line">&times;</button>
+                                    </td>
+                                </tr>
+                                {% if f.errors %}
+                                    <tr class="fin-fr-errors"><td colspan="7" class="text-danger" style="font-size:12px;">
+                                        {% for field, errors in f.errors.items %}
+                                            {% for error in errors %}<div>{{ field }}: {{ error }}</div>{% endfor %}
+                                        {% endfor %}
+                                    </td></tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+                    <button type="button" class="btn btn-default btn-sm" id="fin-fr-add">
+                        <span class="glyphicon glyphicon-plus"></span> Add another line
+                    </button>
+                    <span class="fin-muted" style="font-size:12px;">
+                        Blank lines are ignored when you save.
+                    </span>
+                    <span style="margin-left:auto;">
+                        <a href="{% url 'finance:fr-list' %}" class="btn btn-default">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block finalsay %}
+{{ block.super }}
+<script src="{% asset 'js/fr_lines.js' %}"></script>
+{% endblock %}

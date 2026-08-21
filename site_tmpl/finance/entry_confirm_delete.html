@@ -1,0 +1,45 @@
+{# Page 4 -- delete confirmation for a ledger entry. Deletions are not versioned; say so. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="fin-panel">
+                <div class="fin-panel-head">Remove this allocation?</div>
+                <div class="fin-panel-body">
+                    <dl class="fin-kv">
+                        <dt>Amount</dt>
+                        <dd class="{{ entry.amount|money_class }}"><strong>{{ entry.amount|money }}</strong></dd>
+                        <dt>Description</dt><dd>{{ entry.description|default:"(untitled)" }}</dd>
+                        <dt>Date</dt><dd>{{ entry.effective_date|date:"F j, Y" }}</dd>
+                        {% if entry.fr_line_target %}
+                            <dt>Funding line</dt><dd>{{ entry.fr_line_target.name }}</dd>
+                        {% endif %}
+                    </dl>
+
+                    {% if txn %}
+                        <div class="alert alert-info">
+                            The Workday record <code>{{ txn.reference }}</code> is
+                            immutable and will not be touched. Removing this slice returns
+                            {{ entry.amount|money }} to the unallocated remainder.
+                        </div>
+                    {% endif %}
+
+                    {% if entry.refunds.exists %}
+                        <div class="alert alert-warning">
+                            This purchase has refunds linked to it. Remove those first.
+                        </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <a href="{% if txn %}{% url 'finance:txn-detail' txn.pk %}{% else %}{% url 'finance:ledger' %}{% endif %}"
+                           class="btn btn-default">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Remove allocation</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

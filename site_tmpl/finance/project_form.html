@@ -1,0 +1,40 @@
+{# Page 5 -- create or rename a project tag. #}
+{% extends 'finance/base_finance.html' %}
+{% load crispy_forms_tags %}
+
+{% block fin_content %}
+    <div class="row">
+        <div class="col-md-7">
+            <div class="fin-panel">
+                <div class="fin-panel-head">{{ h2 }}</div>
+                <div class="fin-panel-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% crispy form %}
+                        <div class="text-right">
+                            <a href="{% url 'finance:projects' %}" class="btn btn-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="fin-panel">
+                <div class="fin-panel-head">Project tags</div>
+                <div class="fin-panel-body">
+                    <p class="fin-muted" style="font-size:13px;">
+                        Tags nest: a top-level project like <code>NEL26</code> holds the individual
+                        assets bought under it, such as <code>D60 Lustrs</code>. Costs roll up the
+                        tree, so a parent shows the fully-loaded cost of everything beneath it
+                        across every fiscal year.
+                    </p>
+                    <p class="fin-muted" style="font-size:13px;">
+                        The <strong>code</strong> is also what the importer looks for in Workday
+                        memos when it auto-suggests a project.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

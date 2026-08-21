@@ -1,0 +1,918 @@
+/* ---------------------------------------------------------------------------
+   LNL Financial Subledger
+   Layered on top of Bootstrap 3.3.4. Optimised for data density: the Treasurer
+   is scanning dozens of rows at a time, so type is small, rows are tight, and
+   colour is reserved for things that need a decision.
+   --------------------------------------------------------------------------- */
+
+/* ---- Persistent top bar --------------------------------------------------- */
+.fin-topbar {
+    background: #f5f7fa;
+    border: 1px solid #dfe3e8;
+    border-radius: 3px;
+    padding: 8px 12px;
+    margin-bottom: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+}
+
+.fin-topbar-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px;
+}
+
+.fin-topbar-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fin-topbar-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #7b8794;
+}
+
+.fin-topbar-nav { margin-left: auto; }
+.fin-topbar-nav .nav-pills > li > a {
+    padding: 4px 12px;
+    font-size: 13px;
+    border-radius: 3px;
+}
+
+/* local_styles.css sets `ul.dropdown-menu > li { display: flex }` site-wide,
+   which makes each anchor shrink to fit its own text. Long labels get clamped
+   to the menu width and look right, but the shortest one ("All years") ends up
+   visibly narrower with a stunted hover target. Let the anchor fill the row. */
+.fin-topbar .dropdown-menu > li > a { flex: 1 1 auto; }
+
+.fin-partition .btn.active.fin-partition-projection {
+    background: #6f42c1;
+    border-color: #6f42c1;
+    color: #fff;
+}
+
+.fin-partition .btn.active.fin-partition-event {
+    background: #31708f;
+    border-color: #31708f;
+    color: #fff;
+}
+
+.fin-firewall-note {
+    font-size: 12px;
+    color: #6f42c1;
+    font-weight: 600;
+}
+
+.fin-readonly-banner {
+    background: #eef4f8;
+    border-left: 3px solid #31708f;
+    color: #31708f;
+    padding: 6px 12px;
+    font-size: 13px;
+    margin-bottom: 14px;
+    border-radius: 2px;
+}
+
+/* ---- Action banner -------------------------------------------------------- */
+.fin-action-banner {
+    background: #fcf3d9;
+    border: 1px solid #f0d9a0;
+    border-left: 4px solid #e0a800;
+    border-radius: 3px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.fin-action-banner .fin-banner-text { color: #7a5c00; font-size: 14px; }
+.fin-action-banner strong { font-size: 16px; }
+
+/* ---- Stat tiles ----------------------------------------------------------- */
+.fin-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+
+.fin-stat {
+    flex: 1 1 160px;
+    background: #fff;
+    border: 1px solid #dfe3e8;
+    border-radius: 3px;
+    padding: 12px 14px;
+}
+
+.fin-stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #7b8794;
+    margin-bottom: 4px;
+}
+
+.fin-stat-value { font-size: 22px; font-weight: 600; line-height: 1.2; }
+.fin-stat-sub { font-size: 12px; color: #9aa5b1; margin-top: 2px; }
+
+/* ---- Panels --------------------------------------------------------------- */
+.fin-panel {
+    background: #fff;
+    border: 1px solid #dfe3e8;
+    border-radius: 3px;
+    margin-bottom: 18px;
+}
+
+.fin-panel-head {
+    padding: 10px 14px;
+    border-bottom: 1px solid #eceff1;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fin-panel-body { padding: 14px; }
+
+/* Separates logically-related sections inside one panel, instead of splitting
+   them into two boxes that imply they are unrelated. */
+.fin-panel-divider {
+    border-top: 1px solid #dfe3e8;
+    background: #f7f8fa;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #7b8794;
+}
+
+/* ---- Burndown bars -------------------------------------------------------- */
+.fin-burndown {
+    height: 16px;
+    margin-bottom: 0;
+    background: #eceff1;
+    border-radius: 2px;
+    box-shadow: none;
+}
+
+.fin-burndown .progress-bar {
+    font-size: 10px;
+    line-height: 16px;
+    box-shadow: none;
+}
+
+/* Each funding request is its own card so two requests can never be mistaken
+   for one another, and its line items stay collapsed until asked for. */
+.fin-fr-list > .fin-fr + .fin-fr { margin-top: 12px; }
+
+.fin-fr {
+    border: 1px solid #dfe3e8;
+    border-radius: 3px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.fin-fr-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    padding: 10px 12px 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.fin-fr-head:hover { background: #f7fafc; }
+.fin-fr-head:focus { outline: 2px solid #9ec5e0; outline-offset: -2px; }
+.fin-fr-title { font-size: 14px; }
+.fin-fr-figures { font-size: 13px; white-space: nowrap; }
+
+.fin-fr-caret {
+    font-size: 10px;
+    color: #7b8794;
+    margin-right: 5px;
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+/* Bootstrap 3 drops the `collapsed` class while the panel is open. */
+.fin-fr-head:not(.collapsed) .fin-fr-caret { transform: rotate(90deg); }
+
+.fin-fr-bar { padding: 0 12px 8px; }
+
+.fin-fr-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 12px 9px;
+    font-size: 11.5px;
+    color: #7b8794;
+}
+
+.fin-fr-count { cursor: pointer; }
+.fin-fr-count:hover { color: #23527c; text-decoration: underline; }
+
+/* Line items sit inside a rule that visually ties them to their parent. */
+.fin-fr-lines {
+    margin: 0 12px 10px 26px;
+    padding-left: 12px;
+    border-left: 2px solid #dfe3e8;
+}
+
+.fin-fr-line { padding: 8px 0; border-bottom: 1px solid #f2f4f6; }
+.fin-fr-line:first-child { padding-top: 2px; }
+.fin-fr-line:last-child { border-bottom: none; padding-bottom: 2px; }
+.fin-fr-line-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12.5px;
+    margin-bottom: 4px;
+}
+
+/* ---- Queue row feedback ---------------------------------------------------
+   Each row is allocated on its own without reloading, so success and failure
+   have to be reported next to the row rather than in a banner at the top. */
+.fin-queue-note {
+    margin-top: 8px;
+    font-size: 12.5px;
+    padding: 5px 8px;
+    border-radius: 3px;
+}
+.fin-queue-note-success { background: #dff0d8; color: #3c763d; }
+.fin-queue-note-error { background: #f2dede; color: #a94442; }
+.fin-field-error { color: #a94442; font-size: 11.5px; margin-top: 3px; max-width: 240px; }
+/* A finished row recedes, but its confirmation does not.
+   ``opacity`` on the row faded everything inside it, the success message
+   included -- and a child cannot be more opaque than its parent, so no rule on
+   the message could win it back. The row's own parts are faded individually
+   instead, which leaves the message at full strength where it belongs. */
+.fin-queue-done > .fin-queue-head,
+.fin-queue-done > .fin-queue-body > form {
+    opacity: 0.55;
+    transition: opacity 0.3s ease;
+}
+.fin-busy { opacity: 0.6; cursor: progress; }
+
+/* The way back out of an allocation, offered in the row that was just
+   allocated. Underlined rather than made a button: it sits inside a success
+   message, and a second button there competes with the one just pressed. */
+.fin-queue-undo {
+    margin-left: 10px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-weight: 600;
+    text-decoration: underline;
+    color: inherit;
+}
+.fin-queue-undo:hover:not(:disabled) { text-decoration: none; }
+.fin-queue-undo:disabled { opacity: 0.6; cursor: progress; text-decoration: none; }
+/* An undone row is fully live again, so nothing about it should look spent. */
+.fin-queue-row:not(.fin-queue-done) .fin-queue-undo { display: none; }
+
+/* Import confirmation ------------------------------------------------------ */
+.fin-import-confirm-lede { font-size: 15px; }
+.fin-import-errors {
+    margin: 0 0 14px 0;
+    padding-left: 18px;
+    font-size: 12.5px;
+    color: #a94442;
+}
+.fin-panel-subhead {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #888;
+    margin: 14px 0 6px;
+}
+.fin-panel-actions { border-top: 1px solid #eee; }
+.fin-panel-actions .fin-muted { margin-left: 8px; font-size: 12px; }
+
+/* A box filled in from the funding request line, briefly, so it is visible
+   that something was decided for you rather than left blank. */
+.fin-inherited-flash select {
+    background-color: #fcf8e3;
+    transition: background-color 0.4s ease;
+}
+
+/* ---- Funding request line editor ------------------------------------------ */
+/* Every row removes the same way, with an X. On a row that is already saved
+   that X only *stages* the removal -- Django needs the DELETE flag set, and it
+   takes effect on save -- so the row stays visible and struck through until
+   then, and the X becomes an undo. */
+.fin-fr-delete-flag { display: none; }
+.fin-fr-drop { font-size: 15px; line-height: 1; padding: 0 4px; text-decoration: none; }
+.fin-fr-deleted > td { opacity: 0.45; }
+.fin-fr-deleted > td:not(.fin-fr-remove) { text-decoration: line-through; }
+.fin-fr-deleted .fin-fr-drop { color: #31708f; }
+
+/* ---- Dense data table ----------------------------------------------------- */
+.fin-table { font-size: 12.5px; margin-bottom: 0; }
+.fin-table > thead > tr > th {
+    background: #f5f7fa;
+    border-bottom: 2px solid #dfe3e8;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #52606d;
+    white-space: nowrap;
+    padding: 6px 8px;
+}
+
+.fin-table > tbody > tr > td { padding: 5px 8px; vertical-align: middle; }
+.fin-table > tbody > tr:hover { background: #f7fafc; }
+.fin-table .fin-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fin-table th a { color: inherit; text-decoration: none; }
+.fin-table th a:hover { color: #23527c; }
+.fin-sort-arrow { font-size: 9px; margin-left: 3px; color: #9aa5b1; }
+.fin-table-wrap { overflow-x: auto; }
+.fin-row-selected { background: #eef6fc !important; }
+.fin-row-projection td:first-child { border-left: 3px solid #6f42c1; }
+
+/*
+ * An entry filed on the opposite side from the account that paid for it. Not
+ * an error -- SGA reimburses one account for the other's spending -- so it is
+ * marked rather than flagged.
+ */
+.fin-cross-badge { color: #8a6d3b; margin-left: 4px; cursor: help; }
+.fin-cross-badge .glyphicon { font-size: 10px; }
+
+/* ---- Bulk action bar ------------------------------------------------------ */
+.fin-bulk-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #323f4b;
+    color: #fff;
+    padding: 12px 20px;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+    transform: translateY(110%);
+    transition: transform 0.18s ease-out;
+    z-index: 1000;
+}
+
+.fin-bulk-bar.is-visible { transform: translateY(0); }
+.fin-bulk-inner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.fin-bulk-count { font-weight: 600; margin-right: 4px; }
+/* The queue's bar carries three pickers rather than one, so each says which
+   it is -- three unlabelled dropdowns in a row is a guessing game. */
+.fin-bulk-label { font-weight: 400; font-size: 12px; margin: 0 -4px 0 4px; opacity: 0.85; }
+.fin-bulk-bar .form-control { display: inline-block; width: auto; }
+
+/* The bar is dark and sets color on itself, and a form control that inherits
+   that colour keeps its own light background -- which is white text on a white
+   dropdown. Every control in here states both colours rather than inheriting
+   half of them, so a widget that arrives without form-control is still
+   readable. */
+.fin-bulk-bar select,
+.fin-bulk-bar input,
+.fin-bulk-bar textarea {
+    color: #323f4b;
+    background-color: #fff;
+}
+.fin-bulk-bar select option { color: #323f4b; background-color: #fff; }
+
+/* ---- Ingestion queue ------------------------------------------------------
+   Worked top to bottom, twenty-five rows at a time, so the layout is built for
+   scanning: one field component used everywhere, fixed control widths so the
+   same box sits in the same place on every row, and captions underneath rather
+   than beside, which is what used to make rows wrap to different heights.
+   --------------------------------------------------------------------------- */
+
+/* ---- Toolbar -------------------------------------------------------------- */
+.fin-queue-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    flex-wrap: wrap;
+    background: #fff;
+    border: 1px solid #dfe3e8;
+    border-radius: 3px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+}
+
+.fin-queue-counts { min-width: 150px; }
+.fin-queue-toolbar-actions { margin-left: auto; display: flex; gap: 8px; }
+
+/* ---- Import ---------------------------------------------------------------
+   Folded away behind a button: importing happens once a month, reconciling is
+   the whole point of the page. */
+.fin-import-panel.is-folded { display: none; }
+
+.fin-dropzone {
+    border: 2px dashed #b8c2cc;
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    color: #7b8794;
+    background: #fbfcfd;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.fin-dropzone:hover { border-color: #31708f; background: #f4f9fc; }
+.fin-dropzone.is-dragover { border-color: #31708f; background: #e8f2f8; color: #31708f; }
+.fin-dropzone .glyphicon { font-size: 24px; display: block; margin-bottom: 6px; }
+.fin-dropzone-hint { font-size: 12px; margin-top: 3px; }
+.fin-dropzone-file { margin-top: 8px; font-weight: 600; color: #323f4b; }
+.hidden-file-input { display: none; }
+
+.fin-import-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+/* ---- One row -------------------------------------------------------------- */
+.fin-queue-row {
+    border: 1px solid #dfe3e8;
+    border-left-width: 3px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+    background: #fff;
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.fin-queue-row:hover { box-shadow: 0 1px 4px rgba(50, 63, 75, 0.08); }
+.fin-queue-row.is-revenue { border-left-color: #5cb85c; }
+.fin-queue-row.is-expense { border-left-color: #d9534f; }
+
+.fin-queue-head {
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid #f0f2f4;
+}
+
+/* The bulk-reconcile checkbox. Fixed width whether or not a row has one, so
+   a revenue row (which has nothing to select) does not shift its neighbours'
+   amounts sideways and break the column below. */
+.fin-queue-select {
+    flex: 0 0 16px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.fin-queue-select.is-empty { cursor: default; }
+.fin-queue-select input { margin: 0; cursor: pointer; }
+.fin-queue-selected { box-shadow: inset 3px 0 0 #4E79A7; }
+
+/* Fixed width and tabular figures, so the amounts form a column the eye can
+   run down instead of jittering with the length of each number. */
+.fin-queue-amount {
+    flex: 0 0 108px;
+    text-align: right;
+    font-size: 17px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.2px;
+}
+
+.fin-queue-identity { min-width: 0; flex: 1 1 auto; }
+
+.fin-queue-payee {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1f2933;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fin-queue-meta {
+    font-size: 12px;
+    color: #7b8794;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fin-queue-sep { margin: 0 5px; color: #cbd2d9; }
+.fin-queue-tags { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* One badge style with modifiers, replacing four Bootstrap label colours that
+   implied a severity ranking none of them had. */
+.fin-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: #f0f2f4;
+    color: #52606d;
+    border: 1px solid #e1e5ea;
+    white-space: nowrap;
+}
+
+.fin-tag[title] { cursor: help; }
+.fin-tag.is-projection { background: #f3effa; color: #6f42c1; border-color: #e3d9f5; }
+.fin-tag.is-warn { background: #fcf3d9; color: #8a6d3b; border-color: #f0e0b8; }
+.fin-tag.is-alert { background: #fdeceb; color: #a94442; border-color: #f5cfcd; }
+.fin-tag .glyphicon { font-size: 10px; }
+
+.fin-queue-open {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: #7b8794;
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+}
+
+.fin-queue-open:hover { color: #31708f; background: #f4f9fc; text-decoration: none; }
+.fin-queue-open .glyphicon { font-size: 10px; margin-right: 3px; }
+
+.fin-queue-body { padding: 12px 14px; }
+
+/* ---- The field component --------------------------------------------------
+   Label, control, one caption. Every box on the page is this, which is what
+   the row-by-row hand-written markup could not keep true of itself. */
+.fin-fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.fin-fields-more {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #e6e9ed;
+}
+
+.fin-fields-more.is-folded { display: none; }
+
+.fin-field { margin-bottom: 0; }
+.fin-field-sm { flex: 0 0 130px; }
+.fin-field-md { flex: 0 0 190px; }
+.fin-field-lg { flex: 0 0 260px; }
+.fin-field-check { flex: 0 0 auto; }
+
+.fin-field > label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #7b8794;
+    margin-bottom: 4px;
+    white-space: nowrap;
+}
+
+/* Every control the same height and type size, whether Django, crispy or
+   django-ajax-selects rendered it. */
+.fin-field .form-control,
+.fin-field select,
+.fin-field input[type="text"],
+.fin-field textarea {
+    width: 100%;
+    height: 30px;
+    padding: 3px 8px;
+    font-size: 13px;
+    border: 1px solid #cbd2d9;
+    border-radius: 3px;
+    background: #fff;
+    box-shadow: none;
+}
+
+.fin-field textarea { height: 30px; resize: vertical; min-height: 30px; }
+.fin-field .form-control:focus { border-color: #31708f; box-shadow: 0 0 0 2px rgba(49,112,143,0.12); }
+
+.fin-inline-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    margin: 0;
+    font-weight: 400;
+    font-size: 13px;
+    color: #52606d;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.fin-inline-check input[type="checkbox"] { margin: 0; }
+
+.fin-fields-tail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    align-self: flex-end;
+    padding-bottom: 1px;
+}
+
+.fin-allocate { font-variant-numeric: tabular-nums; }
+
+.fin-more-toggle {
+    border: 1px solid transparent;
+    background: none;
+    color: #7b8794;
+    font-size: 12px;
+    padding: 5px 9px;
+    border-radius: 3px;
+}
+
+.fin-more-toggle:hover { background: #f0f2f4; color: #52606d; }
+.fin-more-toggle[aria-expanded="true"] { background: #eef4f8; color: #31708f; border-color: #d7e5ee; }
+.fin-more-toggle .glyphicon { font-size: 10px; margin-right: 3px; }
+
+/* ---- Captions under a control ---------------------------------------------
+   Two kinds, one geometry: what the export already answered, and what we are
+   offering to answer. Sitting under the box rather than beside it is what
+   keeps rows the same height. */
+.fin-note {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.35;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fin-note .glyphicon { font-size: 9px; margin-right: 4px; }
+
+/* Already filled in: a caption, not an offer. Quiet, dashed, not clickable. */
+.fin-note-auto {
+    background: #f7fafc;
+    color: #6b7b8c;
+    border-color: #e6ecf1;
+    border-style: dashed;
+    cursor: help;
+}
+
+/* Offered: clearly a button, because clicking it is the whole point. */
+.fin-suggest { cursor: pointer; }
+.fin-suggest-success { background: #dff0d8; color: #3c763d; border-color: #c6e0b4; }
+.fin-suggest-info    { background: #d9edf7; color: #31708f; border-color: #bce8f1; }
+.fin-suggest-default { background: #f0f2f4; color: #52606d; border-color: #dfe3e8; }
+.fin-suggest:hover { filter: brightness(0.96); }
+.fin-suggest-applied { opacity: 0.5; text-decoration: line-through; }
+
+/* django-ajax-selects renders its own help paragraph and results box inside
+   the field. Given the same geometry as our own captions rather than left to
+   look like a different form library. */
+.fin-field .help {
+    display: block;
+    margin: 4px 0 0;
+    font-size: 11px;
+    line-height: 1.35;
+    color: #9aa5b1;
+}
+
+.fin-field .results_on_deck { margin-top: 4px; }
+.fin-field .results_on_deck:empty { margin-top: 0; }
+.fin-field .results_on_deck div { font-size: 11.5px; }
+.fin-field .results_on_deck .ui-helper-hidden-accessible { display: none; }
+
+/* Revealed by routing.js only when the answer leaves the account's own side. */
+.fin-partition-reason { display: none; }
+.fin-partition-reason.is-needed { display: block; }
+
+/* ---- Split modal ---------------------------------------------------------- */
+.fin-split-summary {
+    background: #f5f7fa;
+    border: 1px solid #dfe3e8;
+    border-radius: 3px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.fin-remainder { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fin-remainder.is-balanced { color: #3c763d; }
+.fin-remainder.is-unbalanced { color: #a94442; }
+.fin-split-row td { padding: 6px 4px; vertical-align: top; }
+.fin-split-row .form-control { font-size: 12.5px; height: 30px; padding: 4px 8px; }
+
+/* ---- Immutable / editable detail panes ------------------------------------ */
+.fin-immutable {
+    background: #f7f8fa;
+    border: 1px solid #dfe3e8;
+    border-radius: 3px;
+}
+
+.fin-immutable .fin-panel-head {
+    background: #eef1f4;
+    color: #52606d;
+}
+
+.fin-locked-note {
+    font-size: 11px;
+    color: #7b8794;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.fin-kv { margin: 0; font-size: 13px; }
+.fin-kv dt {
+    float: left;
+    clear: left;
+    width: 42%;
+    color: #7b8794;
+    font-weight: 500;
+    padding: 4px 0;
+}
+.fin-kv dd { margin-left: 44%; padding: 4px 0; word-break: break-word; }
+
+/* ---- Audit trail ---------------------------------------------------------- */
+.fin-audit { list-style: none; padding: 0; margin: 0; font-size: 13px; }
+.fin-audit li {
+    padding: 8px 0 8px 18px;
+    border-left: 2px solid #dfe3e8;
+    position: relative;
+}
+.fin-audit li:before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 13px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #b8c2cc;
+}
+.fin-audit-meta { color: #7b8794; font-size: 12px; }
+.fin-audit-change { font-size: 12px; }
+.fin-audit-old { color: #a94442; text-decoration: line-through; }
+.fin-audit-new { color: #3c763d; }
+
+/* ---- Project explorer ----------------------------------------------------- */
+.fin-explorer { display: flex; gap: 16px; align-items: flex-start; }
+.fin-tree {
+    flex: 0 0 280px;
+    background: #fff;
+    border: 1px solid #dfe3e8;
+    border-radius: 3px;
+    max-height: 75vh;
+    overflow-y: auto;
+}
+.fin-tree-node {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px;
+    font-size: 13px;
+    border-bottom: 1px solid #f5f7fa;
+    text-decoration: none;
+    color: #323f4b;
+}
+.fin-tree-node:hover { background: #f5f7fa; text-decoration: none; color: #323f4b; }
+.fin-tree-node.is-selected { background: #e8f2f8; font-weight: 600; color: #23527c; }
+.fin-tree-node.is-ancestor { font-weight: 600; }
+.fin-tree-cost { color: #7b8794; font-variant-numeric: tabular-nums; font-size: 12px; }
+.fin-explorer-main { flex: 1 1 auto; min-width: 0; }
+
+/* ---- Doughnut + legend ---------------------------------------------------- */
+.fin-chart-wrap { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.fin-chart-canvas { flex: 0 0 150px; max-width: 150px; }
+
+/* Chart tooltips live on <body>, not inside the canvas.
+   Chart.js paints its own tooltip onto the canvas, which means it can never be
+   wider than the chart -- and these doughnuts are 150px across while their
+   labels run to fifty characters, so the text was simply cut off at the edge.
+   As an ordinary element it is sized by its content and clamped to the
+   viewport by charts.js instead. */
+.fin-chart-tip {
+    position: absolute;
+    z-index: 1080;
+    max-width: 320px;
+    padding: 7px 10px;
+    border-radius: 3px;
+    background: rgba(30, 38, 45, 0.94);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.45;
+    /* The pointer must never land on the tooltip: that would count as leaving
+       the slice, which hides it, which puts the pointer back on the slice. */
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+}
+.fin-chart-tip-title { font-weight: 600; margin-bottom: 3px; }
+.fin-chart-tip-row { display: flex; align-items: baseline; gap: 6px; }
+.fin-chart-tip-swatch {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+}
+.fin-chart-tip-footer {
+    margin-top: 3px;
+    padding-top: 3px;
+    border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+.fin-legend { flex: 1 1 170px; font-size: 12px; min-width: 0; }
+.fin-legend-row { display: flex; align-items: center; gap: 7px; padding: 2px 0; }
+.fin-legend-swatch { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 10px; }
+.fin-legend-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.fin-legend-value { font-variant-numeric: tabular-nums; color: #52606d; white-space: nowrap; }
+
+.fin-chart-note {
+    font-size: 11px;
+    color: #9aa5b1;
+    margin: 10px 0 0;
+    line-height: 1.4;
+}
+
+/* ---- Ranked bars (revenue by client) -------------------------------------- */
+.fin-rank { margin-bottom: 10px; }
+.fin-rank:last-child { margin-bottom: 0; }
+
+.fin-rank-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 12.5px;
+    margin-bottom: 3px;
+}
+
+.fin-rank-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fin-rank-value { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.fin-rank-track {
+    background: #eceff1;
+    border-radius: 2px;
+    height: 10px;
+    overflow: hidden;
+}
+
+.fin-rank-fill { height: 100%; border-radius: 2px; min-width: 2px; }
+
+/* ---- Project composition stacks ------------------------------------------- */
+.fin-project { margin-bottom: 14px; }
+.fin-project:last-child { margin-bottom: 0; }
+
+/* The stack's own width encodes the project's share of total project spend,
+   so bars are comparable across projects; segments divide it by child asset. */
+.fin-stack {
+    display: flex;
+    height: 14px;
+    border-radius: 2px;
+    overflow: hidden;
+    background: #eceff1;
+    min-width: 12px;
+}
+
+.fin-stack-seg { display: block; height: 100%; min-width: 2px; }
+.fin-stack-seg:hover { filter: brightness(1.12); }
+
+.fin-project-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-top: 5px;
+    font-size: 11.5px;
+    color: #52606d;
+}
+
+.fin-project-chip { display: inline-flex; align-items: center; gap: 5px; }
+
+/* ---- Print mode ----------------------------------------------------------- */
+@media print {
+    .fin-topbar, .fin-bulk-bar, .navbar, footer, .fin-readonly-banner,
+    .fin-no-print, .btn, .pagination { display: none !important; }
+    .fin-explorer { display: block; }
+    .fin-tree { display: none; }
+    .fin-panel, .fin-table { border: 1px solid #999; }
+    .fin-table { font-size: 10.5px; }
+    .fin-print-header { display: block !important; margin-bottom: 12px; }
+    a[href]:after { content: none !important; }
+    body { background: #fff; }
+}
+
+.fin-print-header { display: none; }
+
+/* ---- Utility -------------------------------------------------------------- */
+.fin-muted { color: #9aa5b1; }
+.fin-nowrap { white-space: nowrap; }
+.fin-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #9aa5b1;
+}
+.fin-empty .glyphicon { font-size: 34px; display: block; margin-bottom: 10px; opacity: 0.5; }

@@ -1,0 +1,111 @@
+{# One funding request, line by line, with the entries charged against each line. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+{% load permissionif %}
+
+{% block fin_content %}
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>
+                {{ fr.name }}
+                {% if fr.reference %}<code class="fin-muted">{{ fr.reference }}</code>{% endif %}
+                {% if fr.is_projection %}<span class="fin-tag is-projection">PROJECTION</span>{% endif %}
+                {% if fr.closed %}<span class="label label-default">Closed</span>{% endif %}
+            </span>
+            {% permission request.user has 'finance.manage_fundingrequest' %}
+                <a href="{% url 'finance:fr-edit' fr.pk %}" class="btn btn-xs btn-default">Edit</a>
+            {% endpermission %}
+        </div>
+        <div class="fin-panel-body">
+            <div class="fin-stats" style="margin-bottom:12px;">
+                <div class="fin-stat">
+                    <div class="fin-stat-label">Awarded</div>
+                    <div class="fin-stat-value">{{ fr.total_awarded|money }}</div>
+                </div>
+                <div class="fin-stat">
+                    <div class="fin-stat-label">Spent</div>
+                    <div class="fin-stat-value text-danger">{{ fr.total_spent|money }}</div>
+                </div>
+                <div class="fin-stat">
+                    <div class="fin-stat-label">Remaining</div>
+                    <div class="fin-stat-value {% if fr.is_overspent %}text-danger{% else %}text-success{% endif %}">
+                        {{ fr.total_remaining|money }}
+                    </div>
+                </div>
+                <div class="fin-stat">
+                    <div class="fin-stat-label">Fiscal Year</div>
+                    <div class="fin-stat-value">FY{{ fr.fiscal_year|stringformat:"s"|slice:"2:" }}</div>
+                </div>
+            </div>
+            {% burndown_bar fr.total_spent fr.total_awarded %}
+            {% if fr.notes %}<p class="fin-muted" style="margin-top:10px;">{{ fr.notes|linebreaksbr }}</p>{% endif %}
+        </div>
+    </div>
+
+    {% for line in lines %}
+        <div class="fin-panel">
+            <div class="fin-panel-head">
+                <span>{{ line.obj.name }}</span>
+                <span class="{% if line.overspent %}text-danger{% else %}fin-muted{% endif %}"
+                      style="font-weight:400;font-size:13px;">
+                    {{ line.spent|money }} of {{ line.obj.amount_awarded|money }}
+                    {% if line.overspent %}
+                        &middot; <strong>over by {{ line.obj.overspent_by|money }}</strong>
+                    {% else %}
+                        &middot; {{ line.remaining|money }} left
+                    {% endif %}
+                </span>
+            </div>
+            <div class="fin-panel-body" style="padding-bottom:8px;">
+                {% if line.obj.description %}
+                    <p class="fin-muted" style="font-size:13px;margin-bottom:10px;">
+                        {{ line.obj.description|linebreaksbr }}
+                    </p>
+                {% endif %}
+                {% burndown_bar line.spent line.obj.amount_awarded %}
+            </div>
+            {% if line.allocations %}
+                <div class="fin-table-wrap">
+                    <table class="table fin-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th><th>Description</th><th>Payee</th>
+                                <th class="fin-num">Amount</th><th>Project</th><th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in line.allocations %}
+                                <tr>
+                                    <td class="fin-nowrap">{{ entry.effective_date|date:"M j, Y" }}</td>
+                                    <td>
+                                        <a href="{% url 'finance:entry-detail' entry.pk %}">
+                                            {{ entry.description|default:"(untitled)" }}</a>
+                                        {% if entry.refund_of %}<span class="label label-info">Refund</span>{% endif %}
+                                    </td>
+                                    <td>{% if entry.parent_transaction %}{{ entry.parent_transaction.payee|default:"—" }}{% else %}<span class="fin-muted">encumbrance</span>{% endif %}</td>
+                                    <td class="fin-num {{ entry.amount|money_class }}">{{ entry.amount|money }}</td>
+                                    <td>{% if entry.project_tag %}{{ entry.project_tag.code }}{% else %}—{% endif %}</td>
+                                    <td>{{ entry|status_badge }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="fin-panel-body" style="padding-top:0;">
+                    <span class="fin-muted">Nothing charged to this line yet.</span>
+                </div>
+            {% endif %}
+        </div>
+    {% empty %}
+        <div class="fin-panel">
+            <div class="fin-empty">
+                <span class="glyphicon glyphicon-list"></span>
+                This request has no line items.
+                {% permission request.user has 'finance.manage_fundingrequest' %}
+                    <br><a href="{% url 'finance:fr-edit' fr.pk %}">Add some</a>
+                {% endpermission %}
+            </div>
+        </div>
+    {% endfor %}
+{% endblock %}
