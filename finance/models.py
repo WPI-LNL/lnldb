@@ -1279,13 +1279,20 @@ class WorkdayTransaction(models.Model):
         alone can tell "this file lists the charge twice" from "this file is a
         re-upload". A one-off insert (the admin, a test, a shell) has no such
         context, so it simply takes the next free occurrence.
+
+        "Next free" is one past the highest occurrence on file, not one past
+        the count of them: after a ``hard_delete()`` of anything but the last
+        copy those two disagree, and counting would hand back a number a
+        surviving row already holds.
         """
         self.row_fingerprint = self.compute_fingerprint()
         if ordinal is not None:
             self.fingerprint_ordinal = ordinal
         else:
-            self.fingerprint_ordinal = 1 + WorkdayTransaction.objects.filter(
-                row_fingerprint=self.row_fingerprint).count()
+            highest = WorkdayTransaction.objects.filter(
+                row_fingerprint=self.row_fingerprint).aggregate(
+                    top=models.Max('fingerprint_ordinal'))['top']
+            self.fingerprint_ordinal = (highest or 0) + 1
         return self
 
     # -- immutability -------------------------------------------------------

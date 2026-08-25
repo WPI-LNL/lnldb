@@ -621,3 +621,166 @@ class TypedCellTests(TestCase):
         self.assertEqual(parse_date(datetime.datetime(2025, 9, 15, 13, 30)),
                          datetime.date(2025, 9, 15))
         self.assertEqual(parse_date(datetime.date(2025, 9, 15)), datetime.date(2025, 9, 15))
+
+
+class MisalignedRowTests(TestCase):
+    """
+    A row that did not split where the header did must not import.
+
+    Drawn from a live incident. A memo reading  Stereo 1/4" cables for PCDI
+    kits, Maintenance and Repair, (A.27.16)  met a CSV dialect that had guessed
+    ``doublequote=False``, so it split at its own commas: the memo tail landed
+    in Fund, and Fund, Cost Center, Ledger Account and Spend Category each
+    shifted one column right while Student Organization and Program fell off
+    the end. The row imported without complaint, was reconciled a fortnight
+    later, and then imported *again* from the next export -- correctly parsed
+    that time, so a different fingerprint, so not a duplicate.
+
+    The dialect bug is fixed in :func:`_read_csv`. These tests cover the guard
+    that makes the *class* of failure loud, whatever causes it next.
+    """
+
+    #: The same line, quoted the way the old dialect left it: two cells too wide.
+    MISALIGNED = ('7/1/2025,17.91,0.00,(17.91),Supplier Invoice: 25070087-SINV,'
+                  '"Amazon Capital Services, Inc.",,Operational Journal: WPI - 07/01/2025,'
+                  'Stereo 1/4" cables for PCDI kits, Maintenance and Repair, (A.27.16)",,'
+                  '810-FD Agency,1125-CC Student Clubs,71100:Supplies,Supplies,,,'
+                  '226-AG Lens & Light Club,920 Agencies')
+
+    def test_a_row_wider_than_the_header_is_an_error(self):
+        result = import_workday_export(upload(self.MISALIGNED))
+        self.assertEqual(result.created_count, 0)
+        self.assertEqual(result.error_count, 1)
+        self.assertEqual(WorkdayTransaction.objects.count(), 0)
+
+    def test_the_error_says_what_overflowed(self):
+        result = import_workday_export(upload(self.MISALIGNED))
+        message = result.errors[0].message
+        self.assertIn('more value', message)
+        self.assertIn('920 Agencies', message)
+
+    def test_one_bad_row_does_not_stop_the_rest_of_the_file(self):
+        result = import_workday_export(upload(EXPENSE_ROW, self.MISALIGNED, REVENUE_ROW))
+        self.assertEqual(result.created_count, 2)
+        self.assertEqual(result.error_count, 1)
+
+    def test_a_quoted_memo_with_commas_and_quotes_still_imports(self):
+        """ The guard must not catch the well-formed version of the same line. """
+        good = ('7/1/2025,17.91,0.00,(17.91),Supplier Invoice: 25070087-SINV,'
+                '"Amazon Capital Services, Inc.",,Operational Journal: WPI - 07/01/2025,'
+                '"Stereo 1/4"" cables for PCDI kits, Maintenance and Repair, (A.27.16)",,'
+                '810-FD Agency,1125-CC Student Clubs,71100:Supplies,Supplies,,,'
+                '226-AG Lens & Light Club,920 Agencies')
+        result = import_workday_export(upload(good))
+        self.assertEqual(result.created_count, 1, result.errors and result.errors[0].message)
+        txn = WorkdayTransaction.objects.get()
+        self.assertEqual(txn.worktags_json['fund'], '810-FD Agency')
+        self.assertEqual(txn.worktags_json['cost_center'], '1125-CC Student Clubs')
+        self.assertEqual(txn.worktags_json['student_organization'], '226-AG Lens & Light Club')
+        self.assertIn('Maintenance and Repair', txn.memo)
+
+    def test_trailing_empty_cells_are_not_an_overflow(self):
+        """ A stray delimiter at the end of a line is ordinary, not corruption. """
+        result = import_workday_export(upload(EXPENSE_ROW + ',,,'))
+        self.assertEqual(result.created_count, 1)
+
+
+class NearDuplicateTests(TestCase):
+    """
+    The warning for a line that is new by fingerprint but looks already held.
+
+    The fingerprint is exact, so any drift in how a line is *read* -- a column
+    Workday renamed, a memo edited upstream, a parser fixed -- reads as a fresh
+    charge. That is the correct thing for the ledger to do and the wrong thing
+    to do silently, so these rows import and are flagged.
+    """
+
+    def _drifted(self):
+        """ The same charge with one worktag read differently. """
+        return INVOICE_LINE_1.replace('920 Agencies', '921 Agencies')
+
+    def test_a_line_differing_only_in_worktags_is_flagged(self):
+        import_workday_export(upload(INVOICE_LINE_1))
+        result = import_workday_export(upload(self._drifted()))
+        self.assertEqual(result.created_count, 1)
+        self.assertEqual(len(result.suspects), 1)
+
+    def test_the_warning_names_the_row_it_resembles(self):
+        import_workday_export(upload(INVOICE_LINE_1))
+        held = WorkdayTransaction.objects.get()
+        result = import_workday_export(upload(self._drifted()))
+        self.assertIn('#%s' % held.pk, result.suspects[0].warning)
+
+    def test_an_exact_duplicate_is_not_flagged(self):
+        """ It is skipped, not warned about -- the ordinary case stays quiet. """
+        import_workday_export(upload(INVOICE_LINE_1))
+        result = import_workday_export(upload(INVOICE_LINE_1))
+        self.assertEqual(result.suspects, [])
+
+    def test_a_deliberate_second_identical_charge_is_not_flagged(self):
+        """ Two Spotify charges share a fingerprint, so they are not a near miss. """
+        result = import_workday_export(upload(SPOTIFY_ROW, SPOTIFY_ROW))
+        self.assertEqual(result.created_count, 2)
+        self.assertEqual(result.suspects, [])
+
+    def test_two_lines_of_one_invoice_are_not_flagged(self):
+        result = import_workday_export(upload(INVOICE_LINE_1, INVOICE_LINE_2))
+        self.assertEqual(result.created_count, 2)
+        self.assertEqual(result.suspects, [])
+
+    def test_journal_entries_sharing_a_date_and_amount_are_not_flagged(self):
+        """
+        A journal line names neither document nor person, so date-and-amount is
+        all there is to match on -- and one real October journal in this ledger
+        holds four separate $100 projector rentals. Matching on that would cry
+        wolf on every one of them.
+        """
+        other = JOURNAL_ENTRY_ROW.replace('306711: 11x17 posters for LNL',
+                                          '306786: Posters V for Vendetta')
+        result = import_workday_export(upload(JOURNAL_ENTRY_ROW, other))
+        self.assertEqual(result.created_count, 2)
+        self.assertEqual(result.suspects, [])
+
+    def test_a_flagged_row_still_imports(self):
+        """ A warning, never a block: it may genuinely be a second charge. """
+        import_workday_export(upload(INVOICE_LINE_1))
+        import_workday_export(upload(self._drifted()))
+        self.assertEqual(WorkdayTransaction.objects.count(), 2)
+
+
+class OrdinalNumberingTests(TestCase):
+    """
+    Occurrence numbers come from the highest one on file, not from the count.
+
+    They disagree the moment ``hard_delete()`` removes anything but the last
+    copy of a line, and numbering from the count then hands a new row a number
+    a surviving row already holds -- which the unique constraint rejects,
+    aborting the whole import inside its atomic block.
+    """
+
+    def test_re_import_after_deleting_the_first_occurrence(self):
+        import_workday_export(upload(SPOTIFY_ROW, SPOTIFY_ROW))
+        WorkdayTransaction.objects.filter(fingerprint_ordinal=1).hard_delete()
+
+        result = import_workday_export(upload(SPOTIFY_ROW, SPOTIFY_ROW))
+
+        self.assertEqual(result.created_count, 1)
+        self.assertEqual(result.duplicate_count, 1)
+        self.assertEqual(
+            sorted(WorkdayTransaction.objects.values_list('fingerprint_ordinal', flat=True)),
+            [2, 3])
+
+    def test_a_one_off_insert_takes_the_next_free_occurrence(self):
+        import_workday_export(upload(SPOTIFY_ROW, SPOTIFY_ROW))
+        WorkdayTransaction.objects.filter(fingerprint_ordinal=1).hard_delete()
+        held = WorkdayTransaction.objects.get()
+
+        extra = WorkdayTransaction(
+            operational_transaction=held.operational_transaction,
+            accounting_date=held.accounting_date, net_amount=held.net_amount,
+            supplier=held.supplier, employee=held.employee, memo=held.memo,
+            worktags_json=held.worktags_json)
+        extra.save()
+
+        self.assertEqual(extra.row_fingerprint, held.row_fingerprint)
+        self.assertEqual(extra.fingerprint_ordinal, 3)

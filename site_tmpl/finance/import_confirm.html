@@ -37,7 +37,25 @@
                                 {{ error_count }} row{{ error_count|pluralize }} will be left out
                             </dd>
                         {% endif %}
+                        {% if suspect_count %}
+                            <dt>Worth a look</dt>
+                            <dd class="text-warning">
+                                {{ suspect_count }} new line{{ suspect_count|pluralize }}
+                                resemble{{ suspect_count|pluralize:"s," }} a line already in the ledger
+                            </dd>
+                        {% endif %}
                     </dl>
+
+                    {% if suspects %}
+                        <ul class="fin-import-errors">
+                            {% for row in suspects %}
+                                <li class="text-warning">Line {{ row.line_number }}: {{ row.warning }}</li>
+                            {% endfor %}
+                            {% if more_suspects %}
+                                <li class="fin-muted">&hellip;and {{ more_suspects }} more.</li>
+                            {% endif %}
+                        </ul>
+                    {% endif %}
 
                     {% if errors %}
                         <ul class="fin-import-errors">

@@ -27,7 +27,8 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
-from finance.models import MEMO_SEPARATOR, WorkdayTransaction, column_aliases
+from finance.models import (MEMO_SEPARATOR, WorkdayTransaction, _identity_text,
+                            column_aliases)
 
 # Canonical Workday columns. Keys are the normalised header, values are the
 # aliases we have actually seen come out of Workday.
@@ -234,19 +235,23 @@ class RowResult(object):
     """ Outcome of a single CSV row. """
     CREATED, DUPLICATE, ERROR = 'created', 'duplicate', 'error'
 
-    def __init__(self, line_number, status, message='', transaction=None, preview=None):
+    def __init__(self, line_number, status, message='', transaction=None, preview=None,
+                 warning=''):
         """
         Record what happened to one row.
 
         ``transaction`` is set only on a successful create. ``preview`` holds
         the parsed field values so a dry run can show the operator what *would*
-        be written without writing it.
+        be written without writing it. ``warning`` is set on a row that is
+        importing but looks like something already on file -- see
+        :func:`_find_near_duplicates`.
         """
         self.line_number = line_number
         self.status = status
         self.message = message
         self.transaction = transaction
         self.preview = preview or {}
+        self.warning = warning
 
     @property
     def is_error(self):
@@ -308,6 +313,19 @@ class ImportResult(object):
     def errors(self):
         """ The failed rows, each still carrying its line number and message. """
         return [r for r in self.rows if r.is_error]
+
+    @property
+    def suspects(self):
+        """
+        New rows that look like a line the ledger already holds.
+
+        These are importing, not blocked -- the fingerprint says they are new
+        and the fingerprint is what the ledger trusts. They are surfaced
+        because the one way this importer can double-count is a line whose
+        exported detail changed between two exports of the same charge, and
+        that is invisible in a count of "new rows".
+        """
+        return [r for r in self.rows if r.warning]
 
     @property
     def total(self):
@@ -373,12 +391,23 @@ def _resolve_duplicates(candidates):
     """
     fingerprints = {txn.row_fingerprint for _, txn in candidates}
     already_held = defaultdict(int)
+    highest_ordinal = defaultdict(int)
     if fingerprints:
-        counts = (WorkdayTransaction.objects
-                  .filter(row_fingerprint__in=fingerprints)
-                  .values('row_fingerprint')
-                  .annotate(n=models.Count('pk')))
-        already_held.update({row['row_fingerprint']: row['n'] for row in counts})
+        # Count and high-water mark are deliberately two different numbers.
+        # How many copies are on file decides what counts as a duplicate; the
+        # highest occurrence number already taken decides what a new row may be
+        # numbered. They diverge the moment hard_delete() removes anything but
+        # the last occurrence, and numbering from the count would then collide
+        # with a surviving row and abort the whole import on the unique
+        # constraint.
+        held = (WorkdayTransaction.objects
+                .filter(row_fingerprint__in=fingerprints)
+                .values('row_fingerprint')
+                .annotate(n=models.Count('pk'),
+                          top=models.Max('fingerprint_ordinal')))
+        for row in held:
+            already_held[row['row_fingerprint']] = row['n']
+            highest_ordinal[row['row_fingerprint']] = row['top'] or 0
 
     seen_in_file = Counter()
     to_create, decisions = [], {}
@@ -396,11 +425,103 @@ def _resolve_duplicates(candidates):
             continue
 
         # Occurrences 1..held are on file; this one continues the sequence.
-        txn.fingerprint_ordinal = occurrence
+        highest_ordinal[txn.row_fingerprint] += 1
+        txn.fingerprint_ordinal = highest_ordinal[txn.row_fingerprint]
         to_create.append(txn)
         decisions[line_number] = None
 
     return to_create, decisions
+
+
+def _near_duplicate_key(txn):
+    """
+    The part of a line that a re-parse cannot plausibly change.
+
+    Date, amount and who the document was with come off the export as their own
+    columns and survive any reasonable disagreement about quoting, column
+    naming or memo joining. The memo and the worktags do not, which is exactly
+    why they are the fields that go wrong quietly.
+
+    ``None`` when the line names neither a document nor a person: journal entry
+    lines carry only a date and an amount, and two of those matching means
+    nothing -- one October journal in this ledger holds four separate $100
+    projector rentals.
+    """
+    document = _identity_text(txn.operational_transaction)
+    supplier = _identity_text(txn.supplier)
+    employee = _identity_text(txn.employee)
+    if not (document or supplier or employee):
+        return None
+    return (txn.accounting_date,
+            Decimal(txn.net_amount or 0).quantize(Decimal('0.01')),
+            document, supplier, employee)
+
+
+def _find_near_duplicates(to_create):
+    """
+    Rows that are new by fingerprint but look like a line already on file.
+
+    The fingerprint is an exact hash of the whole exported line, which is the
+    only honest answer to "is this the same line" -- but it means any drift in
+    how a line is *read* reads as a brand new charge. A bad CSV dialect that
+    shifted a memo across four worktag columns did exactly that: the line
+    imported a second time, months after the first copy had been reconciled,
+    and nothing in the import counts looked unusual.
+
+    So the fingerprint still decides what gets written, and this decides what
+    gets said about it. A match here is not proof of a duplicate -- one
+    supplier invoice can legitimately carry two lines of the same amount -- so
+    these rows import and are flagged, never blocked.
+
+    :param to_create: ``(line_number, transaction)`` for the rows being written.
+    :returns: ``{line_number: [existing WorkdayTransaction, ...]}``
+    """
+    keyed = defaultdict(list)
+    for line_number, txn in to_create:
+        key = _near_duplicate_key(txn)
+        if key is not None:
+            keyed[key].append((line_number, txn))
+    if not keyed:
+        return {}
+
+    # Narrowed in SQL by the two columns that are indexed and selective, then
+    # matched exactly in Python: date and amount together are cheap to filter
+    # on and leave few enough rows to compare properly.
+    candidates = WorkdayTransaction.objects.filter(
+        accounting_date__in={key[0] for key in keyed},
+        net_amount__in={key[1] for key in keyed})
+
+    matches = {}
+    for existing in candidates:
+        key = _near_duplicate_key(existing)
+        if key not in keyed:
+            continue
+        for line_number, txn in keyed[key]:
+            # Same fingerprint is the deliberate case, not the suspect one:
+            # a second copy of an identical charge, numbered by its ordinal.
+            if existing.row_fingerprint == txn.row_fingerprint:
+                continue
+            matches.setdefault(line_number, []).append(existing)
+    return matches
+
+
+def _describe_near_duplicates(existing):
+    """
+    The one-line warning for a row :func:`_find_near_duplicates` flagged.
+
+    Names the rows it resembles so the Treasurer can open them, and says what
+    it means, because "possible duplicate" on its own invites either ignoring
+    every one of them or deleting a legitimate second line.
+    """
+    if not existing:
+        return ''
+    which = ", ".join("#%s" % txn.pk for txn in existing[:3])
+    if len(existing) > 3:
+        which += " and %s more" % (len(existing) - 3)
+    return ("Same date, amount, document and payee as %s already in the ledger, but the "
+            "memo or worktags differ, so this imports as a separate line. Check %s before "
+            "confirming: if it is the same charge read differently, this would double-count "
+            "it." % (which, "them" if len(existing) > 1 else "it"))
 
 
 def _decode(file_obj):
@@ -596,6 +717,30 @@ def import_workday_export(file_obj, user=None, filename='', dry_run=False):
         if not any(_is_filled(cell) for cell in raw_row):
             continue  # blank spacer row
 
+        # A row wider than the header means the line did not split where the
+        # header did, and every cell after the break is under the wrong
+        # column. Silently truncating to the header width -- which is what
+        # indexing alone does -- turns that into a row that imports cleanly,
+        # reads plausibly, and is wrong in every worktag. It has happened: a
+        # memo reading  Stereo 1/4" cables, Maintenance and Repair  was split
+        # at its commas by a bad CSV dialect, shifting the fund, cost center,
+        # ledger account and spend category one column each and pushing the
+        # student organization off the end. Nothing downstream can tell that
+        # from a real line, and its fingerprint will never match the same line
+        # exported again, so it double-counts on the next import.
+        #
+        # Trailing empty cells are not that: a stray delimiter at the end of a
+        # line is ordinary, so only cells with something in them count.
+        overflow = [cell for cell in raw_row[len(headers):] if _is_filled(cell)]
+        if overflow:
+            result.add(RowResult(
+                line_number, RowResult.ERROR,
+                "This line has %s more value(s) than there are columns, so the "
+                "columns after the overflow cannot be trusted. Usually a quote or a "
+                "delimiter inside a memo. Extra value(s): %s"
+                % (len(overflow), ", ".join(repr(_text(c)) for c in overflow[:3]))))
+            continue
+
         row = {}
         for index, header in enumerate(headers):
             if not header:
@@ -667,13 +812,21 @@ def import_workday_export(file_obj, user=None, filename='', dry_run=False):
     # arriving in a second export is one.
     to_create, decisions = _resolve_duplicates(candidates)
 
+    # Belt to the guard above's braces: that one catches a line that arrived
+    # misaligned, this one catches a line that arrived clean but disagrees with
+    # a copy already on file. Both exist because a wrong row imports silently.
+    near = _find_near_duplicates(
+        [(line_number, txn) for line_number, txn in candidates
+         if decisions[line_number] is None])
+
     for line_number, txn in candidates:
         skip_reason = decisions[line_number]
         if skip_reason:
             result.add(RowResult(line_number, RowResult.DUPLICATE, skip_reason))
         else:
             result.add(RowResult(line_number, RowResult.CREATED, transaction=txn,
-                                 preview=previews[line_number]))
+                                 preview=previews[line_number],
+                                 warning=_describe_near_duplicates(near.get(line_number))))
     result.rows.sort(key=lambda r: r.line_number)
 
     if not dry_run and to_create:

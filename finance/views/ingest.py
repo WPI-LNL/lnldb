@@ -120,6 +120,16 @@ def _report_import(request, result, dry_run=False):
     if result.error_count > 10:
         messages.warning(request, "...and %s more problem rows." % (result.error_count - 10))
 
+    # Louder than an error would be wrong -- these rows are fine as far as the
+    # ledger can tell -- but quieter than this is how a double-counted line got
+    # all the way to a reconciled entry without anyone seeing it.
+    suspects = result.suspects
+    for row in suspects[:5]:
+        messages.warning(request, "Line %s: %s" % (row.line_number, row.warning))
+    if len(suspects) > 5:
+        messages.warning(request, "...and %s more line(s) resembling something already in "
+                                  "the ledger." % (len(suspects) - 5))
+
     # A Workday spend category nothing maps is a category the Treasurer will
     # pick by hand on every line that carries it. One admin row ends that.
     unmapped = result.unmapped_spend_categories()
@@ -215,6 +225,9 @@ def upload(request):
         'error_count': result.error_count,
         'errors': result.errors[:5],
         'more_errors': max(0, result.error_count - 5),
+        'suspects': result.suspects[:5],
+        'suspect_count': len(result.suspects),
+        'more_suspects': max(0, len(result.suspects) - 5),
         # Enough of the file to recognise it as the right one, without
         # reprinting a 253-line export on a confirmation screen.
         'preview_rows': [r.preview for r in result.created[:8]],
