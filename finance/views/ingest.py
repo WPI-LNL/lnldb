@@ -15,19 +15,23 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 from django.views.decorators.http import require_POST
 
 from finance.filters import filter_context, get_filter_state
-from finance.forms import (BulkReconcileForm, EncumbranceForm, ReconcileForm,
-                           WorkdayCSVUploadForm)
+from finance.forms import (BulkEncumbranceForm, BulkReconcileForm, EncumbranceForm,
+                           ReconcileForm, WorkdayCSVUploadForm)
 from finance.importers import (ImportError_, discard_staged, import_workday_export,
                                purge_stale_staged, read_staged, stage_upload)
-from finance.models import ParsedTransaction, TransactionStatus, WorkdayTransaction  # NOQA
-from finance.suggestions import (active_project_tags, active_suggestion_rules,
-                                 suggest_all, suggest_refund_targets)
+from finance.models import (ZERO, ParsedTransaction, TransactionStatus,  # NOQA
+                            WorkdayTransaction, money)
+from finance.suggestions import (ENCUMBRANCE_CLOSE_ENOUGH, active_project_tags,
+                                 active_suggestion_rules, encumbrance_match_is_close,
+                                 encumbrance_match_label, suggest_all,
+                                 suggest_encumbrance_matches, suggest_refund_targets)
 
 #: Where a staged upload's details live between the two halves of an import.
 #: The session, not a hidden form field, so a token cannot be replayed by
@@ -69,10 +73,24 @@ def queue(request):
         form = ReconcileForm(parent_transaction=txn, prefix='txn%s' % txn.pk,
                              suggestions=suggestions)
         filled += len(form.autofilled)
+        # Only ever a shortlist to choose from, so it is built per row rather
+        # than prefetched: the queryset is narrow (pending, parentless, dated
+        # near this line) and most ledgers carry a handful of open
+        # encumbrances at a time, not a page of them.
+        encumbrances = [
+            {'entry': entry, 'label': encumbrance_match_label(entry, txn)}
+            for entry in suggest_encumbrance_matches(txn)]
+        # Everything in the window is offered; only a candidate of roughly the
+        # right size earns the warning on the row itself.
+        close_encumbrance = any(encumbrance_match_is_close(c['entry'], txn)
+                                for c in encumbrances)
+
         rows.append({
             'txn': txn,
             'form': form,
             'suggestions': suggestions,
+            'encumbrances': encumbrances,
+            'close_encumbrance': close_encumbrance,
             'is_revenue': txn.net_amount > 0,
             'partially_allocated': txn.slice_count > 0,
             # The seldom-used fields are folded away so a row reads as two
@@ -98,6 +116,9 @@ def queue(request):
         'can_import': request.user.has_perm('finance.import_workdaytransaction'),
         'can_edit': can_edit,
         'bulk_reconcile_form': BulkReconcileForm() if can_edit else None,
+        # Every open reservation, not the per-row shortlist: a bulk draw spans
+        # several lines, so no single line's ranking applies to it.
+        'bulk_encumbrance_form': BulkEncumbranceForm() if can_edit else None,
     }
     context.update(filter_context(request))
     return render(request, 'finance/queue.html', context)
@@ -372,6 +393,11 @@ def suggestions_json(request, pk):
             'value': str(entry.pk),
             'label': "%s — %s" % (entry.description or entry.parent_transaction.payee, entry.amount),
         } for entry in suggest_refund_targets(txn)]
+    else:
+        payload['encumbrances'] = [{
+            'value': str(entry.pk),
+            'label': encumbrance_match_label(entry, txn),
+        } for entry in suggest_encumbrance_matches(txn)]
 
     return JsonResponse(payload)
 
@@ -396,8 +422,11 @@ def encumbrance(request, pk=None):
                     entry.created_by = request.user
                 entry.full_clean()
                 entry.save()
-            messages.success(request, "Encumbered $%s. It will stay Pending until the matching "
-                                      "Workday line is imported." % abs(entry.amount))
+            messages.success(
+                request,
+                "Encumbered $%s. It stays Pending until the matching Workday line is "
+                "imported — that line will then offer this row under “Already "
+                "encumbered?” in the queue." % abs(entry.amount))
             return HttpResponseRedirect(reverse('finance:ledger'))
     else:
         form = EncumbranceForm(instance=instance)
@@ -410,6 +439,265 @@ def encumbrance(request, pk=None):
     }
     context.update(filter_context(request))
     return render(request, 'finance/encumbrance.html', context)
+
+
+def _name_a_few(labels, limit=5):
+    """
+    ``"A, B, C and 4 more"`` -- enough to recognise, not enough to scroll.
+
+    A bulk action's report has to name the rows it did not finish, or the
+    Treasurer has to go and find them; naming forty of them in a banner means
+    nobody reads any.
+    """
+    labels = list(labels)
+    named = ", ".join(labels[:limit])
+    if len(labels) > limit:
+        named += " and %s more" % (len(labels) - limit)
+    return named
+
+
+def _draw_message(txn, reserved, drawn, exhausted, settled):
+    """
+    What one drawdown did, in a sentence.
+
+    Says all three of what the line took, what the reservation has left, and
+    what the line still needs, because after this change any of them can be
+    non-obvious: a reservation spanning ten lines is neither used up nor
+    untouched, and the Treasurer has no other way to see where it stands
+    without going and looking.
+    """
+    took = abs(money(drawn))
+    estimate = abs(money(reserved))
+    verb = "settled against" if settled else "matched to"
+
+    if exhausted and took == estimate:
+        message = "%s %s an encumbrance of $%s." % (txn.reference, verb, took)
+    elif exhausted:
+        message = ("%s %s an encumbrance reserved at $%s; $%s was drawn."
+                   % (txn.reference, verb, estimate, took))
+    else:
+        message = ("%s %s $%s of a $%s encumbrance — $%s stays reserved."
+                   % (txn.reference, verb, took, estimate, estimate - took))
+
+    left = abs(money(txn.unallocated_amount))
+    if left:
+        message += (" $%s of this line is still unallocated — the reservation did not "
+                    "cover it." % left)
+    return message
+
+
+def _encumbrance_draw(reserved, remaining):
+    """
+    How much of one reservation this bank line takes, and whether that ends it.
+
+    Three shapes, and the arithmetic has to tell them apart because charging the
+    wrong one of them to a budget line is invisible afterwards. Everything here
+    is negative -- money going out -- so the comparisons are on magnitude.
+
+    * **The reservation is larger than the line.** One encumbrance covering ten
+      invoice lines is the ordinary case: somebody reserves what the whole job
+      will cost and Workday delivers it a line at a time. The line takes what it
+      needs and the reservation stays open for the rest.
+    * **The line is larger, but not by much.** An estimate is a round number and
+      an invoice is not, so $200.00 reserved against $203.55 charged is the
+      estimate being an estimate. The reservation covers the line and closes.
+    * **The line is larger by a lot.** A $200 reservation is not evidence about
+      a $2,000 charge. It covers the $200 it was written for and the rest of the
+      line stays in the queue to be routed on its own -- silently swallowing the
+      difference would charge the budget line $1,800 nobody reserved, which is
+      the exact failure this whole feature exists to prevent.
+
+    :returns: ``(draw, exhausted)`` -- what this line takes, and whether the
+        reservation has nothing left afterwards.
+    """
+    reserved, remaining = money(reserved), money(remaining)
+    if abs(reserved) > abs(remaining):
+        return remaining, False
+    # Within the tolerance the difference is estimate noise, so the reservation
+    # stretches to cover the line; beyond it, it covers only what it says.
+    slack = abs(money(remaining)) * ENCUMBRANCE_CLOSE_ENOUGH
+    covers_the_line = abs(remaining - reserved) <= slack
+    return (remaining if covers_the_line else reserved), True
+
+
+def _slice_from_encumbrance(entry, txn, amount, user):
+    """
+    One bank line's share of a reservation, as its own ledger entry.
+
+    Written when the reservation is bigger than the line and so survives it.
+    The routing is copied because that is the whole point -- somebody already
+    decided what this money was for -- but the receipt is not: it is evidence of
+    a purchase that has cleared, and what is left reserved has not.
+
+    ``created_by`` is the person allocating, while the reservation keeps whoever
+    wrote it. The two are different facts and the ledger has room for both.
+    """
+    return ParsedTransaction(
+        parent_transaction=txn,
+        amount=amount,
+        status=TransactionStatus.PENDING,
+        effective_date=txn.accounting_date,
+        description=entry.description,
+        audit_explanation=entry.audit_explanation,
+        is_projection=entry.is_projection,
+        fund_source=entry.fund_source,
+        lnl_spend_category=entry.lnl_spend_category,
+        fr_line_target=entry.fr_line_target,
+        project_tag=entry.project_tag,
+        linked_event=entry.linked_event,
+        created_by=user,
+    )
+
+
+def draw_from_encumbrance(entry, txn, user):
+    """
+    Charge as much of ``entry`` as ``txn`` accounts for against ``txn``.
+
+    The reservation is the thing that persists. It keeps its primary key, its
+    author and its whole revision history across every line it pays for, and
+    shrinks as each one lands; only the line that finishes it off takes the row
+    itself. That is what lets ten Workday lines map to one encumbrance without
+    the reservation's identity churning underneath the Treasurer -- it stays the
+    same row in the picker, reading down towards zero.
+
+    Raises ``ValidationError`` if the result would not be a legal entry, having
+    written nothing: the caller runs inside an atomic revision.
+
+    :returns: ``(drawn, exhausted)`` -- how much this line took, and whether the
+        reservation is now closed.
+    """
+    remaining = txn.unallocated_amount
+    draw, exhausted = _encumbrance_draw(entry.amount, remaining)
+
+    if not exhausted:
+        # The reservation outlives this line, so the line gets a copy and the
+        # reservation is written down by what it just paid for.
+        slice_ = _slice_from_encumbrance(entry, txn, draw, user)
+        slice_.full_clean()
+        slice_.save()
+        entry.amount = money(entry.amount) - money(draw)
+        entry.full_clean()
+        entry.save()
+        return draw, False
+
+    # Nothing left over, so the reservation becomes this line's entry rather
+    # than spawning one and deleting itself -- the row keeps its history.
+    entry.parent_transaction = txn
+    entry.amount = draw
+    entry.effective_date = txn.accounting_date
+    entry.full_clean()
+    entry.save()
+    return draw, True
+
+
+@login_required
+@permission_required('finance.edit_subledger', raise_exception=True)
+@require_POST
+def match_encumbrance(request, pk):
+    """
+    Attach a pending encumbrance to the bank line that turned out to be it.
+
+    This is the other half of :func:`encumbrance`, and until now it did not
+    exist: three places in the UI told the Treasurer an encumbrance "stays
+    Pending until it is matched to an imported transaction", and nothing in
+    the app could do the matching. The consequence was not merely a missing
+    convenience -- reconciling the imported line the ordinary way writes a
+    *second* entry, so the funding request line was charged both the estimate
+    and the actual, and the only sign of it was a balance quietly $200 short.
+
+    Three things are settled here, all of which are wrong to leave to the
+    person doing it:
+
+    * **The amount becomes the actual.** An encumbrance is an estimate and the
+      bank line is what happened, so the entry takes the line's unallocated
+      remainder. An over-estimate keeps its difference reserved --
+      see :func:`_carve_remainder`.
+    * **The date becomes the accounting date.** ``effective_date`` is filled in
+      only when blank, so an encumbrance carries the day it was *written*. A
+      June reservation settling a July charge would otherwise stay in FY25
+      while its bank line sits in FY26, splitting one purchase across two
+      fiscal years on the ledger, the cash-flow chart and the award balance.
+    * **Routing is left exactly as it was.** Somebody already decided what this
+      money was for; the arrival of the invoice is not new information about
+      that.
+    """
+    txn = get_object_or_404(WorkdayTransaction, pk=pk)
+    redirect_to = request.POST.get('next') or reverse('finance:queue')
+    wants_json = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+    def fail(message, status=400):
+        if wants_json:
+            return JsonResponse({'ok': False, 'reference': txn.reference,
+                                 'message': message}, status=status)
+        messages.error(request, message)
+        return HttpResponseRedirect(redirect_to)
+
+    # The picker's first option is "not encumbered", which is a real answer and
+    # the common one -- it just is not this button's answer.
+    chosen = (request.POST.get('encumbrance') or '').strip()
+    if not chosen.isdigit():
+        return fail("Pick an encumbrance from the list first, or reconcile %s with the form "
+                    "below if it was never encumbered." % txn.reference)
+
+    entry = ParsedTransaction.objects.filter(
+        pk=int(chosen),
+        parent_transaction__isnull=True,
+        status=TransactionStatus.PENDING).first()
+    if entry is None:
+        # Nearly always two people working the queue at once: the row was on
+        # screen when the page rendered and matched by someone else since.
+        return fail("That encumbrance is no longer pending — it may have been matched or "
+                    "deleted already. Reload the queue and try again.", status=409)
+
+    remaining = txn.unallocated_amount
+    if not remaining:
+        return fail("%s is already fully allocated, so there is nothing for an encumbrance "
+                    "to settle." % txn.reference, status=409)
+    if (remaining > 0) != (entry.amount > 0):
+        # An encumbrance is always money out; a positive line is a receipt.
+        return fail("%s is money coming in, and an encumbrance reserves money going out."
+                    % txn.reference)
+
+    reserved = entry.amount
+
+    try:
+        with reversion.create_revision():
+            reversion.set_user(request.user)
+            reversion.set_comment("Matched to %s from the ingestion queue" % txn.reference)
+            drawn, exhausted = draw_from_encumbrance(entry, txn, request.user)
+    except ValidationError as exc:
+        # Attaching a parent brings the partition rules into play for the first
+        # time, so a cross-partition encumbrance can fail here having been
+        # perfectly valid as a standalone row.
+        return fail("%s could not be matched: %s"
+                    % (txn.reference, " ".join(exc.messages)))
+
+    settled = txn.is_fully_allocated and request.user.has_perm('finance.settle_subledger')
+    if settled:
+        txn.settle()
+
+    message = _draw_message(txn, reserved, drawn, exhausted, settled)
+
+    if wants_json:
+        txn.refresh_from_db()
+        return JsonResponse({
+            'ok': True,
+            'reference': txn.reference,
+            'message': message,
+            'settled': settled,
+            'done': txn.is_fully_allocated,
+            'unallocated': str(txn.unallocated_amount),
+            # The queue's Undo deletes a row's allocations outright. That is
+            # the right way back out of an allocation typed a second ago and
+            # the wrong way back out of an encumbrance logged weeks ago -- it
+            # would take the description, the reason and the reservation with
+            # it, and none of that came from the bank line. Correcting a wrong
+            # match is an edit on the entry, not a deletion.
+            'undoable': False,
+        })
+
+    messages.success(request, message)
+    return HttpResponseRedirect(redirect_to)
 
 
 @login_required
@@ -595,4 +883,126 @@ def bulk_reconcile(request):
     if len(refused) > 5:
         messages.warning(request, "...and %s more the settings would have invalidated."
                          % (len(refused) - 5))
+    return HttpResponseRedirect(redirect_to)
+
+
+@login_required
+@permission_required('finance.edit_subledger', raise_exception=True)
+@require_POST
+def bulk_match_encumbrance(request):
+    """
+    Draw one reservation down across every selected queue row.
+
+    One encumbrance written for a job, delivered by Workday as ten invoice
+    lines, is the ordinary shape of a big purchase -- and matching them one at
+    a time is the same repetition the bulk bar exists to remove, with a running
+    balance to keep in your head between clicks.
+
+    Oldest line first, because that is the order the money actually left and it
+    makes the drawdown reproducible: the same selection and the same reservation
+    always produce the same allocation, whichever order the rows were ticked in.
+
+    Stops when the reservation runs out rather than stretching it, and says how
+    many lines were left over. A reservation is evidence about the purchase it
+    was written for, not about whatever else is on the same export.
+    """
+    form = BulkEncumbranceForm(request.POST)
+    redirect_to = request.POST.get('next') or reverse('finance:queue')
+
+    if not form.is_valid():
+        for errors in form.errors.values():
+            for error in errors:
+                messages.error(request, error)
+        return HttpResponseRedirect(redirect_to)
+
+    entry = form.cleaned_data.get('encumbrance')
+    if entry is None:
+        messages.error(request, "Pick the encumbrance to draw from.")
+        return HttpResponseRedirect(redirect_to)
+
+    ids = form.selected_ids
+    if not ids:
+        messages.warning(request, "Nothing was selected.")
+        return HttpResponseRedirect(redirect_to)
+
+    lines = list(WorkdayTransaction.objects.filter(pk__in=ids)
+                 .order_by('accounting_date', 'pk'))
+
+    revenue = [t for t in lines if t.net_amount > 0]
+    if revenue:
+        messages.warning(
+            request, "%s revenue line%s skipped — an encumbrance reserves money going out."
+            % (len(revenue), '' if len(revenue) == 1 else 's'))
+    lines = [t for t in lines if t.net_amount < 0 and t.unallocated_amount]
+
+    if not lines:
+        messages.info(request, "Nothing was left to allocate on the selected lines.")
+        return HttpResponseRedirect(redirect_to)
+
+    reserved = entry.amount
+    can_settle = request.user.has_perm('finance.settle_subledger')
+    covered, settled, refused, untouched = [], 0, [], []
+    exhausted = False
+
+    with reversion.create_revision():
+        reversion.set_user(request.user)
+        reversion.set_comment("Drawn from an encumbrance in bulk from the ingestion queue")
+        for index, txn in enumerate(lines):
+            if exhausted:
+                # Nothing left to draw, so every remaining line is untouched
+                # rather than partly done -- and is named below.
+                untouched = lines[index:]
+                break
+            try:
+                # Each row is validated on its own and a failure leaves it
+                # alone: a bulk action must never write a row the rest of the
+                # app would have rejected. Savepointed so one refusal does not
+                # take the successful draws before it down with it.
+                with transaction.atomic():
+                    drawn, exhausted = draw_from_encumbrance(entry, txn, request.user)
+            except ValidationError as exc:
+                refused.append((txn, exc))
+                continue
+            covered.append((txn, drawn))
+            if can_settle and txn.is_fully_allocated:
+                txn.settle()
+                settled += 1
+
+    if covered:
+        total = abs(sum((money(d) for _, d in covered), ZERO))
+        messages.success(
+            request, "Drew $%s from the encumbrance across %s line%s%s. %s" % (
+                total, len(covered), '' if len(covered) == 1 else 's',
+                " and settled %s" % settled if settled else '',
+                "The reservation is now closed." if exhausted else
+                "$%s stays reserved." % (abs(money(reserved)) - total)))
+
+    # A line the reservation reached but did not finish. It stays in the queue,
+    # which is correct and easy to miss among nine that left it -- the eye reads
+    # "settled 9" and stops.
+    short = [(t, t.unallocated_amount) for t, _ in covered if t.unallocated_amount]
+    if short:
+        messages.info(
+            request, "The reservation did not cover all of %s: %s. %s still in the queue."
+            % ("one line" if len(short) == 1 else "%s lines" % len(short),
+               _name_a_few("%s ($%s left)" % (t.reference, abs(money(left)))
+                           for t, left in short),
+               "It is" if len(short) == 1 else "They are"))
+
+    # The lines the reservation did not reach. Named rather than counted: the
+    # Treasurer has to route them by hand and needs to know which.
+    if untouched:
+        messages.info(
+            request, "The encumbrance ran out before %s line%s: %s. Reconcile %s on %s own."
+            % (len(untouched), '' if len(untouched) == 1 else 's',
+               _name_a_few(t.reference for t in untouched),
+               'it' if len(untouched) == 1 else 'them',
+               'its' if len(untouched) == 1 else 'their'))
+
+    for txn, exc in refused[:5]:
+        messages.warning(request, "%s unchanged: %s" % (txn.reference, " ".join(exc.messages)))
+    if len(refused) > 5:
+        messages.warning(request, "...and %s more the reservation would have invalidated."
+                         % (len(refused) - 5))
+
     return HttpResponseRedirect(redirect_to)

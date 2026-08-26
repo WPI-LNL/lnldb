@@ -142,6 +142,19 @@
                             <span class="glyphicon glyphicon-alert"></span> Unknown request
                         </span>
                     {% endif %}
+
+                    {% comment %}
+                        Reconciling this line the ordinary way while an
+                        encumbrance for it is open charges the budget twice, so
+                        the possibility is stated on the row itself and not only
+                        in the picker further down.
+                    {% endcomment %}
+                    {% if row.close_encumbrance %}
+                        <span class="fin-tag is-warn"
+                              title="A pending encumbrance of about this amount is open. Match it below rather than reconciling, or the budget line is charged twice.">
+                            <span class="glyphicon glyphicon-lock"></span> Maybe encumbered
+                        </span>
+                    {% endif %}
                 </div>
 
                 <a href="{% url 'finance:txn-detail' row.txn.pk %}" class="fin-queue-open"
@@ -152,7 +165,46 @@
 
             {% if can_edit %}
                 <div class="fin-queue-body">
-                    <form method="post" action="{% url 'finance:reconcile' row.txn.pk %}">
+                    {% comment %}
+                        Above the routing form, because it answers a question
+                        asked earlier than "where does this go": somebody has
+                        already said where this money goes, and filling the form
+                        in below would charge the budget line a second time.
+
+                        Its own <form> rather than a control inside the
+                        reconcile one -- nested forms are invalid, and these two
+                        post to different places and mean opposite things.
+                    {% endcomment %}
+                    {% if row.encumbrances %}
+                        <form method="post" class="fin-encumbrance-match"
+                              action="{% url 'finance:match-encumbrance' row.txn.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <label class="fin-encumbrance-lede" for="fin-enc-{{ row.txn.pk }}">
+                                <span class="glyphicon glyphicon-lock"></span>
+                                Already encumbered?
+                            </label>
+                            <select name="encumbrance" id="fin-enc-{{ row.txn.pk }}"
+                                    class="form-control input-sm">
+                                {% comment %}
+                                    Nothing pre-selected on purpose. Picking the
+                                    wrong row files a purchase against the wrong
+                                    budget line and marks a live commitment
+                                    spent, and neither shows up afterwards.
+                                {% endcomment %}
+                                <option value="">Not encumbered — reconcile below</option>
+                                {% for candidate in row.encumbrances %}
+                                    <option value="{{ candidate.entry.pk }}">{{ candidate.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-default btn-sm">
+                                Match &amp; settle
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <form method="post" class="fin-reconcile-form"
+                          action="{% url 'finance:reconcile' row.txn.pk %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
 
@@ -272,6 +324,28 @@
                     {{ bulk_reconcile_form.project_tag }}
 
                     <button type="submit" class="btn btn-primary btn-sm">Reconcile selected</button>
+
+                    {% comment %}
+                        The other thing a batch of rows can be: ten Workday
+                        lines delivering one encumbrance. It shares the bar and
+                        the selection because the selecting is identical, and
+                        posts elsewhere via formaction because the actions are
+                        not -- this one takes its routing from the reservation
+                        rather than from the boxes to the left.
+
+                        formnovalidate because Fund above is a required field
+                        of the *other* action, and the browser would otherwise
+                        refuse to submit a form this button does not use it in.
+                    {% endcomment %}
+                    {% if bulk_encumbrance_form %}
+                        <span class="fin-bulk-or">or</span>
+                        {{ bulk_encumbrance_form.encumbrance }}
+                        <button type="submit" class="btn btn-default btn-sm" formnovalidate
+                                formaction="{% url 'finance:bulk-match-encumbrance' %}">
+                            Draw selected
+                        </button>
+                    {% endif %}
+
                     <button type="button" class="btn btn-link btn-sm" id="fin-qbulk-cancel"
                             style="color:#cbd2d9;">Cancel</button>
                 </div>

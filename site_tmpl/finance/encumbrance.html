@@ -36,6 +36,13 @@
                         matching line shows up in a Workday export. Encumbrances can never be
                         marked Settled on their own.
                     </p>
+                    <p class="fin-muted" style="font-size:13px;">
+                        When that line is imported it appears in the
+                        <a href="{% url 'finance:queue' %}">ingestion queue</a> under
+                        <em>Already encumbered?</em>, with this row on the list. Matching it
+                        there closes the encumbrance against the real charge &mdash; reconciling
+                        the line the ordinary way instead would charge the budget twice.
+                    </p>
                 </div>
             </div>
         </div>

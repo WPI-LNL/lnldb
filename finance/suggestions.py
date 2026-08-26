@@ -25,13 +25,15 @@ box is not a shortlist, it is a puzzle.
 Both carry a confidence for the UI to colour, but ``is_lookup`` is what decides
 whether the Treasurer is confirming or being asked.
 """
+import datetime
 import re
+from decimal import Decimal
 
 from django.db.models import Q
 from django.utils.formats import date_format
 
-from finance.models import (FundSource, ProjectTag, SuggestionRule,
-                            fund_source_for_workday_fund)
+from finance.models import (ZERO, FundSource, ProjectTag, SuggestionRule,
+                            fund_source_for_workday_fund, money)
 
 HIGH, MEDIUM, LOW = 'high', 'medium', 'low'
 
@@ -468,3 +470,139 @@ def suggest_refund_targets(txn, limit=8):
         ).select_related('parent_transaction')
         .order_by('-effective_date')[:limit]
     )
+
+
+# ---------------------------------------------------------------------------
+# Matching an encumbrance to the bank line that finally settles it
+# ---------------------------------------------------------------------------
+
+#: How far either side of the accounting date an encumbrance may sit and still
+#: be offered. Wide on the earlier side because that is the whole point of an
+#: encumbrance -- gear ordered in June can clear in September -- and narrow on
+#: the later side, where the only honest case is someone logging the purchase a
+#: few days after it already went through.
+ENCUMBRANCE_LOOKBACK_DAYS = 365
+ENCUMBRANCE_LOOKAHEAD_DAYS = 30
+
+#: Within this fraction of the bank amount, an encumbrance is close enough to
+#: be worth warning about on the row itself. Everything inside the date window
+#: is still offered in the picker -- a badly estimated match is still a match,
+#: and only a person can tell -- but a $900 reservation and a $12 charge should
+#: not put a warning on each other, or the warning stops being read.
+ENCUMBRANCE_CLOSE_ENOUGH = Decimal('0.25')
+
+
+def encumbrance_match_score(entry, txn):
+    """
+    How well one pending encumbrance fits a bank line. Lower sorts first.
+
+    Deliberately **not** symmetric about the line's amount, because the two
+    directions mean opposite things. A reservation smaller than the charge has
+    failed to cover it and something else will have to; a reservation larger
+    than the charge is the ordinary shape of the whole feature -- one
+    encumbrance written for a job that Workday delivers as ten invoice lines --
+    and penalising it by the difference would bury a $1,000 reservation under
+    every $80 stray on an $80 line, which is exactly the case a Treasurer opens
+    this picker to find.
+
+    So the signals, in the order a person weighs them:
+
+    1. **What it fails to cover**, ignoring a shortfall small enough that the
+       reservation will simply stretch over it -- see
+       :func:`finance.views.ingest.draw_from_encumbrance`, which does the
+       stretching, and :data:`ENCUMBRANCE_CLOSE_ENOUGH`, which bounds it.
+    2. **Whether the payee is named** in what somebody typed.
+    3. **How much would be left over**, so the tightest sufficient reservation
+       is offered ahead of a larger one that would also do.
+    4. **How far apart the dates are**, last: an encumbrance is written weeks
+       before the charge by definition, so this separates near-ties and nothing
+       more.
+    """
+    target = abs(money(txn.net_amount))
+    reserved = abs(money(entry.amount))
+    if not target:                                          # pragma: no cover
+        return (1.0, 1, 1.0, 0)
+
+    uncovered = max(target - reserved, ZERO)
+    # A shortfall this small is the estimate being an estimate, and the draw
+    # will cover the line anyway, so it is not held against the match.
+    if uncovered <= target * ENCUMBRANCE_CLOSE_ENOUGH:
+        uncovered = ZERO
+    surplus = max(reserved - target, ZERO)
+
+    payee = (txn.payee or '').strip().lower()
+    haystack = ' '.join(filter(None, (entry.description, entry.audit_explanation))).lower()
+    names_payee = bool(payee) and payee in haystack
+
+    days = abs((entry.effective_date - txn.accounting_date).days)
+    return (float(uncovered / target), 0 if names_payee else 1,
+            float(surplus / target), days)
+
+
+def suggest_encumbrance_matches(txn, limit=8):
+    """
+    Pending encumbrances that this bank line might be the arrival of.
+
+    An encumbrance is money reserved before the purchase reaches Workday, so
+    the line that eventually settles it has to be recognised by resemblance:
+    there is no shared identifier, and there cannot be one -- the encumbrance
+    was written before Workday had ever heard of the charge.
+
+    Deliberately a shortlist, not an answer. Nothing here is auto-applied and
+    nothing is pre-selected: getting this wrong files a purchase against the
+    wrong budget line and marks a genuine commitment as spent, and neither is
+    visible afterwards. The filters are only what would be *wrong* to offer
+    (revenue, already-matched, absurd dates); everything else is ranking.
+    """
+    from finance.models import ParsedTransaction, TransactionStatus
+
+    # Revenue never settles an encumbrance: you cannot reserve money coming in.
+    if txn.net_amount >= 0:
+        return []
+
+    earliest = txn.accounting_date - datetime.timedelta(days=ENCUMBRANCE_LOOKBACK_DAYS)
+    latest = txn.accounting_date + datetime.timedelta(days=ENCUMBRANCE_LOOKAHEAD_DAYS)
+
+    candidates = (ParsedTransaction.objects
+                  .filter(parent_transaction__isnull=True,
+                          status=TransactionStatus.PENDING,
+                          amount__lt=0,
+                          effective_date__range=(earliest, latest))
+                  .select_related('lnl_spend_category', 'fund_source',
+                                  'fr_line_target__funding_request'))
+
+    return sorted(candidates, key=lambda entry: encumbrance_match_score(entry, txn))[:limit]
+
+
+def encumbrance_match_is_close(entry, txn):
+    """
+    Whether this candidate is near enough to flag the bank line on sight.
+
+    The picker offers everything in the window; this decides what the row says
+    before anyone opens it. See :data:`ENCUMBRANCE_CLOSE_ENOUGH`.
+    """
+    target = abs(money(txn.net_amount))
+    if not target:                                          # pragma: no cover
+        return False
+    return abs(abs(money(entry.amount)) - target) / target <= ENCUMBRANCE_CLOSE_ENOUGH
+
+
+def encumbrance_match_label(entry, txn):
+    """
+    One encumbrance as it reads in the picker.
+
+    The gap against the bank line is on the label because it is the thing that
+    decides whether this is the right row, and working it out in your head from
+    two numbers on opposite sides of a dropdown is exactly the sort of small
+    arithmetic that gets skipped.
+    """
+    reserved = abs(money(entry.amount))
+    actual = abs(money(txn.net_amount))
+    difference = actual - reserved
+    if not difference:
+        gap = "exact match"
+    else:
+        gap = "%s %s" % (money(abs(difference)), "over" if difference > 0 else "under")
+    return "%s — $%s reserved %s · %s" % (
+        entry.description or "(no description)", reserved,
+        date_format(entry.effective_date, 'M j, Y'), gap)

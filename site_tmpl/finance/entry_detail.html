@@ -66,6 +66,11 @@
                             It has no bank line yet, so it stays Pending until it is matched to an
                             imported transaction.
                         </p>
+                        <p class="fin-muted">
+                            Match it from the <a href="{% url 'finance:queue' %}">ingestion
+                            queue</a>: the bank line it belongs to offers this row under
+                            <em>Already encumbered?</em>.
+                        </p>
                     </div>
                 </div>
             {% endif %}

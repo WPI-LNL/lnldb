@@ -29,7 +29,8 @@ what they cover rather than alphabetically.
     helpers behind the two-step import.
 ``test_ingest``
     The queue itself -- upload, confirm, reconcile, bulk reconcile, undo,
-    settle, and the suggestion JSON endpoint.
+    settle, matching an encumbrance to the line that settles it, and the
+    suggestion JSON endpoint.
 
 **Deciding what a line means**
 

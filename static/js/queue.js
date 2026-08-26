@@ -158,7 +158,12 @@
     function undoUrl(pk) {
         // Built from the row's own allocate action so the URL prefix this app
         // is mounted under is never guessed at.
-        return String($('#txn-' + pk).find('form').attr('action'))
+        //
+        // Pinned to the reconcile form by class rather than taken as "the form
+        // in this row": there is a second one above it now -- the encumbrance
+        // picker -- and .find('form') returns the first, which would have sent
+        // every Undo to the wrong endpoint.
+        return String($('#txn-' + pk).find('form.fin-reconcile-form').attr('action'))
             .replace(/reconcile\/$/, 'undo/');
     }
 
@@ -236,7 +241,14 @@
                 $row.addClass('fin-queue-done');
                 rowMessage($row, data.message, 'success');
                 updateCounts(-1);
-                undoButton($row, pk);
+                // Undo deletes the row's allocations outright, which is the
+                // right way back out of an allocation just typed and the wrong
+                // way back out of an encumbrance somebody logged weeks ago --
+                // it would take the description, the reason and the reservation
+                // with it. Matching says so by sending undoable: false.
+                if (data.undoable !== false) {
+                    undoButton($row, pk);
+                }
                 $(document).trigger('fin:row-done', [pk]);
             } else {
                 // A partial allocation leaves work behind, so the row stays and
@@ -252,8 +264,8 @@
             if (data && data.errors) {
                 showErrors($form, data.errors, data.reference || 'This line');
             } else {
-                rowMessage($row, 'That could not be saved. Reload the page and try again.',
-                           'error');
+                rowMessage($row, (data && data.message) ||
+                           'That could not be saved. Reload the page and try again.', 'error');
             }
         });
     });

@@ -284,6 +284,124 @@ identical. Only the label is new — an encumbrance still carries expense routin
 still answers yes to ``is_expense``, and is still counted as spending
 everywhere it was before.
 
+Closing an encumbrance
+----------------------
+
+An encumbrance stops being one when the real charge is imported, but nothing
+makes that happen by itself: the reservation was written before Workday had
+ever heard of the purchase, so there is no shared identifier and there cannot
+be one. The two have to be matched by a person.
+
+The ingestion queue offers that on the bank line itself. Above the routing form
+— above, because it answers a question asked earlier than "where does this go"
+— a line that resembles an open reservation carries an *Already encumbered?*
+picker listing the candidates, each labelled with what was reserved, when, and
+how far it is from the amount that actually cleared::
+
+    Gaff tape order — $200.00 reserved Aug 20, 2025 · 3.55 over
+
+The ranking behind that list is deliberately **not** symmetric about the line's
+amount, because the two directions mean opposite things. A reservation smaller
+than the charge has failed to cover it and something else will have to; a
+reservation *larger* than the charge is the ordinary shape of the whole feature,
+and scoring it by the raw difference would bury a $1,000 reservation under every
+$80 stray on an $80 line — the exact row the Treasurer opened the picker to find.
+So :func:`~finance.suggestions.encumbrance_match_score` sorts on what a
+reservation fails to cover first, ignores a shortfall small enough that the draw
+will stretch over it anyway, and only then prefers the tightest sufficient
+reservation. Nothing is pre-selected: matching the wrong row files a purchase
+against the wrong budget line *and* marks a live commitment spent, and neither
+is visible once done.
+
+Choosing one draws that line's share out of the reservation. Two things are
+decided there rather than left to the person doing it:
+
+* **The date becomes the accounting date.** ``effective_date`` is filled in
+  only when blank, so an encumbrance otherwise keeps the day it was *written*.
+  A June reservation settling a July charge would sit in FY25 while its own
+  bank line sits in FY26, splitting one purchase across two fiscal years on the
+  ledger, the cash-flow chart and the award balance.
+* **Routing is left alone.** Somebody already decided what the money was for.
+  The invoice arriving is not new information about that.
+
+Drawing down
+~~~~~~~~~~~~
+
+One reservation usually pays for more than one bank line. A single encumbrance
+is written for a job and Workday then delivers it as ten invoice lines weeks
+apart, so the reservation is not consumed by the first line that matches it: it
+is *drawn down*, and :func:`finance.views.ingest.draw_from_encumbrance` decides
+how much each line takes. Three shapes, and the arithmetic has to tell them
+apart because charging the wrong one to a budget line is invisible afterwards:
+
+============================  =========================================================
+Reservation **larger**        The line takes what it needs; the reservation stays open
+                              for the rest.
+Line larger, **not by much**  Within :data:`~finance.suggestions.ENCUMBRANCE_CLOSE_ENOUGH`
+                              the difference is estimate noise, so the reservation
+                              stretches to cover the line and closes.
+Line larger **by a lot**      The reservation covers only what it says. The rest of the
+                              line stays in the queue to be routed on its own —
+                              swallowing the difference would charge the budget line
+                              money nobody reserved.
+============================  =========================================================
+
+The reservation is the row that persists. It keeps its primary key, its author
+and its whole revision history across every line it pays for, and only the line
+that finishes it off takes the row itself. That is what lets ten Workday lines
+map to one encumbrance without the reservation's identity churning underneath
+the Treasurer: it is the same row in the picker on the tenth match as on the
+first, reading down towards zero. ``created_by`` on each drawn slice is the
+person allocating, while the reservation keeps whoever wrote it — two different
+facts, and the ledger has room for both.
+
+Ten lines at once
+~~~~~~~~~~~~~~~~~
+
+Matching ten lines one at a time works, but it is the same repetition the bulk
+bar exists to remove, with a running balance to keep in your head between
+clicks. So the queue's bulk bar carries a second action beside *Reconcile
+selected*: tick the rows, pick the reservation, and *Draw selected* runs the
+drawdown across all of them —
+:func:`finance.views.ingest.bulk_match_encumbrance`.
+
+Oldest line first, because that is the order the money actually left and it
+makes the result reproducible: the same selection and the same reservation
+always produce the same allocation, whichever order the rows were ticked in. It
+stops when the reservation runs out rather than stretching it, and reports all
+three outcomes by name — what was covered, what was covered only partly, and
+which lines it never reached. A batch that half-worked and said only
+"reconciled 9 lines" is how the other half gets found a month later.
+
+It takes no routing fields of its own, unlike the ordinary bulk reconcile: the
+answer to *where does this money go* is written on the reservation already, and
+asking again here would let a bulk action contradict the thing it is drawing
+from.
+
+Reconciling the line the ordinary way instead is the failure this exists to
+prevent: it writes a *second* entry, so the funding request line is charged the
+estimate **and** the actual, and the only symptom is a balance quietly a couple
+of hundred dollars short. Hence the *Maybe encumbered* tag on any row with a
+reservation of roughly the right size open against it.
+
+Nothing here is auto-applied and nothing is pre-selected. Matching the wrong
+row files a purchase against the wrong budget line *and* marks a live
+commitment spent, and neither is visible once done, so
+:func:`finance.suggestions.suggest_encumbrance_matches` returns a ranked
+shortlist and stops there. It ranks on the amount first — the one signal a crew
+member cannot be vague about — then on whether the payee appears in what they
+typed, then on how close the dates are. It filters only what would be *wrong*
+to offer: revenue lines, entries already on a bank line, and reservations dated
+absurdly far from the charge.
+
+The queue's *Undo* is deliberately not offered after a match. Undo deletes a
+row's allocations, which is the right way back out of an allocation typed a
+second ago and the wrong way back out of an encumbrance logged weeks ago — it
+would take the description, the reason and the reservation with it, none of
+which came from the bank line. Correcting a wrong match is an edit on the
+entry.
+
+
 Guard rails
 -----------
 

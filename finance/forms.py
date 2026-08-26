@@ -23,6 +23,7 @@ from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db.models import DecimalField, F, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.forms.models import BaseInlineFormSet, inlineformset_factory
+from django.utils.formats import date_format
 from mptt.forms import TreeNodeChoiceField
 
 from finance.importers import CSV_EXTENSIONS, XLSX_EXTENSIONS
@@ -1201,6 +1202,57 @@ class BulkReconcileForm(forms.Form):
     @property
     def selected_ids(self):
         """ The ticked queue rows, parsed as in :class:`BulkActionForm`. """
+        raw = self.cleaned_data.get('selected', '')
+        return [int(pk) for pk in raw.split(',') if pk.strip().isdigit()]
+
+
+class OpenEncumbranceChoiceField(forms.ModelChoiceField):
+    """ Open reservations, labelled with what is left rather than what was asked for. """
+
+    def label_from_instance(self, obj):
+        """ ``Whole gear order — $296.45 still reserved · Aug 20, 2025``. """
+        return "%s — $%s still reserved · %s" % (
+            obj.description or "(no description)", abs(obj.amount),
+            date_format(obj.effective_date, 'M j, Y'))
+
+
+class BulkEncumbranceForm(forms.Form):
+    """
+    Draw one reservation down across a whole selection of queue rows.
+
+    The case this exists for: a single encumbrance is written for a job, and
+    Workday then delivers it as ten separate invoice lines. Matching them one
+    at a time works -- the reservation survives each draw -- but it is the same
+    ten-times-over interaction the bulk bar exists to remove, and the balance to
+    keep track of between clicks is the thing most likely to be got wrong.
+
+    No routing fields, unlike :class:`BulkReconcileForm`: the answer to "where
+    does this money go" is already written on the reservation, and asking it
+    again here would let a bulk action contradict the thing it is drawing from.
+    """
+    selected = forms.CharField(widget=forms.HiddenInput, required=False)
+    encumbrance = OpenEncumbranceChoiceField(
+        queryset=ParsedTransaction.objects.none(), required=False,
+        label="Encumbrance", empty_label="Draw from encumbrance…")
+
+    def __init__(self, *args, **kwargs):
+        """ Resolve the open reservations per instance, newest first. """
+        super(BulkEncumbranceForm, self).__init__(*args, **kwargs)
+        self.fields['encumbrance'].queryset = (
+            ParsedTransaction.objects
+            .filter(parent_transaction__isnull=True,
+                    status=TransactionStatus.PENDING,
+                    amount__lt=0)
+            .order_by('-effective_date', '-pk'))
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.HiddenInput):
+                continue
+            existing = field.widget.attrs.get('class', '')
+            field.widget.attrs['class'] = (existing + ' form-control input-sm').strip()
+
+    @property
+    def selected_ids(self):
+        """ The ticked queue rows, parsed as in :class:`BulkReconcileForm`. """
         raw = self.cleaned_data.get('selected', '')
         return [int(pk) for pk in raw.split(',') if pk.strip().isdigit()]
 

@@ -364,6 +364,19 @@
 /* The queue's bar carries three pickers rather than one, so each says which
    it is -- three unlabelled dropdowns in a row is a guessing game. */
 .fin-bulk-label { font-weight: 400; font-size: 12px; margin: 0 -4px 0 4px; opacity: 0.85; }
+
+/* The bar carries two different actions on one selection -- reconcile these
+   rows with the same routing, or draw them all from one reservation. The word
+   between them is what stops the second dropdown reading as a third field of
+   the first action. */
+.fin-bulk-or {
+    font-size: 12px;
+    font-style: italic;
+    opacity: 0.6;
+    padding: 0 2px;
+    border-left: 1px solid rgba(255, 255, 255, 0.15);
+    padding-left: 12px;
+}
 .fin-bulk-bar .form-control { display: inline-block; width: auto; }
 
 /* The bar is dark and sets color on itself, and a form control that inherits
@@ -539,6 +552,48 @@
 .fin-queue-open .glyphicon { font-size: 10px; margin-right: 3px; }
 
 .fin-queue-body { padding: 12px 14px; }
+
+/* ---- "Already encumbered?" -------------------------------------------------
+   One strip above the routing form. Deliberately quieter than the Allocate
+   button below it -- most lines were never encumbered, so this is a question
+   being asked, not the expected next action -- but tinted warning rather than
+   plain, because reconciling past an open encumbrance is the one mistake on
+   this page that charges a budget line twice and leaves no trace. */
+.fin-encumbrance-match {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border: 1px solid #f0e0b8;
+    border-left: 3px solid #d9a441;
+    border-radius: 3px;
+    background: #fdf8ec;
+}
+
+.fin-encumbrance-lede {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #8a6d3b;
+    white-space: nowrap;
+}
+
+.fin-encumbrance-lede .glyphicon { font-size: 10px; margin-right: 4px; }
+
+/* Grows to eat the strip: the labels carry a description, an amount, a date
+   and the gap against the bank line, and truncating any of those is what
+   would make the picker unusable. */
+.fin-encumbrance-match select {
+    flex: 1 1 320px;
+    min-width: 0;
+    width: auto;
+}
+
+@media (max-width: 600px) {
+    .fin-encumbrance-match select { flex-basis: 100%; }
+}
 
 /* ---- The field component --------------------------------------------------
    Label, control, one caption. Every box on the page is this, which is what
