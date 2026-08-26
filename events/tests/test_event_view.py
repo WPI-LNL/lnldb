@@ -84,6 +84,9 @@ class EventBasicViewTest(ViewTestCase):
         permission = Permission.objects.get(codename="edit_event_text")
         self.user.user_permissions.add(permission)
 
+        permission = Permission.objects.get(codename="view_event_billing")
+        self.user.user_permissions.add(permission)
+
         self.assertOk(self.client.get(reverse("events:new")))
 
         # Verify pricelist defaults
@@ -126,6 +129,12 @@ class EventBasicViewTest(ViewTestCase):
             "save": "Save Changes"
         }
 
+        # we expect this to be erroring here because this event does have a pricelist, but we're trying to add a service that isn't in the pricelist
+        self.assertContains(self.client.post(reverse("events:new"), valid_data), "Select a valid choice. That choice is not one of the available choices.", status_code=400)
+        self.assertFalse(models.Event2019.objects.filter(event_name="New Event").exists())
+
+        # we can fix this by adding the service to the pricelist
+        models.ServicePrice.objects.create(service=service, pricelist=pricelist1, cost=10)
         self.assertRedirects(self.client.post(reverse("events:new"), valid_data), reverse("events:detail", args=[4]))
 
         self.assertTrue(models.Event2019.objects.filter(event_name="New Event").exists())
@@ -162,6 +171,8 @@ class EventBasicViewTest(ViewTestCase):
 
         pricelist = models.Pricelist.objects.create(name="test pricelist")
         models.DiscountPrice.objects.create(pricelist=pricelist, discount=combo_discount, percent=10)
+        models.ServicePrice.objects.create(service=lighting_service, pricelist=pricelist, cost=10)
+        models.ServicePrice.objects.create(service=sound_service, pricelist=pricelist, cost=10)
 
         valid_data = {
             "event_name": "New Event",

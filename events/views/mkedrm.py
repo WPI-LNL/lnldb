@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.forms.models import inlineformset_factory
-from django.http import HttpResponseRedirect, Http404
+from django.http import HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 
@@ -12,7 +12,7 @@ from emails.generators import EventEmailGenerator
 from slack.views import event_edited_notification
 from slack.api import slack_post, lookup_user
 from events.forms import InternalEventForm, InternalEventForm2019, ServiceInstanceForm
-from events.models import BaseEvent, Event2019, ServiceInstance, Pricelist, Discount
+from events.models import BaseEvent, Event2019, ServiceInstance, Pricelist, Discount, Fee, Service
 from helpers.revision import set_revision_comment
 from helpers.util import curry_class
 
@@ -184,6 +184,33 @@ def eventnew(request, id=None, initial=None):
         context['msg'] = "New Event"
 
     return render(request, 'form_crispy_event.html', context, status = 400 if request.method == 'POST' else 200)
+
+@login_required
+def load_pricelist(request):
+    pricelist_id = request.GET.get('pricelist')
+    if pricelist_id:
+        pricelist = Pricelist.objects.get(id=pricelist_id)
+        services_list = list(pricelist.services.all().values('id', 'longname'))
+        fees_list = list(pricelist.fees.all().values('id', 'name'))
+        discounts_list = list(pricelist.discounts.all().values('id', 'name'))
+
+        response_dict = {
+            'services': services_list,
+            'fees': fees_list,
+            'discounts': discounts_list
+        }
+    else:
+        services_list = list(Service.objects.filter(enabled_event2019=True).values('id', 'longname'))
+        fees_list = list(Fee.objects.all().values('id', 'name'))
+        discounts_list = list(Discount.objects.all().values('id', 'name'))
+        response_dict = {
+            'services': services_list,
+            'fees': fees_list,
+            'discounts': discounts_list
+        }
+
+    return JsonResponse(response_dict)
+    
 
 @login_required
 def duplicate_event(request, id):
