@@ -259,6 +259,56 @@ class MeetingsViewTest(ViewTestCase):
         self.assertRedirects(self.client.post(reverse("meetings:new"), valid_data),
                              reverse("meetings:detail", args=[3]))
 
+    def test_bulk_new_attendance(self):
+        import datetime
+        office = LocationFactory(name="Office", setup_only=False, available_for_meetings=True)
+
+        # User should not have permission to create meetings by default
+        self.assertOk(self.client.get(reverse("meetings:bulk")), 403)
+
+        permission = Permission.objects.get(codename="create_mtg")
+        self.user.user_permissions.add(permission)
+
+        permission = Permission.objects.get(codename="list_mtgs")
+        self.user.user_permissions.add(permission)
+
+        self.assertOk(self.client.get(reverse("meetings:bulk")))
+
+        # Test invalid date range (end_date before start_date)
+        invalid_data = {
+            "meeting_type": str(self.meeting_type1.pk),
+            "location": str(office.pk),
+            "start_date": datetime.date(2026, 9, 14),
+            "end_date": datetime.date(2026, 9, 1),
+            "time": "17:00:00",
+            "days_of_week": ['1'],
+            "duration": "1 hour",
+            "agenda": "Bulk test agenda",
+            "save": "Bulk Create Meetings"
+        }
+        response = self.client.post(reverse("meetings:bulk"), invalid_data)
+        self.assertFormError(response, 'form', 'end_date', "End date must be on or after start date.")
+
+        # Test valid bulk creation (Sep 1 to Sep 14, 2026 on Tuesdays -> Sep 1 and Sep 8)
+        initial_count = models.Meeting.objects.count()
+        valid_data = {
+            "meeting_type": str(self.meeting_type1.pk),
+            "location": str(office.pk),
+            "start_date": datetime.date(2026, 9, 1),
+            "end_date": datetime.date(2026, 9, 14),
+            "time": "17:00:00",
+            "days_of_week": ['1'],
+            "duration": "1 hour",
+            "agenda": "Bulk test agenda",
+            "send_invites": False,
+            "save": "Bulk Create Meetings"
+        }
+        self.assertRedirects(self.client.post(reverse("meetings:bulk"), valid_data),
+                             reverse("meetings:list"))
+
+        # 2 new meetings should have been created
+        self.assertEqual(models.Meeting.objects.count(), initial_count + 2)
+
     def test_mknotice(self):
         recipient = models.TargetEmailList.objects.create(name="Test", email="test@wpi.edu")
 

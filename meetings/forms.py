@@ -1,7 +1,7 @@
 import datetime
 
 from ajax_select.fields import AutoCompleteSelectMultipleField
-from crispy_forms.bootstrap import FormActions, Tab, TabHolder
+from crispy_forms.bootstrap import FormActions, InlineCheckboxes, Tab, TabHolder
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Button, Field, Layout, Submit, HTML
 from django import forms
@@ -16,6 +16,106 @@ from data.forms import FieldAccessForm, FieldAccessLevel
 from helpers.form_text import slack_channel_msgs
 from events.models import Event2019, Location
 from meetings.models import (CCNoticeSend, Meeting, MeetingAnnounce, MeetingType, MtgAttachment)
+
+
+WEEKDAYS = (
+    ('0', 'Monday'),
+    ('1', 'Tuesday'),
+    ('2', 'Wednesday'),
+    ('3', 'Thursday'),
+    ('4', 'Friday'),
+    ('5', 'Saturday'),
+    ('6', 'Sunday'),
+)
+
+
+class BulkMeetingForm(forms.Form):
+    meeting_type = forms.ModelChoiceField(
+        queryset=MeetingType.objects.filter(archived=False),
+        required=True,
+        label="Meeting Type"
+    )
+    location = forms.ModelChoiceField(
+        queryset=Location.objects.filter(available_for_meetings=True),
+        required=False,
+        label="Location"
+    )
+    start_date = forms.DateField(
+        required=True,
+        label="Start Date",
+        widget=forms.DateInput(attrs={"class": "datepick"}),
+        initial=datetime.date.today
+    )
+    end_date = forms.DateField(
+        required=True,
+        label="End Date",
+        widget=forms.DateInput(attrs={"class": "datepick"}),
+        initial=lambda: datetime.date.today() + datetime.timedelta(days=90)
+    )
+    time = forms.TimeField(
+        required=True,
+        label="Start Time",
+        widget=forms.TimeInput(attrs={"class": "timepick"}),
+        initial="17:00"
+    )
+    days_of_week = forms.MultipleChoiceField(
+        choices=WEEKDAYS,
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="Repeat On"
+    )
+    duration = NaturalDurationField(
+        human_values=True,
+        required=True,
+        initial=datetime.timedelta(hours=1),
+        help_text='<span class="small">This field accepts a quantifier followed by a unit of time (e.g. "1 hour").</span>'
+    )
+    agenda = forms.CharField(
+        widget=EasyMDEEditor(),
+        required=False,
+        label="Default Agenda (Optional)"
+    )
+    send_invites = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Send calendar invites to subscribers for each meeting"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super(BulkMeetingForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-3'
+        self.helper.field_class = 'col-lg-8'
+        self.helper.layout = Layout(
+            'meeting_type',
+            'location',
+            Field('start_date', css_class='datepick'),
+            Field('end_date', css_class='datepick'),
+            Field('time', css_class='timepick'),
+            InlineCheckboxes('days_of_week'),
+            'duration',
+            'agenda',
+            'send_invites',
+            FormActions(
+                Submit('save', 'Bulk Create Meetings')
+            )
+        )
+        self.fields['duration'].widget.attrs['placeholder'] = "e.g. 1 hour"
+
+    def clean(self):
+        cleaned_data = super(BulkMeetingForm, self).clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+
+        if start_date and end_date:
+            if end_date < start_date:
+                self.add_error('end_date', "End date must be on or after start date.")
+            elif (end_date - start_date).days > 366:
+                self.add_error('end_date', "Date range cannot exceed one year.")
+
+        return cleaned_data
+
 
 
 class MeetingAdditionForm(FieldAccessForm):

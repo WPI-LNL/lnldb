@@ -11,6 +11,7 @@ import hijack.urls
 import data.views
 from events.views.indices import admin as db_home, index
 from events.views.indices import event_search, survey_dashboard, workshops
+from meetings.views import bulk_new_attendance
 from pages.views import page as view_page
 
 admin.autodiscover()
@@ -66,6 +67,7 @@ urlpatterns += [
     re_path(r'^db/oldsearch$', event_search, name="events-search"),
     re_path(r'^db/search$', data.views.search, name="search"),
     re_path(r'^db/survey-dashboard/$', survey_dashboard, name="survey-dashboard"),
+    re_path(r'^db/meetings/bulk/$', bulk_new_attendance, name="bulk"),
     #    re_path(r'^db/workorderwizard-load$', data.views.workorderwizard_load, name="wizard-load"),
     #    re_path(r'^db/workorderwizard-submit$', data.views.workorderwizard_submit, name="wizard-submit"),
     #    re_path(r'^db/workorderwizard-autopopulate$', data.views.workorderwizard_findprevious, name="wizard-findprevious"),

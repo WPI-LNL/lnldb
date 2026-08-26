@@ -1,5 +1,6 @@
 import datetime
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import InvalidPage, Paginator
@@ -24,7 +25,7 @@ from events.models import BaseEvent, EventCCInstance
 from events.cal import generate_ics, EventAttendee
 from accounts.models import UserPreferences
 
-from .forms import (AnnounceCCSendForm, AnnounceSendForm, MeetingAdditionForm,
+from .forms import (AnnounceCCSendForm, AnnounceSendForm, BulkMeetingForm, MeetingAdditionForm,
                     MtgAttachmentEditForm)
 from .models import AnnounceSend, Meeting, MtgAttachment
 
@@ -237,6 +238,52 @@ def newattendance(request):
         form = MeetingAdditionForm(request.user)
     context['form'] = form
     context['msg'] = "New Meeting"
+    return render(request, 'form_crispy_meetings.html', context)
+
+
+@login_required
+@permission_required('meetings.create_mtg', raise_exception=True)
+def bulk_new_attendance(request):
+    """ Bulk create meetings based on recurrence settings """
+    context = {}
+    if request.method == 'POST':
+        form = BulkMeetingForm(request.POST)
+        if form.is_valid():
+            meeting_type = form.cleaned_data['meeting_type']
+            location = form.cleaned_data.get('location')
+            start_date = form.cleaned_data['start_date']
+            end_date = form.cleaned_data['end_date']
+            time_val = form.cleaned_data['time']
+            selected_days = [int(d) for d in form.cleaned_data['days_of_week']]
+            duration = form.cleaned_data['duration']
+            agenda = form.cleaned_data.get('agenda', '')
+            send_invites = form.cleaned_data.get('send_invites', False)
+
+            created_meetings = []
+            curr_date = start_date
+            while curr_date <= end_date:
+                if curr_date.weekday() in selected_days:
+                    dt_naive = datetime.datetime.combine(curr_date, time_val)
+                    dt_aware = timezone.make_aware(dt_naive, timezone.get_current_timezone())
+                    mtg = Meeting.objects.create(
+                        meeting_type=meeting_type,
+                        location=location,
+                        datetime=dt_aware,
+                        duration=duration,
+                        agenda=agenda
+                    )
+                    if send_invites:
+                        send_invite(mtg)
+                    created_meetings.append(mtg)
+                curr_date += datetime.timedelta(days=1)
+
+            messages.success(request, "%d meeting(s) created successfully." % len(created_meetings))
+            return HttpResponseRedirect(reverse('meetings:list'))
+    else:
+        form = BulkMeetingForm()
+
+    context['form'] = form
+    context['msg'] = "Bulk Create Meetings"
     return render(request, 'form_crispy_meetings.html', context)
 
 
