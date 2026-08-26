@@ -1,6 +1,5 @@
 import json
 import icalendar
-from time import mktime
 
 from django.conf import settings
 from django.db.models import Count, F, Q
@@ -14,7 +13,6 @@ from django.utils.html import conditional_escape
 from django.views.generic.base import View
 from django.views.decorators.cache import cache_page
 from django_ical.views import ICalFeed
-from django.utils.timezone import localtime
 
 
 from events.models import BaseEvent, Category, EventOccurrence
@@ -350,10 +348,6 @@ def timestamp_to_datetime(timestamp):
     else:
         return ""
 
-
-def datetime_to_timestamp(dt):
-    """Converts a datetime object to a UNIX timestamp in milliseconds."""
-    return int(dt.timestamp() * 1000) 
 
 class EventAttendee(object):
     """
