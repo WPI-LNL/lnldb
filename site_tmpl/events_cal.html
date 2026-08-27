@@ -33,7 +33,19 @@
   border-color:rgb(42, 42, 42) !important
 }
 
+.cal-status-cancelled .fc-event-title { text-decoration: line-through; }
+
+.cal-status-cancelled:hover .fc-event-title { text-decoration: none !important; }
+
 .cal-status-awaiting-review { background-color: #e39c2b!important; border-color:#87572a !important}
+
+.fc-event-title-container .glyphicon {
+    margin-left: 0.4rem;
+    padding: 1px;
+    line-height: inherit !important;
+}
+
+.key > span { padding: .3em .6em !important; }
 </style>
 
 <script>
@@ -89,6 +101,8 @@
           arrow: true,
           animation: 'shift-away',
         });
+        console.log(info.event.extendedProps);
+        info.el.querySelector('.fc-event-title-container').insertAdjacentHTML('afterbegin',info.event.extendedProps.icon);
       },
     });
     calendar.render();
@@ -159,13 +173,16 @@
         <a class="btn btn-default{% if request.GET.projection == 'only'%} active{% endif %}" href="{% append_to_get projection='only' %}">Show Only Projection</a>
     </div>
   </h4>
-  <h4 class="well" style="margin: 10px 15px;">
+  <h4 class="well key" style="margin: 10px 15px;">
     <span class="label" style="color:black">Event Color Key</span>
-    <span class="label cal-status-awaiting-approval">Awaiting Approval</span>
-    <span class="label cal-status-approved">Confirmed</span>
-    <span class="label cal-status-awaiting-review">Awaiting Billing Review</span>
-    <span class="label cal-status-paid">To be billed, Awaiting payment, Paid, Cancelled, or Closed</span> <!-- .cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed -->
-    <span class="label" style="background-color: blue; border: darkblue;">Other/Unknown</span>
+    <span class="label cal-status-awaiting-approval"><span class="glyphicon glyphicon-time"></span> Awaiting Approval</span>
+    <span class="label cal-status-approved"><span class="glyphicon glyphicon-ok-sign"></span> Confirmed</span>
+    <span class="label cal-status-awaiting-review"><span class="glyphicon glyphicon-exclamation-sign"></span> Awaiting Billing Review</span>
+    <span class="label cal-status-awaiting-payment"><span class="glyphicon glyphicon-usd"></span> Awaiting payment</span>
+    <span class="label cal-status-paid"><span class="glyphicon glyphicon-check"></span> Paid</span>
+    <span class="label cal-status-cancelled"><span class="glyphicon glyphicon-ban-circle"></span> Cancelled</span>
+    <span class="label cal-status-closed"><span class="glyphicon glyphicon-ok-circle"></span> Closed</span>
+    <span class="label" style="background-color: blue; border: darkblue;"><span class="glyphicon glyphicon-question-sign"></span> Other/Unknown</span>
   </h4>
 </div>
 
