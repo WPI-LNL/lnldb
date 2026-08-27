@@ -1002,6 +1002,8 @@ def viewevent(request, id):
     context['history'] = Version.objects.get_for_object(event)
     if isinstance(event, Event2019):
         context['crew_count'] = event.crew_attendance.filter(active=True).values('user').count()
+
+    context["has_cc_setup_times_or_locations"] = event.ccinstances.filter(setup_location__isnull=False).exists() or event.ccinstances.filter(setup_start__isnull=False).exists()
  
     if event.serviceinstance_set.exists():
         context['categorized_services_and_extras'] = {}

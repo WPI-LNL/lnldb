@@ -15,8 +15,8 @@
                 <p align="left" class="article-title">{{ subject }}</p>
                 <div align="left" class="article-content">
                 <p>You've been added as a crew chief to the event {{ ccinstance.event.event_name }}.<br>
-                You have signed up to be crew chief for {{ ccinstance.category }},
-                with your setup starting on {{ ccinstance.setup_start }} in the {{ ccinstance.setup_location }}.</p>
+                You have signed up to be crew chief for {{ ccinstance.category }}{% if ccinstance.setup_start and ccinstance.setup_location %},
+                with your setup starting on {{ ccinstance.setup_start }} in the {{ ccinstance.setup_location }}{% endif %}.</p>
 
                 <p>Please note that the attached Workorder PDF contains all services relating to the event, not just your assigned service.</p>
 
@@ -24,7 +24,9 @@
                 <i>{{ ccinstance.event.location }}</i><br>
                 Start: {{ ccinstance.event.datetime_start }}<br>
                 End: {{ ccinstance.event.datetime_end }}<br>
+                {% if ccinstance.setup_start %}
                 Setup start: {{ ccinstance.setup_start }}<br>
+                {% endif %}
                 Setup complete: {{ ccinstance.event.datetime_setup_complete }}</p>
 
                 <p>See full details of this event <a href="{% get_base_url %}{% url 'events:detail' ccinstance.event.id %}">here</a>.</p>
