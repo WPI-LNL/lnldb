@@ -12,8 +12,8 @@ from decimal import Decimal
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
 
-from finance.models import (ClientType, ParsedTransaction, fiscal_year_bounds, money,
-                            service_colors, student_org_workday_fund)
+from finance.models import (ClientType, ParsedTransaction, client_of, client_type_for,
+                            fiscal_year_bounds, money, service_colors)
 
 # ---------------------------------------------------------------------------
 # Palette
@@ -201,37 +201,6 @@ def _service_costs(event):
     return costs
 
 
-def _client_of(event):
-    """ The organisation a show is billed to, falling back to its first client. """
-    if event is None:
-        return None
-    org = event.billing_org
-    if org is None:
-        org = event.org.first()
-    return org
-
-
-def _client_type_of(event):
-    """
-    Classify an event's payer as a student org or a university department.
-
-    The Workday fund is the signal, and it can hang off either the event or
-    the org billing for it, so both are tried before giving up. Anything we
-    cannot place is ``UNKNOWN`` rather than being guessed into a bucket -- a
-    department miscounted as a student org would distort the revenue split.
-    """
-    if event is None:
-        return ClientType.UNKNOWN
-    fund = getattr(event, 'workday_fund', None)
-    if fund is None:
-        org = _client_of(event)
-        fund = getattr(org, 'workday_fund', None) if org else None
-    if fund is None:
-        return ClientType.UNKNOWN
-    return (ClientType.STUDENT_ORG if fund == student_org_workday_fund()
-            else ClientType.DEPARTMENT)
-
-
 def revenue_rows(fiscal_year=None, is_projection=None):
     """
     Every revenue slice with its Event resolved to a concrete subclass.
@@ -268,7 +237,7 @@ def revenue_by_client(fiscal_year=None, is_projection=None, limit=8, rows=None):
     for row in rows:
         event = row['event']
         if event is not None:
-            org = _client_of(event)
+            org = client_of(event)
             label = org.retname if org else '(no client on file)'
         else:
             source = row['entry'].non_event_revenue_type
@@ -310,7 +279,7 @@ def client_type_breakdown(fiscal_year=None, is_projection=None, rows=None):
         event = row['event']
         if event is None:
             continue
-        kind = _client_type_of(event)
+        kind = client_type_for(event)
         totals[kind] += row['amount']
         events_seen[kind].add(event.pk)
 

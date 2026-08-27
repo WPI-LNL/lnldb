@@ -967,6 +967,14 @@ Permissions
 
 ``view_subledger``
     Read-only access to every page. General members get this.
+``view_fundingrequest``
+    Read-only access to the funding request list and detail pages. Django
+    creates this one automatically; it is granted alongside ``view_subledger``,
+    since those pages are part of the same read-only tour.
+``view_subledger_receipts``
+    See the receipt attached to an entry. Separate from ``view_subledger``
+    because a receipt is a scan of somebody's purchase, which is a narrower
+    thing to hand out than a ledger row.
 ``edit_subledger``
     Create and edit allocation slices, run bulk actions, log encumbrances.
 ``settle_subledger``
@@ -975,6 +983,29 @@ Permissions
     Upload Workday journal exports.
 ``manage_projecttag`` / ``manage_fundingrequest``
     Maintain the project tree and funding requests.
+
+Who holds them
+~~~~~~~~~~~~~~
+
+Declaring a permission on a model creates the row; it does not put it in
+anybody's hands. The grants live in ``fixtures/groups.json``, which is what
+``manage.py loaddata fixtures/*.json`` applies when a database is built:
+
+===================  =========================================================
+Group                Finance permissions
+===================  =========================================================
+Officer              All eight. The Treasurer is an Officer, and this is the
+                     Treasurer's tool.
+Active               ``view_subledger`` and ``view_fundingrequest`` only —
+                     read-only, no receipts.
+===================  =========================================================
+
+Adding a permission to a model is therefore only half of adding it: until a
+group holds it, the only account that can exercise it is a superuser. That is
+worth stating because it fails silently and no view test can catch it — view
+tests grant themselves whatever they need. ``finance/tests/test_rollups.py``
+loads the fixture and asserts the Officer grant, which is the check that does
+catch it.
 
 Models
 ------

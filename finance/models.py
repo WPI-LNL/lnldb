@@ -37,7 +37,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models, transaction
-from django.db.models import Count, Q, Sum, Value
+from django.db.models import Count, OuterRef, Prefetch, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.urls.base import reverse
 from django.utils import timezone
@@ -147,8 +147,16 @@ def worktag_value(worktags, key, default=''):
     return default
 
 
-def _identity_text(value):
-    """ Normalise one identity component: blank-insensitive, case-insensitive. """
+def identity_text(value):
+    """
+    Normalise one identity component: blank-insensitive, case-insensitive.
+
+    Public because the importer compares the same fields the same way when
+    looking for near-duplicates -- see
+    :func:`finance.importers._near_duplicate_key`. Two normalisations that
+    disagreed would let a line be "the same" to one and "different" to the
+    other, which is precisely the disagreement that double-counts a charge.
+    """
     if value is None:
         return ''
     return re.sub(r'\s+', ' ', str(value)).strip().lower()
@@ -180,7 +188,7 @@ def workday_fingerprint(accounting_date, net_amount, operational_transaction,
     parts.extend(worktag_value(worktags, key) for key in FINGERPRINT_WORKTAGS)
     # Unit separator: a control character no Workday field can contain, so
     # ('ab', 'c') and ('a', 'bc') cannot collide.
-    joined = '\x1f'.join(_identity_text(part) for part in parts)
+    joined = '\x1f'.join(identity_text(part) for part in parts)
     return hashlib.sha256(joined.encode('utf-8')).hexdigest()
 
 
@@ -403,6 +411,49 @@ def student_org_workday_fund():
     Workday assigns, and Workday renumbers things.
     """
     return finance_settings().student_org_workday_fund
+
+
+def client_of(event):
+    """
+    The organisation a show is billed to, or ``None``.
+
+    ``billing_org`` is the answer when somebody set it; otherwise the first
+    client attached to the event stands in for it.
+    """
+    if event is None:
+        return None
+    return event.billing_org or event.org.first()
+
+
+def client_type_for(event):
+    """
+    Classify an event's payer as a student org or a university department.
+
+    The Workday fund is the signal, and it can hang off either the event
+    (``Event2019`` carries its own) or the org billing for it, so both are
+    tried before giving up. Anything that cannot be placed is
+    :attr:`ClientType.UNKNOWN` rather than being guessed into a bucket -- a
+    department miscounted as a student org would distort the revenue split on
+    the dashboard.
+
+    Deliberately a free function rather than a method. The same question is
+    asked from two directions -- of a slice, through
+    :attr:`ParsedTransaction.client_type`, and of a bare event, by the
+    dashboard calculators -- and it used to be answered by two separate
+    implementations of the same four rules. Two copies of a classification rule
+    is two answers the day one of them is updated, and the symptom would be a
+    dashboard that disagrees with the ledger about who paid for something.
+    """
+    if event is None:
+        return ClientType.UNKNOWN
+    fund = getattr(event, 'workday_fund', None)
+    if fund is None:
+        org = client_of(event)
+        fund = getattr(org, 'workday_fund', None) if org else None
+    if fund is None:
+        return ClientType.UNKNOWN
+    return (ClientType.STUDENT_ORG if fund == student_org_workday_fund()
+            else ClientType.DEPARTMENT)
 
 
 # ---------------------------------------------------------------------------
@@ -947,9 +998,121 @@ class ProjectTag(MPTTModel):
         return -money(qs.aggregate(t=Sum('amount'))['t'])
 
 
+def project_tag_costs(fiscal_year=None):
+    """
+    Every project tag's cost, in two queries instead of two per tag.
+
+    :meth:`ProjectTag.total_cost` is the right shape for one node and the wrong
+    shape for a page full of them: it re-reads the node to refresh its MPTT
+    bounds and then aggregates, so the explorer's sidebar -- which shows the
+    whole forest -- cost a pair of queries for every row on it.
+
+    The arithmetic is identical, and the result is if anything fresher: the
+    bounds come from a single read of the tree taken now, rather than from
+    whatever each instance happened to be carrying.
+
+    :returns: ``(direct, rollup)``, two ``{tag pk: cost}`` maps. ``direct`` is
+        what was tagged straight to that node; ``rollup`` is that plus
+        everything beneath it. Both are positive figures, net of refunds,
+        matching :meth:`ProjectTag.total_cost`. A tag with no spending is
+        absent from both -- callers should default to zero.
+    """
+    entries = ParsedTransaction.objects.exclude(project_tag__isnull=True)
+    if fiscal_year:
+        start, end = fiscal_year_bounds(fiscal_year)
+        entries = entries.filter(effective_date__range=(start, end))
+    raw = {row['project_tag']: row['t']
+           for row in entries.values('project_tag').annotate(t=Sum('amount'))}
+
+    direct = {pk: -money(total) for pk, total in raw.items()}
+
+    # The whole forest, including archived nodes: an archived child's spending
+    # still counted towards its parent under total_cost(), and a rollup that
+    # quietly stopped counting it would report a lower cost for the project
+    # than the project actually incurred.
+    nodes = list(ProjectTag.objects.values_list('pk', 'tree_id', 'lft', 'rght'))
+
+    trees = {}
+    for pk, tree_id, lft, rght in nodes:
+        trees.setdefault(tree_id, []).append((pk, lft, rght))
+
+    rollup = {}
+    for members in trees.values():
+        for pk, lft, rght in members:
+            # MPTT nested sets: everything under a node has an ``lft`` between
+            # that node's own bounds, so containment is a comparison rather
+            # than a query.
+            total = ZERO
+            for other_pk, other_lft, _ in members:
+                if lft <= other_lft <= rght:
+                    total += direct.get(other_pk, ZERO)
+            if total:
+                rollup[pk] = total
+    return direct, rollup
+
+
 # ---------------------------------------------------------------------------
 # Funding requests (out-of-cycle SGA capital grants)
 # ---------------------------------------------------------------------------
+
+#: The decimal shape every money annotation in this module declares. Django
+#: needs to be told, because a ``Subquery`` has no field of its own to infer
+#: from and a ``Coalesce`` over mixed types refuses to guess.
+MONEY_FIELD = models.DecimalField(max_digits=12, decimal_places=2)
+
+
+def _money_subquery(queryset, group_by, column='amount'):
+    """
+    A correlated ``SUM`` as a subquery, for annotating a parent row.
+
+    Written as a subquery rather than a join because two ``Sum``\\ s over
+    different reverse relations in one query multiply each other out: joining
+    a request to its lines *and* to the allocations under those lines repeats
+    every award once per allocation, so ``total_awarded`` silently reads as a
+    multiple of itself. One subquery per figure keeps each ``SUM`` over exactly
+    the rows it is about.
+    """
+    return Coalesce(
+        Subquery(queryset.values(group_by).annotate(t=Sum(column)).values('t')[:1],
+                 output_field=MONEY_FIELD),
+        Value(ZERO), output_field=MONEY_FIELD)
+
+
+class FundingRequestQuerySet(models.QuerySet):
+    """ Annotations for the funding request listings and burndown bars. """
+
+    def with_totals(self):
+        """
+        Pre-compute awarded and spent, for pages that show many requests.
+
+        Both figures are properties that aggregate, and an aggregate ignores
+        ``prefetch_related`` entirely -- so the listing pages were issuing
+        roughly eight queries per request while carrying a prefetch that was
+        never read. See :attr:`FundingRequest.total_awarded`.
+        """
+        return self.annotate(
+            _awarded_total=_money_subquery(
+                FRLineItem.objects.filter(funding_request=OuterRef('pk')),
+                'funding_request', 'amount_awarded'),
+            _spent_total=_money_subquery(
+                ParsedTransaction.objects.filter(
+                    fr_line_target__funding_request=OuterRef('pk')),
+                'fr_line_target__funding_request'))
+
+    def with_lines(self):
+        """
+        Prefetch the line items with their own spend already annotated.
+
+        The plain ``line_items__allocations`` prefetch does not help:
+        :attr:`FRLineItem.spent` aggregates, and an aggregate does not read a
+        prefetch cache. Going through
+        :meth:`FRLineItemQuerySet.with_spend` puts the figure in SQL where the
+        property can find it.
+        """
+        return self.prefetch_related(
+            Prefetch('line_items',
+                     queryset=FRLineItem.objects.with_spend().order_by('sort_order', 'pk')))
+
 
 @reversion.register(follow=['line_items'])
 class FundingRequest(models.Model):
@@ -968,6 +1131,8 @@ class FundingRequest(models.Model):
 
     created_on = models.DateTimeField(auto_now_add=True)
 
+    objects = FundingRequestQuerySet.as_manager()
+
     class Meta:
         ordering = ('-fiscal_year', 'name')
         verbose_name = "Funding Request"
@@ -985,12 +1150,29 @@ class FundingRequest(models.Model):
 
     @property
     def total_awarded(self):
-        """ Everything SGA granted across this request's lines. """
+        """
+        Everything SGA granted across this request's lines.
+
+        Uses :meth:`FundingRequestQuerySet.with_totals` when the row was loaded
+        through it. Every listing asks this of every request, and the
+        aggregate below cannot be prefetched away -- the same trap
+        :attr:`FRLineItem.spent` avoids.
+        """
+        annotated = getattr(self, '_awarded_total', None)
+        if annotated is not None:
+            return money(annotated)
         return money(self.line_items.aggregate(t=Sum('amount_awarded'))['t'])
 
     @property
     def total_spent(self):
-        """ Positive figure. Refunds against these lines reduce it automatically. """
+        """
+        Positive figure. Refunds against these lines reduce it automatically.
+
+        Prefers the ``with_totals()`` annotation, as :attr:`total_awarded` does.
+        """
+        annotated = getattr(self, '_spent_total', None)
+        if annotated is not None:
+            return -money(annotated)
         return -money(ParsedTransaction.objects.filter(
             fr_line_target__funding_request=self).aggregate(t=Sum('amount'))['t'])
 
@@ -1860,18 +2042,11 @@ class ParsedTransaction(models.Model):
         """
         Student Org vs Department, inherited from the linked event's billing
         org rather than re-keyed by the Treasurer.
+
+        The rule itself lives in :func:`client_type_for`, so this answer and
+        the dashboard's cannot drift apart.
         """
-        event = self.linked_event
-        if event is None:
-            return ClientType.UNKNOWN
-        fund = getattr(event, 'workday_fund', None)  # Event2019 carries its own
-        if fund is None:
-            org = event.billing_org or event.org.first()
-            fund = getattr(org, 'workday_fund', None) if org else None
-        if fund is None:
-            return ClientType.UNKNOWN
-        return (ClientType.STUDENT_ORG if fund == student_org_workday_fund()
-                else ClientType.DEPARTMENT)
+        return client_type_for(self.linked_event)
 
     @property
     def client_type_display(self):

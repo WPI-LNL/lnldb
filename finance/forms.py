@@ -35,6 +35,43 @@ from finance.models import (FRLineItem, FundingRequest, FundSource, ParsedTransa
 from finance.suggestions import lookups_for_form, suggest_all
 
 
+def finance_form_helper(**attrs):
+    """
+    The crispy helper every finance form uses, built in one place.
+
+    Two settings are the same on all six of them, and neither is a preference:
+
+    ``form_tag = False``
+        The finance templates write their own ``<form>``. A second one nested
+        inside it is invalid markup, and the browser closes the outer form at
+        the inner one -- so the submit button ends up outside the form it is
+        meant to submit.
+
+    ``include_media = False``
+        ``base_finance.html`` emits the autocomplete scripts once for the whole
+        app -- see
+        :func:`finance.templatetags.finance_extras.autocomplete_media` -- so
+        crispy must not emit them again: its copy also carries a jQuery UI 1.13
+        theme, and the widget here runs on jQuery UI 1.10. Two themes over one
+        widget is what made the dropdown flicker.
+
+    Both were previously copied, comment and all, into six ``__init__``
+    methods. That is six places to edit the day ajax_select bumps a jQuery
+    version, and five chances to miss one -- and a form that misses it renders
+    correctly right up until someone opens the event picker on it.
+
+    Anything else is passed as a keyword and set on the helper, which is how
+    the Entry page asks for its horizontal layout without a second copy of the
+    shared part.
+    """
+    helper = FormHelper()
+    helper.form_tag = False
+    helper.include_media = False
+    for name, value in attrs.items():
+        setattr(helper, name, value)
+    return helper
+
+
 class ProjectTagChoiceField(TreeNodeChoiceField):
     """
     A project picker whose options are nested by depth, so a sub-project is
@@ -231,13 +268,7 @@ class WorkdayCSVUploadForm(forms.Form):
     def __init__(self, *args, **kwargs):
         """ Render without a ``<form>`` tag; the template supplies one. """
         super(WorkdayCSVUploadForm, self).__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        # base_finance.html emits the autocomplete scripts once for the whole
-        # app, so crispy must not emit them again: its copy also carries a
-        # jQuery UI 1.13 theme, and the widget here runs on jQuery UI 1.10.
-        # Two themes over one widget is what made the dropdown flicker.
-        self.helper.include_media = False
+        self.helper = finance_form_helper()
 
     def clean_csv_file(self):
         """
@@ -778,16 +809,8 @@ class AllocationForm(BaseAllocationForm):
         explanation = self.fields.get('audit_explanation')
         if explanation is not None and not explanation.required:
             explanation.help_text = "Optional, but the first thing an auditor asks for."
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        # base_finance.html emits the autocomplete scripts once for the whole
-        # app, so crispy must not emit them again: its copy also carries a
-        # jQuery UI 1.13 theme, and the widget here runs on jQuery UI 1.10.
-        # Two themes over one widget is what made the dropdown flicker.
-        self.helper.include_media = False
-        self.helper.label_class = 'col-md-4'
-        self.helper.field_class = 'col-md-8'
-        self.helper.form_class = 'form-horizontal'
+        self.helper = finance_form_helper(
+            label_class='col-md-4', field_class='col-md-8', form_class='form-horizontal')
 
 
 class ReconcileForm(BaseAllocationForm):
@@ -808,13 +831,7 @@ class ReconcileForm(BaseAllocationForm):
     def __init__(self, *args, **kwargs):
         """ Compact styling: this form is rendered many times down one page. """
         super(ReconcileForm, self).__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        # base_finance.html emits the autocomplete scripts once for the whole
-        # app, so crispy must not emit them again: its copy also carries a
-        # jQuery UI 1.13 theme, and the widget here runs on jQuery UI 1.10.
-        # Two themes over one widget is what made the dropdown flicker.
-        self.helper.include_media = False
+        self.helper = finance_form_helper()
         if 'audit_explanation' in self.fields:
             self.fields['audit_explanation'].widget.attrs['rows'] = 2
 
@@ -903,13 +920,7 @@ class EncumbranceForm(BaseAllocationForm):
         self.fields['description'].required = True
         self.fields['audit_explanation'].required = True
         self.fields['audit_explanation'].label = "What is this for?"
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        # base_finance.html emits the autocomplete scripts once for the whole
-        # app, so crispy must not emit them again: its copy also carries a
-        # jQuery UI 1.13 theme, and the widget here runs on jQuery UI 1.10.
-        # Two themes over one widget is what made the dropdown flicker.
-        self.helper.include_media = False
+        self.helper = finance_form_helper()
 
     def _direction(self):
         """ Always an expense: you cannot encumber money coming in. """
@@ -1073,7 +1084,86 @@ SplitFormSet = inlineformset_factory(
 # Bulk actions
 # ---------------------------------------------------------------------------
 
-class BulkActionForm(forms.Form):
+class BulkSelectionForm(forms.Form):
+    """
+    Shared behaviour for the three forms that act on a ticked set of rows.
+
+    All three -- the ledger's bulk bar, the queue's bulk reconcile and its
+    bulk encumbrance draw -- are the same shape: a hidden field that
+    JavaScript fills with row ids, and a bar of controls rendered over a dark
+    background. They had three verbatim copies of both, which is three places
+    to fix a parsing bug in and three chances for the bars to drift apart
+    visually.
+    """
+
+    # Optional so that submitting with nothing ticked reaches the view's
+    # "Nothing was selected" message. Required, it fails here instead and the
+    # Treasurer is told that a hidden field they have never seen is missing --
+    # and the view's own branch for it becomes unreachable.
+    selected = forms.CharField(widget=forms.HiddenInput, required=False)
+
+    def __init__(self, *args, **kwargs):
+        """
+        Build the form, let the subclass finish it, then style what resulted.
+
+        The order is the point. :meth:`BulkReconcileForm.build_fields` swaps
+        the fund widget for a :class:`FundSourceSelect`, and a freshly
+        constructed widget carries none of the attributes set on the one it
+        replaced -- so styling before that runs silently loses the class on the
+        one control that most needs it. Making it a hook means a subclass
+        cannot get that order wrong by forgetting to re-style.
+        """
+        super(BulkSelectionForm, self).__init__(*args, **kwargs)
+        self.build_fields()
+        self._style_for_dark_bar()
+
+    def build_fields(self):
+        """
+        Hook for resolving querysets and swapping widgets. No-op by default.
+
+        Subclasses resolve their querysets here rather than at class-definition
+        time so that retiring a category in the admin takes effect without a
+        restart.
+        """
+
+    def _style_for_dark_bar(self):
+        """
+        Put ``form-control input-sm`` on every visible widget.
+
+        The bar these render into is dark and sets ``color: #fff``. A bare
+        ``<select>`` inherits that colour while keeping the browser's own white
+        background, so the value picker came out white-on-white -- present,
+        focusable, and completely unreadable. ``form-control`` states both.
+
+        These are plain ``Form``\\ s, so they get none of
+        :meth:`BaseAllocationForm._style_widgets`; the one ``<select>`` that
+        ever looked right was the one a template wrote out by hand.
+        """
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.HiddenInput):
+                continue
+            existing = field.widget.attrs.get('class', '')
+            # Guarded so calling this twice cannot stack duplicate classes,
+            # the same way BaseAllocationForm._style_widgets guards.
+            missing = [cls for cls in ('form-control', 'input-sm')
+                       if cls not in existing.split()]
+            if missing:
+                field.widget.attrs['class'] = ' '.join([existing] + missing).strip()
+
+    @property
+    def selected_ids(self):
+        """
+        The ticked row ids, parsed out of the hidden field.
+
+        Non-numeric fragments are dropped rather than raising: the value is
+        assembled by JavaScript, and a malformed one should narrow the
+        selection, not 500 the page.
+        """
+        raw = self.cleaned_data.get('selected', '')
+        return [int(pk) for pk in raw.split(',') if pk.strip().isdigit()]
+
+
+class BulkActionForm(BulkSelectionForm):
     """ Backs the slide-up bulk action bar on the spreadsheet ledger. """
     ACTIONS = (
         ('project_tag', 'Assign project tag'),
@@ -1083,11 +1173,6 @@ class BulkActionForm(forms.Form):
     )
 
     action = forms.ChoiceField(choices=ACTIONS)
-    # Optional so that submitting with nothing selected reaches the view's
-    # "Nothing was selected" message. Required, it fails here instead and the
-    # Treasurer is told that a hidden field they have never seen is missing --
-    # and the view's own branch for it becomes unreachable.
-    selected = forms.CharField(widget=forms.HiddenInput, required=False)
     project_tag = ProjectTagChoiceField()
     lnl_spend_category = forms.ModelChoiceField(
         queryset=SpendCategory.objects.active(), required=False, label="Spend category")
@@ -1100,23 +1185,6 @@ class BulkActionForm(forms.Form):
                   "time, so the request line can be named.")
     status = forms.ChoiceField(choices=[('', '---')] + list(TransactionStatus.choices),
                                required=False)
-
-    def __init__(self, *args, **kwargs):
-        """ Style the widgets by hand -- see the comment below for why. """
-        super(BulkActionForm, self).__init__(*args, **kwargs)
-        # The bar these render into is dark and sets ``color: #fff``. A bare
-        # <select> inherits that colour while keeping the browser's own white
-        # background, so the value picker came out white-on-white -- present,
-        # focusable, and completely unreadable. ``form-control`` states both.
-        #
-        # This is a plain Form, so it gets none of BaseAllocationForm's widget
-        # styling; the one <select> that looked right was the one the template
-        # writes out by hand.
-        for name, field in self.fields.items():
-            if isinstance(field.widget, forms.HiddenInput):
-                continue
-            existing = field.widget.attrs.get('class', '')
-            field.widget.attrs['class'] = (existing + ' form-control input-sm').strip()
 
     def clean(self):
         """
@@ -1132,20 +1200,8 @@ class BulkActionForm(forms.Form):
             self.add_error(action, "Pick a value to apply.")
         return cleaned
 
-    @property
-    def selected_ids(self):
-        """
-        The ticked row ids, parsed out of the hidden field.
 
-        Non-numeric fragments are dropped rather than raising: the value is
-        assembled by JavaScript, and a malformed one should narrow the
-        selection, not 500 the page.
-        """
-        raw = self.cleaned_data.get('selected', '')
-        return [int(pk) for pk in raw.split(',') if pk.strip().isdigit()]
-
-
-class BulkReconcileForm(forms.Form):
+class BulkReconcileForm(BulkSelectionForm):
     """
     Reconcile a batch of queue rows that all take the same routing.
 
@@ -1160,11 +1216,6 @@ class BulkReconcileForm(forms.Form):
     alone rather than being quietly given expense routing that the database
     would refuse anyway.
     """
-    # Optional so that submitting with nothing selected reaches the view's
-    # "Nothing was selected" message. Required, it fails here instead and the
-    # Treasurer is told a hidden field they have never seen is missing.
-    selected = forms.CharField(widget=forms.HiddenInput, required=False)
-
     # Required for the same reason ReconcileForm requires it: an expense that
     # does not say where the money came from is not reconciled, it is filed.
     fund_source = forms.ModelChoiceField(
@@ -1178,9 +1229,8 @@ class BulkReconcileForm(forms.Form):
         queryset=SpendCategory.objects.none(), required=False, label="Spend category")
     project_tag = ProjectTagChoiceField()
 
-    def __init__(self, *args, **kwargs):
-        """ Resolve the querysets and style the widgets at instantiation. """
-        super(BulkReconcileForm, self).__init__(*args, **kwargs)
+    def build_fields(self):
+        """ Resolve the querysets per instance and fit the fund picker. """
         # Resolved per instance, not at import time, so retiring a category in
         # the admin takes effect without a restart.
         self.fields['fund_source'].queryset = (
@@ -1190,20 +1240,6 @@ class BulkReconcileForm(forms.Form):
         fund = self.fields['fund_source']
         fund.widget = FundSourceSelect(attrs={'class': 'fin-fund-source'})
         fund.widget.choices = fund.choices
-
-        # Same reasoning as BulkActionForm: this bar is dark and sets a colour,
-        # and a control that inherits it keeps its own light background.
-        for field in self.fields.values():
-            if isinstance(field.widget, forms.HiddenInput):
-                continue
-            existing = field.widget.attrs.get('class', '')
-            field.widget.attrs['class'] = (existing + ' form-control input-sm').strip()
-
-    @property
-    def selected_ids(self):
-        """ The ticked queue rows, parsed as in :class:`BulkActionForm`. """
-        raw = self.cleaned_data.get('selected', '')
-        return [int(pk) for pk in raw.split(',') if pk.strip().isdigit()]
 
 
 class OpenEncumbranceChoiceField(forms.ModelChoiceField):
@@ -1216,7 +1252,7 @@ class OpenEncumbranceChoiceField(forms.ModelChoiceField):
             date_format(obj.effective_date, 'M j, Y'))
 
 
-class BulkEncumbranceForm(forms.Form):
+class BulkEncumbranceForm(BulkSelectionForm):
     """
     Draw one reservation down across a whole selection of queue rows.
 
@@ -1230,31 +1266,18 @@ class BulkEncumbranceForm(forms.Form):
     does this money go" is already written on the reservation, and asking it
     again here would let a bulk action contradict the thing it is drawing from.
     """
-    selected = forms.CharField(widget=forms.HiddenInput, required=False)
     encumbrance = OpenEncumbranceChoiceField(
         queryset=ParsedTransaction.objects.none(), required=False,
         label="Encumbrance", empty_label="Draw from encumbrance…")
 
-    def __init__(self, *args, **kwargs):
+    def build_fields(self):
         """ Resolve the open reservations per instance, newest first. """
-        super(BulkEncumbranceForm, self).__init__(*args, **kwargs)
         self.fields['encumbrance'].queryset = (
             ParsedTransaction.objects
             .filter(parent_transaction__isnull=True,
                     status=TransactionStatus.PENDING,
                     amount__lt=0)
             .order_by('-effective_date', '-pk'))
-        for field in self.fields.values():
-            if isinstance(field.widget, forms.HiddenInput):
-                continue
-            existing = field.widget.attrs.get('class', '')
-            field.widget.attrs['class'] = (existing + ' form-control input-sm').strip()
-
-    @property
-    def selected_ids(self):
-        """ The ticked queue rows, parsed as in :class:`BulkReconcileForm`. """
-        raw = self.cleaned_data.get('selected', '')
-        return [int(pk) for pk in raw.split(',') if pk.strip().isdigit()]
 
 
 # ---------------------------------------------------------------------------
@@ -1284,13 +1307,7 @@ class FundingRequestForm(forms.ModelForm):
         super(FundingRequestForm, self).__init__(*args, **kwargs)
         self.fields['fiscal_year'] = forms.ChoiceField(
             choices=fiscal_year_choices(), initial=current_fiscal_year(), label="Fiscal Year")
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        # base_finance.html emits the autocomplete scripts once for the whole
-        # app, so crispy must not emit them again: its copy also carries a
-        # jQuery UI 1.13 theme, and the widget here runs on jQuery UI 1.10.
-        # Two themes over one widget is what made the dropdown flicker.
-        self.helper.include_media = False
+        self.helper = finance_form_helper()
 
 
 class FRLineItemForm(forms.ModelForm):
@@ -1394,10 +1411,4 @@ class ProjectTagForm(forms.ModelForm):
             # Prevent making a node its own ancestor.
             qs = qs.exclude(pk__in=self.instance.get_descendants(include_self=True))
         self.fields['parent'].queryset = qs
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        # base_finance.html emits the autocomplete scripts once for the whole
-        # app, so crispy must not emit them again: its copy also carries a
-        # jQuery UI 1.13 theme, and the widget here runs on jQuery UI 1.10.
-        # Two themes over one widget is what made the dropdown flicker.
-        self.helper.include_media = False
+        self.helper = finance_form_helper()

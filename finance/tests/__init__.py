@@ -59,6 +59,12 @@ what they cover rather than alphabetically.
 
 **Everything else**
 
+``test_rollups``
+    The batch figures behind the listing pages -- that each equals the
+    per-row property it stands in for, and that its query count stays flat as
+    rows are added -- together with the group fixture that decides whether a
+    fresh install can open the app at all.
+
 ``test_admin``
     That every registered admin page loads, and that the guards on the
     read-only and singleton models hold.

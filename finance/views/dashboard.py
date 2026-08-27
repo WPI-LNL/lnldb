@@ -70,8 +70,10 @@ def dashboard(request):
     projects = project_composition(fiscal_year=fy, is_projection=proj)
 
     # -- funding request burndowns ------------------------------------------
-    fr_qs = FundingRequest.objects.filter(closed=False).prefetch_related(
-        'line_items__allocations')
+    # with_totals() puts the request's own figures in SQL; with_lines() does
+    # the same for each line's spend. Both are aggregating properties, so a
+    # plain prefetch of the allocations would not have been read by either.
+    fr_qs = FundingRequest.objects.filter(closed=False).with_totals().with_lines()
     if projection_flag is not None:
         fr_qs = fr_qs.filter(is_projection=projection_flag)
     if state.fiscal_year:

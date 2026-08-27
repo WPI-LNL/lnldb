@@ -27,8 +27,8 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
-from finance.models import (MEMO_SEPARATOR, WorkdayTransaction, _identity_text,
-                            column_aliases)
+from finance.models import (MEMO_SEPARATOR, WorkdayTransaction, column_aliases,
+                            identity_text)
 
 # Canonical Workday columns. Keys are the normalised header, values are the
 # aliases we have actually seen come out of Workday.
@@ -447,9 +447,9 @@ def _near_duplicate_key(txn):
     nothing -- one October journal in this ledger holds four separate $100
     projector rentals.
     """
-    document = _identity_text(txn.operational_transaction)
-    supplier = _identity_text(txn.supplier)
-    employee = _identity_text(txn.employee)
+    document = identity_text(txn.operational_transaction)
+    supplier = identity_text(txn.supplier)
+    employee = identity_text(txn.employee)
     if not (document or supplier or employee):
         return None
     return (txn.accounting_date,
@@ -574,7 +574,7 @@ def _read_csv(raw):
 
     Returns raw cell lists, not dictionaries: the header row is not
     necessarily the first one, so working out which row is the header is a
-    later step (see :func:`find_header_row`).
+    later step (see :func:`_find_header`).
     """
     text = _decode(io.BytesIO(raw) if isinstance(raw, bytes) else raw)
     if not text.strip():

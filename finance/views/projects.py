@@ -18,30 +18,43 @@ from django.urls.base import reverse
 
 from finance.filters import filter_context, get_filter_state
 from finance.forms import FRLineItemFormSet, FundingRequestForm, ProjectTagForm
-from finance.models import FundingRequest, ProjectTag, money
+from finance.models import FundingRequest, ProjectTag, money, project_tag_costs
 
 
-def _tree_context(state, selected=None):
+def _tree_context(state, selected=None, rollup=None):
     """
     The left sidebar: the whole project forest with live rollup totals.
 
     Tree figures are deliberately *lifetime* rather than fiscal-year scoped --
     a project like NEL26 spans years by definition, and scoping the browser to
     one FY would hide most of what the explorer exists to show.
+
+    Costs come from :func:`finance.models.project_tag_costs` in one pass rather
+    than from ``node.total_cost()`` per row: this sidebar renders every tag
+    there is, and asking each one separately made the page cost a pair of
+    queries per project. The caller passes the map in when it has already
+    built one, since it needs the same figures for the pane on the right.
     """
     nodes = ProjectTag.objects.filter(archived=False)
     if state.projection_flag is not None:
         nodes = nodes.filter(is_projection=state.projection_flag)
+
+    if rollup is None:
+        rollup = project_tag_costs()[1]
+
+    # Resolved once rather than per row -- it was a query inside the loop.
+    ancestors = set()
+    if selected is not None:
+        ancestors = set(selected.get_ancestors().values_list('pk', flat=True))
 
     tree = []
     for node in nodes:
         tree.append({
             'node': node,
             'depth': node.level,
-            'cost': node.total_cost(),
+            'cost': rollup.get(node.pk, Decimal('0.00')),
             'is_selected': selected is not None and node.pk == selected.pk,
-            'is_ancestor': (selected is not None and selected.pk != node.pk
-                            and node.pk in selected.get_ancestors().values_list('pk', flat=True)),
+            'is_ancestor': node.pk in ancestors,
         })
     return tree
 
@@ -60,8 +73,13 @@ def project_explorer(request, pk=None):
     entries, total, children = [], Decimal('0.00'), []
     lifetime = Decimal('0.00')
 
+    # One pass for the sidebar, the lifetime figure and the child list, all of
+    # which ask the same question of overlapping sets of nodes.
+    direct_costs, rollup_costs = project_tag_costs()
+
     if selected is not None:
-        lifetime = selected.total_cost(include_descendants=include_children)
+        costs = rollup_costs if include_children else direct_costs
+        lifetime = costs.get(selected.pk, Decimal('0.00'))
 
         qs = selected.rollup_transactions(include_descendants=include_children)
         qs = state.apply(qs).select_related(
@@ -71,12 +89,13 @@ def project_explorer(request, pk=None):
         total = -money(qs.aggregate(t=Sum('amount'))['t'])
 
         for child in selected.get_children():
-            children.append({'node': child, 'cost': child.total_cost()})
+            children.append({'node': child,
+                             'cost': rollup_costs.get(child.pk, Decimal('0.00'))})
 
     context = {
         'h2': "Project Explorer",
         'fin_page': 'projects',
-        'tree': _tree_context(state, selected),
+        'tree': _tree_context(state, selected, rollup_costs),
         'selected': selected,
         'entries': entries,
         'total_cost': total,
@@ -132,12 +151,15 @@ def funding_list(request):
     """
     Every funding request for the selected year, with spend rolled up.
 
-    The prefetch matters: the template asks each request for its awarded and
-    spent totals, which walk ``line_items`` and then the allocations under
-    each line. Without it the page issues two queries per line item.
+    ``with_totals()`` is what keeps this to a constant number of queries. The
+    template asks every row for its awarded, spent and remaining figures, and
+    all three are aggregating properties -- so a plain
+    ``prefetch_related('line_items__allocations')`` bought nothing here, since
+    an aggregate never reads a prefetch cache. The totals are computed in SQL
+    alongside the rows instead.
     """
     state = get_filter_state(request)
-    qs = FundingRequest.objects.prefetch_related('line_items__allocations')
+    qs = FundingRequest.objects.with_totals()
     if state.fiscal_year:
         qs = qs.filter(fiscal_year=state.fiscal_year)
     if state.projection_flag is not None:
@@ -163,8 +185,13 @@ def funding_detail(request, pk):
     each property (``spent``, ``remaining``, ``percent_spent``) is evaluated
     exactly once -- they are computed, not stored, and several of them hit the
     database.
+
+    ``with_lines()`` annotates each line's spend in SQL, which is what makes
+    "evaluated exactly once" cheap rather than merely tidy: without it every
+    one of those three properties aggregates, because an aggregate does not
+    read a prefetch cache.
     """
-    fr = get_object_or_404(FundingRequest.objects.prefetch_related('line_items__allocations'), pk=pk)
+    fr = get_object_or_404(FundingRequest.objects.with_totals().with_lines(), pk=pk)
 
     lines = []
     for line in fr.line_items.all():

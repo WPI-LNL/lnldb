@@ -71,16 +71,47 @@ class FinanceSettingsTests(TestCase):
 
     def test_client_type_follows_the_setting(self):
         from events.tests.generators import Event2019Factory, OrgFactory
-        from finance.calculators import _client_type_of
-        from finance.models import ClientType
+        from finance.models import ClientType, client_type_for
 
         event = Event2019Factory.create(billing_org=OrgFactory.create(workday_fund=810))
-        self.assertEqual(_client_type_of(event), ClientType.STUDENT_ORG)
+        self.assertEqual(client_type_for(event), ClientType.STUDENT_ORG)
 
         config = FinanceSettings.load()
         config.student_org_workday_fund = 811
         config.save()
-        self.assertEqual(_client_type_of(event), ClientType.DEPARTMENT)
+        self.assertEqual(client_type_for(event), ClientType.DEPARTMENT)
+
+    def test_the_slice_and_the_dashboard_agree_on_client_type(self):
+        """
+        One rule, asked from both directions.
+
+        The classification used to be implemented twice -- once as a property
+        on the slice, once as a private helper in the calculators -- so the
+        ledger and the dashboard could in principle disagree about who paid
+        for a show. They now share :func:`finance.models.client_type_for`, and
+        this is what says so.
+        """
+        import datetime
+        from decimal import Decimal
+
+        from events.tests.generators import Event2019Factory, OrgFactory
+        from finance.models import ParsedTransaction, WorkdayTransaction, client_type_for
+
+        event = Event2019Factory.create(billing_org=OrgFactory.create(workday_fund=810))
+        txn = WorkdayTransaction(operational_transaction='CT-1',
+                                 accounting_date=datetime.date(2025, 9, 15),
+                                 net_amount=Decimal('120.00'))
+        txn.save()
+        entry = ParsedTransaction.objects.create(
+            parent_transaction=txn, amount=Decimal('120.00'),
+            effective_date=datetime.date(2025, 9, 15), linked_event=event)
+
+        self.assertEqual(entry.client_type, client_type_for(event))
+
+        config = FinanceSettings.load()
+        config.student_org_workday_fund = 811
+        config.save()
+        self.assertEqual(entry.client_type, client_type_for(event))
 
 
 class ServiceColorTests(TestCase):
