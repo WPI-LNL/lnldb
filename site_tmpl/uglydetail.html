@@ -19,6 +19,9 @@
             <h3>Status: <b>{{ event.status }}</b></h3>
 
             <div class="btn-group">
+                <!--{% if can_selfcrew %}
+                    <a class="btn btn-warning btn-lg" href="{% url "events:crew-tracker" %}">Crew Check In/Out</a>
+                {% endif %}-->
                 {% permission request.user has 'events.view_event_reports' of event %}
                     <a class="btn btn-info btn-lg" href="{% url "events:pdf" event.id %}">PDF</a>
                 {% endpermission %}
