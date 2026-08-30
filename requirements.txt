@@ -127,7 +127,7 @@ sphinxcontrib-jquery==4.1
 sphinxcontrib-jsmath==1.0.1
 sphinxcontrib-qthelp==2.0.0
 sphinxcontrib-serializinghtml==2.0.0
-spotipy==2.24.0
+spotipy==2.25.1
 sqlparse==0.5.3
 svglib==1.5.1
 tinycss2==1.4.0
