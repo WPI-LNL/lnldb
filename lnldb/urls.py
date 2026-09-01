@@ -47,6 +47,7 @@ urlpatterns += [
     re_path(r'^db/equipment/', include(('inventory.urls', 'inventory'), namespace='equipment')),
     re_path(r'^db/laptops/', include(('devices.urls.laptops', 'laptops'), namespace='laptops')),
     re_path(r'^db/projection/', include(('projection.urls', 'projection'), namespace='projection')),
+    re_path(r'^db/finance/', include(('finance.urls', 'finance'), namespace='finance')),
     re_path(r'^db/events/', include(('events.urls.events', 'lnldb'), namespace='events')),
     re_path(r'^my/', include(('events.urls.my', 'lnldb'), namespace='my')),
     re_path(r'^list/', include(('events.urls.cal', 'lnldb'), namespace='cal')),

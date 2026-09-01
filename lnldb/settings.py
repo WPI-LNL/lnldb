@@ -335,6 +335,7 @@ INSTALLED_APPS = (
     'data',
     'projection',
     'acct',
+    'finance',
     'pages',
     'meetings',
     'emails',
@@ -451,7 +452,9 @@ AJAX_LOOKUP_CHANNELS = {
     'Members': ('accounts.lookups', 'MemberLookup'),
     'AssocMembers': ('accounts.lookups', 'AssocMemberLookup'),
     'EquipmentClass': ('inventory.lookups', 'ClassLookup'),
-    'EquipmentContainer': ('inventory.lookups', 'ContainerLookup')
+    'EquipmentContainer': ('inventory.lookups', 'ContainerLookup'),
+    'Events': ('finance.lookups', 'EventLookup'),
+    'ProjectTags': ('finance.lookups', 'ProjectTagLookup')
 }
 
 AUTHENTICATION_BACKENDS = (

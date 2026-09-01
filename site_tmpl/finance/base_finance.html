@@ -1,0 +1,148 @@
+{# Shared chrome for all five finance pages: the nav tabs and the global filter bar. #}
+{% extends 'base_admin.html' %}
+{% load static %}
+{% load permissionif %}
+{% load finance_extras %}
+
+{% block title %}{{ h2|default:"Finance" }} — LNL Finance{% endblock %}
+
+{% block extras %}
+    {% comment %}
+        ?v= busts the browser cache on deploy. This project serves static files
+        from unhashed URLs, so without it a change can sit invisible behind a
+        cached copy. It used to be the git SHA, which does not change between
+        commits and so hid every edit made under one -- including a script whose
+        absence looks exactly like a button that does nothing. finance_extras.asset
+        stamps the file's own modification time in development instead, and the
+        release SHA in production, where files only change when a deploy does.
+    {% endcomment %}
+    <link href="{% asset 'css/finance.css' %}" rel="stylesheet" type="text/css">
+    {% comment %}
+        What makes the "Link to Event" and project pickers do anything.
+
+        base.html already loads ajax_select.js for the whole site, so it is
+        tempting to think this is redundant. It is not. That script ends with
+
+            })(window.jQuery, window.django.jQuery);
+
+        and window.django is created by admin/js/jquery.init.js, which base.html
+        does not load. On a page that supplies nothing further, that last line
+        throws TypeError before the module body runs: the plugin is never
+        registered, nothing binds on ready, and every picker stays an ordinary
+        text box that searches nothing and reports no error.
+
+        This emits the real media -- jQuery, jquery.init.js, then ajax_select.js
+        again -- so the second execution has the window.django it needs. The
+        bundled jQuery is not a conflict: jquery.init.js calls
+        jQuery.noConflict(true), which hands the new copy to django.jQuery and
+        puts window.$ back to the jQuery 1.10 the finance scripts expect.
+
+        Emitted for the whole app rather than per page for the same reason
+        routing.js is: a page with no picker on it simply finds nothing to wire
+        up. Per page it would have to come from {{ form.media }}, and the queue
+        -- the page that needs it most -- has one form per row and none at all
+        when the queue is empty.
+    {% endcomment %}
+    {% autocomplete_media %}
+    {% comment %}
+        Folding away the seldom-used fields is an enhancement, and an
+        enhancement that cannot be undone is a trap: a script that fails to
+        load -- or one a browser is still serving from cache -- would leave
+        those fields unreachable rather than merely tidy. Without JavaScript
+        everything is simply on screen, as it was before the fold existed.
+    {% endcomment %}
+    <noscript>
+        <style>
+            .fin-import-panel.is-folded { display: block; }
+            .fin-fields-more.is-folded { display: flex; }
+            .fin-more-toggle, #fin-import-toggle { display: none; }
+        </style>
+    </noscript>
+{% endblock %}
+
+{% comment %}
+    Loaded for the whole app rather than per page: every allocation form has
+    the same routing fields, and a page without them simply finds nothing to
+    do. Child templates that add their own scripts start their finalsay block
+    with {{ block.super }}.
+{% endcomment %}
+{% block finalsay %}
+    <script src="{% asset 'js/routing.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+    {# ---- Persistent filter bar: fiscal year + Event | Projection partition ---- #}
+    <div class="fin-topbar {% if print_mode %}hidden-print{% endif %}">
+        <div class="fin-topbar-inner">
+            <div class="fin-topbar-group">
+                <span class="fin-topbar-label">Fiscal Year</span>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-default btn-sm dropdown-toggle"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        {% if filter_state.fiscal_year %}FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}{% else %}All years{% endif %}
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        {% for fy, label in fiscal_year_options %}
+                            <li {% if filter_state.fiscal_year == fy %}class="active"{% endif %}>
+                                <a href="{% filter_url fiscal_year=fy %}">{{ label }}</a>
+                            </li>
+                        {% endfor %}
+                        <li role="separator" class="divider"></li>
+                        <li {% if not filter_state.fiscal_year %}class="active"{% endif %}>
+                            <a href="{% filter_url fiscal_year='' %}">All years</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="fin-topbar-group">
+                <span class="fin-topbar-label">Partition</span>
+                <div class="btn-group btn-group-sm fin-partition" role="group">
+                    {% for value, label in partition_options %}
+                        <a href="{% filter_url partition=value %}"
+                           class="btn btn-default {% if filter_state.partition == value %}active fin-partition-{{ value }}{% endif %}">
+                            {{ label }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if filter_state.partition == 'projection' %}
+                <span class="fin-firewall-note"
+                      title="University rules require film/Projection money to be tracked separately from Event Production. Anything Workday tags to ledger account 315-AG is locked to this side and cannot be moved.">
+                    <span class="glyphicon glyphicon-lock"></span>
+                    Showing Projection money only
+                </span>
+            {% endif %}
+
+            <div class="fin-topbar-nav">
+                <ul class="nav nav-pills nav-sm">
+                    <li {% if fin_page == 'dashboard' %}class="active"{% endif %}>
+                        <a href="{% url 'finance:dashboard' %}?{{ filter_state.querystring }}">Dashboard</a></li>
+                    <li {% if fin_page == 'ledger' %}class="active"{% endif %}>
+                        <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}">Ledger</a></li>
+                    {% permission request.user has 'finance.edit_subledger' %}
+                        <li {% if fin_page == 'queue' %}class="active"{% endif %}>
+                            <a href="{% url 'finance:queue' %}?{{ filter_state.querystring }}">Queue</a></li>
+                    {% endpermission %}
+                    <li {% if fin_page == 'projects' %}class="active"{% endif %}>
+                        <a href="{% url 'finance:projects' %}?{{ filter_state.querystring }}">Projects</a></li>
+                    <li {% if fin_page == 'funding' %}class="active"{% endif %}>
+                        <a href="{% url 'finance:fr-list' %}?{{ filter_state.querystring }}">Funding</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    {% if not perms.finance.edit_subledger %}
+        <div class="fin-readonly-banner hidden-print">
+            <span class="glyphicon glyphicon-eye-open"></span>
+            Read-only view. Contact the Treasurer to make changes.
+        </div>
+    {% endif %}
+
+    <div class="fin-page">
+        {% block fin_content %}{% endblock %}
+    </div>
+{% endblock %}

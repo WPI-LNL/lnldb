@@ -1,0 +1,296 @@
+{# Page 2 -- spreadsheet ledger, column picker and bulk action bar. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+{% load permissionif %}
+{% load static %}
+
+{% block fin_content %}
+    {# ---- Toolbar: search, facets, column picker ---- #}
+    <div class="fin-panel">
+        <div class="fin-panel-body" style="padding:10px 14px;">
+            <form method="get" class="form-inline" id="fin-ledger-filters">
+                {% comment %}
+                    Written out explicitly so submitting the filter form keeps
+                    "All years" / "All" instead of falling back to the session.
+                {% endcomment %}
+                <input type="hidden" name="fy" value="{{ filter_state.fiscal_year|default:'all' }}">
+                <input type="hidden" name="partition" value="{{ filter_state.partition|default:'all' }}">
+
+                <div class="form-group">
+                    <input type="search" name="q" class="form-control input-sm" style="width:240px;"
+                           placeholder="Search description, payee, memo, event…" value="{{ query }}">
+                </div>
+
+                <div class="form-group">
+                    <select name="kind" class="form-control input-sm">
+                        <option value="">All types</option>
+                        <option value="revenue" {% if active_filters.kind == 'revenue' %}selected{% endif %}>Revenue</option>
+                        <option value="expense" {% if active_filters.kind == 'expense' %}selected{% endif %}>Expenses</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <select name="status" class="form-control input-sm">
+                        <option value="">Any status</option>
+                        {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if active_filters.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <select name="category" class="form-control input-sm">
+                        <option value="">Any category</option>
+                        {% for value, label in category_choices %}
+                            <option value="{{ value }}" {% if active_filters.category == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <select name="fund" class="form-control input-sm">
+                        <option value="">Any fund</option>
+                        {% for value, label in fund_choices %}
+                            <option value="{{ value }}" {% if active_filters.fund == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <select name="project" class="form-control input-sm">
+                        <option value="">Any project</option>
+                        {# indented_label nests sub-projects; same source the form fields use #}
+                        {% for tag in projects %}
+                            <option value="{{ tag.pk }}" {% if active_filters.project == tag.pk|stringformat:"s" %}selected{% endif %}>{{ tag.indented_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}" class="btn btn-link btn-sm">Reset</a>
+
+                {# ---- Column visibility ---- #}
+                <div class="btn-group pull-right">
+                    <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown">
+                        <span class="glyphicon glyphicon-th-list"></span> Columns <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-right" id="fin-column-picker">
+                        {% for key, label, default in columns %}
+                            <li>
+                                <a href="#" class="fin-col-toggle" data-col="{{ key }}">
+                                    <input type="checkbox" class="fin-col-check" data-col="{{ key }}"
+                                           {% if default %}checked{% endif %}> {{ label }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                        <li role="separator" class="divider"></li>
+                        <li><a href="#" id="fin-col-reset">Reset to defaults</a></li>
+                    </ul>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# ---- Totals ---- #}
+    <div class="fin-stats">
+        <div class="fin-stat">
+            <div class="fin-stat-label">Rows</div>
+            <div class="fin-stat-value">{{ result_count }}</div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Revenue</div>
+            <div class="fin-stat-value text-success">{{ revenue_total|money }}</div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Expenses</div>
+            <div class="fin-stat-value text-danger">{{ expense_total|money }}</div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Net</div>
+            <div class="fin-stat-value {{ net_total|money_class }}">{{ net_total|money }}</div>
+        </div>
+    </div>
+
+    {# ---- The spreadsheet ---- #}
+    <div class="fin-panel">
+        <div class="fin-table-wrap">
+            <table class="table fin-table" id="fin-ledger-table">
+                <thead>
+                    <tr>
+                        {% if can_edit %}
+                            <th style="width:28px;">
+                                <input type="checkbox" id="fin-select-all" title="Select all on this page">
+                            </th>
+                        {% endif %}
+                        <th data-col="date"><a href="{% sort_url 'date' %}">Date{% sort_indicator 'date' %}</a></th>
+                        <th data-col="description"><a href="{% sort_url 'description' %}">Description{% sort_indicator 'description' %}</a></th>
+                        <th data-col="payee">Payee</th>
+                        <th data-col="amount" class="fin-num"><a href="{% sort_url 'amount' %}">Amount{% sort_indicator 'amount' %}</a></th>
+                        <th data-col="type">Type</th>
+                        <th data-col="status"><a href="{% sort_url 'status' %}">Status{% sort_indicator 'status' %}</a></th>
+                        <th data-col="partition">Partition</th>
+                        <th data-col="event">Event</th>
+                        <th data-col="client_type">Client Type</th>
+                        <th data-col="services">Services</th>
+                        <th data-col="fund_source"><a href="{% sort_url 'fund_source' %}">Fund{% sort_indicator 'fund_source' %}</a></th>
+                        <th data-col="spend_category"><a href="{% sort_url 'spend_category' %}">Spend Category{% sort_indicator 'spend_category' %}</a></th>
+                        <th data-col="fr_line">FR Line</th>
+                        <th data-col="project"><a href="{% sort_url 'project' %}">Project{% sort_indicator 'project' %}</a></th>
+                        <th data-col="workday_ref">Workday Ref</th>
+                        <th data-col="ledger_account">Ledger Acct</th>
+                        <th data-col="receipt">Receipt</th>
+                        <th style="width:40px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in page_obj %}
+                        <tr class="{% if entry.is_projection %}fin-row-projection{% endif %}" data-pk="{{ entry.pk }}">
+                            {% if can_edit %}
+                                <td><input type="checkbox" class="fin-row-check" value="{{ entry.pk }}"></td>
+                            {% endif %}
+                            <td data-col="date" class="fin-nowrap">{{ entry.effective_date|date:"M j, Y" }}</td>
+                            <td data-col="description">
+                                <a href="{% url 'finance:entry-detail' entry.pk %}">
+                                    {{ entry.description|default:"(untitled)" }}
+                                </a>
+                            </td>
+                            <td data-col="payee">
+                                {% if entry.parent_transaction %}{{ entry.parent_transaction.payee|default:"—" }}
+                                {% else %}<span class="fin-muted">encumbrance</span>{% endif %}
+                            </td>
+                            <td data-col="amount" class="fin-num {{ entry.amount|money_class }}">{{ entry.amount|money }}</td>
+                            <td data-col="type">{{ entry|entry_badge }}</td>
+                            <td data-col="status">{{ entry|status_badge }}</td>
+                            <td data-col="partition">
+                                {% if entry.is_projection %}
+                                    <span class="fin-tag is-projection">PROJ</span>
+                                {% else %}<span class="fin-muted">Event</span>{% endif %}
+                                {% comment %}
+                                    Filed on the opposite side from the account that
+                                    paid. Legitimate, and the reason the column alone
+                                    no longer tells the whole story.
+                                {% endcomment %}
+                                {% if entry.crosses_partition %}
+                                    <span class="fin-cross-badge" title="{{ entry.partition_note }}">
+                                        <span class="glyphicon glyphicon-transfer"></span>
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td data-col="event">
+                                {% if entry.linked_event %}
+                                    <a href="{% url 'events:detail' entry.linked_event.pk %}">{{ entry.linked_event.event_name }}</a>
+                                {% elif entry.non_event_revenue_type %}
+                                    {{ entry.non_event_revenue_type }}
+                                {% else %}<span class="fin-muted">—</span>{% endif %}
+                            </td>
+                            <td data-col="client_type">
+                                {% if entry.linked_event %}{{ entry.client_type_display }}{% else %}<span class="fin-muted">—</span>{% endif %}
+                            </td>
+                            <td data-col="services">
+                                {{ entry.event_services_display|default:"—" }}
+                            </td>
+                            <td data-col="fund_source">{{ entry.fund_source|default:"—" }}</td>
+                            <td data-col="spend_category">{{ entry.lnl_spend_category|default:"—" }}</td>
+                            <td data-col="fr_line">
+                                {% if entry.fr_line_target %}
+                                    <a href="{% url 'finance:fr-detail' entry.fr_line_target.funding_request.pk %}">
+                                        {{ entry.fr_line_target.name }}</a>
+                                {% else %}<span class="fin-muted">—</span>{% endif %}
+                            </td>
+                            <td data-col="project">
+                                {% if entry.project_tag %}
+                                    <a href="{% url 'finance:projects-detail' entry.project_tag.pk %}">{{ entry.project_tag.code }}</a>
+                                {% else %}<span class="fin-muted">—</span>{% endif %}
+                            </td>
+                            <td data-col="workday_ref" class="fin-nowrap">
+                                {% if entry.parent_transaction %}
+                                    <a href="{% url 'finance:txn-detail' entry.parent_transaction.pk %}">
+                                        {{ entry.parent_transaction.reference }}</a>
+                                {% else %}<span class="fin-muted">—</span>{% endif %}
+                            </td>
+                            <td data-col="ledger_account">
+                                {% if entry.parent_transaction %}{{ entry.parent_transaction.ledger_account|default:"—" }}{% else %}—{% endif %}
+                            </td>
+                            <td data-col="receipt">
+                                {% if entry.receipt_file %}
+                                    <a href="{{ entry.receipt_file.url }}" target="_blank" title="View receipt">
+                                        <span class="glyphicon glyphicon-paperclip"></span></a>
+                                {% else %}<span class="fin-muted">—</span>{% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'finance:entry-detail' entry.pk %}" class="btn btn-xs btn-default"
+                                   title="Open">&rsaquo;</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="20">
+                                <div class="fin-empty">
+                                    <span class="glyphicon glyphicon-search"></span>
+                                    Nothing matches these filters.
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# ---- Pagination ---- #}
+    {% if page_obj.has_other_pages %}
+        <nav class="text-center">
+            <ul class="pagination pagination-sm">
+                {% if page_obj.has_previous %}
+                    <li><a href="?page={{ page_obj.previous_page_number }}&amp;{{ querystring }}">&laquo;</a></li>
+                {% else %}<li class="disabled"><span>&laquo;</span></li>{% endif %}
+                <li class="disabled"><span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                    <li><a href="?page={{ page_obj.next_page_number }}&amp;{{ querystring }}">&raquo;</a></li>
+                {% else %}<li class="disabled"><span>&raquo;</span></li>{% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+
+    {# ---- Slide-up bulk action bar ---- #}
+    {% if can_edit %}
+        <form method="post" action="{% url 'finance:bulk-action' %}" id="fin-bulk-form">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <input type="hidden" name="selected" id="fin-bulk-selected" value="">
+            <div class="fin-bulk-bar" id="fin-bulk-bar">
+                <div class="fin-bulk-inner">
+                    <span class="fin-bulk-count"><span id="fin-bulk-count">0</span> selected</span>
+
+                    <select name="action" class="form-control input-sm" id="fin-bulk-action">
+                        {% for value, label in bulk_form.fields.action.choices %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <span class="fin-bulk-value" data-for="project_tag">
+                        {{ bulk_form.project_tag }}
+                    </span>
+                    <span class="fin-bulk-value" data-for="lnl_spend_category" style="display:none;">
+                        {{ bulk_form.lnl_spend_category }}
+                    </span>
+                    <span class="fin-bulk-value" data-for="fund_source" style="display:none;">
+                        {{ bulk_form.fund_source }}
+                    </span>
+                    <span class="fin-bulk-value" data-for="status" style="display:none;">
+                        {{ bulk_form.status }}
+                    </span>
+
+                    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                    <button type="button" class="btn btn-link btn-sm" id="fin-bulk-cancel"
+                            style="color:#cbd2d9;">Cancel</button>
+                </div>
+            </div>
+        </form>
+    {% endif %}
+{% endblock %}
+
+{% block finalsay %}
+{{ block.super }}
+<script src="{% asset 'js/ledger.js' %}"></script>
+{% endblock %}

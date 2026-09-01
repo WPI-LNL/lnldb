@@ -1,0 +1,45 @@
+{# One field of a queue row, with its auto-suggest chip when the importer offered one. #}
+{% comment %}
+One control on a reconciliation row.
+
+Every field on the queue is the same three things stacked: a label, the widget,
+and at most one caption underneath saying where the answer came from. Writing
+that out per field is what produced four near-identical twelve-line blocks that
+drifted apart, so it lives here once and each row is a single include.
+
+Parameters:
+  field       a bound form field (required)
+  label       the visible label (required)
+  size        sm | md | lg -- fixes the control width so the same field lines
+              up vertically down the page, which is how the queue is read
+  autofilled  the Suggestion the form already applied, if any
+  suggestion  a Suggestion to offer as a clickable chip, used only when nothing
+              was auto-filled: a box that is already answered should not also
+              be nagging
+
+At most one caption, always. There used to be an `options` parameter that
+rendered a whole row of chips under the event picker -- five scored guesses at
+which show a deposit belonged to. Guessing was the wrong shape for that field:
+the ISD memo names the event outright, so it is a lookup that fills the box in,
+and five candidates under a box is a puzzle rather than a shortcut.
+{% endcomment %}
+<div class="form-group fin-field fin-field-{{ size|default:"md" }}">
+    <label for="{{ field.id_for_label }}"
+           {% if field.help_text %}title="{{ field.help_text }}"{% endif %}>{{ label }}</label>
+    {{ field }}
+
+    {% if autofilled %}
+        <span class="fin-note fin-note-auto"
+              title="Filled in from the export: {{ autofilled.reason }}. Change it if that is wrong.">
+            <span class="glyphicon glyphicon-import"></span>{{ autofilled.reason }}
+        </span>
+    {% elif suggestion %}
+        <span class="fin-note fin-suggest fin-suggest-{{ suggestion.css_class }}"
+              data-target="{{ field.id_for_label }}"
+              data-value="{{ suggestion.value }}"
+              data-label="{{ suggestion.label }}"
+              title="{{ suggestion.reason }}">
+            <span class="glyphicon glyphicon-flash"></span>{{ suggestion.label|truncatechars:30 }}
+        </span>
+    {% endif %}
+</div>
