@@ -409,6 +409,7 @@ def suggest_all(txn, tags=None, rules=None):
         return {
             'kind': 'revenue',
             'linked_event': suggest_linked_event(txn),
+            'refund_of': suggest_refund_target(txn),
             'project_tag': suggest_project_tag(txn, tags=tags),
             'warning': '',
         }
@@ -470,6 +471,39 @@ def suggest_refund_targets(txn, limit=8):
         ).select_related('parent_transaction')
         .order_by('-effective_date')[:limit]
     )
+
+
+def suggest_refund_target(txn, limit=8):
+    """
+    The one purchase a credit most likely reverses, as a chip to click.
+
+    :func:`suggest_refund_targets` ranks by recency, which is the right order
+    for a picker and the wrong one for a single guess -- the most recent charge
+    to a supplier is rarely the one being credited back. What identifies a
+    reversal is the amount: a credit matching an earlier charge to the penny,
+    from the same payee, is a reversal of *that* charge whatever else the
+    supplier billed in between. That is the whole test, and it is the shape
+    Workday produces when it rescinds an invoice, line for line.
+
+    Deliberately silent when nothing matches exactly. Partial credits and
+    restocking fees are real, but they are the cases where only a person can
+    tell which purchase is meant, and a wrong guess here is worse than no guess
+    at all: accepting it would quietly hand the money back to the wrong funding
+    request line, where it reads as budget nobody spent. The full picker is
+    still there for those.
+
+    An inference, never a lookup -- the export does not say a line is a
+    reversal, we are noticing that it looks like one. So it offers a chip and
+    fills in nothing. See the module docstring.
+    """
+    for entry in suggest_refund_targets(txn, limit=limit):
+        if -entry.amount == txn.net_amount:
+            return Suggestion(entry.pk, HIGH,
+                              "Same payee and amount as this purchase on %s, so it looks "
+                              "like a reversal of it. Check before accepting."
+                              % date_format(entry.effective_date, 'M j'),
+                              entry.picker_label)
+    return None
 
 
 # ---------------------------------------------------------------------------

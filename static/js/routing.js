@@ -1,7 +1,8 @@
 /* How the routing fields react to each other on any allocation form.
 
-   Three rules. The first two are about not making the Treasurer type something
-   the database already knows; the third is about asking only when it matters:
+   Four rules. The first two are about not making the Treasurer type something
+   the database already knows; the third is about asking only when it matters;
+   the fourth is about not asking two questions where only one can be answered:
 
      1. The funding request picker only appears when the chosen fund draws on
         one. Which funds those are is a flag on the FundSource row, rendered
@@ -19,8 +20,15 @@
         the main account and SGA reimburses it -- so the question is asked at
         the moment it becomes relevant rather than sitting on screen always.
 
-   The server enforces rules 1 and 3 either way (ParsedTransaction.clean() and
-   BaseAllocationForm._check_fund_and_fr_line). None of this is validation. */
+     4. Naming the purchase a credit reverses puts the revenue boxes away. Money
+        coming in is either new revenue or a purchase being credited back, never
+        both, and a refund carries no routing of its own -- ReconcileForm copies
+        it off the entry being reversed.
+
+   The server enforces all four either way (ParsedTransaction.clean(),
+   BaseAllocationForm._check_fund_and_fr_line, and, for rule 4, the direction
+   rules that drop the revenue fields from a refund outright). None of this is
+   validation. */
 (function ($) {
     'use strict';
 
@@ -51,7 +59,13 @@
             category: $scope.find('[name$="lnl_spend_category"]').first(),
             project: $scope.find('[name$="project_tag"]').first(),
             projection: $scope.find('[name$="is_projection"]').first(),
-            reason: $scope.find('.fin-partition-reason').first()
+            reason: $scope.find('.fin-partition-reason').first(),
+            refund: $scope.find('select[name$="refund_of"]').first(),
+            /* ajax-select renders linked_event as a visible text box plus a
+               hidden input; the hidden one carries the name, and its wrapper
+               holds both. */
+            event: $scope.find('[name$="linked_event"]').first(),
+            revenueType: $scope.find('[name$="non_event_revenue_type"]').first()
         };
     }
 
@@ -138,7 +152,34 @@
         }
     }
 
+    /* ---- 4. A credit is a refund or it is revenue, never both -------------- */
+    function refundGate($refund) {
+        var f = fields($refund);
+        var isRefund = !!f.refund.val();
+
+        $.each([f.event, f.revenueType], function (_, $field) {
+            if (!$field.length) { return; }
+            container($field).toggle(!isRefund);
+        });
+
+        /* Deliberately not cleared. The server drops both fields from a refund
+           form outright, so whatever they hold is discarded rather than saved
+           -- and blanking an ajax-select by hand means reaching past the
+           visible box into the hidden input that actually carries the value,
+           which is a good way to leave the two disagreeing if this rule ever
+           moves. Hiding says the same thing and cannot lie about what was
+           submitted. */
+    }
+
     function bind(root) {
+        $(root).find('select[name$="refund_of"]').each(function () {
+            var $refund = $(this);
+            if ($refund.data('fin-refund-gate')) { return; }
+            $refund.data('fin-refund-gate', true);
+            $refund.on('change', function () { refundGate($refund); });
+            refundGate($refund);
+        });
+
         $(root).find('.fin-partition-reason').each(function () {
             var $reason = $(this);
             if ($reason.data('fin-partition')) { return; }

@@ -22,9 +22,10 @@ from django.urls import reverse
 
 from finance.models import (FRLineItem, FundingRequest, ParsedTransaction, SpendCategory,
                             SuggestionRule, TransactionStatus, WorkdayTransaction)
-from finance.suggestions import encumbrance_match_label, suggest_encumbrance_matches
+from finance.suggestions import (encumbrance_match_label, suggest_all,
+                                 suggest_encumbrance_matches)
 from finance.tests.test_views import CSV_HEADER, CSV_ROW, FinanceViewTestCase
-from finance.tests.util import category, fund
+from finance.tests.util import category, fund, revenue_source
 
 
 class ImportReportingTests(FinanceViewTestCase):
@@ -445,6 +446,114 @@ class QueueSuggestionEndpointTests(FinanceViewTestCase):
         self.client.force_login(stranger)
         response = self.client.get(reverse('finance:suggestions', args=[txn.pk]))
         self.assertEqual(response.status_code, 403)
+
+
+class QueueRefundTests(FinanceViewTestCase):
+    """
+    Filing a credit against the purchase it reverses, from the queue.
+
+    Workday rescinds an invoice by posting its mirror image days later: same
+    payee, same lines, same amounts, opposite sign, new document number. Both
+    postings are real and both land in the queue, and the credit is only
+    correctly filed if it goes back to the fund and the funding request line
+    the original came out of. Anywhere else and the reversal does not reverse
+    anything -- the award stays drawn down and the ledger grows income LNL
+    never received.
+    """
+
+    def setUp(self):
+        super(QueueRefundTests, self).setUp()
+        self.grant('view_subledger', 'edit_subledger')
+        self.request = FundingRequest.objects.create(name='Shop Tools', fiscal_year=2026)
+        self.line = FRLineItem.objects.create(
+            funding_request=self.request, name='Hand tools',
+            amount_awarded=Decimal('500.00'))
+        self.purchase_txn = self.make_txn(op='OT-RF1', amount='-25.58',
+                                          date=datetime.date(2025, 9, 15))
+        self.purchase = ParsedTransaction.objects.create(
+            parent_transaction=self.purchase_txn, amount=Decimal('-25.58'),
+            effective_date=self.purchase_txn.accounting_date, description='Solder sucker',
+            fund_source=fund('sga_fr'), lnl_spend_category=category('repairs'),
+            fr_line_target=self.line)
+        self.credit_txn = self.make_txn(op='OT-RF2', amount='25.58',
+                                        date=datetime.date(2025, 9, 20))
+
+    def reconcile(self, txn, **payload):
+        prefixed = {'txn%s-%s' % (txn.pk, k): v for k, v in payload.items()}
+        return self.client.post(reverse('finance:reconcile', args=[txn.pk]), prefixed)
+
+    def test_a_credit_can_be_filed_as_a_refund_from_the_queue(self):
+        """ The whole point: one dropdown, no retyping, no second page. """
+        response = self.reconcile(self.credit_txn, refund_of=self.purchase.pk)
+        self.assertEqual(response.status_code, 302)
+        entry = self.credit_txn.slices.get()
+        self.assertEqual(entry.refund_of, self.purchase)
+        self.assertEqual(entry.amount, Decimal('25.58'))
+
+    def test_the_refund_inherits_every_routing_field(self):
+        """
+        Naming the purchase answers all of them, so none of them are asked.
+        """
+        self.reconcile(self.credit_txn, refund_of=self.purchase.pk)
+        entry = self.credit_txn.slices.get()
+        self.assertEqual(entry.fund_source, self.purchase.fund_source)
+        self.assertEqual(entry.lnl_spend_category, self.purchase.lnl_spend_category)
+        self.assertEqual(entry.fr_line_target, self.line)
+
+    def test_the_refund_carries_no_revenue_routing(self):
+        """ It is money coming back, not money coming in. """
+        self.reconcile(self.credit_txn, refund_of=self.purchase.pk,
+                       non_event_revenue_type=revenue_source('alumni').pk)
+        entry = self.credit_txn.slices.get()
+        self.assertIsNone(entry.non_event_revenue_type,
+                          "a refund posted with a revenue type should discard it")
+
+    def test_it_gives_the_funding_request_line_its_money_back(self):
+        """ The reason any of this matters: the award is spendable again. """
+        self.assertEqual(FRLineItem.objects.get(pk=self.line.pk).remaining,
+                         Decimal('474.42'))
+        self.reconcile(self.credit_txn, refund_of=self.purchase.pk)
+        self.assertEqual(FRLineItem.objects.get(pk=self.line.pk).remaining,
+                         Decimal('500.00'))
+
+    def test_a_credit_with_no_refund_target_is_still_revenue(self):
+        """ The ordinary case is untouched: a deposit is not a refund. """
+        self.reconcile(self.credit_txn, non_event_revenue_type=revenue_source('alumni').pk)
+        entry = self.credit_txn.slices.get()
+        self.assertIsNone(entry.refund_of)
+        self.assertIsNone(entry.fund_source)
+        self.assertEqual(entry.non_event_revenue_type, revenue_source('alumni'))
+
+    def test_the_picker_is_offered_on_a_credit_row(self):
+        response = self.client.get(reverse('finance:queue') + '?fy=2026')
+        self.assertContains(response, 'txn%s-refund_of' % self.credit_txn.pk)
+
+    def test_the_picker_is_not_offered_on_a_debit_row(self):
+        """ A refund must be positive, so on spending the box could only fail. """
+        response = self.client.get(reverse('finance:queue') + '?fy=2026')
+        self.assertNotContains(response, 'txn%s-refund_of' % self.purchase_txn.pk)
+
+    def test_an_exact_mirror_is_suggested_as_a_chip(self):
+        data = suggest_all(self.credit_txn)
+        self.assertIsNotNone(data['refund_of'])
+        self.assertEqual(data['refund_of'].value, self.purchase.pk)
+
+    def test_a_credit_matching_nothing_exactly_suggests_nothing(self):
+        """
+        A wrong guess here credits the wrong award, so silence is the answer.
+        """
+        odd = self.make_txn(op='OT-RF3', amount='19.99',
+                            date=datetime.date(2025, 9, 20))
+        self.assertIsNone(suggest_all(odd)['refund_of'])
+
+    def test_the_suggestion_is_never_filled_in_for_you(self):
+        """
+        An inference, not a lookup -- the export never says "this is a reversal".
+        """
+        response = self.client.get(reverse('finance:queue') + '?fy=2026')
+        self.assertContains(response, 'fin-suggest')
+        row = [r for r in response.context['rows'] if r['txn'].pk == self.credit_txn.pk][0]
+        self.assertNotIn('refund_of', row['form'].autofilled)
 
 
 class EncumbranceMatchingTests(FinanceViewTestCase):

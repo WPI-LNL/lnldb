@@ -585,6 +585,19 @@ class BaseAllocationForm(forms.ModelForm):
             field.queryset = queryset
 
     # -- direction ----------------------------------------------------------
+    def _refund_selected(self):
+        """
+        Whether this row is being filed as a credit against an earlier purchase.
+
+        Read from the raw data rather than ``cleaned_data`` because the answer
+        is needed in ``__init__``, long before validation: it decides which
+        fields the form even has. Subclasses that fix the direction from the
+        bank line still have to consult it, so it lives here rather than inline
+        in :meth:`_direction`.
+        """
+        return bool(self.data.get(self.add_prefix('refund_of'))
+                    or self.instance.refund_of_id)
+
     def _direction(self):
         """ ``'revenue'`` or ``'expense'`` for the row being edited. """
         amount = None
@@ -601,8 +614,7 @@ class BaseAllocationForm(forms.ModelForm):
         if amount is None:
             return None
 
-        is_refund = bool(self.data.get(self.add_prefix('refund_of')) or self.instance.refund_of_id)
-        if amount > 0 and not is_refund:
+        if amount > 0 and not self._refund_selected():
             return 'revenue'
         return 'expense'
 
@@ -824,9 +836,19 @@ class ReconcileForm(BaseAllocationForm):
     # from. Receipt and explanation are deferred to the Entry page.
     REQUIRED_ON_EXPENSES = ('fund_source',)
 
+    #: Routing a credit takes from the purchase it reverses, rather than asking
+    #: for it again. A refund filed anywhere other than where the money went
+    #: does not undo the spending: the fund keeps the charge, the funding
+    #: request line keeps the draw, and only the grand total nets out. There is
+    #: exactly one right answer for every one of these and the original entry
+    #: already holds it, so the queue fills them in and shows no boxes at all.
+    REFUND_INHERITED = ('fund_source', 'lnl_spend_category', 'fr_line_target',
+                        'linked_event', 'project_tag', 'is_projection')
+
     class Meta(BaseAllocationForm.Meta):
-        fields = ('linked_event', 'non_event_revenue_type', 'fund_source', 'lnl_spend_category',
-                  'fr_line_target', 'project_tag', 'is_projection', 'audit_explanation')
+        fields = ('refund_of', 'linked_event', 'non_event_revenue_type', 'fund_source',
+                  'lnl_spend_category', 'fr_line_target', 'project_tag', 'is_projection',
+                  'audit_explanation')
 
     def __init__(self, *args, **kwargs):
         """ Compact styling: this form is rendered many times down one page. """
@@ -835,16 +857,80 @@ class ReconcileForm(BaseAllocationForm):
         if 'audit_explanation' in self.fields:
             self.fields['audit_explanation'].widget.attrs['rows'] = 2
 
+    def _refundable_queryset(self):
+        """
+        Nothing to offer against a debit line.
+
+        A refund is money coming back, so the picker means something only on a
+        positive line. :meth:`_apply_direction_rules` drops the field from a
+        debit row outright, which is what actually keeps the query from ever
+        running -- a queryset is lazy, and an unrendered field never evaluates
+        one. This is the belt to that pair of braces: should the field ever
+        survive onto a debit row, it offers nothing rather than offering
+        purchases that could only fail validation on the way back.
+        """
+        if self.parent_transaction is not None and self.parent_transaction.net_amount <= 0:
+            return ParsedTransaction.objects.none()
+        return super(ReconcileForm, self)._refundable_queryset()
+
     def _direction(self):
         """
         Take the direction from the bank line, which cannot be argued with.
 
         The base class infers it from the typed amount; here there is no
         amount box, and the sign Workday recorded is authoritative.
+
+        The one thing that *can* argue with it is the Treasurer naming the
+        purchase this credit reverses. A refund is money arriving that belongs
+        on the expense side -- it has to land on the fund and the funding
+        request line it is giving back to -- so a positive line with a refund
+        target is an expense, exactly as the base class has it.
         """
         if self.parent_transaction is not None:
-            return 'revenue' if self.parent_transaction.net_amount > 0 else 'expense'
+            positive = self.parent_transaction.net_amount > 0
+            return 'revenue' if positive and not self._refund_selected() else 'expense'
         return super(ReconcileForm, self)._direction()
+
+    def _apply_direction_rules(self):
+        """
+        Strip the queue row down to the one question each kind of line asks.
+
+        Two subtractions on top of the base rules, both of which exist so that
+        no row ever renders a box it cannot honour:
+
+        * A **debit** line loses the refund picker. Money going out is not a
+          credit against anything, and the database says so -- a refund must be
+          positive -- so offering the field could only ever produce an error.
+
+        * A **refund** loses the expense routing. Those fields are not blank
+          for it to fill; they are already answered by the purchase being
+          reversed, and :meth:`_inherit_refund_routing` copies them across.
+          Leaving them on screen would ask the Treasurer to retype an answer
+          the ledger holds, and let them get it wrong -- and because
+          ``fund_source`` is required on the expense side, a refund chosen from
+          a row that renders as revenue would otherwise bounce with an error
+          against a box that was never on screen to fill in.
+        """
+        super(ReconcileForm, self)._apply_direction_rules()
+
+        if self.parent_transaction is not None and self.parent_transaction.net_amount <= 0:
+            self.fields.pop('refund_of', None)
+        elif self._refund_selected():
+            for name in self.REFUND_INHERITED + ('allow_cross_year_fr',):
+                self.fields.pop(name, None)
+
+    def _inherit_refund_routing(self, original):
+        """
+        Point the credit at everything the original purchase was charged to.
+
+        Runs after :meth:`BaseAllocationForm.clean`, which nulls every routing
+        field the form does not render -- which, on a refund, is all of them.
+        Filling them in first would be undone.
+        """
+        if original is None:
+            return
+        for name in self.REFUND_INHERITED:
+            setattr(self.instance, name, getattr(original, name))
 
     def _inherit_from_parent(self):
         """
@@ -870,9 +956,16 @@ class ReconcileForm(BaseAllocationForm):
             self.instance.description = parent.journal_line_memo or parent.description
 
     def clean(self):
-        """ Inherit amount and date before the model gets a look at them. """
+        """
+        Inherit amount, date and refund routing before the model looks.
+
+        The refund target is read out of ``cleaned_data`` rather than off the
+        instance: ``ModelForm`` only writes the form's values onto the instance
+        in ``_post_clean``, which has not run yet.
+        """
         cleaned = super(ReconcileForm, self).clean()
         self._inherit_from_parent()
+        self._inherit_refund_routing((cleaned or {}).get('refund_of'))
         return cleaned
 
     def save(self, commit=True):
@@ -881,10 +974,13 @@ class ReconcileForm(BaseAllocationForm):
 
         ``_inherit_from_parent`` runs again rather than being trusted from
         ``clean()``: ``save(commit=False)`` rebuilds the instance from
-        ``cleaned_data``, which has no amount or date in it.
+        ``cleaned_data``, which has no amount or date in it -- and rebuilding
+        it drops the routing copied off the refund target too, so that is
+        redone here for the same reason.
         """
         instance = super(ReconcileForm, self).save(commit=False)
         self._inherit_from_parent()
+        self._inherit_refund_routing(instance.refund_of if instance.refund_of_id else None)
         if commit:
             instance.full_clean()
             instance.save()

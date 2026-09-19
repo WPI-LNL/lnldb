@@ -215,6 +215,17 @@
                                 structurally incapable of posting a fund.
                             {% endcomment %}
                             {% if row.is_revenue %}
+                                {% comment %}
+                                    Money coming in is one of two things, and
+                                    they are not variations on each other: new
+                                    revenue, or a purchase being credited back.
+                                    A refund takes no routing of its own -- the
+                                    entry it reverses already carries all of it
+                                    -- so choosing one here is the whole job,
+                                    and routing.js folds the revenue pair away
+                                    the moment it is chosen.
+                                {% endcomment %}
+                                {% include 'finance/_queue_field.html' with field=row.form.refund_of label="Refund of" size="lg" suggestion=row.suggestions.refund_of only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Link to Event" size="lg" autofilled=row.form.autofilled.linked_event only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.non_event_revenue_type label="or Non-Event Revenue" size="md" only %}
                             {% else %}
