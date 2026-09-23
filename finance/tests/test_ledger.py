@@ -227,7 +227,7 @@ class BulkActionGuardTests(FinanceViewTestCase):
         encumbrance = ParsedTransaction.objects.create(
             amount=Decimal('-400.00'), effective_date=datetime.date(2025, 9, 15),
             description='Deposit on a console', fund_source=fund('sga_budget'),
-            lnl_spend_category=category('new_stuff'))
+            lnl_spend_category=category('equipment_noncapital'))
         response = self._act('status', TransactionStatus.SETTLED, [encumbrance])
         self.assertContains(response, 'not fully allocated yet')
         encumbrance.refresh_from_db()

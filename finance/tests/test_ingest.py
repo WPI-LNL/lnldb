@@ -106,7 +106,7 @@ class ImportReportingTests(FinanceViewTestCase):
 
     def test_the_wording_matches_the_number_of_unmapped_categories(self):
         rows = [CSV_ROW.replace('OT-9001', 'OT-U1').replace('Supplies', 'Balloon Animals'),
-                CSV_ROW.replace('OT-9001', 'OT-U2').replace('Supplies', 'Kazoo Rental')]
+                CSV_ROW.replace('OT-9001', 'OT-U2').replace('Supplies', 'Kazoo Tuning')]
         self._upload(CSV_HEADER + "\n" + "\n".join(rows) + "\n")
         response = self.client.post(reverse('finance:upload-confirm'), {}, follow=True)
         self.assertContains(response, 'these Workday categories')
@@ -533,7 +533,7 @@ class QueueRefundTests(FinanceViewTestCase):
         response = self.client.get(reverse('finance:queue') + '?fy=2026')
         self.assertNotContains(response, 'txn%s-refund_of' % self.purchase_txn.pk)
 
-    def test_an_exact_mirror_is_suggested_as_a_chip(self):
+    def test_an_exact_mirror_is_recognised(self):
         data = suggest_all(self.credit_txn)
         self.assertIsNotNone(data['refund_of'])
         self.assertEqual(data['refund_of'].value, self.purchase.pk)
@@ -546,14 +546,71 @@ class QueueRefundTests(FinanceViewTestCase):
                             date=datetime.date(2025, 9, 20))
         self.assertIsNone(suggest_all(odd)['refund_of'])
 
-    def test_the_suggestion_is_never_filled_in_for_you(self):
+    def test_a_different_memo_is_not_a_reversal(self):
         """
-        An inference, not a lookup -- the export never says "this is a reversal".
+        The amount agreeing is a coincidence a busy vendor produces monthly.
+        What identifies a reversal is the original line quoted back: same memo,
+        same spend category, same payee, opposite sign. Drop any one of them
+        and this goes quiet.
+        """
+        stranger = self.make_txn(op='OT-RF4', amount='25.58',
+                                 date=datetime.date(2025, 9, 21),
+                                 memo='Something else entirely')
+        self.assertIsNone(suggest_all(stranger)['refund_of'])
+
+    def test_two_identical_purchases_leave_the_box_empty(self):
+        """
+        LNL bought the same thing twice, so nothing tells the two apart and one
+        credit could be giving back either. Choosing would be answering the
+        question rather than reading the answer -- and if the two were charged
+        to different awards, the wrong one gets its money back. The picker
+        still lists both.
+        """
+        from finance.suggestions import suggest_refund_targets
+        twin_txn = self.make_txn(op='OT-RF6', amount='-25.58',
+                                 date=datetime.date(2025, 9, 16))
+        twin = ParsedTransaction.objects.create(
+            parent_transaction=twin_txn, amount=Decimal('-25.58'),
+            effective_date=twin_txn.accounting_date, description='Solder sucker',
+            fund_source=fund('sga_fr'), lnl_spend_category=category('repairs'),
+            fr_line_target=self.line)
+
+        self.assertIsNone(suggest_all(self.credit_txn)['refund_of'])
+        offered = suggest_refund_targets(self.credit_txn)
+        self.assertIn(twin, offered)
+        self.assertIn(self.purchase, offered)
+
+    def test_a_different_workday_category_is_not_a_reversal(self):
+        other = WorkdayTransaction.objects.create(
+            operational_transaction='OT-RF5', accounting_date=datetime.date(2025, 9, 21),
+            net_amount=Decimal('25.58'), supplier='B&H Photo', memo='Test line',
+            worktags_json={'ledger_account': '71100:Supplies',
+                           'spend_category': 'Printing'})
+        self.assertIsNone(suggest_all(other)['refund_of'])
+
+    def test_the_reversal_is_filled_in_and_says_what_it_matched(self):
+        """
+        Four fields agreeing exactly is not a resemblance between two
+        purchases, it is one purchase described twice -- so the box is filled
+        in rather than left for the Treasurer to hunt the original out of a
+        dropdown. The caption under it names what agreed, and the row still
+        has to be submitted by a person.
         """
         response = self.client.get(reverse('finance:queue') + '?fy=2026')
-        self.assertContains(response, 'fin-suggest')
         row = [r for r in response.context['rows'] if r['txn'].pk == self.credit_txn.pk][0]
-        self.assertNotIn('refund_of', row['form'].autofilled)
+        self.assertEqual(row['form'].initial['refund_of'], self.purchase.pk)
+        self.assertIn('refund_of', row['form'].autofilled)
+        self.assertIn('Same memo', row['form'].autofilled['refund_of'].reason)
+
+    def test_a_filled_in_reversal_still_has_to_be_submitted(self):
+        """
+        Nothing is written by the queue rendering. The entry only exists once
+        somebody posts the row it was filled in on.
+        """
+        self.client.get(reverse('finance:queue') + '?fy=2026')
+        self.assertEqual(self.credit_txn.slices.count(), 0)
+        self.reconcile(self.credit_txn, refund_of=self.purchase.pk)
+        self.assertEqual(self.credit_txn.slices.get().refund_of, self.purchase)
 
 
 class EncumbranceMatchingTests(FinanceViewTestCase):

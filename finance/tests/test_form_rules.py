@@ -352,9 +352,85 @@ class BulkReconcileFormTests(TestCase):
         """
         The bar is dark and sets a colour; a control that inherits it keeps its
         own light background and comes out white on white.
+
+        The tick box is the exception, and the one widget the class would
+        actively damage: ``form-control`` is a full-width block.
         """
         form = BulkReconcileForm()
         for name, field in form.fields.items():
-            if name == 'selected':
+            if name in ('selected', 'allow_cross_year_fr'):
                 continue
             self.assertIn('form-control', field.widget.attrs.get('class', ''), name)
+
+    def test_the_tick_box_is_left_unstyled(self):
+        form = BulkReconcileForm()
+        classes = form.fields['allow_cross_year_fr'].widget.attrs.get('class', '')
+        self.assertNotIn('form-control', classes)
+
+
+class BulkReconcileFundingRequestTests(TestCase):
+    """
+    Charging a whole selection to one award.
+
+    A funding request is spent the same way the standing budget is -- as a
+    dozen invoice lines on one export -- so the bar offers FR money and a line
+    to charge it to. The pairing rule between them is the one thing the other
+    bulk fields have no equivalent of, and it is enforced twice: here, against
+    the box the Treasurer has to change, and again per row in the view.
+    """
+
+    def setUp(self):
+        self.request = FundingRequest.objects.create(
+            name='A Term Films', reference='F.26.6', fiscal_year=2026)
+        self.line = FRLineItem.objects.create(
+            funding_request=self.request, name='Film Rights',
+            amount_awarded=Decimal('5000.00'))
+
+    def _form(self, **data):
+        payload = {'selected': '1'}
+        payload.update(data)
+        return BulkReconcileForm(payload)
+
+    def test_the_funding_request_fund_is_offered(self):
+        """ It used to be left out, for want of anywhere to name the line. """
+        form = BulkReconcileForm()
+        offered = [f.slug for f in form.fields['fund_source'].queryset]
+        self.assertIn('sga_fr', offered)
+        self.assertIn('sga_budget', offered)
+
+    def test_fr_money_has_to_name_a_line(self):
+        form = self._form(fund_source=str(fund('sga_fr').pk))
+        self.assertFalse(form.is_valid())
+        self.assertIn('fr_line_target', form.errors)
+
+    def test_fr_money_with_a_line_is_accepted(self):
+        form = self._form(fund_source=str(fund('sga_fr').pk),
+                          fr_line_target=str(self.line.pk))
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_a_line_without_fr_money_is_refused(self):
+        """ An FR balance must not move without an award behind it. """
+        form = self._form(fund_source=str(fund('sga_budget').pk),
+                          fr_line_target=str(self.line.pk))
+        self.assertFalse(form.is_valid())
+        self.assertIn('fr_line_target', form.errors)
+
+    def test_a_closed_request_is_not_offered(self):
+        self.request.closed = True
+        self.request.save()
+        form = BulkReconcileForm()
+        self.assertNotIn(self.line, form.fields['fr_line_target'].queryset)
+
+    def test_every_open_year_is_offered(self):
+        """
+        A selection has no one fiscal year to narrow to, so the picker offers
+        them all and each label leads with its year. The view checks the year
+        row by row.
+        """
+        old = FundingRequest.objects.create(name='Last Year', reference='F.25.1',
+                                            fiscal_year=2025)
+        old_line = FRLineItem.objects.create(funding_request=old, name='Rights',
+                                             amount_awarded=Decimal('100.00'))
+        offered = list(BulkReconcileForm().fields['fr_line_target'].queryset)
+        self.assertIn(old_line, offered)
+        self.assertIn(self.line, offered)

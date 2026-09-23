@@ -26,20 +26,24 @@ class FinanceConfig(AppConfig):
         """
         from finance import models as finance_models
 
+        # A model may back more than one cached read, and every one of them has
+        # to go when the table changes: renaming a spend category invalidates
+        # both the event pass-through row and the name index the queue turns a
+        # memo back into a category with.
         cached_models = {
-            'PartitionCode': 'codes',
-            'FinanceSettings': 'config',
-            'ServiceColor': 'service_colors',
-            'ColumnAlias': 'column_aliases',
-            'SpendCategory': 'event_passthrough',
-            'FundSource': 'fund_codes',
+            'PartitionCode': ('codes',),
+            'FinanceSettings': ('config',),
+            'ServiceColor': ('service_colors',),
+            'ColumnAlias': ('column_aliases',),
+            'SpendCategory': ('event_passthrough', 'category_names'),
+            'FundSource': ('fund_codes', 'default_fund'),
         }
 
-        for model_name, cache_key in cached_models.items():
+        for model_name, cache_keys in cached_models.items():
             model = getattr(finance_models, model_name)
 
-            def _invalidate(sender, key=cache_key, **kwargs):
-                finance_models.reset_finance_cache(key)
+            def _invalidate(sender, keys=cache_keys, **kwargs):
+                finance_models.reset_finance_cache(*keys)
 
             post_save.connect(_invalidate, sender=model,
                               dispatch_uid='finance.cache_save.%s' % model_name)

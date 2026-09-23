@@ -350,11 +350,15 @@ class SuggestionTests(TestCase):
         """
         810-FD is the fund every LNL line is spent out of, so it cannot say
         whether the money was the SGA standing budget, an award or legacy
-        funds. Left blank rather than pre-filled with one of the three.
+        funds -- and the suggestion does not pretend it did. An answer still
+        arrives, because a Treasurer nominated a fallback in the admin, but it
+        is labelled 'default' and the reason never quotes the worktag.
         """
-        from finance.suggestions import suggest_fund_source
+        from finance.suggestions import DEFAULT, suggest_fund_source
         txn = WorkdayTransaction.objects.get(operational_transaction='OT-1002')
-        self.assertIsNone(suggest_fund_source(txn))
+        suggestion = suggest_fund_source(txn)
+        self.assertEqual(suggestion.source, DEFAULT)
+        self.assertNotIn('810', suggestion.reason)
 
     def test_a_fund_code_that_does_identify_a_bucket_is_a_lookup(self):
         from finance.suggestions import suggest_fund_source
@@ -368,8 +372,27 @@ class SuggestionTests(TestCase):
         self.assertEqual(suggestion.confidence, 'high')
         self.assertTrue(suggestion.is_lookup)
 
-    def test_unrecognised_fund_is_left_blank_rather_than_guessed(self):
+    def test_an_unrecognised_fund_falls_to_the_default_not_to_a_guess(self):
+        """
+        No code on the line matches any fund's configured list, so nothing is
+        read off it. What fills the box is the stated fallback, at medium
+        confidence -- the one autofilled answer that is nobody's assertion.
+        """
+        from finance.suggestions import DEFAULT, MEDIUM, suggest_fund_source
+        txn = WorkdayTransaction.objects.get(operational_transaction='OT-1001')
+        suggestion = suggest_fund_source(txn)
+        self.assertEqual(suggestion.value, fund('legacy').pk)
+        self.assertEqual(suggestion.source, DEFAULT)
+        self.assertEqual(suggestion.confidence, MEDIUM)
+
+    def test_nothing_is_offered_when_no_fund_is_nominated(self):
+        """ Untick every default in the admin and the box goes back to blank. """
+        from finance.models import FundSource, reset_finance_cache
         from finance.suggestions import suggest_fund_source
+        FundSource.objects.update(is_default=False)
+        reset_finance_cache('default_fund')
+        self.addCleanup(reset_finance_cache, 'default_fund')
+
         txn = WorkdayTransaction.objects.get(operational_transaction='OT-1001')
         self.assertIsNone(suggest_fund_source(txn))
 

@@ -18,11 +18,11 @@
 
         {% if can_edit %}
             <div class="fin-queue-counts">
-                <div class="fin-stat-label">Filled in from the export</div>
+                <div class="fin-stat-label">Filled in for you</div>
                 <div class="fin-stat-value {% if autofilled_count %}text-success{% endif %}">
                     {{ autofilled_count }}
                 </div>
-                <div class="fin-stat-sub">boxes on this page &mdash; confirm rather than type</div>
+                <div class="fin-stat-sub">boxes on this page &mdash; read rather than type</div>
             </div>
         {% endif %}
 
@@ -225,7 +225,7 @@
                                     and routing.js folds the revenue pair away
                                     the moment it is chosen.
                                 {% endcomment %}
-                                {% include 'finance/_queue_field.html' with field=row.form.refund_of label="Refund of" size="lg" suggestion=row.suggestions.refund_of only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.refund_of label="Refund of" size="lg" autofilled=row.form.autofilled.refund_of suggestion=row.suggestions.refund_of only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Link to Event" size="lg" autofilled=row.form.autofilled.linked_event only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.non_event_revenue_type label="or Non-Event Revenue" size="md" only %}
                             {% else %}
@@ -327,6 +327,25 @@
 
                     <label class="fin-bulk-label" for="{{ bulk_reconcile_form.fund_source.id_for_label }}">Fund</label>
                     {{ bulk_reconcile_form.fund_source }}
+
+                    {% comment %}
+                        Hidden by routing.js unless the chosen fund draws on a
+                        funding request, the same rule it applies to the picker
+                        on a queue row -- the wrapper is what gets folded away,
+                        so the label goes with the box rather than being left
+                        behind as a stray word on the bar.
+
+                        Charging a whole batch to one award is why the fund
+                        list includes funding-request money at all; see
+                        finance.forms.BulkReconcileForm.
+                    {% endcomment %}
+                    <span class="fin-bulk-fr">
+                        <label class="fin-bulk-label" for="{{ bulk_reconcile_form.fr_line_target.id_for_label }}">FR line</label>
+                        {{ bulk_reconcile_form.fr_line_target }}
+                    </span>
+                    <label class="fin-bulk-check" title="{{ bulk_reconcile_form.allow_cross_year_fr.help_text }}">
+                        {{ bulk_reconcile_form.allow_cross_year_fr }} Other year
+                    </label>
 
                     <label class="fin-bulk-label" for="{{ bulk_reconcile_form.lnl_spend_category.id_for_label }}">Category</label>
                     {{ bulk_reconcile_form.lnl_spend_category }}

@@ -90,13 +90,17 @@ class FundSourceAdmin(VocabularyAdmin):
     """
     Where the money came from, and the Workday fund codes that imply it.
 
-    ``requires_funding_request`` is the one flag with teeth: it is what makes
-    the allocation form insist on an SGA request number.
+    Two flags with teeth. ``requires_funding_request`` is what makes the
+    allocation form insist on an SGA request number. ``is_default`` is what the
+    ingestion queue fills the Fund box in with when neither the memo nor the
+    Fund worktag identifies one -- both are on the list view, because which
+    fund holds which is worth being able to see at a glance rather than by
+    opening three rows.
     """
     list_display = ('name', 'slug', 'workday_fund_codes', 'requires_funding_request',
-                    'sort_order', 'is_active', 'in_use')
+                    'is_default', 'sort_order', 'is_active', 'in_use')
     fields = ('name', 'slug', 'description', 'workday_fund_codes',
-              'requires_funding_request', 'sort_order', 'is_active')
+              'requires_funding_request', 'is_default', 'sort_order', 'is_active')
 
 
 @admin.register(RevenueSource)

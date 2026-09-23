@@ -61,19 +61,29 @@ class FundSourceChoiceTests(TestCase):
 class SpendCategoryChoiceTests(TestCase):
     def test_seed_matches_the_requested_list(self):
         """
-        The eighteen categories LNL asked for, in the order asked for. 'Event
-        Expense' follows them: it was added later for costs billed straight to
-        an event, and is filled in automatically rather than chosen.
+        The thirteen categories LNL asked for, in the order asked for.
+
+        This is LNL's chart of spending rather than WPI's, and the two do not
+        line up: several rows here gather together things Workday keeps apart,
+        because a club's year is not worth cutting into eighteen slices.
         """
         self.assertEqual([c.name for c in SpendCategory.objects.active()], [
-            'Repairs', 'Consumables', 'New Stuff', 'Radio Things', 'Booth Expenses',
-            'Shipping', 'Printing', 'Marketing', 'Spotify', 'Slack', 'Food', 'Merch',
-            'Safety', 'Gifts', 'Adjustments', 'Chain Motor Inspection',
-            'LNL Internal Events', 'Other', 'Event Expense'])
+            'Equipment - Capital', 'Equipment - Non Capital', 'Maintenance and Repair',
+            'Consumables', 'Food', 'Software and Subscriptions',
+            'Films Rights and Shipping', 'Merch', 'Club Operations',
+            'Safety and Inspections', 'Adjustments', 'Event - Sub-Rental',
+            'Event - Other'])
 
     def test_exactly_one_category_is_the_event_pass_through(self):
+        """
+        Two of the thirteen are event costs; only one can be the automatic one.
+
+        Sub-Rental is it, because that is what a cost billed straight to a show
+        nearly always is -- gear hired in for the night. 'Event - Other' is for
+        the rarer pass-through and stays a deliberate choice.
+        """
         flagged = SpendCategory.objects.filter(is_event_passthrough=True)
-        self.assertEqual([c.name for c in flagged], ['Event Expense'])
+        self.assertEqual([c.name for c in flagged], ['Event - Sub-Rental'])
 
     def test_every_category_carries_a_chart_colour(self):
         for c in SpendCategory.objects.all():
@@ -353,7 +363,7 @@ class FundAndFundingRequestPairingTests(TestCase):
     def _post(self, **overrides):
         data = {
             't-fund_source': str(fund('sga_fr').pk),
-            't-lnl_spend_category': str(category('new_stuff').pk),
+            't-lnl_spend_category': str(category('equipment_noncapital').pk),
             't-fr_line_target': str(self.line.pk),
             't-project_tag': '', 't-audit_explanation': '', 't-is_projection': '',
         }
@@ -380,7 +390,7 @@ class FundAndFundingRequestPairingTests(TestCase):
         entry = ParsedTransaction(
             parent_transaction=self.txn, amount=self.txn.net_amount,
             effective_date=self.txn.accounting_date, fund_source=fund('sga_budget'),
-            lnl_spend_category=category('new_stuff'), fr_line_target=self.line)
+            lnl_spend_category=category('equipment_noncapital'), fr_line_target=self.line)
         with self.assertRaises(ValidationError) as ctx:
             entry.full_clean()
         self.assertIn('fr_line_target', ctx.exception.error_dict)
@@ -428,7 +438,7 @@ class CrossFiscalYearTests(TestCase):
     def _post(self, line, cross=False):
         data = {
             't-fund_source': str(fund('sga_fr').pk),
-            't-lnl_spend_category': str(category('new_stuff').pk),
+            't-lnl_spend_category': str(category('equipment_noncapital').pk),
             't-fr_line_target': str(line.pk),
             't-project_tag': '', 't-audit_explanation': '', 't-is_projection': '',
         }
@@ -467,7 +477,7 @@ class CrossFiscalYearTests(TestCase):
         entry = ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=self.txn.net_amount,
             effective_date=self.txn.accounting_date, fund_source=fund('sga_fr'),
-            lnl_spend_category=category('new_stuff'), fr_line_target=self.last_year)
+            lnl_spend_category=category('equipment_noncapital'), fr_line_target=self.last_year)
         form = AllocationForm(instance=entry, parent_transaction=self.txn)
         self.assertIn(self.last_year, list(form.fields['fr_line_target'].queryset))
         self.assertTrue(form.initial.get('allow_cross_year_fr'))
@@ -556,7 +566,7 @@ class EventLinkedExpenseTests(TestCase):
         form = self._form()
         self.assertTrue(form.is_valid(), form.errors)
         entry = form.save()
-        self.assertEqual(entry.lnl_spend_category.slug, 'event_expense')
+        self.assertEqual(entry.lnl_spend_category.slug, 'event_subrental')
 
     def test_an_explicit_category_is_not_overwritten(self):
         form = self._form(lnl_spend_category=str(category('consumables').pk))
@@ -678,17 +688,46 @@ class FundingRequestFromMemoTests(TestCase):
         self.assertEqual(payload['fr_line_target'].value, self.line.pk)
         self.assertEqual(payload['fr_line_target'].confidence, 'high')
 
-    def test_without_a_reference_810_answers_nothing(self):
+    def test_award_money_never_falls_through_to_the_default_fund(self):
         """
-        There is no fallback to fall back to. 810-FD is the fund every LNL line
-        is spent out of, so a line with no request number in its memo is simply
-        one whose funding source nobody has stated yet.
+        The memo has just said this is a specific award. If no fund is set up
+        to draw on one, the honest answer is nothing -- answering with the
+        standing budget would charge the club for money SGA granted.
         """
         from finance.suggestions import suggest_all
+        FundSource.objects.filter(requires_funding_request=True).update(is_active=False)
+        payload = suggest_all(self._txn('Truman Show Film Rights (F.26.6)'))
+        self.assertIsNone(payload['fund_source'])
+
+    def test_without_a_reference_810_falls_back_to_the_stated_default(self):
+        """
+        810-FD still says nothing -- it is the fund every LNL line is spent out
+        of -- so the answer does not come from reading it. It comes from the
+        fund a Treasurer nominated in the admin, and the suggestion says so:
+        ``source`` is 'default', not 'export'.
+        """
+        from finance.suggestions import DEFAULT, suggest_all
         txn = bank(op='OT-NOFR', amount='-50.00', line_memo='Gaff tape')
         txn.worktags_json['fund'] = '810-FD Agency'
         payload = suggest_all(txn)
-        self.assertIsNone(payload['fund_source'])
+        self.assertEqual(payload['fund_source'].value, fund('legacy').pk)
+        self.assertEqual(payload['fund_source'].source, DEFAULT)
+        self.assertIn('default', payload['fund_source'].reason)
+
+    def test_nothing_is_offered_when_no_default_is_configured(self):
+        """
+        The fallback is LNL's convention, not this module's. Untick it and the
+        box goes back to being blank.
+        """
+        from finance.models import reset_finance_cache
+        from finance.suggestions import suggest_all
+        FundSource.objects.update(is_default=False)
+        reset_finance_cache('default_fund')
+        self.addCleanup(reset_finance_cache, 'default_fund')
+
+        txn = bank(op='OT-NODEF', amount='-50.00', line_memo='Gaff tape')
+        txn.worktags_json['fund'] = '810-FD Agency'
+        self.assertIsNone(suggest_all(txn)['fund_source'])
 
     def test_a_reference_lnldb_does_not_know_is_still_flagged(self):
         """
@@ -702,6 +741,242 @@ class FundingRequestFromMemoTests(TestCase):
         payload = suggest_all(txn)
         self.assertIsNone(payload['fund_source'])
         self.assertIn('F.26.999', payload['warning'])
+
+
+class HouseFormatMemoTests(TestCase):
+    """
+    The memo LNL actually writes, read back into the form.
+
+    ``{line description}, {FR line}, {FR code}`` -- "Velcro restock,
+    consumables, (A.27.16)" -- is one sentence carrying the description, the
+    funding request line and the request number. Between them that is the fund,
+    the FR line, the spend category and the description: four of the five boxes
+    on a queue row, filled in from a sentence somebody had already written.
+    """
+
+    def setUp(self):
+        self.fr = FundingRequest.objects.create(
+            name='Shop Restock', reference='A.27.16', fiscal_year=2026)
+        self.consumables = FRLineItem.objects.create(
+            funding_request=self.fr, name='Consumables',
+            amount_awarded=Decimal('600.00'),
+            lnl_spend_category=category('consumables'))
+        self.tools = FRLineItem.objects.create(
+            funding_request=self.fr, name='Hand tools', amount_awarded=Decimal('400.00'),
+            lnl_spend_category=category('equipment_noncapital'))
+
+    def _txn(self, memo, op='OT-HF1'):
+        return bank(op=op, amount='-42.00', line_memo=memo,
+                    worktags={'fund': '810-FD Agency'})
+
+    def _payload(self, memo, op='OT-HF1'):
+        from finance.suggestions import suggest_all
+        return suggest_all(self._txn(memo, op=op))
+
+    def test_the_named_line_is_picked_out_of_several(self):
+        """
+        Two lines on the request, and the memo says which. Before the format
+        was read, a request with more than one line offered nothing at all.
+        """
+        payload = self._payload('Velcro restock, consumables, (A.27.16)')
+        self.assertEqual(payload['fr_line_target'].value, self.consumables.pk)
+
+    def test_a_different_line_on_the_same_request(self):
+        payload = self._payload('Socket set, hand tools, (A.27.16)', op='OT-HF2')
+        self.assertEqual(payload['fr_line_target'].value, self.tools.pk)
+
+    def test_the_line_carries_its_awarded_spend_category(self):
+        """
+        The user-facing point of the whole exercise: choosing the FR line
+        answers the spend category, because somebody answered it when the award
+        was entered. Asking again is double entry.
+        """
+        from finance.suggestions import AWARD
+        payload = self._payload('Velcro restock, consumables, (A.27.16)')
+        self.assertEqual(payload['spend_category'].value, category('consumables').pk)
+        self.assertEqual(payload['spend_category'].source, AWARD)
+
+    def test_the_award_beats_what_workday_called_it(self):
+        """
+        Workday files everything LNL buys as "Supplies" whatever it was really
+        for, and the bank line here says exactly that. The award is the finer
+        answer and wins.
+        """
+        payload = self._payload('Socket set, hand tools, (A.27.16)', op='OT-HF3')
+        self.assertEqual(payload['spend_category'].value,
+                         category('equipment_noncapital').pk)
+
+    def test_the_line_hint_may_name_the_category_rather_than_the_line(self):
+        """
+        People write the category as often as the line name, and on a
+        well-formed request those are the same thing anyway.
+        """
+        line = FRLineItem.objects.create(
+            funding_request=self.fr, name='Sundries', amount_awarded=Decimal('50.00'),
+            lnl_spend_category=category('food'))
+        payload = self._payload('Crew pizza, food, (A.27.16)', op='OT-HF4')
+        self.assertEqual(payload['fr_line_target'].value, line.pk)
+
+    def test_a_line_named_for_the_hint_beats_one_merely_awarded_for_it(self):
+        """
+        Two lines could answer "consumables": the one called that, and one
+        called something else that was awarded the Consumables category. The
+        name is the more direct answer whichever order the request lists them.
+        """
+        FRLineItem.objects.create(funding_request=self.fr, name='Sundries',
+                                  amount_awarded=Decimal('50.00'),
+                                  lnl_spend_category=category('consumables'))
+        # Sundries now sorts first, so a single pass that tested name and
+        # category together on each line in turn would answer with it.
+        FRLineItem.objects.filter(pk=self.consumables.pk).update(sort_order=9)
+        payload = self._payload('Velcro restock, consumables, (A.27.16)', op='OT-HF11')
+        self.assertEqual(payload['fr_line_target'].value, self.consumables.pk)
+
+    def test_a_partial_name_matches_when_only_one_line_could_be_meant(self):
+        payload = self._payload('Wrench, tools, (A.27.16)', op='OT-HF5')
+        self.assertEqual(payload['fr_line_target'].value, self.tools.pk)
+
+    def test_an_ambiguous_hint_names_no_line(self):
+        """
+        Two candidates is a question, not a near miss. Answering it silently
+        charges the wrong award line, which nothing afterwards shows.
+        """
+        FRLineItem.objects.create(funding_request=self.fr, name='Power tools',
+                                  amount_awarded=Decimal('100.00'))
+        payload = self._payload('Wrench, tools, (A.27.16)', op='OT-HF6')
+        self.assertIsNone(payload['fr_line_target'])
+
+    def test_the_memo_names_an_lnl_category_with_no_request_at_all(self):
+        """
+        Half the format is still worth reading: no request number, but the
+        middle field names one of LNL's own categories.
+        """
+        from finance.suggestions import MEMO
+        payload = self._payload('Crew pizza, food', op='OT-HF7')
+        self.assertEqual(payload['spend_category'].value, category('food').pk)
+        self.assertEqual(payload['spend_category'].source, MEMO)
+
+    def test_the_memo_beats_the_workday_category(self):
+        """
+        WPI's list is not LNL's. The bank line says "Supplies"; the Treasurer
+        wrote "merch", and they were there.
+        """
+        payload = self._payload('Crew shirts, merch', op='OT-HF8')
+        self.assertEqual(payload['spend_category'].value, category('merch').pk)
+
+    def test_a_category_written_loosely_still_lands(self):
+        """ Nobody types the punctuation in "Equipment - Non Capital". """
+        payload = self._payload('Two DMX splitters, equipment non capital', op='OT-HF9')
+        self.assertEqual(payload['spend_category'].value,
+                         category('equipment_noncapital').pk)
+
+    def test_the_middle_field_is_left_out_of_the_description(self):
+        """
+        The routing is about to be recorded in columns of its own; repeating it
+        in prose is how a description column stops being read.
+        """
+        payload = self._payload('Velcro restock, consumables, (A.27.16)')
+        self.assertEqual(payload['description'], 'Velcro restock')
+
+    def test_reading_a_line_does_not_cost_a_query_per_award_line(self):
+        """
+        The queue renders twenty-five of these. The request's lines are
+        prefetched with their awarded category attached, so working out the
+        line and then its category is the same one query however many lines
+        the award has.
+        """
+        from finance.suggestions import suggest_funding_request, suggest_spend_category
+        txn = self._txn('Velcro restock, consumables, (A.27.16)', op='OT-HF12')
+        with self.assertNumQueries(2):          # the requests, then their lines
+            found, line = suggest_funding_request(txn)
+            suggest_spend_category(txn, rules=[], fr_line=line)
+
+    def test_the_whole_row_fills_itself_in(self):
+        """
+        End to end: the fund, the line, the category and the description, from
+        one sentence. The Treasurer reads four boxes instead of filling them.
+        """
+        form = ReconcileForm(
+            parent_transaction=self._txn('Velcro restock, consumables, (A.27.16)'),
+            prefix='t')
+        self.assertEqual(form.initial['fund_source'], fund('sga_fr').pk)
+        self.assertEqual(form.initial['fr_line_target'], self.consumables.pk)
+        self.assertEqual(form.initial['lnl_spend_category'], category('consumables').pk)
+        self.assertEqual(sorted(form.autofilled),
+                         ['fr_line_target', 'fund_source', 'lnl_spend_category'])
+
+    def test_a_filled_row_submits_as_it_stands(self):
+        """ Open the queue, read the row, press Allocate. """
+        txn = self._txn('Velcro restock, consumables, (A.27.16)')
+        form = ReconcileForm(parent_transaction=txn, prefix='t')
+        data = {'t-%s' % name: str(value) for name, value in form.initial.items()
+                if value not in (None, '')}
+        bound = ReconcileForm(data, parent_transaction=txn, prefix='t')
+        self.assertTrue(bound.is_valid(), bound.errors)
+        entry = bound.save()
+        self.assertEqual(entry.fr_line_target, self.consumables)
+        self.assertEqual(entry.lnl_spend_category, category('consumables'))
+        self.assertEqual(entry.description, 'Velcro restock')
+
+    def test_the_inherited_category_is_marked_for_the_browser(self):
+        """
+        routing.js re-fills the category whenever the FR line changes, but only
+        over a box it filled itself -- a hand-picked value survives. A category
+        that came off the award belongs in the first group, and the data
+        attribute is how the page is told.
+        """
+        form = ReconcileForm(
+            parent_transaction=self._txn('Velcro restock, consumables, (A.27.16)'),
+            prefix='t')
+        attrs = form.fields['lnl_spend_category'].widget.attrs
+        self.assertEqual(attrs.get('data-fin-inherited'), str(category('consumables').pk))
+
+    def test_a_category_read_off_the_export_is_not_marked(self):
+        """ Nothing lent it, so nothing may take it away when a line changes. """
+        form = ReconcileForm(parent_transaction=bank(op='OT-HF10', amount='-42.00',
+                                                     line_memo='Gaff tape'),
+                             prefix='t')
+        self.assertNotIn('data-fin-inherited',
+                         form.fields['lnl_spend_category'].widget.attrs)
+
+
+class DescriptionFromMemoTests(TestCase):
+    """
+    What lands in the ledger's Description column.
+
+    Only ever what LNL wrote, and only the part of it that is prose. An empty
+    memo yields an empty description rather than the payee -- the row already
+    says who was paid, and a spare split row that looks filled in is worse than
+    one that looks empty.
+    """
+
+    def test_the_first_field_of_the_memo(self):
+        from finance.suggestions import suggest_description
+        txn = bank(op='OT-D1', line_memo='Velcro restock, consumables, (A.27.16)')
+        self.assertEqual(suggest_description(txn), 'Velcro restock')
+
+    def test_a_memo_with_no_format_comes_through_whole(self):
+        from finance.suggestions import suggest_description
+        txn = bank(op='OT-D2', line_memo='11x17 posters for LNL')
+        self.assertEqual(suggest_description(txn), '11x17 posters for LNL')
+
+    def test_no_memo_means_no_description(self):
+        from finance.suggestions import suggest_description
+        txn = bank(op='OT-D3', line_memo='')
+        self.assertEqual(suggest_description(txn), '')
+
+    def test_the_queue_falls_back_to_the_payee_for_its_own_label(self):
+        """
+        ReconcileForm does not render Description, so it cannot be left blank:
+        it falls back itself rather than making the suggester reach for a
+        column the ledger already shows.
+        """
+        txn = bank(op='OT-D4', amount='-42.00', line_memo='')
+        form = ReconcileForm({'t-fund_source': str(fund('sga_budget').pk),
+                              't-lnl_spend_category': str(category('consumables').pk)},
+                             parent_transaction=txn, prefix='t')
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().description, 'B&H Photo')
 
 
 class VendorGuessworkRemovedTests(TestCase):
@@ -799,7 +1074,7 @@ class MatchModeTests(TestCase):
 
     def _rule(self, mode, pattern, field='spend_category'):
         return SuggestionRule(match_field=field, match_mode=mode, pattern=pattern,
-                              spend_category=category('printing'))
+                              spend_category=category('club_operations'))
 
     def test_exact_matches_the_whole_value(self):
         txn = bank(op='OT-EX')
@@ -861,7 +1136,7 @@ class SeededChartOfAccountsTests(TestCase):
         not remotely the same thing.
         """
         self.assertEqual(self._category_for('71100:Supplies', 'Printing').value,
-                         category('printing').pk)
+                         category('club_operations').pk)
         self.assertEqual(self._category_for('71100:Supplies', 'Supplies - Medical').value,
                          category('safety').pk)
         self.assertEqual(self._category_for('71100:Supplies', 'Supplies').value,
@@ -870,7 +1145,7 @@ class SeededChartOfAccountsTests(TestCase):
     def test_an_unmapped_workday_category_falls_back_to_the_account(self):
         """ Still a lookup -- a coarser code, but a code. """
         found = self._category_for('74900:Miscellaneous Fees', 'Some New Fee Type')
-        self.assertEqual(found.value, category('other').pk)
+        self.assertEqual(found.value, category('club_operations').pk)
         self.assertTrue(found.is_lookup)
         self.assertIn('74900', found.reason)
 
@@ -958,19 +1233,43 @@ class AutofillFromExportTests(TestCase):
 
     def test_the_spend_category_is_selected(self):
         form = self.form()
-        self.assertEqual(form.initial['lnl_spend_category'], category('printing').pk)
+        self.assertEqual(form.initial['lnl_spend_category'], category('club_operations').pk)
         self.assertIn('lnl_spend_category', form.autofilled)
 
-    def test_the_fund_is_left_blank_on_810(self):
+    def test_810_is_filled_from_the_default_and_admits_it(self):
         """
         810-FD is the fund all of LNL's spending comes out of, so it says
-        nothing about whose money this was. Blank is the honest answer, and
-        pre-filling a bucket would be worse than empty: an autofilled box
-        reads as something the export stated, and nobody re-reads it.
+        nothing about whose money this was, and the box is not filled in from
+        it. It is filled in from the fallback a Treasurer nominated -- which
+        is a different claim, and the caption makes it: the reason says
+        "default", so the row never pretends the export answered.
         """
+        from finance.suggestions import DEFAULT
         form = self.form()
-        self.assertNotIn('fund_source', form.initial)
-        self.assertNotIn('fund_source', form.autofilled)
+        self.assertEqual(form.initial['fund_source'], fund('legacy').pk)
+        self.assertEqual(form.autofilled['fund_source'].source, DEFAULT)
+        self.assertNotIn('810', form.autofilled['fund_source'].reason)
+
+    def test_a_real_fund_code_beats_the_default(self):
+        """
+        A stated fallback is the last resort, never the first answer.
+
+        The default is nominated away from Legacy for the length of this test,
+        because Legacy is both the seeded fallback *and* the fund that owns the
+        220-FD code -- so with the shipped configuration the two passes agree
+        and the assertion would hold whichever one ran.
+        """
+        from finance.models import reset_finance_cache
+        from finance.suggestions import EXPORT
+        FundSource.objects.update(is_default=False)
+        FundSource.objects.filter(slug='sga_budget').update(is_default=True)
+        reset_finance_cache('default_fund')
+        self.addCleanup(reset_finance_cache, 'default_fund')
+
+        self.txn = self.legacy_txn()
+        form = self.form()
+        self.assertEqual(form.initial['fund_source'], fund('legacy').pk)
+        self.assertEqual(form.autofilled['fund_source'].source, EXPORT)
 
     def test_a_fund_code_naming_one_bucket_is_selected(self):
         self.txn = self.legacy_txn()
@@ -991,7 +1290,7 @@ class AutofillFromExportTests(TestCase):
         bound = ReconcileForm(data, parent_transaction=self.txn, prefix='t')
         self.assertTrue(bound.is_valid(), bound.errors)
         entry = bound.save()
-        self.assertEqual(entry.lnl_spend_category, category('printing'))
+        self.assertEqual(entry.lnl_spend_category, category('club_operations'))
         self.assertEqual(entry.fund_source, fund('legacy'))
 
     def test_a_guess_is_never_filled_in(self):
@@ -1127,6 +1426,16 @@ class UnmappedCategoryReportTests(TestCase):
         txn = self._txn('OT-BLANK2', '', ledger='88888:New Account')
         self.assertEqual(unmapped_spend_categories([txn]), [])
 
+    def test_a_category_only_a_wording_rule_reaches_is_still_reported(self):
+        """
+        "Kazoo Rental" trips the seeded ``contains 'rental'`` rule, which
+        offers a chip and fills nothing in -- so the box is still one somebody
+        types into on every line, which is the whole thing being counted. A
+        chip is a convenience; a mapping is an answer.
+        """
+        txn = self._txn('OT-CHIP', 'Kazoo Rental', ledger='88888:New Account')
+        self.assertEqual(unmapped_spend_categories([txn]), [('Kazoo Rental', 1)])
+
 
 class PartitionDefaultOnFormsTests(TestCase):
     """
@@ -1225,7 +1534,7 @@ class RefundPickerTests(TestCase):
         ParsedTransaction.objects.create(
             amount=Decimal('-400.00'), effective_date=datetime.date(2025, 9, 15),
             description='Deposit on a console', fund_source=fund('sga_budget'),
-            lnl_spend_category=category('new_stuff'))
+            lnl_spend_category=category('equipment_noncapital'))
         self.assertEqual(len(self._labels()), 1)
 
     def test_a_fully_refunded_purchase_is_not_offered(self):

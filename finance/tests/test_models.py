@@ -435,7 +435,7 @@ class SplitAndSettleTests(TestCase):
         line = FRLineItem.objects.create(funding_request=fr, name='Fixtures',
                                          amount_awarded=Decimal('1000.00'))
         self._slice('-200.00', lnl_spend_category=category('consumables'))
-        self._slice('-1000.00', lnl_spend_category=category('new_stuff'), fr_line_target=line)
+        self._slice('-1000.00', lnl_spend_category=category('equipment_noncapital'), fr_line_target=line)
         self.assertTrue(self.parent.is_fully_allocated)
         self.assertTrue(self.parent.is_split)
         self.assertEqual(line.spent, Decimal('1000.00'))
@@ -576,7 +576,7 @@ class FundingRequestBurndownTests(TestCase):
         parent = make_txn(op=op, net_amount=Decimal(amount))
         return ParsedTransaction.objects.create(
             parent_transaction=parent, amount=Decimal(amount), fund_source=fund('sga_budget'),
-            lnl_spend_category=category('new_stuff'), fr_line_target=line)
+            lnl_spend_category=category('equipment_noncapital'), fr_line_target=line)
 
     def test_totals_roll_up(self):
         self.assertEqual(self.fr.total_awarded, Decimal('1500.00'))
@@ -607,7 +607,7 @@ class ProjectTagTests(TestCase):
         parent = make_txn(op=op, net_amount=Decimal(amount), accounting_date=date)
         return ParsedTransaction.objects.create(
             parent_transaction=parent, amount=Decimal(amount), effective_date=date,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('new_stuff'),
+            fund_source=fund('sga_budget'), lnl_spend_category=category('equipment_noncapital'),
             project_tag=tag)
 
     def test_hierarchy(self):
@@ -753,7 +753,7 @@ class EncumbranceTypeTests(TestCase):
         return ParsedTransaction.objects.create(
             amount=Decimal(amount), effective_date=datetime.date(2025, 9, 15),
             description='Deposit on a console', fund_source=fund('sga_budget'),
-            lnl_spend_category=category('new_stuff'))
+            lnl_spend_category=category('equipment_noncapital'))
 
     def test_an_encumbrance_says_encumbrance(self):
         entry = self._encumbrance()

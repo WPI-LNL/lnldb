@@ -163,7 +163,7 @@ class DashboardTests(FinanceViewTestCase):
         tag = ProjectTag.objects.create(name='NEL26', code='NEL26')
         ParsedTransaction.objects.create(
             parent_transaction=expense, amount=expense.net_amount, fund_source=fund('sga_budget'),
-            lnl_spend_category=category('new_stuff'), project_tag=tag,
+            lnl_spend_category=category('equipment_noncapital'), project_tag=tag,
             effective_date=expense.accounting_date)
 
         response = self.client.get(reverse('finance:dashboard') + '?fy=2026')
@@ -740,7 +740,7 @@ class SplitViewTests(FinanceViewTestCase):
             {'amount': '-200.00', 'description': 'Consumables',
              'fund_source': fund('sga_budget').pk, 'lnl_spend_category': category('consumables').pk},
             {'amount': '-1000.00', 'description': 'Capital',
-             'fund_source': fund('sga_budget').pk, 'lnl_spend_category': category('new_stuff').pk},
+             'fund_source': fund('sga_budget').pk, 'lnl_spend_category': category('equipment_noncapital').pk},
         ])
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.txn.slices.count(), 2)
@@ -835,7 +835,7 @@ class ProjectExplorerTests(FinanceViewTestCase):
         txn = self.make_txn(op='OT-T1', amount='-8000.00')
         ParsedTransaction.objects.create(
             parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
-            lnl_spend_category=category('new_stuff'), project_tag=self.child,
+            lnl_spend_category=category('equipment_noncapital'), project_tag=self.child,
             description='Lustr fixtures', effective_date=txn.accounting_date)
 
     def test_tree_renders(self):
@@ -960,7 +960,7 @@ class FundingRequestViewTests(FinanceViewTestCase):
         txn = self.make_txn(op='OT-F1', amount='-1500.00')
         ParsedTransaction.objects.create(
             parent_transaction=txn, amount=txn.net_amount, fund_source=fund('sga_budget'),
-            lnl_spend_category=category('new_stuff'), fr_line_target=self.line,
+            lnl_spend_category=category('equipment_noncapital'), fr_line_target=self.line,
             effective_date=txn.accounting_date)
         response = self.client.get(reverse('finance:fr-detail', args=[self.fr.pk]))
         self.assertContains(response, "over by")
@@ -1248,6 +1248,16 @@ class BulkReconcileTests(FinanceViewTestCase):
         self.grant('view_subledger', 'edit_subledger', 'settle_subledger')
         self.a = self.make_txn(op='OT-B1', amount='-40.00')
         self.b = self.make_txn(op='OT-B2', amount='-55.00')
+        # Both rows are dated in September 2025, which is FY26; the second
+        # request is there for the rows that are not.
+        self.fr = FundingRequest.objects.create(name='A Term Films',
+                                                reference='F.26.6', fiscal_year=2026)
+        self.line = FRLineItem.objects.create(funding_request=self.fr, name='Film Rights',
+                                              amount_awarded=Decimal('5000.00'))
+        self.old_fr = FundingRequest.objects.create(name='Last Year',
+                                                    reference='F.25.1', fiscal_year=2025)
+        self.old_line = FRLineItem.objects.create(funding_request=self.old_fr, name='Rights',
+                                                  amount_awarded=Decimal('900.00'))
 
     def _post(self, ids=None, **extra):
         data = {
@@ -1321,15 +1331,78 @@ class BulkReconcileTests(FinanceViewTestCase):
         response = self._post(selected='')
         self.assertContains(response, "Nothing was selected")
 
-    def test_a_fund_needing_a_funding_request_is_not_offered(self):
+    def test_a_fund_needing_a_funding_request_is_offered(self):
         """
-        Its FR line cannot be chosen in bulk, so every row would come out
-        invalid -- the same reason the ledger's bulk bar leaves it out.
+        It used to be left out: its FR line could not be chosen in bulk, so
+        every row would have come out invalid. The bar now carries the line
+        picker beside the fund, which is what makes the fund answerable.
         """
         form = BulkReconcileForm()
         offered = [f.slug for f in form.fields['fund_source'].queryset]
-        self.assertNotIn('sga_fr', offered)
+        self.assertIn('sga_fr', offered)
         self.assertIn('sga_budget', offered)
+
+    def test_a_batch_is_charged_to_one_funding_request_line(self):
+        """ A dozen invoice lines against one award, answered once. """
+        self._post(fund_source=fund('sga_fr').pk, fr_line_target=self.line.pk)
+        for txn in (self.a, self.b):
+            entry = txn.slices.get()
+            self.assertEqual(entry.fund_source, fund('sga_fr'))
+            self.assertEqual(entry.fr_line_target, self.line)
+
+    def test_the_award_burns_down_by_the_whole_batch(self):
+        """ Each row draws its own amount, so the line moves by their total. """
+        self._post(fund_source=fund('sga_fr').pk, fr_line_target=self.line.pk)
+        self.assertEqual(FRLineItem.objects.get(pk=self.line.pk).spent,
+                         Decimal('95.00'))
+
+    def test_fr_money_without_a_line_writes_nothing(self):
+        """
+        Refused once, against the box to change -- not once per selected row
+        after the bar has gone.
+        """
+        response = self._post(fund_source=fund('sga_fr').pk)
+        self.assertEqual(self.a.slices.count(), 0)
+        self.assertContains(response, "has to name the funding request line")
+
+    def test_a_line_from_another_year_is_refused_by_default(self):
+        """
+        Legal now and then -- a late invoice, a carried-over award -- and far
+        more often a mis-pick that corrupts two years' burndown at once.
+        """
+        response = self._post(fund_source=fund('sga_fr').pk,
+                              fr_line_target=self.old_line.pk)
+        self.assertEqual(self.a.slices.count(), 0)
+        self.assertContains(response, "FY2025 request")
+
+    def test_the_other_year_tick_box_allows_it(self):
+        self._post(fund_source=fund('sga_fr').pk, fr_line_target=self.old_line.pk,
+                   allow_cross_year_fr='on')
+        self.assertEqual(self.a.slices.get().fr_line_target, self.old_line)
+
+    def test_a_row_of_the_wrong_year_is_named_and_the_rest_go_through(self):
+        """
+        A bulk action reports what it would not write rather than abandoning
+        the rows it can -- the same rule every other refusal here follows.
+        """
+        stray = self.make_txn(op='OT-B4', amount='-20.00',
+                              date=datetime.date(2025, 3, 2))
+        response = self._post(ids=[self.a, stray], fund_source=fund('sga_fr').pk,
+                              fr_line_target=self.line.pk)
+        self.assertEqual(self.a.slices.count(), 1)
+        self.assertEqual(stray.slices.count(), 0)
+        self.assertContains(response, "FY2025 spending")
+
+    def test_the_bar_offers_the_line_picker_beside_the_fund(self):
+        """
+        The two are only answerable together, so they are on the bar together.
+        routing.js folds the picker away until the fund calls for it, off the
+        ``data-requires-fr`` flag the fund option carries.
+        """
+        response = self.client.get(reverse('finance:queue'))
+        self.assertContains(response, 'name="fr_line_target"')
+        self.assertContains(response, 'name="allow_cross_year_fr"')
+        self.assertContains(response, 'data-requires-fr')
 
     def test_it_needs_the_edit_permission(self):
         stranger = get_user_model().objects.create_user(

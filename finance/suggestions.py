@@ -2,40 +2,64 @@
 Auto-suggest routing.
 
 Everything here is advisory: nothing is written without a human submitting the
-form. What separates the two kinds of answer is where they came from.
+form. What the module decides is how much of that form is already filled in
+when the Treasurer gets to it, and how each answer explains itself.
 
-A **lookup** is something the export already states, read through a table a
-Treasurer maintains: the ledger account, Workday's own spend category, a
-funding request number written into the memo, a project code. There is no
-opinion in it, so the reconciliation form fills the box in and says which
-column it came from.
+The design turns on where an answer came from, which :attr:`Suggestion.source`
+records:
 
-An **inference** is our own reading of the line: a word spotted in some prose,
-a resemblance we noticed. Those are offered as a chip to click and never fill
-anything in by themselves.
+``AWARD``
+    The funding request line the memo names was awarded for this. Somebody
+    entered that when the award was recorded, so re-asking is double entry.
 
-Linking an event is a lookup rather than an inference, which is worth spelling
-out because it was the other way round for a while. The ISD memo LNL bills
-event work through *names the event*, so reading it is reading an answer
-somebody already wrote down -- see :func:`suggest_linked_event`. What replaced
-was a scorer that ranked candidate events by date proximity and billed total
-and offered its best five; those were genuine guesses, and five guesses under a
-box is not a shortlist, it is a puzzle.
+``MEMO``
+    The Treasurer wrote it into the Workday memo themselves. LNL's memos are
+    written to a house format -- ``{description}, {FR line}, {FR code}``, as in
+    ``Velcro restock, consumables, (A.27.16)`` -- so the memo carries the
+    routing outright and reading it back is reading their own answer.
 
-Both carry a confidence for the UI to colour, but ``is_lookup`` is what decides
-whether the Treasurer is confirming or being asked.
+``EXPORT``
+    Workday stated it, through a table a Treasurer maintains: the ledger
+    account, Workday's own spend category, a Fund code, a project code.
+
+``DEFAULT``
+    Nothing said, so the fallback configured in the admin. Only the fund has
+    one; see :attr:`finance.models.FundSource.is_default`.
+
+``GUESS``
+    Our own reading of the line -- a word noticed in some prose, a resemblance.
+
+The first four fill the box in. A guess is offered as a chip to click and fills
+in nothing, because a pre-selected dropdown gets accepted without being read,
+and that is precisely the wrong thing to do with a guess.
+
+Filling a box in is not deciding anything. Every autofilled field renders with
+a caption saying which of the above answered it, the row still has to be
+submitted by a person, and changing any box is one click. What it buys is that
+the ordinary line -- and on a house-format memo that is most of them -- is read
+and confirmed rather than retyped.
 """
 import datetime
 import re
 from decimal import Decimal
 
-from django.db.models import Q
+from django.db.models import DecimalField, F, Q, Sum, Value
+from django.db.models.functions import Coalesce
 from django.utils.formats import date_format
 
 from finance.models import (ZERO, FundSource, ProjectTag, SuggestionRule,
-                            fund_source_for_workday_fund, money)
+                            default_fund_source, fund_source_for_workday_fund,
+                            normalise_term, spend_category_named, money)
 
 HIGH, MEDIUM, LOW = 'high', 'medium', 'low'
+
+#: Where a filled-in answer came from. See the module docstring; the order is
+#: the order the suggesters try them in, most specific first.
+AWARD, MEMO, EXPORT, DEFAULT, GUESS = 'award', 'memo', 'export', 'default', 'guess'
+
+#: The sources that entitle an answer to fill the form in rather than offer a
+#: chip. ``GUESS`` is deliberately the only one left out.
+FILLS_IN = (AWARD, MEMO, EXPORT, DEFAULT)
 
 
 def active_suggestion_rules():
@@ -47,24 +71,35 @@ def active_suggestion_rules():
 
 class Suggestion(object):
     """
-    One proposed value for one field.
+    One proposed value for one field, and why it is being proposed.
 
-    ``is_lookup`` marks the answer as read out of the export rather than
-    reasoned about, which is what entitles it to pre-fill the form. See the
-    module docstring.
+    ``source`` is the interesting part -- see the module docstring. It decides
+    whether the form pre-fills this or merely offers it, and it decides what
+    the caption under the box says, which is what keeps a filled box from
+    claiming more certainty than it has.
     """
 
-    def __init__(self, value, confidence, reason, label='', is_lookup=False):
-        """ Hold the proposed ``value`` together with why it is being proposed. """
+    def __init__(self, value, confidence, reason, label='', source=GUESS):
+        """ Hold the proposed ``value`` together with where it came from. """
         self.value = value
         self.confidence = confidence
         self.reason = reason
         self.label = label
-        self.is_lookup = is_lookup
+        self.source = source
 
     def __repr__(self):
-        return "<Suggestion %s (%s%s)>" % (self.value, self.confidence,
-                                           ', lookup' if self.is_lookup else '')
+        return "<Suggestion %s (%s, %s)>" % (self.value, self.confidence, self.source)
+
+    @property
+    def is_lookup(self):
+        """
+        Whether this may fill the form in, rather than only offer itself.
+
+        Named for what it meant when the only two kinds were "the export said
+        so" and "we guessed": the forms and templates ask this question, not
+        which of the four filling sources it was.
+        """
+        return self.source in FILLS_IN
 
     @property
     def css_class(self):
@@ -72,64 +107,17 @@ class Suggestion(object):
         return {HIGH: 'success', MEDIUM: 'info', LOW: 'default'}.get(self.confidence, 'default')
 
 
-def suggest_spend_category(txn, rules=None):
-    """
-    Work out the LNL spend category from what Workday already recorded.
+# ---------------------------------------------------------------------------
+# Reading the memo
+#
+# The single richest thing in a Workday export, because LNL writes it rather
+# than Workday. Everything below is about getting the three fields back out of
+# it without ever insisting they are there.
+# ---------------------------------------------------------------------------
 
-    Rules are stored, not coded: a Treasurer maps a new account or a newly
-    invented Workday category from the admin without a deploy. They are tried
-    in priority order and the first match wins, and the seeded order runs from
-    the most specific evidence to the least:
-
-    1. Workday's own Spend Category, matched **exactly**. It is the finest code
-       in the export -- "Printing" and "Supplies - Medical" both sit under the
-       ledger account 71100:Supplies, and they are not the same thing.
-    2. The **ledger account**, matched on its number. Coarser, but still a code
-       WPI assigned; it catches Workday categories nobody has mapped yet.
-    3. Anything matched by wording, which is a guess and stays a chip.
-
-    ``rules`` lets a caller rendering many rows load the table once.
-    """
-    for rule in (active_suggestion_rules() if rules is None else rules):
-        if rule.matches(txn):
-            return Suggestion(rule.spend_category_id, rule.confidence,
-                              rule_reason(rule, txn), str(rule.spend_category),
-                              is_lookup=rule.is_lookup)
-    return None
-
-
-def rule_reason(rule, txn):
-    """ Human explanation shown on the auto-suggest badge. """
-    if rule.match_field == SuggestionRule.LEDGER_ACCOUNT:
-        return 'Ledger account %s' % (txn.ledger_account or rule.pattern)
-    if rule.match_field == SuggestionRule.SPEND_CATEGORY:
-        return 'Workday spend category "%s"' % txn.worktag('spend_category')
-    if rule.match_field == SuggestionRule.SUPPLIER:
-        return 'Supplier "%s"' % txn.payee
-    return 'Memo mentions "%s"' % rule.pattern
-
-
-def unmapped_spend_categories(transactions, rules=None):
-    """
-    Workday spend categories on these lines that no rule accounts for.
-
-    Every unmapped value is a category the Treasurer will have to pick by hand
-    on every line that carries it, so the importer reports them: one row in the
-    admin retires the question permanently.
-    """
-    rules = active_suggestion_rules() if rules is None else rules
-    missing = {}
-    for txn in transactions:
-        value = (txn.worktag('spend_category') or '').strip()
-        if not value or any(rule.matches(txn) for rule in rules):
-            continue
-        missing[value] = missing.get(value, 0) + 1
-    return sorted(missing.items(), key=lambda kv: (-kv[1], kv[0]))
-
-
-# An SGA request number as it appears in a memo: F.26.6, A.26.115, F.25.33.
-# One letter for the term the request was heard in, the fiscal year, then the
-# number within that year.
+#: An SGA request number as it appears in a memo: F.26.6, A.26.115, F.25.33.
+#: One letter for the term the request was heard in, the fiscal year, then the
+#: number within that year.
 FR_REFERENCE = re.compile(r'\b([A-Za-z])\.(\d{2})\.(\d+)\b')
 
 
@@ -149,82 +137,395 @@ def normalise_reference(value):
     return re.sub(r'\s+', '', (value or '')).upper()
 
 
-def suggest_funding_request(txn):
+def _collapse(text):
+    """ One space between words, nothing at either end. """
+    return re.sub(r'\s+', ' ', text or '').strip()
+
+
+def _without_reference(segment):
     """
-    Find the funding request whose number the memo quotes.
+    One comma-separated segment with any request number taken out of it.
 
-    Workday memos routinely carry the SGA request they were approved under --
-    "Truman Show Film Rights (F.26.6)", "Rights for Jaws (F.26.86)". That is
-    the Treasurer's own reference, written down at the time, so matching it is
-    a lookup rather than a guess: far better evidence than anything a vendor's
-    name could offer.
-
-    Returns ``(funding_request, line_or_None)``. The line is only offered when
-    the request has exactly one, since nothing in the memo says which of
-    several it belongs to.
+    Brackets go with it, but only on a segment that actually carried a
+    reference: "Live at the CC Window (Apr 27)" is a name with a date in it and
+    the brackets are part of how the show is told from the other four of it.
     """
-    from finance.models import FundingRequest
+    if not FR_REFERENCE.search(segment or ''):
+        return _collapse(segment)
+    return _collapse(re.sub(r'[()\[\]]', ' ', FR_REFERENCE.sub(' ', segment)))
 
-    references = funding_request_references(txn.memo)
-    if not references:
+
+class MemoFields(object):
+    """
+    What a Workday memo turned out to be carrying.
+
+    Three optional fields, none of which any particular memo has to have:
+
+    ``description``
+        What the line was for, in LNL's words. The ledger's description.
+    ``line_hint``
+        The funding request line the spending comes out of, as written -- often
+        the category name, often the line's own name, and matched against both.
+    ``reference``
+        The SGA request number, e.g. ``A.27.16``.
+    """
+
+    __slots__ = ('description', 'line_hint', 'reference')
+
+    def __init__(self, description='', line_hint='', reference=''):
+        self.description = description
+        self.line_hint = line_hint
+        self.reference = reference
+
+    def __repr__(self):
+        return "<MemoFields %r / %r / %r>" % (self.description, self.line_hint,
+                                              self.reference)
+
+
+def parse_memo(text):
+    """
+    Pull LNL's house memo format apart into its three fields.
+
+    The format is ``{line description}, {FR line}, {FR code}``::
+
+        Velcro restock, consumables, (A.27.16)
+
+    Nothing insists on it, and the parser is written so that a memo which does
+    not follow it degrades to "the whole thing is the description" rather than
+    to nonsense. Three real shapes, all handled:
+
+    * the full format above, which yields all three fields;
+    * a description with the request number written into it --
+      ``Truman Show Film Rights (F.26.6)`` -- which yields a description and a
+      reference and leaves the line to be worked out another way;
+    * anything else at all, which is a description.
+
+    The request number is looked for anywhere in the text rather than only in
+    the last segment, because it is as often written inline as appended. The
+    segment it leaves empty behind it is dropped; the segment it leaves words
+    behind in is kept, minus the number.
+
+    Where several segments survive, the **last** is the line hint and the rest
+    rejoin as the description, so a description that itself contains a comma --
+    "Gaff tape, spike tape, consumables" -- keeps both halves.
+    """
+    text = _collapse(text)
+    if not text:
+        return MemoFields()
+
+    references = funding_request_references(text)
+    reference = references[0] if references else ''
+
+    segments = [s for s in (_without_reference(part) for part in text.split(',')) if s]
+    if not segments:
+        # A memo that was nothing but a request number. Odd, but it happens,
+        # and the number is the useful half anyway.
+        return MemoFields(reference=reference)
+    if len(segments) == 1:
+        return MemoFields(description=segments[0], reference=reference)
+    return MemoFields(description=', '.join(segments[:-1]), line_hint=segments[-1],
+                      reference=reference)
+
+
+def memo_fields(txn):
+    """
+    :func:`parse_memo` applied to the part of a bank line LNL wrote.
+
+    The Journal Line Memo is what somebody typed; ``memo`` is that with
+    Workday's header memo concatenated on, which is nobody's sentence and would
+    put a stranger's words into the ledger's description column.
+    """
+    return parse_memo(txn.journal_line_memo or txn.memo)
+
+
+def suggest_description(txn):
+    """
+    What LNL said this line was for, in their own words, or ``''``.
+
+    The first field of the memo, which is the whole point of the house format:
+    "Velcro restock", not "Velcro restock, consumables, (A.27.16)". The routing
+    that follows it is about to be recorded in its own columns, and repeating
+    it in prose is how a description column stops being read.
+
+    Empty when the memo is empty, deliberately, and callers that need a label
+    whatever happens fall back themselves. Reaching for the payee here would
+    put "B&H Photo" in a Description column on a row that already says B&H
+    Photo -- and, worse, would make a blank spare row in the split modal look
+    like one somebody had filled in.
+    """
+    return memo_fields(txn).description
+
+
+# ---------------------------------------------------------------------------
+# Funding requests
+# ---------------------------------------------------------------------------
+
+def _named_category(line):
+    """ The normalised name of the category a line was awarded for, or ``''``. """
+    category = line.lnl_spend_category
+    return normalise_term(category.name) if category is not None else ''
+
+
+def match_fr_line(funding_request, hint):
+    """
+    The line of ``funding_request`` a memo's middle field names, or ``None``.
+
+    Tried in descending order of how sure it makes us:
+
+    1. The line's own name, normalised -- "Film Rights" for a line called
+       ``Film Rights``.
+    2. The spend category that line was awarded for, because a memo written as
+       ``..., consumables, (A.27.16)`` is naming the category as often as the
+       line, and on a well-formed request those are the same thing anyway.
+    3. One containing the other, which catches "consumables" against a line
+       called "Consumable Supplies" -- but only where exactly one line matches
+       that way. Two candidates is not a near miss, it is a question, and
+       picking one of them would answer it silently.
+
+    A request with a single line falls through to that line whatever the hint
+    said, which is how this behaved before memos were parsed at all: there is
+    nowhere else the money could have come from.
+    """
+    # ``.all()`` rather than a fresh ``select_related``, so a caller that
+    # prefetched the lines -- :func:`suggest_funding_request` does, once per
+    # row of a queue page -- gets to use what it fetched.
+    lines = list(funding_request.line_items.all())
+    if not lines:
+        return None
+
+    wanted = normalise_term(hint)
+    if wanted:
+        # Three separate passes rather than three tests per line, so that the
+        # order above is the order that actually decides: a line *named*
+        # "Consumables" must beat one merely awarded for consumables, whichever
+        # of the two the request happens to list first.
+        for line in lines:
+            if normalise_term(line.name) == wanted:
+                return line
+        for line in lines:
+            if _named_category(line) == wanted:
+                return line
+        loose = [line for line in lines
+                 if normalise_term(line.name)
+                 and (wanted in normalise_term(line.name)
+                      or normalise_term(line.name) in wanted)]
+        if len(loose) == 1:
+            return loose[0]
+
+    return lines[0] if len(lines) == 1 else None
+
+
+def suggest_funding_request(txn, fields=None):
+    """
+    The funding request the memo quotes, and the line of it the memo names.
+
+    Workday memos routinely carry the SGA request the spending was approved
+    under, and LNL's house format carries the line as well -- that is what the
+    middle field of ``Velcro restock, consumables, (A.27.16)`` is for. Both are
+    the Treasurer's own reference, written down at the time, so reading them
+    back is a lookup and not a guess.
+
+    Returns ``(funding_request, line_or_None)``.
+    """
+    from django.db.models import Prefetch
+
+    from finance.models import FRLineItem, FundingRequest
+
+    fields = memo_fields(txn) if fields is None else fields
+    if not fields.reference:
         return None, None
 
     # Compared in Python rather than SQL: references are written inconsistently
     # ("F.26.6", "F 26.6") and there are only ever a handful of open requests.
-    candidates = FundingRequest.objects.filter(closed=False).prefetch_related('line_items')
-    wanted = {normalise_reference(reference) for reference in references}
+    #
+    # The lines come with their awarded spend category attached, because that
+    # category is the next question this answers -- see
+    # :func:`suggest_spend_category` -- and fetching it per line would be a
+    # query per line per row of the queue.
+    wanted = normalise_reference(fields.reference)
+    candidates = FundingRequest.objects.filter(closed=False).prefetch_related(
+        Prefetch('line_items',
+                 queryset=FRLineItem.objects.select_related('lnl_spend_category')))
     for funding_request in candidates:
-        if normalise_reference(funding_request.reference) in wanted:
-            lines = list(funding_request.line_items.all())
-            return funding_request, lines[0] if len(lines) == 1 else None
+        if normalise_reference(funding_request.reference) == wanted:
+            return funding_request, match_fr_line(funding_request, fields.line_hint)
     return None, None
 
 
+def suggest_fr_line(funding_request, line, fields):
+    """ The FR line picker's answer, as a :class:`Suggestion` or ``None``. """
+    if line is None:
+        return None
+    if fields.line_hint and normalise_term(fields.line_hint) != normalise_term(line.name):
+        reason = ('Memo quotes %s and names "%s"'
+                  % (funding_request.reference, fields.line_hint))
+    elif fields.line_hint:
+        reason = 'Memo quotes %s and names its %s line' % (funding_request.reference,
+                                                           line.name)
+    else:
+        # Reached only when the request has exactly one line, so say so --
+        # otherwise the caption claims the memo named a line it never did.
+        reason = '%s has only the one line' % funding_request.reference
+    return Suggestion(line.pk, HIGH, reason, line.picker_label, source=MEMO)
+
+
+# ---------------------------------------------------------------------------
+# Spend category
+# ---------------------------------------------------------------------------
+
+def rule_reason(rule, txn):
+    """ Human explanation shown on the auto-suggest badge. """
+    if rule.match_field == SuggestionRule.LEDGER_ACCOUNT:
+        return 'Ledger account %s' % (txn.ledger_account or rule.pattern)
+    if rule.match_field == SuggestionRule.SPEND_CATEGORY:
+        return 'Workday spend category "%s"' % txn.worktag('spend_category')
+    if rule.match_field == SuggestionRule.SUPPLIER:
+        return 'Supplier "%s"' % txn.payee
+    return 'Memo mentions "%s"' % rule.pattern
+
+
+def suggest_spend_category(txn, rules=None, fr_line=None, fields=None):
+    """
+    Work out the LNL spend category, most specific evidence first.
+
+    Four passes, and the order is the whole of the logic:
+
+    1. **What the funding request line was awarded for.** If the memo named a
+       line and somebody recorded a category against that line when the award
+       was entered, that is the answer -- it is the same question, asked once
+       already, by the person best placed to answer it.
+    2. **What the memo says.** The middle field of the house format is usually
+       an LNL category by name: ``Velcro restock, consumables, (A.27.16)``.
+       Matching it back to the row is reading the Treasurer's own answer, and
+       it outranks Workday's category because WPI's list is not LNL's and never
+       was -- everything LNL buys arrives as "Supplies" or "Equipment -
+       General" whatever it was really for.
+    3. **The rule table**, in priority order: Workday's own spend category
+       matched exactly, then the ledger account matched on its number. Both are
+       codes somebody at WPI assigned, read through a mapping a Treasurer
+       maintains in the admin, so a new code is one row rather than a deploy.
+    4. **Wording**, which is a guess and stays a chip.
+
+    ``rules`` lets a caller rendering many rows load the table once.
+    """
+    if fr_line is not None and fr_line.lnl_spend_category_id:
+        return Suggestion(
+            fr_line.lnl_spend_category_id, HIGH,
+            'The %s line of %s is awarded for it'
+            % (fr_line.name, fr_line.funding_request.reference
+               or fr_line.funding_request.name),
+            str(fr_line.lnl_spend_category), source=AWARD)
+
+    fields = memo_fields(txn) if fields is None else fields
+    named = spend_category_named(fields.line_hint)
+    if named is not None:
+        return Suggestion(named.pk, HIGH, 'Memo says "%s"' % fields.line_hint,
+                          str(named), source=MEMO)
+
+    for rule in (active_suggestion_rules() if rules is None else rules):
+        if rule.matches(txn):
+            return Suggestion(rule.spend_category_id, rule.confidence,
+                              rule_reason(rule, txn), str(rule.spend_category),
+                              source=EXPORT if rule.is_lookup else GUESS)
+    return None
+
+
+def unmapped_spend_categories(transactions, rules=None):
+    """
+    Workday spend categories on these lines that no rule will fill a box from.
+
+    Every one of them is a category the Treasurer will have to pick by hand on
+    every line that carries it, so the importer reports them: one row in the
+    admin retires the question permanently.
+
+    A category matched only by a *wording* rule counts as unmapped here, which
+    is not a contradiction. Those rules offer a chip and fill nothing in -- see
+    :attr:`finance.models.SuggestionRule.LOOKUP_MODES` -- so the box is still
+    one the Treasurer answers by hand, and that is exactly what this list is
+    for. The chip is a convenience; a mapping is an answer.
+    """
+    rules = [rule for rule in (active_suggestion_rules() if rules is None else rules)
+             if rule.is_lookup]
+    missing = {}
+    for txn in transactions:
+        value = (txn.worktag('spend_category') or '').strip()
+        if not value or any(rule.matches(txn) for rule in rules):
+            continue
+        missing[value] = missing.get(value, 0) + 1
+    return sorted(missing.items(), key=lambda kv: (-kv[1], kv[0]))
+
+
+# ---------------------------------------------------------------------------
+# Fund
+# ---------------------------------------------------------------------------
+
 def suggest_fund_source(txn, funding_request=None, unmatched_reference=None):
     """
-    Read the fund bucket off the memo, and off the Workday Fund worktag only
-    where that worktag actually identifies a bucket.
+    Which pot of money paid for this, in descending order of evidence.
 
-    Two things can settle this, and neither is a guess:
+    1. **A funding request number in the memo.** That money is a specific SGA
+       award, so the fund is whichever bucket is marked as requiring a request
+       line.
+    2. **The Fund worktag**, through the code list on each :class:`FundSource`.
+       Which Workday code means which LNL bucket is WPI's numbering and LNL's
+       bookkeeping convention, so it is typed into the admin rather than
+       compiled in here. A fund with no codes configured is never chosen this
+       way -- which matters, because 810-FD is the agency fund *all* of LNL's
+       spending comes out of and identifies nothing at all.
+    3. **The default**, if a Treasurer has named one. What is left after the
+       two passes above is a line that quotes no award and carries no fund code
+       anyone has mapped, and which bucket *that* is, is LNL's bookkeeping
+       convention rather than anything this module can work out -- so it is a
+       flag on the fund row, set from the admin. This is stated rather than
+       read, and the queue's caption says so in those words: it does not claim
+       the export answered.
 
-    * A funding request number in the memo. That money is a specific SGA award,
-      so the fund is whichever bucket is marked as requiring a request line.
-    * The Fund worktag, through the code list on each :class:`FundSource`.
-      Which Workday code means which LNL bucket is WPI's numbering and LNL's
-      bookkeeping convention, so it is typed into the admin rather than
-      compiled in here. A fund with no codes configured is never chosen.
+    That third pass is a deliberate change of mind. Leaving the fund blank was
+    the honest thing to do while the alternative was inferring it from a
+    worktag that says nothing; it is not the honest thing to do when a
+    Treasurer can write the fallback down once in the admin. Fund is required
+    on every expense, so a blank box was a typing job repeated down the whole
+    queue, and the row that gets no attention is the row where every box needed
+    filling in equally.
 
-    What the worktag cannot settle is anything about SGA. 810-FD is the agency
-    fund all of LNL's spending comes out of, whoever is paying: standing budget,
-    out-of-cycle award and legacy money are indistinguishable on the worktag,
-    so no bucket is mapped to it and 810-FD lines are simply left blank for the
-    Treasurer. Reading "SGA Budget" off a code every line carries is not a
-    lookup, and pre-filling it is worse than leaving it empty, because a filled
-    box is the one nobody checks.
-
-    ``unmatched_reference`` is the safety catch for the memo half. When a memo
-    quotes a request number and lnldb has no such request, guessing at some
-    other bucket would be quietly wrong, so nothing is offered and the queue
-    says why.
+    ``unmatched_reference`` is the safety catch on the first pass. When a memo
+    quotes a request number and lnldb has no such request, every later pass
+    would be answering a different question from the one the memo asked, so
+    nothing is offered and the queue says why.
     """
     if funding_request is not None:
         source = FundSource.objects.filter(requires_funding_request=True,
                                            is_active=True).first()
-        if source is not None:
-            return Suggestion(source.pk, HIGH,
-                              'Memo quotes %s' % funding_request.reference, str(source),
-                              is_lookup=True)
+        if source is None:
+            # No fund is configured to draw on a request, so there is nothing
+            # right to offer -- and falling through would be actively wrong:
+            # the memo has just said this is award money, and the passes below
+            # would answer with the standing budget.
+            return None
+        return Suggestion(source.pk, HIGH,
+                          'Memo quotes %s' % funding_request.reference, str(source),
+                          source=MEMO)
 
     if unmatched_reference:
         return None
 
     fund = txn.worktag('fund')
     source = fund_source_for_workday_fund(fund)
-    if source is None:
-        return None
-    return Suggestion(source.pk, HIGH, 'Workday fund "%s"' % fund, str(source),
-                      is_lookup=True)
+    if source is not None:
+        return Suggestion(source.pk, HIGH, 'Workday fund "%s"' % fund, str(source),
+                          source=EXPORT)
 
+    fallback = default_fund_source()
+    if fallback is None:
+        return None
+    return Suggestion(fallback.pk, MEDIUM,
+                      "LNL's stated default — nothing in the export says otherwise",
+                      str(fallback), source=DEFAULT)
+
+
+# ---------------------------------------------------------------------------
+# Project tags
+# ---------------------------------------------------------------------------
 
 def active_project_tags():
     """ The candidate pool for :func:`suggest_project_tag`, loaded once. """
@@ -248,9 +549,13 @@ def suggest_project_tag(txn, tags=None):
             # exports, so this is a lookup rather than a reading of prose.
             return Suggestion(tag.pk, HIGH,
                               'Project code %s appears in the export' % tag.code,
-                              str(tag), is_lookup=True)
+                              str(tag), source=EXPORT)
     return None
 
+
+# ---------------------------------------------------------------------------
+# Linking an event
+# ---------------------------------------------------------------------------
 
 #: How Workday writes an Internal Service Delivery that bills event work.
 #: LNL invoices departments and student orgs through ISDs, and the memo is
@@ -279,11 +584,6 @@ ISD_DOCUMENT_TYPE = 'internal service delivery'
 #: the name and occasionally in the middle ("RRC E26 Rental"), so it is removed
 #: wherever it appears rather than trimmed off one end.
 WPI_TERM_CODE = re.compile(r'\b(?:CM|[A-E])\d{2}\b', re.IGNORECASE)
-
-
-def _collapse(text):
-    """ One space between words, nothing at either end. """
-    return re.sub(r'\s+', ' ', text or '').strip()
 
 
 def event_name_from_memo(text):
@@ -339,12 +639,10 @@ def suggest_linked_event(txn):
     """
     The event an ISD memo names, matched against lnldb by name.
 
-    This is a lookup, not an inference, and the distinction is the whole reason
-    it may pre-select where :func:`suggest_events` could only ever offer. The
-    memo is not evidence *about* which event this is; it is somebody writing
-    down which event this is, at the time they raised the invoice. Matching it
-    is reading their answer, the same as reading a funding request number out
-    of an expense memo.
+    The memo is not evidence *about* which event this is; it is somebody
+    writing down which event this is, at the time they raised the invoice.
+    Matching it is reading their answer, the same as reading a funding request
+    number out of an expense memo.
 
     Matching is exact on the name, case-insensitively. Nothing fuzzy: a filled
     box is the one nobody re-reads, so a near-miss that silently attributes
@@ -378,14 +676,174 @@ def suggest_linked_event(txn):
     return Suggestion(
         event.pk, HIGH,
         'Memo names this event (%s)' % date_format(event.datetime_start, 'M j, Y'),
-        str(event), is_lookup=True)
+        str(event), source=EXPORT)
 
+
+# ---------------------------------------------------------------------------
+# Refunds
+#
+# Workday does not say a line is a refund. What it does is emit the reversal
+# the same way it emitted the charge -- same memo, same spend category, same
+# payee -- with the sign turned round, and that is a good deal more than a
+# resemblance: it is the original line, quoted back.
+# ---------------------------------------------------------------------------
+
+def _payee_of(txn):
+    """ Who a bank line actually names, or ``''`` where it names nobody. """
+    return (txn.supplier or txn.employee or '').strip().lower()
+
+
+def _payees_agree(one, other):
+    """
+    Whether two bank lines name the same counterparty.
+
+    An Internal Service Delivery names neither side -- both are WPI -- so a
+    line with no payee at all does not disagree with anything. Its memo is
+    carrying the identity instead, and the memo has already had to match
+    exactly to get this far.
+    """
+    left, right = _payee_of(one), _payee_of(other)
+    if not left or not right:
+        return True
+    return left == right
+
+
+def _same_text(one, other):
+    """ Two export fields, compared the way a person reads them. """
+    return _collapse(one).lower() == _collapse(other).lower()
+
+
+def _uncredited(queryset):
+    """ Purchases not already given back in full, which cannot take a refund. """
+    return queryset.annotate(_credited=Coalesce(
+        Sum('refunds__amount'), Value(Decimal('0.00')),
+        output_field=DecimalField(max_digits=12, decimal_places=2))
+    ).exclude(_credited__gte=F('amount') * Value(-1))
+
+
+def suggest_refund_target(txn):
+    """
+    The purchase a credit gives back, when the export quotes it back to us.
+
+    A reversal in Workday is the original line re-emitted with the sign turned
+    round: the same Journal Line Memo, the same Workday spend category, the
+    same supplier, the same amount. Four fields agreeing exactly is not a
+    resemblance between two purchases, it is one purchase described twice, and
+    treating it as anything less was making the Treasurer hunt an earlier row
+    out of a dropdown to say what the file had already said.
+
+    So this fills the box in, and the row says what it matched on. Two things
+    it will not do:
+
+    * fill it in on a partial agreement -- a credit for part of an order, a
+      restocking fee, a vendor who bills the same wording every month at a
+      different price. Only a person can tell which purchase those belong to,
+      and filing a refund against the wrong one quietly hands the money back
+      to a funding request line nobody spent it from;
+    * fill it in when *two* earlier purchases reverse this line equally well,
+      which happens when LNL buys the same thing twice. Nothing distinguishes
+      them, so choosing one would be answering a question rather than reading
+      an answer -- and if the two were charged to different awards, the wrong
+      one gets its money back.
+
+    The picker -- :func:`suggest_refund_targets` -- is still there for both.
+    """
+    reversals = _exact_reversals(txn, limit=2)
+    if len(reversals) != 1:
+        return None
+    entry = reversals[0]
+    return Suggestion(
+        entry.pk, HIGH,
+        'Same memo, spend category, payee and amount as this purchase on %s, with the '
+        'sign turned round' % date_format(entry.effective_date, 'M j'),
+        entry.picker_label, source=EXPORT)
+
+
+def _exact_reversals(txn, limit=8):
+    """
+    Entries this credit reverses line for line. Newest first.
+
+    Memo equality is done in SQL because it is the field that narrows hardest;
+    the spend category lives inside a JSON blob and the payee has two possible
+    columns, so both are compared in Python over the handful of rows that
+    survive.
+    """
+    from finance.models import ParsedTransaction
+
+    memo = _collapse(txn.memo)
+    if txn.net_amount <= 0 or not memo:
+        return []
+
+    candidates = _uncredited(
+        ParsedTransaction.objects
+        .filter(parent_transaction__isnull=False,
+                parent_transaction__memo__iexact=memo,
+                amount=-money(txn.net_amount),
+                effective_date__lte=txn.accounting_date)
+        .exclude(parent_transaction=txn)
+        .select_related('parent_transaction')
+        .order_by('-effective_date', '-pk'))
+
+    found = []
+    for entry in candidates[:50]:
+        original = entry.parent_transaction
+        if not _payees_agree(original, txn):
+            continue
+        if not _same_text(original.worktag('spend_category'), txn.worktag('spend_category')):
+            continue
+        found.append(entry)
+        if len(found) >= limit:
+            break
+    return found
+
+
+def suggest_refund_targets(txn, limit=8):
+    """
+    Everything this credit might be giving back, best first, for the picker.
+
+    Two pools, in order: the lines that reverse this one exactly (see
+    :func:`_exact_reversals`), then earlier purchases from the same payee. The
+    second pool is a genuine shortlist rather than an answer -- a partial
+    credit or a restocking fee has nothing in it that identifies which purchase
+    it belongs to -- so it is offered and never applied.
+    """
+    from finance.models import ParsedTransaction
+
+    if txn.net_amount <= 0:
+        return []
+
+    found = _exact_reversals(txn, limit=limit)
+    seen = {entry.pk for entry in found}
+    if len(found) >= limit or not txn.payee:
+        return found
+
+    same_payee = _uncredited(
+        ParsedTransaction.objects
+        .filter(Q(parent_transaction__supplier__iexact=txn.payee) |
+                Q(parent_transaction__employee__iexact=txn.payee),
+                amount__lt=0,
+                effective_date__lte=txn.accounting_date)
+        .select_related('parent_transaction')
+        .order_by('-effective_date', '-pk'))
+
+    for entry in same_payee[:limit * 2]:
+        if entry.pk in seen:
+            continue
+        found.append(entry)
+        if len(found) >= limit:
+            break
+    return found
+
+
+# ---------------------------------------------------------------------------
+# The whole answer for one line
+# ---------------------------------------------------------------------------
 
 #: Fields ``suggest_all`` may return a :class:`Suggestion` for. The form walks
 #: this rather than a list of its own, so adding a suggester here is enough to
 #: have it pre-fill.
 SUGGESTED_FIELDS = ('spend_category', 'fund_source', 'fr_line_target',
-                    'project_tag', 'linked_event')
+                    'project_tag', 'linked_event', 'refund_of')
 
 #: The form field each of those maps to. Spend category is the odd one out
 #: because LNL's category and Workday's share a name but are different things.
@@ -395,6 +853,7 @@ FIELD_NAMES = {
     'fr_line_target': 'fr_line_target',
     'project_tag': 'project_tag',
     'linked_event': 'linked_event',
+    'refund_of': 'refund_of',
 }
 
 
@@ -402,35 +861,43 @@ def suggest_all(txn, tags=None, rules=None):
     """
     Everything the ingestion queue needs for one bank line, in one call.
 
+    The memo is parsed once here and handed down, because three of the
+    suggesters below read it and it is the same sentence every time.
+
     ``tags`` and ``rules`` let the queue load the project list and the rule
     table once for the whole page instead of per row.
     """
+    fields = memo_fields(txn)
+
     if txn.net_amount > 0:
         return {
             'kind': 'revenue',
+            'memo': fields,
+            'description': suggest_description(txn),
             'linked_event': suggest_linked_event(txn),
             'refund_of': suggest_refund_target(txn),
             'project_tag': suggest_project_tag(txn, tags=tags),
             'warning': '',
         }
-    # Looked up once: the request drives both the fund and the FR line.
-    funding_request, fr_line = suggest_funding_request(txn)
+
+    # Looked up once: the request drives the fund, the FR line and, through the
+    # line, the spend category.
+    funding_request, fr_line = suggest_funding_request(txn, fields=fields)
 
     # A number the memo quotes that lnldb has never heard of. Worth saying out
     # loud: either the request has not been entered yet or the memo is wrong,
     # and both are things to fix before this line is filed anywhere.
-    quoted = funding_request_references(txn.memo)
-    unmatched = quoted[0] if (quoted and funding_request is None) else ''
+    unmatched = fields.reference if (fields.reference and funding_request is None) else ''
 
     return {
         'kind': 'expense',
-        'spend_category': suggest_spend_category(txn, rules=rules),
+        'memo': fields,
+        'description': suggest_description(txn),
+        'spend_category': suggest_spend_category(txn, rules=rules, fr_line=fr_line,
+                                                 fields=fields),
         'fund_source': suggest_fund_source(txn, funding_request=funding_request,
                                            unmatched_reference=unmatched),
-        'fr_line_target': (
-            None if fr_line is None else
-            Suggestion(fr_line.pk, HIGH, 'Memo quotes %s' % funding_request.reference,
-                       fr_line.picker_label, is_lookup=True)),
+        'fr_line_target': suggest_fr_line(funding_request, fr_line, fields),
         'funding_request': funding_request,
         'project_tag': suggest_project_tag(txn, tags=tags),
         'warning': ('The memo quotes funding request %s, which is not in lnldb. Enter the '
@@ -440,10 +907,10 @@ def suggest_all(txn, tags=None, rules=None):
 
 def lookups_for_form(suggestions):
     """
-    ``{form field: Suggestion}`` for the answers that came out of the export.
+    ``{form field: Suggestion}`` for the answers a form may fill in.
 
-    This is the whole of what the reconciliation form is allowed to fill in --
-    see the module docstring for why an inference is deliberately not here.
+    This is the whole of what the reconciliation form is allowed to pre-select
+    -- see the module docstring for why a guess is deliberately not here.
     """
     out = {}
     for key in SUGGESTED_FIELDS:
@@ -451,59 +918,6 @@ def lookups_for_form(suggestions):
         if suggestion is not None and suggestion.is_lookup:
             out[FIELD_NAMES[key]] = suggestion
     return out
-
-
-def suggest_refund_targets(txn, limit=8):
-    """
-    For a positive line that looks like a return credit, find the original
-    purchase it likely reverses: same supplier, earlier, opposite sign.
-    """
-    from finance.models import ParsedTransaction
-
-    if txn.net_amount <= 0 or not txn.payee:
-        return []
-    return list(
-        ParsedTransaction.objects.filter(
-            Q(parent_transaction__supplier__iexact=txn.payee) |
-            Q(parent_transaction__employee__iexact=txn.payee),
-            amount__lt=0,
-            effective_date__lte=txn.accounting_date,
-        ).select_related('parent_transaction')
-        .order_by('-effective_date')[:limit]
-    )
-
-
-def suggest_refund_target(txn, limit=8):
-    """
-    The one purchase a credit most likely reverses, as a chip to click.
-
-    :func:`suggest_refund_targets` ranks by recency, which is the right order
-    for a picker and the wrong one for a single guess -- the most recent charge
-    to a supplier is rarely the one being credited back. What identifies a
-    reversal is the amount: a credit matching an earlier charge to the penny,
-    from the same payee, is a reversal of *that* charge whatever else the
-    supplier billed in between. That is the whole test, and it is the shape
-    Workday produces when it rescinds an invoice, line for line.
-
-    Deliberately silent when nothing matches exactly. Partial credits and
-    restocking fees are real, but they are the cases where only a person can
-    tell which purchase is meant, and a wrong guess here is worse than no guess
-    at all: accepting it would quietly hand the money back to the wrong funding
-    request line, where it reads as budget nobody spent. The full picker is
-    still there for those.
-
-    An inference, never a lookup -- the export does not say a line is a
-    reversal, we are noticing that it looks like one. So it offers a chip and
-    fills in nothing. See the module docstring.
-    """
-    for entry in suggest_refund_targets(txn, limit=limit):
-        if -entry.amount == txn.net_amount:
-            return Suggestion(entry.pk, HIGH,
-                              "Same payee and amount as this purchase on %s, so it looks "
-                              "like a reversal of it. Check before accepting."
-                              % date_format(entry.effective_date, 'M j'),
-                              entry.picker_label)
-    return None
 
 
 # ---------------------------------------------------------------------------

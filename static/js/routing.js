@@ -14,6 +14,14 @@
         entered; asking for them again on every transaction charged to the line
         is exactly the double data entry this module exists to remove.
 
+        The queue usually gets there first: LNL's Workday memos name the
+        request line outright -- "Velcro restock, consumables, (A.27.16)" -- so
+        the server picks the line and its category before the page is rendered
+        (finance/suggestions.py). What it renders then is a box already filled
+        in and carrying data-fin-inherited, which is what tells adopt() below
+        that the value is on loan from the line rather than chosen by hand, and
+        so must follow along if the Treasurer picks a different line.
+
      3. The "why is this leaving 315-AG" box appears only once the Projection
         tick box actually disagrees with the account the money came out of.
         Crossing the partition is legitimate -- LNL buys Projection gear from

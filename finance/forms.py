@@ -32,7 +32,7 @@ from finance.models import (FRLineItem, FundingRequest, FundSource, ParsedTransa
                             WorkdayTransaction, current_fiscal_year,
                             event_passthrough_category, fiscal_year_bounds,
                             fiscal_year_choices, fiscal_year_for)
-from finance.suggestions import lookups_for_form, suggest_all
+from finance.suggestions import AWARD, lookups_for_form, suggest_all, suggest_description
 
 
 def finance_form_helper(**attrs):
@@ -522,15 +522,19 @@ class BaseAllocationForm(forms.ModelForm):
 
     def _prefill_from_workday(self):
         """
-        Select what the export already tells us, so reconciling is confirming.
+        Select every answer the line already carries, so reconciling is reading.
 
-        Only *lookups* land here: an LNL category the Treasurer mapped to a
-        Workday account or spend category, a funding request whose number the
-        memo quotes, a project code appearing verbatim, a fund whose Workday
-        code is configured on it. Anything we merely inferred -- which event a
-        deposit belongs to, a word noticed in a memo -- stays a chip to click,
-        because a pre-selected dropdown gets accepted without being read, and
-        that is precisely the wrong thing to do with a guess.
+        What lands here is whatever :mod:`finance.suggestions` did not have to
+        guess at: the spend category a funding request line was awarded for,
+        the routing LNL wrote into the Workday memo, an LNL category mapped to
+        a Workday account, a project code appearing verbatim, and the fund a
+        Treasurer nominated as the fallback. Each arrives with a note saying
+        which of those it was, which the queue prints under the box -- a filled
+        box is allowed, a filled box that overstates where it came from is not.
+
+        A guess -- a word noticed in some prose, a resemblance between two
+        purchases -- stays a chip to click and fills in nothing, because a
+        pre-selected dropdown gets accepted without being read.
 
         Skipped entirely for a bound form (the Treasurer's own submission wins)
         and for a saved entry (it already has answers).
@@ -548,6 +552,26 @@ class BaseAllocationForm(forms.ModelForm):
                 continue
             self.initial[name] = suggestion.value
             self.autofilled[name] = suggestion
+            self._mark_inherited(field, suggestion)
+
+    @staticmethod
+    def _mark_inherited(field, suggestion):
+        """
+        Tell routing.js which pre-filled boxes came off the funding request line.
+
+        Rule 2 in ``static/js/routing.js`` fills the spend category and project
+        in from whichever FR line is chosen, and it will only ever overwrite a
+        box it filled in itself -- a value the Treasurer picked by hand survives
+        switching lines. A box *this* method filled in belongs in the first
+        group, not the second: it is the same answer from the same place, and
+        it has to follow along when the line changes. Saying so is one data
+        attribute, which is what jQuery's ``.data('fin-inherited')`` reads.
+        """
+        if suggestion.source != AWARD:
+            return
+        widget = getattr(field, 'widget', None)
+        if widget is not None:
+            widget.attrs['data-fin-inherited'] = str(suggestion.value)
 
     @staticmethod
     def _offers(field, value):
@@ -567,7 +591,13 @@ class BaseAllocationForm(forms.ModelForm):
 
     def _seed_description(self):
         """
-        Pre-fill Description from the CSV's Journal Line Memo.
+        Pre-fill Description from the memo, minus the routing written into it.
+
+        LNL writes its memos as ``{description}, {FR line}, {FR code}``, so the
+        whole memo is the wrong thing to copy here: the two fields after the
+        comma are about to be recorded in columns of their own, and repeating
+        them in prose is how a description column stops being read. See
+        :func:`finance.suggestions.parse_memo`.
 
         Only for a brand-new slice, so it never overwrites what the Treasurer
         already typed.
@@ -576,7 +606,7 @@ class BaseAllocationForm(forms.ModelForm):
         if field is None or self.instance.pk or self.parent_transaction is None:
             return
         if not self.initial.get('description'):
-            self.initial['description'] = self.parent_transaction.journal_line_memo
+            self.initial['description'] = suggest_description(self.parent_transaction)
 
     def _narrow(self, name, queryset):
         """ Restrict a choice field's queryset if this subclass renders it. """
@@ -951,9 +981,10 @@ class ReconcileForm(BaseAllocationForm):
         self.instance.amount = remaining if remaining else parent.net_amount
         self.instance.effective_date = parent.accounting_date
         if not self.instance.description:
-            # The CSV's Journal Line Memo is the closest thing to a human
-            # description of the line; fall back to the payee if it is blank.
-            self.instance.description = parent.journal_line_memo or parent.description
+            # The memo's first field: what the line was for, without the FR
+            # line and request number that follow it in LNL's house format and
+            # are about to be recorded as routing. Falls back to the payee.
+            self.instance.description = suggest_description(parent) or parent.description
 
     def clean(self):
         """
@@ -1224,7 +1255,7 @@ class BulkSelectionForm(forms.Form):
 
     def _style_for_dark_bar(self):
         """
-        Put ``form-control input-sm`` on every visible widget.
+        Put ``form-control input-sm`` on every visible widget but a tick box.
 
         The bar these render into is dark and sets ``color: #fff``. A bare
         ``<select>`` inherits that colour while keeping the browser's own white
@@ -1236,7 +1267,10 @@ class BulkSelectionForm(forms.Form):
         ever looked right was the one a template wrote out by hand.
         """
         for field in self.fields.values():
-            if isinstance(field.widget, forms.HiddenInput):
+            # A tick box is skipped for the reason BaseAllocationForm._style_widgets
+            # skips one: ``form-control`` is a full-width block, which turns a
+            # checkbox into a stretched grey slab with its label adrift.
+            if isinstance(field.widget, (forms.HiddenInput, forms.CheckboxInput)):
                 continue
             existing = field.widget.attrs.get('class', '')
             # Guarded so calling this twice cannot stack duplicate classes,
@@ -1314,28 +1348,81 @@ class BulkReconcileForm(BulkSelectionForm):
     """
     # Required for the same reason ReconcileForm requires it: an expense that
     # does not say where the money came from is not reconciled, it is filed.
+    #
+    # Every active fund is offered, funding-request money included. It used to
+    # be left out, on the same grounds as BulkActionForm: a fund that draws on
+    # a request needs an FR line named beside it, so offering the fund without
+    # a way to name the line would have produced a bar whose every row came
+    # back invalid. The answer to that is the line picker below rather than a
+    # missing fund -- a batch charged to one award is the ordinary shape of a
+    # funding request being spent, and it was the one batch this bar could not
+    # do.
     fund_source = forms.ModelChoiceField(
-        # Funds needing an FR line are left out for the reason BulkActionForm
-        # leaves them out: the line cannot be chosen in bulk, so every row would
-        # come out invalid.
-        queryset=FundSource.objects.none(), label="Fund",
-        help_text="Funds drawing on a specific funding request are reconciled one line at "
-                  "a time, so the request line can be named.")
+        queryset=FundSource.objects.none(), label="Fund")
+    # Blank unless the chosen fund needs it, which is also when routing.js
+    # unhides it -- exactly as on a queue row. clean() below pairs the two.
+    fr_line_target = FRLineChoiceField()
+    # The same tick box the per-row form carries, for the same reason: charging
+    # spending to another year's request is legitimate -- a late invoice, a
+    # carried-over award -- but it has to be meant rather than mis-picked.
+    allow_cross_year_fr = forms.BooleanField(
+        required=False, label="Other year",
+        help_text="Only tick this if the spending really belongs to another year's request.")
     lnl_spend_category = forms.ModelChoiceField(
         queryset=SpendCategory.objects.none(), required=False, label="Spend category")
     project_tag = ProjectTagChoiceField()
 
     def build_fields(self):
-        """ Resolve the querysets per instance and fit the fund picker. """
+        """ Resolve the querysets per instance and fit the two routing pickers. """
         # Resolved per instance, not at import time, so retiring a category in
         # the admin takes effect without a restart.
-        self.fields['fund_source'].queryset = (
-            FundSource.objects.active().filter(requires_funding_request=False))
+        self.fields['fund_source'].queryset = FundSource.objects.active()
         self.fields['lnl_spend_category'].queryset = SpendCategory.objects.active()
+
+        # Every open request, not one fiscal year's, because a selection has no
+        # one year to narrow to -- the rows in it can be from either side of a
+        # July. Each label leads with its year (FRLineItem.picker_label) and the
+        # view checks the year row by row, so nothing crosses unnoticed.
+        line = self.fields['fr_line_target']
+        line.queryset = (FRLineItem.objects
+                         .filter(funding_request__closed=False)
+                         .select_related('funding_request')
+                         .with_spend()
+                         .order_by('funding_request__fiscal_year', 'funding_request__name',
+                                   'sort_order', 'pk'))
+        line.help_text = ("Every open funding request is listed — check the year on the "
+                          "line you pick.")
 
         fund = self.fields['fund_source']
         fund.widget = FundSourceSelect(attrs={'class': 'fin-fund-source'})
         fund.widget.choices = fund.choices
+
+    def clean(self):
+        """
+        Fund and FR line are a pair, and the bar has to say so itself.
+
+        The view validates every row it writes, so a mismatched pair would be
+        caught -- but as the same refusal repeated once per selected line, with
+        the fix being a field on a bar that has already been dismissed. Said
+        here it is one error against the box to change, before anything is
+        written. The rules are ParsedTransaction.clean()'s, worded as
+        BaseAllocationForm._check_fund_and_fr_line words them.
+        """
+        cleaned = super(BulkReconcileForm, self).clean()
+        fund = cleaned.get('fund_source')
+        line = cleaned.get('fr_line_target')
+
+        if line is None:
+            if fund is not None and fund.requires_funding_request:
+                self.add_error('fr_line_target',
+                               "%s money has to name the funding request line it comes out "
+                               "of." % fund)
+        elif fund is None or not fund.requires_funding_request:
+            self.add_error(
+                'fr_line_target',
+                "Only a fund that draws on a funding request may name an FR line — %s does "
+                "not. Change the fund, or clear this." % (fund or "no fund"))
+        return cleaned
 
 
 class OpenEncumbranceChoiceField(forms.ModelChoiceField):

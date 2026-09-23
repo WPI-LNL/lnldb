@@ -25,8 +25,9 @@ from django.test import TestCase
 
 from events.tests.generators import Event2019Factory, OrgFactory
 from finance.models import FundSource, ParsedTransaction, SpendCategory, WorkdayTransaction
-from finance.suggestions import (HIGH, LOW, MEDIUM, Suggestion,
-                                 event_name_from_memo, event_name_from_transaction,
+from finance.suggestions import (AWARD, DEFAULT, EXPORT, GUESS, HIGH, LOW, MEDIUM, MEMO,
+                                 Suggestion, event_name_from_memo,
+                                 event_name_from_transaction, parse_memo,
                                  suggest_linked_event, suggest_refund_targets)
 from finance.tests.util import category, fund
 
@@ -43,13 +44,22 @@ def bank(op, amount, date=SEP, payee='B&H Photo', **worktags):
 class SuggestionValueTests(TestCase):
     """ The little carrier every suggester returns. """
 
-    def test_a_lookup_says_so_in_its_repr(self):
+    def test_the_repr_names_where_the_answer_came_from(self):
         """ Read in tracebacks and the shell, where the distinction matters most. """
-        looked_up = Suggestion(7, HIGH, 'because the export said so', is_lookup=True)
+        looked_up = Suggestion(7, HIGH, 'because the export said so', source=EXPORT)
         guessed = Suggestion(7, LOW, 'because a word appeared')
-        self.assertIn('lookup', repr(looked_up))
-        self.assertNotIn('lookup', repr(guessed))
+        self.assertIn('export', repr(looked_up))
+        self.assertIn('guess', repr(guessed))
         self.assertIn('7', repr(looked_up))
+
+    def test_every_source_but_a_guess_may_fill_the_form_in(self):
+        """
+        An award, a memo, a Workday code and a stated default are all somebody
+        writing something down. Only the last of the five is ours.
+        """
+        for source in (AWARD, MEMO, EXPORT, DEFAULT):
+            self.assertTrue(Suggestion(1, HIGH, '', source=source).is_lookup, source)
+        self.assertFalse(Suggestion(1, HIGH, '', source=GUESS).is_lookup)
 
     def test_the_css_class_follows_the_confidence(self):
         self.assertEqual(Suggestion(1, HIGH, '').css_class, 'success')
@@ -63,6 +73,69 @@ class SuggestionValueTests(TestCase):
     def test_a_suggestion_is_a_guess_unless_it_says_otherwise(self):
         """ The safe default: filling a box in has to be asked for explicitly. """
         self.assertFalse(Suggestion(1, HIGH, 'reason').is_lookup)
+        self.assertEqual(Suggestion(1, HIGH, 'reason').source, GUESS)
+
+
+class MemoFormatTests(TestCase):
+    """
+    LNL writes its Workday memos as ``{description}, {FR line}, {FR code}``::
+
+        Velcro restock, consumables, (A.27.16)
+
+    That one sentence carries the description, the funding request line and the
+    request number, which between them are most of a reconciliation. Nothing
+    enforces the format, so every test here is as much about what happens to a
+    memo that ignores it: the parser has to degrade to "all of it is the
+    description" rather than to nonsense.
+    """
+
+    def test_the_house_format(self):
+        fields = parse_memo('Velcro restock, consumables, (A.27.16)')
+        self.assertEqual(fields.description, 'Velcro restock')
+        self.assertEqual(fields.line_hint, 'consumables')
+        self.assertEqual(fields.reference, 'A.27.16')
+
+    def test_a_reference_written_inline_still_leaves_a_description(self):
+        """ The other common shape: no line named, number in the sentence. """
+        fields = parse_memo('Truman Show Film Rights (F.26.6)')
+        self.assertEqual(fields.description, 'Truman Show Film Rights')
+        self.assertEqual(fields.line_hint, '')
+        self.assertEqual(fields.reference, 'F.26.6')
+
+    def test_a_description_may_contain_commas(self):
+        """
+        The *last* segment is the line, not the second -- so a list of things
+        bought keeps both halves instead of losing everything after the first
+        comma.
+        """
+        fields = parse_memo('Gaff tape, spike tape, consumables, (A.27.16)')
+        self.assertEqual(fields.description, 'Gaff tape, spike tape')
+        self.assertEqual(fields.line_hint, 'consumables')
+
+    def test_a_memo_ignoring_the_format_is_all_description(self):
+        fields = parse_memo('306711: 11x17 posters for LNL')
+        self.assertEqual(fields.description, '306711: 11x17 posters for LNL')
+        self.assertEqual(fields.line_hint, '')
+        self.assertEqual(fields.reference, '')
+
+    def test_brackets_that_are_part_of_a_name_survive(self):
+        """
+        Several shows run repeatedly and are told apart by a date in brackets.
+        Only a segment that actually carried a request number is de-bracketed.
+        """
+        fields = parse_memo('Lens and Lights Services for Live at the CC Window (Apr 27) D26')
+        self.assertEqual(fields.description,
+                         'Lens and Lights Services for Live at the CC Window (Apr 27) D26')
+
+    def test_an_empty_memo_yields_nothing_rather_than_failing(self):
+        fields = parse_memo('')
+        self.assertEqual((fields.description, fields.line_hint, fields.reference),
+                         ('', '', ''))
+
+    def test_a_memo_that_is_only_a_reference_keeps_the_useful_half(self):
+        fields = parse_memo('(A.27.16)')
+        self.assertEqual(fields.reference, 'A.27.16')
+        self.assertEqual(fields.description, '')
 
 
 class EventNameFromMemoTests(TestCase):

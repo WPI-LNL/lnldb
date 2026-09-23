@@ -270,7 +270,7 @@ class EntryDeleteTests(FinanceViewTestCase):
         encumbrance = ParsedTransaction.objects.create(
             amount=Decimal('-400.00'), effective_date=datetime.date(2025, 9, 15),
             description='Deposit on a console', fund_source=fund('sga_budget'),
-            lnl_spend_category=category('new_stuff'))
+            lnl_spend_category=category('equipment_noncapital'))
         response = self.client.post(
             reverse('finance:entry-delete', args=[encumbrance.pk]), follow=True)
         self.assertEqual(response.redirect_chain[-1][0], reverse('finance:ledger'))

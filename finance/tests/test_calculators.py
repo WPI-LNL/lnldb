@@ -37,10 +37,10 @@ class SpendByCategoryTests(TestCase):
         slice_(bank('C1', '-100.00'), '-100.00', fund_source=fund('sga_budget'),
                lnl_spend_category=category('consumables'))
         slice_(bank('C2', '-400.00'), '-400.00', fund_source=fund('sga_budget'),
-               lnl_spend_category=category('new_stuff'))
+               lnl_spend_category=category('equipment_noncapital'))
         rows = spend_by_category(fiscal_year=FY26)
         self.assertEqual([r['label'] for r in rows],
-                         ['New Stuff', 'Consumables'])
+                         ['Equipment - Non Capital', 'Consumables'])
         self.assertEqual(rows[0]['amount'], Decimal('400.00'))
         self.assertEqual(rows[0]['percent'], Decimal('80.0'))
         self.assertTrue(rows[0]['color'].startswith('#'))
@@ -59,7 +59,7 @@ class SpendByCategoryTests(TestCase):
         slice_(bank('C6', '-700.00'), '-700.00', fund_source=fund('sga_budget'),
                lnl_spend_category=category('consumables'))
         self.assertEqual([r['label'] for r in spend_by_category(FY26, is_projection=True)],
-                         ['Repairs'])
+                         ['Maintenance and Repair'])
         self.assertEqual([r['label'] for r in spend_by_category(FY26, is_projection=False)],
                          ['Consumables'])
 
@@ -194,7 +194,7 @@ class ProjectCompositionTests(TestCase):
 
     def _spend(self, tag, amount, op, **kwargs):
         return slice_(bank(op, amount), amount, fund_source=fund('sga_budget'),
-                      lnl_spend_category=category('new_stuff'), project_tag=tag, **kwargs)
+                      lnl_spend_category=category('equipment_noncapital'), project_tag=tag, **kwargs)
 
     def test_segments_are_child_assets_biggest_first(self):
         self._spend(self.lustr, '-8000.00', 'P1')

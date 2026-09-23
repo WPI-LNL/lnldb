@@ -27,11 +27,12 @@ from finance.forms import (BulkEncumbranceForm, BulkReconcileForm, EncumbranceFo
 from finance.importers import (ImportError_, discard_staged, import_workday_export,
                                purge_stale_staged, read_staged, stage_upload)
 from finance.models import (ZERO, ParsedTransaction, TransactionStatus,  # NOQA
-                            WorkdayTransaction, money)
-from finance.suggestions import (ENCUMBRANCE_CLOSE_ENOUGH, active_project_tags,
-                                 active_suggestion_rules, encumbrance_match_is_close,
-                                 encumbrance_match_label, suggest_all,
-                                 suggest_encumbrance_matches, suggest_refund_targets)
+                            WorkdayTransaction, fiscal_year_for, money)
+from finance.suggestions import (ENCUMBRANCE_CLOSE_ENOUGH, SUGGESTED_FIELDS,
+                                 active_project_tags, active_suggestion_rules,
+                                 encumbrance_match_is_close, encumbrance_match_label,
+                                 suggest_all, suggest_encumbrance_matches,
+                                 suggest_refund_targets)
 
 #: Where a staged upload's details live between the two halves of an import.
 #: The session, not a hidden form field, so a token cannot be replayed by
@@ -374,17 +375,21 @@ def suggestions_json(request, pk):
                'crossing_requires_reason': txn.crossing_requires_reason}
 
     payload['warning'] = data.get('warning', '')
+    # The memo's first field, which is what the ledger's Description gets.
+    payload['description'] = data.get('description', '')
 
-    for key in ('spend_category', 'fund_source', 'project_tag', 'fr_line_target',
-                'linked_event'):
+    for key in SUGGESTED_FIELDS:
         suggestion = data.get(key)
         payload[key] = None if suggestion is None else {
             'value': str(suggestion.value),
             'label': suggestion.label,
             'confidence': suggestion.confidence,
             'reason': suggestion.reason,
-            # True when the export said so and the form has already filled it
-            # in; False when this is ours to offer and theirs to accept.
+            # Where the answer came from -- 'award', 'memo', 'export',
+            # 'default' or 'guess'. See finance.suggestions.
+            'source': suggestion.source,
+            # True when the form has already filled this in; False when this is
+            # ours to offer and theirs to accept.
             'is_lookup': suggestion.is_lookup,
         }
 
@@ -799,6 +804,13 @@ def bulk_reconcile(request):
     which is exactly what :class:`ReconcileForm` does for a single row, so a
     part-allocated line is finished off rather than double-counted.
 
+    The answers include a funding request line when the chosen fund draws on
+    one -- a dozen invoice lines against a single award is as ordinary a batch
+    as a dozen supply orders against the standing budget. What that adds over
+    the other fields is a rule they do not have: the request belongs to a
+    fiscal year, and a row from the other side of a July is charged to it only
+    if that was asked for.
+
     Every row is validated on its own and the failures are named. A bulk action
     must never be the thing that writes a row the rest of the app would have
     rejected -- the same rule the ledger's bulk action follows.
@@ -845,10 +857,28 @@ def bulk_reconcile(request):
     can_settle = request.user.has_perm('finance.settle_subledger')
     done, settled, refused = 0, 0, []
 
+    # Charging a batch to one funding request line is the ordinary way an award
+    # gets spent, so the fund picker offers FR money and this is where the line
+    # lands. The year rule is checked per row rather than once for the form: a
+    # selection is whatever was ticked, which can straddle a July, and
+    # ParsedTransaction.clean() does not police the year -- only
+    # BaseAllocationForm does, and that form is not in this path.
+    line = form.cleaned_data.get('fr_line_target')
+    line_year = line.funding_request.fiscal_year if line is not None else None
+    cross_year_allowed = form.cleaned_data.get('allow_cross_year_fr')
+
     with reversion.create_revision():
         reversion.set_user(request.user)
         reversion.set_comment("Reconciled in bulk from the ingestion queue")
         for txn in lines:
+            entry_year = fiscal_year_for(txn.accounting_date)
+            if line_year is not None and line_year != entry_year and not cross_year_allowed:
+                refused.append((txn, ValidationError({'fr_line_target': [
+                    "This is FY%s spending but %s is an FY%s request. If that is genuinely "
+                    "intended, tick “Other year”."
+                    % (entry_year, line.funding_request.name, line_year)]})))
+                continue
+
             remaining = txn.unallocated_amount
             entry = ParsedTransaction(
                 parent_transaction=txn,
@@ -858,6 +888,7 @@ def bulk_reconcile(request):
                 fund_source=form.cleaned_data['fund_source'],
                 lnl_spend_category=form.cleaned_data.get('lnl_spend_category'),
                 project_tag=form.cleaned_data.get('project_tag'),
+                fr_line_target=line,
                 created_by=request.user)
             try:
                 entry.full_clean()

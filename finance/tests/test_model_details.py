@@ -252,7 +252,7 @@ class ProjectRollupTests(TestCase):
         return ParsedTransaction.objects.create(
             parent_transaction=self.txn, amount=Decimal(amount), effective_date=date,
             project_tag=tag, fund_source=fund('sga_budget'),
-            lnl_spend_category=category('new_stuff'))
+            lnl_spend_category=category('equipment_noncapital'))
 
     def test_cost_rolls_up_from_the_children(self):
         self._spend(self.child, '-300.00')
@@ -273,7 +273,7 @@ class ProjectRollupTests(TestCase):
         ParsedTransaction.objects.create(
             parent_transaction=credit_txn, amount=Decimal('50.00'), effective_date=SEP,
             project_tag=self.child, refund_of=purchase,
-            fund_source=fund('sga_budget'), lnl_spend_category=category('new_stuff'))
+            fund_source=fund('sga_budget'), lnl_spend_category=category('equipment_noncapital'))
         self.assertEqual(self.parent.total_cost(), Decimal('250.00'))
 
     def test_it_can_be_narrowed_to_one_fiscal_year(self):

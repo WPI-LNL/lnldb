@@ -379,6 +379,28 @@
 }
 .fin-bulk-bar .form-control { display: inline-block; width: auto; }
 
+/* The funding request picker and its "other year" tick box, which routing.js
+   shows only once a fund that draws on a request is chosen. The wrapper is
+   what gets folded away, so the label travels with its box.
+
+   An FR line's option text is its year, its request, its purpose and its
+   remaining balance, which at width:auto is wide enough to wrap the bar onto a
+   second line and push the buttons off the bottom of the screen. Capped here;
+   the full text is still there in the open dropdown. */
+.fin-bulk-fr { display: inline-flex; align-items: center; }
+.fin-bulk-bar .fin-bulk-fr .form-control { max-width: 320px; }
+.fin-bulk-check {
+    font-weight: 400;
+    font-size: 12px;
+    opacity: 0.85;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+.fin-bulk-check input { margin: 0; }
+
 /* The bar is dark and sets color on itself, and a form control that inherits
    that colour keeps its own light background -- which is white text on a white
    dropdown. Every control in here states both colours rather than inheriting
@@ -714,6 +736,16 @@
     border-color: #e6ecf1;
     border-style: dashed;
     cursor: help;
+}
+
+/* A box filled in from a stated default rather than from anything the export
+   said. Same shape as the caption above -- it is still not clickable -- but
+   warm rather than grey, because this is the one autofilled answer nobody
+   actually asserted and therefore the one worth a second look. */
+.fin-note-default {
+    background: #fdf6e7;
+    color: #8a6d3b;
+    border-color: #f5e2b8;
 }
 
 /* Offered: clearly a button, because clicking it is the whole point. */

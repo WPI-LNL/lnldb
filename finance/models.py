@@ -134,6 +134,20 @@ FINGERPRINT_WORKTAGS = (
 )
 
 
+def normalise_term(text):
+    """
+    Squash a name down to what is worth comparing: lower-case letters and
+    digits, nothing else.
+
+    LNL's category names carry punctuation and spacing that nobody reproduces
+    when typing them into a Workday memo -- "Equipment - Non Capital" is
+    written "equipment non capital", "Equipment-NonCapital" and
+    "equipment_noncapital" by three different people in the same week. All four
+    mean the row, so all four have to reach it.
+    """
+    return re.sub(r'[^a-z0-9]+', '', (text or '').lower())
+
+
 def worktag_value(worktags, key, default=''):
     """ Case/format tolerant lookup into a ``worktags_json`` dict. """
     if not worktags:
@@ -403,6 +417,48 @@ def event_passthrough_category():
         None)
 
 
+def spend_categories_by_name():
+    """
+    ``{normalised name: <SpendCategory>}`` for every category still offered.
+
+    LNL writes the category into the Workday memo by hand -- "Velcro restock,
+    consumables, (A.27.16)" -- so the queue has to be able to turn the word
+    somebody typed back into the row it names. Keyed on a normalised form so
+    "Equipment - Non Capital", "equipment non capital" and "EquipmentNonCapital"
+    all arrive at the same place, and on the slug as well, because that is what
+    the URL filters use and what a Treasurer sees beside the name in the admin.
+    """
+    def build():
+        out = {}
+        for row in SpendCategory.objects.active():
+            for key in (normalise_term(row.name), normalise_term(row.slug)):
+                # First row to claim a key keeps it: sort order decides, so a
+                # collision resolves the same way twice running.
+                if key and key not in out:
+                    out[key] = row
+        return out
+    return _cached('category_names', build, {})
+
+
+def spend_category_named(text):
+    """ The :class:`SpendCategory` a piece of text names outright, or ``None``. """
+    return spend_categories_by_name().get(normalise_term(text))
+
+
+def default_fund_source():
+    """
+    The fund to fill an expense in with when nothing identifies one, or ``None``.
+
+    Which fund that is belongs in the admin rather than here: it is LNL's
+    bookkeeping convention, and the club that inherits this code may not share
+    it. See :attr:`FundSource.is_default` for why one exists at all.
+    """
+    return _cached(
+        'default_fund',
+        lambda: FundSource.objects.active().filter(is_default=True).first(),
+        None)
+
+
 def student_org_workday_fund():
     """
     The Workday fund that marks a client as a student organization (810-FD).
@@ -549,6 +605,13 @@ class FundSource(Vocabulary):
                   "request's lines, or the request's balance silently drifts. Turn this on "
                   "and an expense on this fund cannot be saved without an FR line -- and no "
                   "other fund is allowed to name one.")
+    is_default = models.BooleanField(
+        default=False, verbose_name="Fill this in when nothing else says",
+        help_text="The fund an expense is filled in with when neither the memo nor the "
+                  "Fund worktag identifies one. This is a stated default, not a reading of "
+                  "the export, and the queue labels it as such -- but leaving the one "
+                  "required box on every row blank is what made reconciling a typing job. "
+                  "Tick it on exactly one fund.")
 
     class Meta(Vocabulary.Meta):
         abstract = False
