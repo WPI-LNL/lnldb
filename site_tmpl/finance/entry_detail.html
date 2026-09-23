@@ -1,0 +1,196 @@
+{# Page 4 -- one ledger entry, its routing form and its audit trail. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+{% load crispy_forms_tags %}
+
+{% block fin_content %}
+    <div class="row">
+        {# ---- LEFT: locked source record ---- #}
+        <div class="col-md-5">
+            {% if txn %}
+                <div class="fin-panel fin-immutable">
+                    <div class="fin-panel-head">
+                        <span><span class="glyphicon glyphicon-lock"></span> Workday Record</span>
+                        <span class="fin-locked-note">read-only</span>
+                    </div>
+                    <div class="fin-panel-body">
+                        <dl class="fin-kv">
+                            <dt>Operational Transaction</dt>
+                            <dd><a href="{% url 'finance:txn-detail' txn.pk %}"><code>{{ txn.reference }}</code></a></dd>
+                            <dt>Accounting Date</dt><dd>{{ txn.accounting_date|date:"F j, Y" }}</dd>
+                            <dt>Bank Line Total</dt>
+                            <dd class="{{ txn.net_amount|money_class }}"><strong>{{ txn.net_amount|money }}</strong></dd>
+                            {% if txn.payee %}<dt>Payee</dt><dd>{{ txn.payee }}</dd>{% endif %}
+                            {% if txn.memo %}<dt>Memo</dt><dd>{{ txn.memo }}</dd>{% endif %}
+                        </dl>
+                        {% if txn.is_split %}
+                            <div class="alert alert-info" style="margin-bottom:0;">
+                                This bank line is split across {{ txn.slices.count }} allocations.
+                                <a href="{% url 'finance:txn-detail' txn.pk %}">View the whole split &rarr;</a>
+                            </div>
+                        {% endif %}
+                        {% if entry.crosses_partition %}
+                            <div class="alert alert-warning" style="margin-bottom:0;margin-top:8px;">
+                                <span class="glyphicon glyphicon-transfer"></span>
+                                {{ entry.partition_note }}
+                                That is allowed — SGA reimburses one account for the other’s
+                                spending — but it is worth being sure it is deliberate.
+                            </div>
+                        {% elif txn.default_partition %}
+                            <div class="alert alert-info" style="margin-bottom:0;margin-top:8px;">
+                                Paid out of <code>{{ txn.partition_code_label }}</code>, and filed
+                                on that side.
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% comment %}
+                        Worktags are the same Workday record, so they share the
+                        box and are separated by a rule rather than a second panel.
+                    {% endcomment %}
+                    {% if worktags %}
+                        <div class="fin-panel-divider">Worktags</div>
+                        <div class="fin-panel-body">
+                            <dl class="fin-kv">
+                                {% for key, value in worktags %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}
+                            </dl>
+                        </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="fin-panel fin-immutable">
+                    <div class="fin-panel-head"><span>Encumbrance</span></div>
+                    <div class="fin-panel-body">
+                        <p class="fin-muted">
+                            This is a pending purchase logged before the Workday feed caught up.
+                            It has no bank line yet, so it stays Pending until it is matched to an
+                            imported transaction.
+                        </p>
+                        <p class="fin-muted">
+                            Match it from the <a href="{% url 'finance:queue' %}">ingestion
+                            queue</a>: the bank line it belongs to offers this row under
+                            <em>Already encumbered?</em>.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# ---- Inherited event metadata ---- #}
+            {% if entry.linked_event %}
+                <div class="fin-panel">
+                    <div class="fin-panel-head">
+                        <span>Inherited from the Event</span>
+                        <span class="fin-locked-note">never re-keyed</span>
+                    </div>
+                    <div class="fin-panel-body">
+                        <dl class="fin-kv">
+                            <dt>Event</dt>
+                            <dd><a href="{% url 'events:detail' entry.linked_event.pk %}">{{ entry.linked_event.event_name }}</a></dd>
+                            <dt>Client Type</dt><dd>{{ entry.client_type_display }}</dd>
+                            <dt>Services</dt><dd>{{ entry.event_services_display|default:"—" }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        {# ---- RIGHT: editable metadata + audit trail ---- #}
+        <div class="col-md-7">
+            <div class="fin-panel">
+                <div class="fin-panel-head">
+                    <span>Subledger Metadata</span>
+                    <span>
+                        {{ entry|entry_badge }} {{ entry|status_badge }}
+                    </span>
+                </div>
+                <div class="fin-panel-body">
+                    {% if can_edit %}
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            {% crispy form %}
+                            <div class="text-right">
+                                <a href="{% url 'finance:entry-delete' entry.pk %}" class="btn btn-link text-danger">Remove</a>
+                                <button type="submit" class="btn btn-primary">Save</button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <dl class="fin-kv">
+                            <dt>Amount</dt>
+                            <dd class="{{ entry.amount|money_class }}">{{ entry.amount|money }}</dd>
+                            <dt>Date</dt><dd>{{ entry.effective_date|date:"F j, Y" }}</dd>
+                            <dt>Description</dt><dd>{{ entry.description|default:"—" }}</dd>
+                            <dt>Fund</dt><dd>{{ entry.fund_source|default:"—" }}</dd>
+                            <dt>Spend Category</dt><dd>{{ entry.lnl_spend_category|default:"—" }}</dd>
+                            <dt>Project</dt><dd>{{ entry.project_tag|default:"—" }}</dd>
+                            <dt>Explanation</dt><dd>{{ entry.audit_explanation|default:"—"|linebreaksbr }}</dd>
+                        </dl>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ---- Receipt ---- #}
+            <div class="fin-panel">
+                <div class="fin-panel-head">Receipt</div>
+                <div class="fin-panel-body">
+                    {% if entry.receipt_file %}
+                        {% if can_view_receipts %}
+                            <a href="{{ entry.receipt_file.url }}" target="_blank" class="btn btn-default btn-sm">
+                                <span class="glyphicon glyphicon-paperclip"></span>
+                                View receipt
+                            </a>
+                            <span class="fin-muted">{{ entry.receipt_file.name|cut:"finance/receipts/" }}</span>
+                        {% else %}
+                            <span class="fin-muted">A receipt is attached, but you don't have permission to view it.</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="fin-muted">
+                            No receipt attached.
+                            {% if can_edit %}Use the field above to upload a PDF.{% endif %}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ---- Audit trail ---- #}
+            <div class="fin-panel">
+                <div class="fin-panel-head">Audit Trail</div>
+                <div class="fin-panel-body">
+                    <ul class="fin-audit">
+                        {% for item in audit_trail %}
+                            <li>
+                                <div>
+                                    <strong>{{ item.user|default:"System" }}</strong>
+                                    {% if item.is_creation %}
+                                        created this entry
+                                    {% elif item.unreadable %}
+                                        saved this entry
+                                        <span class="fin-muted">(recorded before a field changed shape &mdash; details unavailable)</span>
+                                    {% elif item.changes %}
+                                        changed
+                                        {% for change in item.changes %}
+                                            <span class="fin-audit-change">
+                                                {{ change.field }}
+                                                {% if change.old %}<span class="fin-audit-old">{{ change.old|truncatechars:28 }}</span> &rarr; {% endif %}
+                                                <span class="fin-audit-new">{{ change.new|default:"(empty)"|truncatechars:28 }}</span>
+                                            </span>{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        saved this entry
+                                    {% endif %}
+                                </div>
+                                <div class="fin-audit-meta">
+                                    {{ item.date|date:"F j, Y \a\t P" }}
+                                    {% if item.comment %}&middot; {{ item.comment }}{% endif %}
+                                </div>
+                            </li>
+                        {% empty %}
+                            <li class="fin-muted">
+                                No recorded changes yet. Edits made from here on are tracked.
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

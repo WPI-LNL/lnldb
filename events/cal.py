@@ -1,5 +1,6 @@
 import json
 import icalendar
+from time import mktime
 
 from django.conf import settings
 from django.db.models import Count, F, Q
@@ -13,6 +14,7 @@ from django.utils.html import conditional_escape
 from django.views.generic.base import View
 from django.views.decorators.cache import cache_page
 from django_ical.views import ICalFeed
+from django.utils.timezone import localtime
 
 
 from events.models import BaseEvent, Category, EventOccurrence
@@ -277,8 +279,8 @@ def generate_cal_json_publicfacing(queryset, from_date=None, to_date=None):
                 "title": conditional_escape(event.cal_name()),
                 "url": reverse('events:detail', args=[event.id]),
                 "className": 'cal-status-' + slugify(event.status),
-                "start": timezone.make_naive(event.cal_start()).isoformat(),
-                "end": timezone.make_naive(event.cal_end()).isoformat(),
+                "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
+                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5)),
                 "description": event.location.name + " (" + event.location.building.shortname + "). " + conditional_escape(event.cal_desc()),
             }
             objects_body.append(field)
@@ -309,8 +311,8 @@ def generate_cal_json(queryset, from_date=None, to_date=None):
                 "title": event.cal_name(),
                 "url": reverse('events:detail', args=[event.id]),
                 "className": 'cal-status-' + slugify(event.status),
-                "start": timezone.make_naive(event.cal_start()).isoformat(),
-                "end": timezone.make_naive(event.cal_end()).isoformat(),
+                "start": datetime_to_timestamp(event.cal_start() + timezone.timedelta(hours=-5)),
+                "end": datetime_to_timestamp(event.cal_end() + timezone.timedelta(hours=-5)),
                 "description": event.location.name + " (" + event.location.building.shortname + "). " + event.cal_desc(),
             }
             objects_body.append(field)
@@ -322,8 +324,8 @@ def generate_cal_json(queryset, from_date=None, to_date=None):
                         "title": occurrence.cal_name(),
                         "url": reverse('events:detail', args=[occurrence.event.id]),
                         "className": 'cal-status-' + slugify(occurrence.event.status),
-                        "start": timezone.make_naive(occurrence.cal_start()).isoformat(),
-                        "end": timezone.make_naive(occurrence.cal_end()).isoformat(),
+                        "start": datetime_to_timestamp(occurrence.cal_start() + timezone.timedelta(hours=-5)),
+                        "end": datetime_to_timestamp(occurrence.cal_end() + timezone.timedelta(hours=-5)),
                         "description": occurrence.cal_desc(),
                     }
                     objects_body.append(field)
@@ -348,6 +350,10 @@ def timestamp_to_datetime(timestamp):
     else:
         return ""
 
+
+def datetime_to_timestamp(dt):
+    """Converts a datetime object to a UNIX timestamp in milliseconds."""
+    return int(dt.timestamp() * 1000) 
 
 class EventAttendee(object):
     """

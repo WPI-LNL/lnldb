@@ -1,0 +1,307 @@
+{# Page 1 -- executive dashboard. Every chart reads its data from a json_script block. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+{% load permissionif %}
+{% load static %}
+
+{% block fin_content %}
+    {# ---- Action banner: only shown when something needs a decision ---- #}
+    {% if unreconciled_count %}
+        <div class="fin-action-banner">
+            <div class="fin-banner-text">
+                <span class="glyphicon glyphicon-exclamation-sign"></span>
+                <strong>{{ unreconciled_count }}</strong>
+                transaction{{ unreconciled_count|pluralize }} awaiting reconciliation
+                covering <strong>{{ unreconciled_total|money }}</strong> of activity.
+                {% if pending_encumbrances %}
+                    <span class="fin-muted">
+                        &middot; {{ pending_encumbrances }} pending encumbrance{{ pending_encumbrances|pluralize }}.
+                    </span>
+                {% endif %}
+            </div>
+            {% permission request.user has 'finance.edit_subledger' %}
+                <a href="{% url 'finance:queue' %}?{{ filter_state.querystring }}" class="btn btn-warning btn-sm">
+                    Clear the queue &rarr;
+                </a>
+            {% endpermission %}
+        </div>
+    {% elif pending_encumbrances %}
+        <div class="fin-action-banner">
+            <div class="fin-banner-text">
+                <span class="glyphicon glyphicon-time"></span>
+                {{ pending_encumbrances }} pending encumbrance{{ pending_encumbrances|pluralize }}
+                waiting for the Workday feed.
+            </div>
+            <a href="{% url 'finance:ledger' %}?status=pending&amp;{{ filter_state.querystring }}"
+               class="btn btn-default btn-sm">Review</a>
+        </div>
+    {% endif %}
+
+    {# ---- Headline figures ---- #}
+    <div class="fin-stats">
+        <div class="fin-stat">
+            <div class="fin-stat-label">Revenue</div>
+            <div class="fin-stat-value text-success">{{ total_revenue|money }}</div>
+            <div class="fin-stat-sub">money in</div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Expenses</div>
+            <div class="fin-stat-value text-danger">{{ total_expense|money }}</div>
+            <div class="fin-stat-sub">money out</div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Net Position</div>
+            <div class="fin-stat-value {{ net_position|money_class }}">{{ net_position|money }}</div>
+            <div class="fin-stat-sub">
+                {% if filter_state.fiscal_year %}FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}{% else %}all years{% endif %}
+                &middot;
+                {% if filter_state.partition == 'projection' %}Projection{% elif filter_state.partition == 'event' %}Event Production{% else %}all partitions{% endif %}
+            </div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Unreconciled</div>
+            <div class="fin-stat-value {% if unreconciled_count %}text-warning{% else %}text-muted{% endif %}">
+                {{ unreconciled_count }}
+            </div>
+            <div class="fin-stat-sub">{{ unreconciled_total|money }} across the queue</div>
+        </div>
+    </div>
+
+    {# ---- Money in vs money out, by month ---- #}
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>Money In vs Money Out</span>
+            <span class="fin-muted" style="font-weight:400;font-size:12px;">
+                {% if filter_state.fiscal_year %}
+                    across FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}
+                {% else %}last 12 months{% endif %}
+            </span>
+        </div>
+        <div class="fin-panel-body">
+            {% if cash_flow_peak %}
+                <canvas id="fin-cashflow" height="80"></canvas>
+            {% else %}
+                <div class="fin-empty">
+                    <span class="glyphicon glyphicon-stats"></span>
+                    No activity recorded in this period yet.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ---- Three doughnuts: where money goes, who it comes from, what we sold ---- #}
+    <div class="row">
+        <div class="col-md-4">
+            <div class="fin-panel">
+                <div class="fin-panel-head">
+                    <span>Spending by Category</span>
+                    <span class="fin-muted" style="font-weight:400;font-size:12px;">{{ category_total|money }}</span>
+                </div>
+                <div class="fin-panel-body">
+                    {% url 'finance:ledger' as ledger_url %}
+                    {% include 'finance/partials/_doughnut.html' with rows=categories canvas_id='fin-chart-categories' legend_link_prefix=ledger_url|add:"?category=" empty_icon='piggy-bank' empty_text='No categorised spending in this period yet.' %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="fin-panel">
+                <div class="fin-panel-head">
+                    <span>Department vs Student Org</span>
+                    <span class="fin-muted" style="font-weight:400;font-size:12px;">
+                        {{ client_type_shows }} show{{ client_type_shows|pluralize }}
+                    </span>
+                </div>
+                <div class="fin-panel-body">
+                    {% include 'finance/partials/_doughnut.html' with rows=client_types canvas_id='fin-chart-clienttypes' empty_icon='education' empty_text='No event revenue linked yet.' %}
+                    {% if client_types %}
+                        <p class="fin-chart-note">
+                            Client type is inherited from each event&rsquo;s billing org
+                            (Workday fund 810-FD means Student Organization). Non-event
+                            revenue is excluded.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="fin-panel">
+                <div class="fin-panel-head">
+                    <span>Service Mix</span>
+                    <span class="fin-muted" style="font-weight:400;font-size:12px;">{{ service_total|money }}</span>
+                </div>
+                <div class="fin-panel-body">
+                    {% include 'finance/partials/_doughnut.html' with rows=services canvas_id='fin-chart-services' empty_icon='music' empty_text='No services recorded on linked events yet.' %}
+                    {% if services %}
+                        <p class="fin-chart-note">
+                            A show&rsquo;s revenue is split across its services in proportion to
+                            list price, so a lighting-and-sound show counts toward both.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ---- Clients and projects ---- #}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="fin-panel">
+                <div class="fin-panel-head">
+                    <span>Revenue by Client</span>
+                    <span class="fin-muted" style="font-weight:400;font-size:12px;">{{ client_total|money }}</span>
+                </div>
+                <div class="fin-panel-body">
+                    {% for row in clients %}
+                        <div class="fin-rank">
+                            <div class="fin-rank-head">
+                                {# Ellipsised in CSS, so the full name has to be reachable somehow. #}
+                                <span class="fin-rank-label" title="{{ row.label }}">{{ row.label }}</span>
+                                <span class="fin-rank-value">
+                                    {{ row.amount|money }}
+                                    <span class="fin-muted">{{ row.percent }}%</span>
+                                </span>
+                            </div>
+                            <div class="fin-rank-track">
+                                <div class="fin-rank-fill"
+                                     style="width:{{ row.amount|percent_of:client_max }}%;background:{{ row.color }}"></div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="fin-empty">
+                            <span class="glyphicon glyphicon-user"></span>
+                            No revenue recorded in this period yet.
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="fin-panel">
+                <div class="fin-panel-head">
+                    <span>Project Spending</span>
+                    <a href="{% url 'finance:projects' %}?{{ filter_state.querystring }}"
+                       class="fin-muted" style="font-weight:400;font-size:12px;">Explore &rarr;</a>
+                </div>
+                <div class="fin-panel-body">
+                    {% for project in projects %}
+                        <div class="fin-project">
+                            <div class="fin-rank-head">
+                                <span class="fin-rank-label" title="{{ project.label }} ({{ project.code }})">
+                                    <a href="{% url 'finance:projects-detail' project.node.pk %}?{{ filter_state.querystring }}">{{ project.label }}</a>
+                                    <code class="fin-muted">{{ project.code }}</code>
+                                </span>
+                                <span class="fin-rank-value">{{ project.total|money }}</span>
+                            </div>
+                            {# Bar length compares projects; segments are the child assets. #}
+                            <div class="fin-stack" style="width:{{ project.total|percent_of:project_max }}%">
+                                {% for segment in project.segments %}
+                                    <span class="fin-stack-seg"
+                                          style="width:{{ segment.percent }}%;background:{{ segment.color }}"
+                                          title="{{ segment.label }} — {{ segment.amount|money }} ({{ segment.percent }}%)"></span>
+                                {% endfor %}
+                            </div>
+                            <div class="fin-project-legend">
+                                {% for segment in project.segments %}
+                                    <span class="fin-project-chip">
+                                        <span class="fin-legend-swatch" style="background:{{ segment.color }}"></span>
+                                        {{ segment.label }}
+                                        <span class="fin-muted">{{ segment.amount|money }}</span>
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="fin-empty">
+                            <span class="glyphicon glyphicon-tags"></span>
+                            Nothing tagged to a project in this period yet.
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ---- Funding request burndowns ---- #}
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>Funding Request Burndown</span>
+            <a href="{% url 'finance:fr-list' %}?{{ filter_state.querystring }}"
+               class="fin-muted" style="font-weight:400;font-size:12px;">View all &rarr;</a>
+        </div>
+        <div class="fin-panel-body fin-fr-list">
+            {% for fr in funding_requests %}
+                {% comment %}
+                    Collapsed by default: only the request's combined
+                    burndown shows until the row is expanded.
+                {% endcomment %}
+                <div class="fin-fr">
+                    <div class="fin-fr-head collapsed" role="button" tabindex="0"
+                         data-toggle="collapse" data-target="#fr-lines-{{ fr.obj.pk }}"
+                         aria-expanded="false" aria-controls="fr-lines-{{ fr.obj.pk }}">
+                        <span class="fin-fr-title">
+                            <span class="fin-fr-caret glyphicon glyphicon-chevron-right"></span>
+                            <strong>{{ fr.obj.name }}</strong>
+                            {% if fr.obj.is_projection %}
+                                <span class="fin-tag is-projection">PROJ</span>
+                            {% endif %}
+                        </span>
+                        <span class="fin-fr-figures {% if fr.overspent %}text-danger{% endif %}">
+                            {{ fr.spent|money }} of {{ fr.awarded|money }}
+                            {% if fr.overspent %}
+                                <span class="label label-danger">Overspent</span>
+                            {% else %}
+                                <span class="fin-muted">({{ fr.remaining|money }} left)</span>
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="fin-fr-bar">{% burndown_bar fr.spent fr.awarded %}</div>
+
+                    <div class="fin-fr-meta">
+                        <span class="fin-fr-count" data-toggle="collapse"
+                              data-target="#fr-lines-{{ fr.obj.pk }}" role="button">
+                            {{ fr.lines|length }} line item{{ fr.lines|length|pluralize }}
+                        </span>
+                        <a href="{% url 'finance:fr-detail' fr.obj.pk %}">Open request &rarr;</a>
+                    </div>
+
+                    <div class="collapse fin-fr-lines" id="fr-lines-{{ fr.obj.pk }}">
+                        {% for line in fr.lines %}
+                            <div class="fin-fr-line">
+                                <div class="fin-fr-line-head">
+                                    <span>{{ line.name }}</span>
+                                    <span class="{% if line.is_overspent %}text-danger{% else %}fin-muted{% endif %}">
+                                        {{ line.spent|money }} / {{ line.amount_awarded|money }}
+                                        {% if line.is_overspent %}
+                                            <span class="label label-danger">Over</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                {% burndown_bar line.spent line.amount_awarded %}
+                            </div>
+                        {% empty %}
+                            <div class="fin-fr-line fin-muted">No line items on this request.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% empty %}
+                <div class="fin-empty">
+                    <span class="glyphicon glyphicon-inbox"></span>
+                    No active funding requests.
+                    {% permission request.user has 'finance.manage_fundingrequest' %}
+                        <br><a href="{% url 'finance:fr-new' %}">Create one</a>
+                    {% endpermission %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block finalsay %}
+{{ block.super }}
+    {{ chart_data|json_script:"fin-chart-data" }}
+    <script src="{% asset 'js/charts.js' %}"></script>
+{% endblock %}

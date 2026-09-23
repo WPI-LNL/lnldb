@@ -1,0 +1,43 @@
+{# One doughnut chart plus its legend. Included several times per dashboard. #}
+{% load finance_extras %}
+{% comment %}
+    A doughnut chart with a scannable legend beside it.
+
+    Expects: rows (label/amount/color/percent, plus optional shows), canvas_id,
+    total, and empty_icon / empty_text for the no-data case. Optional
+    legend_link_prefix turns each legend row into a ledger link.
+{% endcomment %}
+{% if rows %}
+    <div class="fin-chart-wrap">
+        <div class="fin-chart-canvas">
+            <canvas id="{{ canvas_id }}" width="180" height="180"></canvas>
+        </div>
+        <div class="fin-legend">
+            {% for row in rows %}
+                <div class="fin-legend-row">
+                    <span class="fin-legend-swatch" style="background:{{ row.color }}"></span>
+                    {# Ellipsised in CSS; the title is how a clipped name stays readable. #}
+                    <span class="fin-legend-label" title="{{ row.label }}">
+                        {% if legend_link_prefix %}
+                            <a href="{{ legend_link_prefix }}{{ row.key }}&amp;{{ filter_state.querystring }}">{{ row.label }}</a>
+                        {% else %}
+                            {{ row.label }}
+                        {% endif %}
+                        {% if row.shows %}
+                            <span class="fin-muted">&middot; {{ row.shows }} show{{ row.shows|pluralize }}</span>
+                        {% endif %}
+                    </span>
+                    <span class="fin-legend-value">
+                        {{ row.amount|money }}
+                        <span class="fin-muted">({{ row.percent }}%)</span>
+                    </span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% else %}
+    <div class="fin-empty">
+        <span class="glyphicon glyphicon-{{ empty_icon|default:'stats' }}"></span>
+        {{ empty_text|default:"Nothing recorded in this period yet." }}
+    </div>
+{% endif %}

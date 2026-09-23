@@ -1,0 +1,55 @@
+{# Funding requests for the selected year, each with its burndown bar. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+{% load permissionif %}
+
+{% block fin_content %}
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>Funding Requests</span>
+            {% permission request.user has 'finance.manage_fundingrequest' %}
+                <a href="{% url 'finance:fr-new' %}" class="btn btn-xs btn-primary">
+                    <span class="glyphicon glyphicon-plus"></span> New request
+                </a>
+            {% endpermission %}
+        </div>
+        <div class="fin-table-wrap">
+            <table class="table fin-table">
+                <thead>
+                    <tr>
+                        <th>Name</th><th>Reference</th><th>FY</th>
+                        <th class="fin-num">Awarded</th><th class="fin-num">Spent</th>
+                        <th class="fin-num">Remaining</th><th style="width:180px;">Burndown</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fr in requests %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'finance:fr-detail' fr.pk %}">{{ fr.name }}</a>
+                                {% if fr.is_projection %}<span class="fin-tag is-projection">P</span>{% endif %}
+                                {% if fr.closed %}<span class="label label-default">Closed</span>{% endif %}
+                            </td>
+                            <td>{{ fr.reference|default:"—" }}</td>
+                            <td>FY{{ fr.fiscal_year|stringformat:"s"|slice:"2:" }}</td>
+                            <td class="fin-num">{{ fr.total_awarded|money }}</td>
+                            <td class="fin-num text-danger">{{ fr.total_spent|money }}</td>
+                            <td class="fin-num {% if fr.is_overspent %}text-danger{% else %}text-success{% endif %}">
+                                {{ fr.total_remaining|money }}
+                            </td>
+                            <td>{% burndown_bar fr.total_spent fr.total_awarded %}</td>
+                            <td><a href="{% url 'finance:fr-detail' fr.pk %}" class="btn btn-xs btn-default">&rsaquo;</a></td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="8">
+                            <div class="fin-empty">
+                                <span class="glyphicon glyphicon-inbox"></span>
+                                No funding requests in this filter.
+                            </div>
+                        </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
