@@ -334,17 +334,36 @@
     }
 
     /* ---- Auto-suggest badges ----------------------------------------------
-       Every field that still offers a chip is a <select>: fund, spend category,
-       funding request line, project. The event picker used to offer them too
-       and needed a branch of its own, because ajax-select keeps its value in a
-       hidden input beside the visible text box -- but the memo names the event
-       outright, so that field is filled in server-side now and offers nothing
-       to click. The branch went with the chips. */
+       Most fields that offer a chip are a <select>: fund, spend category,
+       funding request line, project. The one exception is "Incurred for
+       event" on an expense, where a rental memo can only be *guessed* against
+       an event -- revenue's ISD memo names its event outright and is filled in
+       server-side, so it never offers a chip.
+
+       The event picker is an ajax-select widget, which keeps its value in a
+       hidden input and shows the choice in an "on deck" box beside it. Setting
+       the hidden input alone would save the event while showing nothing, so
+       the chip goes through the widget's own didAddPopup hook, which does
+       both. The chip targets the visible text box (the field's id_for_label);
+       the hidden input is that id without "_text". */
+    function escapeHtml(text) {
+        return $('<div>').text(text).html();
+    }
+
     $(document).on('click', '.fin-suggest', function () {
         var $badge = $(this);
         var targetId = $badge.data('target');
         var value = String($badge.data('value'));
         if (!targetId) { return; }
+
+        var hiddenId = String(targetId).replace(/_text$/, '');
+        if (hiddenId !== targetId && $('#' + hiddenId + '_on_deck').length) {
+            // The label is injected into the deck as HTML by ajax_select.js.
+            $('#' + hiddenId).trigger('didAddPopup',
+                                      [value, escapeHtml(String($badge.data('label') || ''))]);
+            $badge.addClass('fin-suggest-applied');
+            return;
+        }
 
         var $target = $('#' + targetId);
         if (!$target.length) { return; }

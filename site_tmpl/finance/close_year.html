@@ -1,0 +1,150 @@
+{# Closing a finished fiscal year: what is still open, what needs squaring, and the record. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    {% with short=year.fiscal_year|stringformat:"s"|slice:"2:" %}
+    <div class="row">
+        <div class="col-md-7">
+            <form method="post">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="fin-panel">
+                    <div class="fin-panel-head">1. Still open in FY{{ short }}</div>
+                    <div class="fin-panel-body">
+                        <ul class="list-unstyled" style="margin:0;">
+                            {% for ok, text, link in checklist %}
+                                <li style="margin-bottom:6px;">
+                                    <span class="glyphicon {% if ok %}glyphicon-ok text-success{% else %}glyphicon-alert text-warning{% endif %}"></span>
+                                    {{ text }}
+                                    {% if link %}<a href="{{ link }}">Look</a>{% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <p class="fin-muted" style="font-size:12px;margin:8px 0 0;">
+                            None of these stops the close. Workday keeps posting into a year for weeks
+                            after it ends; if something changes afterwards, the balance page says so.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="fin-panel">
+                    <div class="fin-panel-head">2. What Workday says on {{ year.last|date:"M j, Y" }}</div>
+                    <div class="fin-panel-body">
+                        {% for account, field in form.workday_rows %}
+                            <div class="form-group{% if field.errors %} has-error{% endif %}">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {% for error in field.errors %}<div class="help-block">{{ error }}</div>{% endfor %}
+                                <div class="help-block">
+                                    The ledger says {{ account.closing_cash|money }}. {{ field.help_text }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="fin-panel">
+                    <div class="fin-panel-head">3. Balances that cannot just carry forward</div>
+                    <div class="fin-panel-body">
+                        {% for proposal in proposals %}
+                            {% with field=proposal.bound_field row=proposal.row %}
+                                <div class="form-group{% if field.errors %} has-error{% endif %}">
+                                    {% if proposal.kind == 'cover' %}
+                                        <p style="margin-bottom:4px;">
+                                            <strong>{{ row.name }}</strong> ({{ proposal.account.code }}) was overspent by
+                                            {{ proposal.amount|money }}. SGA does not cover that, so it comes out of money
+                                            that carries forward.
+                                        </p>
+                                        <label class="fin-inline-check">{{ field }} {{ field.label }}</label>
+                                    {% else %}
+                                        <p style="margin-bottom:4px;">
+                                            <strong>{{ row.name }}</strong> ({{ proposal.account.code }}) is still awaiting
+                                            {{ proposal.amount|money }} from SGA. That carries into next year and stays
+                                            owed to LNL. If SGA has refused some of it, write that much off to
+                                            {{ proposal.account.own_fund }}.
+                                        </p>
+                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                        {{ field }}
+                                        <div class="help-block">{{ field.help_text }}</div>
+                                    {% endif %}
+                                    {% for error in field.errors %}<div class="help-block">{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endwith %}
+                        {% empty %}
+                            <p class="fin-muted" style="margin:0;">
+                                Nothing to square. No budget is overspent and SGA owes nothing.
+                            </p>
+                        {% endfor %}
+                        {% for account in year.accounts %}
+                            {% for row in account.rows %}
+                                {% if row.fund.returns_to_sga and row.closing > 0 %}
+                                    <p class="fin-muted" style="font-size:13px;">
+                                        {{ row.name }} has {{ row.closing|money }} unspent, which goes back to SGA.
+                                        No transfer is needed: when SGA's Workday line taking it back arrives, file
+                                        it to {{ row.name }} and the balance comes to zero.
+                                    </p>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="fin-panel">
+                    <div class="fin-panel-head">4. Close</div>
+                    <div class="fin-panel-body">
+                        <div class="form-group">
+                            <label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+                            {{ form.notes }}
+                            <div class="help-block">{{ form.notes.help_text }}</div>
+                        </div>
+                        <div class="text-right">
+                            <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <span class="glyphicon glyphicon-lock"></span> Close FY{{ short }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-md-5">
+            <div class="fin-panel">
+                <div class="fin-panel-head">FY{{ short }} as it stands</div>
+                <div class="fin-table-wrap">
+                    <table class="table fin-table">
+                        <tbody>
+                            {% for account in year.accounts %}
+                                <tr><th colspan="2">{{ account.code }}</th></tr>
+                                {% for row in account.rows %}
+                                    <tr>
+                                        <td>{{ row.name }}<div class="fin-muted">{{ row.status }}</div></td>
+                                        <td class="fin-num {{ row.closing|money_class }}">{{ row.closing|money }}</td>
+                                    </tr>
+                                {% endfor %}
+                                {% if account.unfiled_closing %}
+                                    <tr>
+                                        <td>Not filed yet</td>
+                                        <td class="fin-num">{{ account.unfiled_closing|money }}</td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="fin-panel-body" style="font-size:13px;">
+                    <p class="fin-muted" style="margin:0;">
+                        Closing locks nothing. It records these figures, makes the transfers you choose
+                        above on {{ year.last|date:"M j, Y" }}, and from then on the balance page warns if
+                        anything in FY{{ short }} changes. Reopening takes the transfers back.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endwith %}
+{% endblock %}

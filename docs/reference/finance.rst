@@ -36,8 +36,12 @@ a shell session:
 * an allocation amount is never zero;
 * an encumbrance (no parent bank line) can never be ``Settled``;
 * an expense or refund may not be classified as non-event revenue;
-* revenue may not carry expense routing;
+* revenue may not carry a spend category or a funding request line -- it may
+  name a fund, which is the one routing field both directions share;
 * a refund is always positive.
+
+The balance tables add three more: a fund transfer moves a positive amount
+between two different funds, and an account has one Workday balance per day.
 
 Two further rules need cross-row state and so live in ``Model.clean()`` plus a
 transactional helper:
@@ -248,13 +252,258 @@ now forbids only ``non_event_revenue_type`` on the expense side.
 
 Such an expense takes its spend category automatically, from whichever
 :class:`finance.models.SpendCategory` carries ``is_event_passthrough`` -- seeded
-as "Event Expense". The linked event already says what the money was for, so
-making the Treasurer also choose a category is a question with no useful answer;
-an explicit choice is never overwritten.
+as "Event - Sub-Rental", and editable on the category's admin page. The linked
+event already says what the money was for, so making the Treasurer also choose
+a category is a question with no useful answer; an explicit choice is never
+overwritten.
 
 Note that these expenses stay out of the revenue charts. Those read
 :func:`finance.calculators.revenue_rows`, which selects on the sign, so a cost
 billed to an event never reads as income from it.
+
+Finding the event
+~~~~~~~~~~~~~~~~~
+
+A rental invoice's memo is written by whoever placed the order, not to a house
+format, so the event turns up three ways: in brackets (``DT projector rental
+(Drag Show D25)``), as the whole description, or folded into prose (``WPI Pan
+Asian Festival lighting and sound rental``).
+:func:`finance.suggestions.suggest_expense_event` treats them as the two kinds of
+answer every suggestion here is one of:
+
+* **An exact name** -- a bracketed segment, the description or the memo whole,
+  matching an event outright in the term the memo names (or, with no term code,
+  within six months of the charge) -- fills the box in, captioned as coming from
+  the memo. It is somebody writing down which show the money was for.
+* **A resemblance** is only looked for on a line that looks like an event cost
+  (the pass-through category, or a memo saying "rental"), and is only ever one
+  chip. Events from two months before the charge to one after are scored on the
+  distinctive words their name shares with the memo, with gear the event billed
+  its client for at about this price breaking a tie. The chip is offered only
+  when one event leads outright: being nearer in date is not evidence of which
+  show it was.
+
+**A term code says which year.** ``D25`` is the spring-2025 D-term, and the
+Theatre department bills projector hire in batches, so ``DT projector rental
+(Drag Show D25)`` arrives in October 2025 -- nearer to the *next* spring's Drag
+Show than to the one it paid for. Stripping the code and taking the nearest
+event filled in the wrong year on the real FY26 export. So when the memo carries
+a term code, :func:`finance.suggestions.term_window` turns it into that term's
+months (three weeks' slack either side) and both the exact match and the guess
+look only there; with no code, the exact match looks six months either side of
+the charge. A show from another term is left blank rather than filled in.
+Event names are matched with and without their term code, since lnldb has both
+``Goat Talent C26`` and ``Pan Asian Festival``.
+
+A line filed to the pass-through category with no event filled in is tagged
+*Which event?* in the queue and its **More** fold opens, because the event is
+the one thing that makes the cost count against the show.
+
+The event can also be named on an encumbrance -- a sub-rental is booked before
+its invoice exists, which is exactly when somebody knows which show it is for --
+and drawing the reservation down carries it onto every bank line it pays for.
+
+.. note::
+
+   Two places used to lose the link. The split page rendered neither
+   ``linked_event`` nor ``audit_explanation`` on expense rows, although its form
+   saves both, so re-saving a split posted them blank and wiped them. The
+   encumbrance form showed the picker -- it is declared on the base form -- but
+   left the field out of ``Meta.fields``, so a ModelForm threw the choice away.
+   ``test_detail`` now asserts that every model field the split form saves is on
+   the page.
+
+What each event made or lost
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The *Events* page, a panel on each event's Billing tab, and a dashboard list of
+the events that cost more than they brought in all read
+:func:`finance.calculators.event_financials`. Three of its figures are decisions
+rather than arithmetic:
+
+**The year is the year the event ran.** All of an event's entries count, in
+whatever fiscal year each one landed. A late-June show is billed in July; filing
+its revenue and its rental in different years would report half a show twice.
+The ledger's ``?event=`` filter sets the year aside for the same reason, and
+says so.
+
+**Billed is the latest bill, not the total.** A second Billing row for one show
+is nearly always the first one corrected. A multi-bill covers several shows
+with one figure, so each show's share is split by what it would have cost alone
+(``cost_total``), evenly if none has a price, with the last show taking the
+rounding so the shares add up to the bill.
+
+**An encumbrance is reserved, not spent.** It is shown beside the cost and left
+out of the margin, which would otherwise report a loss that may never happen.
+
+Rentals are compared separately: what the event billed its client for hired-in
+gear plus LNL's rental fee, against linked costs in the pass-through category. A
+hire that cost more than both is flagged.
+
+Fund balances and the year end
+------------------------------
+
+Workday reports one balance per account: 226-AG holds this much and 315-AG
+holds that. What it cannot say is how much of that figure is LNL's own money
+and how much is this year's SGA budget, and at June 30 that split is the whole
+question, because the two behave in opposite ways. The *Balances* page keeps
+the split and proves it adds back up to Workday's figure.
+
+How SGA pays, and what that does to a balance
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SGA funds clubs three ways, and each fund says which way it is paid
+(``FundSource.behaviour``, a hard-coded choice because the close branches on
+it):
+
+=========================  ========  ===========================================
+Fund                       Held in   At year end
+=========================  ========  ===========================================
+Legacy                     226-AG    **Carries forward.** LNL's own money: event
+                                     billing and everything else LNL earns.
+SGA Budget                 226-AG    **Unspent returns to SGA.** Deposited
+                                     before the year's spending. A positive
+                                     balance on June 30 is owed back, and an
+                                     overspend has to be covered from Legacy.
+SGA Funding Request        226-AG    **Reimbursed after spending.** LNL spends
+                                     first; SGA pays back what was actually
+                                     spent, never the award. The balance is
+                                     negative in between, and that negative is
+                                     money SGA owes LNL.
+SGA Mandatory Transfer     315-AG    **Carries forward.** Projection's yearly
+                                     allocation, deposited automatically.
+=========================  ========  ===========================================
+
+The carry-forward fund held in an account is that account's *own money*
+(:func:`~finance.models.account_own_funds`). It holds whatever the account had
+when the books started, and it is what the queue fills in when nothing on a
+line names another fund.
+
+SGA reference numbers
+~~~~~~~~~~~~~~~~~~~~~
+
+SGA numbers every funding request as ``[letter].[year].[number]``. The letter
+is the body that approved it, by the size of the ask: **A** for the
+Appropriations Committee, **F** for the Financial Board, **S** for the Senate.
+The year is the last two digits of the fiscal year, so every FY2027 request has
+27 in the middle. The number counts up within each body's year, so A.27.16 and
+F.27.16 are two different requests. Budgets and mandatory transfers have no
+number: any SGA number in a memo means funding-request money.
+
+A funding request's reference is held to that format, and its year has to be
+the request's own. The queue only reads A, F and S out of a memo, so
+"Invoice B.25.12" is not taken for a request.
+
+**When the letters disagree.** LNL's FY27 memos quote A.27.16 while lnldb holds
+F.27.16, and A.27.81 beside F.27.81. By SGA's numbering those are different
+requests, so the queue never treats them as one. When a memo's number is not in
+lnldb but the same year and number exist under another letter, the row is
+tagged *A.27.16 or F.27.16?* and that request's line is offered as a chip, not
+filled in. The fund is still filled in, because the memo has said it is
+funding-request money whichever request it is. Only the Treasurer can say
+which side has the typo.
+
+Money coming in names a fund
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``fund_source`` is now on revenue as well as expenses: *Into fund* on the
+queue, the split page and the entry page, required on all three. A balance
+cannot be worked out without both directions. The SGA budget's deposit is what
+the year's budget spending draws down, and a reimbursement lands in the
+funding-request fund and brings it back towards zero. The queue fills it in:
+
+1. a request number in the memo means the funding-request fund (an SGA
+   reimbursement quotes the request it repays);
+2. Workday's *Tracking* worktag, exported from FY27 on, names the fund in words
+   ("SGA Budget", "Student Org Legacy Funds"), matched through each fund's
+   ``workday_tracking_values``;
+3. a Workday Fund code, as before;
+4. the account's own money, so Legacy on 226-AG and the mandatory transfer on
+   315-AG;
+5. the stated default, for a line on no known account.
+
+The spend category and funding request line stay expense-only, and the
+database still refuses them on revenue. ``0005_fund_balances`` gave every
+revenue entry filed before the change its account's own money. That is what the
+arithmetic would have assumed anyway, and saying it outright means the ledger's
+Fund filter finds those entries.
+
+How the balances are worked out
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Nothing is stored. :mod:`finance.balances` works every figure out from the
+ledger each time it is asked, so a June purchase imported in August corrects
+last year's closing balance and this year's opening at once. For one account:
+
+**The books start** on ``FinanceSettings.ledger_start_date``. Left blank, that is
+the start of the fiscal year of the earliest imported line. Every line from
+then on is counted.
+
+**Cash** comes from a *Workday balance* (:class:`~finance.models.BalanceCheckpoint`):
+what Workday said the account held at the end of a day. The earliest one
+entered is the anchor, and every other day is that figure plus or minus the
+lines in between, counting backwards as well as forwards. Today's balance is
+enough to work out what the account held when the books started. Each later
+Workday balance is a check, and a difference means lines are missing from the
+ledger or a figure was copied wrong.
+
+**A fund's balance** is everything filed to it since the books started:
+money in, less money out (net of refunds, which un-spend rather than earn),
+plus or minus transfers. The account's own money also holds the opening cash.
+
+**Unfiled** lines are a row of their own. With that row, the funds always add up
+to the cash, so a half-finished queue makes the split vague rather than wrong.
+
+**Transfers** (:class:`~finance.models.FundTransfer`) move money between two
+funds inside one account. No cash moves, so Workday never sees them. Each is
+one row taking an amount from one fund and giving it to another, which keeps
+the account's total unchanged by construction. That is the only double-entry
+idea the app needs, and it needs it only where money changes hands without a
+bank line.
+
+**Opening balances** say how the opening cash was split: for instance, that
+SGA already owed $300 for spending before the books started. The page asks for
+every fund held in the account except its own money, which is whatever is
+left. Saving replaces the split rather than adding to it. The split counts
+as the opening, not as a first-year transfer.
+
+Encumbrances show beside each fund as *reserved*. They are not cash, and they
+belong to the account their fund is held in.
+
+Closing a year
+~~~~~~~~~~~~~~
+
+*Close FY26* on the balance page (``close_fiscalyear``) appears once a year has
+ended. It has four parts:
+
+1. **What is still open**: lines in the queue, encumbrances, and whether each
+   account has a June 30 Workday balance that agrees with the ledger. None of
+   these blocks the close. Workday posts into a year for weeks after it ends.
+2. **Workday's June 30 balances**, recorded as Workday balances.
+3. **Squaring the two balances that cannot simply carry forward.** A budget
+   overspend is covered from the account's own money (ticked by default). A
+   funding-request balance still awaiting SGA carries into next year, but
+   any part SGA has refused can be written off to the account's own money.
+   Both are year-end transfers dated June 30. An unspent budget needs no
+   transfer: SGA takes it back with a Workday line of its own, and filing that
+   line to the budget fund brings it to zero.
+4. **The record** (:class:`~finance.models.FiscalYearClose`): every account's
+   cash and fund balances as closed, with notes.
+
+Closing locks nothing. If the year's figures later differ from the record, the
+balance page lists every change. Reopening deletes the record and takes back its
+year-end transfers. The Workday balances stay, because they are still what
+Workday said.
+
+.. note::
+
+   Why no general ledger? Workday already is one: it is the double-entry
+   system of record. LNL only sees its own two accounts, so the other side of
+   almost every entry would be "226-AG cash", and new treasurers would have to
+   learn debits and credits to record nothing new. What the subledger adds is
+   what Workday cannot see: how each account's money divides between funds.
+   One-row transfers, Workday balances as the trial balance, and the unfiled
+   row do that without a chart of accounts.
 
 Entry types
 -----------
@@ -603,11 +852,16 @@ code match fills the form in rather than offering a chip, so being wrong there
 is expensive: a filled box is the one nobody re-reads. It is now blank on those
 lines, which is what "we do not know" should look like.
 
-Only the memo can tell the buckets apart, and when a memo quotes a request
-number lnldb has never heard of, nothing is filled in at all — the queue flags
-the line as *Unknown funding request* instead. Either the award has not been
-entered yet or the memo is mistaken, and both are worth fixing before the line
-is filed anywhere.
+Only the memo and, from FY27, the *Tracking* worktag can tell the buckets
+apart. When nothing on a line does, the queue fills in the account's own money
+and says so in those words; see *Money coming in names a fund* above for the
+full order.
+
+When a memo quotes a request number lnldb has never heard of, the fund is still
+filled in -- every SGA number is a funding request -- but the line is flagged
+*Unknown request*, or *A.27.16 or F.27.16?* when the same number exists under
+another body's letter. Either the award has not been entered yet or the memo is
+mistaken, and both are worth fixing before the line is filed anywhere.
 
 How a queue row is laid out
 ---------------------------
@@ -854,8 +1108,11 @@ Table                Holds
 ===================  ==========================================================
 ``SpendCategory``    LNL's own expense categories, each with the colour it is
                      drawn in on the dashboard
-``FundSource``       SGA Funding Request, SGA Budget, Legacy — and whether the
-                     fund must name a funding request line
+``FundSource``       SGA Funding Request, SGA Budget, Legacy, SGA Mandatory
+                     Transfer — whether the fund must name a funding request
+                     line, which account holds it, how it behaves at year end,
+                     and the Workday Fund codes and Tracking values that mean
+                     it
 ``RevenueSource``    Non-event revenue types (SGA baseline, alumni gifts...)
 ``PartitionCode``    The org codes, which side each one starts on, whether
                      leaving that side needs a written reason, and the worktag
@@ -866,8 +1123,8 @@ Table                Holds
                      treated as lookups and answer the box; *contains* is
                      treated as a guess and is only offered
 ``FinanceSettings``  One row: the month the fiscal year starts, the Workday
-                     fund that means "student organisation", and how many years
-                     the filter bar offers
+                     fund that means "student organisation", how many years
+                     the filter bar offers, and the day the books start
 ``ServiceColor``     The colour of each service category on the service-mix
                      chart, keyed to the events app's own ``Category`` row so a
                      rename does not lose it
@@ -905,6 +1162,10 @@ What stays in code, and why:
 ``ClientType`` and ``entry_type``
     Derived from the billing fund and the sign of the amount. Never stored,
     never chosen — there is nothing to configure.
+``FundBehaviour``
+    Carries forward, returns to SGA, or reimbursed after spending. The funds are
+    rows; what SGA does with money at June 30 is one of three things, and the
+    balance page and the year-end close branch on which.
 :data:`finance.models.FINGERPRINT_WORKTAGS`
     Deliberately *not* editable. It defines what makes a bank line that line,
     so changing it would orphan every fingerprint on file and make the next
@@ -919,7 +1180,7 @@ What stays in code, and why:
 Tests
 -----
 
-``python manage.py test finance`` runs 786 tests across sixteen modules. The
+``python manage.py test finance`` runs 1,106 tests across twenty modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.
@@ -983,6 +1244,10 @@ Permissions
     Upload Workday journal exports.
 ``manage_projecttag`` / ``manage_fundingrequest``
     Maintain the project tree and funding requests.
+``close_fiscalyear``
+    Close a finished fiscal year, which records its balances and makes its
+    year-end transfers, and reopen one. Recording Workday balances and
+    transfers between funds needs only ``edit_subledger``.
 
 Who holds them
 ~~~~~~~~~~~~~~
@@ -994,7 +1259,7 @@ anybody's hands. The grants live in ``fixtures/groups.json``, which is what
 ===================  =========================================================
 Group                Finance permissions
 ===================  =========================================================
-Officer              All eight. The Treasurer is an Officer, and this is the
+Officer              All nine. The Treasurer is an Officer, and this is the
                      Treasurer's tool.
 Active               ``view_subledger`` and ``view_fundingrequest`` only —
                      read-only, no receipts.
@@ -1039,6 +1304,14 @@ Calculators
 
 -----
 
+Balances
+--------
+.. automodule:: finance.balances
+    :members:
+    :undoc-members:
+
+-----
+
 Filters
 -------
 .. automodule:: finance.filters
@@ -1066,6 +1339,14 @@ Views
     :undoc-members:
 
 .. automodule:: finance.views.projects
+    :members:
+    :undoc-members:
+
+.. automodule:: finance.views.events
+    :members:
+    :undoc-members:
+
+.. automodule:: finance.views.balances
     :members:
     :undoc-members:
 

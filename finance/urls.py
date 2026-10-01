@@ -48,6 +48,22 @@ urlpatterns = [
     re_path(r'^projects/new/$', views.project_edit, name="project-new"),
     re_path(r'^projects/(?P<pk>\d+)/edit/$', views.project_edit, name="project-edit"),
 
+    # What each event made or lost
+    re_path(r'^events/$', views.event_pnl, name="events"),
+
+    # What each fund holds, and the year-end close
+    re_path(r'^balances/$', views.balance_sheet, name="balances"),
+    re_path(r'^balances/workday/new/$', views.checkpoint_new, name="checkpoint-new"),
+    re_path(r'^balances/workday/(?P<pk>\d+)/delete/$', views.checkpoint_delete,
+            name="checkpoint-delete"),
+    re_path(r'^balances/transfer/new/$', views.transfer_new, name="transfer-new"),
+    re_path(r'^balances/transfer/(?P<pk>\d+)/delete/$', views.transfer_delete,
+            name="transfer-delete"),
+    re_path(r'^balances/opening/$', views.opening_balances, name="opening-balances"),
+    re_path(r'^balances/close/(?P<fiscal_year>\d{4})/$', views.close_year, name="close-year"),
+    re_path(r'^balances/close/(?P<fiscal_year>\d{4})/reopen/$', views.reopen_year,
+            name="reopen-year"),
+
     # Funding requests
     re_path(r'^funding/$', views.funding_list, name="fr-list"),
     re_path(r'^funding/new/$', views.funding_edit, name="fr-new"),

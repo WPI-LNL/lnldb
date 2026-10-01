@@ -13,11 +13,13 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Sum
 from django.shortcuts import render
 
-from finance.calculators import (cash_flow_by_month, client_type_breakdown, project_composition,
-                                 revenue_by_client, revenue_rows, service_mix, spend_by_category)
+from finance.balances import statement
+from finance.calculators import (cash_flow_by_month, client_type_breakdown, event_pnl_rows,
+                                 project_composition, revenue_by_client, revenue_rows, service_mix,
+                                 spend_by_category)
 from finance.filters import filter_context, get_filter_state
 from finance.models import (FundingRequest, ParsedTransaction, TransactionStatus,
-                            WorkdayTransaction, money)
+                            WorkdayTransaction, current_fiscal_year, money)
 
 
 def _doughnut(rows, label_key='label'):
@@ -68,6 +70,10 @@ def dashboard(request):
     services = service_mix(rows=rev_rows)
 
     projects = project_composition(fiscal_year=fy, is_projection=proj)
+
+    # Already worst-first, so the first five losses are the five biggest.
+    event_losses = [row for row in event_pnl_rows(fiscal_year=fy, is_projection=proj)
+                    if 'loss' in row['flag_keys']][:5]
 
     # -- funding request burndowns ------------------------------------------
     # with_totals() puts the request's own figures in SQL; with_lines() does
@@ -123,6 +129,10 @@ def dashboard(request):
         'projects': projects,
         'project_grand_total': sum((p['total'] for p in projects), Decimal('0.00')),
         'project_max': max([p['total'] for p in projects] + [Decimal('0.00')]),
+        'event_losses': event_losses,
+        # Today's balances whatever year the filter shows: what a fund holds is
+        # a question about now, and the balance page has the history.
+        'funds_now': statement(current_fiscal_year()),
 
         'chart_data': {
             'categories': _doughnut(categories),

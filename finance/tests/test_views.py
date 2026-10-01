@@ -895,7 +895,7 @@ class FundingRequestViewTests(FinanceViewTestCase):
     def _edit_post(self, **overrides):
         """ A complete POST for the edit page: the existing line plus a new one. """
         data = {
-            'name': 'NEL26 Grant', 'reference': 'A.X.X', 'fiscal_year': '2026',
+            'name': 'NEL26 Grant', 'reference': 'A.26.4', 'fiscal_year': '2026',
             'date_submitted': '', 'date_approved': '', 'is_projection': '',
             'closed': '', 'notes': '',
             'line_items-TOTAL_FORMS': '2', 'line_items-INITIAL_FORMS': '1',

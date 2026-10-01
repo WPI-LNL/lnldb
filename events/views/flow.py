@@ -1157,6 +1157,13 @@ def viewevent(request, id):
 
     context['apps'] = apps
 
+    # What the subledger says this show brought in and cost. Imported here
+    # rather than at the top: finance already imports the events models, and
+    # this is the only place the events app looks the other way.
+    if request.user.has_perm('finance.view_subledger'):
+        from finance.calculators import event_financials
+        context['finance'] = event_financials(event)
+
     return render(request, 'uglydetail.html', context)
 
 

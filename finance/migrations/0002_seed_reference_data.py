@@ -79,10 +79,14 @@ SPEND_CATEGORIES = [
 # Note that SGA Budget deliberately has none: 810-FD is the agency fund the
 # whole account sits in, so every LNL line carries it whoever actually paid,
 # and reading it as "SGA funded this" was a coin flip presented as a fact.
+#
+# How each one behaves at year end, which account holds it and which Tracking
+# worktag names it are set by 0005_fund_balances, which added those columns.
 FUND_SOURCES = [
     ('sga_fr', 'SGA Funding Request', '', True, 0, ''),
     ('sga_budget', 'SGA Budget', '', False, 1, ''),
     ('legacy', 'Legacy', '220, 250, 500, 120', False, 2, ''),
+    ('sga_mandatory', 'SGA Mandatory Transfer', '', False, 3, ''),
 ]
 
 # (slug, name, sort order, description)

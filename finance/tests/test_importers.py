@@ -386,12 +386,15 @@ class SuggestionTests(TestCase):
         self.assertEqual(suggestion.confidence, MEDIUM)
 
     def test_nothing_is_offered_when_no_fund_is_nominated(self):
-        """ Untick every default in the admin and the box goes back to blank. """
+        """
+        Hold no fund in any account and untick every default in the admin, and
+        the box goes back to blank.
+        """
         from finance.models import FundSource, reset_finance_cache
         from finance.suggestions import suggest_fund_source
-        FundSource.objects.update(is_default=False)
-        reset_finance_cache('default_fund')
-        self.addCleanup(reset_finance_cache, 'default_fund')
+        FundSource.objects.update(is_default=False, account=None)
+        reset_finance_cache('default_fund', 'own_funds')
+        self.addCleanup(reset_finance_cache, 'default_fund', 'own_funds')
 
         txn = WorkdayTransaction.objects.get(operational_transaction='OT-1001')
         self.assertIsNone(suggest_fund_source(txn))

@@ -4,7 +4,7 @@ Every form the finance pages put in front of a Treasurer.
 The organising idea is Poka-Yoke: wherever a rule can be enforced by the
 form not *having* a field, it is enforced that way rather than by
 validating one. :class:`BaseAllocationForm` removes expense routing from a
-revenue form outright, so a revenue entry cannot carry a fund source even
+revenue form outright, so a revenue entry cannot carry a spend category even
 if the client-side JS is bypassed -- which matters, because the database
 has a constraint saying the same thing and a stray value would surface as
 an IntegrityError rather than a field error.
@@ -14,6 +14,7 @@ place to make a quiet mistake, so each one is labelled with whatever makes
 the wrong option obviously wrong -- the year a funding request belongs to,
 how much of a line is left, which purchase a refund is against.
 """
+import datetime
 from decimal import Decimal
 
 from ajax_select.fields import AutoCompleteSelectField
@@ -23,15 +24,18 @@ from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db.models import DecimalField, F, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.forms.models import BaseInlineFormSet, inlineformset_factory
+from django.utils import timezone
 from django.utils.formats import date_format
 from mptt.forms import TreeNodeChoiceField
 
 from finance.importers import CSV_EXTENSIONS, XLSX_EXTENSIONS
-from finance.models import (FRLineItem, FundingRequest, FundSource, ParsedTransaction,
-                            ProjectTag, RevenueSource, SpendCategory, TransactionStatus,
+from finance.models import (ZERO, BalanceCheckpoint, FRLineItem, FundingRequest, FundSource,
+                            FundTransfer, ParsedTransaction, PartitionCode, ProjectTag,
+                            RevenueSource, SpendCategory, TransactionStatus,
                             WorkdayTransaction, current_fiscal_year,
                             event_passthrough_category, fiscal_year_bounds,
-                            fiscal_year_choices, fiscal_year_for)
+                            fiscal_year_choices, fiscal_year_for, money,
+                            own_fund_for_account)
 from finance.suggestions import AWARD, lookups_for_form, suggest_all, suggest_description
 
 
@@ -299,11 +303,12 @@ class BaseAllocationForm(forms.ModelForm):
 
     The Poka-Yoke rule -- revenue routing and expense routing are mutually
     exclusive -- is enforced by *removing* the irrelevant fields from the form
-    entirely, so a revenue form is structurally incapable of submitting a fund
-    source even if the client-side JS is bypassed.
+    entirely, so a revenue form is structurally incapable of submitting a spend
+    category even if the client-side JS is bypassed.
 
-    ``linked_event`` is the exception, and appears on both: revenue earned by
-    an event, and costs incurred for one.
+    ``linked_event`` and ``fund_source`` are the exceptions, and appear on both:
+    revenue earned by an event and costs incurred for one; money leaving a fund
+    and money arriving in one.
     """
     linked_event = AutoCompleteSelectField('Events', required=False, label="Linked event",
                                            help_text="Search by event name or client")
@@ -319,6 +324,9 @@ class BaseAllocationForm(forms.ModelForm):
     # Required on every expense-side form. Left off revenue forms entirely,
     # because a DB constraint forbids revenue from carrying expense routing.
     REQUIRED_ON_EXPENSES = ()
+    # Required when the row is money coming in. Only the fund can be: it is
+    # the one routing field both directions share that every line must name.
+    REQUIRED_ON_REVENUE = ()
 
     class Meta:
         model = ParsedTransaction
@@ -505,10 +513,12 @@ class BaseAllocationForm(forms.ModelForm):
         return qs
 
     def _apply_required_fields(self):
-        """ Mark the expense-side fields mandatory, if this form renders them. """
-        if self._direction() == 'revenue':
+        """ Mark this direction's mandatory fields, if this form renders them. """
+        direction = self._direction()
+        if direction is None:
             return
-        for name in self.REQUIRED_ON_EXPENSES:
+        names = self.REQUIRED_ON_REVENUE if direction == 'revenue' else self.REQUIRED_ON_EXPENSES
+        for name in names:
             field = self.fields.get(name)
             if field is not None:
                 field.required = True
@@ -653,14 +663,19 @@ class BaseAllocationForm(forms.ModelForm):
         Delete whichever half of the routing fields cannot apply.
 
         This is the structural half of the Poka-Yoke rule described in the
-        class docstring: a revenue form does not validate away a fund source,
-        it has no fund source field at all. ``linked_event`` survives on both
-        sides but is relabelled, because it means two different things.
+        class docstring: a revenue form does not validate away a spend
+        category, it has no spend category field at all. ``linked_event`` and
+        ``fund_source`` survive on both sides, and each is relabelled on the
+        side where it means something different.
         """
         direction = self._direction()
         if direction == 'revenue':
-            for name in ('fund_source', 'lnl_spend_category', 'fr_line_target'):
+            for name in ParsedTransaction.EXPENSE_FIELDS:
                 self.fields.pop(name, None)
+            fund = self.fields.get('fund_source')
+            if fund is not None:
+                fund.label = "Into fund"
+                fund.help_text = self._revenue_fund_help()
         elif direction == 'expense':
             self.fields.pop('non_event_revenue_type', None)
             # linked_event stays: a sub-rental hired for one show is that
@@ -678,6 +693,20 @@ class BaseAllocationForm(forms.ModelForm):
         # The cross-year opt-in is meaningless without the picker it widens.
         if 'fr_line_target' not in self.fields:
             self.fields.pop('allow_cross_year_fr', None)
+
+    def _revenue_fund_help(self):
+        """
+        What choosing a fund for money coming in means, for this line's account.
+
+        Two answers cover nearly every line, and the help says which is which:
+        an SGA reimbursement repays a funding request, and everything else --
+        event billing above all -- is the account's own money.
+        """
+        own = own_fund_for_account(getattr(self.parent_transaction, 'partition_code_label', ''))
+        tail = (" Everything else on %s is %s." % (self.parent_transaction.partition_code_label, own)
+                if own is not None else "")
+        return ("The pot this money adds to. An SGA reimbursement goes to the fund that "
+                "spent it, which brings that fund back towards zero." + tail)
 
     def _apply_partition_default(self):
         """
@@ -834,6 +863,7 @@ class AllocationForm(BaseAllocationForm):
     for both, says which are missing, and saves either way.
     """
     REQUIRED_ON_EXPENSES = ('fund_source', 'lnl_spend_category')
+    REQUIRED_ON_REVENUE = ('fund_source',)
 
     def __init__(self, *args, **kwargs):
         """
@@ -862,9 +892,11 @@ class ReconcileForm(BaseAllocationForm):
     Amount and date are inherited from the bank line, so the Treasurer only
     supplies routing.
     """
-    # Every expense leaving the queue must at least say where the money came
-    # from. Receipt and explanation are deferred to the Entry page.
+    # Every line leaving the queue must at least say which fund the money came
+    # out of or went into. Receipt and explanation are deferred to the Entry
+    # page. A refund names none of its own: it inherits the purchase's.
     REQUIRED_ON_EXPENSES = ('fund_source',)
+    REQUIRED_ON_REVENUE = ('fund_source',)
 
     #: Routing a credit takes from the purchase it reverses, rather than asking
     #: for it again. A refund filed anywhere other than where the money went
@@ -1031,9 +1063,16 @@ class EncumbranceForm(BaseAllocationForm):
         help_text="Enter the expected cost as a positive number; it is recorded as an expense.")
 
     class Meta(BaseAllocationForm.Meta):
+        # linked_event has to be listed here, not merely declared on the base
+        # class. Declared, it rendered -- "Incurred for event" was on the page
+        # -- but a ModelForm only reads and writes the fields in Meta.fields,
+        # so whatever was picked was thrown away on save, and an event set on
+        # the entry page showed here as blank. A sub-rental is usually booked
+        # before its invoice exists, so reserving it is exactly when somebody
+        # knows which show it is for.
         fields = ('amount', 'effective_date', 'description', 'fund_source', 'lnl_spend_category',
-                  'fr_line_target', 'project_tag', 'is_projection', 'audit_explanation',
-                  'receipt_file')
+                  'fr_line_target', 'project_tag', 'linked_event', 'is_projection',
+                  'audit_explanation', 'receipt_file')
 
     def __init__(self, *args, **kwargs):
         """
@@ -1086,6 +1125,7 @@ class SplitLineForm(BaseAllocationForm):
     rather than typed.
     """
     REQUIRED_ON_EXPENSES = ('fund_source',)
+    REQUIRED_ON_REVENUE = ('fund_source',)
 
     class Meta(BaseAllocationForm.Meta):
         fields = ('amount', 'description', 'fund_source', 'lnl_spend_category',
@@ -1133,6 +1173,13 @@ class SplitLineForm(BaseAllocationForm):
         amount = self.fields['amount'].widget
         amount.attrs['step'] = '0.01'
         amount.attrs['class'] = (amount.attrs.get('class', '') + ' split-amount').strip()
+        # A table cell, not a paragraph. Every field in Meta.fields has to be
+        # on screen: one the table leaves out is posted blank, and the formset
+        # saves that blank over whatever the slice already held.
+        note = self.fields.get('audit_explanation')
+        if note is not None:
+            note.widget.attrs['rows'] = 1
+            note.widget.attrs.setdefault('placeholder', 'Why, if it needs saying')
 
 
 class BaseSplitFormSet(BaseInlineFormSet):
@@ -1595,3 +1642,198 @@ class ProjectTagForm(forms.ModelForm):
             qs = qs.exclude(pk__in=self.instance.get_descendants(include_self=True))
         self.fields['parent'].queryset = qs
         self.helper = finance_form_helper()
+
+
+# ---------------------------------------------------------------------------
+# Fund balances
+# ---------------------------------------------------------------------------
+
+def _money_field(label, help_text='', required=False, **kwargs):
+    """ A two-decimal amount box, styled like the rest of the finance forms. """
+    return forms.DecimalField(
+        label=label, help_text=help_text, required=required, max_digits=12,
+        decimal_places=2, widget=forms.NumberInput(attrs={'step': '0.01',
+                                                          'class': 'form-control'}),
+        **kwargs)
+
+
+class BalanceCheckpointForm(forms.ModelForm):
+    """ Write down what Workday says one account holds on one day. """
+
+    class Meta:
+        model = BalanceCheckpoint
+        fields = ('account', 'as_of', 'balance', 'note')
+        widgets = {'as_of': forms.DateInput(attrs={'type': 'date'})}
+
+    def __init__(self, *args, **kwargs):
+        """ Default to today: the figure a Treasurer usually has open is today's. """
+        super(BalanceCheckpointForm, self).__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.fields['as_of'].initial = timezone.localdate()
+        self.fields['account'].queryset = PartitionCode.objects.order_by('code')
+        self.helper = finance_form_helper()
+
+
+class FundTransferForm(forms.ModelForm):
+    """
+    Move money between two funds inside one account.
+
+    Only the ordinary kind is made here. Opening splits and year-end transfers
+    are written by their own pages, which know what they are replacing.
+    """
+
+    class Meta:
+        model = FundTransfer
+        fields = ('account', 'date', 'from_fund', 'to_fund', 'amount', 'description')
+        widgets = {'date': forms.DateInput(attrs={'type': 'date'})}
+
+    def __init__(self, *args, **kwargs):
+        """ Offer only funds still in use. """
+        self.books_start = kwargs.pop('books_start', None)
+        super(FundTransferForm, self).__init__(*args, **kwargs)
+        funds = FundSource.objects.active()
+        self.fields['from_fund'].queryset = funds
+        self.fields['to_fund'].queryset = funds
+        self.fields['account'].queryset = PartitionCode.objects.order_by('code')
+        self.helper = finance_form_helper()
+
+    def clean_date(self):
+        """
+        Refuse a date before the books start.
+
+        Nothing before that day is counted, so a transfer dated earlier would
+        silently do nothing. What each fund held on the first day is the
+        opening split, which has a page of its own.
+        """
+        date = self.cleaned_data['date']
+        if self.books_start and date < self.books_start:
+            raise ValidationError(
+                "The books start on %s, and nothing before that counts. To say what each "
+                "fund held on that day, use Opening balances instead."
+                % date_format(self.books_start, 'M j, Y'))
+        return date
+
+
+class OpeningBalancesForm(forms.Form):
+    """
+    What each account held the night before the books started, and how it split.
+
+    One amount per account, which is a Workday balance, and one per fund held
+    in that account other than its own money. The own fund is never asked for:
+    it is whatever the others leave, which is what makes the split add up to
+    Workday's figure whatever is typed.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """ One section per account that has money of its own to split. """
+        self.books_start = kwargs.pop('books_start')
+        accounts = kwargs.pop('accounts')
+        super(OpeningBalancesForm, self).__init__(*args, **kwargs)
+        night_before = self.books_start - datetime.timedelta(days=1)
+        self.sections = []
+        for account, own, funds, cash, existing in accounts:
+            cash_name = 'cash_%s' % account.pk
+            self.fields[cash_name] = _money_field(
+                "Workday balance at the end of %s" % date_format(night_before, 'M j, Y'),
+                help_text="Leave blank if you only have a later balance. Enter that one as "
+                          "a Workday balance instead, and this is worked out from it.",
+                initial=cash)
+            names = []
+            for fund in funds:
+                name = 'fund_%s_%s' % (account.pk, fund.pk)
+                self.fields[name] = _money_field(
+                    fund.name, initial=existing.get(fund.pk) or None,
+                    help_text=("Negative for spending SGA had not reimbursed yet."
+                               if fund.is_reimbursed else ''))
+                names.append((fund, name))
+            # Bound fields for the template, names for section_values().
+            self.sections.append({'account': account, 'own': own, 'cash_name': cash_name,
+                                  'cash': self[cash_name], 'fund_names': names,
+                                  'funds': [(fund, self[name]) for fund, name in names]})
+
+    def section_values(self):
+        """ ``[(account, own fund, cash or None, {fund: amount})]`` once valid. """
+        out = []
+        for section in self.sections:
+            amounts = {fund: money(self.cleaned_data.get(name))
+                       for fund, name in section['fund_names']}
+            out.append((section['account'], section['own'],
+                        self.cleaned_data.get(section['cash_name']), amounts))
+        return out
+
+
+class YearCloseForm(forms.Form):
+    """
+    The few answers closing a year needs from a person.
+
+    Each account's Workday balance on June 30, so the close can say whether the
+    ledger agrees with the bank; whether to cover each budget overspend from
+    the account's own money; and how much of each unpaid reimbursement, if any,
+    to give up on.
+    """
+    notes = forms.CharField(
+        required=False, label="Notes",
+        widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        help_text="Anything the next Treasurer should know about this year.")
+
+    def __init__(self, *args, **kwargs):
+        """ Build one question per account, and one per balance that needs an answer. """
+        self.year = kwargs.pop('year')
+        self.proposals = kwargs.pop('proposals')
+        super(YearCloseForm, self).__init__(*args, **kwargs)
+        year_end = fiscal_year_bounds(self.year.fiscal_year)[1]
+        self.workday_fields = []
+        for account in self.year.accounts:
+            name = 'workday_%s' % account.account.pk
+            existing = next((row.checkpoint.balance for row in account.checkpoints
+                             if row.checkpoint.as_of == year_end), None)
+            self.fields[name] = _money_field(
+                "%s on %s" % (account.code, date_format(year_end, 'M j, Y')), initial=existing,
+                help_text="The balance Workday shows. Optional, but it is the only check "
+                          "that no line is missing.")
+            self.workday_fields.append((account, name))
+
+        for proposal in self.proposals:
+            key = '%s_%s' % (proposal['account'].account.pk, proposal['row'].fund.pk)
+            if proposal['kind'] == 'cover':
+                proposal['field'] = 'cover_%s' % key
+                self.fields[proposal['field']] = forms.BooleanField(
+                    required=False, initial=True,
+                    label="Cover the $%s overspend from %s" % (
+                        money(proposal['amount']), proposal['account'].own_fund))
+            else:
+                proposal['field'] = 'write_off_%s' % key
+                self.fields[proposal['field']] = _money_field(
+                    "Write off", min_value=ZERO, max_value=money(proposal['amount']),
+                    help_text="Only what SGA will not pay. The rest carries forward, still "
+                              "owed to LNL.")
+            proposal['bound_field'] = self[proposal['field']]
+
+    @property
+    def workday_rows(self):
+        """ ``[(account statement, bound field)]`` for the template. """
+        return [(account, self[name]) for account, name in self.workday_fields]
+
+    def workday_balances(self):
+        """ ``[(account statement, balance)]`` for each balance typed in. """
+        return [(account, self.cleaned_data.get(name)) for account, name in self.workday_fields
+                if self.cleaned_data.get(name) is not None]
+
+    def transfers(self):
+        """ ``[(account statement, fund, amount, description)]`` the close should make. """
+        short_year = str(self.year.fiscal_year)[-2:]
+        out = []
+        for proposal in self.proposals:
+            account, row = proposal['account'], proposal['row']
+            if proposal['kind'] == 'cover':
+                if self.cleaned_data.get(proposal['field']):
+                    out.append((account, row.fund, money(proposal['amount']),
+                                "FY%s %s overspend covered from %s"
+                                % (short_year, row.fund, account.own_fund)))
+            else:
+                amount = money(self.cleaned_data.get(proposal['field']))
+                if amount > 0:
+                    out.append((account, row.fund, amount,
+                                "FY%s %s that SGA will not reimburse, written off to %s"
+                                % (short_year, row.fund, account.own_fund)))
+        return out

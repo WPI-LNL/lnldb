@@ -18,7 +18,7 @@ from django.urls.base import reverse
 from django.views.decorators.http import require_POST
 
 import reversion
-from finance.filters import filter_context, get_filter_state
+from finance.filters import FilterState, filter_context, get_filter_state
 from finance.forms import BulkActionForm
 from finance.models import (FundSource, ParsedTransaction, ProjectTag, SpendCategory,
                             TransactionStatus, money)
@@ -62,10 +62,21 @@ def ledger(request):
     """ Page 2: the high-density spreadsheet ledger. """
     state = get_filter_state(request)
 
-    qs = state.apply(
-        ParsedTransaction.objects.select_related(
-            'parent_transaction', 'project_tag', 'fr_line_target__funding_request', 'linked_event')
-        .prefetch_related('linked_event__serviceinstance_set__service__category'))
+    base = (ParsedTransaction.objects.select_related(
+                'parent_transaction', 'project_tag', 'fr_line_target__funding_request',
+                'linked_event')
+            .prefetch_related('linked_event__serviceinstance_set__service__category'))
+
+    # One event's entries, from the event P&L or the event's own page. Every
+    # year of them: a late-June show is billed in July, so its revenue and its
+    # rental sit in different fiscal years, and a year filter would show half
+    # an event. The partition still applies -- that is a question about the
+    # entries, not about when they landed.
+    event = _event_filter(request.GET.get('event'))
+    if event is not None:
+        qs = FilterState(None, state.partition).apply(base).filter(linked_event=event)
+    else:
+        qs = state.apply(base)
 
     # -- text search --------------------------------------------------------
     query = (request.GET.get('q') or '').strip()
@@ -145,11 +156,30 @@ def ledger(request):
             'status': status, 'category': category, 'fund': fund,
             'project': project, 'kind': kind,
         },
+        'event_filter': event,
+        'event_clear_querystring': _without(params, 'event'),
         'bulk_form': BulkActionForm(),
         'can_edit': request.user.has_perm('finance.edit_subledger'),
     }
     context.update(filter_context(request))
     return render(request, 'finance/ledger.html', context)
+
+
+def _event_filter(raw):
+    """ The event an ``?event=<pk>`` names, or ``None`` for anything else. """
+    from events.models import BaseEvent
+
+    raw = (raw or '').strip()
+    if not raw.isdigit():
+        return None
+    return BaseEvent.objects.filter(pk=int(raw)).first()
+
+
+def _without(params, key):
+    """ ``params`` as a querystring with ``key`` taken out. """
+    params = params.copy()
+    params.pop(key, None)
+    return params.urlencode()
 
 
 @login_required
@@ -177,15 +207,15 @@ def bulk_action(request):
 
     # Expense routing on a revenue row is refused by a database constraint, so
     # without this a mixed selection takes the whole action down with a 500.
-    if action in ('fund_source', 'lnl_spend_category'):
+    # The fund is not expense routing: money coming in names one too.
+    if action == 'lnl_spend_category':
         wrong_direction = [e for e in entries if e.is_revenue]
         if wrong_direction:
             messages.warning(
                 request,
-                "%s revenue entr%s skipped — %s is expense routing and cannot be filed "
-                "against money coming in."
-                % (len(wrong_direction), 'y was' if len(wrong_direction) == 1 else 'ies were',
-                   action.replace('_', ' ')))
+                "%s revenue entr%s skipped — a spend category is expense routing and cannot "
+                "be filed against money coming in."
+                % (len(wrong_direction), 'y was' if len(wrong_direction) == 1 else 'ies were'))
             entries = [e for e in entries if not e.is_revenue]
 
     if action == 'fund_source':

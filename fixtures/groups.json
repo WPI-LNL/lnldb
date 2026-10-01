@@ -431,6 +431,11 @@
         "workdaytransaction"
       ],
       [
+        "close_fiscalyear",
+        "finance",
+        "fiscalyearclose"
+      ],
+      [
         "add_equipmentcategory",
         "inventory",
         "equipmentcategory"

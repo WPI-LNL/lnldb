@@ -95,7 +95,8 @@ class SplitFormSetTests(TestCase):
         # well-formed revenue slice hidden inside an expense.
         formset = self._formset(
             '-1400.00', '400.00',
-            **{'slices-1-fund_source': '', 'slices-1-lnl_spend_category': '',
+            **{'slices-1-fund_source': str(fund('legacy').pk),
+               'slices-1-lnl_spend_category': '',
                'slices-1-non_event_revenue_type': str(RevenueSource.objects.active().first().pk)})
         self.assertFalse(formset.is_valid())
         self.assertIn('same direction', ' '.join(formset.non_form_errors()))
@@ -115,6 +116,7 @@ class SplitFormSetTests(TestCase):
                 'slices-%s-amount' % index: amount,
                 'slices-%s-description' % index: 'Slice %s' % index,
                 'slices-%s-non_event_revenue_type' % index: str(source.pk),
+                'slices-%s-fund_source' % index: str(fund('legacy').pk),
             })
         formset = SplitFormSet(data, instance=self.txn, parent_transaction=self.txn)
         self.assertTrue(formset.is_valid(), formset.errors or formset.non_form_errors())
@@ -146,9 +148,10 @@ class DirectionRuleTests(TestCase):
         self.assertNotIn('non_event_revenue_type', form.fields)
         self.assertIn('fund_source', form.fields)
 
-    def test_a_revenue_form_has_no_fund_or_category(self):
+    def test_a_revenue_form_has_a_fund_but_no_category(self):
+        """ Money goes into a fund as surely as it comes out of one. """
         form = ReconcileForm(parent_transaction=bank(op='OT-F3', amount='500.00'), prefix='t')
-        self.assertNotIn('fund_source', form.fields)
+        self.assertIn('fund_source', form.fields)
         self.assertNotIn('lnl_spend_category', form.fields)
         self.assertIn('non_event_revenue_type', form.fields)
 

@@ -9,6 +9,7 @@
             <span>
                 {{ fr.name }}
                 {% if fr.reference %}<code class="fin-muted">{{ fr.reference }}</code>{% endif %}
+                {% if fr.approving_body %}<span class="fin-muted" style="font-weight:400;font-size:12px;">approved by the {{ fr.approving_body }}</span>{% endif %}
                 {% if fr.is_projection %}<span class="fin-tag is-projection">PROJECTION</span>{% endif %}
                 {% if fr.closed %}<span class="label label-default">Closed</span>{% endif %}
             </span>

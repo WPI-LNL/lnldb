@@ -176,19 +176,24 @@ class BulkActionGuardTests(FinanceViewTestCase):
         data.update(extra)
         return self.client.post(reverse('finance:bulk-action'), data, follow=True)
 
-    def test_expense_routing_is_refused_on_revenue_and_said_out_loud(self):
+    def test_a_fund_is_assigned_to_revenue_as_well(self):
+        """
+        Money coming in goes into a fund, so a mixed selection takes the fund
+        on every row -- an SGA reimbursement filed to the wrong fund is fixed
+        the same way as a purchase.
+        """
+        response = self._act('fund_source', fund('legacy').pk, [self.expense, self.income])
+        self.assertNotContains(response, 'skipped')
+        self.expense.refresh_from_db()
+        self.income.refresh_from_db()
+        self.assertEqual(self.expense.fund_source, fund('legacy'))
+        self.assertEqual(self.income.fund_source, fund('legacy'))
+
+    def test_a_category_is_refused_on_revenue_and_said_out_loud(self):
         """
         A database constraint refuses it, so without the guard a mixed
         selection takes the whole action down with a 500.
         """
-        response = self._act('fund_source', fund('legacy').pk, [self.expense, self.income])
-        self.assertContains(response, 'revenue entry was skipped')
-        self.expense.refresh_from_db()
-        self.income.refresh_from_db()
-        self.assertEqual(self.expense.fund_source, fund('legacy'))
-        self.assertIsNone(self.income.fund_source)
-
-    def test_a_category_is_refused_on_revenue_too(self):
         response = self._act('lnl_spend_category', category('repairs').pk,
                              [self.expense, self.income])
         self.assertContains(response, 'revenue entry was skipped')

@@ -39,6 +39,16 @@ what they cover rather than alphabetically.
     rule ordering that keeps those apart.
 ``test_calculators``
     The dashboard's numbers.
+``test_event_costs``
+    Costs that belong to one event: suggesting the event on an expense, each
+    event's billed / received / cost / margin figures, and the pages that show
+    them -- the event P&L, the ledger's event filter, the dashboard panel, the
+    queue row and the event's own Billing tab.
+``test_balances``
+    What each fund holds: revenue naming a fund, SGA's A/F/S reference rules
+    and the near-miss when a memo's letter disagrees with lnldb's, each
+    account's cash from a Workday balance split between its funds, and the
+    balance page, its inputs, and closing and reopening a year.
 
 **Forms and pages**
 

@@ -28,10 +28,11 @@
         the main account and SGA reimburses it -- so the question is asked at
         the moment it becomes relevant rather than sitting on screen always.
 
-     4. Naming the purchase a credit reverses puts the revenue boxes away. Money
-        coming in is either new revenue or a purchase being credited back, never
-        both, and a refund carries no routing of its own -- ReconcileForm copies
-        it off the entry being reversed.
+     4. Naming the purchase a credit reverses puts the revenue boxes away --
+        the event and the revenue type, and in the queue the fund. Money coming
+        in is either new revenue or a purchase being credited back, never both,
+        and a refund in the queue carries no routing of its own: ReconcileForm
+        copies it, fund included, off the entry being reversed.
 
    The server enforces all four either way (ParsedTransaction.clean(),
    BaseAllocationForm._check_fund_and_fr_line, and, for rule 4, the direction
@@ -165,7 +166,13 @@
         var f = fields($refund);
         var isRefund = !!f.refund.val();
 
-        $.each([f.event, f.revenueType], function (_, $field) {
+        /* The fund goes too, but only in the queue: ReconcileForm copies it off
+           the purchase being reversed. The entry page keeps it, because there a
+           refund is filed like any expense and the fund is asked for. */
+        var hide = [f.event, f.revenueType];
+        if ($refund.closest('.fin-queue-row').length) { hide.push(f.fund); }
+
+        $.each(hide, function (_, $field) {
             if (!$field.length) { return; }
             container($field).toggle(!isRefund);
         });

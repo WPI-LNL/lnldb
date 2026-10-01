@@ -29,6 +29,12 @@ under the event picker -- five scored guesses at which show a deposit belonged
 to. Guessing was the wrong shape for that field: the ISD memo names the event
 outright, so it is a lookup that fills the box in, and five candidates under a
 box is a puzzle rather than a shortcut.
+
+An expense's "Incurred for event" is the one place an event is guessed at
+again, because a rental invoice's memo names the show in prose rather than in a
+house format. It follows the same rule as every other field: one chip at most,
+offered only when a single event leads outright -- see
+finance.suggestions.suggest_expense_event.
 {% endcomment %}
 <div class="form-group fin-field fin-field-{{ size|default:"md" }}">
     <label for="{{ field.id_for_label }}"

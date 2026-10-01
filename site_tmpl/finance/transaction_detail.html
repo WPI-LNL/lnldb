@@ -143,10 +143,16 @@
                                             {% if entry.is_revenue %}
                                                 {% if entry.linked_event %}{{ entry.linked_event.event_name }}
                                                 {% else %}{{ entry.non_event_revenue_type }}{% endif %}
+                                                {% if entry.fund_source %}
+                                                    <span class="fin-muted">&middot; into {{ entry.fund_source }}</span>
+                                                {% endif %}
                                             {% else %}
                                                 {{ entry.lnl_spend_category|default:"—" }}
                                                 {% if entry.fr_line_target %}
                                                     <span class="fin-muted">&middot; {{ entry.fr_line_target.name }}</span>
+                                                {% endif %}
+                                                {% if entry.linked_event %}
+                                                    <span class="fin-muted">&middot; for {{ entry.linked_event.event_name }}</span>
                                                 {% endif %}
                                             {% endif %}
                                         </td>
@@ -208,6 +214,16 @@
                                 </div>
                             {% endif %}
 
+                            {% comment %}
+                                Every field SplitLineForm declares is rendered
+                                here, on both directions. A field the table left
+                                out was posted blank and saved over the slice:
+                                re-saving a split used to wipe the event an
+                                expense was incurred for, and every slice's
+                                audit note. "Incurred for event" is also how one
+                                rental invoice covering two shows gets divided
+                                between them.
+                            {% endcomment %}
                             <div class="fin-table-wrap">
                                 <table class="table fin-table" id="fin-split-table">
                                     <thead>
@@ -216,12 +232,15 @@
                                             <th>Description</th>
                                             {% if txn.net_amount > 0 %}
                                                 <th>Event / Revenue Type</th>
+                                                <th>Into fund</th>
                                             {% else %}
                                                 <th>Fund</th>
                                                 <th>Spend Category</th>
                                                 <th>FR Line</th>
+                                                <th>Incurred for event</th>
                                             {% endif %}
                                             <th>Project</th>
+                                            <th>Note</th>
                                             <th style="width:40px;">Del</th>
                                         </tr>
                                     </thead>
@@ -236,16 +255,19 @@
                                                         {{ form.linked_event }}
                                                         {{ form.non_event_revenue_type }}
                                                     </td>
+                                                    <td>{{ form.fund_source }}</td>
                                                 {% else %}
                                                     <td>{{ form.fund_source }}</td>
                                                     <td>{{ form.lnl_spend_category }}</td>
                                                     <td>{{ form.fr_line_target }}</td>
+                                                    <td>{{ form.linked_event }}</td>
                                                 {% endif %}
                                                 <td>{{ form.project_tag }}</td>
+                                                <td>{{ form.audit_explanation }}</td>
                                                 <td>{% if form.instance.pk %}{{ form.DELETE }}{% endif %}</td>
                                             </tr>
                                             {% if form.errors %}
-                                                <tr><td colspan="7">
+                                                <tr><td colspan="9">
                                                     <div class="text-danger" style="font-size:12px;">
                                                         {% for field, errors in form.errors.items %}
                                                             {% for error in errors %}

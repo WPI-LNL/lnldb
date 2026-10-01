@@ -37,11 +37,13 @@ class FundSourceChoiceTests(TestCase):
     def test_only_the_active_rows_are_offered(self):
         form = ReconcileForm(parent_transaction=bank(), prefix='t')
         labels = [str(label) for value, label in form.fields['fund_source'].choices if value]
-        self.assertEqual(labels, ['SGA Funding Request', 'SGA Budget', 'Legacy'])
+        self.assertEqual(labels, ['SGA Funding Request', 'SGA Budget', 'Legacy',
+                                  'SGA Mandatory Transfer'])
 
     def test_seeded_rows(self):
         self.assertEqual([f.name for f in FundSource.objects.active()],
-                         ['SGA Funding Request', 'SGA Budget', 'Legacy'])
+                         ['SGA Funding Request', 'SGA Budget', 'Legacy',
+                          'SGA Mandatory Transfer'])
 
     def test_retiring_a_row_removes_it_from_the_form(self):
         """ The whole point of the table: no deploy needed to change the list. """
@@ -97,7 +99,10 @@ class SpendCategoryChoiceTests(TestCase):
 
 
 class RequiredFieldTests(TestCase):
-    """ Required on the expense side only -- revenue may not carry these at all. """
+    """
+    What each direction has to name. The fund is asked of both: money comes
+    out of one and goes into one. The spend category stays expense-only.
+    """
 
     def test_reconcile_requires_a_fund_on_expenses(self):
         txn = bank(op='OT-R1', amount='-500.00')
@@ -105,11 +110,13 @@ class RequiredFieldTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('fund_source', form.errors)
 
-    def test_reconcile_does_not_demand_a_fund_on_revenue(self):
+    def test_reconcile_asks_revenue_which_fund_it_goes_into(self):
         txn = bank(op='OT-R2', amount='500.00')
         form = ReconcileForm(parent_transaction=txn, prefix='t')
-        # The field is not even rendered for revenue.
-        self.assertNotIn('fund_source', form.fields)
+        self.assertTrue(form.fields['fund_source'].required)
+        self.assertEqual(form.fields['fund_source'].label, "Into fund")
+        # The spend category is still not even rendered for revenue.
+        self.assertNotIn('lnl_spend_category', form.fields)
 
     def test_entry_page_requires_the_routing(self):
         """
@@ -699,12 +706,13 @@ class FundingRequestFromMemoTests(TestCase):
         payload = suggest_all(self._txn('Truman Show Film Rights (F.26.6)'))
         self.assertIsNone(payload['fund_source'])
 
-    def test_without_a_reference_810_falls_back_to_the_stated_default(self):
+    def test_without_a_reference_810_falls_back_to_the_accounts_own_money(self):
         """
         810-FD still says nothing -- it is the fund every LNL line is spent out
         of -- so the answer does not come from reading it. It comes from the
-        fund a Treasurer nominated in the admin, and the suggestion says so:
-        ``source`` is 'default', not 'export'.
+        fund the admin says 226-AG holds as its own, and the suggestion says
+        so: ``source`` is 'default', not 'export', and the reason never quotes
+        the worktag.
         """
         from finance.suggestions import DEFAULT, suggest_all
         txn = bank(op='OT-NOFR', amount='-50.00', line_memo='Gaff tape')
@@ -712,18 +720,19 @@ class FundingRequestFromMemoTests(TestCase):
         payload = suggest_all(txn)
         self.assertEqual(payload['fund_source'].value, fund('legacy').pk)
         self.assertEqual(payload['fund_source'].source, DEFAULT)
-        self.assertIn('default', payload['fund_source'].reason)
+        self.assertIn("own money", payload['fund_source'].reason)
+        self.assertNotIn('810', payload['fund_source'].reason)
 
     def test_nothing_is_offered_when_no_default_is_configured(self):
         """
-        The fallback is LNL's convention, not this module's. Untick it and the
-        box goes back to being blank.
+        Both fallbacks are LNL's convention, not this module's. Hold no fund in
+        the account and untick the default, and the box goes back to blank.
         """
         from finance.models import reset_finance_cache
         from finance.suggestions import suggest_all
-        FundSource.objects.update(is_default=False)
-        reset_finance_cache('default_fund')
-        self.addCleanup(reset_finance_cache, 'default_fund')
+        FundSource.objects.update(is_default=False, account=None)
+        reset_finance_cache('default_fund', 'own_funds')
+        self.addCleanup(reset_finance_cache, 'default_fund', 'own_funds')
 
         txn = bank(op='OT-NODEF', amount='-50.00', line_memo='Gaff tape')
         txn.worktags_json['fund'] = '810-FD Agency'
@@ -731,15 +740,18 @@ class FundingRequestFromMemoTests(TestCase):
 
     def test_a_reference_lnldb_does_not_know_is_still_flagged(self):
         """
-        A quoted request number we cannot find is a question worth raising even
-        though nothing would have been filled in anyway: either the award has
-        not been entered yet or the memo is wrong, and both matter.
+        A quoted request number we cannot find is a question worth raising:
+        either the award has not been entered yet or the memo is wrong, and
+        both matter. The fund is still known -- every SGA number is a funding
+        request -- so it is filled in, and the request line is what is asked.
         """
-        from finance.suggestions import suggest_all
+        from finance.suggestions import MEMO, suggest_all
         txn = bank(op='OT-GHOST', amount='-50.00', line_memo='Lamps (F.26.999)',
                    worktags={'fund': '810-FD Agency'})
         payload = suggest_all(txn)
-        self.assertIsNone(payload['fund_source'])
+        self.assertEqual(payload['fund_source'].value, fund('sga_fr').pk)
+        self.assertEqual(payload['fund_source'].source, MEMO)
+        self.assertIsNone(payload['fr_line_target'])
         self.assertIn('F.26.999', payload['warning'])
 
 
@@ -1332,11 +1344,15 @@ class AutofillFromExportTests(TestCase):
         self.assertEqual(form.initial['lnl_spend_category'], category('food').pk)
         self.assertNotIn('lnl_spend_category', form.autofilled)
 
-    def test_nothing_is_filled_in_for_revenue(self):
-        """ Which event a deposit belongs to is a guess, and stays one. """
+    def test_only_the_fund_is_filled_in_for_revenue(self):
+        """
+        Which event a deposit belongs to is a guess, and stays one. Which fund it
+        goes into is the account's own money unless the memo says otherwise.
+        """
         deposit = bank(op='OT-REV', amount='886.45')
         form = ReconcileForm(parent_transaction=deposit, prefix='t')
-        self.assertEqual(form.autofilled, {})
+        self.assertEqual(list(form.autofilled), ['fund_source'])
+        self.assertEqual(form.initial['fund_source'], fund('legacy').pk)
 
     def test_the_project_code_is_filled_from_the_export(self):
         tag = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
@@ -1394,7 +1410,10 @@ class AutofillFundingRequestTests(TestCase):
         txn = bank(op='OT-GHOST', amount='-40.00', line_memo='Lamps (F.26.999)',
                    worktags={'fund': '810-FD Agency'})
         form = ReconcileForm(parent_transaction=txn, prefix='t')
-        self.assertNotIn('fund_source', form.autofilled)
+        # Every SGA number is a funding request, so the fund is known; which
+        # request, and so which line, is what the warning asks.
+        self.assertEqual(form.autofilled['fund_source'].value, fund('sga_fr').pk)
+        self.assertNotIn('fr_line_target', form.autofilled)
         self.assertIn('F.26.999', form.suggestions()['warning'])
 
 
@@ -1584,3 +1603,50 @@ class RefundPickerTests(TestCase):
         form = self._form()
         with self.assertNumQueries(1):
             [label for value, label in form.fields['refund_of'].choices if value]
+
+
+class EncumbranceEventTests(TestCase):
+    """
+    The event a reservation is for.
+
+    A sub-rental is booked before the invoice exists, so reserving the money is
+    the moment somebody knows which show it is for. The picker was always on the
+    page -- it is declared on the base form -- but the field was missing from
+    ``Meta.fields``, so a ModelForm threw the choice away on save and showed an
+    event set elsewhere as blank.
+    """
+
+    def setUp(self):
+        self.event = Event2019Factory(event_name='Pan Asian Festival')
+
+    def _data(self, **overrides):
+        data = {
+            'amount': '400.00', 'effective_date': '2025-09-20', 'description': 'Video wall',
+            'fund_source': fund('legacy').pk, 'lnl_spend_category': category('event_subrental').pk,
+            'linked_event': str(self.event.pk), 'audit_explanation': 'Reserved for the festival',
+        }
+        data.update(overrides)
+        return data
+
+    def test_the_form_offers_the_event_as_a_cost(self):
+        field = EncumbranceForm().fields['linked_event']
+        self.assertEqual(field.label, 'Incurred for event')
+
+    def test_editing_an_encumbrance_keeps_its_event(self):
+        entry = EncumbranceForm(data=self._data()).save()
+        self.assertEqual(entry.linked_event, self.event)
+
+        form = EncumbranceForm(instance=entry)
+        self.assertEqual(form['linked_event'].value(), self.event.pk)
+        edited = EncumbranceForm(data=self._data(description='Video wall hire'), instance=entry)
+        self.assertTrue(edited.is_valid(), edited.errors)
+        edited.save()
+        entry.refresh_from_db()
+        self.assertEqual(entry.description, 'Video wall hire')
+        self.assertEqual(entry.linked_event, self.event)
+
+    def test_a_reservation_for_an_event_takes_the_pass_through_category(self):
+        """ The event already says what the money is for. """
+        form = EncumbranceForm(data=self._data(lnl_spend_category=''))
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().lnl_spend_category, category('event_subrental'))

@@ -126,6 +126,10 @@
                         <li {% if fin_page == 'queue' %}class="active"{% endif %}>
                             <a href="{% url 'finance:queue' %}?{{ filter_state.querystring }}">Queue</a></li>
                     {% endpermission %}
+                    <li {% if fin_page == 'events' %}class="active"{% endif %}>
+                        <a href="{% url 'finance:events' %}?{{ filter_state.querystring }}">Events</a></li>
+                    <li {% if fin_page == 'balances' %}class="active"{% endif %}>
+                        <a href="{% url 'finance:balances' %}?{{ filter_state.querystring }}">Balances</a></li>
                     <li {% if fin_page == 'projects' %}class="active"{% endif %}>
                         <a href="{% url 'finance:projects' %}?{{ filter_state.querystring }}">Projects</a></li>
                     <li {% if fin_page == 'funding' %}class="active"{% endif %}>

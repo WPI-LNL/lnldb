@@ -75,14 +75,21 @@
         var $template = $rows.last();
         var $clone = $template.clone();
 
-        // Re-index every name/id from -(count-1) to -count.
-        $clone.find('input, select, textarea').each(function () {
+        // Re-index every name/id from -(count-1) to -count. Every element, not
+        // only the inputs: the event picker keeps its wrapper and the box that
+        // shows the chosen event in a <span> and a <div> it finds by id, so a
+        // copy left with the old ids would write its choice into the row it
+        // was copied from.
+        $clone.find('[id], [name]').each(function () {
             var $el = $(this);
             ['name', 'id'].forEach(function (attr) {
                 var value = $el.attr(attr);
                 if (!value) { return; }
                 $el.attr(attr, value.replace(/-\d+-/, '-' + count + '-'));
             });
+        });
+        $clone.find('input, select, textarea').each(function () {
+            var $el = $(this);
             if ($el.attr('type') === 'checkbox') {
                 $el.prop('checked', false);
             } else if ($el.is('select')) {
@@ -91,9 +98,16 @@
                 $el.val('');
             }
         });
+        // The event chosen on the copied row is display, not a value, so
+        // clearing the inputs leaves it showing on the new row.
+        $clone.find('.results_on_deck').empty();
 
         $clone.appendTo('#fin-split-table tbody');
         $total.val(count + 1);
+        // A copied picker is inert -- ajax_select.js wires each one up once,
+        // and jQuery's clone() does not carry that over. This re-runs it for
+        // whatever is new on the page.
+        $(window).trigger('init-autocomplete');
         // Let fund_gate.js hide the FR picker on the row just added.
         $(document).trigger('fin:rows-added', [$clone]);
         recalc();

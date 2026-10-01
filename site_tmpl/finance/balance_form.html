@@ -1,0 +1,31 @@
+{# One small input on the balance page: a Workday balance, or a transfer between funds. #}
+{% extends 'finance/base_finance.html' %}
+{% load crispy_forms_tags %}
+
+{% block fin_content %}
+    <div class="row">
+        <div class="col-md-7">
+            <div class="fin-panel">
+                <div class="fin-panel-head">{{ h2 }}</div>
+                <div class="fin-panel-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% crispy form %}
+                        <div class="text-right">
+                            <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="fin-panel">
+                <div class="fin-panel-head">What this is for</div>
+                <div class="fin-panel-body">
+                    <p class="fin-muted" style="font-size:13px;margin:0;">{{ intro }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

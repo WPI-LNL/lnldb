@@ -110,6 +110,17 @@ class VocabularyGuardTests(TestCase):
             spend_category=category('consumables'))
         self.assertGreaterEqual(self.admin.rule_count(category('consumables')), 1)
 
+    def test_the_pass_through_flag_is_editable_here(self):
+        """
+        It decides which category "Incurred for event" files into and what the
+        queue's *Which event?* tag watches for. It used to be settable only by a
+        data migration, out of reach of the person who decides it.
+        """
+        self.assertIn('is_event_passthrough', self.admin.fields)
+        self.client.force_login(self.user)
+        url = reverse('admin:finance_spendcategory_change', args=[category('event_other').pk])
+        self.assertContains(self.client.get(url), 'name="is_event_passthrough"')
+
 
 class BankTruthAdminTests(TestCase):
     """

@@ -120,6 +120,69 @@ class TransactionDetailTests(FinanceViewTestCase):
         self._split('-1000.00')
         self.assertEqual(self.txn.slices.count(), 0)
 
+    def _incurred_for_an_event(self):
+        from events.tests.generators import Event2019Factory
+        event = Event2019Factory(event_name='Pan Asian Festival')
+        entry = ParsedTransaction.objects.create(
+            parent_transaction=self.txn, amount=Decimal('-1000.00'), fund_source=fund('legacy'),
+            lnl_spend_category=category('event_subrental'), linked_event=event,
+            audit_explanation='Hired for the festival', effective_date=self.txn.accounting_date)
+        return event, entry
+
+    def test_every_field_the_split_form_saves_is_on_the_page(self):
+        """
+        A model field the table leaves out is posted blank, and the formset
+        saves the blank over the slice. That is how re-saving a split used to
+        wipe the event an expense was incurred for, and every slice's audit
+        note: the form declared both and the expense table rendered neither.
+        """
+        self._incurred_for_an_event()
+        response = self.client.get(self._url())
+        formset = response.context['formset']
+        page = response.content.decode('utf-8')
+        missing = []
+        for form in formset:
+            for name in form._meta.fields:
+                # The bank line itself is the formset's own business: it comes
+                # from the URL, not from anything posted.
+                if name == formset.fk.name or name not in form.fields:
+                    continue
+                if ('name="%s"' % form.add_prefix(name)) not in page:
+                    missing.append(form.add_prefix(name))
+        self.assertEqual(missing, [])
+
+    def test_re_saving_a_split_keeps_the_event_and_the_note(self):
+        """
+        The saved slice posted back with every field it rendered, and only the
+        description changed. The blank spare rows are left out, as the other
+        split tests here do.
+        """
+        event, entry = self._incurred_for_an_event()
+        formset = self.client.get(self._url()).context['formset']
+        saved = [form for form in formset if form.instance.pk]
+        data = {'slices-TOTAL_FORMS': str(len(saved)),
+                'slices-INITIAL_FORMS': str(len(saved)),
+                'slices-MIN_NUM_FORMS': '0', 'slices-MAX_NUM_FORMS': '1000'}
+        for form in saved:
+            for name in tuple(form._meta.fields) + ('id',):
+                if name in form.fields and name != formset.fk.name:
+                    value = form[name].value()
+                    data[form.add_prefix(name)] = '' if value is None else value
+        data['slices-0-description'] = 'Video wall'
+        self.client.post(self._url(), data, follow=True)
+
+        entry.refresh_from_db()
+        self.assertEqual(entry.description, 'Video wall')
+        self.assertEqual(entry.linked_event_id, event.pk)
+        self.assertEqual(entry.audit_explanation, 'Hired for the festival')
+
+    def test_an_expense_slice_can_name_its_event_in_the_split(self):
+        """ One rental invoice for two shows is divided here, one slice per show. """
+        from events.tests.generators import Event2019Factory
+        event = Event2019Factory(event_name='Drag Show')
+        self._split('-600.00', '-400.00', **{'slices-1-linked_event': str(event.pk)})
+        self.assertEqual(self.txn.slices.get(amount=Decimal('-400.00')).linked_event, event)
+
 
 class EntryDetailTests(FinanceViewTestCase):
     """ One slice, its form, and its history. """

@@ -518,10 +518,11 @@ class QueueRefundTests(FinanceViewTestCase):
 
     def test_a_credit_with_no_refund_target_is_still_revenue(self):
         """ The ordinary case is untouched: a deposit is not a refund. """
-        self.reconcile(self.credit_txn, non_event_revenue_type=revenue_source('alumni').pk)
+        self.reconcile(self.credit_txn, non_event_revenue_type=revenue_source('alumni').pk,
+                       fund_source=fund('legacy').pk)
         entry = self.credit_txn.slices.get()
         self.assertIsNone(entry.refund_of)
-        self.assertIsNone(entry.fund_source)
+        self.assertEqual(entry.fund_source, fund('legacy'))
         self.assertEqual(entry.non_event_revenue_type, revenue_source('alumni'))
 
     def test_the_picker_is_offered_on_a_credit_row(self):

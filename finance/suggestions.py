@@ -24,7 +24,8 @@ records:
 
 ``DEFAULT``
     Nothing said, so the fallback configured in the admin. Only the fund has
-    one; see :attr:`finance.models.FundSource.is_default`.
+    one: the account's own money (see :func:`finance.models.account_own_funds`),
+    else :attr:`finance.models.FundSource.is_default`.
 
 ``GUESS``
     Our own reading of the line -- a word noticed in some prose, a resemblance.
@@ -39,6 +40,7 @@ submitted by a person, and changing any box is one click. What it buys is that
 the ordinary line -- and on a house-format memo that is most of them -- is read
 and confirmed rather than retyped.
 """
+import calendar
 import datetime
 import re
 from decimal import Decimal
@@ -48,8 +50,9 @@ from django.db.models.functions import Coalesce
 from django.utils.formats import date_format
 
 from finance.models import (ZERO, FundSource, ProjectTag, SuggestionRule,
-                            default_fund_source, fund_source_for_workday_fund,
-                            normalise_term, spend_category_named, money)
+                            default_fund_source, fund_source_for_tracking,
+                            fund_source_for_workday_fund, money, normalise_sga_reference,
+                            normalise_term, own_fund_for_account, spend_category_named)
 
 HIGH, MEDIUM, LOW = 'high', 'medium', 'low'
 
@@ -116,9 +119,12 @@ class Suggestion(object):
 # ---------------------------------------------------------------------------
 
 #: An SGA request number as it appears in a memo: F.26.6, A.26.115, F.25.33.
-#: One letter for the term the request was heard in, the fiscal year, then the
-#: number within that year.
-FR_REFERENCE = re.compile(r'\b([A-Za-z])\.(\d{2})\.(\d+)\b')
+#: The letter is the body that heard it -- A for Appropriations Committee, F for
+#: Financial Board, S for Senate, by the size of the ask -- then the fiscal
+#: year, then the number within that body's year. Only those three letters, so
+#: "Invoice B.4.12" is not read as a funding request. See
+#: :data:`finance.models.SGA_REFERENCE`.
+FR_REFERENCE = re.compile(r'\b([AFSafs])\.(\d{2})\.(\d+)\b')
 
 
 def funding_request_references(text):
@@ -127,14 +133,8 @@ def funding_request_references(text):
             for letter, year, number in FR_REFERENCE.findall(text or '')]
 
 
-def normalise_reference(value):
-    """
-    Strip whitespace and upper-case a request number so it can be compared.
-
-    Treasurers write the same reference as "F.26.6", "f.26.6" and "F. 26. 6";
-    all three have to match the one stored on the funding request.
-    """
-    return re.sub(r'\s+', '', (value or '')).upper()
+#: Kept under its old name: the queue compares memo references with it.
+normalise_reference = normalise_sga_reference
 
 
 def _collapse(text):
@@ -352,6 +352,66 @@ def suggest_funding_request(txn, fields=None):
     return None, None
 
 
+def near_miss_funding_request(reference):
+    """
+    The open request numbered like ``reference`` in every part but the letter.
+
+    SGA numbers each body's requests separately, so A.27.16 and F.27.16 are two
+    different requests and nothing here may treat them as one. But LNL's memos
+    have quoted A.27.16 for weeks against a request lnldb holds as F.27.16, and
+    A.27.81 beside F.27.81: a memo whose number lnldb lacks, while the same year
+    and number exist under another letter, is far more often a typo on one side
+    than a coincidence. So the request is offered as a chip, labelled as the
+    question it is, and only a person decides which side has the typo.
+
+    ``None`` when the reference is not SGA's format, when nothing matches, or
+    when two do -- two candidates is a question this cannot narrow down.
+    """
+    from django.db.models import Prefetch
+
+    from finance.models import SGA_REFERENCE, FRLineItem, FundingRequest
+
+    match = SGA_REFERENCE.match(normalise_reference(reference))
+    if match is None:
+        return None
+    letter, year, number = match.groups()
+
+    found = []
+    candidates = FundingRequest.objects.filter(closed=False).prefetch_related(
+        Prefetch('line_items',
+                 queryset=FRLineItem.objects.select_related('lnl_spend_category')))
+    for funding_request in candidates:
+        theirs = SGA_REFERENCE.match(normalise_reference(funding_request.reference))
+        if theirs is None:
+            continue
+        their_letter, their_year, their_number = theirs.groups()
+        if (their_letter != letter and their_year == year
+                and int(their_number) == int(number)):
+            found.append(funding_request)
+    return found[0] if len(found) == 1 else None
+
+
+def suggest_near_miss_line(reference, funding_request, fields):
+    """
+    A chip for the line of a request whose letter disagrees with the memo's.
+
+    Never a fill: the memo names a request lnldb does not have, and the request
+    offered is a different one that merely shares its number. See
+    :func:`near_miss_funding_request`.
+    """
+    if funding_request is None:
+        return None
+    line = match_fr_line(funding_request, fields.line_hint)
+    if line is None:
+        return None
+    return Suggestion(
+        line.pk, MEDIUM,
+        'Memo says %s, which lnldb does not have; %s (%s) has the same number. '
+        'Check which letter is right' % (reference, funding_request.reference,
+                                         funding_request.name),
+        line.picker_label, source=GUESS)
+
+
 def suggest_fr_line(funding_request, line, fields):
     """ The FR line picker's answer, as a :class:`Suggestion` or ``None``. """
     if line is None:
@@ -459,41 +519,47 @@ def unmapped_spend_categories(transactions, rules=None):
 # Fund
 # ---------------------------------------------------------------------------
 
-def suggest_fund_source(txn, funding_request=None, unmatched_reference=None):
+def suggest_fund_source(txn, funding_request=None, reference=''):
     """
-    Which pot of money paid for this, in descending order of evidence.
+    Which pot of money this came out of -- or, for money in, went into.
 
-    1. **A funding request number in the memo.** That money is a specific SGA
-       award, so the fund is whichever bucket is marked as requiring a request
-       line.
-    2. **The Fund worktag**, through the code list on each :class:`FundSource`.
+    In descending order of evidence:
+
+    1. **A funding request number in the memo.** Every SGA number names a
+       funding request -- budgets and mandatory transfers have none -- so the
+       memo quoting one says this is award money, whichever award it is. The
+       fund is whichever bucket is marked as drawing on a request. That holds
+       even when lnldb has no request by that number: the fund is still known,
+       and the funding request line beside it is the question left open, which
+       the queue asks out loud.
+    2. **The Tracking worktag**, which Workday exports from FY27 on and which
+       names the pot in words: "SGA Budget", "Student Org Legacy Funds". Read
+       through each fund's list in the admin.
+    3. **The Fund worktag**, through the code list on each :class:`FundSource`.
        Which Workday code means which LNL bucket is WPI's numbering and LNL's
        bookkeeping convention, so it is typed into the admin rather than
        compiled in here. A fund with no codes configured is never chosen this
        way -- which matters, because 810-FD is the agency fund *all* of LNL's
        spending comes out of and identifies nothing at all.
-    3. **The default**, if a Treasurer has named one. What is left after the
-       two passes above is a line that quotes no award and carries no fund code
-       anyone has mapped, and which bucket *that* is, is LNL's bookkeeping
-       convention rather than anything this module can work out -- so it is a
-       flag on the fund row, set from the admin. This is stated rather than
-       read, and the queue's caption says so in those words: it does not claim
-       the export answered.
+    4. **The account's own money**: the carry-forward fund held in the account
+       the line is on, so Legacy on 226-AG and the mandatory transfer on 315-AG.
+       A line nothing else identifies is the account spending, or receiving,
+       its own money.
+    5. **The default**, if a Treasurer has named one, for a line on no account
+       anyone has described.
 
-    That third pass is a deliberate change of mind. Leaving the fund blank was
-    the honest thing to do while the alternative was inferring it from a
-    worktag that says nothing; it is not the honest thing to do when a
-    Treasurer can write the fallback down once in the admin. Fund is required
-    on every expense, so a blank box was a typing job repeated down the whole
-    queue, and the row that gets no attention is the row where every box needed
-    filling in equally.
+    The last two are stated rather than read, and the queue's caption says so
+    in those words: they do not claim the export answered. Leaving the box
+    blank instead was the honest thing to do while the alternative was
+    inferring a fund from a worktag that says nothing; it is not when a
+    Treasurer has written the fallback down in the admin. Fund is required on
+    every line, so a blank box was a typing job repeated down the whole queue.
 
-    ``unmatched_reference`` is the safety catch on the first pass. When a memo
-    quotes a request number and lnldb has no such request, every later pass
-    would be answering a different question from the one the memo asked, so
-    nothing is offered and the queue says why.
+    ``reference`` is the request number the memo quotes, matched or not;
+    ``funding_request`` is lnldb's request by that number, when there is one.
     """
-    if funding_request is not None:
+    reference = reference or (funding_request.reference if funding_request else '')
+    if reference:
         source = FundSource.objects.filter(requires_funding_request=True,
                                            is_active=True).first()
         if source is None:
@@ -502,18 +568,30 @@ def suggest_fund_source(txn, funding_request=None, unmatched_reference=None):
             # the memo has just said this is award money, and the passes below
             # would answer with the standing budget.
             return None
-        return Suggestion(source.pk, HIGH,
-                          'Memo quotes %s' % funding_request.reference, str(source),
-                          source=MEMO)
+        if funding_request is not None:
+            reason = 'Memo quotes %s' % funding_request.reference
+        else:
+            reason = 'Memo quotes %s, an SGA funding request number' % reference
+        return Suggestion(source.pk, HIGH, reason, str(source), source=MEMO)
 
-    if unmatched_reference:
-        return None
+    tracking = txn.worktag('tracking')
+    source = fund_source_for_tracking(tracking)
+    if source is not None:
+        return Suggestion(source.pk, HIGH, 'Workday Tracking "%s"' % tracking, str(source),
+                          source=EXPORT)
 
     fund = txn.worktag('fund')
     source = fund_source_for_workday_fund(fund)
     if source is not None:
         return Suggestion(source.pk, HIGH, 'Workday fund "%s"' % fund, str(source),
                           source=EXPORT)
+
+    account = txn.partition_code_label
+    own = own_fund_for_account(account)
+    if own is not None:
+        return Suggestion(own.pk, MEDIUM,
+                          "%s's own money — nothing in the export says otherwise" % account,
+                          str(own), source=DEFAULT)
 
     fallback = default_fund_source()
     if fallback is None:
@@ -677,6 +755,226 @@ def suggest_linked_event(txn):
         event.pk, HIGH,
         'Memo names this event (%s)' % date_format(event.datetime_start, 'M j, Y'),
         str(event), source=EXPORT)
+
+
+# -- the same question asked of a cost ----------------------------------------
+#
+# A sub-rental hired for one show is that show's cost, and the memo usually
+# says which show -- but not in a house format. Rental invoices are written by
+# whoever placed the order, so the event turns up in brackets ("DT projector
+# rental (Drag Show D25)"), as the whole description ("Equipment rental for
+# Touch of Africa event") or folded into prose ("WPI Pan Asian Festival
+# lighting and sound rental"). The first two can be matched exactly; the third
+# can only be guessed at.
+
+#: How far from the accounting date an exactly-named event may sit, when the
+#: memo carries no term code to say when it was. Wide, because an invoice can
+#: land months after the show, and safe to be wide because the name has to
+#: match outright.
+EXPENSE_EVENT_LOOKUP_DAYS = 180
+
+#: Roughly when each WPI term runs, as the first and last month of the calendar
+#: year its code names: ``D25`` is March to May **2025**, ``A25`` August to
+#: October 2025. The year matters more than the months. The Theatre department
+#: bills projector hire in batches, so ``DT projector rental (Drag Show D25)``
+#: arrives in October 2025 for the spring show -- and nearest-to-the-charge
+#: would pick the *next* spring's Drag Show instead.
+WPI_TERM_MONTHS = {'A': (8, 10), 'B': (10, 12), 'C': (1, 3), 'D': (3, 5), 'E': (5, 8),
+                   'CM': (5, 6)}
+
+#: Slack either side of a term, for the shows that straddle a boundary -- NSO
+#: runs in the week before A-term starts.
+WPI_TERM_SLACK_DAYS = 21
+
+#: The window a *guessed* event has to fall in: rentals are invoiced after the
+#: show far more often than before it, and a guess needs every narrowing it can
+#: get.
+EXPENSE_EVENT_GUESS_BEFORE_DAYS = 60
+EXPENSE_EVENT_GUESS_AFTER_DAYS = 30
+
+#: Within this fraction of the line, the rentals billed on an event count as
+#: the same money -- LNL hired the gear and passed its cost straight through.
+EXPENSE_EVENT_RENTAL_TOLERANCE = Decimal('0.10')
+
+#: Words a rental memo shares with half the events in lnldb, so finding one in
+#: both says nothing about which show it was.
+EVENT_NAME_STOPWORDS = frozenset((
+    'and', 'for', 'the', 'with', 'from', 'wpi', 'lnl', 'lens', 'lights', 'light',
+    'services', 'service', 'rental', 'rentals', 'rent', 'hire', 'equipment', 'gear',
+    'lighting', 'sound', 'audio', 'video', 'stage', 'staging', 'projector',
+    'projection', 'invoice', 'event', 'events', 'show', 'expenses', 'expense',
+))
+
+
+def _event_label(event):
+    """ How a suggested event reads on a chip: the name, and when it ran. """
+    return '%s · %s' % (event.event_name, date_format(event.datetime_start, 'M j, Y'))
+
+
+def term_window(text):
+    """
+    ``(first day, last day)`` of the WPI term a piece of text names, or ``None``.
+
+    The first term code found wins, widened by :data:`WPI_TERM_SLACK_DAYS` on
+    each side. See :data:`WPI_TERM_MONTHS` for why the code is read rather than
+    thrown away.
+    """
+    match = WPI_TERM_CODE.search(text or '')
+    if not match:
+        return None
+    code = match.group(0).upper()
+    letter, year = (code[:2], code[2:]) if code.startswith('CM') else (code[:1], code[1:])
+    first, last = WPI_TERM_MONTHS[letter]
+    year = 2000 + int(year)
+    slack = datetime.timedelta(days=WPI_TERM_SLACK_DAYS)
+    return (datetime.date(year, first, 1) - slack,
+            datetime.date(year, last, calendar.monthrange(year, last)[1]) + slack)
+
+
+def event_names_in_expense_memo(txn):
+    """
+    Every piece of an expense memo that might be an event's name, as written.
+
+    Bracketed segments first, because that is where an event is most often
+    parked; then the house-format description; then the memo whole. Each is
+    offered with its term code stripped, as :func:`event_name_from_memo` does,
+    and as written, because lnldb names some shows with the term and some
+    without -- ``Goat Talent C26`` sits beside ``Pan Asian Festival``.
+    """
+    memo = txn.journal_line_memo or txn.memo or ''
+    pieces = re.findall(r'\(([^()]+)\)', memo)
+    pieces.append(parse_memo(memo).description)
+    pieces.append(memo)
+    out = []
+    for piece in pieces:
+        for name in (_collapse(WPI_TERM_CODE.sub(' ', piece or '')), _collapse(piece)):
+            if len(name) >= 3 and name.lower() not in (n.lower() for n in out):
+                out.append(name)
+    return out
+
+
+def _distinctive_words(text):
+    """
+    The words in ``text`` worth matching an event name on.
+
+    A trailing two-digit year comes off ("NSO25" is NSO), term codes go
+    entirely, and anything on :data:`EVENT_NAME_STOPWORDS` or shorter than three
+    letters is dropped.
+    """
+    words = set()
+    for word in re.findall(r'[a-z0-9]+', WPI_TERM_CODE.sub(' ', text or '').lower()):
+        word = re.sub(r'^([a-z]+)\d{2}$', r'\1', word)
+        if len(word) >= 3 and word not in EVENT_NAME_STOPWORDS:
+            words.add(word)
+    return words
+
+
+def _rentals_total(event):
+    """ What the event billed its client for hired-in gear, before LNL's fee. """
+    return sum((money(rental.totalcost) for rental in event.rentals.all()), ZERO)
+
+
+def suggest_expense_event(txn, spend_category=None):
+    """
+    The event a cost was incurred for, when the memo says so.
+
+    Two answers, and they are not the same kind of thing:
+
+    * **An exact name.** A bracketed segment, the description, or the memo
+      whole matching an event's name outright, case-insensitively and without
+      the term code. That is somebody writing down which show the money was for,
+      so it fills the box in, the same as an ISD memo does for revenue.
+    * **A resemblance.** On a line that looks like an event cost -- filed to the
+      pass-through category, or a memo that says "rental" -- the events either
+      side of the date whose names share a distinctive word with the memo. One
+      chip at most, and only when one event leads outright: the queue used to
+      offer five scored guesses under the revenue box, and five guesses is a
+      puzzle rather than a shortcut. Gear the event billed its client for at
+      about this price breaks a tie, because a pass-through is exactly that.
+
+    ``spend_category`` is the category suggestion already worked out for this
+    line, if any; it decides whether guessing is worth doing at all.
+
+    Returns a :class:`Suggestion` or ``None``.
+    """
+    from events.models import BaseEvent
+
+    from finance.models import event_passthrough_category
+
+    if txn.net_amount >= 0:
+        return None
+
+    memo = txn.journal_line_memo or txn.memo or ''
+    # A term code in the memo says when the show was, which beats any window
+    # drawn round the date the money moved. See WPI_TERM_MONTHS.
+    term = term_window(memo)
+
+    names = event_names_in_expense_memo(txn)
+    if names:
+        reach = datetime.timedelta(days=EXPENSE_EVENT_LOOKUP_DAYS)
+        named = Q()
+        for name in names:
+            named |= Q(event_name__iexact=name)
+        matches = list(BaseEvent.objects.filter(
+            named, cancelled=False, test_event=False,
+            datetime_start__date__range=term or (txn.accounting_date - reach,
+                                                 txn.accounting_date + reach))[:10])
+        if matches:
+            event = min(matches, key=lambda e: abs((e.datetime_start.date()
+                                                    - txn.accounting_date).days))
+            return Suggestion(
+                event.pk, HIGH,
+                'Memo names this event (%s)' % date_format(event.datetime_start, 'M j, Y'),
+                _event_label(event), source=MEMO)
+
+    passthrough = event_passthrough_category()
+    looks_like_event_cost = (
+        'rental' in memo.lower()
+        or (passthrough is not None and spend_category is not None
+            and spend_category.value == passthrough.pk))
+    wanted = _distinctive_words(memo)
+    if not looks_like_event_cost or not wanted:
+        return None
+
+    window = term or (
+        txn.accounting_date - datetime.timedelta(days=EXPENSE_EVENT_GUESS_BEFORE_DAYS),
+        txn.accounting_date + datetime.timedelta(days=EXPENSE_EVENT_GUESS_AFTER_DAYS))
+    candidates = (BaseEvent.objects
+                  .filter(cancelled=False, test_event=False,
+                          datetime_start__date__range=window)
+                  .prefetch_related('rentals'))
+
+    cost = -money(txn.net_amount)
+    scored = []
+    for event in candidates:
+        shared = wanted & _distinctive_words(event.event_name)
+        if not shared:
+            continue
+        score = Decimal(len(shared))
+        billed = _rentals_total(event)
+        if billed:
+            score += Decimal('0.5')
+            if abs(billed - cost) <= cost * EXPENSE_EVENT_RENTAL_TOLERANCE:
+                score += 1
+        distance = abs((event.datetime_start.date() - txn.accounting_date).days)
+        scored.append((score, -distance, event, shared))
+    if not scored:
+        return None
+
+    scored.sort(key=lambda row: (row[0], row[1]), reverse=True)
+    best = scored[0]
+    # A tie on the evidence is a question, not an answer. Being nearer in date
+    # is not evidence of which show it was, so it orders the list but never
+    # breaks a tie on its own.
+    if len(scored) > 1 and scored[1][0] == best[0]:
+        return None
+
+    score, _, event, shared = best
+    return Suggestion(
+        event.pk, MEDIUM,
+        'Memo shares "%s" with this event (%s) -- check it'
+        % ('", "'.join(sorted(shared)), date_format(event.datetime_start, 'M j, Y')),
+        _event_label(event), source=GUESS)
 
 
 # ---------------------------------------------------------------------------
@@ -876,6 +1174,9 @@ def suggest_all(txn, tags=None, rules=None):
             'description': suggest_description(txn),
             'linked_event': suggest_linked_event(txn),
             'refund_of': suggest_refund_target(txn),
+            # An SGA reimbursement quotes the request it repays, and lands in
+            # the funding-request fund; everything else is the account's own.
+            'fund_source': suggest_fund_source(txn, reference=fields.reference),
             'project_tag': suggest_project_tag(txn, tags=tags),
             'warning': '',
         }
@@ -886,23 +1187,61 @@ def suggest_all(txn, tags=None, rules=None):
 
     # A number the memo quotes that lnldb has never heard of. Worth saying out
     # loud: either the request has not been entered yet or the memo is wrong,
-    # and both are things to fix before this line is filed anywhere.
+    # and both are things to fix before this line is filed anywhere. When the
+    # same number exists under another body's letter, that request is offered
+    # as the likely typo.
     unmatched = fields.reference if (fields.reference and funding_request is None) else ''
+    near_miss = near_miss_funding_request(unmatched) if unmatched else None
+
+    spend_category = suggest_spend_category(txn, rules=rules, fr_line=fr_line, fields=fields)
+    linked_event = suggest_expense_event(txn, spend_category=spend_category)
 
     return {
         'kind': 'expense',
         'memo': fields,
         'description': suggest_description(txn),
-        'spend_category': suggest_spend_category(txn, rules=rules, fr_line=fr_line,
-                                                 fields=fields),
+        'spend_category': spend_category,
         'fund_source': suggest_fund_source(txn, funding_request=funding_request,
-                                           unmatched_reference=unmatched),
-        'fr_line_target': suggest_fr_line(funding_request, fr_line, fields),
+                                           reference=fields.reference),
+        'fr_line_target': (suggest_fr_line(funding_request, fr_line, fields)
+                           or suggest_near_miss_line(unmatched, near_miss, fields)),
         'funding_request': funding_request,
+        'near_miss': near_miss,
         'project_tag': suggest_project_tag(txn, tags=tags),
-        'warning': ('The memo quotes funding request %s, which is not in lnldb. Enter the '
-                    'request, or route this line by hand.' % unmatched) if unmatched else '',
+        'linked_event': linked_event,
+        'needs_event': _needs_event(spend_category, linked_event),
+        'warning': _unmatched_reference_warning(unmatched, near_miss),
     }
+
+
+def _unmatched_reference_warning(reference, near_miss):
+    """ What the queue row says about a request number lnldb does not have. """
+    if not reference:
+        return ''
+    if near_miss is not None:
+        return ('The memo quotes %s, which is not in lnldb, but %s (%s) has the same number. '
+                "If one of the letters is a typo, pick that request's line; if not, enter %s."
+                % (reference, near_miss.reference, near_miss.name, reference))
+    return ('The memo quotes funding request %s, which is not in lnldb. Enter the request, '
+            'or route this line by hand.' % reference)
+
+
+def _needs_event(spend_category, linked_event):
+    """
+    Whether a cost is filed as passed through to an event without naming one.
+
+    The pass-through category exists to say "this was one show's cost", so a
+    line headed there with no event filled in is a line whose most useful
+    answer is still missing -- and the event P&L cannot see it.
+    """
+    from finance.models import event_passthrough_category
+
+    passthrough = event_passthrough_category()
+    if passthrough is None or spend_category is None:
+        return False
+    if spend_category.value != passthrough.pk:
+        return False
+    return linked_event is None or not linked_event.is_lookup
 
 
 def lookups_for_form(suggestions):

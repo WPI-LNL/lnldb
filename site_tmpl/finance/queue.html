@@ -134,12 +134,21 @@
 
                     {% comment %}
                         A request number the memo quotes that lnldb has never
-                        heard of. Nothing is filled in for this line on purpose
-                        -- see finance.suggestions.suggest_fund_source.
+                        heard of. The fund is still filled in -- every SGA
+                        number is a funding request -- but which request is the
+                        open question. When lnldb has the same number under
+                        another body's letter, the tag names both, because a
+                        typo on one side is the likeliest story and only the
+                        Treasurer can say which.
                     {% endcomment %}
                     {% if row.suggestions.warning %}
                         <span class="fin-tag is-alert" title="{{ row.suggestions.warning }}">
-                            <span class="glyphicon glyphicon-alert"></span> Unknown request
+                            <span class="glyphicon glyphicon-alert"></span>
+                            {% if row.suggestions.near_miss %}
+                                {{ row.suggestions.memo.reference }} or {{ row.suggestions.near_miss.reference }}?
+                            {% else %}
+                                Unknown request
+                            {% endif %}
                         </span>
                     {% endif %}
 
@@ -153,6 +162,20 @@
                         <span class="fin-tag is-warn"
                               title="A pending encumbrance of about this amount is open. Match it below rather than reconciling, or the budget line is charged twice.">
                             <span class="glyphicon glyphicon-lock"></span> Maybe encumbered
+                        </span>
+                    {% endif %}
+
+                    {% comment %}
+                        Filed as passed through to a show, without saying which
+                        show. The event is the only thing that makes this line
+                        count towards that show's costs on the event P&L, so
+                        the row says it is missing rather than leaving it to be
+                        noticed there.
+                    {% endcomment %}
+                    {% if row.needs_event %}
+                        <span class="fin-tag is-warn"
+                              title="This looks like a cost passed through to one event. Name the event under More so it counts against that show.">
+                            <span class="glyphicon glyphicon-calendar"></span> Which event?
                         </span>
                     {% endif %}
                 </div>
@@ -212,7 +235,9 @@
                             {% comment %}
                                 Poka-Yoke: the form only holds the fields valid
                                 for this direction, so a revenue row is
-                                structurally incapable of posting a fund.
+                                structurally incapable of posting a spend
+                                category. The fund is on both: money goes into
+                                one as surely as it comes out of one.
                             {% endcomment %}
                             {% if row.is_revenue %}
                                 {% comment %}
@@ -228,6 +253,7 @@
                                 {% include 'finance/_queue_field.html' with field=row.form.refund_of label="Refund of" size="lg" autofilled=row.form.autofilled.refund_of suggestion=row.suggestions.refund_of only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Link to Event" size="lg" autofilled=row.form.autofilled.linked_event only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.non_event_revenue_type label="or Non-Event Revenue" size="md" only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.fund_source label="Into fund" size="md" autofilled=row.form.autofilled.fund_source suggestion=row.suggestions.fund_source only %}
                             {% else %}
                                 {% include 'finance/_queue_field.html' with field=row.form.fund_source label="Fund" size="md" autofilled=row.form.autofilled.fund_source suggestion=row.suggestions.fund_source only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.lnl_spend_category label="Spend Category" size="md" autofilled=row.form.autofilled.lnl_spend_category suggestion=row.suggestions.spend_category only %}
@@ -267,7 +293,7 @@
                         {% endcomment %}
                         <div class="fin-fields fin-fields-more{% if not row.expanded %} is-folded{% endif %}">
                             {% if not row.is_revenue %}
-                                {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Incurred for event" size="lg" only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Incurred for event" size="lg" autofilled=row.form.autofilled.linked_event suggestion=row.suggestions.linked_event only %}
                             {% endif %}
 
                             {% include 'finance/_queue_field.html' with field=row.form.project_tag label="Project" size="md" autofilled=row.form.autofilled.project_tag suggestion=row.suggestions.project_tag only %}

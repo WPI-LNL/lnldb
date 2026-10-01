@@ -239,6 +239,7 @@ class GroupFixtureTest(TestCase):
         'view_subledger', 'edit_subledger', 'settle_subledger',
         'view_subledger_receipts', 'import_workdaytransaction',
         'manage_projecttag', 'manage_fundingrequest', 'view_fundingrequest',
+        'close_fiscalyear',
     }
 
     def _held_by(self, group_name):

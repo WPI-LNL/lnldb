@@ -14,7 +14,8 @@ from mptt.admin import MPTTModelAdmin
 from reversion.admin import VersionAdmin
 
 from finance.importers import COLUMN_ALIASES
-from finance.models import (ColumnAlias, FinanceSettings, FRLineItem, FundingRequest, FundSource,
+from finance.models import (BalanceCheckpoint, ColumnAlias, FinanceSettings, FiscalYearClose,
+                            FRLineItem, FundingRequest, FundSource, FundTransfer,
                             ParsedTransaction, PartitionCode, ProjectTag, RevenueSource,
                             ServiceColor, SpendCategory, SuggestionRule, WorkdayTransaction)
 
@@ -66,9 +67,18 @@ class SuggestionRuleInline(admin.TabularInline):
 
 @admin.register(SpendCategory)
 class SpendCategoryAdmin(VocabularyAdmin):
-    """ LNL's own spending buckets, each with the colour it charts in. """
-    list_display = ('name', 'swatch', 'slug', 'sort_order', 'is_active', 'in_use', 'rule_count')
-    fields = ('name', 'slug', 'color', 'description', 'sort_order', 'is_active')
+    """
+    LNL's own spending buckets, each with the colour it charts in.
+
+    ``is_event_passthrough`` was only ever settable by a data migration, which
+    left the category that "Incurred for event" files into -- and that the
+    queue's *Which event?* tag watches for -- invisible to the one person who
+    decides it. It is on the list view too, so which row holds it is a glance.
+    """
+    list_display = ('name', 'swatch', 'slug', 'is_event_passthrough', 'sort_order',
+                    'is_active', 'in_use', 'rule_count')
+    fields = ('name', 'slug', 'color', 'description', 'is_event_passthrough', 'sort_order',
+              'is_active')
     inlines = (SuggestionRuleInline,)
 
     @admin.display(description="Colour")
@@ -96,11 +106,19 @@ class FundSourceAdmin(VocabularyAdmin):
     Fund worktag identifies one -- both are on the list view, because which
     fund holds which is worth being able to see at a glance rather than by
     opening three rows.
+
+    The balance page reads two more: which account each fund is held in, and
+    what happens to it at year end. The carry-forward fund held in an account
+    is that account's own money, so getting these right is what makes the
+    balances add up.
     """
-    list_display = ('name', 'slug', 'workday_fund_codes', 'requires_funding_request',
-                    'is_default', 'sort_order', 'is_active', 'in_use')
-    fields = ('name', 'slug', 'description', 'workday_fund_codes',
-              'requires_funding_request', 'is_default', 'sort_order', 'is_active')
+    list_display = ('name', 'slug', 'account', 'behaviour', 'workday_fund_codes',
+                    'requires_funding_request', 'is_default', 'sort_order', 'is_active',
+                    'in_use')
+    list_select_related = ('account',)
+    fields = ('name', 'slug', 'description', 'account', 'behaviour', 'workday_fund_codes',
+              'workday_tracking_values', 'requires_funding_request', 'is_default',
+              'sort_order', 'is_active')
 
 
 @admin.register(RevenueSource)
@@ -312,3 +330,45 @@ class ColumnAliasAdmin(admin.ModelAdmin):
                 help_text=db_field.help_text,
                 widget=admin.widgets.AdminRadioSelect(attrs={'class': 'inline'}))
         return super(ColumnAliasAdmin, self).formfield_for_dbfield(db_field, request, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Fund balances
+#
+# Each of these has a page of its own under Balances, which is where they are
+# meant to be entered. They are here for looking things up, and for the rare
+# correction the pages do not offer.
+# ---------------------------------------------------------------------------
+
+@admin.register(BalanceCheckpoint)
+class BalanceCheckpointAdmin(VersionAdmin):
+    """ What Workday said each account held, by day. """
+    list_display = ('account', 'as_of', 'balance', 'note', 'entered_by')
+    list_filter = ('account',)
+    date_hierarchy = 'as_of'
+    list_select_related = ('account', 'entered_by')
+    raw_id_fields = ('entered_by',)
+
+
+@admin.register(FundTransfer)
+class FundTransferAdmin(VersionAdmin):
+    """ Money moved between funds inside one account. """
+    list_display = ('date', 'account', 'from_fund', 'to_fund', 'amount', 'kind', 'description')
+    list_filter = ('kind', 'account', 'from_fund', 'to_fund')
+    date_hierarchy = 'date'
+    list_select_related = ('account', 'from_fund', 'to_fund')
+    raw_id_fields = ('created_by', 'fiscal_year_close')
+
+
+@admin.register(FiscalYearClose)
+class FiscalYearCloseAdmin(admin.ModelAdmin):
+    """
+    The record of each closed year. Read-only: closing and reopening happen on
+    the balance page, which makes and takes back the year-end transfers with it.
+    """
+    list_display = ('fiscal_year', 'closed_on', 'closed_by')
+    readonly_fields = ('fiscal_year', 'closed_on', 'closed_by', 'snapshot', 'notes')
+
+    def has_add_permission(self, request):
+        """ Only the close page creates these. """
+        return False

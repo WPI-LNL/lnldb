@@ -32,7 +32,10 @@ from finance.models import ProjectTag
 
 
 class EventLookup(LookupChannel):
-    """ Powers the "Link to Event" search on revenue lines. """
+    """
+    Powers the event picker on both directions: "Link to Event" on revenue,
+    "Incurred for event" on a cost billed straight through to one show.
+    """
     model = BaseEvent
 
     def check_auth(self, request):

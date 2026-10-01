@@ -320,10 +320,18 @@ class RoutingExclusivityTests(TestCase):
     def test_revenue_cannot_carry_expense_routing(self):
         parent = make_txn(op='R1', net_amount=Decimal('500.00'))
         entry = ParsedTransaction(parent_transaction=parent, amount=Decimal('500.00'),
-                                  linked_event=self.event, fund_source=fund('sga_budget'))
+                                  linked_event=self.event,
+                                  lnl_spend_category=category('consumables'))
         with self.assertRaises(ValidationError) as ctx:
             entry.full_clean()
-        self.assertIn('fund_source', ctx.exception.error_dict)
+        self.assertIn('lnl_spend_category', ctx.exception.error_dict)
+
+    def test_revenue_may_name_the_fund_it_goes_into(self):
+        """ The fund is shared: money comes out of one and goes into one. """
+        parent = make_txn(op='R1B', net_amount=Decimal('500.00'))
+        entry = ParsedTransaction(parent_transaction=parent, amount=Decimal('500.00'),
+                                  linked_event=self.event, fund_source=fund('legacy'))
+        entry.full_clean()
 
     def test_expense_cannot_be_classified_as_non_event_revenue(self):
         parent = make_txn(op='R2')

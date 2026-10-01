@@ -94,14 +94,22 @@ def queue(request):
             'close_encumbrance': close_encumbrance,
             'is_revenue': txn.net_amount > 0,
             'partially_allocated': txn.slice_count > 0,
+            # A cost filed as passed through to a show without saying which
+            # show; see finance.suggestions._needs_event.
+            'needs_event': suggestions.get('needs_event', False),
             # The seldom-used fields are folded away so a row reads as two
             # boxes and a button. Unfolded again for the lines that actually
-            # have something in there: a project we found, a partition that is
-            # not the ordinary one, or a crossing that has to be explained.
+            # have something in there: a project or an event we found, a cost
+            # that still needs its event, a partition that is not the ordinary
+            # one, or a crossing that has to be explained.
             'expanded': bool(txn.crossing_requires_reason
                              or txn.defaults_to_projection
                              or form.autofilled.get('project_tag')
-                             or suggestions.get('project_tag')),
+                             or suggestions.get('project_tag')
+                             or (txn.net_amount < 0
+                                 and (form.autofilled.get('linked_event')
+                                      or suggestions.get('linked_event')
+                                      or suggestions.get('needs_event')))),
         })
 
     context = {
@@ -375,6 +383,11 @@ def suggestions_json(request, pk):
                'crossing_requires_reason': txn.crossing_requires_reason}
 
     payload['warning'] = data.get('warning', '')
+    payload['needs_event'] = data.get('needs_event', False)
+    # The request whose number differs from the memo's only by its letter --
+    # A.27.16 against F.27.16 -- or '' when there is none.
+    near_miss = data.get('near_miss')
+    payload['near_miss'] = near_miss.reference if near_miss is not None else ''
     # The memo's first field, which is what the ledger's Description gets.
     payload['description'] = data.get('description', '')
 

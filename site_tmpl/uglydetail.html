@@ -3,6 +3,7 @@
 {% load permissionif %}
 {% load gpa_scale_emoji %}
 {% load spotify_tags %}
+{% load finance_extras %}
 
 {% block title %}{{event}} | Lens and Lights at WPI{% endblock %}
 {% block content %}
@@ -808,6 +809,62 @@
                                 </tr>
                             {% endfor %}
                         </table>
+                    {% endif %}
+
+                    {% comment %}
+                        What the subledger says this show actually brought in and
+                        cost, beside what it was billed. Only there for someone
+                        who can read the subledger -- viewevent leaves `finance`
+                        out of the context otherwise. The figures, and why the
+                        billed amount is the latest bill rather than the sum of
+                        them, are finance.calculators.event_financials.
+                    {% endcomment %}
+                    {% if finance %}
+                        <h2>Finance</h2>
+                        <table class="table">
+                            <thead>
+                            <tr>
+                                <th>Billed</th>
+                                <th>Received</th>
+                                <th>Direct costs</th>
+                                <th>Margin</th>
+                                {% if finance.rentals_billed or finance.passthrough_cost %}
+                                    <th>Rentals billed / cost</th>
+                                {% endif %}
+                            </tr>
+                            </thead>
+                            <tr>
+                                <td>
+                                    {% if finance.billed is not None %}
+                                        {{ finance.billed|money }}{% if finance.billed_source == 'multibill' %} <small class="text-muted">(share of a multi-bill)</small>{% endif %}
+                                    {% else %}
+                                        <span class="text-muted">not billed</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ finance.received|money }}</td>
+                                <td>
+                                    {{ finance.costs|money }}
+                                    {% if finance.reserved %}<br><small class="text-muted">+ {{ finance.reserved|money }} reserved, not yet charged</small>{% endif %}
+                                </td>
+                                <td class="{% if finance.margin < 0 %}text-danger{% elif finance.margin > 0 %}text-success{% endif %}">
+                                    {{ finance.margin|money }}{% if finance.margin_percent is not None %} <small>({{ finance.margin_percent }}%)</small>{% endif %}
+                                </td>
+                                {% if finance.rentals_billed or finance.passthrough_cost %}
+                                    <td>{{ finance.rentals_recovered|money }} / {{ finance.passthrough_cost|money }}</td>
+                                {% endif %}
+                            </tr>
+                        </table>
+                        {% for key, label in finance.flags %}
+                            <span class="label {% if key == 'loss' or key == 'rental_under_billed' %}label-danger{% else %}label-warning{% endif %}">{{ label }}</span>
+                        {% endfor %}
+                        <p>
+                            {% if finance.entries %}
+                                <a href="{% url 'finance:ledger' %}?event={{ event.pk }}">
+                                    {{ finance.entries }} subledger entr{{ finance.entries|pluralize:'y,ies' }} linked to this event</a>
+                            {% else %}
+                                <span class="text-muted">Nothing in the subledger is linked to this event yet.</span>
+                            {% endif %}
+                        </p>
                     {% endif %}
 
                     {% permission request.user has 'events.event_view_sensitive' of event %}

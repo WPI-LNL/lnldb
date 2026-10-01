@@ -224,6 +224,86 @@
         </div>
     </div>
 
+    {# ---- What each fund holds ---- #}
+    {% comment %}
+        Today's figures whatever year the filter bar shows: a balance is a
+        question about now. The Balances page has every year, and the Workday
+        figures that prove these.
+    {% endcomment %}
+    {% if funds_now.accounts %}
+        <div class="fin-panel">
+            <div class="fin-panel-head">
+                <span>What Each Fund Holds Today</span>
+                <a href="{% url 'finance:balances' %}?fy={{ current_fiscal_year }}&amp;partition={{ filter_state.partition|default:'all' }}"
+                   class="fin-muted" style="font-weight:400;font-size:12px;">Balances &rarr;</a>
+            </div>
+            <div class="fin-table-wrap">
+                <table class="table fin-table">
+                    {% for account in funds_now.accounts %}
+                        <tr>
+                            <th>{{ account.code }}</th>
+                            <th class="fin-num">
+                                {% if account.cash_known %}{{ account.closing_cash|money }}{% else %}<span class="fin-muted">no Workday balance yet</span>{% endif %}
+                            </th>
+                            <th></th>
+                        </tr>
+                        {% for row in account.rows %}
+                            <tr>
+                                <td>{{ row.name }}</td>
+                                <td class="fin-num {{ row.closing|money_class }}">{{ row.closing|money }}</td>
+                                <td class="fin-muted">{{ row.status }}</td>
+                            </tr>
+                        {% endfor %}
+                        {% if account.unfiled_closing %}
+                            <tr>
+                                <td><a href="{% url 'finance:queue' %}">Not filed yet</a></td>
+                                <td class="fin-num">{{ account.unfiled_closing|money }}</td>
+                                <td class="fin-muted">in no fund until it is filed</td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    {# ---- Events that lost money ---- #}
+    {% comment %}
+        The question after every big show with a hired-in rig. Costs here are
+        only what has been linked to the event -- "Incurred for event" -- so an
+        event missing from this list may simply have nothing linked to it yet.
+    {% endcomment %}
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>Events That Cost More Than They Brought In</span>
+            <a href="{% url 'finance:events' %}?{{ filter_state.querystring }}"
+               class="fin-muted" style="font-weight:400;font-size:12px;">Every event &rarr;</a>
+        </div>
+        <div class="fin-table-wrap">
+            <table class="table fin-table">
+                {% for row in event_losses %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'events:detail' row.event.pk %}">{{ row.event.event_name }}</a>
+                            <span class="fin-muted">{{ row.event.datetime_start|date:"M j, Y" }}</span>
+                        </td>
+                        <td class="fin-num">{{ row.received|money }} <span class="fin-muted">in</span></td>
+                        <td class="fin-num">{{ row.costs|money }} <span class="fin-muted">out</span></td>
+                        <td class="fin-num {{ row.margin|money_class }}">{{ row.margin|money }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td>
+                        <div class="fin-empty">
+                            <span class="glyphicon glyphicon-calendar"></span>
+                            No event in this period has cost more than it brought in -- of the ones with
+                            costs linked to them.
+                        </div>
+                    </td></tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+
     {# ---- Funding request burndowns ---- #}
     <div class="fin-panel">
         <div class="fin-panel-head">

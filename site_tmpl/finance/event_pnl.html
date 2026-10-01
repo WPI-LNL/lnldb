@@ -1,0 +1,156 @@
+{# What each event made or lost: billed, received, direct costs and margin. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    {% comment %}
+        The year here is the year the event *ran*, and every entry linked to it
+        counts whatever year it landed in -- see finance.calculators. Said on
+        the page because it is the one place in the app where the filter bar's
+        year means something other than an entry's own date.
+    {% endcomment %}
+    <div class="fin-stats">
+        <div class="fin-stat">
+            <div class="fin-stat-label">Received</div>
+            <div class="fin-stat-value text-success">{{ totals.received|money }}</div>
+            <div class="fin-stat-sub">{{ totals.billed|money }} billed</div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Direct costs</div>
+            <div class="fin-stat-value text-danger">{{ totals.costs|money }}</div>
+            <div class="fin-stat-sub">
+                {{ totals.passthrough_cost|money }} passed through{% if totals.reserved %} &middot; {{ totals.reserved|money }} reserved{% endif %}
+            </div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Margin</div>
+            <div class="fin-stat-value {{ totals.margin|money_class }}">{{ totals.margin|money }}</div>
+            <div class="fin-stat-sub">
+                {{ totals.events }} event{{ totals.events|pluralize }}
+                {% if filter_state.fiscal_year %}that ran in FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}{% endif %}
+            </div>
+        </div>
+        <div class="fin-stat">
+            <div class="fin-stat-label">Lost money</div>
+            <div class="fin-stat-value {% if totals.losses %}text-danger{% else %}text-muted{% endif %}">{{ totals.losses }}</div>
+            <div class="fin-stat-sub">events where costs beat what came in</div>
+        </div>
+    </div>
+
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>Events</span>
+            <span class="fin-locked-note">
+                by the year each event ran &middot; every linked entry counts, whenever it landed
+            </span>
+        </div>
+        <div class="fin-panel-body" style="padding:8px 14px;">
+            <form method="get" class="form-inline">
+                <input type="hidden" name="fy" value="{{ filter_state.fiscal_year|default:'all' }}">
+                <input type="hidden" name="partition" value="{{ filter_state.partition|default:'all' }}">
+                <div class="form-group">
+                    <select name="flag" class="form-control input-sm" onchange="this.form.submit()">
+                        <option value="">Every event</option>
+                        {% for key, label, count in flag_options %}
+                            <option value="{{ key }}" {% if active_flag == key %}selected{% endif %}>{{ label }} ({{ count }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="checkbox" style="margin-left:12px;">
+                    <label title="Events billed in lnldb with nothing linked to them yet -- mostly revenue still waiting in the queue.">
+                        <input type="checkbox" name="show" value="all" {% if show_all %}checked{% endif %}
+                               onchange="this.form.submit()">
+                        Include billed events with nothing linked yet
+                    </label>
+                </div>
+                <noscript><button type="submit" class="btn btn-default btn-sm">Apply</button></noscript>
+            </form>
+        </div>
+        <div class="fin-table-wrap">
+            <table class="table fin-table">
+                <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>Client</th>
+                        <th class="fin-num">Billed</th>
+                        <th class="fin-num">Received</th>
+                        <th class="fin-num">Direct costs</th>
+                        <th class="fin-num">Margin</th>
+                        <th class="fin-num" title="What the event billed its client for hired-in gear, plus LNL's rental fee, against what the hire actually cost">Rentals billed / cost</th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'events:detail' row.event.pk %}">{{ row.event.event_name }}</a>
+                                <div class="fin-muted">{{ row.event.datetime_start|date:"M j, Y" }}</div>
+                            </td>
+                            <td>
+                                {{ row.client|default:"—" }}
+                                <div class="fin-muted">{{ row.client_type }}</div>
+                            </td>
+                            <td class="fin-num">
+                                {% if row.billed is not None %}
+                                    {{ row.billed|money }}
+                                    {% if row.billed_source == 'multibill' %}
+                                        <div class="fin-muted" title="This event's share of one bill covering several events, split by what each would have cost on its own.">share of a multi-bill</div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="fin-muted">not billed</span>
+                                {% endif %}
+                            </td>
+                            <td class="fin-num">{{ row.received|money }}</td>
+                            <td class="fin-num">
+                                {{ row.costs|money }}
+                                {% if row.reserved %}
+                                    <div class="fin-muted" title="Encumbered for this event and not yet charged. Not counted in the cost or the margin.">+ {{ row.reserved|money }} reserved</div>
+                                {% endif %}
+                            </td>
+                            <td class="fin-num {{ row.margin|money_class }}">
+                                {{ row.margin|money }}
+                                {% if row.margin_percent is not None %}
+                                    <div class="fin-muted">{{ row.margin_percent }}%</div>
+                                {% endif %}
+                            </td>
+                            <td class="fin-num">
+                                {% if row.rentals_billed or row.passthrough_cost %}
+                                    {{ row.rentals_recovered|money }} / {{ row.passthrough_cost|money }}
+                                {% else %}
+                                    <span class="fin-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% for key, label in row.flags %}
+                                    <span class="fin-tag {% if key == 'loss' or key == 'rental_under_billed' %}is-alert{% else %}is-warn{% endif %}">{{ label }}</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% if row.entries %}
+                                    <a href="{% url 'finance:ledger' %}?event={{ row.event.pk }}"
+                                       class="btn btn-xs btn-default"
+                                       title="The {{ row.entries }} entr{{ row.entries|pluralize:'y,ies' }} linked to this event">
+                                        {{ row.entries }} &rsaquo;
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="9">
+                            <div class="fin-empty">
+                                <span class="glyphicon glyphicon-calendar"></span>
+                                <strong>No events here yet.</strong>
+                                <div>
+                                    Link a cost or a deposit to an event -- "Incurred for event" in the queue
+                                    or on an entry -- and it appears on this page.
+                                </div>
+                            </div>
+                        </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

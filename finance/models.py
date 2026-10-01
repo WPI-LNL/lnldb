@@ -257,6 +257,12 @@ class FinanceSettings(models.Model):
         default=1, verbose_name="Future years in the picker",
         help_text="How many upcoming fiscal years to offer, for encumbrances and awards "
                   "booked ahead of time.")
+    ledger_start_date = models.DateField(
+        null=True, blank=True, verbose_name="Books start on",
+        help_text="The first day the subledger accounts for every line. Fund balances are "
+                  "worked out from here: whatever each account held the night before is its "
+                  "opening, and every line on or after it counts. Leave blank to start at the "
+                  "beginning of the fiscal year of the earliest imported line.")
 
     class Meta:
         verbose_name = "Finance Configuration"
@@ -357,6 +363,24 @@ def current_fiscal_year():
     return fiscal_year_for(timezone.localdate())
 
 
+def books_start_date():
+    """
+    The first day fund balances are counted from, or ``None`` with no lines yet.
+
+    The Treasurer's own date when one is set. Otherwise the start of the fiscal
+    year of the earliest imported line, which is where reconciling began: an
+    install that imported FY26 onwards and filed it has books from July 2025.
+    """
+    configured = finance_settings().ledger_start_date
+    if configured:
+        return configured
+    earliest = WorkdayTransaction.objects.order_by('accounting_date').values_list(
+        'accounting_date', flat=True).first()
+    if earliest is None:
+        return None
+    return fiscal_year_bounds(fiscal_year_for(earliest))[0]
+
+
 def fiscal_year_choices(back=None, forward=None):
     """ Descending list of ``(fy, "FY26 (Jul 2025 - Jun 2026)")`` tuples for filters. """
     config = finance_settings()
@@ -374,13 +398,17 @@ def fiscal_year_choices(back=None, forward=None):
 # ---------------------------------------------------------------------------
 # Enumerations
 #
-# Only two things stay hard-coded here, and both are code rather than data:
+# Only three things stay hard-coded here, and all three are code rather than
+# data:
 #
 # * TransactionStatus is a state machine. ``settle()``, ``clean()`` and a
 #   database CheckConstraint all branch on these two values, so adding a third
 #   from the admin would change nothing without code to go with it.
 # * ClientType is *derived* from the linked event's billing fund. It is never
 #   stored or chosen, so there is nothing to configure.
+# * FundBehaviour is what the year-end close and the balance page branch on.
+#   The funds themselves are rows anyone can add; how money in one behaves at
+#   June 30 is one of three things SGA does, and a fourth would need code.
 #
 # Everything a Treasurer might reasonably want to add or rename -- spend
 # categories, fund sources, revenue sources, auto-suggest rules, the partition
@@ -404,6 +432,28 @@ class ClientType(models.TextChoices):
     STUDENT_ORG = 'student_org', 'Student Organization'
     DEPARTMENT = 'department', 'Department'
     UNKNOWN = 'unknown', 'Unknown'
+
+
+class FundBehaviour(models.TextChoices):
+    """
+    What happens to money in a fund, and when it arrives.
+
+    SGA pays clubs three ways, and they disagree about both questions:
+
+    * **Carries forward** -- LNL's own money (Legacy) and Projection's yearly
+      mandatory transfer into 315-AG. Whatever is left on June 30 is next
+      year's opening balance.
+    * **Returns to SGA** -- the annual budget. Deposited before any of it is
+      spent; whatever is unspent at year end goes back, so a positive balance
+      on June 30 is owed rather than owned, and an overspend has to be covered
+      from money that carries.
+    * **Reimbursed after spending** -- funding requests. LNL spends first and
+      SGA pays back what was actually spent, never the award. The balance runs
+      negative between the two, and that negative is money owed *to* LNL.
+    """
+    CARRIES = 'carries', 'Carries forward'
+    RETURNS = 'returns', 'Unspent returns to SGA at year end'
+    REIMBURSED = 'reimbursed', 'Reimbursed by SGA after spending'
 
 
 def event_passthrough_category():
@@ -612,10 +662,43 @@ class FundSource(Vocabulary):
                   "the export, and the queue labels it as such -- but leaving the one "
                   "required box on every row blank is what made reconciling a typing job. "
                   "Tick it on exactly one fund.")
+    behaviour = models.CharField(
+        max_length=16, choices=FundBehaviour.choices, default=FundBehaviour.CARRIES,
+        verbose_name="At year end",
+        help_text="What happens to this money on June 30. Legacy and the Projection mandatory "
+                  "transfer carry forward; the SGA budget's unspent balance goes back to SGA; "
+                  "a funding request is reimbursed after the spending, so its balance runs "
+                  "negative until SGA pays.")
+    account = models.ForeignKey(
+        'PartitionCode', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='funds', verbose_name="Held in",
+        help_text="The Workday account this money sits in. The carry-forward fund held in an "
+                  "account is that account's own money: a line nothing else identifies is "
+                  "filed to it, and it absorbs the account's opening balance.")
+    workday_tracking_values = models.CharField(
+        max_length=255, blank=True, verbose_name="Workday Tracking values",
+        help_text="Comma-separated values of the Tracking worktag that mean this fund, e.g. "
+                  "\"SGA Funding Request\". Exports from FY27 on carry it, and a line whose "
+                  "Tracking matches has this fund filled in.")
 
     class Meta(Vocabulary.Meta):
         abstract = False
         verbose_name = "Fund Source"
+
+    @property
+    def carries_forward(self):
+        """ Whether what is left on June 30 is next year's opening balance. """
+        return self.behaviour == FundBehaviour.CARRIES
+
+    @property
+    def returns_to_sga(self):
+        """ Whether an unspent balance at year end is owed back to SGA. """
+        return self.behaviour == FundBehaviour.RETURNS
+
+    @property
+    def is_reimbursed(self):
+        """ Whether SGA pays this money back after LNL has spent it. """
+        return self.behaviour == FundBehaviour.REIMBURSED
 
 
 def workday_fund_map():
@@ -657,6 +740,61 @@ def fund_source_for_workday_fund(value):
         if haystack == code or haystack.startswith(code + ' ') or code in haystack:
             return source
     return None
+
+
+def fund_tracking_map():
+    """
+    ``{normalised Tracking value: <FundSource>}``, from each fund's list.
+
+    Workday's Tracking worktag says which pot a line was charged to in words
+    rather than codes -- "SGA Funding Request", "Student Org Legacy Funds" -- so
+    it is matched on :func:`normalise_term`, which forgives the spacing and
+    punctuation those words arrive with.
+    """
+    def build():
+        out = {}
+        for source in FundSource.objects.active().exclude(workday_tracking_values=''):
+            for value in source.workday_tracking_values.split(','):
+                key = normalise_term(value)
+                # First fund to claim a value keeps it, as with fund codes.
+                if key and key not in out:
+                    out[key] = source
+        return out
+    return _cached('fund_tracking', build, {})
+
+
+def fund_source_for_tracking(value):
+    """ The fund a Workday Tracking worktag names outright, or ``None``. """
+    return fund_tracking_map().get(normalise_term(value))
+
+
+def account_own_funds():
+    """
+    ``{'226-AG': <FundSource>}`` -- the money each account holds as its own.
+
+    An account's own fund is the carry-forward fund held in it: Legacy in
+    226-AG, the mandatory transfer in 315-AG. It is what an account's opening
+    balance belongs to when nothing says otherwise, and what a line carrying no
+    other clue is filed to. Two carry-forward funds in one account is allowed;
+    the one ticked as the default wins, then the one listed first.
+    """
+    def build():
+        out = {}
+        funds = (FundSource.objects.active()
+                 .filter(behaviour=FundBehaviour.CARRIES, account__isnull=False)
+                 .select_related('account')
+                 .order_by('-is_default', 'sort_order', 'name'))
+        for source in funds:
+            out.setdefault(source.account.code, source)
+        return out
+    return _cached('own_funds', build, {})
+
+
+def own_fund_for_account(code):
+    """ The fund that is account ``code``'s own money, or ``None``. """
+    if not code:
+        return None
+    return account_own_funds().get(code)
 
 
 class RevenueSource(Vocabulary):
@@ -1177,13 +1315,43 @@ class FundingRequestQuerySet(models.QuerySet):
                      queryset=FRLineItem.objects.with_spend().order_by('sort_order', 'pk')))
 
 
+#: SGA's number for a funding request: ``A.27.16``. The letter is the body
+#: that heard it, which depends on the size of the ask; the middle figure is
+#: the fiscal year (FY2027 is 27); the last counts up within that body and
+#: year. So A.27.16 and F.27.16 are two different requests, not one request
+#: written two ways -- see :func:`finance.suggestions.near_miss_funding_request`
+#: for what the queue does when a memo's letter and lnldb's disagree.
+SGA_REFERENCE = re.compile(r'^([AFS])\.(\d{2})\.(\d+)$')
+
+#: Who each letter means, smallest awards first.
+SGA_BODIES = {
+    'A': 'Appropriations Committee',
+    'F': 'Financial Board',
+    'S': 'Senate',
+}
+
+
+def normalise_sga_reference(value):
+    """
+    Strip whitespace and upper-case a request number so it can be compared.
+
+    Treasurers write the same reference as "F.26.6", "f.26.6" and "F. 26. 6";
+    all three are the one stored on the funding request.
+    """
+    return re.sub(r'\s+', '', (value or '')).upper()
+
+
 @reversion.register(follow=['line_items'])
 class FundingRequest(models.Model):
     """ An out-of-cycle SGA funding request. The parent of a set of line items. """
     glyphicon = 'inbox'
 
     name = models.CharField(max_length=192)
-    reference = models.CharField(max_length=64, blank=True, verbose_name="SGA reference #")
+    reference = models.CharField(
+        max_length=64, blank=True, verbose_name="SGA reference #",
+        help_text="As SGA numbers it: the body that approved it (A for Appropriations "
+                  "Committee, F for Financial Board, S for Senate), the fiscal year, and the "
+                  "request's number -- e.g. A.27.16.")
     fiscal_year = models.PositiveIntegerField(default=current_fiscal_year, db_index=True)
     date_submitted = models.DateField(null=True, blank=True)
     date_approved = models.DateField(null=True, blank=True)
@@ -1210,6 +1378,36 @@ class FundingRequest(models.Model):
     def get_absolute_url(self):
         """ This request's detail page, line items and all. """
         return reverse('finance:fr-detail', args=[self.pk])
+
+    def clean(self):
+        """
+        Hold the reference to SGA's format, and to the year it says.
+
+        The number is how a Workday memo names this request, so one written
+        any other way is one the queue can never match a charge to. The year in
+        it is checked against the request's own because the two are the same
+        fact written twice, and a disagreement means one of them is a typo.
+        """
+        super(FundingRequest, self).clean()
+        self.reference = normalise_sga_reference(self.reference)
+        if not self.reference:
+            return
+        match = SGA_REFERENCE.match(self.reference)
+        if match is None:
+            raise ValidationError({'reference': (
+                "SGA numbers requests like A.27.16: A, F or S for the body that approved it, "
+                "the fiscal year, then the request's number.")})
+        if self.fiscal_year and int(match.group(2)) != int(self.fiscal_year) % 100:
+            raise ValidationError({'reference': (
+                "%s is an FY%s number, but this request is filed under FY%s. Fix whichever "
+                "one is wrong." % (self.reference, match.group(2),
+                                   str(self.fiscal_year)[-2:]))})
+
+    @property
+    def approving_body(self):
+        """ Which part of SGA heard this request, read off its number, or ``''``. """
+        match = SGA_REFERENCE.match(normalise_sga_reference(self.reference))
+        return SGA_BODIES.get(match.group(1), '') if match else ''
 
     @property
     def total_awarded(self):
@@ -1832,7 +2030,8 @@ class ParsedTransaction(models.Model):
 
     Three shapes, distinguished by :attr:`entry_type`:
 
-    * **Revenue**  -- ``amount > 0``, routes to an Event or a non-event source.
+    * **Revenue**  -- ``amount > 0``, routes to an Event or a non-event source,
+      and names the fund it adds to.
     * **Expense**  -- ``amount < 0``, routes to a fund/spend category/FR line.
     * **Refund**   -- ``amount > 0`` *and* ``refund_of`` set. A return credit.
       It carries expense routing, not revenue routing, so that crediting money
@@ -1876,8 +2075,12 @@ class ParsedTransaction(models.Model):
     # -- Expense routing (mutually exclusive with revenue routing) ----------
     # PROTECT rather than CASCADE: retiring a category from the admin must not
     # be able to silently delete the money filed under it.
-    fund_source = models.ForeignKey(FundSource, on_delete=models.PROTECT, null=True, blank=True,
-                                    related_name='entries')
+    #
+    # fund_source is the exception, and belongs to both directions: money
+    # leaves a fund and money arrives in one. See SHARED_FIELDS below.
+    fund_source = models.ForeignKey(
+        FundSource, on_delete=models.PROTECT, null=True, blank=True, related_name='entries',
+        help_text="The pot this money came out of, or, for money coming in, the pot it adds to.")
     lnl_spend_category = models.ForeignKey(
         SpendCategory, on_delete=models.PROTECT, null=True, blank=True,
         related_name='entries', verbose_name="LNL spend category")
@@ -1906,9 +2109,15 @@ class ParsedTransaction(models.Model):
     # that event" -- a sub-rental billed straight through, where LNL hires a
     # console for one show and the cost is that show's, not the club's. The
     # sign of the amount already distinguishes the two readings.
+    #
+    # fund_source is shared for the same reason. Spending comes out of a fund
+    # and income goes into one, and the fund balances cannot be worked out
+    # without both: an SGA reimbursement lands in the funding-request fund and
+    # brings its balance back to zero, and the budget's annual deposit is what
+    # the year's budget spending draws down.
     REVENUE_FIELDS = ('non_event_revenue_type',)
-    EXPENSE_FIELDS = ('fund_source', 'lnl_spend_category', 'fr_line_target')
-    SHARED_FIELDS = ('linked_event',)
+    EXPENSE_FIELDS = ('lnl_spend_category', 'fr_line_target')
+    SHARED_FIELDS = ('linked_event', 'fund_source')
 
     class Meta:
         ordering = ('-effective_date', '-pk')
@@ -1934,12 +2143,12 @@ class ParsedTransaction(models.Model):
                 check=(Q(amount__gt=0, refund_of__isnull=True)
                        | Q(non_event_revenue_type__isnull=True)),
                 name='finance_no_revenue_routing_on_expense'),
-            # Revenue may not carry expense routing.
+            # Revenue may not carry expense routing. fund_source is absent for
+            # the same reason linked_event is above: income goes into a fund.
             models.CheckConstraint(
                 check=(Q(amount__lt=0)
                        | Q(refund_of__isnull=False)
-                       | Q(fund_source__isnull=True, lnl_spend_category__isnull=True,
-                           fr_line_target__isnull=True)),
+                       | Q(lnl_spend_category__isnull=True, fr_line_target__isnull=True)),
                 name='finance_no_expense_routing_on_revenue'),
             # A refund credits money back; it can never be negative.
             models.CheckConstraint(
@@ -2348,3 +2557,173 @@ class ParsedTransaction(models.Model):
         return ("Paid out of %s but filed as %s spending."
                 % (self.parent_transaction.partition_code_label,
                    "Projection" if self.is_projection else "Event Production"))
+
+
+# ---------------------------------------------------------------------------
+# Fund balances
+#
+# Workday is the double-entry system of record, and it reports one figure per
+# account -- 226-AG holds this much, 315-AG holds that. What it cannot say is
+# how much of that figure is Legacy and how much is this year's SGA budget, and
+# that split is the whole question at June 30, because the two behave
+# oppositely: one carries forward and the other goes back to SGA.
+#
+# So the subledger keeps the split, and proves it against Workday rather than
+# replacing it. Three small tables do it:
+#
+# * BalanceCheckpoint -- what Workday said an account held on a day. The first
+#   one anchors the arithmetic; every later one checks it.
+# * FundTransfer -- money moving between two funds inside one account, which
+#   Workday never sees because no cash moves: covering a budget overspend from
+#   Legacy, writing off a reimbursement SGA will not pay, the split of the
+#   opening balance on the day the books start.
+# * FiscalYearClose -- the record that a year was closed, with what it looked
+#   like at the time, so a late import that changes a closed year is noticed.
+#
+# The balances themselves are never stored. They are worked out from these and
+# the ledger every time (finance/balances.py), which is what lets a line
+# imported in August for a June purchase correct last year's closing balance
+# and next year's opening at once.
+# ---------------------------------------------------------------------------
+
+@reversion.register()
+class BalanceCheckpoint(models.Model):
+    """
+    What Workday reported one account holding at the end of one day.
+
+    The earliest checkpoint for an account anchors its cash: every other day's
+    balance is that figure plus or minus the imported lines in between. Every
+    later checkpoint is a test of that arithmetic, and a disagreement means
+    lines are missing from the ledger or a balance was copied down wrong.
+    """
+    glyphicon = 'piggy-bank'
+
+    account = models.ForeignKey(PartitionCode, on_delete=models.PROTECT,
+                                related_name='checkpoints')
+    as_of = models.DateField(
+        verbose_name="As of the end of",
+        help_text="The day Workday's figure is for. Lines dated that day are counted in it.")
+    balance = models.DecimalField(
+        max_digits=12, decimal_places=2, verbose_name="Workday balance",
+        help_text="The account's balance exactly as Workday shows it.")
+    note = models.CharField(max_length=255, blank=True,
+                            help_text="Where the figure came from, if that is worth saying.")
+    entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name='finance_checkpoints')
+    entered_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('account__code', '-as_of')
+        verbose_name = "Workday Balance"
+        constraints = (
+            # Two figures for one account on one day cannot both be right.
+            models.UniqueConstraint(fields=('account', 'as_of'),
+                                    name='finance_one_balance_per_account_per_day'),
+        )
+
+    def __str__(self):
+        return "%s on %s: %s" % (self.account.code, date_format(self.as_of, 'M j, Y'),
+                                 money(self.balance))
+
+
+@reversion.register()
+class FundTransfer(models.Model):
+    """
+    Money moving from one fund to another inside one Workday account.
+
+    No cash moves, so Workday never sees it, and the account's total is
+    unchanged by construction: one row takes the amount from one fund and gives
+    it to the other. That is the only double-entry idea this app needs, and it
+    needs it here because this is the only place money changes hands without a
+    bank line to show for it.
+    """
+    glyphicon = 'transfer'
+
+    #: What prompted it. Opening and year-end transfers are written by their
+    #: own pages, which find and replace them by this; a plain transfer is
+    #: anything a Treasurer records by hand.
+    TRANSFER, OPENING, YEAR_END = 'transfer', 'opening', 'year_end'
+    KIND_CHOICES = (
+        (TRANSFER, 'Transfer'),
+        (OPENING, 'Opening balance'),
+        (YEAR_END, 'Year-end close'),
+    )
+
+    account = models.ForeignKey(PartitionCode, on_delete=models.PROTECT,
+                                related_name='fund_transfers')
+    date = models.DateField(default=timezone.localdate)
+    amount = models.DecimalField(max_digits=12, decimal_places=2,
+                                 validators=[MinValueValidator(CENTS)])
+    from_fund = models.ForeignKey(FundSource, on_delete=models.PROTECT,
+                                  related_name='transfers_out', verbose_name="From")
+    to_fund = models.ForeignKey(FundSource, on_delete=models.PROTECT,
+                                related_name='transfers_in', verbose_name="To")
+    kind = models.CharField(max_length=16, choices=KIND_CHOICES, default=TRANSFER)
+    description = models.CharField(max_length=255,
+                                   help_text="Why the money moved. Shown to auditors.")
+    fiscal_year_close = models.ForeignKey(
+        'FiscalYearClose', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='transfers',
+        help_text="The close that wrote this, which takes it away again if reopened.")
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name='finance_transfers')
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-date', '-pk')
+        verbose_name = "Fund Transfer"
+        constraints = (
+            models.CheckConstraint(check=Q(amount__gt=0),
+                                   name='finance_transfer_amount_positive'),
+            models.CheckConstraint(check=~Q(from_fund=models.F('to_fund')),
+                                   name='finance_transfer_between_two_funds'),
+        )
+
+    def __str__(self):
+        return "%s: %s from %s to %s" % (self.account.code, money(self.amount),
+                                         self.from_fund, self.to_fund)
+
+    def clean(self):
+        """ Refuse moving money to the fund it is already in. """
+        super(FundTransfer, self).clean()
+        if (self.from_fund_id and self.to_fund_id
+                and self.from_fund_id == self.to_fund_id):
+            raise ValidationError({'to_fund': "Pick two different funds."})
+
+    @property
+    def fiscal_year(self):
+        """ The fiscal year the transfer is dated in. """
+        return fiscal_year_for(self.date)
+
+
+class FiscalYearClose(models.Model):
+    """
+    The record that a fiscal year's books were closed.
+
+    Closing locks nothing. Workday keeps posting into a year for weeks after it
+    ends, and refusing those lines would only push them into the wrong year. A
+    close is a dated statement instead: what each fund held, what Workday said,
+    and the year-end transfers made to square it. When the arithmetic later
+    disagrees with the snapshot, the balance page says so and by how much.
+    """
+    glyphicon = 'lock'
+
+    fiscal_year = models.PositiveIntegerField(unique=True)
+    closed_on = models.DateTimeField(auto_now_add=True)
+    closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                  null=True, blank=True, related_name='finance_year_closes')
+    snapshot = models.JSONField(
+        default=dict, blank=True,
+        help_text="Every account's cash and fund balances at the moment of closing.")
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ('-fiscal_year',)
+        verbose_name = "Fiscal Year Close"
+        permissions = (
+            ('close_fiscalyear', 'Close a fiscal year and record its year-end transfers'),
+        )
+
+    def __str__(self):
+        return "FY%s closed" % str(self.fiscal_year)[-2:]

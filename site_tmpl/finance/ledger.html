@@ -15,6 +15,9 @@
                 {% endcomment %}
                 <input type="hidden" name="fy" value="{{ filter_state.fiscal_year|default:'all' }}">
                 <input type="hidden" name="partition" value="{{ filter_state.partition|default:'all' }}">
+                {% if event_filter %}
+                    <input type="hidden" name="event" value="{{ event_filter.pk }}">
+                {% endif %}
 
                 <div class="form-group">
                     <input type="search" name="q" class="form-control input-sm" style="width:240px;"
@@ -90,6 +93,19 @@
             </form>
         </div>
     </div>
+
+    {% comment %}
+        One event's entries. Said out loud, because it is the one filter that
+        sets the fiscal year aside -- see the event filter in views/ledger.py.
+    {% endcomment %}
+    {% if event_filter %}
+        <div class="alert alert-info" style="padding:8px 14px;">
+            Showing entries for
+            <a href="{% url 'events:detail' event_filter.pk %}"><strong>{{ event_filter.event_name }}</strong></a>
+            ({{ event_filter.datetime_start|date:"M j, Y" }}), across every fiscal year.
+            <a href="{% url 'finance:ledger' %}?{{ event_clear_querystring }}" class="alert-link">Clear</a>
+        </div>
+    {% endif %}
 
     {# ---- Totals ---- #}
     <div class="fin-stats">

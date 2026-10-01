@@ -31,12 +31,13 @@ class FinanceConfig(AppConfig):
         # both the event pass-through row and the name index the queue turns a
         # memo back into a category with.
         cached_models = {
-            'PartitionCode': ('codes',),
+            # A renamed code changes which fund is that account's own money.
+            'PartitionCode': ('codes', 'own_funds'),
             'FinanceSettings': ('config',),
             'ServiceColor': ('service_colors',),
             'ColumnAlias': ('column_aliases',),
             'SpendCategory': ('event_passthrough', 'category_names'),
-            'FundSource': ('fund_codes', 'default_fund'),
+            'FundSource': ('fund_codes', 'default_fund', 'fund_tracking', 'own_funds'),
         }
 
         for model_name, cache_keys in cached_models.items():

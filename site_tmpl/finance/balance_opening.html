@@ -1,0 +1,87 @@
+{# What each account held when the books started, and which fund held it. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    <div class="row">
+        <div class="col-md-7">
+            <form method="post">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+                {% for section in form.sections %}
+                    <div class="fin-panel">
+                        <div class="fin-panel-head">
+                            <span>{{ section.account.code }}</span>
+                            <span class="fin-locked-note">the rest is {{ section.own }}</span>
+                        </div>
+                        <div class="fin-panel-body">
+                            {% with field=section.cash %}
+                                <div class="form-group{% if field.errors %} has-error{% endif %}">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% for error in field.errors %}<div class="help-block">{{ error }}</div>{% endfor %}
+                                    <div class="help-block">{{ field.help_text }}</div>
+                                </div>
+                            {% endwith %}
+                            {% if section.funds %}
+                                <p class="fin-muted" style="font-size:13px;">
+                                    How much of that each fund held. Leave a fund blank if it held nothing.
+                                </p>
+                                {% for fund, field in section.funds %}
+                                    {% with field=field %}
+                                        <div class="form-group{% if field.errors %} has-error{% endif %}">
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                            {% for error in field.errors %}<div class="help-block">{{ error }}</div>{% endfor %}
+                                            {% if field.help_text %}<div class="help-block">{{ field.help_text }}</div>{% endif %}
+                                        </div>
+                                    {% endwith %}
+                                {% endfor %}
+                            {% else %}
+                                <p class="fin-muted" style="font-size:13px;margin:0;">
+                                    No other fund is held in {{ section.account.code }}, so all of it is {{ section.own }}.
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+                {% if form.sections %}
+                    <div class="text-right" style="margin-bottom:20px;">
+                        <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save opening balances</button>
+                    </div>
+                {% endif %}
+            </form>
+        </div>
+        <div class="col-md-5">
+            <div class="fin-panel">
+                <div class="fin-panel-head">How the opening works</div>
+                <div class="fin-panel-body" style="font-size:13px;">
+                    <p class="fin-muted">
+                        The books start on {{ books_start|date:"M j, Y" }}. Whatever each account held at the
+                        end of {{ night_before|date:"M j, Y" }} is its opening balance, and every line from
+                        then on is counted on top.
+                    </p>
+                    <p class="fin-muted">
+                        Workday only knows the account's total. If some of it was SGA budget money, or SGA
+                        still owed LNL a reimbursement for spending before then, say so here. Whatever you
+                        do not assign is the account's own money.
+                    </p>
+                    <p class="fin-muted" style="margin:0;">
+                        Saving replaces the opening split, so this page always shows what the opening is.
+                    </p>
+                    {% if skipped %}
+                        <p class="text-warning" style="margin:10px 0 0;">
+                            {% for account in skipped %}{{ account.code }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            ha{{ skipped|pluralize:"s,ve" }} no carry-forward fund held in
+                            {{ skipped|pluralize:"it,them" }}, so there is nothing for the rest to belong to.
+                            Set one under Fund Sources in the admin.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
