@@ -1,0 +1,121 @@
+{# Every year on file, read the way the forecast reads it. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    {% include 'finance/partials/_forecast_nav.html' %}
+
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>
+                {{ account.code }}, year by year
+                {% if accounts|length > 1 %}
+                    <span class="fin-muted">&middot;
+                        {% for other in accounts %}{% if other.code != account.code %}<a href="?account={{ other.code }}">{{ other.code }}</a>{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}
+                    </span>
+                {% endif %}
+            </span>
+            <span class="fin-locked-note">
+                {% if books_start %}books start {{ books_start|date:"M j, Y" }}{% endif %}
+            </span>
+        </div>
+        <div class="fin-panel-body">
+            <p style="margin:0 0 6px;">
+                Lines from before the books start are <strong>history</strong>: imported so the forecast can learn
+                what a year looks like, and never filed. Each is read by the lookups the queue fills its boxes
+                from &mdash; the memo naming a category, Workday's spend category, the ledger account &mdash; and
+                never by the wording rules, which guess. Years in the books show what was filed, with anything
+                still in the queue read the same way.
+            </p>
+            <p class="fin-muted" style="margin:0;">
+                {{ history_lines }} line{{ history_lines|pluralize }} of history{% if corrected %}, {{ corrected }} corrected by hand{% endif %}.
+                Click a year to see its lines and correct one.
+            </p>
+        </div>
+    </div>
+
+    {% if not share.known %}
+        <div class="alert alert-info">
+            <strong>Who paid for the billing?</strong> Until FY27 LNL billed student organizations as well as
+            departments, and history cannot say which was which: {{ share.detail }}. The forecast counts past
+            billing only once it knows the departments' share. Set it under Finance Configuration in the admin,
+            or file FY26's billing against its events and it will be worked out.
+        </div>
+    {% endif %}
+
+    {% if years %}
+        <div class="fin-panel">
+            <div class="fin-table-wrap">
+                <table class="table fin-table fin-report-table fin-history-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            {% for row in years %}
+                                <th class="fin-num">
+                                    <a href="{% url 'finance:history-year' row.year %}">FY{{ row.year|stringformat:"s"|slice:"2:" }}</a>
+                                </th>
+                            {% endfor %}
+                        </tr>
+                        <tr class="fin-muted">
+                            <td>Months with lines</td>
+                            {% for row in years %}
+                                <td class="fin-num">
+                                    {{ row.months }}{% if row.year not in whole_years %} <span class="fin-tag is-warn" title="Too little of the year to count as a whole one">part</span>{% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        <tr class="fin-muted">
+                            <td>Lines read rather than filed</td>
+                            {% for row in years %}<td class="fin-num">{{ row.estimated }} of {{ row.lines }}</td>{% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in matrix %}
+                            <tr class="{% if line.kind == 'total' %}fin-report-total{% endif %}">
+                                <td>{{ line.label }}</td>
+                                {% for value in line.values %}
+                                    <td class="fin-num {% if line.kind == 'total' %}{{ value|money_class }}{% endif %}">
+                                        {% if value %}{{ value|money }}{% else %}<span class="fin-muted">&mdash;</span>{% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                        {% if cash|length and cash.0 is not None %}
+                            <tr class="fin-report-total">
+                                <td>Cash at the end of the year</td>
+                                {% for value in cash %}<td class="fin-num">{{ value|money }}</td>{% endfor %}
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="fin-panel-body fin-muted" style="font-size:12px;">
+                Spending is net of refunds. SGA funding is net of what SGA took back.
+                {% if cash|length and cash.0 is not None %}
+                    Cash is worked back from the Workday balance entered for {{ account.code }}, through every line
+                    imported: a year that never adds up to the next balance Workday reported has lines missing.
+                    A year still running shows today's.
+                {% endif %}
+                The forecast's typical year uses only whole years; equipment and anything else forecast from plans
+                is left out of it, and so is spending SGA pays for.
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">Nothing imported on {{ account.code }} yet.</div>
+    {% endif %}
+
+    {% if unmapped %}
+        <div class="fin-panel">
+            <div class="fin-panel-head">Workday categories no lookup reads</div>
+            <div class="fin-panel-body">
+                <p class="fin-muted" style="margin:0 0 6px;">
+                    Lines carrying these fall back to their ledger account, or are left &ldquo;not worked out&rdquo;.
+                    One rule under Finance &rarr; Spend Category Suggestion Rules reads them all, here and in the queue.
+                </p>
+                <ul style="margin:0;">
+                    {% for name, count in unmapped %}<li>{{ name }} <span class="fin-muted">({{ count }} line{{ count|pluralize }})</span></li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

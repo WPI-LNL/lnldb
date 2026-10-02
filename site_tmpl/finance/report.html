@@ -143,7 +143,7 @@
                     </thead>
                     <tbody>
                         {% for row, cells in section.lines %}
-                            <tr {% if row.tone == 'muted' %}class="fin-report-muted"{% endif %}>
+                            <tr {% if row.tone == 'muted' %}class="fin-report-muted"{% elif row.tone == 'danger' %}class="danger"{% endif %}>
                                 {% for column, value in cells %}
                                     <td class="{% if column.is_numeric %}fin-num{% endif %} {% if column.coloured and value %}{{ value|money_class }}{% endif %}">
                                         {% if column.key == row.link and row.url %}<a href="{{ row.url }}">{% include 'finance/_report_cell.html' %}</a>{% else %}{% include 'finance/_report_cell.html' %}{% endif %}

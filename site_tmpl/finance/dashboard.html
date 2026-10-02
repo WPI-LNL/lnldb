@@ -369,6 +369,49 @@
         </div>
     {% endif %}
 
+    {# ---- Where it is heading ---- #}
+    {% comment %}
+        The Forecast tab's headline, from today's balances above: LNL's own
+        money at each June 30 ahead, its lowest point, and what is left to
+        spend while keeping the reserve.
+    {% endcomment %}
+    {% if ahead.available %}
+        <div class="fin-panel">
+            <div class="fin-panel-head">
+                <span>Where LNL's Own Money Is Heading</span>
+                <a href="{% url 'finance:forecast' %}" class="fin-muted" style="font-weight:400;font-size:12px;">Forecast &rarr;</a>
+            </div>
+            <div class="fin-panel-body">
+                {% for warning in ahead.warnings %}
+                    <div class="alert alert-warning" style="font-size:12.5px;margin-bottom:10px;">{{ warning }}</div>
+                {% endfor %}
+                <div class="fin-stats" style="margin-bottom:0;">
+                    {% for month in ahead.year_ends %}
+                        <div class="fin-stat">
+                            <div class="fin-stat-label">June 30, {{ month.last.year }}</div>
+                            <div class="fin-stat-value {% if month.below_reserve %}text-danger{% endif %}">{{ month.own|money }}</div>
+                            <div class="fin-stat-sub">{% if month.low is not None %}{{ month.low|money }} to {{ month.high|money }}{% else %}a typical year{% endif %}</div>
+                        </div>
+                    {% endfor %}
+                    {% with low=ahead.low_point %}
+                        <div class="fin-stat">
+                            <div class="fin-stat-label">Lowest point</div>
+                            <div class="fin-stat-value {% if low.below_reserve %}text-danger{% endif %}">{{ low.own|money }}</div>
+                            <div class="fin-stat-sub">end of {{ low.label }}</div>
+                        </div>
+                    {% endwith %}
+                    <div class="fin-stat">
+                        <div class="fin-stat-label">Room to spend</div>
+                        <div class="fin-stat-value {% if ahead.room < 0 %}text-danger{% endif %}">
+                            <a href="{% url 'finance:afford' %}" {% if ahead.room < 0 %}class="text-danger"{% endif %}>{{ ahead.room|money }}</a>
+                        </div>
+                        <div class="fin-stat-sub">keeping the {{ ahead.reserve|money }} reserve</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     {# ---- What LNL is owed ---- #}
     {% comment %}
         Money LNL has earned and not yet been paid, across every year since the

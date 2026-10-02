@@ -1,0 +1,6 @@
+{# The Forecast tab's own pages. #}
+<ul class="nav nav-tabs fin-subnav hidden-print">
+    {% for key, label, name in forecast_pages %}
+        <li {% if forecast_page == key %}class="active"{% endif %}><a href="{% url name %}">{{ label }}</a></li>
+    {% endfor %}
+</ul>

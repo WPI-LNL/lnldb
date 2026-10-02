@@ -89,6 +89,9 @@
 
         {# ---- RIGHT: editable subledger metadata ---- #}
         <div class="col-md-7">
+            {% if history %}
+                {% include 'finance/partials/_history_reading.html' %}
+            {% else %}
             <div class="fin-split-summary">
                 <span>
                     <span class="fin-stat-label">Unallocated remainder</span>
@@ -311,6 +314,7 @@
                         </form>
                     </div>
                 </div>
+            {% endif %}
             {% endif %}
         </div>
     </div>

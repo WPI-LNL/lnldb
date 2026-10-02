@@ -25,6 +25,7 @@
                                     {% if item.takes == 'range' %}The fiscal year chosen above, or any dates.
                                     {% elif item.takes == 'year' %}The fiscal year chosen above.
                                     {% elif item.takes == 'trend' %}Term over term or year over year, up to the fiscal year chosen above.
+                                    {% elif item.takes == 'next' %}Next fiscal year, from the last three whole years.
                                     {% else %}As of today.{% endif %}
                                 </div>
                             </td>
@@ -36,6 +37,17 @@
                             </td>
                         </tr>
                     {% endfor %}
+                    <tr>
+                        <td><a href="{% url 'finance:history' %}"><strong>History</strong></a></td>
+                        <td>
+                            Every year on file, side by side, the way the forecast reads it, with the cash each
+                            ended on.
+                            <div class="fin-muted">Every year imported, from the oldest Workday export.</div>
+                        </td>
+                        <td class="fin-nowrap">
+                            <a href="{% url 'finance:history' %}" class="btn btn-xs btn-default">View</a>
+                        </td>
+                    </tr>
                     <tr>
                         <td><a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}"><strong>Ledger</strong></a></td>
                         <td>

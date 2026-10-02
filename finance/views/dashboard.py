@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Sum
 from django.shortcuts import render
 
+from finance import forecast
 from finance.balances import statement
 from finance.calculators import (billing_receivables, cash_flow_by_month, client_retention,
                                  client_type_breakdown, event_billing_kept, event_pnl_rows,
@@ -47,7 +48,8 @@ def dashboard(request):
 
     # -- action banner: what still needs a human -----------------------------
     # Reconciliation state is resolved in SQL rather than by asking each row.
-    unreconciled = list(state.apply_to_workday(WorkdayTransaction.objects.unreconciled()))
+    unreconciled = list(state.apply_to_workday(
+        WorkdayTransaction.objects.in_ledger().unreconciled()))
     pending_encumbrances = state.apply(
         ParsedTransaction.objects.filter(parent_transaction__isnull=True,
                                          status=TransactionStatus.PENDING)).count()
@@ -76,6 +78,8 @@ def dashboard(request):
     # what LNL is owed, are questions about now.
     funds_now = statement(current_fiscal_year())
     receivables = sga_receivables(statement_=funds_now)
+    # Where today's money is heading, from the same balances.
+    ahead = forecast.project(books=funds_now.books)
     unpaid_bills = billing_receivables(is_projection=proj)
 
     projects = project_composition(fiscal_year=fy, is_projection=proj)
@@ -143,6 +147,7 @@ def dashboard(request):
         'billing_kept': event_billing_kept(fiscal_year=fy, is_projection=proj),
         'retention': retention,
         'funds_now': funds_now,
+        'ahead': ahead,
         'owed_by_sga': receivables['owed'],
         'owed_by_clients': sum((row['owed'] for row in unpaid_bills), Decimal('0.00')),
         'owed_by_clients_count': len(unpaid_bills),

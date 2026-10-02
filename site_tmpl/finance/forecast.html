@@ -1,0 +1,308 @@
+{# The forecast: today's balances carried forward to the end of next fiscal year, every movement explained. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    {% include 'finance/partials/_forecast_nav.html' %}
+
+    <div class="fin-print-header">
+        <h3 style="margin:0 0 2px;">Lens and Lights &middot; Forecast for {{ forecast.code }}</h3>
+        <div>To {{ forecast.horizon|date:"F j, Y" }}, from the books as of {{ forecast.since|date:"M j, Y" }}</div>
+    </div>
+
+    {% if not forecast.available %}
+        <div class="alert alert-warning">{{ forecast.problem }}</div>
+    {% else %}
+
+    <div class="fin-panel fin-no-print">
+        <div class="fin-panel-head">
+            <span>
+                {{ forecast.code }} to {{ forecast.horizon|date:"F j, Y" }}
+                {% if accounts|length > 1 %}
+                    <span class="fin-muted">&middot;
+                        {% for other in accounts %}{% if other.code != forecast.code %}<a href="?account={{ other.code }}">{{ other.code }}</a>{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}
+                    </span>
+                {% endif %}
+            </span>
+            <span>
+                <a href="{% url 'finance:report' 'forecast' %}?{{ querystring }}&amp;format=csv" class="btn btn-xs btn-default">
+                    <span class="glyphicon glyphicon-download-alt"></span> Download CSV
+                </a>
+                <a href="{% url 'finance:report' 'forecast' %}?{{ querystring }}" class="btn btn-xs btn-default">
+                    <span class="glyphicon glyphicon-print"></span> Printable
+                </a>
+            </span>
+        </div>
+        <div class="fin-panel-body">
+            <p style="margin:0;">
+                Today's balances carried forward month by month: what is reserved, what LNL is owed,
+                the shows booked, a typical year's billing and running costs, and the purchases you plan.
+                The figure that matters is <strong>LNL's own money</strong> &mdash;
+                {{ forecast.fund_names.own }} &mdash; against the
+                <strong>{{ forecast.reserve|money }}</strong> minimum reserve.
+            </p>
+        </div>
+    </div>
+
+    {% for warning in forecast.warnings %}
+        <div class="alert alert-warning"><span class="glyphicon glyphicon-warning-sign"></span> {{ warning }}</div>
+    {% endfor %}
+
+    <div class="fin-stats">
+        <div class="fin-stat">
+            <div class="fin-stat-label">LNL's own money now</div>
+            <div class="fin-stat-value">{{ forecast.opening_own|money }}</div>
+            <div class="fin-stat-sub">{{ forecast.code }} holds {{ forecast.opening_cash|money }} in all</div>
+        </div>
+        {% for month in forecast.year_ends %}
+            <div class="fin-stat">
+                <div class="fin-stat-label">June 30, {{ month.last.year }}</div>
+                <div class="fin-stat-value {% if month.below_reserve %}text-danger{% endif %}">{{ month.own|money }}</div>
+                <div class="fin-stat-sub">
+                    {% if month.low is not None %}Range {{ month.low|money }} to {{ month.high|money }}{% else %}No range: too few years{% endif %}
+                </div>
+            </div>
+        {% endfor %}
+        {% with low=forecast.low_point %}
+            <div class="fin-stat">
+                <div class="fin-stat-label">Lowest point</div>
+                <div class="fin-stat-value {% if low.below_reserve %}text-danger{% endif %}">{{ low.own|money }}</div>
+                <div class="fin-stat-sub">End of {{ low.label }}</div>
+            </div>
+        {% endwith %}
+        <div class="fin-stat">
+            <div class="fin-stat-label">Room to spend</div>
+            <div class="fin-stat-value {% if forecast.room < 0 %}text-danger{% endif %}">{{ forecast.room|money }}</div>
+            <div class="fin-stat-sub">and keep {{ forecast.reserve|money }} to {{ forecast.horizon|date:"M Y" }}</div>
+        </div>
+    </div>
+
+    <div class="alert {% if forecast.verdict == 'yes' %}alert-success{% elif forecast.verdict == 'tight' %}alert-warning{% else %}alert-danger{% endif %}">
+        {% if forecast.verdict == 'yes' %}
+            <strong>LNL's own money stays above the reserve</strong> in every month to
+            {{ forecast.horizon|date:"F Y" }}{% if forecast.has_band %}, even if the rest of the forecast goes like the weakest of {{ forecast.typical.span }}{% endif %}.
+        {% elif forecast.verdict == 'tight' %}
+            <strong>Tight.</strong> A typical year keeps LNL's own money above the reserve, but if the rest
+            of the forecast went like the weakest of {{ forecast.typical.span }} it would fall to
+            {{ forecast.lowest_in_band|money }}.
+        {% else %}
+            <strong>LNL's own money falls below the reserve</strong>, first at the end of
+            {{ forecast.months_below_reserve.0.label }}, and is lowest at {{ forecast.low_point.own|money }}
+            at the end of {{ forecast.low_point.label }}.
+        {% endif %}
+        Equipment is not in this: the room to spend is what is left for it.
+    </div>
+
+    <div class="row">
+        <div class="col-md-9">
+            <div class="fin-panel">
+                <div class="fin-panel-head">Month by month</div>
+                <div class="fin-panel-body">
+                    <div class="fin-forecast-chart"><canvas id="fin-forecast-chart" height="110"></canvas></div>
+                    <p class="fin-chart-note">
+                        Grey: what Workday says {{ forecast.code }} held at each month end, then everything in it ahead.
+                        Blue: LNL's own money ahead{% if forecast.has_band %}, between dotted lines for the weakest and strongest of {{ forecast.typical.span }}{% endif %}.
+                        Red: the reserve.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="fin-panel fin-no-print">
+                <div class="fin-panel-head">What is counted</div>
+                <ul class="fin-switches">
+                    {% for switch in switches %}
+                        <li class="{% if not switch.included %}is-off{% endif %}">
+                            <a href="{{ switch.url }}" title="{% if switch.included %}Leave this out{% else %}Count this again{% endif %}">
+                                <span class="glyphicon {% if switch.included %}glyphicon-check{% else %}glyphicon-unchecked{% endif %}"></span>
+                                {{ switch.label }}
+                            </a>
+                            {% if switch.included %}<span class="fin-num {{ switch.total|money_class }}">{{ switch.total|money }}</span>{% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+                <div class="fin-panel-body fin-muted" style="font-size:12px;">
+                    Each figure is what the part adds up to over the whole forecast.
+                    Click one to leave it out and see the difference.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>Each month</span>
+            <span class="fin-locked-note">red: below the reserve</span>
+        </div>
+        <div class="fin-table-wrap">
+            <table class="table fin-table fin-report-table">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        {% for key, label in components.items %}<th class="fin-num">{{ label }}</th>{% endfor %}
+                        <th class="fin-num">LNL's own money</th>
+                        {% if forecast.has_band %}<th class="fin-num">Range</th>{% endif %}
+                        <th class="fin-num">All of {{ forecast.code }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for month in forecast.months %}
+                        <tr class="{% if month.below_reserve %}danger{% endif %}{% if month.is_year_end %} fin-year-end{% endif %}">
+                            <td>
+                                {{ month.label }}
+                                {% if month.start != month.first %}<div class="fin-muted">from {{ month.start|date:"M j" }}</div>{% endif %}
+                            </td>
+                            {% for key, label in components.items %}
+                                {% with amount=month.flows|get_item:key %}
+                                    <td class="fin-num {{ amount|money_class }}">{% if amount %}{{ amount|money }}{% else %}<span class="fin-muted">&mdash;</span>{% endif %}</td>
+                                {% endwith %}
+                            {% endfor %}
+                            <td class="fin-num"><strong>{{ month.own|money }}</strong></td>
+                            {% if forecast.has_band %}<td class="fin-num fin-muted">{{ month.low|money }} &ndash; {{ month.high|money }}</td>{% endif %}
+                            <td class="fin-num">{{ month.cash|money }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>Dated, one by one</span>
+            <span class="fin-locked-note">reserved, owed, booked and planned</span>
+        </div>
+        {% if forecast.items %}
+            <div class="fin-table-wrap">
+                <table class="table fin-table">
+                    <thead>
+                        <tr><th>When</th><th>What</th><th>Part</th><th>Fund</th><th class="fin-num">Amount</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for item in forecast.items %}
+                            <tr>
+                                <td class="fin-nowrap">{{ item.day|date:"M j, Y" }}</td>
+                                <td>
+                                    {% if item.url %}<a href="{{ item.url }}">{{ item.label }}</a>{% else %}{{ item.label }}{% endif %}
+                                    {% if item.detail %}<div class="fin-muted">{{ item.detail }}</div>{% endif %}
+                                </td>
+                                <td class="fin-nowrap">{{ item.component_label }}</td>
+                                <td class="fin-nowrap">{% if item.fund == 'own' %}Own money{% else %}{{ forecast.fund_names|get_item:item.fund }}{% endif %}</td>
+                                <td class="fin-num {{ item.amount|money_class }}">{{ item.amount|money }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="fin-panel-body fin-muted">Nothing dated is ahead.</div>
+        {% endif %}
+        <div class="fin-panel-body fin-muted" style="font-size:12px;">
+            {{ forecast.events_booked }} approved show{{ forecast.events_booked|pluralize }} still to come;
+            {{ forecast.events_counted }} bring{{ forecast.events_counted|pluralize:"s," }} money in or hire gear in.
+            A show already billed is under &ldquo;Owed to LNL&rdquo; instead.
+        </div>
+    </div>
+
+    {% if forecast.typical_rows %}
+        <div class="fin-panel">
+            <div class="fin-panel-head">
+                <span>A typical year</span>
+                <span class="fin-locked-note">the median of {{ forecast.typical.span }}</span>
+            </div>
+            <div class="fin-table-wrap">
+                <table class="table fin-table fin-report-table">
+                    <thead>
+                        <tr>
+                            <th>Part</th>
+                            {% for year in forecast.typical.years reversed %}<th class="fin-num">FY{{ year|stringformat:"s"|slice:"2:" }}</th>{% endfor %}
+                            <th class="fin-num">Typical year</th>
+                            {% for month in forecast.year_ends %}<th class="fin-num">Counted to {{ month.last|date:"M Y" }}</th>{% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in forecast.typical_rows %}
+                            <tr>
+                                <td>{{ row.label }}</td>
+                                {% for year in forecast.typical.years reversed %}
+                                    {% with amount=row.past|get_item:year %}<td class="fin-num fin-muted">{{ amount|money }}</td>{% endwith %}
+                                {% endfor %}
+                                <td class="fin-num"><strong>{{ row.annual|money }}</strong></td>
+                                {% for month in forecast.year_ends %}
+                                    {% with amount=row.by_year|get_item:month.fiscal_year %}<td class="fin-num {{ amount|money_class }}">{{ amount|money }}</td>{% endwith %}
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="fin-panel-body fin-muted" style="font-size:12px;">
+                Each part is the middle of the three years, spread over the months the way they spread it.
+                {% if forecast.typical.scaled %}Years before FY27 show billing and hired gear at the departments' share.{% endif %}
+                &ldquo;Counted&rdquo; is what is left of it after the day the forecast starts, less what booked shows and
+                reserved purchases already account for.
+                <a href="{% url 'finance:history' %}">See every year</a>.
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="fin-panel">
+                <div class="fin-panel-head">What it assumes</div>
+                <div class="fin-panel-body">
+                    <ul class="fin-report-notes">
+                        <li>SGA pays back a funding request {{ forecast.waits.sga.days }} days after the spending ({{ forecast.waits.sga.how }}).</li>
+                        <li>Clients pay {{ forecast.waits.bill.days }} days after the show ({{ forecast.waits.bill.how }}).</li>
+                        {% for note in forecast.notes %}<li>{{ note }}</li>{% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="fin-panel">
+                <div class="fin-panel-head">How a typical year would have done</div>
+                {% if back_test %}
+                    <div class="fin-table-wrap">
+                        <table class="table fin-table">
+                            <thead>
+                                <tr><th>Year</th><th class="fin-num">Said, on {{ forecast.today|date:"M j" }}</th><th class="fin-num">Happened</th><th class="fin-num">Off by</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for row in back_test %}
+                                    <tr>
+                                        <td>FY{{ row.year|stringformat:"s"|slice:"2:" }} <span class="fin-muted">from {{ row.from }}</span></td>
+                                        <td class="fin-num">{{ row.predicted|money }}</td>
+                                        <td class="fin-num">{{ row.actual|money }}</td>
+                                        <td class="fin-num {{ row.difference|money_class }}">{{ row.difference|money:True }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="fin-panel-body fin-muted" style="font-size:12px;">
+                        What a typical year made only from the years before said the rest of each year would add to
+                        LNL's own money, beside what it did.
+                        {% if back_test_summary %}
+                            The median miss is {{ back_test_summary.miss|money }}{% if back_test_summary.percent is not None %},
+                            about {{ back_test_summary.percent }}% of what a year moves{% endif %}: read the range, not the line.
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="fin-panel-body fin-muted">
+                        Needs three whole years on file. Import older Workday exports to test it.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}
+
+{% block finalsay %}
+{{ block.super }}
+    {% if chart_data %}
+        {{ chart_data|json_script:"fin-forecast-data" }}
+        <script src="{% asset 'js/forecast.js' %}"></script>
+    {% endif %}
+{% endblock %}

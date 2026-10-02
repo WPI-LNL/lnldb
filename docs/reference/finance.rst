@@ -1221,6 +1221,10 @@ and departments         dates                   client at full rates, service by
 Event activity          terms or years, up to   Who the work was for, which services,
                         the year chosen         tiers and add-ons, and which clients, term
                                                 over term or year over year
+Forecast                today, to the end of    Where LNL's own money is heading, month
+                        next fiscal year        by month; see *Forecasting* below
+Draft budget request    next fiscal year        Each spend category's line for an SGA
+                                                budget request, from three whole years
 ======================  ======================  ==========================================
 
 **The period.** The filter bar's fiscal year, cut off at today while it is still
@@ -1306,6 +1310,177 @@ services it counts the events that used each one; under service tiers and
 add-ons, how many were booked; and for hired-in gear, how many items were
 hired, or what they cost.
 
+Forecasting
+-----------
+
+The *Forecast* tab carries today's balances forward, month by month, to the end
+of next fiscal year, and says whether LNL's own money stays above the minimum
+reserve on the way. Like the balances it starts from, it is worked out on every
+page load and never stored, and every projected movement says where it came
+from. Its four pages are the forecast itself, *Can we afford it?*, the planned
+purchases list, and *History*, which is what the forecast learns from.
+
+History
+~~~~~~~
+
+A forecast needs years to learn from, and the books start in FY26. Older Workday
+exports import through the queue's ordinary upload, and every line dated before
+the books start is **history**: kept for the forecast, outside every balance,
+and never filed. :meth:`~finance.models.WorkdayTransactionQuerySet.in_ledger`
+is what the queue, the dashboard, the year-end checklist and the reports read,
+so history is never work for anybody; a history line cannot take a slice, and
+its own page shows how it is read instead of the split form.
+
+Left blank, the books start where the earliest line does, so importing FY19
+would move the books back six years and put six years of lines in the queue.
+Migration ``0008_forecasting`` writes the start down on an install that has
+lines, and an import that brings in older lines writes it down first if
+nobody has. The confirmation page counts the lines for the queue and the lines
+of history separately. Cash is the one figure history still counts: worked back
+from a Workday balance through every line imported, it gives the cash each past
+year ended on, which the History page shows -- a year that never adds up to the
+next balance Workday reported has lines missing.
+
+A history line is **read** rather than filed (:mod:`finance.history`):
+
+1. **SGA funding**: anything on the SGA account (74600), or shaped like SGA's
+   own journal entries, paying in or taking back.
+2. **Client billing**: money in on a billing account (70050, and before FY20
+   70000), or on an Internal Service Delivery.
+3. **Other**: money in from no supplier and no person -- a transfer between
+   LNL's accounts, a gift.
+4. **Spending**: money out, and money back from whoever was paid, in the
+   category the queue's *lookups* give -- the memo naming a category, Workday's
+   spend category, the ledger account. Wording rules are guesses and are not
+   used: a line nothing looks up is "not worked out". A memo quoting an SGA
+   request number makes it a funding request's spending, which SGA pays back.
+
+A reading is an estimate and is labelled as one. The Treasurer can correct any
+line -- what it was, its category, or leaving a one-off out of the forecast --
+with a :class:`~finance.models.HistoryOverride`, and the forecast follows at
+once. A line in the books that is still in the queue is read the same way until
+it is filed. The History page also lists the Workday categories no lookup reads,
+since one rule in the admin settles each of them here and in the queue.
+
+A typical year
+~~~~~~~~~~~~~~
+
+:class:`~finance.forecast.TypicalYear` is built from the **three most recent
+whole years** -- a year counts once its lines cover nine months, so FY18's
+single day of conversion entries does not. LNL's billing nearly quadrupled
+between FY19 and FY26, so a median over every year since would describe the
+business it used to be.
+
+Each part of the year -- billing, the gear hired in for shows, and each running
+cost category -- is the **median** of those years' totals, spread over the
+calendar the way those years spread it between them. The median, so one odd
+year (a $15,000 chain-motor repair) does not set the pattern; the spread, so
+orientation's billing lands in August. No growth is assumed: next year looks
+like a typical recent one. Left out of a typical year:
+
+* SGA's money, which pays for particular things, and spending SGA pays for;
+* transfers and gifts;
+* **equipment**, and any other category marked *forecast from plans only* --
+  it is chosen one purchase at a time, so only what is reserved or planned
+  counts;
+* lines the Treasurer left out.
+
+**Billing before FY27.** From FY27 LNL bills departments only (see
+:data:`~finance.models.DEPARTMENTS_ONLY_FROM`), so a year of billing from before
+then overstates what the same work brings in now, and history cannot say who
+paid. Billing from those years -- and the gear hired in for them -- counts at the
+**departments' share**: the figure set in Finance Configuration, or else the
+share billing filed against events shows, once at least half of the billing
+since the books started is filed against an event whose client is on file.
+Until either exists, billing is left out of the typical year altogether, and
+the forecast says so above everything else: a forecast that leaves out income
+errs on the side of not overspending.
+
+The projection
+~~~~~~~~~~~~~~
+
+:func:`~finance.forecast.project` starts from the balance page's figures for
+today and adds six parts, each of which can be switched off on the page to see
+what it contributes:
+
+=====================  ===================================================================
+Part                   What it adds
+=====================  ===================================================================
+Reserved purchases     Each encumbrance, on its date
+Owed to LNL            What SGA owes on each funding request, after SGA's usual wait;
+                       each unpaid bill, the client's usual wait after the show
+Booked events          Approved shows still to come that nobody has billed. A
+                       department's show brings in its quote and pays for its hired
+                       gear on the day. From FY27 a student organization's show brings
+                       in nothing and its gear is a funding request's spending, paid
+                       back by SGA. A show with no client on file pays for its gear
+A typical year         Billing, hired gear and running costs, month by month
+Planned purchases      The Treasurer's list, and any "what if" being asked
+Year end               A budget's unspent balance going back to SGA on June 30
+=====================  ===================================================================
+
+The **waits** -- SGA's repayment, measured from the last spending on a request
+before each payment, and a client's, from the show to the payment -- are the
+medians in the ledger once it holds two of each, and thirty days until then.
+A wait already over lands on the first day of the forecast.
+
+Nothing counts twice. A month brings in whichever is more, what is dated for it
+(booked shows, bills owed) or what a typical month does; hired gear the same.
+A reserved or planned purchase in a running-cost category is part of that
+category's year, so the rest of that year shrinks by it.
+
+The forecast starts the day after the last Workday line imported, not today:
+until the export catches up, the days in between are the typical year's. The
+figure that matters is **LNL's own money** -- the account's own fund (Legacy)
+and anything not filed yet. A funding request's money is SGA's, so running it
+down moves the account's cash, which the chart and the table show too, but never
+the verdict. Projection's account is forecast the same way once a Workday
+balance is entered for it.
+
+**The range** is the forecast re-run with each of the three years in place of
+the typical one -- the dotted lines on the chart -- taking in the typical path,
+which, being a median part by part, need not fall between them.
+
+**The verdict** is *yes* when LNL's own money stays above the reserve in every
+month even if the rest of the forecast goes like the weakest of the three years;
+*tight* when only a typical year keeps it there; *no* when not even that does.
+**Room to spend** is the smallest gap between the reserve and LNL's own money
+in any month from today on: spending today lowers every month after it.
+
+Can we afford it, and planned purchases
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+*Can we afford it?* runs the forecast twice, without a purchase and with it, and
+gives the verdict, the low point, each June 30 and the room to spend side by
+side. It is asked by ``GET``, so an answer is a link to send to somebody. One
+click adds it to the **planned purchases** list, a
+:class:`~finance.models.PlannedPurchase` per thing LNL means to buy. The
+forecast counts the planned and approved ones on their dates; marking one
+*bought or reserved* stops it counting once the ledger has it as an encumbrance
+or a Workday line.
+
+How well it does
+~~~~~~~~~~~~~~~~
+
+:func:`~finance.forecast.back_test` asks the past: on today's day of the year in
+each past year with two whole years before it, what a typical year made from
+those years said the rest of the year would add to LNL's own money, beside what
+it did, and the median miss. LNL's years swing widely -- billing has grown
+several-fold, and some years hire in far more gear than others -- so the miss
+is large, and the page says how large. That is why it leads with the range
+rather than the line.
+
+A first budget request
+~~~~~~~~~~~~~~~~~~~~~~
+
+The *Draft budget request* report (:func:`~finance.reports.budget_draft`) lays
+out next fiscal year's SGA budget request: for each spend category on each side
+of the partition, the last three whole years' spending net of refunds, this year
+so far, their median, and that median rounded up to the next $50 to propose.
+Spending SGA paid for through funding requests is included, because with a
+budget that is what the budget pays for. The equipment categories are one line:
+a line read from Workday cannot tell a capital purchase from the rest.
+
 Dashboard metrics
 -----------------
 
@@ -1387,7 +1562,8 @@ the Django admin:
 Table                Holds
 ===================  ==========================================================
 ``SpendCategory``    LNL's own expense categories, each with the colour it is
-                     drawn in on the dashboard
+                     drawn in on the dashboard, and whether the forecast counts
+                     it only from planned purchases
 ``FundSource``       SGA Funding Request, SGA Budget, Legacy, SGA Mandatory
                      Transfer — whether the fund must name a funding request
                      line, which account holds it, how it behaves at year end,
@@ -1406,7 +1582,9 @@ Table                Holds
                      treated as a guess and is only offered
 ``FinanceSettings``  One row: the month the fiscal year starts, the Workday
                      fund that means "student organisation", how many years
-                     the filter bar offers, and the day the books start
+                     the filter bar offers, the day the books start, the
+                     minimum reserve, and the departments' share of billing
+                     before FY27
 ``ServiceColor``     The colour of each service category on the service-mix
                      chart, keyed to the events app's own ``Category`` row so a
                      rename does not lose it
@@ -1448,6 +1626,10 @@ What stays in code, and why:
     Carries forward, returns to SGA, or reimbursed after spending. The funds are
     rows; what SGA does with money at June 30 is one of three things, and the
     balance page and the year-end close branch on which.
+``HistoryKind``, and the SGA and billing ledger accounts in :mod:`finance.history`
+    What a line nobody filed can be. Each kind is projected its own way, and
+    the accounts are how an old line is recognised as one -- WPI's chart of
+    accounts, which a forecast reading six years of exports cannot do without.
 :data:`finance.models.FINGERPRINT_WORKTAGS`
     Deliberately *not* editable. It defines what makes a bank line that line,
     so changing it would orphan every fingerprint on file and make the next
@@ -1462,7 +1644,7 @@ What stays in code, and why:
 Tests
 -----
 
-``python manage.py test finance`` runs 1,301 tests across twenty-three modules. The
+``python manage.py test finance`` runs 1,395 tests across twenty-five modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.
@@ -1612,6 +1794,22 @@ Activity
 
 -----
 
+History
+-------
+.. automodule:: finance.history
+    :members:
+    :undoc-members:
+
+-----
+
+Forecast
+--------
+.. automodule:: finance.forecast
+    :members:
+    :undoc-members:
+
+-----
+
 Filters
 -------
 .. automodule:: finance.filters
@@ -1651,6 +1849,10 @@ Views
     :undoc-members:
 
 .. automodule:: finance.views.reports
+    :members:
+    :undoc-members:
+
+.. automodule:: finance.views.forecast
     :members:
     :undoc-members:
 

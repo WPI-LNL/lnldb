@@ -17,15 +17,31 @@
                 <div class="fin-panel-body">
 
                     <div class="alert alert-warning fin-import-confirm-lede">
-                        You are about to add
-                        <strong>{{ created_count }} unreconciled line{{ created_count|pluralize }}</strong>
-                        to the queue. Are you sure you want to proceed?
+                        {% if queue_count %}
+                            You are about to add
+                            <strong>{{ queue_count }} unreconciled line{{ queue_count|pluralize }}</strong>
+                            to the queue{% if history_count %}, and {{ history_count }} line{{ history_count|pluralize }} of history{% endif %}.
+                        {% else %}
+                            You are about to add
+                            <strong>{{ history_count }} line{{ history_count|pluralize }} of history</strong>,
+                            and nothing to the queue.
+                        {% endif %}
+                        Are you sure you want to proceed?
                     </div>
 
                     <dl class="fin-kv">
                         <dt>File</dt><dd><code>{{ filename }}</code></dd>
                         <dt>New lines</dt>
-                        <dd><strong>{{ created_count }}</strong> &mdash; each one work for somebody</dd>
+                        {% if queue_count %}
+                            <dd><strong>{{ queue_count }}</strong> for the queue &mdash; each one work for somebody</dd>
+                        {% endif %}
+                        {% if history_count %}
+                            <dd>
+                                <strong>{{ history_count }}</strong> from before the books start on
+                                {{ books_start|date:"M j, Y" }}: history, kept for the forecast. They stay out
+                                of the queue and out of every balance, and are never filed.
+                            </dd>
+                        {% endif %}
                         <dd class="fin-muted">Net {{ net_total|money }}</dd>
                         {% if duplicate_count %}
                             <dt>Already imported</dt>
@@ -107,6 +123,9 @@
                         <button type="submit" class="btn btn-primary">
                             Import {{ created_count }} line{{ created_count|pluralize }}
                         </button>
+                        {% if history_count %}
+                            <a href="{% url 'finance:history' %}" class="btn btn-link">What history is for</a>
+                        {% endif %}
                     </form>
                 </div>
             </div>

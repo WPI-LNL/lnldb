@@ -99,6 +99,8 @@ def transaction_detail(request, pk):
     """
     txn = get_object_or_404(
         WorkdayTransaction.objects.prefetch_related('slices__project_tag'), pk=pk)
+    if txn.is_history:
+        return _history_detail(request, txn)
     can_edit = request.user.has_perm('finance.edit_subledger')
 
     if request.method == 'POST' and can_edit:
@@ -153,6 +155,30 @@ def transaction_detail(request, pk):
         'is_balanced': txn.is_fully_allocated,
         'can_edit': can_edit,
         'can_settle': request.user.has_perm('finance.settle_subledger'),
+        'worktags': sorted((k.replace('_', ' ').title(), v)
+                           for k, v in (txn.worktags_json or {}).items()),
+    }
+    context.update(filter_context(request))
+    return render(request, 'finance/transaction_detail.html', context)
+
+
+def _history_detail(request, txn):
+    """
+    A line from before the books start. It is never filed, so there is nothing
+    to split: the page shows the Workday record and how the forecast reads it.
+    """
+    from finance import history
+    from finance.models import HistoryOverride, books_start_date
+
+    override = HistoryOverride.objects.filter(line=txn).first()
+    reading = history.reading_for(txn, override)
+    context = {
+        'h2': "Transaction %s" % txn.reference,
+        'txn': txn,
+        'history': reading,
+        'history_category': history.spending_categories().get(reading.category),
+        'books_start': books_start_date(),
+        'can_edit': request.user.has_perm('finance.edit_subledger'),
         'worktags': sorted((k.replace('_', ' ').title(), v)
                            for k, v in (txn.worktags_json or {}).items()),
     }

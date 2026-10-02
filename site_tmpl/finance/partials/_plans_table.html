@@ -1,0 +1,34 @@
+{# One list of planned purchases. #}
+{% load finance_extras %}
+<div class="fin-table-wrap">
+    <table class="table fin-table">
+        <thead>
+            <tr><th>Expected</th><th>What</th><th>Paid from</th><th>Category</th><th>Status</th><th class="fin-num">Amount</th>{% if can_edit %}<th></th>{% endif %}</tr>
+        </thead>
+        <tbody>
+            {% for purchase in purchases %}
+                <tr>
+                    <td class="fin-nowrap">{{ purchase.expected_date|date:"M j, Y" }}</td>
+                    <td>
+                        {{ purchase.name }}
+                        {% if purchase.notes %}<div class="fin-muted">{{ purchase.notes|truncatechars:120 }}</div>{% endif %}
+                    </td>
+                    <td>{{ purchase.fund_source }}</td>
+                    <td>{% if purchase.spend_category %}{{ purchase.spend_category }}{% else %}<span class="fin-muted">&mdash;</span>{% endif %}</td>
+                    <td>{{ purchase.get_status_display }}</td>
+                    <td class="fin-num">{{ purchase.amount|money }}</td>
+                    {% if can_edit %}
+                        <td class="fin-nowrap text-right">
+                            <a href="{% url 'finance:plan-edit' purchase.pk %}" class="btn btn-xs btn-default">Change</a>
+                            <form method="post" action="{% url 'finance:plan-delete' purchase.pk %}" style="display:inline;"
+                                  onsubmit="return confirm('Remove {{ purchase.name|escapejs }} from the list?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-xs btn-link">Remove</button>
+                            </form>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

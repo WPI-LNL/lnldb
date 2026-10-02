@@ -1014,6 +1014,41 @@
 
 .fin-print-header { display: none; }
 
+/* ---- Forecast ------------------------------------------------------------- */
+.fin-subnav { margin-bottom: 16px; }
+.fin-forecast-chart { position: relative; }
+.fin-switches { list-style: none; margin: 0; padding: 6px 0; }
+.fin-switches li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 14px;
+    font-size: 13px;
+}
+.fin-switches li.is-off a { color: #9aa5b1; }
+.fin-switches li.is-off { text-decoration: line-through; color: #9aa5b1; }
+.fin-switches .glyphicon { margin-right: 4px; }
+tr.fin-year-end td { border-bottom: 2px solid #9aa5b1; }
+.fin-verdict {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid #dfe3e8;
+    border-left-width: 6px;
+    border-radius: 3px;
+    background: #fff;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+}
+.fin-verdict-word { font-size: 28px; font-weight: 700; min-width: 70px; }
+.fin-verdict.is-yes { border-left-color: #59A14F; }
+.fin-verdict.is-yes .fin-verdict-word { color: #3c763d; }
+.fin-verdict.is-tight { border-left-color: #F28E2B; }
+.fin-verdict.is-tight .fin-verdict-word { color: #8a6d3b; }
+.fin-verdict.is-no { border-left-color: #E15759; }
+.fin-verdict.is-no .fin-verdict-word { color: #a94442; }
+.fin-history-table th a { color: inherit; }
+
 /* ---- Utility -------------------------------------------------------------- */
 .fin-muted { color: #9aa5b1; }
 .fin-nowrap { white-space: nowrap; }

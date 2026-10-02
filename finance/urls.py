@@ -74,4 +74,16 @@ urlpatterns = [
     # Reports to print and download
     re_path(r'^reports/$', views.report_list, name="reports"),
     re_path(r'^reports/(?P<slug>[a-z-]+)/$', views.report, name="report"),
+
+    # Where the money is heading, and the past it is worked out from
+    re_path(r'^forecast/$', views.forecast_page, name="forecast"),
+    re_path(r'^forecast/afford/$', views.afford, name="afford"),
+    re_path(r'^forecast/plans/$', views.plans, name="plans"),
+    re_path(r'^forecast/plans/new/$', views.plan_edit, name="plan-new"),
+    re_path(r'^forecast/plans/(?P<pk>\d+)/$', views.plan_edit, name="plan-edit"),
+    re_path(r'^forecast/plans/(?P<pk>\d+)/delete/$', views.plan_delete, name="plan-delete"),
+    re_path(r'^forecast/history/$', views.history_page, name="history"),
+    re_path(r'^forecast/history/(?P<fiscal_year>\d{4})/$', views.history_year,
+            name="history-year"),
+    re_path(r'^forecast/history/line/(?P<pk>\d+)/$', views.history_line, name="history-line"),
 ]

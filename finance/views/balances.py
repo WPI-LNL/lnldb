@@ -285,7 +285,7 @@ def _year_checklist(year):
     from finance.models import ParsedTransaction, TransactionStatus, WorkdayTransaction
 
     first, last = fiscal_year_bounds(year.fiscal_year)
-    lines = WorkdayTransaction.objects.filter(accounting_date__range=(first, last))
+    lines = WorkdayTransaction.objects.in_ledger().filter(accounting_date__range=(first, last))
     unreconciled = lines.unreconciled().count()
     pending_encumbrances = ParsedTransaction.objects.filter(
         parent_transaction__isnull=True, status=TransactionStatus.PENDING,

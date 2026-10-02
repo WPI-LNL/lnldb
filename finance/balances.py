@@ -73,13 +73,16 @@ class Books(object):
         self.own_fund_ids = {code: fund.pk for code, fund in own.items()}
 
         codes = partition_codes()
-        #: ``{line pk: (date, amount, account code)}``
+        #: ``{line pk: (date, amount, account code)}``. Every line, history
+        #: too: cash is a Workday balance plus or minus the lines between it
+        #: and the day asked about, whichever side of the books start they
+        #: fall. Only the funds are counted from the start.
         self.lines = {}
         self.unassigned_lines = 0
         for pk, date, amount, worktags in WorkdayTransaction.objects.values_list(
                 'pk', 'accounting_date', 'net_amount', 'worktags_json'):
             code = account_code_for(worktags, codes)
-            if code is None:
+            if code is None and (self.start is None or date >= self.start):
                 self.unassigned_lines += 1
             self.lines[pk] = (date, money(amount), code)
 

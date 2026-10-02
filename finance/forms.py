@@ -30,8 +30,9 @@ from mptt.forms import TreeNodeChoiceField
 
 from finance.importers import CSV_EXTENSIONS, XLSX_EXTENSIONS
 from finance.models import (ZERO, BalanceCheckpoint, FRLineItem, FundingRequest, FundSource,
-                            FundTransfer, ParsedTransaction, PartitionCode, ProjectTag,
-                            RevenueSource, SpendCategory, TransactionStatus,
+                            FundTransfer, HistoryOverride, ParsedTransaction, PartitionCode,
+                            PlannedPurchase, ProjectTag, RevenueSource, SpendCategory,
+                            TransactionStatus,
                             WorkdayTransaction, current_fiscal_year,
                             event_passthrough_category, fiscal_year_bounds,
                             fiscal_year_choices, fiscal_year_for, money,
@@ -1948,3 +1949,59 @@ class YearCloseForm(forms.Form):
                                 "FY%s %s that SGA will not reimburse, written off to %s"
                                 % (short_year, row.fund, account.own_fund)))
         return out
+
+
+# ---------------------------------------------------------------------------
+# The forecast's inputs
+# ---------------------------------------------------------------------------
+
+def _own_money():
+    """ The event account's own fund -- Legacy -- which a purchase comes out of by default. """
+    account = PartitionCode.objects.filter(is_projection=False).order_by('code').first()
+    return own_fund_for_account(account.code) if account is not None else None
+
+
+class PlannedPurchaseForm(forms.ModelForm):
+    """ Something LNL means to buy, for the forecast to count until it is bought. """
+
+    class Meta:
+        model = PlannedPurchase
+        fields = ('name', 'amount', 'expected_date', 'fund_source', 'spend_category', 'status',
+                  'notes')
+        widgets = {'expected_date': forms.DateInput(attrs={'type': 'date'}),
+                   'notes': forms.Textarea(attrs={'rows': 3})}
+
+    def __init__(self, *args, **kwargs):
+        """ Paid from LNL's own money unless said otherwise; only what is still in use. """
+        super(PlannedPurchaseForm, self).__init__(*args, **kwargs)
+        self.fields['fund_source'].queryset = FundSource.objects.active()
+        self.fields['spend_category'].queryset = SpendCategory.objects.active()
+        if not self.instance.pk and not self.initial.get('fund_source'):
+            own = _own_money()
+            if own is not None:
+                self.fields['fund_source'].initial = own.pk
+        if 'expected_date' in self.fields and not self.instance.pk:
+            self.fields['expected_date'].initial = timezone.localdate()
+        self.helper = finance_form_helper()
+
+
+class WhatIfForm(PlannedPurchaseForm):
+    """ A purchase being asked about: the same questions, and nothing saved. """
+
+    class Meta(PlannedPurchaseForm.Meta):
+        fields = ('name', 'amount', 'expected_date', 'fund_source', 'spend_category')
+
+
+class HistoryOverrideForm(forms.ModelForm):
+    """ Put right how one line from before the books start is read. """
+
+    class Meta:
+        model = HistoryOverride
+        fields = ('kind', 'spend_category', 'leave_out', 'note')
+
+    def __init__(self, *args, **kwargs):
+        """ Every category, retired ones too: a past line may well be in one. """
+        super(HistoryOverrideForm, self).__init__(*args, **kwargs)
+        self.fields['spend_category'].queryset = SpendCategory.objects.order_by('sort_order',
+                                                                                'name')
+        self.helper = finance_form_helper()

@@ -16,8 +16,9 @@ from reversion.admin import VersionAdmin
 from finance.importers import COLUMN_ALIASES
 from finance.models import (BalanceCheckpoint, ColumnAlias, FinanceSettings, FiscalYearClose,
                             FRLineItem, FundingRequest, FundSource, FundTransfer,
-                            ParsedTransaction, PartitionCode, ProjectTag, RevenueSource,
-                            ServiceColor, SpendCategory, SuggestionRule, WorkdayTransaction)
+                            HistoryOverride, ParsedTransaction, PartitionCode, PlannedPurchase,
+                            ProjectTag, RevenueSource, ServiceColor, SpendCategory,
+                            SuggestionRule, WorkdayTransaction)
 
 
 # ---------------------------------------------------------------------------
@@ -75,10 +76,10 @@ class SpendCategoryAdmin(VocabularyAdmin):
     queue's *Which event?* tag watches for -- invisible to the one person who
     decides it. It is on the list view too, so which row holds it is a glance.
     """
-    list_display = ('name', 'swatch', 'slug', 'is_event_passthrough', 'sort_order',
-                    'is_active', 'in_use', 'rule_count')
-    fields = ('name', 'slug', 'color', 'description', 'is_event_passthrough', 'sort_order',
-              'is_active')
+    list_display = ('name', 'swatch', 'slug', 'is_event_passthrough', 'forecast_from_plans',
+                    'sort_order', 'is_active', 'in_use', 'rule_count')
+    fields = ('name', 'slug', 'color', 'description', 'is_event_passthrough',
+              'forecast_from_plans', 'sort_order', 'is_active')
     inlines = (SuggestionRuleInline,)
 
     @admin.display(description="Colour")
@@ -381,3 +382,22 @@ class FiscalYearCloseAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         """ Only the close page creates these. """
         return False
+
+
+@admin.register(PlannedPurchase)
+class PlannedPurchaseAdmin(VersionAdmin):
+    """ What LNL means to buy. The Forecast tab keeps this list too. """
+    list_display = ('name', 'amount', 'expected_date', 'fund_source', 'spend_category', 'status')
+    list_filter = ('status', 'fund_source', 'spend_category')
+    date_hierarchy = 'expected_date'
+    list_select_related = ('fund_source', 'spend_category')
+    raw_id_fields = ('created_by',)
+
+
+@admin.register(HistoryOverride)
+class HistoryOverrideAdmin(admin.ModelAdmin):
+    """ Corrections to how lines from before the books start are read. """
+    list_display = ('line', 'kind', 'spend_category', 'leave_out', 'note', 'updated_by')
+    list_filter = ('kind', 'leave_out', 'spend_category')
+    list_select_related = ('line', 'spend_category', 'updated_by')
+    raw_id_fields = ('line', 'updated_by')

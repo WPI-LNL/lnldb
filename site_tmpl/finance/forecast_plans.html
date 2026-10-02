@@ -1,0 +1,38 @@
+{# Everything LNL means to buy: the forecast counts the planned and approved ones. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    {% include 'finance/partials/_forecast_nav.html' %}
+
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>Counted by the forecast <span class="fin-muted">&middot; {{ counted|length }} totalling {{ counted_total|money }}</span></span>
+            {% if can_edit %}
+                <a href="{% url 'finance:plan-new' %}" class="btn btn-xs btn-primary">
+                    <span class="glyphicon glyphicon-plus"></span> Plan a purchase
+                </a>
+            {% endif %}
+        </div>
+        {% if counted %}
+            {% include 'finance/partials/_plans_table.html' with purchases=counted %}
+        {% else %}
+            <div class="fin-panel-body fin-muted">
+                Nothing planned. Add what LNL means to buy -- the console for next year, the speaker
+                replacement -- and the forecast will count it on its date.
+            </div>
+        {% endif %}
+    </div>
+
+    {% if others %}
+        <div class="fin-panel">
+            <div class="fin-panel-head">Bought or dropped <span class="fin-muted">&middot; not counted</span></div>
+            {% include 'finance/partials/_plans_table.html' with purchases=others %}
+        </div>
+    {% endif %}
+
+    <p class="fin-muted" style="font-size:12px;">
+        Once something is reserved or bought it is in the ledger, as an encumbrance or a Workday line; mark it
+        &ldquo;Bought or reserved&rdquo; here so it is not counted twice.
+    </p>
+{% endblock %}

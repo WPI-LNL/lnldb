@@ -19,19 +19,22 @@ took back undoes a reimbursement rather than being spent.
 import csv
 import datetime
 import io
+import statistics
 from collections import OrderedDict, defaultdict
+from decimal import ROUND_CEILING, Decimal
 
 from django.db.models import Q, Sum
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from finance import activity, balances
+from finance import activity, balances, history
 from finance.calculators import (_percent, billing_receivables, event_pnl_rows,
                                  event_pnl_totals, sga_receivables)
 from finance.models import (ZERO, ClientType, FiscalYearClose, FundBehaviour, ParsedTransaction,
                             RevenueSource, SpendCategory, WorkdayTransaction, books_start_date,
-                            client_type_for, fiscal_year_bounds, money, reimbursement_source)
+                            client_type_for, fiscal_year_bounds, fiscal_year_for, money,
+                            reimbursement_source)
 
 
 # ---------------------------------------------------------------------------
@@ -445,7 +448,7 @@ def _unfiled(period, is_projection=None):
     """
     from finance.filters import PARTITION_EVENT, PARTITION_PROJECTION, FilterState
 
-    lines = WorkdayTransaction.objects.all()
+    lines = WorkdayTransaction.objects.in_ledger()
     if period.is_bounded:
         lines = lines.filter(accounting_date__range=(period.first, period.last))
     if is_projection is not None:
@@ -1360,6 +1363,226 @@ def activity_trends(fiscal_year, by='term', measure='events', today=None):
 
 
 # ---------------------------------------------------------------------------
+# The forecast, to print and download
+# ---------------------------------------------------------------------------
+
+def forecast_report(result):
+    """
+    A forecast from :func:`finance.forecast.project`, laid out as a report:
+    the headline figures, each month, every dated movement, and the typical
+    year it rests on.
+    """
+    from finance.forecast import COMPONENTS, OWN
+
+    period = 'To %s' % _day(result.horizon)
+    file_part = 'to-%s' % _short(fiscal_year_for(result.horizon)).lower()
+    if not result.available:
+        return Report('forecast', "Forecast", period, '', file_part,
+                      [Column('what', '')], [], warnings=[result.problem])
+
+    code = result.code
+    columns = ([Column('month', 'Month')]
+               + [Column(key, label, Column.MONEY, coloured=True)
+                  for key, label in COMPONENTS.items()]
+               + [Column('own', "LNL's own money", Column.MONEY)]
+               + ([Column('low', 'Weakest year', Column.MONEY),
+                   Column('high', 'Strongest year', Column.MONEY)] if result.has_band else [])
+               + [Column('cash', 'All of %s' % code, Column.MONEY)])
+    months = []
+    for month in result.months:
+        cells = {'month': month.label, 'own': month.own, 'low': month.low,
+                 'high': month.high, 'cash': month.cash}
+        cells.update({key: month.flows.get(key) or None for key in COMPONENTS})
+        months.append(Row(cells, tone='danger' if month.below_reserve else ''))
+
+    dated_columns = [Column('day', 'When', Column.DATE), Column('what', 'What'),
+                     Column('part', 'Part'), Column('fund', 'Fund'),
+                     Column('amount', 'Amount', Column.MONEY, coloured=True)]
+    dated = [Row({'day': item.day, 'what': item.label, 'part': item.component_label,
+                  'fund': ("Own money" if item.fund == OWN
+                           else result.fund_names.get(item.fund) or ''),
+                  'amount': item.amount}, url=item.url or None, note=item.detail)
+             for item in result.items]
+
+    typical = result.typical
+    year_ends = result.year_ends
+    typical_columns = ([Column('part', 'Part')]
+                       + [Column('fy%s' % year, _short(year), Column.MONEY)
+                          for year in sorted(typical.years)]
+                       + [Column('annual', 'Typical year', Column.MONEY)]
+                       + [Column('to%s' % month.fiscal_year, 'Counted to %s' % _short(
+                           month.fiscal_year), Column.MONEY, coloured=True)
+                          for month in year_ends])
+    typical_rows = []
+    for row in result.typical_rows:
+        cells = {'part': row['label'], 'annual': row['annual']}
+        cells.update({'fy%s' % year: amount for year, amount in row['past'].items()})
+        cells.update({'to%s' % month.fiscal_year: row['by_year'].get(month.fiscal_year)
+                      for month in year_ends})
+        typical_rows.append(Row(cells))
+
+    low = result.low_point
+    stats = [Stat("LNL's own money now", result.opening_own,
+                  sub='%s holds %s in all' % (code, _dollars(result.opening_cash)))]
+    for month in year_ends:
+        stats.append(Stat('June 30, %s' % month.last.year, month.own,
+                          sub=('Range %s to %s' % (_dollars(month.low), _dollars(month.high))
+                               if month.low is not None else ''),
+                          tone='text-danger' if month.below_reserve else ''))
+    stats.append(Stat('Lowest point', low.own, sub='End of %s' % low.label,
+                      tone='text-danger' if low.below_reserve else ''))
+    stats.append(Stat('Room to spend', result.room,
+                      sub='and keep %s to %s' % (_dollars(result.reserve),
+                                                 _day(result.horizon)),
+                      tone='text-danger' if result.room < 0 else ''))
+
+    notes = ["The figure that matters is LNL's own money: %s." % result.fund_names.get(OWN),
+             "SGA pays back a funding request %s." % result.waits['sga'].after("the spending"),
+             "Clients pay %s." % result.waits['bill'].after("the show")] + list(result.notes)
+    if result.without:
+        notes.insert(0, "Left out: %s." % ', '.join(
+            label for key, label in COMPONENTS.items() if key in result.without))
+    return Report(
+        'forecast', "Forecast for %s" % code, period,
+        'from the books as of %s' % _day(result.since), file_part, columns,
+        [Section('Each month', months),
+         Section('Dated, one by one', dated, empty='Nothing dated is ahead.',
+                 columns=dated_columns),
+         Section('A typical year: the median of %s' % typical.span, typical_rows,
+                 empty='No whole years on file.', columns=typical_columns)],
+        stats=stats, notes=notes, warnings=result.warnings)
+
+
+# ---------------------------------------------------------------------------
+# A first budget request
+# ---------------------------------------------------------------------------
+
+#: How many whole years a draft budget is worked out from.
+BUDGET_YEARS = 3
+
+#: A proposed line is rounded up to a multiple of this.
+BUDGET_ROUNDING = Decimal('50')
+
+
+def _round_up(amount):
+    """ Up to the next multiple of :data:`BUDGET_ROUNDING`. """
+    if amount <= 0:
+        return ZERO
+    return (amount / BUDGET_ROUNDING).to_integral_value(rounding=ROUND_CEILING) * BUDGET_ROUNDING
+
+
+def budget_draft(today=None, ledger=None):
+    """
+    Next fiscal year's SGA budget request, drafted from what LNL spent.
+
+    An SGA budget is a set of lines of expected spending, by general
+    category and split between Event Production and Projection, with one
+    approved figure for each. So each line here is a spend category on one
+    side: what the last three whole years spent on it, net of refunds, this
+    year so far, the median of the three, and that median rounded up to the
+    next $50 as the figure to propose.
+
+    Every year is counted the way the forecast counts it -- filed where the
+    books cover it, read where they do not -- and spending SGA paid for
+    through funding requests is included, because with a budget that is what
+    the budget would pay for.
+
+    The categories forecast from plans -- equipment -- are one line. A line
+    read from Workday cannot tell a capital purchase from the rest, so the
+    years before the books would put all of it in one and the years since in
+    the other, and neither line's median would mean anything.
+    """
+    from finance.forecast import event_account_code
+
+    today = today or timezone.localdate()
+    ledger = ledger or history.Ledger()
+    current = fiscal_year_for(today)
+    target = current + 1
+    code = event_account_code()
+    years = sorted(ledger.whole_years(code, before=current)[:BUDGET_YEARS]) if code else []
+    categories = history.spending_categories()
+
+    planned = [category for category in categories.values() if category.forecast_from_plans]
+    spent = defaultdict(lambda: defaultdict(lambda: ZERO))
+    for flow in ledger.flows:
+        if flow.kind != 'spending' or flow.left_out:
+            continue
+        year = flow.fiscal_year
+        if year in years or year == current:
+            category = categories.get(flow.category)
+            line = 'plans' if category is not None and category.forecast_from_plans else flow.category
+            spent[(flow.is_projection, line)][year] -= flow.amount
+
+    year_columns = [Column('fy%s' % year, _short(year), Column.MONEY) for year in years]
+    columns = ([Column('line', 'Line')] + year_columns
+               + [Column('so_far', '%s so far' % _short(current), Column.MONEY),
+                  Column('median', 'Median', Column.MONEY),
+                  Column('proposed', 'Proposed for %s' % _short(target), Column.MONEY)])
+
+    def order(key):
+        if key[1] == 'plans':
+            return (False, min(c.sort_order for c in planned), '')
+        category = categories.get(key[1])
+        return (key[1] is None, getattr(category, 'sort_order', 0), str(category or ''))
+
+    def label(key):
+        if key[1] == 'plans':
+            return ' and '.join(c.name for c in sorted(planned, key=lambda c: c.sort_order))
+        category = categories.get(key[1])
+        return category.name if category is not None else 'Not worked out'
+
+    sections, stats, grand = [], [], ZERO
+    for is_projection, side in ((False, 'Event Production'), (True, 'Projection')):
+        keys = sorted((key for key in spent if key[0] == is_projection), key=order)
+        rows = []
+        totals = defaultdict(lambda: ZERO)
+        for key in keys:
+            by_year = spent[key]
+            if not any(by_year.values()):
+                continue
+            median = (money(statistics.median([by_year.get(year, ZERO) for year in years]))
+                      if years else ZERO)
+            proposed = _round_up(median)
+            cells = {'line': label(key), 'so_far': by_year.get(current, ZERO), 'median': median,
+                     'proposed': proposed}
+            cells.update({'fy%s' % year: by_year.get(year, ZERO) for year in years})
+            for column, value in cells.items():
+                if column != 'line':
+                    totals[column] += value
+            rows.append(Row(cells, note=('Chosen one purchase at a time: the request should '
+                                         'name what will be bought' if key[1] == 'plans'
+                                         else '')))
+        if not rows:
+            continue
+        total = dict(totals)
+        total['line'] = 'Total'
+        sections.append(Section(side, rows, total=Row(total)))
+        stats.append(Stat('%s, %s' % (side, _short(target)), total['proposed'],
+                          sub='median of %s' % ', '.join(_short(y) for y in years)))
+        grand += total['proposed']
+    if len(stats) > 1:
+        stats.append(Stat('Whole request', grand))
+
+    warnings = []
+    if len(years) < BUDGET_YEARS:
+        warnings.append(
+            "Only %s whole year%s on file. Import older Workday exports for a draft built on %s."
+            % (len(years), '' if len(years) == 1 else 's', BUDGET_YEARS))
+    notes = [
+        "A draft to argue from, not a request: each proposed line is the median of the years "
+        "beside it, rounded up to the next $%s." % BUDGET_ROUNDING,
+        "Spending is net of refunds. Spending SGA paid for through funding requests is "
+        "included, because with a budget it is what the budget would pay for.",
+        "A budget covers expected spending only; nothing here counts what LNL brings in.",
+        "Years before the books start are read from the Workday lines, not filed: see the "
+        "History page, where any line can be corrected.",
+    ]
+    return Report('budget-draft', "Draft budget request for %s" % _short(target),
+                  _short(target), '', _short(target).lower(), columns, sections,
+                  stats=stats, notes=notes, warnings=warnings)
+
+
+# ---------------------------------------------------------------------------
 # The list the Reports page shows
 # ---------------------------------------------------------------------------
 
@@ -1388,4 +1611,12 @@ REPORTS = OrderedDict((
                   "What LNL is doing more or less of, term over term or year over year: who for, "
                   "which services, which service tiers and add-ons, and which clients.",
                   'trend')),
+    ('forecast', ("Forecast",
+                  "Where LNL's own money is heading, month by month to the end of next fiscal "
+                  "year: what is reserved, owed, booked and planned, and a typical year.",
+                  'today')),
+    ('budget-draft', ("Draft budget request",
+                      "Next year's SGA budget request, line by line: each spend category's "
+                      "spending over the last three whole years, and a figure to propose.",
+                      'next')),
 ))

@@ -1,0 +1,67 @@
+{# One line of history: how it is read, and the Treasurer's correction to it. #}
+{% extends 'finance/base_finance.html' %}
+{% load crispy_forms_tags %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    {% include 'finance/partials/_forecast_nav.html' %}
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="fin-panel fin-immutable">
+                <div class="fin-panel-head">
+                    <span><span class="glyphicon glyphicon-lock"></span> {{ txn.reference }}</span>
+                    <a href="{{ txn.get_absolute_url }}" class="fin-locked-note">the whole Workday line</a>
+                </div>
+                <div class="fin-panel-body">
+                    <dl class="fin-kv">
+                        <dt>Date</dt><dd>{{ txn.accounting_date|date:"F j, Y" }}</dd>
+                        <dt>Amount</dt><dd class="{{ txn.net_amount|money_class }}"><strong>{{ txn.net_amount|money }}</strong></dd>
+                        <dt>Payee</dt><dd>{{ txn.payee|default:"(none)" }}</dd>
+                        {% if txn.memo %}<dt>Memo</dt><dd>{{ txn.memo }}</dd>{% endif %}
+                        {% if txn.ledger_account %}<dt>Ledger account</dt><dd>{{ txn.ledger_account }}</dd>{% endif %}
+                        {% if txn.worktags_json.spend_category %}<dt>Workday category</dt><dd>{{ txn.worktags_json.spend_category }}</dd>{% endif %}
+                    </dl>
+                </div>
+            </div>
+            <div class="fin-panel">
+                <div class="fin-panel-head">What the line itself says</div>
+                <div class="fin-panel-body">
+                    <strong>{{ estimate.kind_label }}</strong>{% if estimate.kind == 'spending' %}:
+                        {% with category=categories|get_item:estimate.category %}{% if category %}{{ category }}{% else %}not worked out{% endif %}{% endwith %}{% endif %}
+                    <div class="fin-muted">{{ estimate.reason }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="fin-panel">
+                <div class="fin-panel-head">Your correction</div>
+                <div class="fin-panel-body">
+                    {% if can_edit %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ back }}">
+                            {% crispy form %}
+                            <div class="text-right">
+                                <a href="{{ back }}" class="btn btn-default">Back</a>
+                                {% if override %}
+                                    <button type="submit" name="clear" value="1" class="btn btn-default">Read it from the line again</button>
+                                {% endif %}
+                                <button type="submit" class="btn btn-primary">Save</button>
+                            </div>
+                        </form>
+                    {% elif override %}
+                        <strong>{{ reading.kind_label }}</strong>{% if reading.left_out %}, left out of the forecast{% endif %}
+                        {% if override.note %}<div class="fin-muted">{{ override.note }}</div>{% endif %}
+                    {% else %}
+                        <span class="fin-muted">None: the line is read as it says.</span>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="fin-muted" style="font-size:12px;">
+                Only how the forecast reads this line changes. The line itself is Workday's and stays as it is,
+                and it is never filed: it is from before the books start.
+            </p>
+        </div>
+    </div>
+{% endblock %}

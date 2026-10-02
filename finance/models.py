@@ -35,7 +35,7 @@ from decimal import ROUND_HALF_UP, Decimal
 import reversion
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models, transaction
 from django.db.models import Count, OuterRef, Prefetch, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
@@ -229,6 +229,12 @@ def org_code_matches(value, code):
 MONTH_CHOICES = tuple(
     (n, datetime.date(2000, n, 1).strftime('%B')) for n in range(1, 13))
 
+#: The first fiscal year LNL billed departments only. Until then it billed
+#: student organizations too, so a year of billing from before it overstates
+#: what the same work brings in now. See
+#: :attr:`FinanceSettings.department_billing_share`.
+DEPARTMENTS_ONLY_FROM = 2027
+
 
 class FinanceSettings(models.Model):
     """
@@ -262,7 +268,20 @@ class FinanceSettings(models.Model):
         help_text="The first day the subledger accounts for every line. Fund balances are "
                   "worked out from here: whatever each account held the night before is its "
                   "opening, and every line on or after it counts. Leave blank to start at the "
-                  "beginning of the fiscal year of the earliest imported line.")
+                  "beginning of the fiscal year of the earliest imported line. Lines from "
+                  "before it are history: kept for the forecast, never filed.")
+    minimum_reserve = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal('10000.00'),
+        validators=[MinValueValidator(Decimal('0.00'))], verbose_name="Minimum reserve",
+        help_text="The least LNL's own money should ever hold. The forecast marks any month "
+                  "projected below it, and \"Can we afford it?\" answers against it.")
+    department_billing_share = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MaxValueValidator(100)],
+        verbose_name="Departments' share of billing before FY27 (%)",
+        help_text="Until FY27 LNL billed student organizations as well as departments, and now "
+                  "it bills departments only. The forecast takes this share of past billing as "
+                  "what departments alone bring in. Leave blank to work it out from billing "
+                  "filed against events; until enough is, the forecast leaves past billing out.")
 
     class Meta:
         verbose_name = "Finance Configuration"
@@ -327,7 +346,11 @@ def _cached(key, build, default):
 
 def finance_settings():
     """ The live :class:`FinanceSettings` row, or the defaults if there is none. """
-    return _cached('config', lambda: FinanceSettings.load(), FinanceSettings(pk=1))
+    # The fallback is built only when it is needed. Built as the argument to
+    # _cached, it was a model instance made and thrown away on every call --
+    # and fiscal_year_for() calls this for every row of every page.
+    config = _cached('config', lambda: FinanceSettings.load(), None)
+    return config if config is not None else FinanceSettings(pk=1)
 
 
 def fiscal_year_start_month():
@@ -409,6 +432,8 @@ def fiscal_year_choices(back=None, forward=None):
 # * FundBehaviour is what the year-end close and the balance page branch on.
 #   The funds themselves are rows anyone can add; how money in one behaves at
 #   June 30 is one of three things SGA does, and a fourth would need code.
+# * HistoryKind is how the forecast reads a line nobody filed. Each kind is
+#   projected its own way, so a fifth would need code too.
 #
 # Everything a Treasurer might reasonably want to add or rename -- spend
 # categories, fund sources, revenue sources, auto-suggest rules, the partition
@@ -454,6 +479,20 @@ class FundBehaviour(models.TextChoices):
     CARRIES = 'carries', 'Carries forward'
     RETURNS = 'returns', 'Unspent returns to SGA at year end'
     REIMBURSED = 'reimbursed', 'Reimbursed by SGA after spending'
+
+
+class HistoryKind(models.TextChoices):
+    """
+    What a line from before the books start was, as the forecast reads it.
+
+    Those lines are never filed, so this is read off the line itself (see
+    :mod:`finance.history`) unless the Treasurer has corrected it. A filed line
+    says the same things through its slices.
+    """
+    BILLING = 'billing', 'Client billing'
+    SGA = 'sga', 'SGA funding'
+    SPENDING = 'spending', 'Spending'
+    OTHER = 'other', 'Other: transfers and gifts'
 
 
 def event_passthrough_category():
@@ -632,6 +671,12 @@ class SpendCategory(Vocabulary):
                   "incurred for -- a sub-rental hired for one show, passed straight "
                   "through. Filled in automatically so the Treasurer does not have to "
                   "pick a category that says nothing the linked event does not.")
+    forecast_from_plans = models.BooleanField(
+        default=False, verbose_name="Forecast from plans only",
+        help_text="For spending chosen one purchase at a time, like equipment. The forecast "
+                  "leaves it out of a typical year and counts only what is reserved or on the "
+                  "planned purchases list, so one big purchase is not expected again every "
+                  "year.")
 
     class Meta(Vocabulary.Meta):
         abstract = False
@@ -1803,6 +1848,22 @@ class WorkdayTransactionQuerySet(models.QuerySet):
         return self.with_allocation().filter(
             Q(_slice_count__gt=0) & Q(_pending_count=0) & Q(_allocated=models.F('net_amount')))
 
+    def in_ledger(self):
+        """
+        Lines on or after the day the books start: the ones the subledger files,
+        balances and reports on.
+
+        Anything earlier is history, imported so the forecast can learn what a
+        year looks like and never filed. See :func:`books_start_date`.
+        """
+        start = books_start_date()
+        return self if start is None else self.filter(accounting_date__gte=start)
+
+    def before_books(self):
+        """ The exact complement of :meth:`in_ledger`: history, kept for the forecast. """
+        start = books_start_date()
+        return self.none() if start is None else self.filter(accounting_date__lt=start)
+
 
 WorkdayTransactionManager = models.Manager.from_queryset(WorkdayTransactionQuerySet)
 
@@ -1986,6 +2047,15 @@ class WorkdayTransaction(models.Model):
     def is_revenue(self):
         """ Money in. The sign is the bank's, and is not ours to argue with. """
         return self.net_amount > 0
+
+    @property
+    def is_history(self):
+        """
+        Whether this line is from before the books start: kept so the forecast
+        can learn from it, and never filed.
+        """
+        start = books_start_date()
+        return start is not None and self.accounting_date < start
 
     def worktag(self, key, default=''):
         """ Case/format tolerant lookup into ``worktags_json``. """
@@ -2584,6 +2654,17 @@ class ParsedTransaction(models.Model):
             errors['amount'] = "Amount must be non-zero."
             raise ValidationError(errors)
 
+        # -- History is read, never filed ------------------------------------
+        # A line from before the books start is outside every balance, so a
+        # slice on it would be counted by the reports and by nothing else.
+        parent = self.parent_transaction
+        if parent is not None and parent.is_history:
+            raise ValidationError(
+                "This line is from %s, before the books start on %s. It is kept as history "
+                "for the forecast and is not filed." % (
+                    date_format(parent.accounting_date, 'M j, Y'),
+                    date_format(books_start_date(), 'M j, Y')))
+
         # -- Rule 2: revenue and expense routing are mutually exclusive -----
         if self.entry_type == self.REVENUE:
             for field in self.EXPENSE_FIELDS:
@@ -2987,3 +3068,108 @@ class FiscalYearClose(models.Model):
 
     def __str__(self):
         return "FY%s closed" % str(self.fiscal_year)[-2:]
+
+
+# ---------------------------------------------------------------------------
+# What the forecast reads that only a person can supply
+#
+# The forecast itself is worked out on every page load and never stored; see
+# finance.forecast. These are its two inputs that are not already in the
+# ledger: a correction to how an old line was read, and a purchase not made.
+# ---------------------------------------------------------------------------
+
+class HistoryOverride(models.Model):
+    """
+    The Treasurer's correction to how one line from before the books start is
+    read.
+
+    Those lines are never filed. They are read by the same lookups the queue
+    fills its boxes from (see :mod:`finance.history`), and that reading is an
+    estimate: this puts a wrong one right, or leaves out a one-off that a
+    typical year should not include.
+    """
+    glyphicon = 'pencil'
+
+    line = models.OneToOneField(WorkdayTransaction, on_delete=models.CASCADE,
+                                related_name='history_override')
+    kind = models.CharField(
+        max_length=16, choices=HistoryKind.choices, blank=True, verbose_name="What it was",
+        help_text="Leave blank to keep what the line itself says.")
+    spend_category = models.ForeignKey(
+        SpendCategory, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='history_overrides',
+        help_text="For spending. Leave blank to keep the estimate.")
+    leave_out = models.BooleanField(
+        default=False, verbose_name="Leave out of the forecast",
+        help_text="A one-off -- a conversion entry, a purchase that will not recur -- that a "
+                  "typical year should not include.")
+    note = models.CharField(max_length=255, blank=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name='finance_history_overrides')
+    updated_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "History Correction"
+
+    def __str__(self):
+        return "Correction to %s" % self.line.reference
+
+
+@reversion.register()
+class PlannedPurchase(models.Model):
+    """
+    Something LNL means to buy and has not yet: the forecast's list of plans.
+
+    Nothing here touches a balance. The forecast counts a planned or approved
+    purchase on its expected date; once it is reserved or bought it is in the
+    ledger instead, and marking it so here stops it counting twice.
+    """
+    glyphicon = 'shopping-cart'
+
+    PLANNED, APPROVED, BOUGHT, DROPPED = 'planned', 'approved', 'bought', 'dropped'
+    STATUS_CHOICES = (
+        (PLANNED, 'Planned'),
+        (APPROVED, 'Approved'),
+        (BOUGHT, 'Bought or reserved'),
+        (DROPPED, 'Dropped'),
+    )
+    #: The statuses the forecast counts. A bought one is in the ledger already,
+    #: as an encumbrance or a bank line.
+    COUNTED = (PLANNED, APPROVED)
+
+    name = models.CharField(max_length=128)
+    amount = models.DecimalField(
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(CENTS)],
+        help_text="What it will cost, as a positive figure.")
+    expected_date = models.DateField(verbose_name="Expected on",
+                                     help_text="Roughly when the money will go out.")
+    fund_source = models.ForeignKey(
+        FundSource, on_delete=models.PROTECT, related_name='planned_purchases',
+        verbose_name="Paid from",
+        help_text="Money from a funding request comes back from SGA after it is spent, so "
+                  "the forecast shows only the wait for it.")
+    spend_category = models.ForeignKey(
+        SpendCategory, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='planned_purchases')
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=PLANNED)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name='finance_planned_purchases')
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ('expected_date', 'pk')
+        verbose_name = "Planned Purchase"
+        constraints = (
+            models.CheckConstraint(check=Q(amount__gt=0),
+                                   name='finance_planned_purchase_amount_positive'),
+        )
+
+    def __str__(self):
+        return "%s (%s)" % (self.name, money(self.amount))
+
+    @property
+    def is_counted(self):
+        """ Whether the forecast counts it: planned or approved, not bought or dropped. """
+        return self.status in self.COUNTED

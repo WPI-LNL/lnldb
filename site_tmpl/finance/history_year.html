@@ -1,0 +1,55 @@
+{# One year of history: every line, and how it is read. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    {% include 'finance/partials/_forecast_nav.html' %}
+
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>
+                <a href="{% url 'finance:history' %}">History</a> &rsaquo; FY{{ fiscal_year|stringformat:"s"|slice:"2:" }}
+                {% if narrowed %}&rsaquo; {{ narrowed }} <a href="?" class="fin-muted">(every line)</a>{% endif %}
+            </span>
+            <span class="fin-locked-note">{{ rows|length }} line{{ rows|length|pluralize }} &middot; net {{ total|money }}</span>
+        </div>
+        <div class="fin-panel-body fin-muted" style="font-size:12.5px;">
+            Read, not filed: what each line was taken to be, and why. A line that is wrong, or a one-off a typical
+            year should not include, can be corrected; the forecast and the History page follow at once.
+        </div>
+        {% if rows %}
+            <div class="fin-table-wrap">
+                <table class="table fin-table">
+                    <thead>
+                        <tr><th>Date</th><th>Payee and memo</th><th>Read as</th><th class="fin-num">Amount</th>{% if can_edit %}<th></th>{% endif %}</tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                            <tr class="{% if row.reading.left_out %}fin-report-muted{% endif %}">
+                                <td class="fin-nowrap"><a href="{{ row.txn.get_absolute_url }}">{{ row.txn.accounting_date|date:"M j, Y" }}</a></td>
+                                <td>
+                                    {{ row.txn.payee|default:"(no payee)" }}
+                                    {% if row.txn.memo %}<div class="fin-muted">{{ row.txn.memo|truncatechars:110 }}</div>{% endif %}
+                                </td>
+                                <td>
+                                    {{ row.reading.kind_label }}{% if row.reading.kind == 'spending' %}: {% if row.category %}{{ row.category }}{% else %}<em>not worked out</em>{% endif %}{% endif %}
+                                    {% if row.reading.corrected %}<span class="fin-tag">corrected</span>{% endif %}
+                                    {% if row.reading.left_out %}<span class="fin-tag is-warn">left out</span>{% endif %}
+                                    <div class="fin-muted">{{ row.reading.reason }}</div>
+                                </td>
+                                <td class="fin-num {{ row.txn.net_amount|money_class }}">{{ row.txn.net_amount|money }}</td>
+                                {% if can_edit %}
+                                    <td class="fin-nowrap">
+                                        <a href="{% url 'finance:history-line' row.txn.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-xs btn-default">Correct</a>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="fin-panel-body fin-muted">No lines.</div>
+        {% endif %}
+    </div>
+{% endblock %}

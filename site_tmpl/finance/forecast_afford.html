@@ -1,0 +1,123 @@
+{# "Can we afford it?": the forecast run without a purchase and with it, read against the reserve. #}
+{% extends 'finance/base_finance.html' %}
+{% load crispy_forms_tags %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    {% include 'finance/partials/_forecast_nav.html' %}
+
+    <div class="row">
+        <div class="col-md-5">
+            <div class="fin-panel">
+                <div class="fin-panel-head">What would you buy?</div>
+                <div class="fin-panel-body">
+                    <form method="get">
+                        {% crispy form %}
+                        <div class="text-right">
+                            <button type="submit" class="btn btn-primary">Ask the forecast</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <p class="fin-muted" style="font-size:12px;">
+                The forecast runs twice, without this purchase and with it. The answer is about LNL's own
+                money, which must stay above the minimum reserve in every month to the end of next year.
+                From a funding request, SGA pays the purchase back, so only the wait shows.
+            </p>
+        </div>
+
+        <div class="col-md-7">
+            {% if answer %}
+                {% with after=answer.after before=answer.before purchase=answer.purchase %}
+                    {% if not after.available %}
+                        <div class="alert alert-warning">{{ after.problem }}</div>
+                    {% else %}
+                        <div class="fin-verdict is-{{ after.verdict }}">
+                            <div class="fin-verdict-word">
+                                {% if after.verdict == 'yes' %}Yes{% elif after.verdict == 'tight' %}Tight{% else %}No{% endif %}
+                            </div>
+                            <div>
+                                {% if after.verdict == 'yes' %}
+                                    With {{ purchase.name }} for {{ purchase.amount|money }}, LNL's own money stays above
+                                    the {{ after.reserve|money }} reserve in every month{% if after.has_band %}, even if the
+                                    rest of the forecast goes like the weakest of {{ after.typical.span }}{% endif %}.
+                                {% elif after.verdict == 'tight' %}
+                                    A typical year keeps LNL's own money above the {{ after.reserve|money }} reserve, but if
+                                    the rest of the forecast went like the weakest of {{ after.typical.span }} it would fall to
+                                    {{ after.lowest_in_band|money }}.
+                                {% else %}
+                                    LNL's own money would fall below the {{ after.reserve|money }} reserve, first at the end of
+                                    {{ after.months_below_reserve.0.label }}, and would be lowest at
+                                    {{ after.low_point.own|money }} at the end of {{ after.low_point.label }}.
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% for warning in after.warnings %}
+                            <div class="alert alert-warning" style="font-size:12.5px;">{{ warning }}</div>
+                        {% endfor %}
+
+                        <div class="fin-panel">
+                            <div class="fin-panel-head">Without it, and with it</div>
+                            <div class="fin-table-wrap">
+                                <table class="table fin-table">
+                                    <thead>
+                                        <tr><th></th><th class="fin-num">Without</th><th class="fin-num">With</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Lowest point of LNL's own money</td>
+                                            <td class="fin-num">{{ before.low_point.own|money }}<div class="fin-muted">{{ before.low_point.label }}</div></td>
+                                            <td class="fin-num {% if after.low_point.below_reserve %}text-danger{% endif %}">{{ after.low_point.own|money }}<div class="fin-muted">{{ after.low_point.label }}</div></td>
+                                        </tr>
+                                        {% if after.has_band %}
+                                            <tr>
+                                                <td>Lowest, if it goes like the weakest year</td>
+                                                <td class="fin-num">{{ before.lowest_in_band|money }}</td>
+                                                <td class="fin-num {% if after.lowest_in_band < after.reserve %}text-danger{% endif %}">{{ after.lowest_in_band|money }}</td>
+                                            </tr>
+                                        {% endif %}
+                                        {% for month in after.year_ends %}
+                                            <tr>
+                                                <td>June 30, {{ month.last.year }}</td>
+                                                <td class="fin-num">{% for other in before.year_ends %}{% if other.last == month.last %}{{ other.own|money }}{% endif %}{% endfor %}</td>
+                                                <td class="fin-num">{{ month.own|money }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                        <tr>
+                                            <td>Room to spend, keeping the reserve</td>
+                                            <td class="fin-num">{{ before.room|money }}</td>
+                                            <td class="fin-num {% if after.room < 0 %}text-danger{% endif %}">{{ after.room|money }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {% if can_edit %}
+                            <form method="post" action="{% url 'finance:plan-new' %}" class="text-right">
+                                {% csrf_token %}
+                                {% for name, value in answer.saves %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+                                <input type="hidden" name="status" value="planned">
+                                <input type="hidden" name="next" value="{% url 'finance:plans' %}">
+                                <button type="submit" class="btn btn-default">
+                                    <span class="glyphicon glyphicon-plus"></span> Add to planned purchases
+                                </button>
+                            </form>
+                        {% endif %}
+                        <p class="fin-muted" style="font-size:12px;margin-top:8px;">
+                            Counted with everything already planned. <a href="{% url 'finance:forecast' %}">See the whole forecast</a>.
+                        </p>
+                    {% endif %}
+                {% endwith %}
+            {% else %}
+                <div class="fin-panel">
+                    <div class="fin-panel-body fin-muted">
+                        Say what it is, what it costs and roughly when the money would go out, and the forecast
+                        will say whether LNL can afford it.
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

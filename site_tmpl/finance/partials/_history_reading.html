@@ -1,0 +1,27 @@
+{# The right-hand side of a history line's page: never filed, only read. #}
+<div class="fin-panel">
+    <div class="fin-panel-head">
+        <span><span class="glyphicon glyphicon-time"></span> History</span>
+        <span class="fin-locked-note">before the books start on {{ books_start|date:"M j, Y" }}</span>
+    </div>
+    <div class="fin-panel-body">
+        <p>
+            This line is kept so the forecast can learn what a year looks like. It is outside every balance,
+            so it is never filed and has no slices.
+        </p>
+        <dl class="fin-kv">
+            <dt>Read as</dt>
+            <dd>
+                <strong>{{ history.kind_label }}</strong>{% if history.kind == 'spending' %}: {% if history_category %}{{ history_category }}{% else %}not worked out{% endif %}{% endif %}
+                {% if history.corrected %}<span class="fin-tag">corrected</span>{% endif %}
+                {% if history.left_out %}<span class="fin-tag is-warn">left out of the forecast</span>{% endif %}
+            </dd>
+            <dt>Because</dt><dd>{{ history.reason }}</dd>
+            {% if history.note %}<dt>Note</dt><dd>{{ history.note }}</dd>{% endif %}
+        </dl>
+        <a href="{% url 'finance:history-line' txn.pk %}" class="btn btn-default btn-sm">
+            {% if can_edit %}Correct how it is read{% else %}How it is read{% endif %}
+        </a>
+        <a href="{% url 'finance:history-year' txn.fiscal_year %}" class="btn btn-link btn-sm">The rest of FY{{ txn.fiscal_year|stringformat:"s"|slice:"2:" }}</a>
+    </div>
+</div>

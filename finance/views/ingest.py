@@ -54,8 +54,10 @@ def queue(request):
     upload_form = WorkdayCSVUploadForm()
     can_edit = request.user.has_perm('finance.edit_subledger')
 
+    # History -- lines from before the books start -- is never filed, so it
+    # is never work: see WorkdayTransaction.objects.in_ledger().
     unreconciled = list(
-        state.apply_to_workday(WorkdayTransaction.objects.unreconciled())
+        state.apply_to_workday(WorkdayTransaction.objects.in_ledger().unreconciled())
         .order_by('-accounting_date', '-pk'))
 
     paginator = Paginator(unreconciled, 25)
@@ -256,6 +258,9 @@ def upload(request):
         'fin_page': 'queue',
         'filename': upload_file.name,
         'created_count': result.created_count,
+        'queue_count': result.queue_count,
+        'history_count': result.history_count,
+        'books_start': result.books_start,
         'duplicate_count': result.duplicate_count,
         'error_count': result.error_count,
         'errors': result.errors[:5],

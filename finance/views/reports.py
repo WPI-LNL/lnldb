@@ -10,9 +10,9 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 
-from finance import reports
+from finance import forecast, reports
 from finance.filters import filter_context, get_filter_state
-from finance.models import FundSource, current_fiscal_year
+from finance.models import FundSource, PartitionCode, current_fiscal_year
 
 #: The partition as a report's printed header says it.
 PARTITION_WORDS = {True: 'Projection only', False: 'Event Production only'}
@@ -83,6 +83,18 @@ def report(request, slug):
         projection = None
         built = reports.activity_trends(state.fiscal_year or current_fiscal_year(), by, measure,
                                         today)
+    elif slug == 'forecast':
+        # Always the event account's whole forecast, from today: neither the
+        # year nor the side applies. ``?without=`` and ``?account=`` as on the
+        # Forecast tab.
+        projection = None
+        account = PartitionCode.objects.filter(code=request.GET.get('account', '')).first()
+        built = reports.forecast_report(forecast.project(
+            account, today=today,
+            without=[k for k in request.GET.getlist('without') if k in forecast.COMPONENTS]))
+    elif slug == 'budget-draft':
+        projection = None
+        built = reports.budget_draft(today)
     else:
         built = reports.owed_to_lnl(projection, today)
 

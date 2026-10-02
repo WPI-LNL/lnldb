@@ -64,6 +64,16 @@ what they cover rather than alphabetically.
     show in bulk exactly as the events app does, student organizations against
     departments with the external wear percentage, and activity term over
     term and year over year.
+``test_history``
+    Lines from before the books start: keeping them out of the queue, the
+    balances and the reports, writing the books start down before they
+    arrive, reading each one by the queue's lookups, the Treasurer's
+    corrections, every line as flows, and the History pages.
+``test_forecast``
+    The forecast: a typical year from the most recent whole years, SGA's and
+    clients' waits, the projection against a ledger small enough to add up by
+    hand, the back-test, and the Forecast tab, planned purchases and the draft
+    budget.
 
 **Forms and pages**
 
