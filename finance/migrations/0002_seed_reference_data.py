@@ -98,7 +98,7 @@ REVENUE_SOURCES = [
     ('sga_fr_reimbursement', 'SGA Funding Request Reimbursement', 0,
      'SGA paying back what LNL spent on a funding request -- actual spending, never the '
      'award. The memo quotes the request, e.g. F.26.86.'),
-    ('sga_baseline', 'SGA Budget Deposit', 1,
+    ('sga_baseline', 'SGA Budget', 1,
      "The annual SGA budget, deposited before the year's spending. Whatever is unspent on "
      "June 30 goes back to SGA."),
     ('sga_mandatory', 'SGA Mandatory Transfer', 2,

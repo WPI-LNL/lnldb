@@ -12,3 +12,4 @@ from finance.views.ingest import (bulk_match_encumbrance, bulk_reconcile, encumb
 from finance.views.ledger import bulk_action, ledger
 from finance.views.projects import (funding_detail, funding_edit, funding_list, project_edit,
                                     project_explorer)
+from finance.views.reports import report, report_list

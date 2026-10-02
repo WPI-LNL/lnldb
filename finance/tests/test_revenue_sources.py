@@ -159,8 +159,8 @@ class SeededSourceTests(CacheResetMixin, TestCase):
         self.assertEqual(revenue_source('sga_baseline').credits_fund, fund('sga_budget'))
         self.assertEqual(revenue_source('sga_mandatory').credits_fund, fund('sga_mandatory'))
 
-    def test_the_baseline_is_the_budget_deposit(self):
-        self.assertEqual(revenue_source('sga_baseline').name, 'SGA Budget Deposit')
+    def test_the_baseline_is_the_sga_budget(self):
+        self.assertEqual(revenue_source('sga_baseline').name, 'SGA Budget')
 
     def test_a_gift_is_simply_the_accounts_own_money(self):
         self.assertIsNone(revenue_source('alumni').credits_fund)
@@ -184,7 +184,7 @@ class SeededSourceTests(CacheResetMixin, TestCase):
 
 
 class MigrationTests(CacheResetMixin, TestCase):
-    """ 0006 reconciles a database that ran the original seed, without undoing edits. """
+    """ 0006 and 0007 reconcile a database that ran the original seed, keeping edits. """
 
     def setUp(self):
         super(MigrationTests, self).setUp()
@@ -203,7 +203,7 @@ class MigrationTests(CacheResetMixin, TestCase):
         self.assertEqual([s.slug for s in RevenueSource.objects.all()],
                          ['sga_fr_reimbursement', 'sga_baseline', 'sga_mandatory',
                           'asset_liquidation', 'alumni'])
-        self.assertEqual(revenue_source('sga_baseline').name, 'SGA Budget Deposit')
+        self.assertEqual(revenue_source('sga_baseline').name, 'SGA Budget')
         self.assertEqual(revenue_source('sga_baseline').credits_fund, fund('sga_budget'))
         self.assertEqual(revenue_source('sga_fr_reimbursement').credits_fund, fund('sga_fr'))
 
@@ -219,6 +219,25 @@ class MigrationTests(CacheResetMixin, TestCase):
         RevenueSource.objects.filter(slug='sga_baseline').update(credits_fund=fund('legacy'))
         self.migration.describe_revenue_sources(django_apps, None)
         self.assertEqual(revenue_source('sga_baseline').credits_fund, fund('legacy'))
+
+    def test_0007_renames_the_name_0006_used_to_give(self):
+        RevenueSource.objects.filter(slug='sga_baseline').update(name='SGA Budget Deposit')
+        importlib.import_module('finance.migrations.0007_sga_budget_source_name').rename(
+            django_apps, None)
+        self.assertEqual(revenue_source('sga_baseline').name, 'SGA Budget')
+
+    def test_0007_keeps_a_treasurers_own_name(self):
+        RevenueSource.objects.filter(slug='sga_baseline').update(name='SGA Annual Budget')
+        importlib.import_module('finance.migrations.0007_sga_budget_source_name').rename(
+            django_apps, None)
+        self.assertEqual(revenue_source('sga_baseline').name, 'SGA Annual Budget')
+
+    def test_0007_never_takes_a_name_another_source_has(self):
+        RevenueSource.objects.filter(slug='sga_baseline').update(name='SGA Budget Deposit')
+        RevenueSource.objects.filter(slug='alumni').update(name='SGA Budget')
+        importlib.import_module('finance.migrations.0007_sga_budget_source_name').rename(
+            django_apps, None)
+        self.assertEqual(revenue_source('sga_baseline').name, 'SGA Budget Deposit')
 
     def test_reimbursements_already_filed_are_given_their_request(self):
         request = make_request()
@@ -256,7 +275,7 @@ class SourceDecidesFundTests(CacheResetMixin, TestCase):
                             fund_source=fund('legacy'))
         with self.assertRaises(ValidationError) as caught:
             entry.full_clean()
-        self.assertIn('SGA Budget Deposit goes into SGA Budget, not Legacy',
+        self.assertIn('SGA Budget goes into SGA Budget, not Legacy',
                       str(caught.exception.message_dict['fund_source']))
 
     def test_a_source_with_no_fund_takes_any(self):

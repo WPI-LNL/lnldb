@@ -469,7 +469,7 @@ class EventPnlPageTests(FinanceViewTestCase):
         response = self.client.get(reverse('finance:events') + '?fy=2026')
         self.assertContains(response, 'Pan Asian Festival')
         self.assertContains(response, '($2,000.00)')
-        self.assertContains(response, 'Cost more than it brought in')
+        self.assertContains(response, 'Cost LNL more than it brought in')
 
     def test_a_flag_narrows_the_table_but_not_the_totals(self):
         self.grant('view_subledger')

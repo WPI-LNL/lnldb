@@ -338,9 +338,17 @@ rounding so the shares add up to the bill.
 **An encumbrance is reserved, not spent.** It is shown beside the cost and left
 out of the margin, which would otherwise report a loss that may never happen.
 
+**A cost SGA pays for is not LNL's.** A cost filed to a funding request or the
+SGA budget is still a cost of the event, and is shown as one, but SGA pays for
+it -- after the spending or before. The margin is what came in less what LNL
+paid itself, so such a cost never makes an event a loss. That matters from
+FY27, when LNL bills departments only: a student organization's show is funded
+through LNL's funding requests, so it has costs and no bill without having lost
+anything. LNL's own money spent on an unbilled show is still a loss.
+
 Rentals are compared separately: what the event billed its client for hired-in
-gear plus LNL's rental fee, against linked costs in the pass-through category. A
-hire that cost more than both is flagged.
+gear plus LNL's rental fee, against the linked costs in the pass-through
+category that LNL paid. A hire that cost more than both is flagged.
 
 Each event also says where its bill stands and what is still owed on it. The
 flags that compare lnldb's *paid* date with the ledger, and the *Mark bill
@@ -526,15 +534,15 @@ The source decides the fund
 A :class:`~finance.models.RevenueSource` can name the fund its money goes into
 (``credits_fund``, *Goes into* in the admin). Picking the source then fills the
 fund in, on the queue, the split page and the entry page, and filing the money
-anywhere else is refused by name: "SGA Budget Deposit goes into SGA Budget, not
-Legacy." A source that names no fund is the account's own money like any other
-income.
+anywhere else is refused by name: "SGA Funding Request Reimbursement goes into
+SGA Funding Request, not Legacy." A source that names no fund is the account's
+own money like any other income.
 
 ===================================  ======================  ===================
 Source                               Goes into               Seeded as
 ===================================  ======================  ===================
 SGA Funding Request Reimbursement    SGA Funding Request     new in 0006
-SGA Budget Deposit                   SGA Budget              was *SGA Baseline*
+SGA Budget                           SGA Budget              was *SGA Baseline*
 SGA Mandatory Transfer               SGA Mandatory Transfer  new in 0006
 Asset Liquidation                    (the account's own)
 Alumni / Donation                    (the account's own)
@@ -544,7 +552,9 @@ Alumni / Donation                    (the account's own)
 against it, and ``0006_revenue_sources`` renamed it, keeping the
 ``sga_baseline`` slug so links survive. The migration changes only what still
 matches the original seed, so a row a Treasurer had already renamed or
-reordered keeps their version.
+reordered keeps their version. An install that ran an earlier 0006 calls it
+"SGA Budget Deposit"; ``0007_sga_budget_source_name`` gives it the name SGA
+uses, under the same rule.
 
 SGA's payments name the request
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1179,6 +1189,123 @@ never only on screen: it reached JSON payloads, form initial data and the text
 of validation errors. So the quantize happens where the number is read, not
 where it is printed.
 
+Reports to print and hand over
+------------------------------
+
+The *Reports* tab lays the figures out to print and to hand over. Each report is
+a pure function in :mod:`finance.reports` that returns a
+:class:`~finance.reports.Report`: headline figures, one or more tables, and the
+notes a reader needs before trusting them. One template draws every report and
+:func:`~finance.reports.as_csv` writes any of them out, so the page, the
+printout and the download cannot disagree about a figure. A printed report
+carries a header saying what it is, what it covers and when it was printed;
+saving it as a PDF is the browser's own *Print*, for which the page is laid
+out.
+
+======================  ======================  ==========================================
+Report                  Covers                  What it answers
+======================  ======================  ==========================================
+Income and spending     a fiscal year, or any   What came in, by client type and source,
+                        dates                   and what went out, by spend category,
+                                                beside the same dates a year earlier
+Fund balances           a fiscal year           Each fund's opening, movements, closing
+                                                and reserved money, account by account,
+                                                totalled to Workday's cash
+Events                  a fiscal year, or any   Every event's billing, payments, costs
+                        dates                   and margin, grouped by who the client was
+Owed to LNL             today                   What SGA owes on each request and each
+                                                client on each bill, and for how long
+Student organizations   a fiscal year, or any   The value of LNL's work for each kind of
+and departments         dates                   client at full rates, service by service,
+                                                and the external wear percentage
+Event activity          terms or years, up to   Who the work was for, which services,
+                        the year chosen         tiers and add-ons, and which clients, term
+                                                over term or year over year
+======================  ======================  ==========================================
+
+**The period.** The filter bar's fiscal year, cut off at today while it is still
+running, which the report calls "FY27 to date". The two reports that can cover
+any dates take ``?from=`` and ``?to=`` (``YYYY-MM-DD``); dates given wrongly fall
+back to the year and say so. The Event Production / Projection switch applies
+to every report except *Fund balances*, for the reason the balance page gives.
+
+**Year over year.** *Income and spending* sets each line beside the same dates a
+year earlier, and the change. While a year is still running it adds the whole
+of the year before, which is the column a first budget request starts from.
+LNL has no SGA budget yet: SGA makes a club eligible for one only after it has
+submitted funding requests in two consecutive fiscal years. When it has one,
+the budget is in effect an annual funding request paid in advance -- lines by
+spend category, approved once a year -- and tracking spending against it
+belongs with the funding requests rather than in a report of its own. A
+comparison that ends before the books start is left out, not drawn as a column
+of zeros and a "change" equal to this year; one that starts before them says
+so. Lines still in the queue are not counted, and the report says how many
+there are.
+
+**A closed year** is reported as it stands today, the way the balance page shows
+it, with every figure that has changed since the year was closed listed above
+the tables.
+
+**The CSV** is one header row and one line per table row, with a first
+*Section* column when a report has more than one table, so a whole report
+filters and pivots as one sheet. Money is a plain number with a minus sign and
+dates are ISO, so a column sums. The file starts with a byte-order mark, without
+which Excel reads it as Windows-1252 and an en dash arrives as three
+characters.
+
+**The ledger** downloads as well. ``?format=csv`` on the ledger gives every row
+its filters select -- not only the page on screen -- with every column, whether
+it is showing or not.
+
+What the work was worth
+~~~~~~~~~~~~~~~~~~~~~~~
+
+*Student organizations and departments* and *Event activity* read the events
+app, not the ledger. From FY27 LNL bills departments only, so a student
+organization's show brings in nothing and the ledger cannot see it at all --
+but it is the same work, on the same gear. These two reports price every
+approved show that has run, at its own price list, whether or not anybody was
+billed. Cancelled and test events, and shows still to come, are left out. The
+Event Production / Projection switch does not apply; films count under the
+Projection service.
+
+**Service value** is what the events app would charge for LNL's own services and
+extras, after its discounts and fees: ``Event2019.lnl_services_subtotal``, and
+for a 2012 event its total less one-off charges. Hired-in gear and one-off
+charges are left out, because neither is LNL's work or LNL's gear. Pricing one
+show through the model costs a query for every service on it, so
+:mod:`finance.activity` loads every price once and works the same figures out
+in memory; ``finance.tests.test_activity`` checks it against the model for
+every pricing path. A show's discounts and fees are shared out across the
+services and extras they apply to, rounded so that each service, each
+category and each show adds up to the cent.
+
+**Who the work was for** is the client type the rest of the app uses: Workday
+fund 810, on the event or else its client, is a student organization, and any
+other fund is a department or an outside client billed at full rates. A show
+with no fund on either cannot be placed. It is listed, but left out of the
+percentage below.
+
+**The external wear percentage** is the share of the value of LNL's work -- and
+so of the wear on its gear -- that went to clients billed at full rates:
+
+  departments and external / (student organizations + departments and external)
+
+It is worked out for the whole period and for each service. When some shows
+cannot be placed, the report says how far they could move it, both ways.
+
+**Terms.** WPI's terms move by a few days each year, so each one starts on a
+fixed day in the break before it: C on January 1, D on March 10, E (summer) on
+May 20, A on August 15 (so new student orientation is A term), and B on
+October 15. *Event activity* shows every term of the chosen fiscal year and the
+year before, or the chosen year and the four before it. Columns from before the
+first event on file are dropped. Its last column is the change from the same
+dates a year earlier, so a term half over is compared with the same half of the
+year before. Each cell counts events or adds up their service value. Under
+services it counts the events that used each one; under service tiers and
+add-ons, how many were booked; and for hired-in gear, how many items were
+hired, or what they cost.
+
 Dashboard metrics
 -----------------
 
@@ -1205,7 +1332,8 @@ how much, because it undoes income rather than being spending.
 against event billing. A $26,000 video wall billed to a client goes straight
 back out to the rental house, and counting it as income makes LNL look like a
 much bigger business than it is. Pass-through costs with no event linked still
-count, since a missing link should not make a cost vanish from the figure.
+count, since a missing link should not make a cost vanish from the figure. A
+hire SGA paid for, on a funding request, does not: no billing paid for it.
 
 **New and returning clients** asks the events app, not the ledger, whether LNL
 worked a show for each paying client in an earlier fiscal year, because the
@@ -1334,7 +1462,7 @@ What stays in code, and why:
 Tests
 -----
 
-``python manage.py test finance`` runs 1,190 tests across twenty-one modules. The
+``python manage.py test finance`` runs 1,301 tests across twenty-three modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.
@@ -1468,6 +1596,22 @@ Balances
 
 -----
 
+Reports
+-------
+.. automodule:: finance.reports
+    :members:
+    :undoc-members:
+
+-----
+
+Activity
+--------
+.. automodule:: finance.activity
+    :members:
+    :undoc-members:
+
+-----
+
 Filters
 -------
 .. automodule:: finance.filters
@@ -1503,6 +1647,10 @@ Views
     :undoc-members:
 
 .. automodule:: finance.views.balances
+    :members:
+    :undoc-members:
+
+.. automodule:: finance.views.reports
     :members:
     :undoc-members:
 

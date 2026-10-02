@@ -985,8 +985,22 @@
 
 .fin-project-chip { display: inline-flex; align-items: center; gap: 5px; }
 
+/* ---- Reports ---------------------------------------------------------------- */
+.fin-report-table td, .fin-report-table th { white-space: nowrap; }
+.fin-report-table td:first-child { white-space: normal; min-width: 180px; }
+.fin-report-total td {
+    font-weight: 600;
+    border-top: 2px solid #cbd2d9 !important;
+    background: #f8f9fa;
+}
+.fin-report-muted td { color: #7b8794; font-style: italic; }
+.fin-report-notes { margin: 0; padding-left: 18px; color: #52606d; font-size: 12.5px; }
+.fin-report-notes li { margin-bottom: 4px; }
+
 /* ---- Print mode ----------------------------------------------------------- */
 @media print {
+    .fin-report-section { page-break-inside: avoid; }
+    .fin-report-table td, .fin-report-table th { white-space: normal; }
     .fin-topbar, .fin-bulk-bar, .navbar, footer, .fin-readonly-banner,
     .fin-no-print, .btn, .pagination { display: none !important; }
     .fin-explorer { display: block; }

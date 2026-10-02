@@ -15,7 +15,8 @@ The schema half adds three columns:
 The data half reconciles an install that has already run the seed:
 
 1. **The revenue sources.** "SGA Baseline" is the annual budget, so it is
-   renamed "SGA Budget Deposit" and pays into SGA Budget. Two rows are added:
+   renamed "SGA Budget" and pays into the SGA Budget fund. (An install that ran
+   this before carries the name it gave then, "SGA Budget Deposit", until 0007.) Two rows are added:
    "SGA Funding Request Reimbursement", into SGA Funding Request, and "SGA
    Mandatory Transfer", into the fund of the same name. A row a Treasurer has
    already renamed or reordered keeps what they gave it; only values still
@@ -38,7 +39,7 @@ SOURCES = [
     ('sga_fr_reimbursement', 'SGA Funding Request Reimbursement', None, 0, None, 'sga_fr',
      'SGA paying back what LNL spent on a funding request -- actual spending, never the '
      'award. The memo quotes the request, e.g. F.26.86.'),
-    ('sga_baseline', 'SGA Budget Deposit', 'SGA Baseline', 1, 0, 'sga_budget',
+    ('sga_baseline', 'SGA Budget', 'SGA Baseline', 1, 0, 'sga_budget',
      "The annual SGA budget, deposited before the year's spending. Whatever is unspent on "
      "June 30 goes back to SGA."),
     ('sga_mandatory', 'SGA Mandatory Transfer', None, 2, None, 'sga_mandatory',

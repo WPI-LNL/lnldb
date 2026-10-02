@@ -1,0 +1,59 @@
+{# The Reports tab: every report, what it answers, and the ledger as a download. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    <div class="fin-panel">
+        <div class="fin-panel-head">
+            <span>Reports</span>
+            <span class="fin-locked-note">
+                {% if filter_state.fiscal_year %}FY{{ filter_state.fiscal_year|stringformat:"s"|slice:"2:" }}{% else %}all years{% endif %}
+                &middot; each one prints, and downloads as CSV
+            </span>
+        </div>
+        <div class="fin-table-wrap">
+            <table class="table fin-table">
+                <tbody>
+                    {% for item in reports %}
+                        <tr>
+                            <td style="width:220px;">
+                                <a href="{% url 'finance:report' item.slug %}?{{ filter_state.querystring }}"><strong>{{ item.title }}</strong></a>
+                            </td>
+                            <td>
+                                {{ item.summary }}
+                                <div class="fin-muted">
+                                    {% if item.takes == 'range' %}The fiscal year chosen above, or any dates.
+                                    {% elif item.takes == 'year' %}The fiscal year chosen above.
+                                    {% elif item.takes == 'trend' %}Term over term or year over year, up to the fiscal year chosen above.
+                                    {% else %}As of today.{% endif %}
+                                </div>
+                            </td>
+                            <td class="fin-nowrap" style="width:140px;">
+                                <a href="{% url 'finance:report' item.slug %}?{{ filter_state.querystring }}" class="btn btn-xs btn-default">View</a>
+                                <a href="{% url 'finance:report' item.slug %}?{{ filter_state.querystring }}&amp;format=csv" class="btn btn-xs btn-default">
+                                    <span class="glyphicon glyphicon-download-alt"></span> CSV
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    <tr>
+                        <td><a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}"><strong>Ledger</strong></a></td>
+                        <td>
+                            Every entry in the ledger, one line each, with its event, fund, category,
+                            funding request and the Workday line behind it.
+                            <div class="fin-muted">
+                                The fiscal year and side chosen above. The ledger's own filters narrow it further.
+                            </div>
+                        </td>
+                        <td class="fin-nowrap">
+                            <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}" class="btn btn-xs btn-default">View</a>
+                            <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}&amp;format=csv" class="btn btn-xs btn-default">
+                                <span class="glyphicon glyphicon-download-alt"></span> CSV
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

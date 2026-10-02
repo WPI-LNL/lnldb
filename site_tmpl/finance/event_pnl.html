@@ -22,7 +22,7 @@
             <div class="fin-stat-label">Direct costs</div>
             <div class="fin-stat-value text-danger">{{ totals.costs|money }}</div>
             <div class="fin-stat-sub">
-                {{ totals.passthrough_cost|money }} passed through{% if totals.reserved %} &middot; {{ totals.reserved|money }} reserved{% endif %}
+                {% if totals.sga_funded %}{{ totals.sga_funded|money }} paid by SGA &middot; {% endif %}{{ totals.passthrough_cost|money }} passed through{% if totals.reserved %} &middot; {{ totals.reserved|money }} reserved{% endif %}
             </div>
         </div>
         <div class="fin-stat">
@@ -36,7 +36,7 @@
         <div class="fin-stat">
             <div class="fin-stat-label">Lost money</div>
             <div class="fin-stat-value {% if totals.losses %}text-danger{% else %}text-muted{% endif %}">{{ totals.losses }}</div>
-            <div class="fin-stat-sub">events where costs beat what came in</div>
+            <div class="fin-stat-sub">events where LNL's own costs beat what came in</div>
         </div>
     </div>
 
@@ -78,7 +78,7 @@
                         <th class="fin-num">Billed</th>
                         <th class="fin-num">Received</th>
                         <th class="fin-num">Direct costs</th>
-                        <th class="fin-num">Margin</th>
+                        <th class="fin-num" title="What came in, less the costs LNL paid itself. A cost filed to a funding request or the SGA budget is paid by SGA, so it is not counted against the event.">Margin</th>
                         <th class="fin-num" title="What the event billed its client for hired-in gear, plus LNL's rental fee, against what the hire actually cost">Rentals billed / cost</th>
                         <th></th>
                         <th></th>
@@ -117,6 +117,9 @@
                             </td>
                             <td class="fin-num">
                                 {{ row.costs|money }}
+                                {% if row.sga_funded %}
+                                    <div class="fin-muted" title="Filed to a funding request or the SGA budget, so SGA pays for it and it does not count against the margin">{{ row.sga_funded|money }} paid by SGA</div>
+                                {% endif %}
                                 {% if row.reserved %}
                                     <div class="fin-muted" title="Encumbered for this event and not yet charged. Not counted in the cost or the margin.">+ {{ row.reserved|money }} reserved</div>
                                 {% endif %}

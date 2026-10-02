@@ -12,9 +12,9 @@ from decimal import Decimal
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth
 
-from finance.models import (ZERO, ClientType, FundingRequest, ParsedTransaction,
-                            books_start_date, client_of, client_type_for, fiscal_year_bounds,
-                            money, service_colors)
+from finance.models import (ZERO, ClientType, FundBehaviour, FundingRequest,
+                            ParsedTransaction, books_start_date, client_of, client_type_for,
+                            fiscal_year_bounds, money, service_colors)
 
 # ---------------------------------------------------------------------------
 # Palette
@@ -368,6 +368,14 @@ def service_mix(fiscal_year=None, is_projection=None, rows=None):
 #   of refunds. An encumbrance is reported beside it as *reserved*, because it
 #   is money not yet spent, and adding it in would show a loss that may never
 #   happen.
+#
+# A cost filed to a fund SGA pays -- a funding request, or a budget -- is still
+# a cost of the event, but it is not LNL's: SGA pays for it, whether before
+# the spending or after. From FY27 LNL bills only departments, and a student
+# organisation's show is funded through LNL's funding requests instead, so a
+# show with a $2,000 hire on a request and no bill has not lost $2,000. The
+# margin is therefore what came in less what LNL itself paid, and the part
+# SGA paid for is reported beside it.
 # ---------------------------------------------------------------------------
 
 #: The three ways a linked entry can bear on an event, as filters over
@@ -378,9 +386,35 @@ _EVENT_COST = Q(parent_transaction__isnull=False) & (Q(amount__lt=0) | Q(refund_
 _EVENT_RESERVED = Q(parent_transaction__isnull=True, refund_of__isnull=True, amount__lt=0)
 _EVENT_PASSTHROUGH = _EVENT_COST & Q(lnl_spend_category__is_event_passthrough=True)
 
+#: Funds whose money SGA provides for a purpose: a cost filed there is paid by
+#: SGA rather than by LNL. Money that carries forward -- Legacy, and
+#: Projection's mandatory transfer -- is LNL's own.
+SGA_PAID_BEHAVIOURS = (FundBehaviour.REIMBURSED, FundBehaviour.RETURNS)
+_PAID_BY_SGA = Q(fund_source__behaviour__in=SGA_PAID_BEHAVIOURS)
+_EVENT_SGA_COST = _EVENT_COST & _PAID_BY_SGA
+_EVENT_SGA_PASSTHROUGH = _EVENT_PASSTHROUGH & _PAID_BY_SGA
+
+
+def _event_aggregates():
+    """
+    The sums an event's figures are built from, as keyword arguments to
+    ``aggregate`` or ``annotate`` over its linked entries. One definition for
+    the single event and the whole year, so the two cannot disagree.
+    """
+    return {
+        'received': Sum('amount', filter=_EVENT_REVENUE),
+        'costs': Sum('amount', filter=_EVENT_COST),
+        'sga_costs': Sum('amount', filter=_EVENT_SGA_COST),
+        'reserved': Sum('amount', filter=_EVENT_RESERVED),
+        'passthrough': Sum('amount', filter=_EVENT_PASSTHROUGH),
+        'sga_passthrough': Sum('amount', filter=_EVENT_SGA_PASSTHROUGH),
+        'entries': Count('pk'),
+    }
+
+
 #: How each flag reads on screen.
 EVENT_FLAGS = OrderedDict((
-    ('loss', 'Cost more than it brought in'),
+    ('loss', 'Cost LNL more than it brought in'),
     ('rental_under_billed', 'Rental cost more than was billed for it'),
     ('billed_not_received', 'Billed, not yet received'),
     ('received_without_bill', 'Received with no bill in lnldb'),
@@ -399,13 +433,8 @@ PAYMENT_STATES = {
 
 
 def _event_sums(queryset):
-    """ The four sums an event's figures are built from, over its linked entries. """
-    return queryset.aggregate(
-        received=Sum('amount', filter=_EVENT_REVENUE),
-        costs=Sum('amount', filter=_EVENT_COST),
-        reserved=Sum('amount', filter=_EVENT_RESERVED),
-        passthrough=Sum('amount', filter=_EVENT_PASSTHROUGH),
-        entries=Count('pk'))
+    """ The sums an event's figures are built from, over its linked entries. """
+    return queryset.aggregate(**_event_aggregates())
 
 
 def multibill_shares(multibilling):
@@ -489,8 +518,11 @@ def _event_figures(event, sums, multibill_cache=None, books_start=None, today=No
     """
     received = money(sums.get('received'))
     costs = -money(sums.get('costs'))
+    sga_funded = -money(sums.get('sga_costs'))
+    lnl_costs = costs - sga_funded
     reserved = -money(sums.get('reserved'))
-    passthrough = -money(sums.get('passthrough'))
+    # Only what LNL paid for the hire has to be recovered from the client.
+    passthrough = -money(sums.get('passthrough')) + money(sums.get('sga_passthrough'))
     billed, billed_source = event_billed(event, multibill_cache)
 
     rentals = list(event.rentals.all())
@@ -499,12 +531,12 @@ def _event_figures(event, sums, multibill_cache=None, books_start=None, today=No
     # so it is asked only of a show that actually hired something in.
     rental_fee = money(getattr(event, 'rental_fee_total', ZERO)) if rentals else ZERO
 
-    margin = received - costs
+    margin = received - lnl_costs
     org = client_of(event)
     kind = client_type_for(event)
 
     flags = []
-    if costs > 0 and margin < 0:
+    if lnl_costs > 0 and margin < 0:
         flags.append('loss')
     # The fee is part of what the client paid for the hire, so the hire is
     # covered when the two together are at least what the gear cost. Only
@@ -551,6 +583,8 @@ def _event_figures(event, sums, multibill_cache=None, books_start=None, today=No
         'billed_source': billed_source,
         'received': received,
         'costs': costs,
+        'sga_funded': sga_funded,
+        'lnl_costs': lnl_costs,
         'reserved': reserved,
         'margin': margin,
         'margin_percent': _percent(margin, received) if received > 0 else None,
@@ -597,7 +631,8 @@ def event_financials(event, is_projection=None):
     return _event_figures(fresh, _event_sums(entries), books_start=books_start_date())
 
 
-def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False, since=None):
+def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False, since=None,
+                   between=None, today=None):
     """
     Every event's figures for the year it ran in, worst margin first.
 
@@ -608,23 +643,25 @@ def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False,
 
     ``since`` keeps only events that ran on or after a date, whatever the year:
     what is still owed is a question about every year the books cover.
+    ``between`` is a ``(first, last)`` pair of dates the event ran between,
+    for a report over any stretch of time; it replaces ``fiscal_year``.
+    ``today`` is the day a bill's age is counted to.
     """
     entries = ParsedTransaction.objects.filter(linked_event__isnull=False)
     if is_projection is not None:
         entries = entries.filter(is_projection=is_projection)
-    if fiscal_year:
+    start = end = None
+    if between is not None:
+        start, end = between
+    elif fiscal_year:
         start, end = fiscal_year_bounds(fiscal_year)
+    if start is not None:
         entries = entries.filter(linked_event__datetime_start__date__range=(start, end))
     if since is not None:
         entries = entries.filter(linked_event__datetime_start__date__gte=since)
 
     sums = {}
-    for row in (entries.values('linked_event')
-                .annotate(received=Sum('amount', filter=_EVENT_REVENUE),
-                          costs=Sum('amount', filter=_EVENT_COST),
-                          reserved=Sum('amount', filter=_EVENT_RESERVED),
-                          passthrough=Sum('amount', filter=_EVENT_PASSTHROUGH),
-                          entries=Count('pk'))):
+    for row in entries.values('linked_event').annotate(**_event_aggregates()):
         sums[row['linked_event']] = row
 
     event_ids = set(sums)
@@ -634,7 +671,7 @@ def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False,
         billed = BaseEvent.objects.filter(
             Q(billings__isnull=False) | Q(multibillings__isnull=False),
             cancelled=False, test_event=False)
-        if fiscal_year:
+        if start is not None:
             billed = billed.filter(datetime_start__date__range=(start, end))
         if since is not None:
             billed = billed.filter(datetime_start__date__gte=since)
@@ -645,7 +682,7 @@ def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False,
 
     cache = {}
     books_start = books_start_date()
-    rows = [_event_figures(event, sums.get(event.pk, {}), cache, books_start)
+    rows = [_event_figures(event, sums.get(event.pk, {}), cache, books_start, today)
             for event in _event_queryset().filter(pk__in=event_ids)]
     rows.sort(key=lambda r: (r['margin'], r['event'].datetime_start))
     return rows
@@ -654,8 +691,8 @@ def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False,
 def event_pnl_totals(rows):
     """ The figures summed across a set of rows, for the strip above the table. """
     totals = {key: sum((r[key] for r in rows), ZERO)
-              for key in ('received', 'costs', 'reserved', 'margin', 'passthrough_cost',
-                          'rentals_billed')}
+              for key in ('received', 'costs', 'sga_funded', 'lnl_costs', 'reserved', 'margin',
+                          'passthrough_cost', 'rentals_billed')}
     totals['billed'] = sum((r['billed'] for r in rows if r['billed'] is not None), ZERO)
     totals['events'] = len(rows)
     totals['losses'] = sum(1 for r in rows if 'loss' in r['flag_keys'])
@@ -751,12 +788,15 @@ def event_billing_kept(fiscal_year=None, is_projection=None):
     makes LNL look like a much bigger business than it is, so the dashboard
     sets every cost filed to the pass-through category against the billing.
     Costs filed there with no event still count: a missing link should not
-    make a cost disappear from the figure.
+    make a cost disappear from the figure. A hire SGA paid for -- filed to a
+    funding request -- does not: no billing went to pay for it.
     """
     entries = _scoped(ParsedTransaction.objects.all(), fiscal_year, is_projection)
     gross = money(entries.revenue().filter(linked_event__isnull=False)
                   .aggregate(t=Sum('amount'))['t'])
-    passthrough = -money(entries.filter(_EVENT_PASSTHROUGH).aggregate(t=Sum('amount'))['t'])
+    sums = entries.aggregate(all=Sum('amount', filter=_EVENT_PASSTHROUGH),
+                             sga=Sum('amount', filter=_EVENT_SGA_PASSTHROUGH))
+    passthrough = -money(sums['all']) + money(sums['sga'])
     kept = gross - passthrough
     return {'gross': gross, 'passthrough': passthrough, 'kept': kept,
             'kept_percent': _percent(kept, gross) if gross > 0 else None}
@@ -858,7 +898,7 @@ def sga_receivables(today=None, statement_=None):
             'difference': (owed - overpaid) - fund_owed}
 
 
-def billing_receivables(is_projection=None):
+def billing_receivables(is_projection=None, today=None):
     """
     Events billed since the books started and not yet paid in full.
 
@@ -868,7 +908,7 @@ def billing_receivables(is_projection=None):
     """
     since = books_start_date()
     rows = [row for row in event_pnl_rows(None, is_projection, include_unlinked=True,
-                                          since=since)
+                                          since=since, today=today)
             if row['owed'] > 0]
     rows.sort(key=lambda r: -(r['days_owed'] or 0))
     return rows

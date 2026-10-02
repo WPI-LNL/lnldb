@@ -70,4 +70,8 @@ urlpatterns = [
     re_path(r'^funding/new/$', views.funding_edit, name="fr-new"),
     re_path(r'^funding/(?P<pk>\d+)/$', views.funding_detail, name="fr-detail"),
     re_path(r'^funding/(?P<pk>\d+)/edit/$', views.funding_edit, name="fr-edit"),
+
+    # Reports to print and download
+    re_path(r'^reports/$', views.report_list, name="reports"),
+    re_path(r'^reports/(?P<slug>[a-z-]+)/$', views.report, name="report"),
 ]

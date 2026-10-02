@@ -206,7 +206,7 @@ class RevenueSourceSelect(forms.Select):
     """
     Carries the fund each kind of income goes into onto its ``<option>``.
 
-    Picking "SGA Budget Deposit" has exactly one right answer for the fund, and
+    Picking "SGA Budget" has exactly one right answer for the fund, and
     routing.js fills it in from here -- the same way an FR line fills in its
     spend category.
     """

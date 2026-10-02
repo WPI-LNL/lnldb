@@ -1,0 +1,186 @@
+{# One report from finance.reports: headline figures, its tables and its notes. Prints as it reads. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    {% comment %}
+        Shown only on paper, where the page around the report -- the filter
+        bar, the tabs -- is gone, and a sheet has to say on its own what it is,
+        what it covers and when it was printed.
+    {% endcomment %}
+    <div class="fin-print-header">
+        <h3 style="margin:0 0 2px;">Lens and Lights &middot; {{ report.title }}</h3>
+        <div>
+            {{ report.period }}{% if report.dates and report.dates != report.period %} ({{ report.dates }}){% endif %}{% if partition_words %} &middot; {{ partition_words }}{% endif %}{% if fund %} &middot; {{ fund.name }} only{% endif %}
+        </div>
+        <div class="fin-muted">
+            Printed {{ printed_on|date:"M j, Y" }}{% if request.user.get_full_name %} by {{ request.user.get_full_name }}{% endif %}
+        </div>
+    </div>
+
+    <div class="fin-panel fin-no-print">
+        <div class="fin-panel-head">
+            <span>
+                <a href="{% url 'finance:reports' %}?{{ filter_state.querystring }}">Reports</a>
+                &rsaquo; {{ report.title }}
+                <span class="fin-muted">
+                    {{ report.period }}{% if report.dates and report.dates != report.period %} &middot; {{ report.dates }}{% endif %}{% if partition_words %} &middot; {{ partition_words }}{% endif %}
+                </span>
+            </span>
+            <span>
+                <a href="{{ csv_url }}" class="btn btn-xs btn-default">
+                    <span class="glyphicon glyphicon-download-alt"></span> Download CSV
+                </a>
+                <button type="button" class="btn btn-xs btn-default" onclick="window.print();">
+                    <span class="glyphicon glyphicon-print"></span> Print
+                </button>
+            </span>
+        </div>
+        <div class="fin-panel-body">
+            <p class="fin-muted" style="margin:0 0 8px;">{{ summary }}</p>
+            {% if takes == 'range' %}
+                <form method="get" class="form-inline">
+                    <input type="hidden" name="fy" value="{{ filter_state.fiscal_year|default:'all' }}">
+                    <input type="hidden" name="partition" value="{{ filter_state.partition|default:'all' }}">
+                    <div class="form-group">
+                        <label for="fin-report-from" style="font-weight:normal;">From</label>
+                        <input type="date" id="fin-report-from" name="from" value="{{ range_from }}" class="form-control input-sm">
+                    </div>
+                    <div class="form-group">
+                        <label for="fin-report-to" style="font-weight:normal;">to</label>
+                        <input type="date" id="fin-report-to" name="to" value="{{ range_to }}" class="form-control input-sm">
+                    </div>
+                    {% if fund_choices %}
+                        <div class="form-group">
+                            <select name="fund" class="form-control input-sm">
+                                <option value="">Every fund</option>
+                                {% for choice in fund_choices %}
+                                    <option value="{{ choice.slug }}" {% if fund and fund.pk == choice.pk %}selected{% endif %}>{{ choice.name }} only</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-default btn-sm">Apply</button>
+                    {% if range_from or range_to %}
+                        <a href="?{{ filter_state.querystring }}{% if fund %}&amp;fund={{ fund.slug }}{% endif %}" class="btn btn-link btn-sm">Back to the fiscal year</a>
+                    {% endif %}
+                </form>
+                <div class="fin-muted" style="margin-top:6px;">
+                    With no dates, the report covers the fiscal year chosen above.
+                </div>
+            {% elif takes == 'trend' %}
+                <form method="get" class="form-inline">
+                    <input type="hidden" name="fy" value="{{ filter_state.fiscal_year|default:'all' }}">
+                    <input type="hidden" name="partition" value="{{ filter_state.partition|default:'all' }}">
+                    <div class="form-group">
+                        <select name="by" class="form-control input-sm" aria-label="Columns">
+                            {% for value, label in trend_groupings %}
+                                <option value="{{ value }}" {% if trend_by == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <select name="measure" class="form-control input-sm" aria-label="Count">
+                            {% for value, label in trend_measures %}
+                                <option value="{{ value }}" {% if trend_measure == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-default btn-sm">Apply</button>
+                </form>
+                <div class="fin-muted" style="margin-top:6px;">
+                    Ends with the fiscal year chosen above. The Event Production / Projection switch does not apply.
+                </div>
+            {% elif takes == 'year' %}
+                <p class="fin-muted" style="margin:0;">
+                    For the fiscal year chosen above. The Event Production / Projection switch does not
+                    apply: a fund's money is the account's, whatever it was spent on.
+                </p>
+            {% else %}
+                <p class="fin-muted" style="margin:0;">
+                    Always as of today, whichever year is chosen above.
+                </p>
+            {% endif %}
+            {% if period_error %}
+                <div class="alert alert-warning" style="margin:10px 0 0;">{{ period_error }} Showing the fiscal year instead.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if report.warnings %}
+        <div class="alert alert-warning">
+            <ul style="margin:0; padding-left:18px;">
+                {% for warning in report.warnings %}<li>{{ warning }}</li>{% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if report.stats %}
+        <div class="fin-stats">
+            {% for stat in report.stats %}
+                <div class="fin-stat">
+                    <div class="fin-stat-label">{{ stat.label }}</div>
+                    <div class="fin-stat-value {{ stat.tone }}">
+                        {% if stat.value is None %}<span class="text-muted">&mdash;</span>{% elif stat.kind == 'money' %}{{ stat.value|money }}{% elif stat.kind == 'percent' %}{{ stat.value }}%{% else %}{{ stat.value }}{% endif %}
+                    </div>
+                    {% if stat.sub %}<div class="fin-stat-sub">{{ stat.sub }}</div>{% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% for section in report.sections %}
+        <div class="fin-panel fin-report-section">
+            <div class="fin-panel-head"><span>{{ section.title }}</span></div>
+            <div class="fin-table-wrap">
+                <table class="table fin-table fin-report-table">
+                    <thead>
+                        <tr>
+                            {% for column in section.columns %}
+                                <th class="{% if column.is_numeric %}fin-num{% endif %}" {% if column.title %}title="{{ column.title }}"{% endif %}>{{ column.label }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row, cells in section.lines %}
+                            <tr {% if row.tone == 'muted' %}class="fin-report-muted"{% endif %}>
+                                {% for column, value in cells %}
+                                    <td class="{% if column.is_numeric %}fin-num{% endif %} {% if column.coloured and value %}{{ value|money_class }}{% endif %}">
+                                        {% if column.key == row.link and row.url %}<a href="{{ row.url }}">{% include 'finance/_report_cell.html' %}</a>{% else %}{% include 'finance/_report_cell.html' %}{% endif %}
+                                        {% if column.key == row.link and row.note %}<div class="fin-muted">{{ row.note }}</div>{% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% empty %}
+                            {% if section.empty %}
+                                <tr><td colspan="{{ section.columns|length }}" class="fin-muted">{{ section.empty }}</td></tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                    {% if section.total_cells %}
+                        <tfoot>
+                            <tr class="fin-report-total">
+                                {% for column, value in section.total_cells %}
+                                    <td class="{% if column.is_numeric %}fin-num{% endif %} {% if column.coloured and value %}{{ value|money_class }}{% endif %}">
+                                        {% if value is not None and value != '' %}{% include 'finance/_report_cell.html' %}{% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    {% endfor %}
+
+    {% if report.notes %}
+        <div class="fin-panel">
+            <div class="fin-panel-head"><span>How these figures are worked out</span></div>
+            <div class="fin-panel-body">
+                <ul class="fin-report-notes">
+                    {% for note in report.notes %}<li>{{ note }}</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

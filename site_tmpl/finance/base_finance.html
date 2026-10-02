@@ -134,6 +134,8 @@
                         <a href="{% url 'finance:projects' %}?{{ filter_state.querystring }}">Projects</a></li>
                     <li {% if fin_page == 'funding' %}class="active"{% endif %}>
                         <a href="{% url 'finance:fr-list' %}?{{ filter_state.querystring }}">Funding</a></li>
+                    <li {% if fin_page == 'reports' %}class="active"{% endif %}>
+                        <a href="{% url 'finance:reports' %}?{{ filter_state.querystring }}">Reports</a></li>
                 </ul>
             </div>
         </div>

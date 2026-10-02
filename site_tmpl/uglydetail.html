@@ -847,6 +847,7 @@
                                 </td>
                                 <td>
                                     {{ finance.costs|money }}
+                                    {% if finance.sga_funded %}<br><small class="text-muted" title="Filed to a funding request or the SGA budget, so SGA pays for it and it does not count against the margin">{{ finance.sga_funded|money }} paid by SGA</small>{% endif %}
                                     {% if finance.reserved %}<br><small class="text-muted">+ {{ finance.reserved|money }} reserved, not yet charged</small>{% endif %}
                                 </td>
                                 <td class="{% if finance.margin < 0 %}text-danger{% elif finance.margin > 0 %}text-success{% endif %}">

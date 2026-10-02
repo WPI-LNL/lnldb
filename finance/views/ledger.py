@@ -6,7 +6,14 @@ the sort links, the column picker and the CSV-ish copy behaviour all read from
 that one tuple, so adding a column means editing it in a single place. The
 bulk-action endpoint lives here too, since it operates on exactly the rows the
 ledger's checkboxes select.
+
+``?format=csv`` downloads every row the filters select rather than the page of
+them on screen, with :data:`LEDGER_CSV_COLUMNS` -- every column, since a
+spreadsheet is where hidden columns get used.
 """
+import csv
+import io
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
@@ -22,6 +29,8 @@ from finance.filters import FilterState, filter_context, get_filter_state
 from finance.forms import BulkActionForm
 from finance.models import (FundSource, ParsedTransaction, ProjectTag, SpendCategory,
                             TransactionStatus, money)
+from finance.reports import Period
+from finance.views.reports import csv_response
 
 # Every column the spreadsheet can show. ``default`` drives the initial
 # column-visibility state; the picker stores the rest in localStorage.
@@ -44,6 +53,59 @@ LEDGER_COLUMNS = (
     ('ledger_account', 'Ledger Acct', False),
     ('receipt', 'Receipt', False),
 )
+
+
+def _request_label(entry):
+    """ The funding request an entry names, by line or as SGA's payment. """
+    line = entry.fr_line_target
+    request = line.funding_request if line is not None else entry.funding_request
+    if request is None:
+        return ''
+    return ('%s %s' % (request.reference, request.name)).strip()
+
+
+def _workday(entry, attribute):
+    """ An attribute of the bank line behind an entry; blank for an encumbrance. """
+    parent = entry.parent_transaction
+    return getattr(parent, attribute, '') if parent is not None else ''
+
+
+#: The download's columns: ``(heading, how to read it off an entry)``.
+LEDGER_CSV_COLUMNS = (
+    ('Date', lambda e: e.effective_date.isoformat() if e.effective_date else ''),
+    ('Description', lambda e: e.description),
+    ('Payee', lambda e: e.payee_label),
+    ('Amount', lambda e: '%.2f' % money(e.amount)),
+    ('Type', lambda e: e.get_entry_type_display()),
+    ('Status', lambda e: e.get_status_display()),
+    ('Partition', lambda e: 'Projection' if e.is_projection else 'Event Production'),
+    ('Event', lambda e: e.linked_event.event_name if e.linked_event_id else ''),
+    ('Client type', lambda e: e.client_type_display if e.linked_event_id else ''),
+    ('Fund', lambda e: e.fund_source.name if e.fund_source_id else ''),
+    ('Spend category', lambda e: e.lnl_spend_category.name if e.lnl_spend_category_id else ''),
+    ('Revenue source',
+     lambda e: e.non_event_revenue_type.name if e.non_event_revenue_type_id else ''),
+    ('Funding request', _request_label),
+    ('FR line', lambda e: e.fr_line_target.name if e.fr_line_target_id else ''),
+    ('Project', lambda e: str(e.project_tag) if e.project_tag_id else ''),
+    ('Workday reference', lambda e: _workday(e, 'reference')),
+    ('Ledger account', lambda e: _workday(e, 'ledger_account')),
+    ('Memo', lambda e: _workday(e, 'memo')),
+    ('Note', lambda e: e.audit_explanation),
+)
+
+
+def _ledger_csv(entries, filename):
+    """ ``entries`` as a CSV download, every column, in the order given. """
+    out = io.StringIO()
+    out.write('\ufeff')  # so Excel reads it as UTF-8; see finance.reports.as_csv
+    writer = csv.writer(out)
+    writer.writerow([heading for heading, _ in LEDGER_CSV_COLUMNS])
+    for entry in entries.select_related('fund_source', 'lnl_spend_category',
+                                        'non_event_revenue_type'):
+        writer.writerow([read(entry) or '' for _, read in LEDGER_CSV_COLUMNS])
+    return csv_response(out.getvalue(), filename)
+
 
 SORTABLE = {
     'date': 'effective_date',
@@ -123,6 +185,15 @@ def ledger(request):
     field = SORTABLE.get(sort.lstrip('-'), 'effective_date')
     order = ('-' if direction == 'desc' else '') + field
     qs = qs.order_by(order, '-pk')
+
+    if request.GET.get('format') == 'csv':
+        if event is not None:
+            part = 'event-%s' % event.pk
+        elif state.fiscal_year:
+            part = Period(fiscal_year=state.fiscal_year).file_part
+        else:
+            part = 'all-years'
+        return _ledger_csv(qs, 'lnl-ledger-%s.csv' % part)
 
     net_total = money(qs.aggregate(net=Sum('amount'))['net'])
     revenue_total = money(qs.revenue().aggregate(t=Sum('amount'))['t'])

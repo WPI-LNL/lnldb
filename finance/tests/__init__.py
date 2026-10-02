@@ -55,6 +55,15 @@ what they cover rather than alphabetically.
     back out), what SGA still owes per request and how old it is, the queue's
     reading of SGA's journal entries and of multi-bills, the dashboard's
     revenue figures, and marking a bill paid from the event P&L.
+``test_reports``
+    The Reports tab: an event's costs that SGA pays for, the period a report
+    covers and what it is compared with, the four reports against figures
+    small enough to add up by hand, the CSV, and the ledger's download.
+``test_activity``
+    What LNL's work was worth, from the events app: WPI terms, pricing every
+    show in bulk exactly as the events app does, student organizations against
+    departments with the external wear percentage, and activity term over
+    term and year over year.
 
 **Forms and pages**
 

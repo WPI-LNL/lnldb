@@ -71,6 +71,14 @@
 
                 <button type="submit" class="btn btn-primary btn-sm">Filter</button>
                 <a href="{% url 'finance:ledger' %}?{{ filter_state.querystring }}" class="btn btn-link btn-sm">Reset</a>
+                {% comment %}
+                    Every row the filters above select, not only this page of
+                    them, with every column whether it is showing or not.
+                {% endcomment %}
+                <a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}format=csv" class="btn btn-default btn-sm"
+                   title="Download every row these filters select, with every column, as CSV">
+                    <span class="glyphicon glyphicon-download-alt"></span> CSV
+                </a>
 
                 {# ---- Column visibility ---- #}
                 <div class="btn-group pull-right">
