@@ -37,7 +37,11 @@ class FinanceConfig(AppConfig):
             'ServiceColor': ('service_colors',),
             'ColumnAlias': ('column_aliases',),
             'SpendCategory': ('event_passthrough', 'category_names'),
-            'FundSource': ('fund_codes', 'default_fund', 'fund_tracking', 'own_funds'),
+            # A source names the fund it pays into, and a renamed or retired
+            # fund changes which source that is.
+            'FundSource': ('fund_codes', 'default_fund', 'fund_tracking', 'own_funds',
+                           'revenue_by_fund'),
+            'RevenueSource': ('revenue_by_fund',),
         }
 
         for model_name, cache_keys in cached_models.items():

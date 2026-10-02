@@ -64,7 +64,7 @@ def ledger(request):
 
     base = (ParsedTransaction.objects.select_related(
                 'parent_transaction', 'project_tag', 'fr_line_target__funding_request',
-                'linked_event')
+                'funding_request', 'linked_event')
             .prefetch_related('linked_event__serviceinstance_set__service__category'))
 
     # One event's entries, from the event P&L or the event's own page. Every
@@ -221,14 +221,16 @@ def bulk_action(request):
     if action == 'fund_source':
         # Changing the fund out from under an entry that names an FR line would
         # break the pairing the model insists on.
-        pinned = [e for e in entries if e.fr_line_target_id]
+        # The same goes for SGA's payment for a request.
+        pinned = [e for e in entries if e.fr_line_target_id or e.funding_request_id]
         if pinned:
             messages.warning(
                 request,
-                "%s entr%s skipped — they are charged to a funding request line, so the "
-                "fund has to stay as it is."
+                "%s entr%s skipped — they are charged to a funding request, or are SGA's "
+                "payment for one, so the fund has to stay as it is."
                 % (len(pinned), 'y was' if len(pinned) == 1 else 'ies were'))
-            entries = [e for e in entries if not e.fr_line_target_id]
+            entries = [e for e in entries
+                       if not (e.fr_line_target_id or e.funding_request_id)]
 
     if action == 'status' and value == TransactionStatus.SETTLED:
         # Settling in bulk still has to respect the balance rule, so anything

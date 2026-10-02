@@ -14,9 +14,10 @@ from django.db.models import Sum
 from django.shortcuts import render
 
 from finance.balances import statement
-from finance.calculators import (cash_flow_by_month, client_type_breakdown, event_pnl_rows,
-                                 project_composition, revenue_by_client, revenue_rows, service_mix,
-                                 spend_by_category)
+from finance.calculators import (billing_receivables, cash_flow_by_month, client_retention,
+                                 client_type_breakdown, event_billing_kept, event_pnl_rows,
+                                 project_composition, revenue_by_client, revenue_by_source,
+                                 revenue_rows, service_mix, sga_receivables, spend_by_category)
 from finance.filters import filter_context, get_filter_state
 from finance.models import (FundingRequest, ParsedTransaction, TransactionStatus,
                             WorkdayTransaction, current_fiscal_year, money)
@@ -68,6 +69,14 @@ def dashboard(request):
     clients = revenue_by_client(rows=rev_rows)
     client_types = client_type_breakdown(rows=rev_rows)
     services = service_mix(rows=rev_rows)
+    retention = client_retention(fy, proj, rows=rev_rows)
+
+    # -- what is owed ----------------------------------------------------------
+    # Today's balances whatever year the filter shows: what a fund holds, and
+    # what LNL is owed, are questions about now.
+    funds_now = statement(current_fiscal_year())
+    receivables = sga_receivables(statement_=funds_now)
+    unpaid_bills = billing_receivables(is_projection=proj)
 
     projects = project_composition(fiscal_year=fy, is_projection=proj)
 
@@ -130,9 +139,14 @@ def dashboard(request):
         'project_grand_total': sum((p['total'] for p in projects), Decimal('0.00')),
         'project_max': max([p['total'] for p in projects] + [Decimal('0.00')]),
         'event_losses': event_losses,
-        # Today's balances whatever year the filter shows: what a fund holds is
-        # a question about now, and the balance page has the history.
-        'funds_now': statement(current_fiscal_year()),
+        'revenue_sources': revenue_by_source(fiscal_year=fy, is_projection=proj),
+        'billing_kept': event_billing_kept(fiscal_year=fy, is_projection=proj),
+        'retention': retention,
+        'funds_now': funds_now,
+        'owed_by_sga': receivables['owed'],
+        'owed_by_clients': sum((row['owed'] for row in unpaid_bills), Decimal('0.00')),
+        'owed_by_clients_count': len(unpaid_bills),
+        'oldest_bill_days': max([row['days_owed'] or 0 for row in unpaid_bills] + [0]),
 
         'chart_data': {
             'categories': _doughnut(categories),

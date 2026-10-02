@@ -168,7 +168,8 @@ class BulkActionGuardTests(FinanceViewTestCase):
         self.income = ParsedTransaction.objects.create(
             parent_transaction=income_txn, amount=Decimal('700.00'),
             effective_date=income_txn.accounting_date, description='Concert billing',
-            non_event_revenue_type=RevenueSource.objects.active().first())
+            # Names no fund of its own, so any fund may be given to it.
+            non_event_revenue_type=RevenueSource.objects.get(slug='alumni'))
 
     def _act(self, action, value, entries, **extra):
         data = {'action': action, action: value,
@@ -214,7 +215,7 @@ class BulkActionGuardTests(FinanceViewTestCase):
         self.expense.save()
 
         response = self._act('fund_source', fund('legacy').pk, [self.expense])
-        self.assertContains(response, 'charged to a funding request line')
+        self.assertContains(response, 'charged to a funding request')
         self.expense.refresh_from_db()
         self.assertEqual(self.expense.fund_source, fund('sga_fr'))
 

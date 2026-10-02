@@ -12,8 +12,9 @@ from decimal import Decimal
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth
 
-from finance.models import (ZERO, ClientType, ParsedTransaction, client_of, client_type_for,
-                            fiscal_year_bounds, money, service_colors)
+from finance.models import (ZERO, ClientType, FundingRequest, ParsedTransaction,
+                            books_start_date, client_of, client_type_for, fiscal_year_bounds,
+                            money, service_colors)
 
 # ---------------------------------------------------------------------------
 # Palette
@@ -383,7 +384,18 @@ EVENT_FLAGS = OrderedDict((
     ('rental_under_billed', 'Rental cost more than was billed for it'),
     ('billed_not_received', 'Billed, not yet received'),
     ('received_without_bill', 'Received with no bill in lnldb'),
+    ('not_marked_paid', 'Paid in full, bill not marked paid'),
+    ('paid_not_received', 'Marked paid, no payment filed'),
 ))
+
+#: Where an event's bill stands, as the P&L and the event page say it.
+PAYMENT_STATES = {
+    'not_billed': 'Not billed',
+    'awaiting': 'Billed, nothing received',
+    'part': 'Part received',
+    'paid': 'Received in full',
+    'unbilled_income': 'Received, no bill',
+}
 
 
 def _event_sums(queryset):
@@ -396,7 +408,7 @@ def _event_sums(queryset):
         entries=Count('pk'))
 
 
-def _multibill_shares(multibilling):
+def multibill_shares(multibilling):
     """
     ``{event pk: share}`` of one multi-bill, splitting its single figure.
 
@@ -432,6 +444,18 @@ def _multibill_shares(multibilling):
     return shares
 
 
+def latest_bill(event):
+    """
+    The bill that stands for an event: its latest own bill, else its latest
+    multi-bill, else ``None``. The same choice :func:`event_billed` makes.
+    """
+    bills = sorted(event.billings.all(), key=lambda b: (b.date_billed, b.pk))
+    if bills:
+        return bills[-1]
+    multis = sorted(event.multibillings.all(), key=lambda m: (m.date_billed, m.pk))
+    return multis[-1] if multis else None
+
+
 def event_billed(event, _cache=None):
     """
     What lnldb says this event was billed, and how: ``(amount, source)``.
@@ -450,13 +474,19 @@ def event_billed(event, _cache=None):
         latest = multis[-1]
         cache = {} if _cache is None else _cache
         if latest.pk not in cache:
-            cache[latest.pk] = _multibill_shares(latest)
+            cache[latest.pk] = multibill_shares(latest)
         return cache[latest.pk].get(event.pk, ZERO), 'multibill'
     return None, None
 
 
-def _event_figures(event, sums, multibill_cache=None):
-    """ One event's row, from its sums and the events app's own records. """
+def _event_figures(event, sums, multibill_cache=None, books_start=None, today=None):
+    """
+    One event's row, from its sums and the events app's own records.
+
+    ``books_start`` is when the ledger starts accounting for every line. A bill
+    marked paid before then has no payment in the ledger to find, so it is not
+    flagged for lacking one.
+    """
     received = money(sums.get('received'))
     costs = -money(sums.get('costs'))
     reserved = -money(sums.get('reserved'))
@@ -489,6 +519,30 @@ def _event_figures(event, sums, multibill_cache=None):
     if billed is None and received > 0:
         flags.append('received_without_bill')
 
+    # Where the bill stands. lnldb's own "paid" date is the events app's
+    # record; the ledger's is what actually arrived. Each is checked against
+    # the other, and neither is changed here -- marking a bill paid is a
+    # button, pressed by a person.
+    bill = latest_bill(event)
+    paid_on = getattr(bill, 'date_paid', None)
+    if billed is None:
+        state = 'unbilled_income' if received > 0 else 'not_billed'
+    elif received <= 0:
+        state = 'awaiting'
+    elif received < billed:
+        state = 'part'
+    else:
+        state = 'paid'
+    if state == 'paid' and bill is not None and paid_on is None:
+        flags.append('not_marked_paid')
+    in_books = books_start is None or event.datetime_start.date() >= books_start
+    if paid_on is not None and received <= 0 and billed and in_books:
+        flags.append('paid_not_received')
+    owed = billed - received if billed is not None and billed > received else ZERO
+    today = today or datetime.date.today()
+    days_owed = ((today - bill.date_billed).days
+                 if owed > 0 and bill is not None and bill.date_billed else None)
+
     return {
         'event': event,
         'client': org.retname if org else '',
@@ -507,6 +561,13 @@ def _event_figures(event, sums, multibill_cache=None):
         'flags': [(key, EVENT_FLAGS[key]) for key in flags],
         'flag_keys': flags,
         'entries': sums.get('entries') or 0,
+        'bill': bill,
+        'bill_paid_on': paid_on,
+        'payment_state': state,
+        'payment_state_label': PAYMENT_STATES[state],
+        'owed': owed,
+        'days_owed': days_owed,
+        'can_mark_paid': 'not_marked_paid' in flags,
     }
 
 
@@ -533,10 +594,10 @@ def event_financials(event, is_projection=None):
     if is_projection is not None:
         entries = entries.filter(is_projection=is_projection)
     fresh = _event_queryset().filter(pk=event.pk).first() or event
-    return _event_figures(fresh, _event_sums(entries))
+    return _event_figures(fresh, _event_sums(entries), books_start=books_start_date())
 
 
-def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False):
+def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False, since=None):
     """
     Every event's figures for the year it ran in, worst margin first.
 
@@ -544,6 +605,9 @@ def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False)
     with a story to tell. ``include_unlinked`` adds every event that was billed
     but has nothing filed against it yet, which is mostly a list of revenue
     still waiting in the queue -- useful, but it buries the costs.
+
+    ``since`` keeps only events that ran on or after a date, whatever the year:
+    what is still owed is a question about every year the books cover.
     """
     entries = ParsedTransaction.objects.filter(linked_event__isnull=False)
     if is_projection is not None:
@@ -551,6 +615,8 @@ def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False)
     if fiscal_year:
         start, end = fiscal_year_bounds(fiscal_year)
         entries = entries.filter(linked_event__datetime_start__date__range=(start, end))
+    if since is not None:
+        entries = entries.filter(linked_event__datetime_start__date__gte=since)
 
     sums = {}
     for row in (entries.values('linked_event')
@@ -570,13 +636,16 @@ def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False)
             cancelled=False, test_event=False)
         if fiscal_year:
             billed = billed.filter(datetime_start__date__range=(start, end))
+        if since is not None:
+            billed = billed.filter(datetime_start__date__gte=since)
         event_ids.update(billed.values_list('pk', flat=True))
 
     if not event_ids:
         return []
 
     cache = {}
-    rows = [_event_figures(event, sums.get(event.pk, {}), cache)
+    books_start = books_start_date()
+    rows = [_event_figures(event, sums.get(event.pk, {}), cache, books_start)
             for event in _event_queryset().filter(pk__in=event_ids)]
     rows.sort(key=lambda r: (r['margin'], r['event'].datetime_start))
     return rows
@@ -590,7 +659,219 @@ def event_pnl_totals(rows):
     totals['billed'] = sum((r['billed'] for r in rows if r['billed'] is not None), ZERO)
     totals['events'] = len(rows)
     totals['losses'] = sum(1 for r in rows if 'loss' in r['flag_keys'])
+    totals['owed'] = sum((r['owed'] for r in rows), ZERO)
     return totals
+
+
+# ---------------------------------------------------------------------------
+# Where the money comes from
+#
+# Three questions the revenue charts above do not answer: which kind of income
+# it was (event billing, or one of SGA's three kinds of payment, or a gift);
+# how much of event billing LNL actually kept once the gear it hired in for
+# the show was paid for; and whether the clients paying are new.
+# ---------------------------------------------------------------------------
+
+#: The colour event billing is drawn in, wherever income is broken down.
+EVENT_BILLING_COLOR = '#59A14F'
+
+
+def revenue_by_source(fiscal_year=None, is_projection=None):
+    """
+    Income by kind, biggest first: event billing, then each non-event source.
+
+    Money SGA took back -- a reimbursement it paid twice, reclaimed -- is
+    netted off the source that repays funding requests, because it is that
+    income being undone rather than anything LNL spent. The row says how much
+    was netted, so the figure never hides a correction.
+    """
+    from finance.models import reimbursement_source
+
+    entries = _scoped(ParsedTransaction.objects.all(), fiscal_year, is_projection)
+    income = entries.revenue()
+
+    rows = []
+    event = income.filter(linked_event__isnull=False).aggregate(
+        t=Sum('amount'), n=Count('pk'))
+    if event['n']:
+        rows.append({'key': 'event', 'label': 'Event billing', 'amount': money(event['t']),
+                     'taken_back': ZERO, 'entries': event['n'], 'source': None})
+
+    by_source = (income.filter(linked_event__isnull=True,
+                               non_event_revenue_type__isnull=False)
+                 .values('non_event_revenue_type', 'non_event_revenue_type__name',
+                         'non_event_revenue_type__slug')
+                 .annotate(t=Sum('amount'), n=Count('pk')))
+    source_rows = {}
+    for row in by_source:
+        source_rows[row['non_event_revenue_type']] = {
+            'key': row['non_event_revenue_type__slug'],
+            'label': row['non_event_revenue_type__name'], 'amount': money(row['t']),
+            'taken_back': ZERO, 'entries': row['n'],
+            'source': row['non_event_revenue_type']}
+
+    taken = entries.filter(amount__lt=0, refund_of__isnull=True,
+                           funding_request__isnull=False).aggregate(t=Sum('amount'))['t']
+    taken = -money(taken)
+    if taken:
+        repays = reimbursement_source()
+        if repays is not None:
+            target = source_rows.setdefault(repays.pk, {
+                'key': repays.slug, 'label': repays.name, 'amount': ZERO,
+                'taken_back': ZERO, 'entries': 0, 'source': repays.pk})
+            target['amount'] -= taken
+            target['taken_back'] += taken
+        else:
+            source_rows[None] = {'key': 'taken_back', 'label': 'Taken back by SGA',
+                                 'amount': -taken, 'taken_back': taken, 'entries': 0,
+                                 'source': None}
+    rows.extend(source_rows.values())
+
+    rows.sort(key=lambda r: -r['amount'])
+    grand = sum((r['amount'] for r in rows if r['amount'] > 0), ZERO)
+    biggest = max([r['amount'] for r in rows] + [ZERO])
+    index = 0
+    for row in rows:
+        if row['key'] == 'event':
+            row['color'] = EVENT_BILLING_COLOR
+        else:
+            row['color'] = series_color(index)
+            index += 1
+        row['percent'] = _percent(max(row['amount'], ZERO), grand)
+        row['bar'] = _percent(max(row['amount'], ZERO), biggest)
+    return rows
+
+
+def event_billing_kept(fiscal_year=None, is_projection=None):
+    """
+    Event billing, and how much of it LNL kept after passing hired gear through.
+
+    A show that hires a $26,000 video wall bills its client for it, and that
+    money goes straight back out to the rental house. Counted as revenue it
+    makes LNL look like a much bigger business than it is, so the dashboard
+    sets every cost filed to the pass-through category against the billing.
+    Costs filed there with no event still count: a missing link should not
+    make a cost disappear from the figure.
+    """
+    entries = _scoped(ParsedTransaction.objects.all(), fiscal_year, is_projection)
+    gross = money(entries.revenue().filter(linked_event__isnull=False)
+                  .aggregate(t=Sum('amount'))['t'])
+    passthrough = -money(entries.filter(_EVENT_PASSTHROUGH).aggregate(t=Sum('amount'))['t'])
+    kept = gross - passthrough
+    return {'gross': gross, 'passthrough': passthrough, 'kept': kept,
+            'kept_percent': _percent(kept, gross) if gross > 0 else None}
+
+
+def client_retention(fiscal_year=None, is_projection=None, rows=None, limit=5):
+    """
+    The clients who paid for events this year, split into new and returning.
+
+    Returning means LNL worked a show for them in an earlier fiscal year --
+    asked of the events app, which goes back much further than the ledger.
+    ``None`` with no year selected: "new" means nothing across all of them.
+    """
+    from events.models import BaseEvent
+
+    if not fiscal_year:
+        return None
+    rows = revenue_rows(fiscal_year, is_projection) if rows is None else rows
+    clients = {}
+    for row in rows:
+        event = row['event']
+        org = client_of(event) if event is not None else None
+        if org is None:
+            continue
+        entry = clients.setdefault(org.pk, {'name': org.retname, 'amount': ZERO})
+        entry['amount'] += row['amount']
+    if not clients:
+        return {'new': {'count': 0, 'amount': ZERO}, 'returning': {'count': 0, 'amount': ZERO},
+                'new_clients': []}
+
+    start, _ = fiscal_year_bounds(fiscal_year)
+    earlier = set()
+    previous = (BaseEvent.objects
+                .filter(Q(billing_org__in=list(clients)) | Q(org__in=list(clients)),
+                        datetime_start__date__lt=start, cancelled=False, test_event=False)
+                .values_list('billing_org', 'org'))
+    for billing_org, org in previous:
+        earlier.update(pk for pk in (billing_org, org) if pk in clients)
+
+    out = {'new': {'count': 0, 'amount': ZERO}, 'returning': {'count': 0, 'amount': ZERO}}
+    for pk, entry in clients.items():
+        bucket = out['returning'] if pk in earlier else out['new']
+        bucket['count'] += 1
+        bucket['amount'] += entry['amount']
+    newcomers = sorted((entry for pk, entry in clients.items() if pk not in earlier),
+                       key=lambda e: -e['amount'])
+    out['new_clients'] = newcomers[:limit]
+    return out
+
+
+# ---------------------------------------------------------------------------
+# What LNL is owed
+#
+# Two kinds of money LNL has earned and not yet been paid: SGA's reimbursement
+# for funding-request spending, and clients' payment of their bills. Both are
+# worked out from the ledger against lnldb's own records, never stored.
+# ---------------------------------------------------------------------------
+
+def sga_receivables(today=None, statement_=None):
+    """
+    Every funding request SGA still owes on, or has overpaid, oldest first.
+
+    Returns ``{'rows', 'owed', 'overpaid', 'fund_owed', 'difference'}``. Each
+    row is ``{'request', 'awaiting', 'since', 'days'}``, where ``since`` is the
+    oldest charge SGA has not yet paid for.
+
+    ``fund_owed`` is the same question asked of the balance page: how far below
+    zero the funds that draw on requests are today. The two should agree, and
+    ``difference`` is how far they do not -- usually an opening balance entered
+    on one side only, or a write-off, which moves the fund and not the request.
+    """
+    from finance.balances import statement
+    from finance.models import current_fiscal_year
+
+    today = today or datetime.date.today()
+    books_start = books_start_date()
+    rows = []
+    for request in FundingRequest.objects.with_totals().order_by('fiscal_year', 'reference'):
+        awaiting = request.awaiting_sga
+        if not awaiting:
+            continue
+        since = request.unreimbursed_since(books_start) if awaiting > 0 else None
+        rows.append({'request': request, 'awaiting': awaiting, 'since': since,
+                     'days': (today - since).days if since else None})
+    rows.sort(key=lambda r: (r['awaiting'] <= 0, r['since'] or datetime.date.max))
+
+    owed = sum((r['awaiting'] for r in rows if r['awaiting'] > 0), ZERO)
+    overpaid = -sum((r['awaiting'] for r in rows if r['awaiting'] < 0), ZERO)
+
+    year = statement_ or statement(current_fiscal_year(), today=today)
+    fund_balance = ZERO
+    for account in year.accounts:
+        for row in account.rows:
+            if (row.fund is not None and row.fund.requires_funding_request
+                    and row.closing is not None):
+                fund_balance += row.closing
+    fund_owed = -fund_balance
+    return {'rows': rows, 'owed': owed, 'overpaid': overpaid, 'fund_owed': fund_owed,
+            'difference': (owed - overpaid) - fund_owed}
+
+
+def billing_receivables(is_projection=None):
+    """
+    Events billed since the books started and not yet paid in full.
+
+    Each row is an event P&L row (see :func:`event_pnl_rows`) with something
+    still owed on it, longest-owed first. Events before the books start are
+    left out: their payments, if any, were never imported.
+    """
+    since = books_start_date()
+    rows = [row for row in event_pnl_rows(None, is_projection, include_unlinked=True,
+                                          since=since)
+            if row['owed'] > 0]
+    rows.sort(key=lambda r: -(r['days_owed'] or 0))
+    return rows
 
 
 # ---------------------------------------------------------------------------

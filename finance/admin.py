@@ -123,8 +123,17 @@ class FundSourceAdmin(VocabularyAdmin):
 
 @admin.register(RevenueSource)
 class RevenueSourceAdmin(VocabularyAdmin):
-    """ Where incoming money came from -- clients, grants, cost recovery. """
-    fields = ('name', 'slug', 'description', 'sort_order', 'is_active')
+    """
+    Where incoming money came from -- SGA's three kinds of payment, gifts, sales.
+
+    ``credits_fund`` has teeth: picking a source that names a fund fills that
+    fund in, and filing the money anywhere else is refused. The source whose
+    fund draws on funding requests is the one the queue offers for an SGA
+    reimbursement, so it is worth seeing on the list.
+    """
+    list_display = ('name', 'slug', 'credits_fund', 'sort_order', 'is_active', 'in_use')
+    list_select_related = ('credits_fund',)
+    fields = ('name', 'slug', 'description', 'credits_fund', 'sort_order', 'is_active')
 
 
 @admin.register(SuggestionRule)
@@ -208,7 +217,7 @@ class FRLineItemInline(admin.TabularInline):
 class FundingRequestAdmin(VersionAdmin):
     """ SGA funding requests, versioned so award changes stay traceable. """
     list_display = ('name', 'reference', 'fiscal_year', 'total_awarded', 'total_spent',
-                    'total_remaining', 'closed')
+                    'total_remaining', 'total_received', 'awaiting_sga', 'closed')
     list_filter = ('fiscal_year', 'closed', 'is_projection')
     search_fields = ('name', 'reference')
     inlines = (FRLineItemInline,)

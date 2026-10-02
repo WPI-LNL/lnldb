@@ -97,7 +97,9 @@ class SplitFormSetTests(TestCase):
             '-1400.00', '400.00',
             **{'slices-1-fund_source': str(fund('legacy').pk),
                'slices-1-lnl_spend_category': '',
-               'slices-1-non_event_revenue_type': str(RevenueSource.objects.active().first().pk)})
+               # A source that names no fund of its own, so Legacy is allowed.
+               'slices-1-non_event_revenue_type': str(
+                   RevenueSource.objects.get(slug='alumni').pk)})
         self.assertFalse(formset.is_valid())
         self.assertIn('same direction', ' '.join(formset.non_form_errors()))
 
@@ -110,7 +112,8 @@ class SplitFormSetTests(TestCase):
             'slices-MAX_NUM_FORMS': '1000',
         }
         from finance.models import RevenueSource
-        source = RevenueSource.objects.active().first()
+        # Names no fund of its own, so the slices may go into Legacy.
+        source = RevenueSource.objects.get(slug='alumni')
         for index, amount in enumerate(('400.00', '300.00')):
             data.update({
                 'slices-%s-amount' % index: amount,

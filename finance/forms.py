@@ -181,6 +181,45 @@ class RefundTargetChoiceField(forms.ModelChoiceField):
         return obj.picker_label
 
 
+class FundingRequestChoiceField(forms.ModelChoiceField):
+    """
+    The request an SGA payment is for, labelled with what SGA still owes on it.
+
+    Every request is offered, open or closed, because a reimbursement routinely
+    arrives after a request is closed for spending. See
+    :attr:`finance.models.FundingRequest.picker_label`.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """ Start empty; the form fills the queryset in. """
+        kwargs.setdefault('queryset', FundingRequest.objects.none())
+        kwargs.setdefault('required', False)
+        kwargs.setdefault('label', "SGA funding request")
+        super(FundingRequestChoiceField, self).__init__(*args, **kwargs)
+
+    def label_from_instance(self, obj):
+        """ Label the request with its year and what SGA owes on it. """
+        return obj.picker_label
+
+
+class RevenueSourceSelect(forms.Select):
+    """
+    Carries the fund each kind of income goes into onto its ``<option>``.
+
+    Picking "SGA Budget Deposit" has exactly one right answer for the fund, and
+    routing.js fills it in from here -- the same way an FR line fills in its
+    spend category.
+    """
+
+    def create_option(self, name, value, *args, **kwargs):
+        """ Attach the fund this source pays into. """
+        option = super(RevenueSourceSelect, self).create_option(name, value, *args, **kwargs)
+        source = getattr(value, 'instance', None)
+        if source is not None and source.credits_fund_id:
+            option['attrs']['data-credits-fund'] = str(source.credits_fund_id)
+        return option
+
+
 class FundSourceSelect(forms.Select):
     """
     Tags each option with whether that fund needs a funding request line, so
@@ -332,8 +371,8 @@ class BaseAllocationForm(forms.ModelForm):
         model = ParsedTransaction
         fields = ('amount', 'effective_date', 'description', 'linked_event',
                   'non_event_revenue_type', 'fund_source', 'lnl_spend_category',
-                  'fr_line_target', 'project_tag', 'is_projection', 'refund_of',
-                  'audit_explanation', 'receipt_file')
+                  'fr_line_target', 'funding_request', 'project_tag', 'is_projection',
+                  'refund_of', 'audit_explanation', 'receipt_file')
         widgets = {
             'effective_date': forms.DateInput(attrs={'type': 'date'}),
             'audit_explanation': forms.Textarea(attrs={'rows': 3}),
@@ -344,7 +383,8 @@ class BaseAllocationForm(forms.ModelForm):
         # says -- and three of the subclasses here leave ``refund_of`` out on
         # purpose. The queue's routing-only form accepting a refund target would
         # be exactly the mutual exclusion this class exists to make structural.
-        field_classes = {'refund_of': RefundTargetChoiceField}
+        field_classes = {'refund_of': RefundTargetChoiceField,
+                         'funding_request': FundingRequestChoiceField}
 
     def __init__(self, *args, **kwargs):
         """
@@ -373,12 +413,21 @@ class BaseAllocationForm(forms.ModelForm):
         # offered for new ones -- that is what the admin's "active" flag means.
         self._narrow('lnl_spend_category', SpendCategory.objects.active())
         self._narrow('fund_source', FundSource.objects.active())
-        self._narrow('non_event_revenue_type', RevenueSource.objects.active())
+        self._narrow('non_event_revenue_type',
+                     RevenueSource.objects.active().select_related('credits_fund'))
+        # Every request, closed ones included, newest first: SGA pays for a
+        # request after the spending, often once it is closed.
+        self._narrow('funding_request', FundingRequest.objects.with_totals()
+                     .order_by('-fiscal_year', 'reference', 'name'))
 
         fund = self.fields.get('fund_source')
         if fund is not None:
             fund.widget = FundSourceSelect(attrs={'class': 'fin-fund-source'})
             fund.widget.choices = fund.choices
+        source = self.fields.get('non_event_revenue_type')
+        if source is not None:
+            source.widget = RevenueSourceSelect()
+            source.widget.choices = source.choices
 
         self._style_widgets()
         self._narrow_fr_lines()
@@ -513,15 +562,36 @@ class BaseAllocationForm(forms.ModelForm):
         return qs
 
     def _apply_required_fields(self):
-        """ Mark this direction's mandatory fields, if this form renders them. """
+        """
+        Mark this direction's mandatory fields, if this form renders them.
+
+        Money SGA takes back is the one expense that needs no spend category:
+        nothing was bought, and filing it under one would put SGA's correction
+        on the spending chart.
+        """
         direction = self._direction()
         if direction is None:
             return
         names = self.REQUIRED_ON_REVENUE if direction == 'revenue' else self.REQUIRED_ON_EXPENSES
+        if direction == 'expense' and self._sga_return_selected():
+            names = tuple(name for name in names if name != 'lnl_spend_category')
         for name in names:
             field = self.fields.get(name)
             if field is not None:
                 field.required = True
+
+    def _sga_return_selected(self):
+        """
+        Whether this expense names the request SGA took money back for.
+
+        Read from the raw data, like :meth:`_refund_selected`, because it
+        decides which fields are required before validation runs.
+        """
+        if 'funding_request' not in self.fields:
+            return False
+        if self.data:
+            return bool(self.data.get(self.add_prefix('funding_request')))
+        return bool(self.instance.funding_request_id or self.initial.get('funding_request'))
 
     # -- filling in from the export -----------------------------------------
     def suggestions(self):
@@ -562,10 +632,10 @@ class BaseAllocationForm(forms.ModelForm):
                 continue
             self.initial[name] = suggestion.value
             self.autofilled[name] = suggestion
-            self._mark_inherited(field, suggestion)
+            self._mark_inherited(field, suggestion, name)
 
     @staticmethod
-    def _mark_inherited(field, suggestion):
+    def _mark_inherited(field, suggestion, name=None):
         """
         Tell routing.js which pre-filled boxes came off the funding request line.
 
@@ -576,8 +646,12 @@ class BaseAllocationForm(forms.ModelForm):
         group, not the second: it is the same answer from the same place, and
         it has to follow along when the line changes. Saying so is one data
         attribute, which is what jQuery's ``.data('fin-inherited')`` reads.
+
+        A filled-in fund is marked whatever answered it, for rule 5: choosing
+        the kind of income decides the fund, and a fund nobody chose by hand
+        must give way to that rather than be refused on save.
         """
-        if suggestion.source != AWARD:
+        if suggestion.source != AWARD and name != 'fund_source':
             return
         widget = getattr(field, 'widget', None)
         if widget is not None:
@@ -669,6 +743,7 @@ class BaseAllocationForm(forms.ModelForm):
         side where it means something different.
         """
         direction = self._direction()
+        request = self.fields.get('funding_request')
         if direction == 'revenue':
             for name in ParsedTransaction.EXPENSE_FIELDS:
                 self.fields.pop(name, None)
@@ -676,8 +751,17 @@ class BaseAllocationForm(forms.ModelForm):
             if fund is not None:
                 fund.label = "Into fund"
                 fund.help_text = self._revenue_fund_help()
+            if request is not None:
+                request.label = "Reimburses request"
+                request.help_text = ("The funding request SGA is paying back. Needed whenever "
+                                     "the money goes into a fund that draws on requests.")
         elif direction == 'expense':
             self.fields.pop('non_event_revenue_type', None)
+            if request is not None:
+                request.label = "SGA took back money for"
+                request.help_text = ("Only when SGA is reclaiming money it paid -- a "
+                                     "reimbursement made twice. Ordinary spending names a "
+                                     "funding request line instead.")
             # linked_event stays: a sub-rental hired for one show is that
             # show's cost, passed straight through. It means something
             # different here than on revenue, so it says so.
@@ -765,9 +849,28 @@ class BaseAllocationForm(forms.ModelForm):
         # decide, which is what the split modal wants.
         if 'is_projection' in self.fields:
             self.instance.state_partition()
+        self._default_fund_from_source(cleaned)
         self._check_fund_and_fr_line(cleaned)
         self._default_event_expense_category(cleaned)
         return cleaned
+
+    def _default_fund_from_source(self, cleaned):
+        """
+        Fill the fund in from the kind of income, when that decides it.
+
+        SGA pays each of its three kinds of money into its own fund, so the
+        source and the fund are one answer given twice. routing.js fills the
+        box in the browser; this covers a form posted without it. Only a blank
+        is filled -- a fund that disagrees is the model's to refuse, by name.
+        """
+        if 'fund_source' not in self.fields or cleaned.get('fund_source'):
+            return
+        source = cleaned.get('non_event_revenue_type')
+        if source is None or source.credits_fund_id is None:
+            return
+        cleaned['fund_source'] = source.credits_fund
+        self.instance.fund_source = source.credits_fund
+        self.errors.pop('fund_source', None)
 
     def _default_event_expense_category(self, cleaned):
         """
@@ -807,7 +910,9 @@ class BaseAllocationForm(forms.ModelForm):
         line = cleaned.get('fr_line_target')
 
         if line is None:
-            if fund is not None and fund.requires_funding_request:
+            # Money SGA took back names the request instead; the model says so.
+            if (fund is not None and fund.requires_funding_request
+                    and not cleaned.get('funding_request')):
                 self.add_error('fr_line_target',
                                "%s money has to name the funding request line it comes out "
                                "of." % fund)
@@ -905,12 +1010,12 @@ class ReconcileForm(BaseAllocationForm):
     #: exactly one right answer for every one of these and the original entry
     #: already holds it, so the queue fills them in and shows no boxes at all.
     REFUND_INHERITED = ('fund_source', 'lnl_spend_category', 'fr_line_target',
-                        'linked_event', 'project_tag', 'is_projection')
+                        'funding_request', 'linked_event', 'project_tag', 'is_projection')
 
     class Meta(BaseAllocationForm.Meta):
         fields = ('refund_of', 'linked_event', 'non_event_revenue_type', 'fund_source',
-                  'lnl_spend_category', 'fr_line_target', 'project_tag', 'is_projection',
-                  'audit_explanation')
+                  'funding_request', 'lnl_spend_category', 'fr_line_target', 'project_tag',
+                  'is_projection', 'audit_explanation')
 
     def __init__(self, *args, **kwargs):
         """ Compact styling: this form is rendered many times down one page. """
@@ -1129,8 +1234,8 @@ class SplitLineForm(BaseAllocationForm):
 
     class Meta(BaseAllocationForm.Meta):
         fields = ('amount', 'description', 'fund_source', 'lnl_spend_category',
-                  'fr_line_target', 'project_tag', 'linked_event', 'non_event_revenue_type',
-                  'audit_explanation')
+                  'fr_line_target', 'funding_request', 'project_tag', 'linked_event',
+                  'non_event_revenue_type', 'audit_explanation')
 
     def _inherit_effective_date(self):
         """
@@ -1520,7 +1625,7 @@ class FundingRequestForm(forms.ModelForm):
     class Meta:
         model = FundingRequest
         fields = ('name', 'reference', 'fiscal_year', 'date_submitted', 'date_approved',
-                  'is_projection', 'closed', 'notes')
+                  'is_projection', 'closed', 'owed_at_books_start', 'notes')
         widgets = {
             'date_submitted': forms.DateInput(attrs={'type': 'date'}),
             'date_approved': forms.DateInput(attrs={'type': 'date'}),
@@ -1537,7 +1642,13 @@ class FundingRequestForm(forms.ModelForm):
         super(FundingRequestForm, self).__init__(*args, **kwargs)
         self.fields['fiscal_year'] = forms.ChoiceField(
             choices=fiscal_year_choices(), initial=current_fiscal_year(), label="Fiscal Year")
+        # Almost always zero, so a blank box means zero rather than an error.
+        self.fields['owed_at_books_start'].required = False
         self.helper = finance_form_helper()
+
+    def clean_owed_at_books_start(self):
+        """ A blank is zero: nothing was owed before the books started. """
+        return self.cleaned_data.get('owed_at_books_start') or Decimal('0.00')
 
 
 class FRLineItemForm(forms.ModelForm):

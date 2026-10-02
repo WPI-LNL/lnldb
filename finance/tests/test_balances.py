@@ -103,7 +103,8 @@ class LedgerFixture(object):
         self.fr_spend = line(datetime.date(2025, 10, 1), '-800.00', 'Rights (F.26.6)')
         filed(self.fr_spend, 'sga_fr', lnl_spend_category=category('consumables'))
         self.reimbursement = line(datetime.date(2026, 2, 1), '500.00', 'F.26.6 Film Rights')
-        filed(self.reimbursement, 'sga_fr', non_event_revenue_type=revenue_source('sga_baseline'))
+        filed(self.reimbursement, 'sga_fr',
+              non_event_revenue_type=revenue_source('sga_fr_reimbursement'))
         self.unfiled = line(datetime.date(2026, 3, 1), '-200.00', 'Not yet')
         self.year_end = checkpoint('226-AG', datetime.date(2026, 6, 30), '9500.00')
 
@@ -146,13 +147,13 @@ class RevenueFundRuleTests(TestCase):
     """ Money coming in names the fund it adds to; it still has no spend category. """
 
     def test_revenue_may_name_a_fund(self):
-        txn = line(datetime.date(2025, 9, 1), '500.00', 'F.26.6 Film Rights')
+        txn = line(datetime.date(2025, 9, 1), '500.00', 'Fall Concert')
         entry = ParsedTransaction(parent_transaction=txn, amount=Decimal('500.00'),
-                                  non_event_revenue_type=revenue_source('sga_baseline'),
-                                  fund_source=fund('sga_fr'))
+                                  non_event_revenue_type=revenue_source('alumni'),
+                                  fund_source=fund('legacy'))
         entry.full_clean()
         entry.save()
-        self.assertEqual(entry.fund_source, fund('sga_fr'))
+        self.assertEqual(entry.fund_source, fund('legacy'))
 
     def test_the_database_still_refuses_a_spend_category_on_revenue(self):
         txn = line(datetime.date(2025, 9, 1), '500.00')
@@ -163,11 +164,16 @@ class RevenueFundRuleTests(TestCase):
                     fund_source=fund('legacy'), lnl_spend_category=category('consumables'))
 
     def test_a_reimbursement_need_not_name_a_funding_request_line(self):
-        """ Only spending burns down a line; money coming back does not. """
+        """
+        Only spending burns down a line; money coming back names the request
+        it repays instead.
+        """
         txn = line(datetime.date(2025, 9, 1), '500.00')
+        request = FundingRequest.objects.create(name='Film Rights', reference='F.26.6',
+                                                fiscal_year=2026)
         entry = ParsedTransaction(parent_transaction=txn, amount=Decimal('500.00'),
-                                  non_event_revenue_type=revenue_source('sga_baseline'),
-                                  fund_source=fund('sga_fr'))
+                                  non_event_revenue_type=revenue_source('sga_fr_reimbursement'),
+                                  fund_source=fund('sga_fr'), funding_request=request)
         entry.full_clean()
 
 
@@ -300,7 +306,12 @@ class FundSuggestionTests(TestCase):
         self.assertIn("315-AG's own money", suggestion.reason)
 
     def test_a_reimbursement_lands_in_the_funding_request_fund(self):
-        txn = line(datetime.date(2026, 6, 12), '10837.59', 'F.26.86 Film Posters and Concessions')
+        # SGA pays with a journal entry naming nobody; see is_sga_transfer.
+        txn = WorkdayTransaction.objects.create(
+            accounting_date=datetime.date(2026, 6, 12), net_amount=Decimal('10837.59'),
+            memo='F.26.86 Film Posters and Concessions',
+            worktags_json={'student_organization': MAIN,
+                           'journal': '26060012-JE - Worcester Polytechnic Institute'})
         suggestion = suggest_all(txn)['fund_source']
         self.assertEqual(suggestion.value, fund('sga_fr').pk)
         self.assertEqual(suggestion.source, MEMO)

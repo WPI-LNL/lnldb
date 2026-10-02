@@ -798,12 +798,65 @@ def own_fund_for_account(code):
 
 
 class RevenueSource(Vocabulary):
-    """ Where non-event revenue came from (SGA baseline, alumni gifts...). """
+    """
+    Where non-event revenue came from: SGA's three kinds of payment, a gift, gear sold.
+
+    Most of these say which fund the money goes into as well, because SGA pays
+    each kind of money into its own pot: a budget deposit is the budget, a
+    reimbursement repays the funding-request fund that spent it, and the
+    mandatory transfer is Projection's own money. :attr:`credits_fund` records
+    that, so picking the source fills the fund in and a mismatch is refused.
+    A source that names no fund -- a donation, an asset sale -- is the account's
+    own money like any other income.
+    """
     description = models.TextField(blank=True)
+    credits_fund = models.ForeignKey(
+        FundSource, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='revenue_sources', verbose_name="Goes into",
+        help_text="The fund this kind of income always adds to. Picking the source fills it in, "
+                  "and filing the money anywhere else is refused. When the fund draws on "
+                  "funding requests, the income has to name the request it reimburses. Leave "
+                  "blank for income that is simply the account's own money.")
 
     class Meta(Vocabulary.Meta):
         abstract = False
         verbose_name = "Non-Event Revenue Source"
+
+    @property
+    def repays_funding_requests(self):
+        """ Whether this is SGA paying back what a funding request spent. """
+        return self.credits_fund is not None and self.credits_fund.requires_funding_request
+
+
+def revenue_sources_by_fund():
+    """
+    ``{fund pk: [<RevenueSource>, ...]}`` for every active source that names a fund.
+
+    Read once per queue row -- a line whose fund Workday names is offered the
+    one kind of income that goes there -- so it is cached like the fund maps.
+    """
+    def build():
+        out = {}
+        for source in (RevenueSource.objects.active().filter(credits_fund__isnull=False)
+                       .select_related('credits_fund')):
+            out.setdefault(source.credits_fund_id, []).append(source)
+        return out
+    return _cached('revenue_by_fund', build, {})
+
+
+def reimbursement_source():
+    """
+    The revenue source for SGA repaying a funding request, or ``None``.
+
+    The first active source whose fund draws on funding requests. There is one
+    in the seed data; a Treasurer who retires it gets nothing filled in rather
+    than something wrong.
+    """
+    for sources in revenue_sources_by_fund().values():
+        for source in sources:
+            if source.repays_funding_requests:
+                return source
+    return None
 
 
 class PartitionCode(models.Model):
@@ -1284,9 +1337,9 @@ class FundingRequestQuerySet(models.QuerySet):
 
     def with_totals(self):
         """
-        Pre-compute awarded and spent, for pages that show many requests.
+        Pre-compute awarded, spent and reimbursed, for pages that show many requests.
 
-        Both figures are properties that aggregate, and an aggregate ignores
+        Every figure is a property that aggregates, and an aggregate ignores
         ``prefetch_related`` entirely -- so the listing pages were issuing
         roughly eight queries per request while carrying a prefetch that was
         never read. See :attr:`FundingRequest.total_awarded`.
@@ -1298,7 +1351,15 @@ class FundingRequestQuerySet(models.QuerySet):
             _spent_total=_money_subquery(
                 ParsedTransaction.objects.filter(
                     fr_line_target__funding_request=OuterRef('pk')),
-                'fr_line_target__funding_request'))
+                'fr_line_target__funding_request'),
+            _charged_total=_money_subquery(
+                ParsedTransaction.objects.filter(
+                    fr_line_target__funding_request=OuterRef('pk'),
+                    parent_transaction__isnull=False),
+                'fr_line_target__funding_request'),
+            _received_total=_money_subquery(
+                ParsedTransaction.objects.filter(funding_request=OuterRef('pk')),
+                'funding_request'))
 
     def with_lines(self):
         """
@@ -1359,6 +1420,13 @@ class FundingRequest(models.Model):
     closed = models.BooleanField(
         default=False, help_text="Closed requests are hidden from the dashboard burndown")
     notes = models.TextField(blank=True)
+    owed_at_books_start = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('0.00'),
+        verbose_name="Owed by SGA when the books started",
+        help_text="Only for a request whose spending began before the subledger's books start: "
+                  "what SGA still owed LNL for it on that day, spent and not yet reimbursed. A "
+                  "negative figure is what SGA had overpaid. Leave at zero when every charge "
+                  "against the request is in the ledger.")
 
     created_on = models.DateTimeField(auto_now_add=True)
 
@@ -1459,6 +1527,116 @@ class FundingRequest(models.Model):
     def is_overspent(self):
         """ Whether this request has been charged more than it was awarded. """
         return self.total_remaining < 0
+
+    # -- what SGA owes for it ----------------------------------------------
+    # SGA reimburses what was actually spent, never the award, and only once
+    # the spending has happened. So the figure that matters is spending that
+    # has reached Workday -- an encumbrance is money not yet spent and nothing
+    # SGA will pay for -- set against what SGA has paid in, net of anything it
+    # took back.
+
+    @property
+    def total_charged(self):
+        """
+        Spending against this request that has reached Workday, net of refunds.
+
+        :attr:`total_spent` less what is only encumbered. Positive.
+        """
+        annotated = getattr(self, '_charged_total', None)
+        if annotated is not None:
+            return -money(annotated)
+        return -money(ParsedTransaction.objects.filter(
+            fr_line_target__funding_request=self,
+            parent_transaction__isnull=False).aggregate(t=Sum('amount'))['t'])
+
+    @property
+    def total_received(self):
+        """
+        What SGA has paid LNL for this request, less anything it took back.
+
+        Reimbursements are positive entries naming the request, and money SGA
+        reclaims -- a payment made twice, say -- is a negative one, so the sum
+        is the net.
+        """
+        annotated = getattr(self, '_received_total', None)
+        if annotated is not None:
+            return money(annotated)
+        return money(self.sga_payments.aggregate(t=Sum('amount'))['t'])
+
+    @property
+    def awaiting_sga(self):
+        """
+        What SGA still owes LNL for this request. Negative means SGA overpaid.
+
+        Whatever was owed when the books started, plus the spending since,
+        less what SGA has paid.
+        """
+        return money(self.owed_at_books_start) + self.total_charged - self.total_received
+
+    @property
+    def reimbursement_status(self):
+        """ :attr:`awaiting_sga` in words. """
+        awaiting = self.awaiting_sga
+        if awaiting > 0:
+            return "Awaiting %s from SGA" % _dollars(awaiting)
+        if awaiting < 0:
+            return "SGA overpaid by %s" % _dollars(-awaiting)
+        if self.total_charged or self.total_received or self.owed_at_books_start:
+            return "Fully reimbursed"
+        return "Nothing spent yet"
+
+    def unreimbursed_since(self, books_start=None):
+        """
+        The date of the oldest charge SGA has not yet paid for, or ``None``.
+
+        Payments are taken to settle the oldest charges first, which is how a
+        receivable ages: whatever is still owed is the most recent spending,
+        and the date returned is when the oldest of that was spent. Money owed
+        when the books started counts as spent the day before they did.
+        """
+        if self.awaiting_sga <= 0:
+            return None
+        charges = []
+        opening = money(self.owed_at_books_start)
+        if opening > 0:
+            start = books_start or books_start_date()
+            if start is not None:
+                charges.append((start - datetime.timedelta(days=1), opening))
+        for date, amount in (ParsedTransaction.objects
+                             .filter(fr_line_target__funding_request=self,
+                                     parent_transaction__isnull=False)
+                             .order_by('effective_date', 'pk')
+                             .values_list('effective_date', 'amount')):
+            # Expenses are negative; a refund is a positive one that un-spends.
+            charges.append((date, -money(amount)))
+        paid = self.total_received + max(-opening, ZERO)
+        for date, amount in sorted(charges, key=lambda c: c[0]):
+            if amount <= 0:
+                paid -= amount
+                continue
+            if paid >= amount:
+                paid -= amount
+                continue
+            return date
+        return None
+
+    @property
+    def picker_label(self):
+        """
+        How this request reads in the reimbursement picker.
+
+        The year and what SGA still owes are on it because a reimbursement
+        names the request it repays, and the one still owed money is nearly
+        always the one being repaid.
+        """
+        name = "%s %s" % (self.reference, self.name) if self.reference else self.name
+        return "FY%s · %s — %s" % (str(self.fiscal_year)[-2:], name,
+                                   self.reimbursement_status.lower())
+
+
+def _dollars(amount):
+    """ ``$1,234.56``, for the few model strings that state a figure. """
+    return "${:,.2f}".format(money(amount))
 
 
 class FRLineItemQuerySet(models.QuerySet):
@@ -2031,7 +2209,8 @@ class ParsedTransaction(models.Model):
     Three shapes, distinguished by :attr:`entry_type`:
 
     * **Revenue**  -- ``amount > 0``, routes to an Event or a non-event source,
-      and names the fund it adds to.
+      and names the fund it adds to -- and, when SGA is reimbursing a funding
+      request, the request.
     * **Expense**  -- ``amount < 0``, routes to a fund/spend category/FR line.
     * **Refund**   -- ``amount > 0`` *and* ``refund_of`` set. A return credit.
       It carries expense routing, not revenue routing, so that crediting money
@@ -2087,6 +2266,19 @@ class ParsedTransaction(models.Model):
     fr_line_target = models.ForeignKey(FRLineItem, on_delete=models.PROTECT, null=True, blank=True,
                                        related_name='allocations', verbose_name="Funding request line")
 
+    # -- SGA's own payments -------------------------------------------------
+    # Spending against a request names one of its lines. SGA paying for that
+    # spending names the request itself: a reimbursement on the way in, and
+    # money SGA takes back -- a reimbursement paid twice -- on the way out. The
+    # two are kept apart so a request's spending and what SGA has paid for it
+    # can be set against each other.
+    funding_request = models.ForeignKey(
+        FundingRequest, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='sga_payments', verbose_name="SGA funding request",
+        help_text="SGA's own payment for a funding request: the request a reimbursement repays, "
+                  "or the one SGA took money back for. Spending against a request names one of "
+                  "its lines instead.")
+
     # -- Refunds ------------------------------------------------------------
     refund_of = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True,
                                   related_name='refunds', verbose_name="Refund of",
@@ -2115,9 +2307,13 @@ class ParsedTransaction(models.Model):
     # without both: an SGA reimbursement lands in the funding-request fund and
     # brings its balance back to zero, and the budget's annual deposit is what
     # the year's budget spending draws down.
+    #
+    # funding_request is shared too. A reimbursement coming in names the
+    # request it repays; money SGA takes back going out names the request it
+    # was taken back from. Both are SGA's payments, not LNL's spending.
     REVENUE_FIELDS = ('non_event_revenue_type',)
     EXPENSE_FIELDS = ('lnl_spend_category', 'fr_line_target')
-    SHARED_FIELDS = ('linked_event', 'fund_source')
+    SHARED_FIELDS = ('linked_event', 'fund_source', 'funding_request')
 
     class Meta:
         ordering = ('-effective_date', '-pk')
@@ -2154,6 +2350,12 @@ class ParsedTransaction(models.Model):
             models.CheckConstraint(
                 check=Q(refund_of__isnull=True) | Q(amount__gt=0),
                 name='finance_refund_must_be_positive'),
+            # Spending against a request names its line; SGA paying for that
+            # spending names the request. One entry is one or the other, or a
+            # reimbursement would also count as a draw on the award.
+            models.CheckConstraint(
+                check=Q(funding_request__isnull=True) | Q(fr_line_target__isnull=True),
+                name='finance_sga_payment_is_not_a_charge'),
         ]
 
     def __str__(self):
@@ -2356,7 +2558,8 @@ class ParsedTransaction(models.Model):
         cleanly. These are foreign keys now, so a blank arrives as an empty
         ``*_id`` rather than an empty string, but both are worth catching.
         """
-        for field in ('non_event_revenue_type', 'fund_source', 'lnl_spend_category'):
+        for field in ('non_event_revenue_type', 'fund_source', 'lnl_spend_category',
+                      'funding_request'):
             if getattr(self, '%s_id' % field, None) == '':
                 setattr(self, '%s_id' % field, None)
 
@@ -2416,21 +2619,62 @@ class ParsedTransaction(models.Model):
                         "$%s has already been credited back, leaving $%s."
                         % (-original.amount, already, refundable))
 
-        # -- Funding request lines -----------------------------------------
+        # -- Funding request lines, and SGA's payments for them -------------
         # A fund flagged requires_funding_request is money awarded for a named
-        # purpose, so it has to burn down one of that request's lines; every
-        # other fund is forbidden from naming one, or an FR's balance would
-        # change without any award behind it.
-        if self.entry_type != self.REVENUE:
-            fund = self.fund_source
+        # purpose, so spending from it has to burn down one of that request's
+        # lines; every other fund is forbidden from naming one, or an FR's
+        # balance would change without any award behind it.
+        #
+        # SGA's own payments into and out of that fund name the request rather
+        # than a line: what SGA reimbursed, or took back. Without the request a
+        # reimbursement is money in the fund that no request can be credited
+        # with, and what SGA still owes for each one cannot be worked out.
+        fund = self.fund_source
+        payment_for = self.funding_request
+        if self.entry_type == self.REVENUE:
+            # SGA pays each kind of money into its own pot, so the source of
+            # the income decides the fund. Filled in when blank; refused when
+            # it disagrees, because a reimbursement filed to Legacy leaves the
+            # request looking unpaid for ever.
+            source = self.non_event_revenue_type
+            if source is not None and source.credits_fund_id is not None:
+                if fund is None:
+                    self.fund_source = fund = source.credits_fund
+                elif fund.pk != source.credits_fund_id:
+                    errors['fund_source'] = "%s goes into %s, not %s." % (
+                        source, source.credits_fund, fund)
+            if fund is not None and fund.requires_funding_request and payment_for is None:
+                errors['funding_request'] = (
+                    "Money coming into %s has to name the request SGA is reimbursing. A "
+                    "supplier's credit is not a reimbursement: file it as a refund of the "
+                    "purchase instead." % fund)
+        else:
             line = self.fr_line_target
-            if fund is not None and fund.requires_funding_request and line is None:
+            draws = fund is not None and fund.requires_funding_request
+            if draws and line is None and payment_for is None:
                 errors['fr_line_target'] = (
-                    "%s money has to be charged to a specific funding request line." % fund)
-            elif line is not None and (fund is None or not fund.requires_funding_request):
+                    "%s money has to be charged to a specific funding request line. If SGA "
+                    "is taking money back, name the request under SGA funding request "
+                    "instead." % fund)
+            elif line is not None and not draws:
                 errors['fr_line_target'] = (
                     "Only a fund that draws on a funding request may name an FR line. "
                     "Either change the fund, or clear this.")
+
+        if payment_for is not None and 'funding_request' not in errors:
+            if self.fr_line_target_id is not None:
+                errors['funding_request'] = (
+                    "This is charged to a funding request line, which already names its "
+                    "request. Name the request here only for SGA's own payments.")
+            elif fund is None or not fund.requires_funding_request:
+                errors['funding_request'] = (
+                    "Only money in a fund that draws on funding requests can be SGA's payment "
+                    "for one%s. Change the fund, or clear this."
+                    % (" -- %s does not" % fund if fund is not None else ""))
+            elif self.parent_transaction_id is None:
+                errors['funding_request'] = (
+                    "SGA pays for spending that has happened. An encumbrance cannot be a "
+                    "reimbursement.")
 
         # -- The partition -------------------------------------------------
         # An SGA award was heard as either a Projection request or an Event
@@ -2529,11 +2773,27 @@ class ParsedTransaction(models.Model):
         return super(ParsedTransaction, self).save(*args, **kwargs)
 
     def _adopt_partition_from_funding_request(self):
-        """ Take the side from the funding request line, when there is one. """
-        if self.fr_line_target_id is None:
-            return
-        request = self.fr_line_target.funding_request
-        self.is_projection = request.is_projection
+        """
+        Take the side from the funding request, when there is one.
+
+        Through the line for spending, and directly for SGA's payment: a
+        reimbursement for a Projection request is Projection money coming back.
+        """
+        if self.fr_line_target_id is not None:
+            self.is_projection = self.fr_line_target.funding_request.is_projection
+        elif self.funding_request_id is not None:
+            self.is_projection = self.funding_request.is_projection
+
+    @property
+    def is_sga_return(self):
+        """
+        Money SGA took back for a funding request -- a payment it had made twice.
+
+        Filed on the expense side because money left the account, but it is
+        not LNL spending anything, so it carries no spend category of its own.
+        """
+        return (self.funding_request_id is not None and self.refund_of_id is None
+                and (self.amount or 0) < 0)
 
     @property
     def crosses_partition(self):

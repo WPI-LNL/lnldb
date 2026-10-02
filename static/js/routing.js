@@ -1,13 +1,16 @@
 /* How the routing fields react to each other on any allocation form.
 
-   Four rules. The first two are about not making the Treasurer type something
-   the database already knows; the third is about asking only when it matters;
-   the fourth is about not asking two questions where only one can be answered:
+   Five rules. The first two and the fifth are about not making the Treasurer
+   type something the database already knows; the third is about asking only
+   when it matters; the fourth is about not asking two questions where only one
+   can be answered:
 
-     1. The funding request picker only appears when the chosen fund draws on
-        one. Which funds those are is a flag on the FundSource row, rendered
-        onto the <option> as data-requires-fr, so adding a fund in the admin
-        needs no change here.
+     1. The funding request pickers only appear when the chosen fund draws on
+        funding requests: the line on spending, and the request itself on
+        SGA's own payments -- a reimbursement in, money SGA took back out.
+        Which funds those are is a flag on the FundSource row, rendered onto
+        the <option> as data-requires-fr, so adding a fund in the admin needs
+        no change here.
 
      2. Choosing a funding request line fills in the spend category and project
         that line was awarded for. Those were recorded when the award was
@@ -34,10 +37,16 @@
         and a refund in the queue carries no routing of its own: ReconcileForm
         copies it, fund included, off the entry being reversed.
 
-   The server enforces all four either way (ParsedTransaction.clean(),
-   BaseAllocationForm._check_fund_and_fr_line, and, for rule 4, the direction
-   rules that drop the revenue fields from a refund outright). None of this is
-   validation. */
+     5. Choosing the kind of income fills in the fund it goes into. SGA pays
+        each of its three kinds of money into its own pot, so the source and
+        the fund are one answer; which fund is data-credits-fund on the
+        source's <option>, set from the Revenue Source admin. Like rule 2 it
+        only overwrites a box it filled in itself.
+
+   The server enforces all five either way (ParsedTransaction.clean(),
+   BaseAllocationForm._check_fund_and_fr_line and _default_fund_from_source,
+   and, for rule 4, the direction rules that drop the revenue fields from a
+   refund outright). None of this is validation. */
 (function ($) {
     'use strict';
 
@@ -64,6 +73,7 @@
         return {
             fund: $scope.find('[name$="fund_source"]').first(),
             line: $scope.find('[name$="fr_line_target"]').first(),
+            request: $scope.find('select[name$="funding_request"]').first(),
             cross: $scope.find('[name$="allow_cross_year_fr"]').first(),
             category: $scope.find('[name$="lnl_spend_category"]').first(),
             project: $scope.find('[name$="project_tag"]').first(),
@@ -78,20 +88,26 @@
         };
     }
 
-    /* ---- 1. Show the FR picker only when the fund needs one --------------- */
+    /* ---- 1. Show the FR pickers only when the fund needs one ------------- */
     function gate($fund) {
         var f = fields($fund);
-        if (!f.line.length) { return; }
+        if (!f.line.length && !f.request.length) { return; }
 
         var required = f.fund.find('option:selected').attr('data-requires-fr') === '1';
-        container(f.line).toggle(required);
-        if (f.cross.length) { container(f.cross).toggle(required); }
+        if (f.line.length) {
+            container(f.line).toggle(required);
+            if (f.cross.length) { container(f.cross).toggle(required); }
 
-        if (!required && f.line.val()) {
-            // A stale line would be rejected on save, with the error landing on
-            // a field that is no longer on screen.
-            f.line.val('').trigger('change');
-            if (f.cross.length) { f.cross.prop('checked', false); }
+            if (!required && f.line.val()) {
+                // A stale line would be rejected on save, with the error landing
+                // on a field that is no longer on screen.
+                f.line.val('').trigger('change');
+                if (f.cross.length) { f.cross.prop('checked', false); }
+            }
+        }
+        if (f.request.length) {
+            container(f.request).toggle(required);
+            if (!required && f.request.val()) { f.request.val(''); }
         }
     }
 
@@ -129,6 +145,15 @@
         var $option = $line.find('option:selected');
         adopt(f.category, $option.attr('data-spend-category') || '');
         adopt(f.project, $option.attr('data-project-tag') || '');
+    }
+
+    /* ---- 5. The kind of income decides its fund ---------------------------- */
+    function creditFund($source) {
+        var f = fields($source);
+        if (!f.fund.length) { return; }
+        adopt(f.fund, $source.find('option:selected').attr('data-credits-fund') || '');
+        // The fund may now draw on requests, which brings rule 1 in.
+        gate(f.fund);
     }
 
     /* A hand-edit of either target releases it from inheritance. Namespaced
@@ -170,7 +195,7 @@
            the purchase being reversed. The entry page keeps it, because there a
            refund is filed like any expense and the fund is asked for. */
         var hide = [f.event, f.revenueType];
-        if ($refund.closest('.fin-queue-row').length) { hide.push(f.fund); }
+        if ($refund.closest('.fin-queue-row').length) { hide.push(f.fund, f.request); }
 
         $.each(hide, function (_, $field) {
             if (!$field.length) { return; }
@@ -211,6 +236,25 @@
             $fund.data('fin-gate', true);
             $fund.on('change', function () { gate($fund); });
             gate($fund);
+        });
+
+        $(root).find('select[name$="non_event_revenue_type"]').each(function () {
+            var $source = $(this);
+            if ($source.data('fin-credits')) { return; }
+            $source.data('fin-credits', true);
+            var f = fields($source);
+            // The fund is released from the source the moment it is picked by
+            // hand, as the category is released from an FR line.
+            if (f.fund.length && !f.fund.data('fin-watched-fund')) {
+                f.fund.data('fin-watched-fund', true);
+                f.fund.on('change', function (event) {
+                    if (event.namespace === 'fin-inherit') { return; }
+                    // The attribute too: jQuery re-reads data-* once the cached
+                    // value is gone, which would quietly re-lend the box.
+                    f.fund.removeData('fin-inherited').removeAttr('data-fin-inherited');
+                });
+            }
+            $source.on('change', function () { creditFund($source); });
         });
 
         $(root).find('select[name$="fr_line_target"]').each(function () {

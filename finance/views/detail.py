@@ -15,12 +15,13 @@ from django.core.serializers.base import DeserializationError
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
+from django.utils.formats import date_format
 from reversion.errors import RevertError
 from reversion.models import Version
 
 from finance.filters import filter_context
 from finance.forms import AllocationForm, SplitFormSet
-from finance.models import ParsedTransaction, WorkdayTransaction
+from finance.models import ParsedTransaction, WorkdayTransaction, own_fund_for_account
 from finance.suggestions import suggest_all
 
 
@@ -127,9 +128,20 @@ def transaction_detail(request, pk):
                 messages.error(request, error)
     else:
         formset = SplitFormSet(instance=txn, parent_transaction=txn)
+        multibill = _multibill_to_split(request, txn)
+        if multibill is not None:
+            shares = _multibill_rows(txn, multibill)
+            # Laid out as unsaved rows to check, one per show. The POST builds
+            # its formset without them, so what is saved is what was submitted.
+            formset = SplitFormSet(instance=txn, parent_transaction=txn, initial=shares)
+            formset.extra = len(shares)
+            messages.info(request, "Laid out across the %s events on the multi-bill sent %s, "
+                                   "each by its share. Check the amounts, then save."
+                          % (len(shares), date_format(multibill.date_billed, 'M j, Y')))
 
     slices = list(txn.slices.select_related(
-        'project_tag', 'fr_line_target__funding_request', 'linked_event').all())
+        'project_tag', 'fr_line_target__funding_request', 'linked_event',
+        'funding_request').all())
 
     context = {
         'h2': "Transaction %s" % txn.reference,
@@ -146,6 +158,52 @@ def transaction_detail(request, pk):
     }
     context.update(filter_context(request))
     return render(request, 'finance/transaction_detail.html', context)
+
+
+def _multibill_to_split(request, txn):
+    """
+    The multi-bill ``?multibill=`` asks to split this line across, or ``None``.
+
+    Only for a deposit with nothing filed against it yet: laying the shares out
+    over existing slices would ask the Treasurer to save a split that silently
+    replaces what was already there.
+    """
+    from events.models import MultiBilling
+
+    raw = request.GET.get('multibill')
+    if not raw or not raw.isdigit() or txn.net_amount <= 0:
+        return None
+    if txn.slices.exists():
+        messages.warning(request, "This line already has allocations. Undo them first to "
+                                  "split it across a multi-bill.")
+        return None
+    return MultiBilling.objects.filter(pk=raw).prefetch_related('events').first()
+
+
+def _multibill_rows(txn, multibill):
+    """
+    One unsaved split row per event on the bill, each with its share.
+
+    Shares come from :func:`finance.calculators.multibill_shares`, the same
+    split the event P&L uses, so each show is credited with what the P&L says
+    it was billed. When the payment differs from the bill, the last show takes
+    the difference, so the rows still add up to the bank line.
+    """
+    from finance.calculators import multibill_shares
+
+    shares = multibill_shares(multibill)
+    events = sorted(multibill.events.all(), key=lambda e: e.pk)
+    fund = own_fund_for_account(txn.partition_code_label)
+    rows, allotted = [], 0
+    for index, event in enumerate(events):
+        amount = shares.get(event.pk, 0)
+        if index == len(events) - 1:
+            amount = txn.net_amount - allotted
+        allotted += amount
+        rows.append({'amount': amount, 'description': event.event_name,
+                     'linked_event': event.pk,
+                     'fund_source': fund.pk if fund is not None else None})
+    return rows
 
 
 @login_required

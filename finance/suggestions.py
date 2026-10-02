@@ -52,7 +52,8 @@ from django.utils.formats import date_format
 from finance.models import (ZERO, FundSource, ProjectTag, SuggestionRule,
                             default_fund_source, fund_source_for_tracking,
                             fund_source_for_workday_fund, money, normalise_sga_reference,
-                            normalise_term, own_fund_for_account, spend_category_named)
+                            normalise_term, own_fund_for_account, reimbursement_source,
+                            revenue_sources_by_fund, spend_category_named)
 
 HIGH, MEDIUM, LOW = 'high', 'medium', 'low'
 
@@ -352,7 +353,7 @@ def suggest_funding_request(txn, fields=None):
     return None, None
 
 
-def near_miss_funding_request(reference):
+def near_miss_funding_request(reference, include_closed=False):
     """
     The open request numbered like ``reference`` in every part but the letter.
 
@@ -366,6 +367,9 @@ def near_miss_funding_request(reference):
 
     ``None`` when the reference is not SGA's format, when nothing matches, or
     when two do -- two candidates is a question this cannot narrow down.
+
+    ``include_closed`` looks at closed requests too, which is right for SGA's
+    payments: a reimbursement often arrives after a request is closed.
     """
     from django.db.models import Prefetch
 
@@ -377,7 +381,10 @@ def near_miss_funding_request(reference):
     letter, year, number = match.groups()
 
     found = []
-    candidates = FundingRequest.objects.filter(closed=False).prefetch_related(
+    candidates = FundingRequest.objects.all()
+    if not include_closed:
+        candidates = candidates.filter(closed=False)
+    candidates = candidates.prefetch_related(
         Prefetch('line_items',
                  queryset=FRLineItem.objects.select_related('lnl_spend_category')))
     for funding_request in candidates:
@@ -427,6 +434,195 @@ def suggest_fr_line(funding_request, line, fields):
         # otherwise the caption claims the memo named a line it never did.
         reason = '%s has only the one line' % funding_request.reference
     return Suggestion(line.pk, HIGH, reason, line.picker_label, source=MEMO)
+
+
+# ---------------------------------------------------------------------------
+# SGA's own payments
+#
+# SGA moves money with a journal entry: no supplier, no employee, and a memo
+# quoting the request -- "F.26.86 Film Posters and Concessions" coming in as a
+# reimbursement, "SGA FR F.25.33 was doubled paid to 226-AG" going out when SGA
+# takes back a payment it made twice. That shape is what separates SGA paying
+# for a request from LNL spending on one: a supplier's credit quotes the request
+# too ("Solder wick, Consumables, (A.27.16)"), and it is a refund.
+# ---------------------------------------------------------------------------
+
+#: What :attr:`WorkdayTransaction.document_type` reads for a journal entry.
+JOURNAL_ENTRY_DOCUMENT_TYPE = 'journal entry'
+
+
+def is_sga_transfer(txn, fields=None):
+    """
+    Whether a bank line is SGA moving money for a funding request.
+
+    A journal entry naming nobody, whose memo quotes a request number. Every
+    such line in LNL's exports has been SGA's: reimbursements in, and the
+    occasional payment taken back out.
+    """
+    fields = memo_fields(txn) if fields is None else fields
+    if not fields.reference:
+        return False
+    if (txn.document_type or '').strip().lower() != JOURNAL_ENTRY_DOCUMENT_TYPE:
+        return False
+    return not (txn.supplier or txn.employee)
+
+
+def find_funding_request(reference):
+    """
+    The request numbered ``reference``, open or closed, or ``None``.
+
+    Closed requests count here, unlike when matching spending: SGA's payment
+    for a request routinely arrives after it was closed for spending.
+    """
+    from finance.models import FundingRequest
+
+    wanted = normalise_reference(reference)
+    if not wanted:
+        return None
+    # Compared in Python for the reason suggest_funding_request gives.
+    for funding_request in FundingRequest.objects.exclude(reference='').with_totals():
+        if normalise_reference(funding_request.reference) == wanted:
+            return funding_request
+    return None
+
+
+def suggest_sga_payment(txn, fields=None):
+    """
+    The request an SGA payment is for, read off its memo.
+
+    Returns ``(suggestion, request, near_miss)``. The suggestion fills the box
+    when lnldb holds the request the memo quotes; when it holds the same number
+    under another body's letter, that one is offered as a chip and named as
+    ``near_miss``, because a typo on one side is likelier than a coincidence --
+    see :func:`near_miss_funding_request`.
+    """
+    fields = memo_fields(txn) if fields is None else fields
+    if not fields.reference:
+        return None, None, None
+    request = find_funding_request(fields.reference)
+    if request is not None:
+        reason = ('Memo quotes %s' % request.reference if txn.net_amount > 0
+                  else 'Memo says SGA took back money for %s' % request.reference)
+        return (Suggestion(request.pk, HIGH, reason, request.picker_label, source=MEMO),
+                request, None)
+    near = near_miss_funding_request(fields.reference, include_closed=True)
+    if near is None:
+        return None, None, None
+    return (Suggestion(
+        near.pk, MEDIUM,
+        'Memo says %s, which lnldb does not have; %s (%s) has the same number. '
+        'Check which letter is right' % (fields.reference, near.reference, near.name),
+        near.picker_label, source=GUESS), None, near)
+
+
+def unknown_request(fields):
+    """
+    What to pre-fill a new funding request with, for a number lnldb lacks.
+
+    The memo has the number and usually the request's name after it, and the
+    number has the fiscal year in it, so most of the form can be filled from
+    the line that mentioned it.
+    """
+    from finance.models import SGA_REFERENCE
+
+    match = SGA_REFERENCE.match(normalise_reference(fields.reference))
+    if match is None:
+        return None
+    return {'reference': normalise_reference(fields.reference),
+            'name': fields.description,
+            'fiscal_year': 2000 + int(match.group(2))}
+
+
+# ---------------------------------------------------------------------------
+# Where income came from
+# ---------------------------------------------------------------------------
+
+def suggest_revenue_source(txn, fields=None, fund=None, sga_transfer=False):
+    """
+    The kind of non-event income a line is, when the export says.
+
+    Two answers, both lookups:
+
+    1. **SGA reimbursing a request.** An SGA journal entry quoting a request
+       number is the reimbursement source -- whichever active source pays into
+       the fund that draws on funding requests.
+    2. **The fund Workday named.** When the Tracking worktag or the Fund code
+       says which pot a deposit went into and exactly one kind of income goes
+       there -- a deposit tracked "SGA Budget" is the budget deposit -- that is
+       the source. A fund that is only the account's own money by default says
+       nothing about where the money came from, so it is not read this way.
+
+    ``fund`` is the fund suggestion already worked out for the line.
+    """
+    fields = memo_fields(txn) if fields is None else fields
+    if sga_transfer:
+        source = reimbursement_source()
+        if source is not None:
+            return Suggestion(source.pk, HIGH,
+                              'Memo quotes %s: SGA reimbursing a funding request'
+                              % fields.reference, str(source), source=MEMO)
+        return None
+    if fund is None or fund.source not in (MEMO, EXPORT):
+        return None
+    sources = revenue_sources_by_fund().get(fund.value) or []
+    if len(sources) != 1:
+        return None
+    source = sources[0]
+    # A reimbursement is recognised by SGA's journal entry, never by the fund
+    # alone: a supplier's credit on a funding-request purchase is tracked to
+    # the same fund, and it is a refund.
+    if source.repays_funding_requests:
+        return None
+    return Suggestion(source.pk, HIGH, '%s, and %s is what goes there' % (fund.reason, source),
+                      str(source), source=EXPORT)
+
+
+#: How long before the money arrives a multi-bill may have been sent and still
+#: be offered as what the money pays.
+MULTIBILL_LOOKBACK_DAYS = 365
+
+
+def suggest_multibill(txn, linked_event=None):
+    """
+    The multi-bill a deposit pays, as ``{'multibill', 'reason', 'source'}`` or ``None``.
+
+    One bill can cover several shows, and one payment settles it, so the line
+    has to be split between the shows for each one's P&L to see its share.
+    Found two ways:
+
+    * the event the memo names was billed on a multi-bill for exactly this
+      amount -- the memo said which bill, in effect, so this is a lookup;
+    * otherwise one multi-bill, and only one, for exactly this amount, sent in
+      the year before the money arrived -- a resemblance, offered as a guess.
+
+    Either way the queue only offers a link to the split page, which lays the
+    shares out to be checked and saved: nothing here files anything.
+    """
+    from events.models import MultiBilling
+
+    if txn.net_amount <= 0:
+        return None
+    amount = money(txn.net_amount)
+    if linked_event is not None and linked_event.is_lookup:
+        bill = (MultiBilling.objects.filter(events__pk=linked_event.value, amount=amount)
+                .order_by('-date_billed', '-pk').prefetch_related('events').first())
+        if bill is None:
+            return None
+        return {'multibill': bill, 'source': MEMO,
+                'reason': 'Memo names one of the %s events on a multi-bill for exactly this '
+                          'amount' % bill.events.count()}
+
+    earliest = txn.accounting_date - datetime.timedelta(days=MULTIBILL_LOOKBACK_DAYS)
+    latest = txn.accounting_date + datetime.timedelta(days=7)
+    candidates = list(MultiBilling.objects.filter(amount=amount,
+                                                  date_billed__range=(earliest, latest))
+                      .prefetch_related('events')[:2])
+    if len(candidates) != 1:
+        return None
+    bill = candidates[0]
+    return {'multibill': bill, 'source': GUESS,
+            'reason': 'A multi-bill for exactly this amount, sent %s -- check it'
+                      % date_format(bill.date_billed, 'M j, Y')}
 
 
 # ---------------------------------------------------------------------------
@@ -1141,10 +1337,12 @@ def suggest_refund_targets(txn, limit=8):
 #: this rather than a list of its own, so adding a suggester here is enough to
 #: have it pre-fill.
 SUGGESTED_FIELDS = ('spend_category', 'fund_source', 'fr_line_target',
-                    'project_tag', 'linked_event', 'refund_of')
+                    'project_tag', 'linked_event', 'refund_of', 'revenue_source',
+                    'funding_request')
 
 #: The form field each of those maps to. Spend category is the odd one out
-#: because LNL's category and Workday's share a name but are different things.
+#: because LNL's category and Workday's share a name but are different things,
+#: and revenue source because the model calls it a non-event revenue type.
 FIELD_NAMES = {
     'spend_category': 'lnl_spend_category',
     'fund_source': 'fund_source',
@@ -1152,6 +1350,8 @@ FIELD_NAMES = {
     'project_tag': 'project_tag',
     'linked_event': 'linked_event',
     'refund_of': 'refund_of',
+    'revenue_source': 'non_event_revenue_type',
+    'funding_request': 'funding_request',
 }
 
 
@@ -1166,20 +1366,13 @@ def suggest_all(txn, tags=None, rules=None):
     table once for the whole page instead of per row.
     """
     fields = memo_fields(txn)
+    sga_transfer = is_sga_transfer(txn, fields)
 
     if txn.net_amount > 0:
-        return {
-            'kind': 'revenue',
-            'memo': fields,
-            'description': suggest_description(txn),
-            'linked_event': suggest_linked_event(txn),
-            'refund_of': suggest_refund_target(txn),
-            # An SGA reimbursement quotes the request it repays, and lands in
-            # the funding-request fund; everything else is the account's own.
-            'fund_source': suggest_fund_source(txn, reference=fields.reference),
-            'project_tag': suggest_project_tag(txn, tags=tags),
-            'warning': '',
-        }
+        return _suggest_revenue(txn, fields, sga_transfer, tags)
+
+    if sga_transfer:
+        return _suggest_sga_return(txn, fields, tags)
 
     # Looked up once: the request drives the fund, the FR line and, through the
     # line, the spend category.
@@ -1205,8 +1398,9 @@ def suggest_all(txn, tags=None, rules=None):
                                            reference=fields.reference),
         'fr_line_target': (suggest_fr_line(funding_request, fr_line, fields)
                            or suggest_near_miss_line(unmatched, near_miss, fields)),
-        'funding_request': funding_request,
+        'matched_request': funding_request,
         'near_miss': near_miss,
+        'unknown_request': unknown_request(fields) if unmatched and near_miss is None else None,
         'project_tag': suggest_project_tag(txn, tags=tags),
         'linked_event': linked_event,
         'needs_event': _needs_event(spend_category, linked_event),
@@ -1214,14 +1408,106 @@ def suggest_all(txn, tags=None, rules=None):
     }
 
 
-def _unmatched_reference_warning(reference, near_miss):
-    """ What the queue row says about a request number lnldb does not have. """
+def _suggest_revenue(txn, fields, sga_transfer, tags):
+    """
+    The revenue half of :func:`suggest_all`.
+
+    Money coming in is one of four things, and the suggestions say which:
+
+    * a purchase credited back, when the export quotes the purchase;
+    * event billing, when an Internal Service Delivery names the show;
+    * SGA paying for a funding request, when an SGA journal entry quotes it --
+      source, request and fund all follow from the number;
+    * some other kind of income, when Workday names the fund it went into.
+
+    An ISD that names no show lnldb has is still event billing, so the row says
+    the event is missing rather than leaving it to be noticed on the P&L.
+    """
+    refund = suggest_refund_target(txn)
+    linked_event = suggest_linked_event(txn)
+    # Only SGA's own journal entry makes a quoted request number mean "this is
+    # a reimbursement". A supplier's credit quotes the request too, and is a
+    # refund; its fund comes from the purchase it gives back to.
+    fund = suggest_fund_source(txn, reference=fields.reference if sga_transfer else '')
+
+    payment = request = near_miss = None
+    if sga_transfer:
+        payment, request, near_miss = suggest_sga_payment(txn, fields)
+    unmatched = fields.reference if (sga_transfer and request is None) else ''
+
+    multibill = None if refund is not None else suggest_multibill(txn, linked_event)
+    is_isd = (txn.document_type or '').strip().lower() == ISD_DOCUMENT_TYPE
+    event_named = linked_event is not None and linked_event.is_lookup
+
+    return {
+        'kind': 'revenue',
+        'memo': fields,
+        'description': suggest_description(txn),
+        'linked_event': linked_event,
+        'refund_of': refund,
+        'fund_source': fund,
+        # Event billing has no source of its own: the event is the answer.
+        'revenue_source': (None if event_named
+                           else suggest_revenue_source(txn, fields, fund, sga_transfer)),
+        'funding_request': payment,
+        'matched_request': request,
+        'near_miss': near_miss,
+        'unknown_request': unknown_request(fields) if unmatched and near_miss is None else None,
+        'multibill': multibill,
+        'project_tag': suggest_project_tag(txn, tags=tags),
+        # LNL billing that names no event lnldb has. The P&L cannot see money
+        # that is not linked to its show.
+        'needs_event': bool(is_isd and refund is None and multibill is None
+                            and not event_named),
+        'warning': _unmatched_reference_warning(unmatched, near_miss, revenue=True),
+    }
+
+
+def _suggest_sga_return(txn, fields, tags):
+    """
+    The expense half of :func:`suggest_all`, for money SGA takes back.
+
+    SGA reclaiming a payment -- a reimbursement it made twice -- is a journal
+    entry out of the account quoting the request. It is not LNL spending, so
+    no spend category, event or funding request line is offered: the request
+    itself is the answer, and the fund is the one that draws on requests.
+    """
+    payment, request, near_miss = suggest_sga_payment(txn, fields)
+    unmatched = fields.reference if request is None else ''
+    return {
+        'kind': 'expense',
+        'memo': fields,
+        'description': suggest_description(txn),
+        'spend_category': None,
+        'fund_source': suggest_fund_source(txn, funding_request=request,
+                                           reference=fields.reference),
+        'fr_line_target': None,
+        'funding_request': payment,
+        'matched_request': request,
+        'near_miss': near_miss,
+        'unknown_request': unknown_request(fields) if unmatched and near_miss is None else None,
+        'sga_return': True,
+        'project_tag': suggest_project_tag(txn, tags=tags),
+        'linked_event': None,
+        'needs_event': False,
+        'warning': _unmatched_reference_warning(unmatched, near_miss, revenue=True),
+    }
+
+
+def _unmatched_reference_warning(reference, near_miss, revenue=False):
+    """
+    What the queue row says about a request number lnldb does not have.
+
+    ``revenue`` is for SGA's own payments, which name the request itself rather
+    than one of its lines.
+    """
     if not reference:
         return ''
+    what = 'that request' if revenue else "that request's line"
     if near_miss is not None:
         return ('The memo quotes %s, which is not in lnldb, but %s (%s) has the same number. '
-                "If one of the letters is a typo, pick that request's line; if not, enter %s."
-                % (reference, near_miss.reference, near_miss.name, reference))
+                "If one of the letters is a typo, pick %s; if not, enter %s."
+                % (reference, near_miss.reference, near_miss.name, what, reference))
     return ('The memo quotes funding request %s, which is not in lnldb. Enter the request, '
             'or route this line by hand.' % reference)
 

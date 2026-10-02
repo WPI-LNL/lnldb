@@ -15,7 +15,9 @@ from django.db.models import Sum
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 
+from finance.calculators import sga_receivables
 from finance.filters import filter_context, get_filter_state
 from finance.forms import FRLineItemFormSet, FundingRequestForm, ProjectTagForm
 from finance.models import FundingRequest, ProjectTag, money, project_tag_costs
@@ -169,6 +171,9 @@ def funding_list(request):
         'h2': "Funding Requests",
         'fin_page': 'funding',
         'requests': qs,
+        # Across every year, whatever the filter says: SGA can owe on an FY26
+        # request well into FY27, and that is exactly what this is for.
+        'receivables': sga_receivables(),
         'can_edit': request.user.has_perm('finance.manage_fundingrequest'),
     }
     context.update(filter_context(request))
@@ -210,6 +215,11 @@ def funding_detail(request, pk):
         'fin_page': 'funding',
         'fr': fr,
         'lines': lines,
+        # SGA's own payments for the request: reimbursements, and anything it
+        # took back.
+        'payments': fr.sga_payments.select_related('parent_transaction')
+                                   .order_by('-effective_date', '-pk'),
+        'unreimbursed_since': fr.unreimbursed_since(),
         'can_edit': request.user.has_perm('finance.manage_fundingrequest'),
     }
     context.update(filter_context(request))
@@ -228,6 +238,12 @@ def funding_edit(request, pk=None):
     as a compact table with no room for per-field error text.
     """
     instance = get_object_or_404(FundingRequest, pk=pk) if pk is not None else None
+    # The queue links here to add a request a memo quoted, and wants the row
+    # back afterwards. Only ever a page on this site.
+    next_url = request.GET.get('next') or ''
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()},
+                                           require_https=request.is_secure()):
+        next_url = ''
 
     if request.method == 'POST':
         form = FundingRequestForm(request.POST, instance=instance)
@@ -242,12 +258,18 @@ def funding_edit(request, pk=None):
                 formset.instance = fr
                 formset.save()
             messages.success(request, "Saved %s." % fr.name)
-            return HttpResponseRedirect(reverse('finance:fr-detail', args=[fr.pk]))
+            return HttpResponseRedirect(next_url or reverse('finance:fr-detail', args=[fr.pk]))
         for errors in formset.errors:
             for error in errors.values():
                 messages.error(request, error)
     else:
-        form = FundingRequestForm(instance=instance)
+        # A new request can arrive pre-filled from the memo that quoted it:
+        # the number, the name written after it, and the year the number says.
+        initial = {}
+        if instance is None:
+            initial = {key: request.GET[key] for key in ('reference', 'name', 'fiscal_year')
+                       if request.GET.get(key)}
+        form = FundingRequestForm(instance=instance, initial=initial)
         formset = FRLineItemFormSet(instance=instance)
 
     context = {

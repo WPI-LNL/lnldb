@@ -144,6 +144,108 @@
         </div>
     </div>
 
+    {# ---- Where the money comes from ---- #}
+    {% comment %}
+        Three things the charts above do not say: which kind of income it was,
+        how much of event billing LNL kept once hired-in gear was paid for, and
+        whether the clients are new. finance.calculators has the rules.
+    {% endcomment %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="fin-panel">
+                <div class="fin-panel-head">
+                    <span>Revenue by Source</span>
+                    <span class="fin-muted" style="font-weight:400;font-size:12px;">event billing, and each kind of other income</span>
+                </div>
+                <div class="fin-panel-body">
+                    {% for row in revenue_sources %}
+                        <div class="fin-rank">
+                            <div class="fin-rank-head">
+                                <span class="fin-rank-label" title="{{ row.label }}">{{ row.label }}</span>
+                                <span class="fin-rank-value">
+                                    {{ row.amount|money }}
+                                    <span class="fin-muted">{{ row.percent }}%</span>
+                                </span>
+                            </div>
+                            <div class="fin-rank-track">
+                                <div class="fin-rank-fill" style="width:{{ row.bar }}%;background:{{ row.color }}"></div>
+                            </div>
+                            {% if row.taken_back %}
+                                <div class="fin-muted" style="font-size:11px;"
+                                     title="SGA reclaimed money it had paid -- a reimbursement made twice. It is netted off here because it undoes income rather than being spending.">
+                                    net of {{ row.taken_back|money }} SGA took back
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% empty %}
+                        <div class="fin-empty">
+                            <span class="glyphicon glyphicon-usd"></span>
+                            No revenue recorded in this period yet.
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="fin-panel">
+                <div class="fin-panel-head">
+                    <span>Event Billing, Kept</span>
+                    <a href="{% url 'finance:events' %}?{{ filter_state.querystring }}"
+                       class="fin-muted" style="font-weight:400;font-size:12px;">Event P&amp;L &rarr;</a>
+                </div>
+                <div class="fin-panel-body">
+                    {% comment %}
+                        Hired-in gear billed to a client goes straight back out to
+                        the rental house. Counting it as income makes LNL look like
+                        a bigger business than it is.
+                    {% endcomment %}
+                    <div class="fin-stats" style="margin-bottom:10px;">
+                        <div class="fin-stat">
+                            <div class="fin-stat-label">Billed and received</div>
+                            <div class="fin-stat-value">{{ billing_kept.gross|money }}</div>
+                        </div>
+                        <div class="fin-stat">
+                            <div class="fin-stat-label">Passed through</div>
+                            <div class="fin-stat-value text-danger">{{ billing_kept.passthrough|money }}</div>
+                            <div class="fin-stat-sub">to rental houses and vendors</div>
+                        </div>
+                        <div class="fin-stat">
+                            <div class="fin-stat-label">LNL kept</div>
+                            <div class="fin-stat-value {{ billing_kept.kept|money_class }}">{{ billing_kept.kept|money }}</div>
+                            {% if billing_kept.kept_percent is not None %}
+                                <div class="fin-stat-sub">{{ billing_kept.kept_percent }}% of billing</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if retention %}
+                        <div class="fin-panel-subhead">Clients this year</div>
+                        <div class="fin-stats" style="margin-bottom:6px;">
+                            <div class="fin-stat">
+                                <div class="fin-stat-label">Returning</div>
+                                <div class="fin-stat-value">{{ retention.returning.count }}</div>
+                                <div class="fin-stat-sub">{{ retention.returning.amount|money }}</div>
+                            </div>
+                            <div class="fin-stat">
+                                <div class="fin-stat-label">New</div>
+                                <div class="fin-stat-value text-success">{{ retention.new.count }}</div>
+                                <div class="fin-stat-sub">{{ retention.new.amount|money }}</div>
+                            </div>
+                        </div>
+                        {% if retention.new_clients %}
+                            <div class="fin-muted" style="font-size:12px;"
+                                 title="Clients LNL had not worked a show for in any earlier fiscal year, by what they paid this year">
+                                New: {% for client in retention.new_clients %}{{ client.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            </div>
+                        {% endif %}
+                    {% elif not filter_state.fiscal_year %}
+                        <div class="fin-muted" style="font-size:12px;">Pick a fiscal year to see which clients are new.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     {# ---- Clients and projects ---- #}
     <div class="row">
         <div class="col-md-6">
@@ -263,6 +365,42 @@
                         {% endif %}
                     {% endfor %}
                 </table>
+            </div>
+        </div>
+    {% endif %}
+
+    {# ---- What LNL is owed ---- #}
+    {% comment %}
+        Money LNL has earned and not yet been paid, across every year since the
+        books started: SGA's reimbursement for funding-request spending, and
+        clients' payment of bills lnldb sent. Each figure links to the page
+        that lists it.
+    {% endcomment %}
+    {% if owed_by_sga or owed_by_clients %}
+        <div class="fin-panel">
+            <div class="fin-panel-head">
+                <span>Owed to LNL</span>
+                <span class="fin-muted" style="font-weight:400;font-size:12px;">every year since the books started</span>
+            </div>
+            <div class="fin-panel-body">
+                <div class="fin-stats" style="margin-bottom:0;">
+                    <div class="fin-stat">
+                        <div class="fin-stat-label">By SGA</div>
+                        <div class="fin-stat-value {% if owed_by_sga %}text-warning{% else %}text-muted{% endif %}">
+                            <a href="{% url 'finance:fr-list' %}?fy=all">{{ owed_by_sga|money }}</a>
+                        </div>
+                        <div class="fin-stat-sub">funding-request spending not yet reimbursed</div>
+                    </div>
+                    <div class="fin-stat">
+                        <div class="fin-stat-label">By clients</div>
+                        <div class="fin-stat-value {% if owed_by_clients %}text-warning{% else %}text-muted{% endif %}">
+                            <a href="{% url 'finance:events' %}?fy=all&amp;flag=billed_not_received&amp;show=all">{{ owed_by_clients|money }}</a>
+                        </div>
+                        <div class="fin-stat-sub">
+                            {{ owed_by_clients_count }} bill{{ owed_by_clients_count|pluralize }} not yet paid in full{% if oldest_bill_days %} &middot; oldest {{ oldest_bill_days }} days{% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     {% endif %}

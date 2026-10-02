@@ -49,6 +49,12 @@ what they cover rather than alphabetically.
     and the near-miss when a memo's letter disagrees with lnldb's, each
     account's cash from a Workday balance split between its funds, and the
     balance page, its inputs, and closing and reopening a year.
+``test_revenue_sources``
+    Where income comes from and what LNL is owed: the source deciding the
+    fund, SGA's payments naming their request (reimbursements in, money taken
+    back out), what SGA still owes per request and how old it is, the queue's
+    reading of SGA's journal entries and of multi-bills, the dashboard's
+    revenue figures, and marking a bill paid from the event P&L.
 
 **Forms and pages**
 

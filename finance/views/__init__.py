@@ -5,7 +5,7 @@ from finance.views.balances import (balance_sheet, checkpoint_delete, checkpoint
                                     transfer_new)
 from finance.views.dashboard import dashboard
 from finance.views.detail import entry_delete, entry_detail, transaction_detail
-from finance.views.events import event_pnl
+from finance.views.events import event_pnl, mark_bill_paid
 from finance.views.ingest import (bulk_match_encumbrance, bulk_reconcile, encumbrance,
                                  match_encumbrance, queue, reconcile, settle,
                                  suggestions_json, unreconcile, upload, upload_confirm)

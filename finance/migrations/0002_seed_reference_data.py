@@ -90,10 +90,21 @@ FUND_SOURCES = [
 ]
 
 # (slug, name, sort order, description)
+#
+# The first three are SGA's three ways of paying a club. Which fund each one
+# pays into is set by 0006_revenue_sources, which added that column; the
+# ``sga_baseline`` slug is the row's original name, kept so links survive.
 REVENUE_SOURCES = [
-    ('sga_baseline', 'SGA Baseline', 0, ''),
-    ('asset_liquidation', 'Asset Liquidation', 1, ''),
-    ('alumni', 'Alumni / Donation', 2, ''),
+    ('sga_fr_reimbursement', 'SGA Funding Request Reimbursement', 0,
+     'SGA paying back what LNL spent on a funding request -- actual spending, never the '
+     'award. The memo quotes the request, e.g. F.26.86.'),
+    ('sga_baseline', 'SGA Budget Deposit', 1,
+     "The annual SGA budget, deposited before the year's spending. Whatever is unspent on "
+     "June 30 goes back to SGA."),
+    ('sga_mandatory', 'SGA Mandatory Transfer', 2,
+     "Projection's yearly allocation into 315-AG. It carries forward."),
+    ('asset_liquidation', 'Asset Liquidation', 3, ''),
+    ('alumni', 'Alumni / Donation', 4, ''),
 ]
 
 # (code, is projection, crossing needs a written reason, worktag, notes)

@@ -841,7 +841,10 @@
                                         <span class="text-muted">not billed</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ finance.received|money }}</td>
+                                <td>
+                                    {{ finance.received|money }}
+                                    <br><small class="text-muted">{{ finance.payment_state_label }}{% if finance.owed %}: {{ finance.owed|money }} owed{% if finance.days_owed is not None %}, {{ finance.days_owed }} days{% endif %}{% endif %}</small>
+                                </td>
                                 <td>
                                     {{ finance.costs|money }}
                                     {% if finance.reserved %}<br><small class="text-muted">+ {{ finance.reserved|money }} reserved, not yet charged</small>{% endif %}
@@ -857,6 +860,23 @@
                         {% for key, label in finance.flags %}
                             <span class="label {% if key == 'loss' or key == 'rental_under_billed' %}label-danger{% else %}label-warning{% endif %}">{{ label }}</span>
                         {% endfor %}
+                        {% comment %}
+                            The payment filed against this show covers its bill,
+                            and the bill above is still unpaid. finance copies the
+                            date the money arrived across, when asked.
+                        {% endcomment %}
+                        {% if finance.can_mark_paid %}
+                            {% permission request.user has 'finance.edit_subledger' %}
+                                <form method="post" action="{% url 'finance:event-mark-paid' event.pk %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}#billing">
+                                    <button type="submit" class="btn btn-xs btn-default"
+                                            title="Set the bill's paid date to the day the last of its payment reached Workday">
+                                        Mark bill paid
+                                    </button>
+                                </form>
+                            {% endpermission %}
+                        {% endif %}
                         <p>
                             {% if finance.entries %}
                                 <a href="{% url 'finance:ledger' %}?event={{ event.pk }}">

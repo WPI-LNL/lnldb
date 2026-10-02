@@ -146,6 +146,13 @@
                                                 {% if entry.fund_source %}
                                                     <span class="fin-muted">&middot; into {{ entry.fund_source }}</span>
                                                 {% endif %}
+                                                {% if entry.funding_request %}
+                                                    <span class="fin-muted">&middot; repays
+                                                        <a href="{% url 'finance:fr-detail' entry.funding_request.pk %}">{{ entry.funding_request.reference|default:entry.funding_request.name }}</a></span>
+                                                {% endif %}
+                                            {% elif entry.is_sga_return %}
+                                                SGA took back money for
+                                                <a href="{% url 'finance:fr-detail' entry.funding_request.pk %}">{{ entry.funding_request.reference|default:entry.funding_request.name }}</a>
                                             {% else %}
                                                 {{ entry.lnl_spend_category|default:"—" }}
                                                 {% if entry.fr_line_target %}
@@ -232,11 +239,11 @@
                                             <th>Description</th>
                                             {% if txn.net_amount > 0 %}
                                                 <th>Event / Revenue Type</th>
-                                                <th>Into fund</th>
+                                                <th title="An SGA reimbursement goes into the funding-request fund and names the request it repays">Into fund / Request</th>
                                             {% else %}
                                                 <th>Fund</th>
                                                 <th>Spend Category</th>
-                                                <th>FR Line</th>
+                                                <th title="Spending names a request's line; money SGA took back names the request">FR Line / Request</th>
                                                 <th>Incurred for event</th>
                                             {% endif %}
                                             <th>Project</th>
@@ -255,11 +262,17 @@
                                                         {{ form.linked_event }}
                                                         {{ form.non_event_revenue_type }}
                                                     </td>
-                                                    <td>{{ form.fund_source }}</td>
+                                                    <td>
+                                                        {{ form.fund_source }}
+                                                        <div class="form-group fin-cell-group">{{ form.funding_request }}</div>
+                                                    </td>
                                                 {% else %}
                                                     <td>{{ form.fund_source }}</td>
                                                     <td>{{ form.lnl_spend_category }}</td>
-                                                    <td>{{ form.fr_line_target }}</td>
+                                                    <td>
+                                                        <div class="form-group fin-cell-group">{{ form.fr_line_target }}</div>
+                                                        <div class="form-group fin-cell-group">{{ form.funding_request }}</div>
+                                                    </td>
                                                     <td>{{ form.linked_event }}</td>
                                                 {% endif %}
                                                 <td>{{ form.project_tag }}</td>

@@ -211,6 +211,12 @@
                                 {% if entry.fr_line_target %}
                                     <a href="{% url 'finance:fr-detail' entry.fr_line_target.funding_request.pk %}">
                                         {{ entry.fr_line_target.name }}</a>
+                                {% elif entry.funding_request %}
+                                    {# SGA's own payment for a request, not a draw on one of its lines. #}
+                                    <a href="{% url 'finance:fr-detail' entry.funding_request.pk %}"
+                                       title="{% if entry.is_sga_return %}Money SGA took back for this request{% else %}SGA reimbursing this request{% endif %}">
+                                        {% if entry.is_sga_return %}taken back:{% else %}repays{% endif %}
+                                        {{ entry.funding_request.reference|default:entry.funding_request.name }}</a>
                                 {% else %}<span class="fin-muted">—</span>{% endif %}
                             </td>
                             <td data-col="project">

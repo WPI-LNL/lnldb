@@ -1,9 +1,91 @@
-{# Funding requests for the selected year, each with its burndown bar. #}
+{# Funding requests for the selected year, each with its burndown bar, and what SGA still owes. #}
 {% extends 'finance/base_finance.html' %}
 {% load finance_extras %}
 {% load permissionif %}
 
 {% block fin_content %}
+    {% comment %}
+        What SGA owes LNL across every year, not only the one selected: a
+        request is reimbursed after its spending, often in the next fiscal
+        year. See finance.calculators.sga_receivables.
+    {% endcomment %}
+    {% if receivables.rows %}
+        <div class="fin-panel">
+            <div class="fin-panel-head">
+                <span>Owed by SGA</span>
+                <span class="fin-locked-note">
+                    spending that has reached Workday, less what SGA has paid for it &middot; every year
+                </span>
+            </div>
+            <div class="fin-panel-body">
+                <div class="fin-stats" style="margin-bottom:10px;">
+                    <div class="fin-stat">
+                        <div class="fin-stat-label">SGA owes LNL</div>
+                        <div class="fin-stat-value {% if receivables.owed %}text-warning{% else %}text-muted{% endif %}">{{ receivables.owed|money }}</div>
+                    </div>
+                    {% if receivables.overpaid %}
+                        <div class="fin-stat">
+                            <div class="fin-stat-label">SGA overpaid</div>
+                            <div class="fin-stat-value text-danger">{{ receivables.overpaid|money }}</div>
+                            <div class="fin-stat-sub">LNL may be asked to return it</div>
+                        </div>
+                    {% endif %}
+                </div>
+                {% if receivables.difference %}
+                    {% comment %}
+                        The requests and the fund answer the same question two
+                        ways. When they disagree it is nearly always an opening
+                        balance or a write-off entered on one side only.
+                    {% endcomment %}
+                    <div class="alert alert-warning" style="font-size:13px;">
+                        The requests add up to {{ receivables.owed|money }}{% if receivables.overpaid %} owed less {{ receivables.overpaid|money }} overpaid{% endif %},
+                        but the funding-request fund on the <a href="{% url 'finance:balances' %}">balance page</a>
+                        says SGA owes {{ receivables.fund_owed|money }} &mdash; {{ receivables.difference|money }} apart.
+                        That is usually an opening balance entered on one side only (a request's
+                        &ldquo;owed by SGA when the books started&rdquo;, or the fund's opening split), or a
+                        year-end write-off, which moves the fund but not the request.
+                    </div>
+                {% endif %}
+            </div>
+            <div class="fin-table-wrap">
+                <table class="table fin-table">
+                    <thead>
+                        <tr>
+                            <th>Request</th><th>FY</th>
+                            <th class="fin-num">Spent in Workday</th>
+                            <th class="fin-num">Reimbursed</th>
+                            <th class="fin-num">Owed</th>
+                            <th title="The oldest spending SGA has not yet paid for">Oldest unpaid</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in receivables.rows %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'finance:fr-detail' row.request.pk %}">{{ row.request.name }}</a>
+                                    {% if row.request.reference %}<code class="fin-muted">{{ row.request.reference }}</code>{% endif %}
+                                    {% if row.request.closed %}<span class="label label-default">Closed</span>{% endif %}
+                                </td>
+                                <td>FY{{ row.request.fiscal_year|stringformat:"s"|slice:"2:" }}</td>
+                                <td class="fin-num">{{ row.request.total_charged|money }}</td>
+                                <td class="fin-num">{{ row.request.total_received|money }}</td>
+                                <td class="fin-num {% if row.awaiting < 0 %}text-danger{% endif %}">
+                                    {% if row.awaiting < 0 %}overpaid {{ row.awaiting|abs_value|money }}{% else %}{{ row.awaiting|money }}{% endif %}
+                                </td>
+                                <td>
+                                    {% if row.since %}
+                                        {{ row.since|date:"M j, Y" }}
+                                        <span class="fin-muted">&middot; {{ row.days }} day{{ row.days|pluralize }}</span>
+                                    {% else %}<span class="fin-muted">—</span>{% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
     <div class="fin-panel">
         <div class="fin-panel-head">
             <span>Funding Requests</span>
@@ -19,7 +101,9 @@
                     <tr>
                         <th>Name</th><th>Reference</th><th>FY</th>
                         <th class="fin-num">Awarded</th><th class="fin-num">Spent</th>
-                        <th class="fin-num">Remaining</th><th style="width:180px;">Burndown</th><th></th>
+                        <th class="fin-num">Remaining</th><th style="width:180px;">Burndown</th>
+                        <th class="fin-num" title="What SGA has paid back, and what it still owes, for spending that has reached Workday">Reimbursed</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,10 +122,14 @@
                                 {{ fr.total_remaining|money }}
                             </td>
                             <td>{% burndown_bar fr.total_spent fr.total_awarded %}</td>
+                            <td class="fin-num">
+                                {{ fr.total_received|money }}
+                                <div class="fin-muted">{{ fr.reimbursement_status }}</div>
+                            </td>
                             <td><a href="{% url 'finance:fr-detail' fr.pk %}" class="btn btn-xs btn-default">&rsaquo;</a></td>
                         </tr>
                     {% empty %}
-                        <tr><td colspan="8">
+                        <tr><td colspan="9">
                             <div class="fin-empty">
                                 <span class="glyphicon glyphicon-inbox"></span>
                                 No funding requests in this filter.

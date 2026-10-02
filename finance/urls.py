@@ -50,6 +50,7 @@ urlpatterns = [
 
     # What each event made or lost
     re_path(r'^events/$', views.event_pnl, name="events"),
+    re_path(r'^events/(?P<pk>\d+)/mark-paid/$', views.mark_bill_paid, name="event-mark-paid"),
 
     # What each fund holds, and the year-end close
     re_path(r'^balances/$', views.balance_sheet, name="balances"),

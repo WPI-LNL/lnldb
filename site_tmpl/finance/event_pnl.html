@@ -13,7 +13,10 @@
         <div class="fin-stat">
             <div class="fin-stat-label">Received</div>
             <div class="fin-stat-value text-success">{{ totals.received|money }}</div>
-            <div class="fin-stat-sub">{{ totals.billed|money }} billed</div>
+            <div class="fin-stat-sub">
+                {{ totals.billed|money }} billed{% if totals.owed %} &middot;
+                <a href="?fy={{ filter_state.fiscal_year|default:'all' }}&amp;partition={{ filter_state.partition|default:'all' }}&amp;flag=billed_not_received&amp;show=all">{{ totals.owed|money }} still owed</a>{% endif %}
+            </div>
         </div>
         <div class="fin-stat">
             <div class="fin-stat-label">Direct costs</div>
@@ -102,7 +105,16 @@
                                     <span class="fin-muted">not billed</span>
                                 {% endif %}
                             </td>
-                            <td class="fin-num">{{ row.received|money }}</td>
+                            <td class="fin-num">
+                                {{ row.received|money }}
+                                {% if row.owed %}
+                                    <div class="fin-muted" title="Billed and not yet received{% if row.days_owed is not None %}, {{ row.days_owed }} days since the bill went out{% endif %}">
+                                        {{ row.owed|money }} owed{% if row.days_owed is not None %} &middot; {{ row.days_owed }}d{% endif %}
+                                    </div>
+                                {% elif row.bill_paid_on %}
+                                    <div class="fin-muted" title="The date lnldb has the bill marked paid">paid {{ row.bill_paid_on|date:"M j" }}</div>
+                                {% endif %}
+                            </td>
                             <td class="fin-num">
                                 {{ row.costs|money }}
                                 {% if row.reserved %}
@@ -126,6 +138,21 @@
                                 {% for key, label in row.flags %}
                                     <span class="fin-tag {% if key == 'loss' or key == 'rental_under_billed' %}is-alert{% else %}is-warn{% endif %}">{{ label }}</span>
                                 {% endfor %}
+                                {% comment %}
+                                    The payment filed against the event covers the
+                                    bill, and lnldb still has it unpaid. Copying the
+                                    date across is a button, never automatic.
+                                {% endcomment %}
+                                {% if row.can_mark_paid and can_mark_paid %}
+                                    <form method="post" action="{% url 'finance:event-mark-paid' row.event.pk %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        <button type="submit" class="btn btn-xs btn-default"
+                                                title="Set the bill's paid date in lnldb to the day the last of its payment reached Workday">
+                                            Mark bill paid
+                                        </button>
+                                    </form>
+                                {% endif %}
                             </td>
                             <td>
                                 {% if row.entries %}

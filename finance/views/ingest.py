@@ -109,7 +109,10 @@ def queue(request):
                              or (txn.net_amount < 0
                                  and (form.autofilled.get('linked_event')
                                       or suggestions.get('linked_event')
-                                      or suggestions.get('needs_event')))),
+                                      or suggestions.get('needs_event')
+                                      # SGA taking money back is answered in
+                                      # the folded half.
+                                      or suggestions.get('sga_return')))),
         })
 
     context = {
@@ -124,6 +127,8 @@ def queue(request):
         'autofilled_count': filled,
         'can_import': request.user.has_perm('finance.import_workdaytransaction'),
         'can_edit': can_edit,
+        # A memo quoting a request lnldb lacks offers to add it, pre-filled.
+        'can_add_request': request.user.has_perm('finance.manage_fundingrequest'),
         'bulk_reconcile_form': BulkReconcileForm() if can_edit else None,
         # Every open reservation, not the per-row shortlist: a bulk draw spans
         # several lines, so no single line's ranking applies to it.
@@ -384,6 +389,11 @@ def suggestions_json(request, pk):
 
     payload['warning'] = data.get('warning', '')
     payload['needs_event'] = data.get('needs_event', False)
+    payload['sga_return'] = data.get('sga_return', False)
+    multibill = data.get('multibill')
+    payload['multibill'] = None if multibill is None else {
+        'pk': multibill['multibill'].pk, 'reason': multibill['reason'],
+        'source': multibill['source']}
     # The request whose number differs from the memo's only by its letter --
     # A.27.16 against F.27.16 -- or '' when there is none.
     near_miss = data.get('near_miss')

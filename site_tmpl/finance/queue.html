@@ -150,6 +150,35 @@
                                 Unknown request
                             {% endif %}
                         </span>
+                        {% comment %}
+                            The number names the year and usually the request's
+                            own name follows it in the memo, so most of the new
+                            request's form can be filled from this line. Back to
+                            the queue afterwards, where this row will now match.
+                        {% endcomment %}
+                        {% if can_add_request and row.suggestions.unknown_request %}
+                            {% with new=row.suggestions.unknown_request %}
+                                <a class="fin-tag" href="{% url 'finance:fr-new' %}?reference={{ new.reference|urlencode }}&amp;name={{ new.name|urlencode }}&amp;fiscal_year={{ new.fiscal_year }}&amp;next={{ request.get_full_path|urlencode }}%23txn-{{ row.txn.pk }}"
+                                   title="Enter {{ new.reference }} in lnldb, pre-filled from this line">
+                                    <span class="glyphicon glyphicon-plus"></span> Add {{ new.reference }}
+                                </a>
+                            {% endwith %}
+                        {% endif %}
+                    {% endif %}
+
+                    {% comment %}
+                        One payment for a bill that covered several shows. The
+                        split page lays out each show's share to check and
+                        save; nothing is filed from here.
+                    {% endcomment %}
+                    {% if row.suggestions.multibill %}
+                        {% with mb=row.suggestions.multibill %}
+                            <a class="fin-tag is-warn" href="{% url 'finance:txn-detail' row.txn.pk %}?multibill={{ mb.multibill.pk }}"
+                               title="{{ mb.reason }}. Split it so each event's P&L sees its share.">
+                                <span class="glyphicon glyphicon-th-list"></span>
+                                Multi-bill: split across {{ mb.multibill.events.all|length }} events
+                            </a>
+                        {% endwith %}
                     {% endif %}
 
                     {% comment %}
@@ -174,7 +203,7 @@
                     {% endcomment %}
                     {% if row.needs_event %}
                         <span class="fin-tag is-warn"
-                              title="This looks like a cost passed through to one event. Name the event under More so it counts against that show.">
+                              title="{% if row.is_revenue %}LNL billing -- an Internal Service Delivery -- that names no event lnldb has. Link the event so its P&amp;L counts this money.{% else %}This looks like a cost passed through to one event. Name the event under More so it counts against that show.{% endif %}">
                             <span class="glyphicon glyphicon-calendar"></span> Which event?
                         </span>
                     {% endif %}
@@ -252,8 +281,14 @@
                                 {% endcomment %}
                                 {% include 'finance/_queue_field.html' with field=row.form.refund_of label="Refund of" size="lg" autofilled=row.form.autofilled.refund_of suggestion=row.suggestions.refund_of only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Link to Event" size="lg" autofilled=row.form.autofilled.linked_event only %}
-                                {% include 'finance/_queue_field.html' with field=row.form.non_event_revenue_type label="or Non-Event Revenue" size="md" only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.non_event_revenue_type label="or Non-Event Revenue" size="md" autofilled=row.form.autofilled.non_event_revenue_type suggestion=row.suggestions.revenue_source only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.fund_source label="Into fund" size="md" autofilled=row.form.autofilled.fund_source suggestion=row.suggestions.fund_source only %}
+                                {% comment %}
+                                    Hidden by routing.js unless the fund draws on
+                                    funding requests: SGA's reimbursement names the
+                                    request it repays.
+                                {% endcomment %}
+                                {% include 'finance/_queue_field.html' with field=row.form.funding_request label="Reimburses request" size="lg" autofilled=row.form.autofilled.funding_request suggestion=row.suggestions.funding_request only %}
                             {% else %}
                                 {% include 'finance/_queue_field.html' with field=row.form.fund_source label="Fund" size="md" autofilled=row.form.autofilled.fund_source suggestion=row.suggestions.fund_source only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.lnl_spend_category label="Spend Category" size="md" autofilled=row.form.autofilled.lnl_spend_category suggestion=row.suggestions.spend_category only %}
@@ -294,6 +329,13 @@
                         <div class="fin-fields fin-fields-more{% if not row.expanded %} is-folded{% endif %}">
                             {% if not row.is_revenue %}
                                 {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Incurred for event" size="lg" autofilled=row.form.autofilled.linked_event suggestion=row.suggestions.linked_event only %}
+                                {% comment %}
+                                    Money SGA took back -- a reimbursement it made
+                                    twice -- names the request instead of a line.
+                                    Rare, so it lives here, and the row unfolds
+                                    when the memo says this is one.
+                                {% endcomment %}
+                                {% include 'finance/_queue_field.html' with field=row.form.funding_request label="SGA took back money for" size="lg" autofilled=row.form.autofilled.funding_request suggestion=row.suggestions.funding_request only %}
                             {% endif %}
 
                             {% include 'finance/_queue_field.html' with field=row.form.project_tag label="Project" size="md" autofilled=row.form.autofilled.project_tag suggestion=row.suggestions.project_tag only %}

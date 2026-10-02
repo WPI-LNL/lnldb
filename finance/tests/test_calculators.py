@@ -139,7 +139,7 @@ class RevenueBreakdownTests(TestCase):
         self.assertEqual(labels[0], 'SAB')             # 800, biggest
         self.assertEqual(rows[0]['amount'], Decimal('800.00'))
         self.assertIn('OSL', labels)
-        self.assertIn('SGA Baseline', labels)          # non-event kept, labelled
+        self.assertIn('SGA Budget Deposit', labels)    # non-event kept, labelled
 
     def test_revenue_by_client_rolls_up_the_tail(self):
         for index in range(6):

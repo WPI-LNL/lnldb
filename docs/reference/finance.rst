@@ -29,7 +29,7 @@ tables:
 Enforced accounting rules
 -------------------------
 
-Five rules are enforced as database ``CheckConstraint``\ s, so they hold even if
+Six rules are enforced as database ``CheckConstraint``\ s, so they hold even if
 application-level validation is bypassed by a bulk action, a data migration or
 a shell session:
 
@@ -38,7 +38,9 @@ a shell session:
 * an expense or refund may not be classified as non-event revenue;
 * revenue may not carry a spend category or a funding request line -- it may
   name a fund, which is the one routing field both directions share;
-* a refund is always positive.
+* a refund is always positive;
+* an entry names a funding request line or the request SGA is paying for,
+  never both (see *SGA's payments name the request*).
 
 The balance tables add three more: a fund transfer moves a positive amount
 between two different funds, and an account has one Workday balance per day.
@@ -340,6 +342,10 @@ Rentals are compared separately: what the event billed its client for hired-in
 gear plus LNL's rental fee, against linked costs in the pass-through category. A
 hire that cost more than both is flagged.
 
+Each event also says where its bill stands and what is still owed on it. The
+flags that compare lnldb's *paid* date with the ledger, and the *Mark bill
+paid* button, are described under *What clients owe*.
+
 Fund balances and the year end
 ------------------------------
 
@@ -412,8 +418,9 @@ cannot be worked out without both directions. The SGA budget's deposit is what
 the year's budget spending draws down, and a reimbursement lands in the
 funding-request fund and brings it back towards zero. The queue fills it in:
 
-1. a request number in the memo means the funding-request fund (an SGA
-   reimbursement quotes the request it repays);
+1. a request number in SGA's journal entry means the funding-request fund (a
+   reimbursement quotes the request it repays; a supplier's credit quoting one
+   is a refund, and takes its fund from the purchase);
 2. Workday's *Tracking* worktag, exported from FY27 on, names the fund in words
    ("SGA Budget", "Student Org Legacy Funds"), matched through each fund's
    ``workday_tracking_values``;
@@ -504,6 +511,134 @@ Workday said.
    what Workday cannot see: how each account's money divides between funds.
    One-row transfers, Workday balances as the trial balance, and the unfiled
    row do that without a chart of accounts.
+
+Where income comes from, and what LNL is owed
+---------------------------------------------
+
+Money coming in is one of four things, and each is filed differently: a
+purchase credited back (a refund), event billing (linked to the event), SGA
+paying LNL, or some other income. The third is where a balance goes wrong most
+easily, because SGA pays three kinds of money into three different funds.
+
+The source decides the fund
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A :class:`~finance.models.RevenueSource` can name the fund its money goes into
+(``credits_fund``, *Goes into* in the admin). Picking the source then fills the
+fund in, on the queue, the split page and the entry page, and filing the money
+anywhere else is refused by name: "SGA Budget Deposit goes into SGA Budget, not
+Legacy." A source that names no fund is the account's own money like any other
+income.
+
+===================================  ======================  ===================
+Source                               Goes into               Seeded as
+===================================  ======================  ===================
+SGA Funding Request Reimbursement    SGA Funding Request     new in 0006
+SGA Budget Deposit                   SGA Budget              was *SGA Baseline*
+SGA Mandatory Transfer               SGA Mandatory Transfer  new in 0006
+Asset Liquidation                    (the account's own)
+Alumni / Donation                    (the account's own)
+===================================  ======================  ===================
+
+*SGA Baseline* was the annual budget under its older name. It had nothing filed
+against it, and ``0006_revenue_sources`` renamed it, keeping the
+``sga_baseline`` slug so links survive. The migration changes only what still
+matches the original seed, so a row a Treasurer had already renamed or
+reordered keeps their version.
+
+SGA's payments name the request
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Spending against a funding request names one of its *lines*. SGA paying for
+that spending names the *request* (``ParsedTransaction.funding_request``, *SGA
+funding request*). There are two cases:
+
+* **A reimbursement** coming in. Any money into a fund that draws on funding
+  requests has to name the request it repays. Without that, it is money in the
+  fund that no request can be credited with.
+* **Money SGA takes back**, going out. The FY26 export opens with one: "SGA FR
+  F.25.33 was doubled paid to 226-AG", -$15,000. It is filed on the expense
+  side, because money left the account, but it is not LNL spending anything.
+  So it names the request instead of a line, and needs no spend category.
+
+An entry names a line or a request, never both, and a database constraint says
+so. Otherwise a reimbursement would also count as a draw on the award.
+Encumbrances cannot name a request: SGA pays for spending that has happened.
+
+**How the queue recognises SGA.** SGA moves money with a journal entry that
+names nobody, no supplier and no employee, and whose memo quotes the request:
+"F.26.86 Film Posters and Concessions". That shape is the whole test
+(:func:`~finance.suggestions.is_sga_transfer`). A supplier's credit quotes the
+request too ("Solder wick, Consumables, (A.27.16)"), but it is a refund, so it
+is never offered as a reimbursement. For an SGA journal entry the queue fills
+in the source, the fund and the request together, and closed requests count,
+because SGA often pays after a request is closed. A request number lnldb does
+not have gets the *Unknown request* tag and an *Add F.26.195* link. The link
+opens a new request pre-filled with the number, the name written after it, and
+the fiscal year the number gives, then returns to the queue row. The near-miss
+rule for a wrong letter applies here as it does to spending.
+
+A deposit Workday tracks to a fund that exactly one source pays into is
+offered that source; a deposit tracked "SGA Budget" is the budget deposit. A
+fund the queue assumed because it is the account's own money says nothing
+about where the money came from, so it is not read this way.
+
+What SGA owes
+~~~~~~~~~~~~~
+
+SGA reimburses spending that has happened, and only what was actually spent,
+so what it owes on a request (:attr:`~finance.models.FundingRequest.awaiting_sga`)
+is:
+
+  owed when the books started + spending that has reached Workday, net of refunds
+  - what SGA has paid, net of anything it took back
+
+Encumbrances are left out, because nothing has been spent yet for SGA to pay
+for. *Owed by SGA when the books started* (``owed_at_books_start``) is for a
+request whose spending began before the ledger did. Without it, a reimbursement
+for that earlier spending would make SGA look overpaid. It can be negative:
+before the books started, SGA had paid F.25.33 twice, so it held -$15,000, and
+taking the money back brings it to zero.
+
+Payments are taken to settle the oldest spending first, so what is still owed
+ages from the oldest charge SGA has not yet paid for
+(:meth:`~finance.models.FundingRequest.unreimbursed_since`).
+
+The *Funding Requests* page opens with every request SGA owes on, across every
+year, since SGA routinely pays an FY26 request in FY27. It checks the total
+against the balance page: the fund that draws on funding requests should be
+exactly that far below zero. When the two disagree, the page says by how much.
+That is nearly always an opening balance entered on one side only, or a
+year-end write-off, which moves the fund but not the request. Each request's
+own page lists SGA's payments for it.
+
+What clients owe
+~~~~~~~~~~~~~~~~
+
+Each event's figures (see *What each event made or lost*) include where its
+bill stands: not billed, billed with nothing received, part received, received
+in full, or received with no bill in lnldb. The amount still owed is shown
+with how many days it has been since the bill went out. Two flags check
+lnldb's own *paid* date against the ledger:
+
+* **Paid in full, bill not marked paid.** The payment filed against the event
+  covers the bill, and the events app still has it unpaid. *Mark bill paid*,
+  on the event P&L and the event's Billing tab, sets the bill's paid date to
+  the day the last of the payment reached Workday. It never happens
+  automatically. It needs ``finance.edit_subledger`` and the events app's own
+  ``bill_event``, because it is that app's record being changed. A multi-bill
+  is marked paid once the payments for every show on it cover it.
+* **Marked paid, no payment filed.** lnldb says the bill was paid, and nothing
+  is linked to the event. The payment is probably still in the queue. Shows
+  that ran before the books start are not flagged, because their payments were
+  never imported.
+
+**One payment for several shows.** When a deposit is exactly the amount of a
+multi-bill, the queue offers to split it. That happens when the memo names one
+of the bill's shows, or, as a guess, when exactly one multi-bill sent in the
+previous year has that amount. The split page then lays out one row per show,
+each with its share, which is the same share the event P&L uses. The rows are
+unsaved until the Treasurer checks them and saves.
 
 Entry types
 -----------
@@ -1059,8 +1194,25 @@ flatten to nothing. Months with no activity still appear, as gaps are
 themselves informative.
 
 **Client type** is never entered by hand — it is inherited from each event's
-billing organisation. Non-event revenue (SGA baseline, alumni gifts) has no
+billing organisation. Non-event revenue (SGA's payments, alumni gifts) has no
 client and is excluded rather than silently bucketed as "Unknown".
+
+**Revenue by source** is event billing against each kind of non-event income.
+Money SGA took back is netted off the reimbursement source, with a note saying
+how much, because it undoes income rather than being spending.
+
+**Event billing, kept** sets every cost filed to the pass-through category
+against event billing. A $26,000 video wall billed to a client goes straight
+back out to the rental house, and counting it as income makes LNL look like a
+much bigger business than it is. Pass-through costs with no event linked still
+count, since a missing link should not make a cost vanish from the figure.
+
+**New and returning clients** asks the events app, not the ledger, whether LNL
+worked a show for each paying client in an earlier fiscal year, because the
+events app goes back much further. It needs a fiscal year to be selected.
+
+**Owed to LNL** is today's figure whatever year is selected: what SGA owes on
+funding requests, and what clients owe on bills sent since the books started.
 
 .. warning::
 
@@ -1113,7 +1265,9 @@ Table                Holds
                      line, which account holds it, how it behaves at year end,
                      and the Workday Fund codes and Tracking values that mean
                      it
-``RevenueSource``    Non-event revenue types (SGA baseline, alumni gifts...)
+``RevenueSource``    Non-event revenue types: SGA's three kinds of payment,
+                     gifts, sales -- and the fund each one goes into, if it
+                     decides one
 ``PartitionCode``    The org codes, which side each one starts on, whether
                      leaving that side needs a written reason, and the worktag
                      the code is read from
@@ -1180,7 +1334,7 @@ What stays in code, and why:
 Tests
 -----
 
-``python manage.py test finance`` runs 1,106 tests across twenty modules. The
+``python manage.py test finance`` runs 1,190 tests across twenty-one modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.
@@ -1238,6 +1392,8 @@ Permissions
     thing to hand out than a ledger row.
 ``edit_subledger``
     Create and edit allocation slices, run bulk actions, log encumbrances.
+    *Mark bill paid* also needs the events app's ``bill_event``, which
+    Officers hold.
 ``settle_subledger``
     Mark reconciled transactions as Settled.
 ``import_workdaytransaction``

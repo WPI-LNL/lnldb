@@ -301,6 +301,12 @@
     transition: background-color 0.4s ease;
 }
 
+/* Two pickers stacked in one split-table cell -- an FR line over the request
+   SGA paid for. Each is a form-group so routing.js can hide one without
+   hiding the cell, which would shift every column after it. */
+.fin-cell-group { margin-bottom: 4px; }
+.fin-cell-group:last-child { margin-bottom: 0; }
+
 /* ---- Funding request line editor ------------------------------------------ */
 /* Every row removes the same way, with an X. On a row that is already saved
    that X only *stages* the removal -- Django needs the DELETE flag set, and it
