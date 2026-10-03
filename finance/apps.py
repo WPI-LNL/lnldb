@@ -19,8 +19,9 @@ class FinanceConfig(AppConfig):
         Drop the in-memory copies of the settings tables whenever one changes.
 
         A few tables are read on paths hot enough to cache -- the partition
-        lock runs on every save, the fiscal year on every row of every page --
-        so they are held in module state. Without these signals an admin edit
+        codes on every save, the fiscal year on every row of every page -- so
+        they are held in module state (see ``_cached`` in
+        :mod:`finance.models`). Without these signals an admin edit
         would appear to do nothing until the next restart, which is a far worse
         failure than the query it saves.
         """

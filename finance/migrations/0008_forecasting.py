@@ -5,8 +5,8 @@ written down before any history is imported.
 
 Left blank, the books start at the beginning of the fiscal year of the
 earliest imported line. Importing FY19's export so the forecast can learn from
-it would then move the books back six years and put six years of lines in the
-queue. Writing today's answer down first keeps the books where they are, and
+it would then move the books back seven years and put seven years of lines in
+the queue. Writing today's answer down first keeps the books where they are, and
 every older line becomes history.
 
 The two equipment categories are spending chosen one purchase at a time, so

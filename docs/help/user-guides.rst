@@ -53,6 +53,22 @@ Events
     events/event-attachments
     events/create-bill
 
+Finance (Treasurer)
+^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    finance/overview
+    finance/import-and-file
+    finance/encumbrances
+    finance/funding-requests
+    finance/events
+    finance/balances
+    finance/reports
+    finance/forecast
+    finance/settings
+
 Meetings
 ^^^^^^^^
 

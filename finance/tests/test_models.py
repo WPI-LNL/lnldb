@@ -345,7 +345,8 @@ class RoutingExclusivityTests(TestCase):
     def test_an_expense_may_name_the_event_it_was_incurred_for(self):
         """
         A sub-rental is one show's cost passed straight through. linked_event
-        is the one routing field that belongs to both directions.
+        belongs to both directions, like the fund and the funding request (see
+        ParsedTransaction.SHARED_FIELDS).
         """
         parent = make_txn(op='R2B')
         entry = ParsedTransaction(parent_transaction=parent, amount=Decimal('-1200.00'),
@@ -451,7 +452,7 @@ class SplitAndSettleTests(TestCase):
 
 
 class EncumbranceTests(TestCase):
-    """ Crew can reserve funds before the bank feed catches up. """
+    """ Funds can be reserved before the bank feed catches up. """
 
     def test_encumbrance_needs_no_parent(self):
         entry = ParsedTransaction(amount=Decimal('-75.00'), fund_source=fund('sga_budget'),
@@ -678,7 +679,7 @@ class ProjectTagTests(TestCase):
 
 
 class JournalLineMemoTests(TestCase):
-    """ Description is seeded from the CSV's Journal Line Memo. """
+    """ The export's Journal Line Memo on its own, which an entry's Description is seeded from. """
 
     def test_reads_the_stored_worktag(self):
         txn = make_txn(op='JLM1', worktags_json={'journal_line_memo': 'NEL26 fixture order'},

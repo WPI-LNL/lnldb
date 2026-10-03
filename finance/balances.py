@@ -485,10 +485,13 @@ def snapshot(year):
     """
     A statement reduced to the figures a close records, as JSON-safe text.
 
-    Both ends of the year, not only the closing. With Workday's June 30 balance
-    entered, the closing figures are pinned to it, and a June line imported
-    after the close shows up as the year having *opened* differently -- which
-    a snapshot of the closing alone would never notice.
+    Both ends of the year, not only the closing. Cash is counted from the
+    account's earliest Workday balance (see :meth:`Books.cash_on`), so which
+    end a late line moves depends on where that anchor is. Counted forwards
+    from an earlier balance, a June line imported after the close changes the
+    closing figures. Counted backwards from the June 30 balance itself, it
+    changes the year's *opening* instead -- which a snapshot of the closing
+    alone would never notice.
     """
     out = {'first': year.first.isoformat(), 'last': year.last.isoformat(), 'accounts': {}}
     for account in year.accounts:

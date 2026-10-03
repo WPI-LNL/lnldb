@@ -14,9 +14,12 @@ click and never fill anything in, because a pre-selected dropdown gets accepted
 without being read, and that is precisely the wrong thing to do with a guess.
 
 The routing suggestions (spend category, fund, project, funding request) are
-covered alongside the forms that consume them in ``test_forms``. This module
-covers the parts nothing else reaches: the scoring engine behind the event
-picker, the refund-target search, and the small value type both produce.
+covered alongside the forms that consume them in ``test_forms``, SGA's payments
+in ``test_revenue_sources``, and the event on an expense in
+``test_event_costs``. This module covers the parts nothing else reaches:
+reading LNL's house memo format, finding the event an ISD memo names and
+matching it exactly, the refund-target search, retired vocabulary, and the
+small value type every suggester returns.
 """
 import datetime
 from decimal import Decimal

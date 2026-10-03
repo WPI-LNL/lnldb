@@ -2,7 +2,7 @@
 Shared plumbing for the persistent top bar (fiscal year + Event | Projection).
 
 Every downstream view reads its filter state through :func:`get_filter_state`,
-so the two controls behave identically on all five pages and survive
+so the two controls behave identically on every finance page and survive
 navigation via querystring.
 """
 from django.db.models import Q

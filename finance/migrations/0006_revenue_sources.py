@@ -15,8 +15,9 @@ The schema half adds three columns:
 The data half reconciles an install that has already run the seed:
 
 1. **The revenue sources.** "SGA Baseline" is the annual budget, so it is
-   renamed "SGA Budget" and pays into the SGA Budget fund. (An install that ran
-   this before carries the name it gave then, "SGA Budget Deposit", until 0007.) Two rows are added:
+   renamed "SGA Budget" and pays into the SGA Budget fund. (This file first
+   named it "SGA Budget Deposit"; an install that ran that version keeps the
+   name until 0007 renames it.) Two rows are added:
    "SGA Funding Request Reimbursement", into SGA Funding Request, and "SGA
    Mandatory Transfer", into the fund of the same name. A row a Treasurer has
    already renamed or reordered keeps what they gave it; only values still

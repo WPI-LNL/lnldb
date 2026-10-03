@@ -319,12 +319,14 @@
                         </div>
 
                         {% comment %}
-                            Real fields, rarely touched: seven of 253 lines on a
-                            year's export carry a project, and a sub-rental is
-                            rarer still. Folded away so the row a Treasurer sees
-                            twenty-five times reads as two boxes and a button,
-                            and opened by the view whenever this particular line
-                            has something in here worth seeing.
+                            Real fields, but most lines leave them alone: seven
+                            of 253 lines on a year's export carry a project, and
+                            only a cost hired in for one show needs its event.
+                            Folded away so the row a Treasurer sees twenty-five
+                            times reads as two boxes and a button, and opened by
+                            the view whenever this particular line has something
+                            in here worth seeing -- an event found or still
+                            needed, a project code, the 315-AG partition.
                         {% endcomment %}
                         <div class="fin-fields fin-fields-more{% if not row.expanded %} is-folded{% endif %}">
                             {% if not row.is_revenue %}

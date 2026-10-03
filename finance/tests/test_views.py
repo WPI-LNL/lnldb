@@ -216,7 +216,10 @@ class DashboardTests(FinanceViewTestCase):
         self.assertContains(response, '2 line items')
 
     def test_year_end_calculator_is_gone(self):
-        """ Removed at the Treasurer's request; it will be handled differently. """
+        """
+        Removed at the Treasurer's request. The year end is now closed from the
+        Balances tab, and where the money is heading is the Forecast tab's job.
+        """
         response = self.client.get(reverse('finance:dashboard'))
         self.assertNotContains(response, "Year-End Calculator")
         self.assertNotContains(response, "Reserve Rollback")
@@ -503,7 +506,10 @@ class IngestionTests(FinanceViewTestCase):
         self.assertEqual(WorkdayTransaction.objects.count(), 0)
 
     def test_expense_row_shows_expense_pickers_only(self):
-        """ Poka-Yoke: a negative line must not offer the event linker. """
+        """
+        Poka-Yoke: a negative line offers expense routing. It may still name an
+        event, but as "Incurred for event" -- never revenue's "Link to Event".
+        """
         self.make_txn(op='OT-Q2', amount='-500.00')
         response = self.client.get(reverse('finance:queue') + '?fy=2026')
         self.assertContains(response, "Spend Category")
@@ -690,8 +696,7 @@ class IngestionTests(FinanceViewTestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data['kind'], 'expense')
-        # The JSON payload carries ids as strings so the browser can drop them
-        # straight into a <select>.
+        # The JSON payload carries ids as strings, as a <select>'s values are.
         self.assertEqual(data['spend_category']['value'], str(category('consumables').pk))
         self.assertEqual(data['spend_category']['label'], 'Consumables')
 
@@ -1239,8 +1244,8 @@ class BulkReconcileTests(FinanceViewTestCase):
     Reconciling a batch of rows that all take the same answers.
 
     A monthly export arrives with a dozen supply orders on it, all Consumables
-    out of the standing budget, and the per-row form asks the same two
-    questions a dozen times.
+    out of Legacy, and the per-row form asks the same two questions a dozen
+    times.
     """
 
     def setUp(self):

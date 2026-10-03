@@ -48,7 +48,8 @@ def report(request, slug):
     ``?from=&to=`` reports on any dates instead of the year, for the reports
     that can; ``?fund=<slug>`` narrows income and spending to one fund;
     ``?by=term|year`` and ``?measure=events|value`` cut and count event
-    activity; and ``?format=csv`` downloads it.
+    activity; ``?account=`` and ``?without=`` choose the forecast's account
+    and leave parts of it out; and ``?format=csv`` downloads it.
     """
     if slug not in reports.REPORTS:
         raise Http404
@@ -84,9 +85,9 @@ def report(request, slug):
         built = reports.activity_trends(state.fiscal_year or current_fiscal_year(), by, measure,
                                         today)
     elif slug == 'forecast':
-        # Always the event account's whole forecast, from today: neither the
-        # year nor the side applies. ``?without=`` and ``?account=`` as on the
-        # Forecast tab.
+        # The whole forecast from today -- the event account's, unless
+        # ``?account=`` names another -- so neither the year nor the side
+        # applies. ``?without=`` and ``?account=`` work as on the Forecast tab.
         projection = None
         account = PartitionCode.objects.filter(code=request.GET.get('account', '')).first()
         built = reports.forecast_report(forecast.project(

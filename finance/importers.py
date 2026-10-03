@@ -82,7 +82,10 @@ ZIP_MAGIC = b'PK\x03\x04'
 
 
 class ImportError_(Exception):
-    """ Raised when the file cannot be parsed at all (bad headers, not a CSV). """
+    """
+    Raised when the file cannot be read at all: no Workday header row, or
+    neither a CSV nor an .xlsx workbook.
+    """
 
 
 def _text(value):
@@ -232,7 +235,7 @@ def build_memo(row):
 
 
 class RowResult(object):
-    """ Outcome of a single CSV row. """
+    """ Outcome of a single row of the file, CSV or spreadsheet. """
     CREATED, DUPLICATE, ERROR = 'created', 'duplicate', 'error'
 
     def __init__(self, line_number, status, message='', transaction=None, preview=None,
@@ -402,8 +405,9 @@ def _resolve_duplicates(candidates):
 
     The known limit: an export deliberately narrowed to a single line cannot
     add a second copy of a charge already on file -- it is indistinguishable
-    from a re-upload of one line. Those land in the queue as duplicates with
-    the count spelled out, and an encumbrance can carry the odd genuine case.
+    from a re-upload of one line. It is skipped and reported as a duplicate,
+    with the count spelled out; an export covering a range that shows both
+    copies brings the second one in.
 
     :param candidates: ``(line_number, transaction)`` in file order.
     :returns: ``(to_create, decisions)`` where decisions maps line number to
@@ -833,9 +837,10 @@ def import_workday_export(file_obj, user=None, filename='', dry_run=False):
     # arriving in a second export is one.
     to_create, decisions = _resolve_duplicates(candidates)
 
-    # Belt to the guard above's braces: that one catches a line that arrived
-    # misaligned, this one catches a line that arrived clean but disagrees with
-    # a copy already on file. Both exist because a wrong row imports silently.
+    # A second guard alongside the overflow check above: that one catches a
+    # line that arrived misaligned, this one a line that arrived clean but
+    # disagrees with a copy already on file. Both exist because a wrong row
+    # imports silently.
     near = _find_near_duplicates(
         [(line_number, txn) for line_number, txn in candidates
          if decisions[line_number] is None])

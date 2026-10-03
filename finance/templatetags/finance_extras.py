@@ -1,5 +1,5 @@
 """
-Template filters and tags shared by the five finance pages.
+Template filters and tags shared by the finance pages.
 
 Two rules hold across everything in here. First, a filter is handed
 whatever the template happens to have -- ``None``, an empty string, a value
@@ -232,7 +232,11 @@ def burndown_bar(spent, awarded):
 
 @register.simple_tag(takes_context=True)
 def filter_url(context, **overrides):
-    """ Rebuild the current URL with some filter values swapped. """
+    """
+    The filter bar's querystring (``?fy=...&partition=...``) with some values
+    swapped. Only those two survive: see
+    :meth:`finance.filters.FilterState.url_with`.
+    """
     state = context.get('filter_state')
     if state is None:
         return '?'

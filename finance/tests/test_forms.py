@@ -530,7 +530,7 @@ class RefundGuardTests(TestCase):
 class EventLinkedExpenseTests(TestCase):
     """
     Sub-rentals: a cost hired for one show and passed straight through to it.
-    Until now linked_event was revenue-only, so there was nowhere to say that.
+    linked_event used to be revenue-only, so there was nowhere to say that.
     """
 
     def setUp(self):
@@ -699,7 +699,7 @@ class FundingRequestFromMemoTests(TestCase):
         """
         The memo has just said this is a specific award. If no fund is set up
         to draw on one, the honest answer is nothing -- answering with the
-        standing budget would charge the club for money SGA granted.
+        account's own money would charge the club for money SGA granted.
         """
         from finance.suggestions import suggest_all
         FundSource.objects.filter(requires_funding_request=True).update(is_active=False)
@@ -1131,7 +1131,7 @@ class MatchModeTests(TestCase):
 
 class SeededChartOfAccountsTests(TestCase):
     """
-    The seeded rules come from eleven years of real 226-AG exports. What
+    The seeded rules come from real 226-AG exports, FY18 to FY26. What
     matters is the precedence: Workday's own Spend Category is the finest code
     in the file and has to outrank the ledger account it sits under.
     """
@@ -1198,8 +1198,8 @@ class WorkdayFundCodeTests(TestCase):
     def test_810_does_not_mean_sga(self):
         """
         All of LNL's spending comes out of 810-FD, so the code is a fact about
-        the account, not about who paid. Standing budget, out-of-cycle award and
-        legacy money all look like this, and picking one would be a coin flip
+        the account, not about who paid. SGA budget, funding request and
+        Legacy money all look like this, and picking one would be a coin flip
         dressed up as a lookup.
         """
         self.assertIsNone(fund_source_for_workday_fund('810-FD Agency'))
@@ -1252,9 +1252,9 @@ class AutofillFromExportTests(TestCase):
         """
         810-FD is the fund all of LNL's spending comes out of, so it says
         nothing about whose money this was, and the box is not filled in from
-        it. It is filled in from the fallback a Treasurer nominated -- which
-        is a different claim, and the caption makes it: the reason says
-        "default", so the row never pretends the export answered.
+        it. It is filled in from 226-AG's own money, Legacy -- a stated
+        default, which is a different claim, and the caption makes it: the
+        source is 'default', so the row never pretends the export answered.
         """
         from finance.suggestions import DEFAULT
         form = self.form()
@@ -1346,8 +1346,10 @@ class AutofillFromExportTests(TestCase):
 
     def test_only_the_fund_is_filled_in_for_revenue(self):
         """
-        Which event a deposit belongs to is a guess, and stays one. Which fund it
-        goes into is the account's own money unless the memo says otherwise.
+        A deposit whose memo names no event gets no event: only an Internal
+        Service Delivery naming one exactly fills that in (see
+        ``test_suggestions``). Which fund it goes into is the account's own
+        money unless the memo says otherwise.
         """
         deposit = bank(op='OT-REV', amount='886.45')
         form = ReconcileForm(parent_transaction=deposit, prefix='t')
@@ -1381,8 +1383,8 @@ class AutofillFundingRequestTests(TestCase):
 
     def test_the_award_beats_the_fund_worktag(self):
         """
-        Every LNL line carries the same Fund code, so the memo is the only
-        thing that can tell an award from the standing budget.
+        Every LNL line carries the same Fund code, so it cannot tell an award
+        from the SGA budget; the request number in the memo can.
         """
         form = ReconcileForm(parent_transaction=self.txn, prefix='t')
         self.assertNotEqual(form.initial['fund_source'], fund('sga_budget').pk)
@@ -1576,10 +1578,12 @@ class RefundPickerTests(TestCase):
 
     def test_only_the_entry_page_offers_the_field_at_all(self):
         """
-        A declared form field lands on every subclass whatever its
-        ``Meta.fields`` says. Three of them leave ``refund_of`` out on purpose,
-        and the queue's routing-only form accepting a refund target would undo
-        the mutual exclusion the base class makes structural.
+        On a debit line, at least. A declared form field lands on every
+        subclass whatever its ``Meta.fields`` says, which is why ``refund_of``
+        comes in through ``field_classes``: the encumbrance and split forms
+        leave it out on purpose. The queue's form does carry it, but drops it
+        from a debit row -- money going out is not a credit against anything --
+        and offers it only on money coming in.
         """
         for cls in (ReconcileForm, EncumbranceForm, SplitLineForm):
             form = cls(parent_transaction=self.txn)

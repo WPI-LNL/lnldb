@@ -65,8 +65,8 @@ def dashboard(request):
     categories = spend_by_category(fiscal_year=fy, is_projection=proj)
     cash_flow = cash_flow_by_month(fiscal_year=fy, is_projection=proj)
 
-    # One enriched revenue pass feeds all three revenue widgets rather than
-    # re-resolving the polymorphic events three times.
+    # One enriched revenue pass feeds every revenue widget below rather than
+    # re-resolving the polymorphic events once per widget.
     rev_rows = revenue_rows(fiscal_year=fy, is_projection=proj)
     clients = revenue_by_client(rows=rev_rows)
     client_types = client_type_breakdown(rows=rev_rows)

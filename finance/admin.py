@@ -2,10 +2,13 @@
 Admin registrations for the finance app.
 
 The admin is the Treasurer's back door, not a second ledger. Day-to-day work
-happens on the five finance pages; what lives here is the stuff those pages
-deliberately do not expose -- the editable vocabularies, the suggestion rules,
-the importer's column aliases, and read-only access to the raw bank rows for
-when something needs to be looked at rather than changed.
+happens on the finance pages; what lives here is the stuff those pages
+deliberately do not expose -- the settings, the editable vocabularies, the
+suggestion rules, the importer's column aliases, and read-only access to the
+raw bank rows for when something needs to be looked at rather than changed.
+The tables the pages do write (entries, funding requests, balances, transfers,
+planned purchases, history corrections) are here too, for looking things up
+and for the rare repair the pages do not offer.
 """
 from django import forms
 from django.contrib import admin
@@ -99,10 +102,10 @@ class SpendCategoryAdmin(VocabularyAdmin):
 @admin.register(FundSource)
 class FundSourceAdmin(VocabularyAdmin):
     """
-    Where the money came from, and the Workday fund codes that imply it.
+    Which pot of money paid, and the Workday values that identify it.
 
     Two flags with teeth. ``requires_funding_request`` is what makes the
-    allocation form insist on an SGA request number. ``is_default`` is what the
+    allocation form insist on a funding request line. ``is_default`` is what the
     ingestion queue fills the Fund box in with when neither the memo nor the
     Fund worktag identifies one -- both are on the list view, because which
     fund holds which is worth being able to see at a glance rather than by
@@ -161,14 +164,18 @@ class SuggestionRuleAdmin(admin.ModelAdmin):
 
 @admin.register(PartitionCode)
 class PartitionCodeAdmin(admin.ModelAdmin):
-    """ The worktags that pin a transaction to Event Production or Projection. """
+    """
+    The account codes that say which side, Event Production or Projection, a
+    Workday line starts on. A starting position, not a lock: see
+    :class:`~finance.models.PartitionCode`.
+    """
     list_display = ('code', 'partition', 'worktag')
     list_filter = ('is_projection',)
     search_fields = ('code', 'notes')
 
-    @admin.display(description="Locks money to", boolean=False)
+    @admin.display(description="Starts money on", boolean=False)
     def partition(self, obj):
-        """ Spell out which side of the partition this code locks money to. """
+        """ Spell out which side of the partition this code starts money on. """
         return 'Projection' if obj.is_projection else 'Event Production'
 
 
@@ -191,7 +198,7 @@ class WorkdayTransactionAdmin(admin.ModelAdmin):
     readonly_fields = [f.name for f in WorkdayTransaction._meta.fields]
 
     def has_add_permission(self, request):
-        """ Never: rows arrive only via the CSV importer. """
+        """ Never: rows arrive only via the importer. """
         return False
 
     def has_change_permission(self, request, obj=None):
@@ -244,8 +251,9 @@ class ParsedTransactionAdmin(VersionAdmin):
     Raw access to ledger entries, for repairs the finance pages will not do.
 
     ``raw_id_fields`` rather than dropdowns on the three FKs: each points at a
-    table with tens of thousands of rows, and rendering a ``<select>`` over
-    them would time the page out.
+    table that only grows -- every bank line, every event, every entry -- and a
+    ``<select>`` over all of them would make the page slow to the point of
+    timing out.
     """
     list_display = ('__str__', 'effective_date', 'amount', 'status', 'is_projection',
                     'lnl_spend_category', 'project_tag')
@@ -263,7 +271,10 @@ class ParsedTransactionAdmin(VersionAdmin):
 
 @admin.register(FinanceSettings)
 class FinanceSettingsAdmin(admin.ModelAdmin):
-    """ One row, so the changelist goes straight to it and neither adds nor deletes. """
+    """
+    One row, so the changelist goes straight to it. Nothing can delete it, and
+    adding is offered only while it is missing.
+    """
 
     def has_add_permission(self, request):
         """ Only while the singleton row does not exist yet. """

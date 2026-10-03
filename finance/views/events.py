@@ -33,7 +33,8 @@ def event_pnl(request):
 
     ``?show=all`` adds events that were billed but have nothing linked yet. Off
     by default: until the queue's revenue is filed that is most of the year, and
-    the events that cost money are what this page is for.
+    the events that cost money are what this page is for. ``?flag=<key>`` shows
+    only the events carrying one of :data:`~finance.calculators.EVENT_FLAGS`.
     """
     state = get_filter_state(request)
     show_all = request.GET.get('show') == 'all'

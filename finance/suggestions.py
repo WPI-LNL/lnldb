@@ -336,8 +336,10 @@ def suggest_funding_request(txn, fields=None):
     if not fields.reference:
         return None, None
 
-    # Compared in Python rather than SQL: references are written inconsistently
-    # ("F.26.6", "F 26.6") and there are only ever a handful of open requests.
+    # Compared in Python rather than SQL, so case and stray spaces in a stored
+    # reference ("f.26.6", "F. 26. 6") cannot stop a match -- the forms
+    # normalise it, a shell or a migration need not -- and there are only
+    # ever a handful of open requests.
     #
     # The lines come with their awarded spend category attached, because that
     # category is the next question this answers -- see
@@ -656,11 +658,17 @@ def suggest_spend_category(txn, rules=None, fr_line=None, fields=None):
        it outranks Workday's category because WPI's list is not LNL's and never
        was -- everything LNL buys arrives as "Supplies" or "Equipment -
        General" whatever it was really for.
-    3. **The rule table**, in priority order: Workday's own spend category
-       matched exactly, then the ledger account matched on its number. Both are
-       codes somebody at WPI assigned, read through a mapping a Treasurer
-       maintains in the admin, so a new code is one row rather than a deploy.
-    4. **Wording**, which is a guess and stays a chip.
+    3. **The rule table**, in priority order. The seeded rules put Workday's
+       own spend category matched exactly first, then the ledger account
+       matched on its number. Both are codes somebody at WPI assigned, read
+       through a mapping a Treasurer maintains in the admin, so a new code is
+       one row rather than a deploy.
+    4. **Wording** -- the rule table's "contains" and "whole word" rules,
+       ranked after the codes. A match is a guess and stays a chip.
+
+    Passes 3 and 4 are one walk down the table and the first rule to match
+    wins, so a wording rule given a lower priority number than a code rule
+    would be tried first.
 
     ``rules`` lets a caller rendering many rows load the table once.
     """
@@ -762,7 +770,7 @@ def suggest_fund_source(txn, funding_request=None, reference=''):
             # No fund is configured to draw on a request, so there is nothing
             # right to offer -- and falling through would be actively wrong:
             # the memo has just said this is award money, and the passes below
-            # would answer with the standing budget.
+            # would answer with the account's own money.
             return None
         if funding_request is not None:
             reason = 'Memo quotes %s' % funding_request.reference
@@ -832,10 +840,10 @@ def suggest_project_tag(txn, tags=None):
 # ---------------------------------------------------------------------------
 
 #: How Workday writes an Internal Service Delivery that bills event work.
-#: LNL invoices departments and student orgs through ISDs, and the memo is
-#: written to a house format: the words "Lens and Lights services for" and then
-#: the event, spelled the way it is spelled in lnldb because whoever raised the
-#: ISD copied it from there. Real examples, unedited::
+#: LNL invoices departments (and, before FY27, student orgs) through ISDs, and
+#: the memo is written to a house format: the words "Lens and Lights services
+#: for" and then the event, spelled the way it is spelled in lnldb because
+#: whoever raised the ISD copied it from there. Real examples, unedited::
 #:
 #:     Lens and Lights services for Pan Asian Festival D26
 #:     Lens and Lights Services for Live at the CC Window (Apr 27) D26
@@ -1085,8 +1093,9 @@ def suggest_expense_event(txn, spend_category=None):
       side of the date whose names share a distinctive word with the memo. One
       chip at most, and only when one event leads outright: the queue used to
       offer five scored guesses under the revenue box, and five guesses is a
-      puzzle rather than a shortcut. Gear the event billed its client for at
-      about this price breaks a tie, because a pass-through is exactly that.
+      puzzle rather than a shortcut. An event that billed its client for
+      hired-in gear scores higher, and higher again when that gear was billed
+      at about this price, because a pass-through is exactly that.
 
     ``spend_category`` is the category suggestion already worked out for this
     line, if any; it decides whether guessing is worth doing at all.
@@ -1208,7 +1217,7 @@ def _same_text(one, other):
 
 
 def _uncredited(queryset):
-    """ Purchases not already given back in full, which cannot take a refund. """
+    """ Purchases not yet given back in full; one that has been can take no more refunds. """
     return queryset.annotate(_credited=Coalesce(
         Sum('refunds__amount'), Value(Decimal('0.00')),
         output_field=DecimalField(max_digits=12, decimal_places=2))
@@ -1359,7 +1368,7 @@ def suggest_all(txn, tags=None, rules=None):
     """
     Everything the ingestion queue needs for one bank line, in one call.
 
-    The memo is parsed once here and handed down, because three of the
+    The memo is parsed once here and handed down, because most of the
     suggesters below read it and it is the same sentence every time.
 
     ``tags`` and ``rules`` let the queue load the project list and the rule

@@ -1,4 +1,4 @@
-{# Shared chrome for all five finance pages: the nav tabs and the global filter bar. #}
+{# Shared chrome for every finance page: the nav tabs and the global filter bar. #}
 {% extends 'base_admin.html' %}
 {% load static %}
 {% load permissionif %}
@@ -110,7 +110,7 @@
 
             {% if filter_state.partition == 'projection' %}
                 <span class="fin-firewall-note"
-                      title="University rules require film/Projection money to be tracked separately from Event Production. Anything Workday tags to ledger account 315-AG is locked to this side and cannot be moved.">
+                      title="University rules require film/Projection money to be tracked separately from Event Production. A line from the 315-AG account starts on this side, and filing it the other way needs a written reason.">
                     <span class="glyphicon glyphicon-lock"></span>
                     Showing Projection money only
                 </span>

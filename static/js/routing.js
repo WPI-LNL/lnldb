@@ -32,10 +32,11 @@
         the moment it becomes relevant rather than sitting on screen always.
 
      4. Naming the purchase a credit reverses puts the revenue boxes away --
-        the event and the revenue type, and in the queue the fund. Money coming
-        in is either new revenue or a purchase being credited back, never both,
-        and a refund in the queue carries no routing of its own: ReconcileForm
-        copies it, fund included, off the entry being reversed.
+        the event and the revenue type, and in the queue the fund and the SGA
+        request too. Money coming in is either new revenue or a purchase being
+        credited back, never both, and a refund in the queue carries no routing
+        of its own: ReconcileForm copies it, fund included, off the entry being
+        reversed.
 
      5. Choosing the kind of income fills in the fund it goes into. SGA pays
         each of its three kinds of money into its own pot, so the source and
@@ -191,9 +192,10 @@
         var f = fields($refund);
         var isRefund = !!f.refund.val();
 
-        /* The fund goes too, but only in the queue: ReconcileForm copies it off
-           the purchase being reversed. The entry page keeps it, because there a
-           refund is filed like any expense and the fund is asked for. */
+        /* The fund and the SGA request go too, but only in the queue:
+           ReconcileForm copies them off the purchase being reversed. The entry
+           page keeps them, because there a refund is filed like any expense and
+           the fund is asked for. */
         var hide = [f.event, f.revenueType];
         if ($refund.closest('.fin-queue-row').length) { hide.push(f.fund, f.request); }
 
@@ -202,13 +204,14 @@
             container($field).toggle(!isRefund);
         });
 
-        /* Deliberately not cleared. The server drops both fields from a refund
-           form outright, so whatever they hold is discarded rather than saved
-           -- and blanking an ajax-select by hand means reaching past the
-           visible box into the hidden input that actually carries the value,
-           which is a good way to leave the two disagreeing if this rule ever
-           moves. Hiding says the same thing and cannot lie about what was
-           submitted. */
+        /* Deliberately not cleared. In the queue the server drops both fields
+           from a refund outright -- the event comes off the purchase being
+           reversed -- and on the entry page it drops the revenue type and
+           saves the event as it stands. Blanking an ajax-select by hand means
+           reaching past the visible box into the hidden input that actually
+           carries the value, which is a good way to leave the two disagreeing
+           if this rule ever moves. Hiding says the same thing and cannot lie
+           about what was submitted. */
     }
 
     function bind(root) {

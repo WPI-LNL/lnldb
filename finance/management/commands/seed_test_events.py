@@ -102,7 +102,7 @@ class Command(BaseCommand):
             '"Link to Event" autocomplete can be exercised.')
 
     def add_arguments(self, parser):
-        """ Wire up ``--clear``, ``--create`` and ``--years``. """
+        """ Wire up ``--clear``, ``--create``, ``--years`` and ``--no-from-memos``. """
         parser.add_argument(
             '--clear', action='store_true',
             help='Remove everything a previous run of this command created.')
@@ -221,9 +221,9 @@ class Command(BaseCommand):
         does not -- the Workday export is real and the events beside it are not.
 
         Each event is dated three weeks before the accounting date, because an
-        ISD is raised after the show rather than before it, and that ordering is
-        what :func:`finance.suggestions.suggest_linked_event` breaks ties on
-        when the same event has run in several years.
+        ISD is raised after the show rather than before it. When the same name
+        has run in several years, :func:`finance.suggestions.suggest_linked_event`
+        picks the one nearest the accounting date, which is this one.
         """
         rows = [t for t in WorkdayTransaction.objects.filter(net_amount__gt=0)
                 if event_name_from_transaction(t)]
@@ -257,9 +257,12 @@ class Command(BaseCommand):
                 existing += 1
                 continue
 
-            # A line carrying a student organization worktag was billed to a
-            # student org; anything else is a department. Rough, but it keeps
-            # the dashboard's client split from being all one colour.
+            # Meant to split the seeded clients between student orgs and
+            # departments. It does not really: the Student Organization worktag
+            # is where Workday puts LNL's own account code (226-AG), so nearly
+            # every line carries one and nearly every event seeded here goes to
+            # a student org. Good enough for exercising the picker; do not read
+            # the client split off seeded data.
             is_student_org = bool((txn.worktag('student_organization') or '').strip())
             pool = [short for _, short, student in ORGANIZATIONS if student == is_student_org]
 

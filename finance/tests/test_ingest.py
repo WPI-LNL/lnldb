@@ -401,7 +401,11 @@ class SettleViewTests(FinanceViewTestCase):
 
 
 class QueueSuggestionEndpointTests(FinanceViewTestCase):
-    """ The JSON the queue page fetches to draw its chips. """
+    """
+    The JSON view of one line's suggestions. No page fetches it -- the queue
+    renders its chips on the server -- but it is how to see exactly what the
+    suggesters make of a line.
+    """
 
     def setUp(self):
         super(QueueSuggestionEndpointTests, self).setUp()
@@ -431,7 +435,7 @@ class QueueSuggestionEndpointTests(FinanceViewTestCase):
         self.assertNotIn('refund_targets', payload)
 
     def test_ids_are_strings_so_the_browser_can_use_them_directly(self):
-        """ They go straight into a <select>, whose values are strings. """
+        """ Strings, as a <select>'s values are, so a script could set one directly. """
         SuggestionRule.objects.create(
             match_field='spend_category', match_mode='exact', pattern='Supplies',
             spend_category=SpendCategory.objects.get(slug='consumables'), priority=1)

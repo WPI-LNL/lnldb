@@ -1,12 +1,16 @@
 """
-Page 4 -- one bank line, and the entries posted against it.
+Page 4 -- one bank line and the entries posted against it, and one entry on
+a page of its own.
 
-Two things make this page more than a template. The first is the audit trail:
-django-reversion stores each save as an opaque field snapshot, so the helpers
-here diff consecutive versions and translate database column names back into
-the labels a Treasurer actually recognises. The second is splitting -- a single
-Workday line frequently pays for several different things, and the formset
-below is what carves it up.
+Three things make these more than templates. The first is splitting, on the
+bank line's page -- a single Workday line frequently pays for several
+different things, and the formset below is what carves it up. The second is
+the audit trail, on the entry's page: django-reversion stores each save as an
+opaque field snapshot, so the helpers here diff consecutive versions and
+translate database column names back into the labels a Treasurer actually
+recognises. The third is history: a line from before the books start has no
+entries and is never split, so its page shows how the forecast reads it
+instead.
 """
 import reversion
 from django.contrib import messages
@@ -289,7 +293,8 @@ def entry_delete(request, pk):
        The deletion itself leaves no new version. ``_save_revision`` in
        django-reversion drops any version whose row no longer exists -- by
        design, since a version is a snapshot of something that is there -- so
-       ``add_to_revision`` inside this block is silently discarded. What does
+       adding the entry to the revision opened below would be silently
+       discarded, which is why it is not tried. What does
        survive is everything recorded *before* the deletion: the entry's
        history stays queryable through
        ``Version.objects.get_for_object_reference(ParsedTransaction, pk)``,

@@ -1,11 +1,14 @@
 """
 Page 2 -- the spreadsheet ledger.
 
-Everything on this page is driven by :data:`LEDGER_COLUMNS`: the header row,
-the sort links, the column picker and the CSV-ish copy behaviour all read from
-that one tuple, so adding a column means editing it in a single place. The
-bulk-action endpoint lives here too, since it operates on exactly the rows the
-ledger's checkboxes select.
+:data:`LEDGER_COLUMNS` lists every column the page can show and whether it is
+shown by default; the column picker is built from it. The header and the
+cells are written out in ``site_tmpl/finance/ledger.html``, keyed by the same
+names (``data-col``), and ``SORTABLE`` says which columns sort. So adding
+a column means an entry here, a ``<th>`` and a ``<td>`` in the template, an
+entry in ``SORTABLE`` if it sorts, and a line in
+:data:`LEDGER_CSV_COLUMNS` for the download. The bulk-action endpoint lives
+here too, since it operates on exactly the rows the ledger's checkboxes select.
 
 ``?format=csv`` downloads every row the filters select rather than the page of
 them on screen, with :data:`LEDGER_CSV_COLUMNS` -- every column, since a
@@ -32,8 +35,9 @@ from finance.models import (FundSource, ParsedTransaction, ProjectTag, SpendCate
 from finance.reports import Period
 from finance.views.reports import csv_response
 
-# Every column the spreadsheet can show. ``default`` drives the initial
-# column-visibility state; the picker stores the rest in localStorage.
+# Every column the spreadsheet can show: ``(key, label, shown by default)``.
+# The key matches ``data-col`` in the template. ledger.js remembers each
+# viewer's own choice of columns in localStorage.
 LEDGER_COLUMNS = (
     ('date', 'Date', True),
     ('description', 'Description', True),

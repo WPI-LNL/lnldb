@@ -6,11 +6,275 @@ money LNL has) and lnldb (which knows *why*).
 
 The module never invents financial data. It ingests Workday journal exports
 verbatim, then lets the Treasurer attach internal meaning to each line by
-linking it to objects lnldb already holds — Events, funding request lines and
-project tags.
+linking it to what lnldb already holds -- events, funding requests and project
+tags -- and to the fund whose money it was.
+
+Start here
+----------
+
+This page is for whoever looks after the finance app: usually the webmaster,
+and any Treasurer who wants to know *why* a figure is what it is. This first
+part is the map -- what the app is for, how money moves through it, the words
+it uses, which page does what and where the code for each piece lives. Every
+part after it takes one area in depth and explains the decisions inside it,
+many of which were made after the obvious approach went wrong on real data.
+
+For the steps rather than the reasons -- importing an export, working the
+queue, closing a year -- see the Treasurer's guide, starting at
+:doc:`/help/finance/overview`.
+
+What the app is for
+~~~~~~~~~~~~~~~~~~~
+
+LNL's money sits in two WPI accounts in Workday: **226-AG**, the club account
+Event Production works from, and **315-AG**, which SGA funds directly for
+Projection. Workday is the system of record. It knows to the cent what each
+account holds and every line that moved it, but it cannot answer what a
+Treasurer gets asked:
+
+* How much of the money is LNL's own, and how much is SGA's?
+* What does SGA still owe on each funding request, and which client has not
+  paid?
+* Did the show with the $26,000 video wall make money or lose it?
+* What will be left on June 30, and can LNL afford a new console?
+
+lnldb already knows the events, the clients, the bills and the funding
+requests. The finance app joins the two: it imports Workday's lines exactly as
+exported, the Treasurer says what each one was for, and every figure is worked
+out from those two things.
+
+How money moves through it
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    Workday: Find Journal Lines for one account, exported as .xlsx or .csv
+        |
+        |  Queue > Import an export                  finance.importers
+        v
+    Bank lines (WorkdayTransaction) -- dated before the books start? --> History
+        |  never edited after import                 read for the forecast,
+        |                                            never filed
+        v
+    The queue: every line not yet filed in full     finance.views.ingest
+        |  boxes arrive filled in wherever the        finance.suggestions
+        |  export states the answer; a person
+        |  checks them and presses Allocate
+        v
+    Entries (ParsedTransaction): how much, which fund, which spend category
+    or event, which funding request, which project
+        |
+        +--> Ledger, Projects, Funding    every entry, filtered and summed
+        +--> Balances                     what each fund holds   finance.balances
+        +--> Events                       what each show made    finance.calculators
+        +--> Dashboard, Reports                                  finance.calculators
+        |                                                        finance.reports
+        +--> Forecast                     plus history, booked   finance.history
+                                          shows and planned      finance.forecast
+                                          purchases
+
+Three rules hold everywhere, and most of the design follows from them.
+
+**Workday's lines are never edited.** A bank line is written by the importer
+and by nothing else, and the model refuses updates and deletes. If a line is
+wrong, it is wrong in Workday. What LNL decides about a line lives in its
+entries, which can be changed or undone freely.
+
+**Nothing that can be worked out is stored.** Fund balances, what SGA owes,
+each event's margin, the reports and the forecast are all worked out from the
+lines and entries whenever a page asks. A June purchase imported in August
+corrects last year's closing balance, this year's opening and the forecast at
+once. The only figures anybody types are ones nothing else knows: what Workday
+said an account held on a day, an opening split, a transfer between funds, a
+purchase being planned.
+
+**Nothing is filed without a person.** The queue fills in every box the export
+answers, and says which column each answer came from, but a person presses the
+button. A guess is only ever offered as a chip to click; see *Lookups and
+guesses*.
+
+Words used throughout
+~~~~~~~~~~~~~~~~~~~~~
+
+========================  ============================================  ===============================
+Word                      Means                                         In the code
+========================  ============================================  ===============================
+Bank line, Workday line   One row of a Workday export: a date, an       ``WorkdayTransaction``
+                          amount, a memo and the worktags
+Entry, slice, allocation  LNL's account of all or part of a bank line:  ``ParsedTransaction``
+                          what the money paid for or came from. One
+                          line can carry several
+Filing, allocating,       Writing entries against a line until they     ``views.ingest.reconcile``
+reconciling               add up to it exactly
+Settled                   A line's entries are complete. Officers       ``WorkdayTransaction.settle``
+                          settle in the same click as filing
+The queue                 Every line from the books start on that is    ``WorkdayTransactionQuerySet``
+                          not filed in full                             ``.unreconciled``
+Encumbrance               Money reserved for a purchase Workday has     A ``ParsedTransaction`` with no
+                          not shown yet, drawn down when it does        ``parent_transaction``
+Refund                    Money back for a purchase. It un-spends       ``refund_of``
+                          rather than earning
+Account, org code         226-AG or 315-AG, read from Workday's         ``PartitionCode``
+                          Student Organization worktag
+Partition                 Event Production or Projection: which         ``is_projection``
+                          activity an entry was for, whichever
+                          account paid
+Fund                      Whose money it is, inside an account:         ``FundSource``,
+                          Legacy, SGA Budget, SGA Funding Request,      ``FundBehaviour``
+                          SGA Mandatory Transfer
+Own money                 The fund an account carries forward:          ``account_own_funds``
+                          Legacy in 226-AG, the mandatory transfer in
+                          315-AG
+Funding request (FR)      An SGA award for a purpose, numbered like     ``FundingRequest``,
+                          F.26.86, with lines LNL spends against. SGA   ``FRLineItem``
+                          pays the spending back afterwards
+Revenue source            What income that is not event billing was:    ``RevenueSource``
+                          an SGA payment, a gift, a sale
+Spend category            LNL's own category for spending               ``SpendCategory``
+Pass-through, sub-rental  Gear hired in for one show, whose cost        ``SpendCategory``
+                          belongs to that event                         ``.is_event_passthrough``
+Project tag               An optional grouping across categories, in a  ``ProjectTag``
+                          tree
+Books start               The first day the ledger counts               ``books_start_date``
+History                   Lines from before the books start, imported   ``finance.history``,
+                          for the forecast and never filed              ``.before_books``
+Workday balance           What Workday said an account held at the end  ``BalanceCheckpoint``
+                          of a day
+Transfer                  Money moved between two funds in one          ``FundTransfer``
+                          account. No cash moves
+Closing a year            Recording June 30's balances and squaring     ``FiscalYearClose``
+                          what cannot carry forward. Locks nothing
+Lookup, guess             An answer the export states, which fills the  ``Suggestion.source``
+                          box; our own reading, offered as a chip
+ISD                       Internal Service Delivery: WPI billing WPI.   ``WorkdayTransaction``
+                          LNL's event bills arrive as ISDs              ``.document_type``
+Multi-bill                One bill covering several events              ``events.models.MultiBilling``
+Fiscal year               July to June, named for the year it ends:     ``fiscal_year_for``
+                          FY26 is July 2025 to June 2026
+Minimum reserve           The least LNL's own money should hold         ``FinanceSettings``
+                                                                        ``.minimum_reserve``
+Typical year              What the most recent whole years did, month   ``forecast.TypicalYear``
+                          by month
+========================  ============================================  ===============================
+
+The pages
+~~~~~~~~~
+
+Every page is under ``/db/finance/``. Looking needs ``view_subledger`` (the
+*Funding* tab needs ``view_fundingrequest``, which is granted with it); the last
+column is what changing anything there needs. The site's *Finance* menu links
+to the dashboard, the ledger, projects, funding requests, the queue and *Log a
+purchase*; every page is a tab across the top of the others.
+
+===========  ==============  ===============================================  ==========================
+Tab          URL             What it is for                                   To change anything
+===========  ==============  ===============================================  ==========================
+Dashboard    (the root)      The year at a glance; see *Dashboard metrics*
+Ledger       ``ledger/``     Every entry: filtered, sorted, edited in bulk,   ``edit_subledger``
+                             downloaded as CSV
+Queue        ``queue/``      Importing exports, filing each new line,         ``edit_subledger``;
+                             logging a purchase before it happens             importing needs
+                                                                              ``import_workdaytransaction``
+Events       ``events/``     What each show made or lost, and *Mark bill      ``edit_subledger`` and
+                             paid*                                            ``events.bill_event``
+Balances     ``balances/``   What each fund holds; Workday balances,          ``edit_subledger``; closing
+                             transfers, opening balances, closing a year      needs ``close_fiscalyear``
+Projects     ``projects/``   Spending by project tag                          ``manage_projecttag``
+Funding      ``funding/``    Funding requests: what SGA owes, and each        ``manage_fundingrequest``
+                             request's lines and burndown
+Forecast     ``forecast/``   The forecast, *Can we afford it?*, planned       ``edit_subledger``
+                             purchases and history
+Reports      ``reports/``    Eight reports to print or download
+===========  ==============  ===============================================  ==========================
+
+Three more pages are reached from those: one bank line
+(``transaction/<pk>/``, with its split form and undo), one entry
+(``entry/<pk>/``, with its receipt and audit trail), and *Log a purchase*
+(``encumbrance/new/``). Outside the app, an event's *Billing* tab shows that
+event's figures, and the Django admin's *Financial Subledger* section holds
+everything in *What is editable without a deploy*.
+
+Where the code is
+~~~~~~~~~~~~~~~~~
+
+===========================================  ===========================================================
+Where                                        What it holds
+===========================================  ===========================================================
+:mod:`finance.models`                        Every table, the accounting rules, the fiscal year and
+                                             money helpers, and the cached settings
+:mod:`finance.importers`                     Reading a Workday export into bank lines
+:mod:`finance.suggestions`                   What the queue fills in, and what it only offers
+:mod:`finance.forms`                         Every form, and the rules that remove a field rather than
+                                             validate it
+:mod:`finance.calculators`                   The dashboard's figures, each event's figures, and what
+                                             SGA and clients owe
+:mod:`finance.balances`                      Each fund's balance and each account's cash, on any day
+:mod:`finance.reports`                       The reports, as data one template draws and one function
+                                             writes as CSV
+:mod:`finance.activity`                      What LNL's work was worth, priced from the events app
+:mod:`finance.history`                       Every line, filed or not, reduced to what it was
+:mod:`finance.forecast`                      The forecast, the typical year and the back-test
+:mod:`finance.filters`                       The filter bar: fiscal year and partition
+``finance/views/``                           One module per tab, plus ``detail`` for the line and entry
+                                             pages
+:mod:`finance.lookups`                       The event and project autocompletes
+:mod:`finance.admin`, :mod:`finance.apps`    The admin, and the signals that drop cached settings
+``finance/management/commands/``             Development tools; see *Management commands*
+``finance/tests/``                           The test suite; its map is :mod:`finance.tests`
+``site_tmpl/finance/``                       The templates, whose comments explain the layout choices
+``static/js/``, ``static/css/finance.css``   ``queue.js``, ``routing.js``, ``split.js``,
+                                             ``fr_lines.js``, ``ledger.js``, ``charts.js``,
+                                             ``forecast.js``
+``fixtures/groups.json``                     Who holds the finance permissions
+===========================================  ===========================================================
+
+How it was built
+~~~~~~~~~~~~~~~~
+
+The app arrived in stages, and the order explains some of its shape. The first
+release was the ledger, the queue, funding requests, project tags,
+encumbrances and the dashboard. Five later stages each answered one of the
+Treasurer's questions:
+
+1. **Costs that belong to one event**: linking spending to a show, and the
+   *Events* page.
+2. **Fund balances and the year end**: the *Balances* page, Workday balances,
+   transfers and closing a year.
+3. **Where income comes from and what LNL is owed**: revenue sources that
+   decide the fund, SGA's payments tied to their request, multi-bills, and
+   *Mark bill paid*.
+4. **Reports**, and the two reports priced from the events app.
+5. **History and forecasting**: older exports read as history, the *Forecast*
+   tab, and the draft budget request.
+
+==========================================  ======================================================
+Migration                                   What it does
+==========================================  ======================================================
+``0001_initial``                            The schema, collapsed from the sixteen migrations it
+                                            was developed through
+``0002_seed_reference_data``                What a new install starts with: spend categories,
+                                            funds, revenue sources, account codes, suggestion rules
+``0003_fund_source_default``                The fund an expense falls back to when nothing names one
+``0004_current_spend_categories``           Brings an earlier install onto the revised spend
+                                            categories, moving entries off retired ones
+``0005_fund_balances``                      How each fund behaves at June 30, Workday balances,
+                                            transfers, year closes, and revenue naming a fund
+``0006_revenue_sources``                    Sources that decide the fund, SGA payments naming
+                                            their request, and what SGA owed when the books started
+``0007_sga_budget_source_name``             Renames the budget's revenue source "SGA Budget"
+``0008_forecasting``                        The minimum reserve, the departments' share, planned
+                                            purchases, history corrections, and the books start
+                                            written down before history arrives
+==========================================  ======================================================
+
+
+The ledger
+----------
+
+What the app stores, and the rules that hold whatever code path writes it.
 
 The two-table ledger
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 Raw bank data and internal interpretation are deliberately kept in separate
 tables:
@@ -26,8 +290,38 @@ tables:
     split-purchase case), or at none at all (an encumbrance logged before the
     bank feed catches up).
 
+Entry types
+~~~~~~~~~~~
+
+``ParsedTransaction.entry_type`` distinguishes four shapes, because "positive
+means revenue" is not quite true:
+
+===========  ===============================  =============================================
+Type         Condition                        Routing
+===========  ===============================  =============================================
+Revenue      ``amount > 0``, no refund        Event or revenue source; the fund it goes
+                                              into; the request SGA is repaying
+Expense      ``amount < 0``, has a bank line  Fund, spend category, FR line (or the request
+                                              SGA took money back for); an event
+Refund       ``amount > 0`` + ``refund_of``   The purchase's routing (contra-expense)
+Encumbrance  ``amount < 0``, no bank line     Expense routing
+===========  ===============================  =============================================
+
+A refund is a *contra-expense*, not revenue. Because expenses are stored
+negative and refunds positive, a return credit restores the budget line it came
+out of purely by arithmetic — no special-casing in the burndown code.
+
+An encumbrance is money reserved for a purchase that has not happened yet, and
+it read as *Expense* in the ledger's Type column until it got a word of its own.
+That is not a synonym: no money has left the account, there is no bank line
+behind it, and it stops being an encumbrance when the real charge is imported.
+The one column whose entire job is telling rows apart was showing the two as
+identical. Only the label is new — an encumbrance still carries expense routing,
+still answers yes to ``is_expense``, and is still counted as spending
+everywhere it was before.
+
 Enforced accounting rules
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Six rules are enforced as database ``CheckConstraint``\ s, so they hold even if
 application-level validation is bypassed by a bulk action, a data migration or
@@ -36,26 +330,51 @@ a shell session:
 * an allocation amount is never zero;
 * an encumbrance (no parent bank line) can never be ``Settled``;
 * an expense or refund may not be classified as non-event revenue;
-* revenue may not carry a spend category or a funding request line -- it may
-  name a fund, which is the one routing field both directions share;
+* revenue may not carry a spend category or a funding request line. The event,
+  the fund and the SGA funding request are the routing both directions share
+  (``ParsedTransaction.SHARED_FIELDS``);
 * a refund is always positive;
 * an entry names a funding request line or the request SGA is paying for,
   never both (see *SGA's payments name the request*).
 
-The balance tables add three more: a fund transfer moves a positive amount
-between two different funds, and an account has one Workday balance per day.
+The tables added since bring four more: a fund transfer moves a positive amount
+between two different funds, an account has one Workday balance per day, and a
+planned purchase has a positive amount.
 
-Two further rules need cross-row state and so live in ``Model.clean()`` plus a
-transactional helper:
+Three further rules depend on other rows or on a setting, so they live in
+``Model.clean()``, the first with a transactional helper:
 
 * the sum of a bank line's slices must equal its ``net_amount`` exactly before
-  any slice may be marked ``Settled`` (:meth:`WorkdayTransaction.settle`);
+  any slice may be marked ``Settled`` (:meth:`~finance.models.WorkdayTransaction.settle`);
 * the partition rules, described below. The funding request's side and the
   written reason for leaving 315-AG are both re-applied in ``save()`` as well as
-  ``clean()``, so they hold regardless of the code path.
+  ``clean()``, so they hold regardless of the code path;
+* a line from before the books start takes no entry at all
+  (:attr:`~finance.models.WorkdayTransaction.is_history`). It is history, read for the forecast
+  and never filed -- see *History* -- and which lines are history depends on a
+  setting, which a database constraint cannot see.
+
+Cents, and only cents
+~~~~~~~~~~~~~~~~~~~~~
+
+Every monetary figure crosses back into whole cents through
+:func:`finance.models.money` at the point it leaves the database.
+
+This is not belt-and-braces. Everything here is stored as
+``DecimalField(decimal_places=2)``, so it is tempting to assume what comes back
+is already cents -- but SQLite quantizes a plain column read and *not* an
+aggregate. ``Sum('amount')`` therefore returns fifteen significant digits and
+the float noise with them: ``Decimal('-2808.24000000000')`` for a column that
+only ever held ``-2808.24``. Subtracting two of those gives ``Decimal('0E-11')``,
+which is zero, prints as ``0E-11``, and reads to a Treasurer as a bug.
+
+Rounding at the display layer would not have fixed it, because the raw value was
+never only on screen: it reached JSON payloads, form initial data and the text
+of validation errors. So the quantize happens where the number is read, not
+where it is printed.
 
 The Event Production / Projection partition
--------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Which account paid for something and which activity it was for are different
 questions, and for a while this module answered both with one field.
@@ -131,8 +450,14 @@ unfamiliar org code appears in one view rather than neither. On a bank line the
 filter asks about the account, since nothing in the queue has been filed yet; on
 the ledger it asks about the entry, since by then somebody has decided.
 
+Getting Workday lines in
+------------------------
+
+How a Workday export becomes bank lines: the files it reads, how it tells a new
+line from one already imported, and the confirmation in between.
+
 File formats
-------------
+~~~~~~~~~~~~
 
 The importer reads CSV and ``.xlsx`` alike. Workday will hand you either, and
 which button someone happened to press should not decide whether the ledger can
@@ -186,7 +511,7 @@ Reading ``.xlsx`` needs ``openpyxl``, which is in ``requirements.txt``. If it
 is missing the importer says so and points at CSV rather than failing obscurely.
 
 Line identity
--------------
+~~~~~~~~~~~~~
 
 Nothing Workday exports identifies a journal line.
 
@@ -226,25 +551,553 @@ well as the importer.
    out. Import the wider export, or log the odd genuine case as an encumbrance.
 
 Because a line may have no Operational Transaction at all,
-:attr:`WorkdayTransaction.reference` is what the UI shows: the Operational
+:attr:`~finance.models.WorkdayTransaction.reference` is what the UI shows: the Operational
 Transaction if there is one, else the journal number (``25090054-JE``).
 
 Naming the counterparty needs the same care. An Internal Service Delivery is
 WPI billing WPI — LNL invoicing a department, campus shipping, Chartwells
 catering — so it carries neither a Supplier nor an Employee, and neither do
 journal entries. That is 94 of the 314 lines on the FY26 export, every one of
-which used to read "(no payee)". :attr:`WorkdayTransaction.payee` now falls
-back to :attr:`~WorkdayTransaction.document_type`, taken from the Operational
+which used to read "(no payee)". :attr:`~finance.models.WorkdayTransaction.payee` now falls
+back to :attr:`~finance.models.WorkdayTransaction.document_type`, taken from the Operational
 Transaction's own prefix, so those lines read "Internal Service Delivery" or
 "Journal Entry" and the memo carries the rest.
+
+Two-step import
+~~~~~~~~~~~~~~~
+
+Choosing a file writes nothing. :func:`finance.views.ingest.upload` parses it
+with ``dry_run``, stages the bytes in the file store and renders a confirmation
+naming the count: *you are about to add 253 unreconciled lines*.
+:func:`finance.views.ingest.upload_confirm` re-reads the same bytes and does the
+real insert.
+
+The count is the whole point. An import is the one action on the page that is
+awkward to walk back -- every line it creates is work somebody now has to do,
+and undoing it means finding and deleting them by hand. It runs once a month
+against a file exported by a system nobody here controls, and the two ways it
+goes wrong are picking last month's export and picking a file that is not an
+export at all. Both parse perfectly, read correctly, and are obvious the moment
+a number appears -- and invisible before it.
+
+Staging exists because the file is gone by the time the question is answered: a
+browser will not re-submit an ``<input type=file>`` it never kept. Staged
+uploads live under ``finance/staged_imports/`` with unguessable names, and the
+token is held in the session rather than in a form field, so it cannot be
+replayed by anyone else. They are consumed on confirmation, deleted on cancel,
+and purged after six hours by the next upload -- a confirmation left open
+overnight should not quietly import itself in the morning.
+
+Two cases skip the question, because it would be asking twice: *Preview only*,
+which is already a request to look and not touch, and a file with no new lines,
+where the button does nothing either way.
+
+**History is counted apart.** A line dated before the books start is history
+(see *History*) and never reaches the queue, so the confirmation counts the
+lines for the queue and the lines of history separately, and an old export adds
+nothing to the queue at all. If the books start has never been written down, an
+import that brings history writes it down first -- where it stood before the
+file arrived, in the same transaction. Otherwise an export older than
+everything on file would move the books back to meet it.
+
+Filing lines in the queue
+-------------------------
+
+The queue is where a bank line is given its meaning. These sections cover what
+is filled in for the Treasurer and why, how a row is laid out, and the guard
+rails, bulk actions and undo around it.
+
+Lookups and guesses
+~~~~~~~~~~~~~~~~~~~
+
+Reconciling should be confirming rather than typing, so the reconciliation form
+arrives with the boxes already answered. What may be answered, and what may only
+be offered, is decided by where the answer came from.
+
+A **lookup** is something the export already states, read through a table a
+Treasurer maintains — the ledger account, Workday's own Spend Category, a request
+number written into the memo, a project code, the Fund worktag. There is no
+opinion in it, so the form selects it and captions the box with the column it
+came from. An **inference** is our own reading of the line — a word noticed in
+some prose, a resemblance somebody might not agree with. Those stay a chip to
+click and never fill anything in, because a pre-selected dropdown gets accepted
+without being read, and that is precisely the wrong thing to do with a guess.
+
+Linking an event moved from the second category to the first, and the move is
+worth understanding because it is the clearest example of the distinction.
+
+There used to be a scorer that ranked candidate events by how close they ran to
+the accounting date, whether the client worktag matched, and whether the billed
+total came out the same, then offered its best five under the box. Every one of
+those was a genuine guess, and five guesses is not a shortlist — it is a puzzle
+handed to somebody who was trying to file a deposit.
+
+What replaced it reads the memo. LNL bills event work through Internal Service
+Deliveries, and those memos are written to a house format that names the event
+outright::
+
+    Lens and Lights services for Pan Asian Festival D26
+    Lens and Lights Services for Live at the CC Window (Apr 27) D26
+    LNL Services for C26 CS Social Movies
+
+That is not evidence *about* which event the money is for. It is the person who
+raised the invoice writing down which event the money is for, at the time, from
+the same lnldb the reconciliation form is reading. Matching it is a lookup in
+exactly the sense a funding request number quoted in an expense memo is, so it
+fills the box in and captions it.
+
+:func:`finance.suggestions.event_name_from_transaction` handles both shapes seen
+in practice — the house format above, and the event name alone with just a term
+code ("BRASA Carnival C26"). The bare form is only read off a document Workday
+itself calls an Internal Service Delivery, because there is nothing in the text
+to separate it from any other short memo.
+
+The match is **exact**, case-insensitively, and nothing fuzzy is attempted. A
+near-miss would attribute several thousand dollars of revenue to the wrong show,
+and it would do it in a box already showing an answer — the one box nobody
+re-reads. Where the same event name has run in several years, the one nearest
+the accounting date wins, since an ISD is raised within weeks of the show, and
+the caption names the event's date so the year can be checked at a glance. On
+the FY26 export this fills in every one of the 58 ISD lines that names an
+event, and leaves the journal entries and credit memos alone.
+
+The distinction is a field on the rule, not a convention:
+``SuggestionRule.match_mode`` is one of *is exactly*, *starts with*, *contains*
+or *contains the whole word*, and the first two count as lookups. It used to be
+implied by the column — ledger accounts matched their start, everything else
+matched anywhere — which left an exact account code and a keyword spotted in
+prose indistinguishable to whatever consumed the result.
+
+For the spend category, :func:`~finance.suggestions.suggest_spend_category`
+runs from the most specific evidence to the coarsest:
+
+1. **What the funding request line was awarded for.** If the memo names a line
+   and a category was recorded against it when the award was entered, the
+   question has been answered once already.
+2. **What the memo says.** The middle field of LNL's house format is usually a
+   category by name -- ``Velcro restock, consumables, (A.27.16)`` -- and it
+   outranks Workday's, because WPI's list is not LNL's: everything LNL buys
+   arrives as "Supplies" or "Equipment - General" whatever it was for.
+3. **Workday's own Spend Category, matched exactly.** The finest code in the
+   export. "Printing", "Supplies - Office" and "Supplies - Medical" all sit
+   under the ledger account ``71100:Supplies`` and are not the same thing.
+4. **The ledger account, matched on its number.** Coarser, but still a code WPI
+   assigned, so it covers Workday categories nobody has mapped yet.
+5. **Anything matched by wording**, which is a guess and stays a chip.
+
+Eleven fiscal years of 226-AG exports contain 2,644 lines, 17 ledger accounts
+and 38 distinct Workday spend categories, and every expense line carries one.
+The seeded table is therefore not an approximation of the chart of accounts — it
+*is* the chart of accounts. Where LNL has no category meaning the same thing
+(Rent - Equipment, Travel, Subscriptions & Memberships) no exact rule is seeded
+on purpose: the ledger-account rule catches those at *Other*, and one admin row
+promotes any of them to a category of their own.
+
+The measured effect on the FY26 export, 253 expense lines:
+
+===============================  =========  ==========================================
+Field                            Filled in  From
+===============================  =========  ==========================================
+LNL spend category               253        203 Workday spend category, 50 ledger account
+Fund source                      16         a funding request number in the memo
+Project tag                      7          a project code appearing verbatim
+===============================  =========  ==========================================
+
+Those are the lines the export itself answers. The fund was filled in only
+where a memo quoted a request number, and that was deliberate -- see below.
+Every other line now arrives with the account's own money, captioned as the
+fallback it is, because a fund left blank on every row was worse than one that
+says plainly it was assumed.
+
+After an import, any Workday spend category that no rule covers is named in a
+warning with a line count, because each one is a question the Treasurer would
+otherwise answer by hand on every line carrying it, forever.
+
+Fund codes are admin data
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Which Workday Fund code means which LNL bucket was an ``if '810' in fund`` in
+``suggestions.py``. It is WPI's numbering and LNL's bookkeeping convention, so
+it is now ``FundSource.workday_fund_codes`` — a comma-separated list on each
+fund. A fund with no codes configured is never chosen for you, which is how an
+SGA award stays identified by its number rather than by a fund code.
+
+**810-FD is mapped to nothing at all**, and that is the important part. It is
+the agency fund the whole 226-AG account sits in, so every LNL line in eleven
+years of exports carries it, whoever actually paid. Standing SGA budget,
+out-of-cycle SGA award and legacy money are identical on the worktag. The
+original ``if '810' in fund`` read it as "SGA budget" and the first pass at this
+table copied that across unexamined, which meant the Fund source box arrived
+pre-filled and high-confidence on nearly every line, on no evidence. An exact
+code match fills the form in rather than offering a chip, so being wrong there
+is expensive: a filled box is the one nobody re-reads. 810-FD is now mapped to
+no fund, so it fills in nothing.
+
+Only the memo and, from FY27, the *Tracking* worktag can tell the buckets
+apart. When nothing on a line does, the queue fills in the account's own money
+and says so in those words; see *Money coming in names a fund* below for the
+full order.
+
+When a memo quotes a request number lnldb has never heard of, the fund is still
+filled in -- every SGA number is a funding request -- but the line is flagged
+*Unknown request*, or *A.27.16 or F.27.16?* when the same number exists under
+another body's letter. Either the award has not been entered yet or the memo is
+mistaken, and both are worth fixing before the line is filed anywhere.
+
+How a queue row is laid out
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The queue is worked twenty-five rows at a time, so what appears on each row is
+the whole usability question. Three rules, all of them enforced by structure
+rather than by remembering:
+
+**One field component, used everywhere.** Label, control, and at most one
+caption underneath. It lives in ``finance/_queue_field.html`` and each field is
+one ``{% include %}``. Writing it out per field is what produced four
+near-identical twelve-line blocks that had already drifted apart -- different
+label markup, captions beside the control on some fields and under it on
+others, and inline ``style="margin-right:10px"`` on every wrapper.
+
+**Fixed control widths, captions underneath.** The same field sits in the same
+place on every row, and a row is the same height whether or not it has anything
+to say, so the eye can run down a column instead of re-finding it each time. A
+caption beside a control pushes the next field along by however many characters
+the reason happened to be.
+
+**Rarely-used fields fold away.** Fund and Spend Category are needed on every
+expense; Project appears on seven of 253 lines in a year, a sub-rental is rarer,
+and the partition tick box and the cross-year opt-in are rarer still. Those sit
+behind *More*, so an ordinary row reads as two boxes and a button. The view
+unfolds it per row whenever that line has something in there worth seeing --
+a project we found, a partition that is not the ordinary one, a crossing that
+has to be explained -- and ``queue.js`` unfolds it if a validation error lands
+on a field inside, since an invisible error is worse than the clutter the fold
+removes.
+
+Two smaller things follow the same logic. Every widget gets ``form-control`` from
+``BaseAllocationForm._style_widgets()``, because Django renders a bare
+``<select>``, crispy adds the class itself and django-ajax-selects does its own
+thing, so one row could look like three different form libraries depending on
+the page. And the import drop zone is collapsed behind a button: importing
+happens once a month, reconciling is what the page is for, and the drop zone was
+the first thing between the Treasurer and the work.
+
+An answered box never also nags. A field the export filled in gets a quiet
+dashed caption naming the column it came from; a field we can only guess at gets
+a coloured chip that fills it in when clicked. Never both -- see *Lookups and
+guesses* above for which is which.
+
+.. warning::
+
+   A fold that only script can open is a trap rather than a tidy-up: anything
+   that stops ``queue.js`` running makes those fields unreachable instead of
+   merely hidden. So the fold is a class the server renders, script toggles, and
+   a ``<noscript>`` rule in ``base_finance.html`` undoes -- without JavaScript
+   every field is simply on screen, as it was before the fold existed.
+
+   This is not hypothetical. The fold appeared broken the first time it shipped,
+   because every finance asset was cache-busted with ``?v={{ GIT_RELEASE }}`` --
+   the git SHA, which does not change between commits. Browsers kept serving the
+   previous ``queue.js``, and a script that never arrives looks exactly like a
+   button that does nothing. :func:`finance.templatetags.finance_extras.asset`
+   now stamps the file's own modification time in development, and the release
+   SHA in production, where files really do only change when a deploy does.
+
+Guard rails
+~~~~~~~~~~~
+
+The subledger is meant to be hard to get wrong, not merely capable of being
+right. Three techniques, in order of preference:
+
+**Remove the option.** The strongest guard is a field that is not on screen.
+A revenue form has no ``lnl_spend_category`` or funding request line picker;
+an expense form has no ``non_event_revenue_type``; and the line picker is
+hidden even on an expense unless the chosen fund draws on one. Nothing to
+mis-click. The fields are *deleted* in
+:meth:`finance.forms.BaseAllocationForm._apply_direction_rules` rather than
+validated away, so a revenue form is structurally incapable of submitting
+expense routing even with the client-side script bypassed.
+
+Three fields survive on both sides, because each means something on both, and
+each is relabelled rather than removed:
+
+* the event -- "Linked event" on revenue, "Incurred for event" on an expense;
+  see *Costs that belong to one event* below;
+* the fund -- "Into fund" on revenue, "Fund" on an expense; see *Money coming
+  in names a fund*;
+* the SGA funding request -- "Reimburses request" on revenue, "SGA took back
+  money for" on an expense; see *SGA's payments name the request*.
+
+**Offer the likely, gate the unlikely.** Where something is legal but usually a
+mistake, the usual case is the default and the exception costs one deliberate
+tick. Charging FY25 spending to an FY26 funding request is the worked example:
+the picker lists this year's requests, and *"Charge a different fiscal year"*
+widens it. Submitting another year's line without that tick is refused by name
+— "This is FY2026 spending but FY25 Grant is an FY2025 request." The same
+thinking narrows the refund target list to the current year.
+
+**Put the number where the decision is.** Every funding request line reads
+``FY2026 · F.26.6 Fixtures — $340.00 left`` in the dropdown, so the year and
+the remaining balance are in front of you at the moment you choose, rather than
+on a page you would have to go and look at.
+
+**Match what is written down, do not guess at it.** Workday memos routinely
+quote the SGA request a purchase was approved under — "Truman Show Film Rights
+(F.26.6)", "Rights for Apollo 13 (F.26.86)". That is the Treasurer's own
+reference, recorded at the time, so
+:func:`finance.suggestions.suggest_funding_request` matches it against
+``FundingRequest.reference`` and offers both the fund and the request line at
+high confidence. On the FY26 export, 18 lines quote a request number.
+
+The funding request line is only offered when the request has exactly one:
+nothing in "(F.26.86)" says which of several lines a purchase belongs to, and
+an arbitrary pick would be worse than no pick.
+
+.. note::
+
+   The suggestion table used to ship with twelve "supplier contains barbizon →
+   Consumables" rules and seven "memo contains tape → Consumables" ones. Those
+   were guesses about what a vendor usually sells, and they have been removed —
+   a suggestion that must be read carefully is not saving anyone anything.
+
+   They cost nothing to lose: every expense line on the FY26 export gets its
+   category from Workday's own accounting codes. The ``supplier`` and ``memo``
+   match types remain available in the admin for a rule someone genuinely wants.
+
+**Never ask twice for something already recorded.** Choosing a funding request
+line fills in the spend category and project that line was awarded for — the
+award already said what the money was for, so re-typing it per transaction is
+the double data entry this module exists to remove. Only a box the page filled
+in itself is ever overwritten: a value chosen by hand survives switching
+between lines. The pairing is carried on the ``<option>`` by
+:class:`finance.forms.FRLineSelect`.
+
+The queue posts one row at a time over XHR rather than reloading. Reloading
+discarded whatever was typed into the *other* rows on screen, and the queue is
+designed to be worked a screenful at a time. Errors come back keyed by field so
+they land beside the input that caused them. Without JavaScript the same forms
+submit, redirect and report through the messages framework exactly as before.
+
+Rules live at the layer that cannot be bypassed, and are then *repeated* higher
+up for the error message. The fund/funding-request pairing is enforced in
+``ParsedTransaction.clean()`` — so bulk actions, the admin and the shell all
+obey it — and again in ``BaseAllocationForm`` so the message lands on the field
+you have to change. Which fund needs a funding request line is
+``FundSource.requires_funding_request``, a flag on the row, so it survives SGA
+renaming things.
+
+Bulk actions get particular attention, being the one place a single click can
+be wrong hundreds of times. The ledger's bar refuses to offer a fund that would
+need a per-entry FR line, skips revenue rows when asked to apply expense
+routing (a database constraint would otherwise turn the whole action into a
+500), leaves entries already charged to a funding request alone, and validates
+every row individually before writing — anything the rest of the app would have
+rejected is reported and left untouched.
+
+Reconciling in bulk
+~~~~~~~~~~~~~~~~~~~
+
+The per-row form is the right tool when the rows differ. When they do not — a
+dozen supply orders on one export, every one of them Consumables out of the
+standing budget — it asks the same two questions a dozen times and gets the
+same two answers a dozen times. :func:`finance.views.ingest.bulk_reconcile` is
+the ledger's bulk bar pointed at the queue: select rows, answer once, apply.
+
+Each selected line gets one slice for whatever is still unallocated on it,
+which is what the single-row form does, so a part-allocated line is finished
+off rather than double-counted. Every row is then validated on its own and the
+failures are named — a bulk action must never be the thing that writes a row
+the rest of the app would have rejected.
+
+Three kinds of row are reported and left alone rather than forced:
+
+* **revenue**, because "the same settings" for money coming in means "the same
+  event", which is a different question with a different picker and is seldom
+  true of a batch. The database refuses expense routing on revenue anyway, so
+  including them would take the whole action down;
+* **lines already fully allocated**, which have nothing left to slice;
+* **anything the chosen settings would invalidate**, named individually.
+
+Every fund is offered, funding-request money included. Choosing a fund that
+draws on a request shows a line picker beside it, as on a single row, listing
+every open request's lines with the year first, because a selection can span a
+July. Each row is checked against its own year, and *Other year* is the
+deliberate tick for charging another year's request. A batch charged to one
+award is the ordinary shape of a funding request being spent, so leaving those
+funds out -- as this bar once did -- left out the batch it was most needed for.
+The ledger's bulk bar still leaves them out: it has no line picker, so every
+entry it touched would be left invalid.
+
+The checkbox appears on expense rows only. A revenue row has nothing to offer
+this bar, and an empty slot keeps the amounts in their column.
+
+Undoing a reconciliation
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The moment you notice a line was filed wrong is the moment right after you
+filed it. Until :func:`finance.views.ingest.unreconcile` existed, the way back
+was to leave the queue, find the line in the ledger, open each slice and delete
+it through a confirmation page -- five navigations to take back one click, which
+in practice meant the wrong answer stayed.
+
+Undo deletes every slice of one bank line, settled or not; settling happens in
+the same click as reconciling whenever the line balances, so an undo that
+refused to touch settled slices could never undo anything. The Workday row
+itself is untouched -- it is immutable bank truth, and only what LNL decided
+*about* it is being withdrawn.
+
+One case is refused rather than forced: a slice with a refund filed against it
+is load-bearing, since the refund exists to reverse *that* purchase, and the
+database will not orphan it. The queue says so instead of returning a 500.
+
+In the queue the undo is offered in the row that was just allocated, for twelve
+seconds, before the row is removed. The row stays in the DOM for exactly that
+reason -- undoing has to put the Treasurer's own answers back in front of them,
+and the only copy of those answers is the form still sitting in that row. The
+transaction detail page carries the same action without a time limit, for when
+it is noticed later.
+
+What an entry has to have
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+On the entry page an expense must name its fund and its spend category. Both
+are structural: the reports group by them, so a blank makes the line
+uncountable.
+
+The audit explanation and the receipt are asked for and not insisted on. They
+were mandatory, and that made the page unusable for its commonest job -- fixing
+a spend category chosen wrong three weeks ago meant first producing a receipt
+for somebody else's purchase, or inventing a sentence about it. A line missing
+its paperwork is a line to chase, not a line to lock; the entry page says
+plainly when a receipt is absent, and the ledger has a Receipt column to sort
+by. The encumbrance form still asks what the money is for at the point of
+reserving it, which is the one moment somebody actually knows.
+
+Closing an encumbrance
+~~~~~~~~~~~~~~~~~~~~~~
+
+An encumbrance stops being one when the real charge is imported, but nothing
+makes that happen by itself: the reservation was written before Workday had
+ever heard of the purchase, so there is no shared identifier and there cannot
+be one. The two have to be matched by a person.
+
+The ingestion queue offers that on the bank line itself. Above the routing form
+— above, because it answers a question asked earlier than "where does this go"
+— a line that resembles an open reservation carries an *Already encumbered?*
+picker listing the candidates, each labelled with what was reserved, when, and
+how far it is from the amount that actually cleared::
+
+    Gaff tape order — $200.00 reserved Aug 20, 2025 · 3.55 over
+
+The ranking behind that list is deliberately **not** symmetric about the line's
+amount, because the two directions mean opposite things. A reservation smaller
+than the charge has failed to cover it and something else will have to; a
+reservation *larger* than the charge is the ordinary shape of the whole feature,
+and scoring it by the raw difference would bury a $1,000 reservation under every
+$80 stray on an $80 line — the exact row the Treasurer opened the picker to find.
+So :func:`~finance.suggestions.encumbrance_match_score` sorts on what a
+reservation fails to cover first, ignores a shortfall small enough that the draw
+will stretch over it anyway, and only then prefers the tightest sufficient
+reservation. Nothing is pre-selected: matching the wrong row files a purchase
+against the wrong budget line *and* marks a live commitment spent, and neither
+is visible once done.
+
+Choosing one draws that line's share out of the reservation. Two things are
+decided there rather than left to the person doing it:
+
+* **The date becomes the accounting date.** ``effective_date`` is filled in
+  only when blank, so an encumbrance otherwise keeps the day it was *written*.
+  A June reservation settling a July charge would sit in FY25 while its own
+  bank line sits in FY26, splitting one purchase across two fiscal years on the
+  ledger, the cash-flow chart and the award balance.
+* **Routing is left alone.** Somebody already decided what the money was for.
+  The invoice arriving is not new information about that.
+
+Drawing down
+^^^^^^^^^^^^
+
+One reservation usually pays for more than one bank line. A single encumbrance
+is written for a job and Workday then delivers it as ten invoice lines weeks
+apart, so the reservation is not consumed by the first line that matches it: it
+is *drawn down*, and :func:`finance.views.ingest.draw_from_encumbrance` decides
+how much each line takes. Three shapes, and the arithmetic has to tell them
+apart because charging the wrong one to a budget line is invisible afterwards:
+
+============================  =========================================================
+Reservation **larger**        The line takes what it needs; the reservation stays open
+                              for the rest.
+Line larger, **not by much**  Within :data:`~finance.suggestions.ENCUMBRANCE_CLOSE_ENOUGH`
+                              the difference is estimate noise, so the reservation
+                              stretches to cover the line and closes.
+Line larger **by a lot**      The reservation covers only what it says. The rest of the
+                              line stays in the queue to be routed on its own —
+                              swallowing the difference would charge the budget line
+                              money nobody reserved.
+============================  =========================================================
+
+The reservation is the row that persists. It keeps its primary key, its author
+and its whole revision history across every line it pays for, and only the line
+that finishes it off takes the row itself. That is what lets ten Workday lines
+map to one encumbrance without the reservation's identity churning underneath
+the Treasurer: it is the same row in the picker on the tenth match as on the
+first, reading down towards zero. ``created_by`` on each drawn slice is the
+person allocating, while the reservation keeps whoever wrote it — two different
+facts, and the ledger has room for both.
+
+Ten lines at once
+^^^^^^^^^^^^^^^^^
+
+Matching ten lines one at a time works, but it is the same repetition the bulk
+bar exists to remove, with a running balance to keep in your head between
+clicks. So the queue's bulk bar carries a second action beside *Reconcile
+selected*: tick the rows, pick the reservation, and *Draw selected* runs the
+drawdown across all of them —
+:func:`finance.views.ingest.bulk_match_encumbrance`.
+
+Oldest line first, because that is the order the money actually left and it
+makes the result reproducible: the same selection and the same reservation
+always produce the same allocation, whichever order the rows were ticked in. It
+stops when the reservation runs out rather than stretching it, and reports all
+three outcomes by name — what was covered, what was covered only partly, and
+which lines it never reached. A batch that half-worked and said only
+"reconciled 9 lines" is how the other half gets found a month later.
+
+It takes no routing fields of its own, unlike the ordinary bulk reconcile: the
+answer to *where does this money go* is written on the reservation already, and
+asking again here would let a bulk action contradict the thing it is drawing
+from.
+
+Reconciling the line the ordinary way instead is the failure this exists to
+prevent: it writes a *second* entry, so the funding request line is charged the
+estimate **and** the actual, and the only symptom is a balance quietly a couple
+of hundred dollars short. Hence the *Maybe encumbered* tag on any row with a
+reservation of roughly the right size open against it.
+
+Nothing here is auto-applied and nothing is pre-selected. Matching the wrong
+row files a purchase against the wrong budget line *and* marks a live
+commitment spent, and neither is visible once done, so
+:func:`finance.suggestions.suggest_encumbrance_matches` returns a ranked
+shortlist and stops there. It ranks on the amount first — the one signal a crew
+member cannot be vague about — then on whether the payee appears in what they
+typed, then on how close the dates are. It filters only what would be *wrong*
+to offer: revenue lines, entries already on a bank line, and reservations dated
+absurdly far from the charge.
+
+The queue's *Undo* is deliberately not offered after a match. Undo deletes a
+row's allocations, which is the right way back out of an allocation typed a
+second ago and the wrong way back out of an encumbrance logged weeks ago — it
+would take the description, the reason and the reservation with it, none of
+which came from the bank line. Correcting a wrong match is an edit on the
+entry.
+
 
 Costs that belong to one event
 ------------------------------
 
-``linked_event`` is the one routing field that belongs to both directions. On
-revenue it means "this is what the event earned"; on an expense it means "this
-cost was incurred for that event". The sign of the amount already separates the
-two readings, so no third field is needed.
+``linked_event`` belongs to both directions, as the fund and the SGA funding
+request do. On revenue it means "this is what the event earned"; on an expense
+it means "this cost was incurred for that event". The sign of the amount
+already separates the two readings, so no second field is needed.
 
 The case that forced it is the sub-rental: LNL hires a console for one show and
 the invoice is that show's cost, passed straight through, sometimes with a
@@ -452,7 +1305,9 @@ last year's closing balance and this year's opening at once. For one account:
 
 **The books start** on ``FinanceSettings.ledger_start_date``. Left blank, that is
 the start of the fiscal year of the earliest imported line. Every line from
-then on is counted.
+then on is counted. Lines from before it are history, imported for the
+forecast: they are in no fund and never in the queue, but they still move the
+cash, so cash worked back from a Workday balance is right on any day.
 
 **Cash** comes from a *Workday balance* (:class:`~finance.models.BalanceCheckpoint`):
 what Workday said the account held at the end of a day. The earliest one
@@ -650,544 +1505,86 @@ previous year has that amount. The split page then lays out one row per show,
 each with its share, which is the same share the event P&L uses. The rows are
 unsaved until the Treasurer checks them and saves.
 
-Entry types
------------
-
-``ParsedTransaction.entry_type`` distinguishes four shapes, because "positive
-means revenue" is not quite true:
-
-===========  ===============================  ================================
-Type         Condition                        Routing
-===========  ===============================  ================================
-Revenue      ``amount > 0``, no refund        Event, or non-event revenue type
-Expense      ``amount < 0``, has a bank line  Fund, spend category, FR line
-Refund       ``amount > 0`` + ``refund_of``   Expense routing (contra-expense)
-Encumbrance  ``amount < 0``, no bank line     Expense routing
-===========  ===============================  ================================
-
-A refund is a *contra-expense*, not revenue. Because expenses are stored
-negative and refunds positive, a return credit restores the budget line it came
-out of purely by arithmetic — no special-casing in the burndown code.
-
-An encumbrance is money reserved for a purchase that has not happened yet, and
-it read as *Expense* in the ledger's Type column until it got a word of its own.
-That is not a synonym: no money has left the account, there is no bank line
-behind it, and it stops being an encumbrance when the real charge is imported.
-The one column whose entire job is telling rows apart was showing the two as
-identical. Only the label is new — an encumbrance still carries expense routing,
-still answers yes to ``is_expense``, and is still counted as spending
-everywhere it was before.
-
-Closing an encumbrance
-----------------------
-
-An encumbrance stops being one when the real charge is imported, but nothing
-makes that happen by itself: the reservation was written before Workday had
-ever heard of the purchase, so there is no shared identifier and there cannot
-be one. The two have to be matched by a person.
-
-The ingestion queue offers that on the bank line itself. Above the routing form
-— above, because it answers a question asked earlier than "where does this go"
-— a line that resembles an open reservation carries an *Already encumbered?*
-picker listing the candidates, each labelled with what was reserved, when, and
-how far it is from the amount that actually cleared::
-
-    Gaff tape order — $200.00 reserved Aug 20, 2025 · 3.55 over
-
-The ranking behind that list is deliberately **not** symmetric about the line's
-amount, because the two directions mean opposite things. A reservation smaller
-than the charge has failed to cover it and something else will have to; a
-reservation *larger* than the charge is the ordinary shape of the whole feature,
-and scoring it by the raw difference would bury a $1,000 reservation under every
-$80 stray on an $80 line — the exact row the Treasurer opened the picker to find.
-So :func:`~finance.suggestions.encumbrance_match_score` sorts on what a
-reservation fails to cover first, ignores a shortfall small enough that the draw
-will stretch over it anyway, and only then prefers the tightest sufficient
-reservation. Nothing is pre-selected: matching the wrong row files a purchase
-against the wrong budget line *and* marks a live commitment spent, and neither
-is visible once done.
-
-Choosing one draws that line's share out of the reservation. Two things are
-decided there rather than left to the person doing it:
-
-* **The date becomes the accounting date.** ``effective_date`` is filled in
-  only when blank, so an encumbrance otherwise keeps the day it was *written*.
-  A June reservation settling a July charge would sit in FY25 while its own
-  bank line sits in FY26, splitting one purchase across two fiscal years on the
-  ledger, the cash-flow chart and the award balance.
-* **Routing is left alone.** Somebody already decided what the money was for.
-  The invoice arriving is not new information about that.
-
-Drawing down
-~~~~~~~~~~~~
-
-One reservation usually pays for more than one bank line. A single encumbrance
-is written for a job and Workday then delivers it as ten invoice lines weeks
-apart, so the reservation is not consumed by the first line that matches it: it
-is *drawn down*, and :func:`finance.views.ingest.draw_from_encumbrance` decides
-how much each line takes. Three shapes, and the arithmetic has to tell them
-apart because charging the wrong one to a budget line is invisible afterwards:
-
-============================  =========================================================
-Reservation **larger**        The line takes what it needs; the reservation stays open
-                              for the rest.
-Line larger, **not by much**  Within :data:`~finance.suggestions.ENCUMBRANCE_CLOSE_ENOUGH`
-                              the difference is estimate noise, so the reservation
-                              stretches to cover the line and closes.
-Line larger **by a lot**      The reservation covers only what it says. The rest of the
-                              line stays in the queue to be routed on its own —
-                              swallowing the difference would charge the budget line
-                              money nobody reserved.
-============================  =========================================================
-
-The reservation is the row that persists. It keeps its primary key, its author
-and its whole revision history across every line it pays for, and only the line
-that finishes it off takes the row itself. That is what lets ten Workday lines
-map to one encumbrance without the reservation's identity churning underneath
-the Treasurer: it is the same row in the picker on the tenth match as on the
-first, reading down towards zero. ``created_by`` on each drawn slice is the
-person allocating, while the reservation keeps whoever wrote it — two different
-facts, and the ledger has room for both.
-
-Ten lines at once
-~~~~~~~~~~~~~~~~~
-
-Matching ten lines one at a time works, but it is the same repetition the bulk
-bar exists to remove, with a running balance to keep in your head between
-clicks. So the queue's bulk bar carries a second action beside *Reconcile
-selected*: tick the rows, pick the reservation, and *Draw selected* runs the
-drawdown across all of them —
-:func:`finance.views.ingest.bulk_match_encumbrance`.
-
-Oldest line first, because that is the order the money actually left and it
-makes the result reproducible: the same selection and the same reservation
-always produce the same allocation, whichever order the rows were ticked in. It
-stops when the reservation runs out rather than stretching it, and reports all
-three outcomes by name — what was covered, what was covered only partly, and
-which lines it never reached. A batch that half-worked and said only
-"reconciled 9 lines" is how the other half gets found a month later.
-
-It takes no routing fields of its own, unlike the ordinary bulk reconcile: the
-answer to *where does this money go* is written on the reservation already, and
-asking again here would let a bulk action contradict the thing it is drawing
-from.
-
-Reconciling the line the ordinary way instead is the failure this exists to
-prevent: it writes a *second* entry, so the funding request line is charged the
-estimate **and** the actual, and the only symptom is a balance quietly a couple
-of hundred dollars short. Hence the *Maybe encumbered* tag on any row with a
-reservation of roughly the right size open against it.
-
-Nothing here is auto-applied and nothing is pre-selected. Matching the wrong
-row files a purchase against the wrong budget line *and* marks a live
-commitment spent, and neither is visible once done, so
-:func:`finance.suggestions.suggest_encumbrance_matches` returns a ranked
-shortlist and stops there. It ranks on the amount first — the one signal a crew
-member cannot be vague about — then on whether the payee appears in what they
-typed, then on how close the dates are. It filters only what would be *wrong*
-to offer: revenue lines, entries already on a bank line, and reservations dated
-absurdly far from the charge.
-
-The queue's *Undo* is deliberately not offered after a match. Undo deletes a
-row's allocations, which is the right way back out of an allocation typed a
-second ago and the wrong way back out of an encumbrance logged weeks ago — it
-would take the description, the reason and the reservation with it, none of
-which came from the bank line. Correcting a wrong match is an edit on the
-entry.
-
-
-Guard rails
------------
-
-The subledger is meant to be hard to get wrong, not merely capable of being
-right. Three techniques, in order of preference:
-
-**Remove the option.** The strongest guard is a field that is not on screen.
-A revenue form has no ``fund_source``, ``lnl_spend_category`` or funding
-request picker; an expense form has no ``non_event_revenue_type``; and the
-funding request picker is hidden even on an expense unless the chosen fund
-draws on one. Nothing to mis-click. The fields are *deleted* in
-:meth:`finance.forms.BaseAllocationForm._apply_direction_rules` rather than
-validated away, so a revenue form is structurally incapable of submitting
-expense routing even with the client-side script bypassed.
-
-``linked_event`` is the one field that survives on both sides, because it
-means something on both -- see *Costs that belong to one event* above. It is
-relabelled rather than removed, so the expense form asks "Incurred for
-event" and the revenue form asks "Linked event".
-
-**Offer the likely, gate the unlikely.** Where something is legal but usually a
-mistake, the usual case is the default and the exception costs one deliberate
-tick. Charging FY25 spending to an FY26 funding request is the worked example:
-the picker lists this year's requests, and *"Charge a different fiscal year"*
-widens it. Submitting another year's line without that tick is refused by name
-— "This is FY2026 spending but FY25 Grant is an FY2025 request." The same
-thinking narrows the refund target list to the current year.
-
-**Put the number where the decision is.** Every funding request line reads
-``FY2026 · F.26.6 Fixtures — $340.00 left`` in the dropdown, so the year and
-the remaining balance are in front of you at the moment you choose, rather than
-on a page you would have to go and look at.
-
-**Match what is written down, do not guess at it.** Workday memos routinely
-quote the SGA request a purchase was approved under — "Truman Show Film Rights
-(F.26.6)", "Rights for Apollo 13 (F.26.86)". That is the Treasurer's own
-reference, recorded at the time, so
-:func:`finance.suggestions.suggest_funding_request` matches it against
-``FundingRequest.reference`` and offers both the fund and the request line at
-high confidence. On the FY26 export, 18 lines quote a request number.
-
-The funding request line is only offered when the request has exactly one:
-nothing in "(F.26.86)" says which of several lines a purchase belongs to, and
-an arbitrary pick would be worse than no pick.
-
-.. note::
-
-   The suggestion table used to ship with twelve "supplier contains barbizon →
-   Consumables" rules and seven "memo contains tape → Consumables" ones. Those
-   were guesses about what a vendor usually sells, and they have been removed —
-   a suggestion that must be read carefully is not saving anyone anything.
-
-   They cost nothing to lose: every expense line on the FY26 export gets its
-   category from Workday's own accounting codes. The ``supplier`` and ``memo``
-   match types remain available in the admin for a rule someone genuinely wants.
-
-**Never ask twice for something already recorded.** Choosing a funding request
-line fills in the spend category and project that line was awarded for — the
-award already said what the money was for, so re-typing it per transaction is
-the double data entry this module exists to remove. Only a box the page filled
-in itself is ever overwritten: a value chosen by hand survives switching
-between lines. The pairing is carried on the ``<option>`` by
-:class:`finance.forms.FRLineSelect`.
-
-The queue posts one row at a time over XHR rather than reloading. Reloading
-discarded whatever was typed into the *other* rows on screen, and the queue is
-designed to be worked a screenful at a time. Errors come back keyed by field so
-they land beside the input that caused them. Without JavaScript the same forms
-submit, redirect and report through the messages framework exactly as before.
-
-Rules live at the layer that cannot be bypassed, and are then *repeated* higher
-up for the error message. The fund/funding-request pairing is enforced in
-``ParsedTransaction.clean()`` — so bulk actions, the admin and the shell all
-obey it — and again in ``BaseAllocationForm`` so the message lands on the field
-you have to change. Which fund needs a funding request line is
-``FundSource.requires_funding_request``, a flag on the row, so it survives SGA
-renaming things.
-
-Bulk actions get particular attention, being the one place a single click can
-be wrong hundreds of times. The ledger's bar refuses to offer a fund that would
-need a per-entry FR line, skips revenue rows when asked to apply expense
-routing (a database constraint would otherwise turn the whole action into a
-500), leaves entries already charged to a funding request alone, and validates
-every row individually before writing — anything the rest of the app would have
-rejected is reported and left untouched.
-
-Lookups and guesses
--------------------
-
-Reconciling should be confirming rather than typing, so the reconciliation form
-arrives with the boxes already answered. What may be answered, and what may only
-be offered, is decided by where the answer came from.
-
-A **lookup** is something the export already states, read through a table a
-Treasurer maintains — the ledger account, Workday's own Spend Category, a request
-number written into the memo, a project code, the Fund worktag. There is no
-opinion in it, so the form selects it and captions the box with the column it
-came from. An **inference** is our own reading of the line — a word noticed in
-some prose, a resemblance somebody might not agree with. Those stay a chip to
-click and never fill anything in, because a pre-selected dropdown gets accepted
-without being read, and that is precisely the wrong thing to do with a guess.
-
-Linking an event moved from the second category to the first, and the move is
-worth understanding because it is the clearest example of the distinction.
-
-There used to be a scorer that ranked candidate events by how close they ran to
-the accounting date, whether the client worktag matched, and whether the billed
-total came out the same, then offered its best five under the box. Every one of
-those was a genuine guess, and five guesses is not a shortlist — it is a puzzle
-handed to somebody who was trying to file a deposit.
-
-What replaced it reads the memo. LNL bills event work through Internal Service
-Deliveries, and those memos are written to a house format that names the event
-outright::
-
-    Lens and Lights services for Pan Asian Festival D26
-    Lens and Lights Services for Live at the CC Window (Apr 27) D26
-    LNL Services for C26 CS Social Movies
-
-That is not evidence *about* which event the money is for. It is the person who
-raised the invoice writing down which event the money is for, at the time, from
-the same lnldb the reconciliation form is reading. Matching it is a lookup in
-exactly the sense a funding request number quoted in an expense memo is, so it
-fills the box in and captions it.
-
-:func:`finance.suggestions.event_name_from_transaction` handles both shapes seen
-in practice — the house format above, and the event name alone with just a term
-code ("BRASA Carnival C26"). The bare form is only read off a document Workday
-itself calls an Internal Service Delivery, because there is nothing in the text
-to separate it from any other short memo.
-
-The match is **exact**, case-insensitively, and nothing fuzzy is attempted. A
-near-miss would attribute several thousand dollars of revenue to the wrong show,
-and it would do it in a box already showing an answer — the one box nobody
-re-reads. Where the same event name has run in several years, the one nearest
-the accounting date wins, since an ISD is raised within weeks of the show, and
-the caption names the event's date so the year can be checked at a glance. On
-the FY26 export this fills in every one of the 58 ISD lines that names an
-event, and leaves the journal entries and credit memos alone.
-
-The distinction is a field on the rule, not a convention:
-``SuggestionRule.match_mode`` is one of *is exactly*, *starts with*, *contains*
-or *contains the whole word*, and the first two count as lookups. It used to be
-implied by the column — ledger accounts matched their start, everything else
-matched anywhere — which left an exact account code and a keyword spotted in
-prose indistinguishable to whatever consumed the result.
-
-Ordering runs from the finest evidence to the coarsest:
-
-1. **Workday's own Spend Category, matched exactly.** The finest code in the
-   export. "Printing", "Supplies - Office" and "Supplies - Medical" all sit
-   under the ledger account ``71100:Supplies`` and are not the same thing.
-2. **The ledger account, matched on its number.** Coarser, but still a code WPI
-   assigned, so it covers Workday categories nobody has mapped yet.
-3. **Anything matched by wording**, which is a guess and stays a chip.
-
-Eleven fiscal years of 226-AG exports contain 2,644 lines, 17 ledger accounts
-and 38 distinct Workday spend categories, and every expense line carries one.
-The seeded table is therefore not an approximation of the chart of accounts — it
-*is* the chart of accounts. Where LNL has no category meaning the same thing
-(Rent - Equipment, Travel, Subscriptions & Memberships) no exact rule is seeded
-on purpose: the ledger-account rule catches those at *Other*, and one admin row
-promotes any of them to a category of their own.
-
-The measured effect on the FY26 export, 253 expense lines:
-
-===============================  =========  ==========================================
-Field                            Filled in  From
-===============================  =========  ==========================================
-LNL spend category               253        203 Workday spend category, 50 ledger account
-Fund source                      16         a funding request number in the memo
-Project tag                      7          a project code appearing verbatim
-===============================  =========  ==========================================
-
-Fund source is filled in on only the 16 lines whose memo quotes a funding
-request number, and that is deliberate — see below.
-
-After an import, any Workday spend category that no rule covers is named in a
-warning with a line count, because each one is a question the Treasurer would
-otherwise answer by hand on every line carrying it, forever.
-
-Fund codes are admin data
--------------------------
-
-Which Workday Fund code means which LNL bucket was an ``if '810' in fund`` in
-``suggestions.py``. It is WPI's numbering and LNL's bookkeeping convention, so
-it is now ``FundSource.workday_fund_codes`` — a comma-separated list on each
-fund. A fund with no codes configured is never chosen for you, which is how an
-SGA award stays identified by its number rather than by a fund code.
-
-**810-FD is mapped to nothing at all**, and that is the important part. It is
-the agency fund the whole 226-AG account sits in, so every LNL line in eleven
-years of exports carries it, whoever actually paid. Standing SGA budget,
-out-of-cycle SGA award and legacy money are identical on the worktag. The
-original ``if '810' in fund`` read it as "SGA budget" and the first pass at this
-table copied that across unexamined, which meant the Fund source box arrived
-pre-filled and high-confidence on nearly every line, on no evidence. An exact
-code match fills the form in rather than offering a chip, so being wrong there
-is expensive: a filled box is the one nobody re-reads. It is now blank on those
-lines, which is what "we do not know" should look like.
-
-Only the memo and, from FY27, the *Tracking* worktag can tell the buckets
-apart. When nothing on a line does, the queue fills in the account's own money
-and says so in those words; see *Money coming in names a fund* above for the
-full order.
-
-When a memo quotes a request number lnldb has never heard of, the fund is still
-filled in -- every SGA number is a funding request -- but the line is flagged
-*Unknown request*, or *A.27.16 or F.27.16?* when the same number exists under
-another body's letter. Either the award has not been entered yet or the memo is
-mistaken, and both are worth fixing before the line is filed anywhere.
-
-How a queue row is laid out
----------------------------
-
-The queue is worked twenty-five rows at a time, so what appears on each row is
-the whole usability question. Three rules, all of them enforced by structure
-rather than by remembering:
-
-**One field component, used everywhere.** Label, control, and at most one
-caption underneath. It lives in ``finance/_queue_field.html`` and each field is
-one ``{% include %}``. Writing it out per field is what produced four
-near-identical twelve-line blocks that had already drifted apart -- different
-label markup, captions beside the control on some fields and under it on
-others, and inline ``style="margin-right:10px"`` on every wrapper.
-
-**Fixed control widths, captions underneath.** The same field sits in the same
-place on every row, and a row is the same height whether or not it has anything
-to say, so the eye can run down a column instead of re-finding it each time. A
-caption beside a control pushes the next field along by however many characters
-the reason happened to be.
-
-**Rarely-used fields fold away.** Fund and Spend Category are needed on every
-expense; Project appears on seven of 253 lines in a year, a sub-rental is rarer,
-and the partition tick box and the cross-year opt-in are rarer still. Those sit
-behind *More*, so an ordinary row reads as two boxes and a button. The view
-unfolds it per row whenever that line has something in there worth seeing --
-a project we found, a partition that is not the ordinary one, a crossing that
-has to be explained -- and ``queue.js`` unfolds it if a validation error lands
-on a field inside, since an invisible error is worse than the clutter the fold
-removes.
-
-Two smaller things follow the same logic. Every widget gets ``form-control`` from
-``BaseAllocationForm._style_widgets()``, because Django renders a bare
-``<select>``, crispy adds the class itself and django-ajax-selects does its own
-thing, so one row could look like three different form libraries depending on
-the page. And the import drop zone is collapsed behind a button: importing
-happens once a month, reconciling is what the page is for, and the drop zone was
-the first thing between the Treasurer and the work.
-
-An answered box never also nags. A field the export filled in gets a quiet
-dashed caption naming the column it came from; a field we can only guess at gets
-a coloured chip that fills it in when clicked. Never both -- see *Lookups and
-guesses* above for which is which.
+Dashboard metrics
+-----------------
+
+:mod:`finance.calculators` backs the dashboard widgets. Every function takes the
+same ``(fiscal_year, is_projection)`` pair the global filter bar produces, so
+each widget answers the same question about the same slice of the ledger.
+
+The page reads from the top: the year's headline figures (revenue, expenses,
+the net and what is still in the queue); money in against money out by month;
+spending by category; departments against student organizations; the service
+mix; revenue by source; event billing kept; revenue by client; project
+spending; what each fund holds today; where LNL's own money is heading; what is
+owed to LNL; the events that cost more than they brought in; and the funding
+request burndown. Three of those are about now, whatever year is chosen: what
+each fund holds (:mod:`finance.balances`), where the money is heading
+(:func:`finance.forecast.project`, see *Forecasting*), and what is owed.
+
+A few deliberate choices are worth knowing when reading the numbers:
+
+**Money in vs money out** sums revenue and expenses separately per month rather
+than netting them, so a month with heavy activity in both directions doesn't
+flatten to nothing. Months with no activity still appear, as gaps are
+themselves informative.
+
+**Client type** is never entered by hand — it is inherited from each event's
+billing organisation. Non-event revenue (SGA's payments, alumni gifts) has no
+client and is excluded rather than silently bucketed as "Unknown".
+
+**Revenue by source** is event billing against each kind of non-event income.
+Money SGA took back is netted off the reimbursement source, with a note saying
+how much, because it undoes income rather than being spending.
+
+**Event billing, kept** sets every cost filed to the pass-through category
+against event billing. A $26,000 video wall billed to a client goes straight
+back out to the rental house, and counting it as income makes LNL look like a
+much bigger business than it is. Pass-through costs with no event linked still
+count, since a missing link should not make a cost vanish from the figure. A
+hire SGA paid for, on a funding request, does not: no billing paid for it.
+
+**New and returning clients** asks the events app, not the ledger, whether LNL
+worked a show for each paying client in an earlier fiscal year, because the
+events app goes back much further. It needs a fiscal year to be selected.
+
+**Owed to LNL** is today's figure whatever year is selected: what SGA owes on
+funding requests, and what clients owe on bills sent since the books started.
 
 .. warning::
 
-   A fold that only script can open is a trap rather than a tidy-up: anything
-   that stops ``queue.js`` running makes those fields unreachable instead of
-   merely hidden. So the fold is a class the server renders, script toggles, and
-   a ``<noscript>`` rule in ``base_finance.html`` undoes -- without JavaScript
-   every field is simply on screen, as it was before the fold existed.
+   ``810-FD`` appears in two unrelated places, and conflating them is a
+   mistake this module has already made once.
 
-   This is not hypothetical. The fold appeared broken the first time it shipped,
-   because every finance asset was cache-busted with ``?v={{ GIT_RELEASE }}`` --
-   the git SHA, which does not change between commits. Browsers kept serving the
-   previous ``queue.js``, and a script that never arrives looks exactly like a
-   button that does nothing. :func:`finance.templatetags.finance_extras.asset`
-   now stamps the file's own modification time in development, and the release
-   SHA in production, where files really do only change when a deploy does.
+   Here it is read off **the client's** billing organisation: an org that
+   bills through fund 810 is a student organisation rather than a university
+   department. That inference is sound, and the fund number is
+   :attr:`~finance.models.FinanceSettings.student_org_workday_fund` rather
+   than a constant, so it can be changed when Workday renumbers.
 
-Two-step import
----------------
+   It says **nothing whatever about where LNL's own money came from.**
+   810-FD is the agency fund the entire 226-AG account sits in, so every
+   line LNL has ever spent carries it, whoever actually paid. Reading it as
+   "this was funded by SGA" is wrong, and is precisely what the mapping
+   described in *Fund codes are admin data* was removed for doing.
 
-Choosing a file writes nothing. :func:`finance.views.ingest.upload` parses it
-with ``dry_run``, stages the bytes in the file store and renders a confirmation
-naming the count: *you are about to add 253 unreconciled lines*.
-:func:`finance.views.ingest.upload_confirm` re-reads the same bytes and does the
-real insert.
+**Service mix** splits a show's revenue across its service categories in
+proportion to their list prices, so a lighting-and-sound show contributes to
+both instead of being filed under whichever service happens to sort first.
+List price is used rather than ``ServiceInstance.cost`` because only the ratio
+matters and the pricelist lookup costs a query per instance. Shows with no
+recorded services are grouped as "Unspecified" rather than dropped, so the
+parts always sum to total linked revenue.
 
-The count is the whole point. An import is the one action on the page that is
-awkward to walk back -- every line it creates is work somebody now has to do,
-and undoing it means finding and deleting them by hand. It runs once a month
-against a file exported by a system nobody here controls, and the two ways it
-goes wrong are picking last month's export and picking a file that is not an
-export at all. Both parse perfectly, read correctly, and are obvious the moment
-a number appears -- and invisible before it.
+**Revenue rows** are resolved once per request and shared by the client,
+client-type and service widgets. The re-fetch through the polymorphic manager
+in :func:`finance.calculators.revenue_rows` is deliberate: ``select_related``
+across a polymorphic foreign key yields base ``BaseEvent`` instances, which
+would hide ``Event2019.workday_fund`` and misclassify every client.
 
-Staging exists because the file is gone by the time the question is answered: a
-browser will not re-submit an ``<input type=file>`` it never kept. Staged
-uploads live under ``finance/staged_imports/`` with unguessable names, and the
-token is held in the session rather than in a form field, so it cannot be
-replayed by anyone else. They are consumed on confirmation, deleted on cancel,
-and purged after six hours by the next upload -- a confirmation left open
-overnight should not quietly import itself in the morning.
-
-Two cases skip the question, because it would be asking twice: *Preview only*,
-which is already a request to look and not touch, and a file with no new lines,
-where the button does nothing either way.
-
-Reconciling in bulk
--------------------
-
-The per-row form is the right tool when the rows differ. When they do not — a
-dozen supply orders on one export, every one of them Consumables out of the
-standing budget — it asks the same two questions a dozen times and gets the
-same two answers a dozen times. :func:`finance.views.ingest.bulk_reconcile` is
-the ledger's bulk bar pointed at the queue: select rows, answer once, apply.
-
-Each selected line gets one slice for whatever is still unallocated on it,
-which is what the single-row form does, so a part-allocated line is finished
-off rather than double-counted. Every row is then validated on its own and the
-failures are named — a bulk action must never be the thing that writes a row
-the rest of the app would have rejected.
-
-Three kinds of row are reported and left alone rather than forced:
-
-* **revenue**, because "the same settings" for money coming in means "the same
-  event", which is a different question with a different picker and is seldom
-  true of a batch. The database refuses expense routing on revenue anyway, so
-  including them would take the whole action down;
-* **lines already fully allocated**, which have nothing left to slice;
-* **anything the chosen settings would invalidate**, named individually.
-
-Funds that draw on a specific funding request are not offered at all, for the
-reason the ledger's bulk bar leaves them out: the FR line cannot be chosen in
-bulk, so every row would come out invalid. Those are reconciled one at a time,
-where the line can be named.
-
-The checkbox appears on expense rows only. A revenue row has nothing to offer
-this bar, and an empty slot keeps the amounts in their column.
-
-Undoing a reconciliation
-------------------------
-
-The moment you notice a line was filed wrong is the moment right after you
-filed it. Until :func:`finance.views.ingest.unreconcile` existed, the way back
-was to leave the queue, find the line in the ledger, open each slice and delete
-it through a confirmation page -- five navigations to take back one click, which
-in practice meant the wrong answer stayed.
-
-Undo deletes every slice of one bank line, settled or not; settling happens in
-the same click as reconciling whenever the line balances, so an undo that
-refused to touch settled slices could never undo anything. The Workday row
-itself is untouched -- it is immutable bank truth, and only what LNL decided
-*about* it is being withdrawn.
-
-One case is refused rather than forced: a slice with a refund filed against it
-is load-bearing, since the refund exists to reverse *that* purchase, and the
-database will not orphan it. The queue says so instead of returning a 500.
-
-In the queue the undo is offered in the row that was just allocated, for twelve
-seconds, before the row is removed. The row stays in the DOM for exactly that
-reason -- undoing has to put the Treasurer's own answers back in front of them,
-and the only copy of those answers is the form still sitting in that row. The
-transaction detail page carries the same action without a time limit, for when
-it is noticed later.
-
-What an entry has to have
--------------------------
-
-On the entry page an expense must name its fund and its spend category. Both
-are structural: the reports group by them, so a blank makes the line
-uncountable.
-
-The audit explanation and the receipt are asked for and not insisted on. They
-were mandatory, and that made the page unusable for its commonest job -- fixing
-a spend category chosen wrong three weeks ago meant first producing a receipt
-for somebody else's purchase, or inventing a sentence about it. A line missing
-its paperwork is a line to chase, not a line to lock; the entry page says
-plainly when a receipt is absent, and the ledger has a Receipt column to sort
-by. The encumbrance form still asks what the money is for at the point of
-reserving it, which is the one moment somebody actually knows.
-
-Cents, and only cents
----------------------
-
-Every monetary figure crosses back into whole cents through
-:func:`finance.models.money` at the point it leaves the database.
-
-This is not belt-and-braces. Everything here is stored as
-``DecimalField(decimal_places=2)``, so it is tempting to assume what comes back
-is already cents -- but SQLite quantizes a plain column read and *not* an
-aggregate. ``Sum('amount')`` therefore returns fifteen significant digits and
-the float noise with them: ``Decimal('-2808.24000000000')`` for a column that
-only ever held ``-2808.24``. Subtracting two of those gives ``Decimal('0E-11')``,
-which is zero, prints as ``0E-11``, and reads to a Treasurer as a bug.
-
-Rounding at the display layer would not have fixed it, because the raw value was
-never only on screen: it reached JSON payloads, form initial data and the text
-of validation errors. So the quantize happens where the number is read, not
-where it is printed.
+**Bar widths** on the client and project panels scale to the largest value so
+the leader fills its track; the true share of the total is shown as the
+percentage label beside it.
 
 Reports to print and hand over
 ------------------------------
@@ -1259,7 +1656,8 @@ characters.
 
 **The ledger** downloads as well. ``?format=csv`` on the ledger gives every row
 its filters select -- not only the page on screen -- with every column, whether
-it is showing or not.
+it is showing or not. The Reports tab links to it, and to *History* (see
+*Forecasting*), below the reports.
 
 What the work was worth
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -1481,77 +1879,6 @@ Spending SGA paid for through funding requests is included, because with a
 budget that is what the budget pays for. The equipment categories are one line:
 a line read from Workday cannot tell a capital purchase from the rest.
 
-Dashboard metrics
------------------
-
-:mod:`finance.calculators` backs the dashboard widgets. Every function takes the
-same ``(fiscal_year, is_projection)`` pair the global filter bar produces, so
-each widget answers the same question about the same slice of the ledger.
-
-A few deliberate choices are worth knowing when reading the numbers:
-
-**Money in vs money out** sums revenue and expenses separately per month rather
-than netting them, so a month with heavy activity in both directions doesn't
-flatten to nothing. Months with no activity still appear, as gaps are
-themselves informative.
-
-**Client type** is never entered by hand — it is inherited from each event's
-billing organisation. Non-event revenue (SGA's payments, alumni gifts) has no
-client and is excluded rather than silently bucketed as "Unknown".
-
-**Revenue by source** is event billing against each kind of non-event income.
-Money SGA took back is netted off the reimbursement source, with a note saying
-how much, because it undoes income rather than being spending.
-
-**Event billing, kept** sets every cost filed to the pass-through category
-against event billing. A $26,000 video wall billed to a client goes straight
-back out to the rental house, and counting it as income makes LNL look like a
-much bigger business than it is. Pass-through costs with no event linked still
-count, since a missing link should not make a cost vanish from the figure. A
-hire SGA paid for, on a funding request, does not: no billing paid for it.
-
-**New and returning clients** asks the events app, not the ledger, whether LNL
-worked a show for each paying client in an earlier fiscal year, because the
-events app goes back much further. It needs a fiscal year to be selected.
-
-**Owed to LNL** is today's figure whatever year is selected: what SGA owes on
-funding requests, and what clients owe on bills sent since the books started.
-
-.. warning::
-
-   ``810-FD`` appears in two unrelated places, and conflating them is a
-   mistake this module has already made once.
-
-   Here it is read off **the client's** billing organisation: an org that
-   bills through fund 810 is a student organisation rather than a university
-   department. That inference is sound, and the fund number is
-   :attr:`~finance.models.FinanceSettings.student_org_workday_fund` rather
-   than a constant, so it can be changed when Workday renumbers.
-
-   It says **nothing whatever about where LNL's own money came from.**
-   810-FD is the agency fund the entire 226-AG account sits in, so every
-   line LNL has ever spent carries it, whoever actually paid. Reading it as
-   "this was funded by SGA" is wrong, and is precisely what the mapping
-   described in *Fund codes are admin data* was removed for doing.
-
-**Service mix** splits a show's revenue across its service categories in
-proportion to their list prices, so a lighting-and-sound show contributes to
-both instead of being filed under whichever service happens to sort first.
-List price is used rather than ``ServiceInstance.cost`` because only the ratio
-matters and the pricelist lookup costs a query per instance. Shows with no
-recorded services are grouped as "Unspecified" rather than dropped, so the
-parts always sum to total linked revenue.
-
-**Revenue rows** are resolved once per request and shared by the client,
-client-type and service widgets. The re-fetch through the polymorphic manager
-in :func:`finance.calculators.revenue_rows` is deliberate: ``select_related``
-across a polymorphic foreign key yields base ``BaseEvent`` instances, which
-would hide ``Event2019.workday_fund`` and misclassify every client.
-
-**Bar widths** on the client and project panels scale to the largest value so
-the leader fills its track; the true share of the total is shown as the
-percentage label beside it.
-
 What is editable without a deploy
 ---------------------------------
 
@@ -1592,7 +1919,12 @@ Table                Holds
                      relabels one
 ===================  ==========================================================
 
-Each row has a ``slug`` alongside its name. URL filters use the slug
+Two more tables hold the Treasurer's own input rather than a vocabulary, and
+are edited on the *Forecast* tab: ``PlannedPurchase``, what LNL means to buy,
+and ``HistoryOverride``, a correction to how a line from before the books start
+is read. Both are in the admin too, for looking at.
+
+Each vocabulary row has a ``slug`` alongside its name. URL filters use the slug
 (``?category=repairs``), so links and bookmarks survive a rename or a reorder;
 changing a *slug* is the breaking edit, and the admin says so on the field.
 
@@ -1641,6 +1973,198 @@ What stays in code, and why:
 ``MEMO_SEPARATOR``, the date formats, the structural column lists
     Parser internals rather than organisational policy.
 
+Permissions
+-----------
+
+``view_subledger``
+    Read-only access to every page, including the forecast, the history and
+    every report. General members get this.
+``view_fundingrequest``
+    Read-only access to the funding request list and detail pages. Django
+    creates this one automatically; it is granted alongside ``view_subledger``,
+    since those pages are part of the same read-only tour.
+``view_subledger_receipts``
+    See the receipt attached to an entry. Separate from ``view_subledger``
+    because a receipt is a scan of somebody's purchase, which is a narrower
+    thing to hand out than a ledger row.
+``edit_subledger``
+    Create and edit allocation slices, run bulk actions, log encumbrances,
+    plan purchases and correct how a line of history is read.
+    *Mark bill paid* also needs the events app's ``bill_event``, which
+    Officers hold.
+``settle_subledger``
+    Mark reconciled transactions as Settled.
+``import_workdaytransaction``
+    Upload Workday journal exports.
+``manage_projecttag`` / ``manage_fundingrequest``
+    Maintain the project tree and funding requests.
+``close_fiscalyear``
+    Close a finished fiscal year, which records its balances and makes its
+    year-end transfers, and reopen one. Recording Workday balances and
+    transfers between funds needs only ``edit_subledger``.
+
+Who holds them
+~~~~~~~~~~~~~~
+
+Declaring a permission on a model creates the row; it does not put it in
+anybody's hands. The grants live in ``fixtures/groups.json``, which is what
+``manage.py loaddata fixtures/*.json`` applies when a database is built:
+
+===================  =========================================================
+Group                Finance permissions
+===================  =========================================================
+Officer              All nine. The Treasurer is an Officer, and this is the
+                     Treasurer's tool.
+Active               ``view_subledger`` and ``view_fundingrequest`` only —
+                     read-only, no receipts.
+===================  =========================================================
+
+Adding a permission to a model is therefore only half of adding it: until a
+group holds it, the only account that can exercise it is a superuser. That is
+worth stating because it fails silently and no view test can catch it — view
+tests grant themselves whatever they need. ``finance/tests/test_rollups.py``
+loads the fixture and asserts the Officer grant, which is the check that does
+catch it.
+
+Looking after the app
+---------------------
+
+For the webmaster: setting the app up, changing it safely, and what is known to
+be unfinished.
+
+Setting up a new install
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. ``python manage.py migrate`` creates the tables and seeds the reference data
+   -- spend categories, funds, revenue sources, the two account codes and the
+   suggestion rules. All of it can be edited in the admin afterwards.
+2. Load ``fixtures/groups.json`` with the other fixtures. It is what gives
+   Officers the finance permissions; see *Who holds them*.
+3. In the admin, open *Financial Subledger* > *Finance Configuration* and check
+   the month the fiscal year starts, the student organization fund (810), the
+   minimum reserve, and the departments' share of billing before FY27 if
+   anyone knows it.
+4. **Import the current fiscal year first.** While *Books start on* is blank,
+   the books start on the first day of the fiscal year of the earliest line on
+   file, so on an empty install the first export decides it. Importing FY19
+   first would start the books in FY19 and put six years of lines in the
+   queue. Either import the current year first, or set *Books start on* before
+   importing anything.
+5. On the *Balances* tab, record a Workday balance for each account -- today's
+   is enough -- and, if an account held SGA money when the books started, its
+   opening split.
+6. Import older exports for the forecast to learn from. They arrive as history;
+   see *History*.
+
+Working on a copy
+~~~~~~~~~~~~~~~~~
+
+The database is the Treasurer's real work, and an import or a migration is
+awkward to take back. Try anything new against a copy. ``DATABASE_URL`` points
+the app at another database, and on a development machine the default is
+``runtime/lnldb.db``::
+
+    cp runtime/lnldb.db /tmp/lnldb-copy.db
+    DATABASE_URL=sqlite:////tmp/lnldb-copy.db python manage.py migrate
+    DATABASE_URL=sqlite:////tmp/lnldb-copy.db python manage.py runserver
+
+Back the real database up before migrating it.
+
+Changing reference data
+~~~~~~~~~~~~~~~~~~~~~~~
+
+A Treasurer changes the vocabularies in the admin; see *What is editable without
+a deploy*. Changing what an install starts with is a developer's job, and it is
+two jobs, because ``0002_seed_reference_data`` has already run on every existing
+install and Django never runs a migration twice:
+
+1. Edit the seed, so a new database starts right.
+2. Write a new data migration that brings an existing database to the same
+   place. Rename what survives; create what is new; move entries and funding
+   request lines off a retired row before deleting it, since the foreign keys
+   are ``PROTECT``; and repoint any suggestion rule the change contradicts.
+
+**A green test run says nothing about whether such a change reached a real
+install**, because the suite builds a fresh database from the seed every time.
+The seeding migrations change only what still matches what they seeded, so a
+Treasurer's own edits survive: ``0006_revenue_sources`` and
+``0007_sga_budget_source_name`` show the pattern. ``0004_current_spend_categories``
+overwrites on purpose, because the Treasurer asked for a new list, and its
+docstring explains how it keeps that safe.
+
+Adding to the app
+~~~~~~~~~~~~~~~~~
+
+**A setting read on a hot path** is cached in module state. Register its model
+in :meth:`finance.apps.FinanceConfig.ready` or an admin edit will appear to do
+nothing until the next restart.
+
+**A permission** does nothing until a group holds it. Add it to the Officer
+group in ``fixtures/groups.json`` and to the assertion in
+``finance/tests/test_rollups.py``; see *Who holds them*.
+
+**A report** is a function in :mod:`finance.reports` that returns a
+:class:`~finance.reports.Report`. Add it to :data:`~finance.reports.REPORTS`
+(its slug, title, summary, and what period it takes) and to the dispatch in
+:func:`finance.views.reports.report`. The page, the printout and the CSV come
+with it.
+
+**A field the queue fills in** goes through :mod:`finance.suggestions`, and has
+to decide whether it is a lookup or a guess; see *Lookups and guesses*.
+
+**A column in a Workday export** that Workday renames needs a *CSV Column Alias*
+in the admin, not code. A column nobody has seen before is kept on the line as a
+worktag, and the import says so.
+
+Management commands
+~~~~~~~~~~~~~~~~~~~
+
+Three commands in ``finance/management/commands/``, all for development and
+repair rather than daily use. Each one's docstring has the details.
+
+``seed_test_events``
+    Creates searchable test events, including one named after each billing memo
+    already imported, so the event picker can be tried on a fresh checkout.
+    ``--clear`` removes them.
+``import_real_events``
+    Imports real event names from the production site's public API, to measure
+    how often a billing memo names an event that exists.
+``repair_misaligned_imports``
+    Finds lines an old version of the CSV reader imported with their columns
+    shifted, and retires them. It changes nothing without ``--apply``.
+
+Known limits and open questions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* **The departments' share of billing before FY27 is not known.** History says
+  which event a bill was for, not who paid it, so until the share is set in
+  *Finance Configuration*, or enough FY26 billing is filed against events to
+  measure it, the forecast leaves past billing out and says so.
+* **LNL has no SGA budget yet**, so nothing compares a budget with what was
+  spent. When it has one, model it as a funding request whose money arrives
+  first rather than as new tables; see *Reports to print and hand over*.
+* **Workday's Tracking worktag is not always right.** It names the fund from
+  FY27 on and the queue reads it as a lookup, but at least one FY27 line is
+  tracked "SGA Budget" although LNL has no budget. A person still checks every
+  row.
+* **The events app holds no bills from before FY25**, so pricing can only be
+  compared with billing from then on.
+* **315-AG has no forecast** until a Workday balance is entered for it.
+* **The forecast's assumptions are choices, not facts**: a typical year from
+  the three most recent whole years, equipment only from plans, and waits of
+  thirty days until the ledger can measure them. Each is explained under
+  *Forecasting*, and each is a constant at the top of :mod:`finance.forecast`.
+
+Building these docs
+~~~~~~~~~~~~~~~~~~~
+
+The reference sections below are generated from the code's docstrings, so a
+docstring is documentation and is worth keeping accurate. To build the site
+locally::
+
+    python -m sphinx -b html docs docs/_build/html
+
+
 Tests
 -----
 
@@ -1687,59 +2211,14 @@ against ``clean()``, for the same reason.
    application code because it exists solely because tests are running, and it
    can be deleted as soon as django-mptt fixes the split upstream.
 
-Permissions
------------
+Code reference
+--------------
 
-``view_subledger``
-    Read-only access to every page. General members get this.
-``view_fundingrequest``
-    Read-only access to the funding request list and detail pages. Django
-    creates this one automatically; it is granted alongside ``view_subledger``,
-    since those pages are part of the same read-only tour.
-``view_subledger_receipts``
-    See the receipt attached to an entry. Separate from ``view_subledger``
-    because a receipt is a scan of somebody's purchase, which is a narrower
-    thing to hand out than a ledger row.
-``edit_subledger``
-    Create and edit allocation slices, run bulk actions, log encumbrances.
-    *Mark bill paid* also needs the events app's ``bill_event``, which
-    Officers hold.
-``settle_subledger``
-    Mark reconciled transactions as Settled.
-``import_workdaytransaction``
-    Upload Workday journal exports.
-``manage_projecttag`` / ``manage_fundingrequest``
-    Maintain the project tree and funding requests.
-``close_fiscalyear``
-    Close a finished fiscal year, which records its balances and makes its
-    year-end transfers, and reopen one. Recording Workday balances and
-    transfers between funds needs only ``edit_subledger``.
-
-Who holds them
-~~~~~~~~~~~~~~
-
-Declaring a permission on a model creates the row; it does not put it in
-anybody's hands. The grants live in ``fixtures/groups.json``, which is what
-``manage.py loaddata fixtures/*.json`` applies when a database is built:
-
-===================  =========================================================
-Group                Finance permissions
-===================  =========================================================
-Officer              All nine. The Treasurer is an Officer, and this is the
-                     Treasurer's tool.
-Active               ``view_subledger`` and ``view_fundingrequest`` only —
-                     read-only, no receipts.
-===================  =========================================================
-
-Adding a permission to a model is therefore only half of adding it: until a
-group holds it, the only account that can exercise it is a superuser. That is
-worth stating because it fails silently and no view test can catch it — view
-tests grant themselves whatever they need. ``finance/tests/test_rollups.py``
-loads the fixture and asserts the Officer grant, which is the check that does
-catch it.
+Generated from the docstrings. The sections above say why; these say what each
+function and class does.
 
 Models
-------
+~~~~~~
 .. automodule:: finance.models
     :members:
     :undoc-members:
@@ -1747,7 +2226,7 @@ Models
 -----
 
 Importer
---------
+~~~~~~~~
 .. automodule:: finance.importers
     :members:
     :undoc-members:
@@ -1755,7 +2234,7 @@ Importer
 -----
 
 Auto-suggest
-------------
+~~~~~~~~~~~~
 .. automodule:: finance.suggestions
     :members:
     :undoc-members:
@@ -1763,7 +2242,7 @@ Auto-suggest
 -----
 
 Calculators
------------
+~~~~~~~~~~~
 .. automodule:: finance.calculators
     :members:
     :undoc-members:
@@ -1771,7 +2250,7 @@ Calculators
 -----
 
 Balances
---------
+~~~~~~~~
 .. automodule:: finance.balances
     :members:
     :undoc-members:
@@ -1779,7 +2258,7 @@ Balances
 -----
 
 Reports
--------
+~~~~~~~
 .. automodule:: finance.reports
     :members:
     :undoc-members:
@@ -1787,7 +2266,7 @@ Reports
 -----
 
 Activity
---------
+~~~~~~~~
 .. automodule:: finance.activity
     :members:
     :undoc-members:
@@ -1795,7 +2274,7 @@ Activity
 -----
 
 History
--------
+~~~~~~~
 .. automodule:: finance.history
     :members:
     :undoc-members:
@@ -1803,7 +2282,7 @@ History
 -----
 
 Forecast
---------
+~~~~~~~~
 .. automodule:: finance.forecast
     :members:
     :undoc-members:
@@ -1811,7 +2290,7 @@ Forecast
 -----
 
 Filters
--------
+~~~~~~~
 .. automodule:: finance.filters
     :members:
     :undoc-members:
@@ -1819,7 +2298,7 @@ Filters
 -----
 
 Views
------
+~~~~~
 .. automodule:: finance.views.dashboard
     :members:
     :undoc-members:
@@ -1859,7 +2338,7 @@ Views
 -----
 
 Forms
------
+~~~~~
 .. automodule:: finance.forms
     :members:
     :undoc-members:
@@ -1867,7 +2346,7 @@ Forms
 -----
 
 Autocomplete channels
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 .. automodule:: finance.lookups
     :members:
     :undoc-members:
@@ -1875,7 +2354,7 @@ Autocomplete channels
 -----
 
 Template tags and filters
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 .. automodule:: finance.templatetags.finance_extras
     :members:
     :undoc-members:
@@ -1883,7 +2362,7 @@ Template tags and filters
 -----
 
 Admin
------
+~~~~~
 .. automodule:: finance.admin
     :members:
     :undoc-members:
@@ -1891,7 +2370,7 @@ Admin
 -----
 
 App configuration
------------------
+~~~~~~~~~~~~~~~~~
 .. automodule:: finance.apps
     :members:
     :undoc-members:
@@ -1899,6 +2378,6 @@ App configuration
 -----
 
 Test suite
-----------
+~~~~~~~~~~
 .. automodule:: finance.tests
     :members:

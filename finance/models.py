@@ -94,19 +94,22 @@ def money(value):
 # it starts in is a FinanceSettings field, not a constant -- see below.
 # ---------------------------------------------------------------------------
 
-# Only the seed for FinanceSettings, applied once by its data migration. The live
-# value is the database row.
+# Not read by anything. The live values are the FinanceSettings row, edited from
+# the admin; migration 0002 seeds that row with its own copy of these figures.
 DEFAULT_FISCAL_YEAR_START_MONTH = getattr(settings, 'LNL_FISCAL_YEAR_START_MONTH', 7)
 DEFAULT_STUDENT_ORG_WORKDAY_FUND = getattr(settings, 'LNL_STUDENT_ORG_WORKDAY_FUND', 810)
 
-# Seed values for the PartitionCode table, used once by the data migration.
-# The live values are rows in that table, editable from the admin -- the codes
-# and the worktag they live in have both already changed once, which is exactly
-# why they are no longer constants.
+# The account codes that say which side of the partition a line starts on are
+# rows in the PartitionCode table, editable from the admin -- the codes and the
+# worktag they live in have both already changed once, which is exactly why
+# they are no longer constants. Migration 0002 seeds 226-AG and 315-AG from its
+# own list; DEFAULT_PARTITION_CODES below is not read by anything.
+# DEFAULT_PARTITION_WORKTAG is where to look for the code while the table is
+# empty.
 #
-# A line carrying one of these codes is *locked* to that side of the partition:
-# 315-AG money can never be filed as Event Production and vice versa. Lines
-# carrying neither are ambiguous and stay at the Treasurer's discretion.
+# A code is a starting position, not a lock: see PartitionCode. A 315-AG line
+# filed as Event Production needs a written reason; any other crossing only
+# shows a warning. Lines carrying neither code start on Event Production.
 DEFAULT_PARTITION_WORKTAG = 'student_organization'
 DEFAULT_PARTITION_CODES = (
     # (code, is_projection, note)
@@ -421,7 +424,7 @@ def fiscal_year_choices(back=None, forward=None):
 # ---------------------------------------------------------------------------
 # Enumerations
 #
-# Only three things stay hard-coded here, and all three are code rather than
+# Only four things stay hard-coded here, and all four are code rather than
 # data:
 #
 # * TransactionStatus is a state machine. ``settle()``, ``clean()`` and a
@@ -1351,7 +1354,7 @@ def project_tag_costs(fiscal_year=None):
 
 
 # ---------------------------------------------------------------------------
-# Funding requests (out-of-cycle SGA capital grants)
+# Funding requests (SGA's one-off awards, reimbursed after the spending)
 # ---------------------------------------------------------------------------
 
 #: The decimal shape every money annotation in this module declares. Django
@@ -1870,7 +1873,7 @@ WorkdayTransactionManager = models.Manager.from_queryset(WorkdayTransactionQuery
 
 class WorkdayTransaction(models.Model):
     """
-    A single line from a Workday journal export. Written *only* by the CSV
+    A single line from a Workday journal export. Written *only* by the
     importer and read-only forever after -- this is the bank's version of
     events, and the subledger is not allowed to rewrite history.
 
@@ -2276,15 +2279,19 @@ class ParsedTransaction(models.Model):
     :class:`WorkdayTransaction` (the split-purchase case), or at none at all
     (an encumbrance logged before the bank feed catches up).
 
-    Three shapes, distinguished by :attr:`entry_type`:
+    Four shapes, distinguished by :attr:`entry_type`:
 
     * **Revenue**  -- ``amount > 0``, routes to an Event or a non-event source,
       and names the fund it adds to -- and, when SGA is reimbursing a funding
       request, the request.
-    * **Expense**  -- ``amount < 0``, routes to a fund/spend category/FR line.
+    * **Expense**  -- ``amount < 0``, routes to a fund/spend category/FR line,
+      and may name the event it was incurred for.
     * **Refund**   -- ``amount > 0`` *and* ``refund_of`` set. A return credit.
       It carries expense routing, not revenue routing, so that crediting money
       back restores the budget line it originally came out of.
+    * **Encumbrance** -- no bank line yet. Money reserved for a purchase,
+      routed like an expense, and always Pending until the real charge is
+      matched to it.
     """
     glyphicon = 'list-alt'
 
@@ -2314,6 +2321,7 @@ class ParsedTransaction(models.Model):
                                     verbose_name="Receipt")
 
     # -- Revenue routing (mutually exclusive with expense routing) ----------
+    # Except linked_event, which an expense may carry too: see SHARED_FIELDS.
     linked_event = models.ForeignKey('events.BaseEvent', on_delete=models.PROTECT,
                                      null=True, blank=True, related_name='subledger_entries',
                                      verbose_name="Linked event")
@@ -2642,10 +2650,18 @@ class ParsedTransaction(models.Model):
         marked at once. The amount is the exception: with no amount there is
         no direction, and every rule below depends on knowing the direction.
 
-        The rules themselves are numbered in the comments, and the important
-        one is that revenue routing and expense routing are mutually
-        exclusive. Matching database constraints back all of this up, because
-        bulk actions and shell writes never call ``full_clean()``.
+        Each rule has a heading comment below. The three original ones keep
+        the numbers ``test_models`` uses for them -- Rule 1, a split balances
+        before it settles; Rule 2, revenue and expense routing are mutually
+        exclusive; Rule 3, a refund reverses a real expense -- and the ones
+        added since (history lines, funding requests, the partition) are headed
+        by name.
+
+        Database constraints (see ``Meta``) back up the simplest of these --
+        a non-zero amount, routing on the right side, a positive refund, an
+        unmatched encumbrance left Pending -- because bulk actions and shell
+        writes never call ``full_clean()``. The rest hold wherever it runs:
+        every finance form and the admin.
         """
         self._normalise_blanks()
         errors = {}
@@ -2868,7 +2884,7 @@ class ParsedTransaction(models.Model):
     @property
     def is_sga_return(self):
         """
-        Money SGA took back for a funding request -- a payment it had made twice.
+        Money SGA took back for a funding request -- a payment it had made twice, say.
 
         Filed on the expense side because money left the account, but it is
         not LNL spending anything, so it carries no spend category of its own.

@@ -367,8 +367,9 @@
 .fin-bulk-bar.is-visible { transform: translateY(0); }
 .fin-bulk-inner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .fin-bulk-count { font-weight: 600; margin-right: 4px; }
-/* The queue's bar carries three pickers rather than one, so each says which
-   it is -- three unlabelled dropdowns in a row is a guessing game. */
+/* The queue's bar carries several pickers rather than one -- fund, FR line,
+   category, project -- so each says which it is: a row of unlabelled
+   dropdowns is a guessing game. */
 .fin-bulk-label { font-weight: 400; font-size: 12px; margin: 0 -4px 0 4px; opacity: 0.85; }
 
 /* The bar carries two different actions on one selection -- reconcile these

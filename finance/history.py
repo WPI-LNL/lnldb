@@ -4,7 +4,7 @@ Every bank line LNL has, reduced to what it was: the forecast's raw material.
 Two kinds of line make up the past. Lines from the books start on are filed in
 the queue, and their slices say exactly what each one was. Lines from before
 it are **history**: imported from older Workday exports so the forecast can
-learn what a year looks like, and never filed, because six years of lines is
+learn what a year looks like, and never filed, because years of old lines is
 not work anybody should have to do to get a forecast.
 
 So history is *read* instead, by the lookups the queue fills its boxes from
@@ -86,7 +86,7 @@ def lookup_rules():
     The queue's suggestion rules that are lookups, in priority order.
 
     Wording rules are left out: a word found in prose is a guess, and a guess
-    nobody confirms has no business deciding six years of a category.
+    nobody confirms has no business deciding years of a category.
     """
     from finance.suggestions import active_suggestion_rules
 
@@ -176,8 +176,9 @@ class Flow(object):
     ``day`` is the bank's date, because what the forecast learns is when money
     moves. ``account`` is the account code the line came out of, ``None`` when
     no account claims it. ``estimated`` is set on anything read rather than
-    filed. ``client_type`` is known only for billing filed against an event;
-    ``sga_paid`` marks spending filed to a fund SGA pays for.
+    filed. ``client_type`` is known only for billing filed against an event.
+    ``sga_paid`` marks spending SGA pays for: filed to a fund SGA pays, or,
+    on a line read rather than filed, one whose memo quotes an SGA request.
     """
 
     __slots__ = ('day', 'amount', 'kind', 'category', 'account', 'line', 'estimated',

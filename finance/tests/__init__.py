@@ -28,9 +28,11 @@ what they cover rather than alphabetically.
     the header hunt, amount and date dialects, column aliases, and the staging
     helpers behind the two-step import.
 ``test_ingest``
-    The queue itself -- upload, confirm, reconcile, bulk reconcile, undo,
-    settle, matching an encumbrance to the line that settles it, and the
-    suggestion JSON endpoint.
+    What the queue says, and the paths around its main flows: what an import
+    reports, the staged upload, logging an encumbrance, settling, the
+    suggestion JSON endpoint, filing a credit as a refund, and matching and
+    drawing down encumbrances. The main flows themselves -- upload and
+    confirm, reconcile, undo, bulk reconcile -- are in ``test_views``.
 
 **Deciding what a line means**
 
@@ -57,8 +59,11 @@ what they cover rather than alphabetically.
     revenue figures, and marking a bill paid from the event P&L.
 ``test_reports``
     The Reports tab: an event's costs that SGA pays for, the period a report
-    covers and what it is compared with, the four reports against figures
-    small enough to add up by hand, the CSV, and the ledger's download.
+    covers and what it is compared with, the income and spending, fund
+    balances, events and owed-to-LNL reports against figures small enough to
+    add up by hand, the CSV, and the ledger's download. The activity, forecast
+    and draft budget reports are tested with what they report on, in
+    ``test_activity`` and ``test_forecast``.
 ``test_activity``
     What LNL's work was worth, from the events app: WPI terms, pricing every
     show in bulk exactly as the events app does, student organizations against
@@ -84,7 +89,8 @@ what they cover rather than alphabetically.
     the fund/FR-line pairing, split formset arithmetic, and the fields each
     form deletes rather than validates.
 ``test_views``
-    The pages, their permissions, and the flows that span several requests.
+    The pages, their permissions, and the flows that span several requests --
+    among them the queue's upload, reconcile, undo and bulk reconcile.
 ``test_ledger``
     The spreadsheet page specifically: sorting, filtering, column visibility
     and the bulk action bar.
@@ -103,6 +109,10 @@ what they cover rather than alphabetically.
 ``test_admin``
     That every registered admin page loads, and that the guards on the
     read-only and singleton models hold.
+``test_import_events``
+    The ``import_real_events`` management command: that it never imports an
+    event twice, deletes one a transaction is linked to, or copies private
+    fields off the production record.
 ``test_lookups``
     The autocomplete channels, including their permission gate and escaping.
 ``test_templatetags``

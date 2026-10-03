@@ -15,10 +15,11 @@
     });
 
     /* ---- The per-row fold --------------------------------------------------
-       Project, the event a sub-rental was bought for, the partition and the
-       cross-year opt-in are all real, and all rare: seven of 253 lines on a
-       year's export carry a project. Kept one click away rather than on screen
-       twenty-five times. */
+       Project, the event a cost was hired in for, the request SGA took money
+       back for, the partition and the cross-year opt-in are all real fields
+       that most lines leave alone: seven of 253 lines on a year's export carry
+       a project. Kept one click away rather than on screen twenty-five times;
+       the view opens the fold on a row that has something in it. */
     function setFold($row, open) {
         $row.find('.fin-fields-more').toggleClass('is-folded', !open);
         $row.find('.fin-more-toggle').attr('aria-expanded', open ? 'true' : 'false');
@@ -273,8 +274,8 @@
 
     /* ---- Bulk reconcile ----------------------------------------------------
        The per-row form is right when the rows differ. When they do not -- a
-       dozen supply orders on one export, all Consumables out of the standing
-       budget -- it asks the same two questions a dozen times. Selecting rows
+       dozen supply orders on one export, all Consumables out of Legacy -- it
+       asks the same two questions a dozen times. Selecting rows
        and answering once is the ledger's bulk bar, pointed at this page, and
        it behaves the same way down to the shift-click range select. */
 

@@ -57,4 +57,9 @@ There are a few different ways to mark a bill as paid. One of the easiest method
 detail page. Under the `Billing` tab, locate the bill then click the `Mark Paid` button. This button will also appear
 in a few additional places throughout the LNLDB, such as on the `All Events` page (`Events` > `All Events`).
 
+.. tip::
+    Once the payment has been imported from Workday and filed against the event, the finance app offers a
+    `Mark bill paid` button instead, which sets the paid date to the day the payment actually arrived. See
+    :doc:`/help/finance/events`.
+
 `Last Modified: May 3, 2021`

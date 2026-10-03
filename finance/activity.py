@@ -30,10 +30,11 @@ from django.utils import timezone
 
 from finance.models import ZERO, ClientType, client_of, client_type_for, money
 
-#: Who a show was for, as the reports group them. A client whose Workday fund
-#: is 810 is a student organization; any other fund is a department or an
-#: outside client billed at full rates; no fund on the event or its client
-#: cannot be placed.
+#: Who a show was for, as the reports group them. A client on the student
+#: organization Workday fund (810, set in the Finance Configuration) is a
+#: student organization; any other fund is a department or an outside client
+#: billed at full rates; no fund on the event or its client cannot be placed.
+#: See :func:`finance.models.client_type_for`.
 CLIENT_GROUPS = OrderedDict((
     (ClientType.STUDENT_ORG, 'Student organizations'),
     (ClientType.DEPARTMENT, 'Departments and external'),

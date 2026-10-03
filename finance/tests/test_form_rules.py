@@ -378,8 +378,8 @@ class BulkReconcileFundingRequestTests(TestCase):
     """
     Charging a whole selection to one award.
 
-    A funding request is spent the same way the standing budget is -- as a
-    dozen invoice lines on one export -- so the bar offers FR money and a line
+    A funding request is spent the same way Legacy is -- as a dozen invoice
+    lines on one export -- so the bar offers FR money and a line
     to charge it to. The pairing rule between them is the one thing the other
     bulk fields have no equivalent of, and it is enforced twice: here, against
     the box the Treasurer has to change, and again per row in the view.

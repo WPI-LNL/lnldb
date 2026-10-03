@@ -1,8 +1,10 @@
 """
 The SGA budget's revenue source is called "SGA Budget".
 
-``0006_revenue_sources`` named it "SGA Budget Deposit". The Treasurer asked for
-the plain name, the one SGA itself uses. Only a row still carrying 0006's name
+``0006_revenue_sources`` first named it "SGA Budget Deposit". The Treasurer
+asked for the plain name, the one SGA itself uses, and 0006 now gives a new
+install that name directly; this renames it on an install that ran the older
+0006. Only a row still carrying 0006's name
 is renamed, so a name a Treasurer chose in the admin is kept, and nothing is
 renamed onto a name another source already has.
 """

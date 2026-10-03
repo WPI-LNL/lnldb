@@ -11,10 +11,17 @@ download cannot disagree about a figure.
 
 The figures come from the same places the rest of the app takes them:
 :mod:`finance.balances` for what each fund holds, :mod:`finance.calculators`
-for events and what LNL is owed. The one report that groups the ledger itself,
+for events and what LNL is owed, :mod:`finance.activity` for the work LNL did
+(read from the events app, not the ledger), :mod:`finance.forecast` for the
+forecast, and :mod:`finance.history` for the past years a draft budget is
+worked out from. The one report that groups ledger entries itself,
 :func:`income_and_spending`, does so by the rules the dashboard uses: income
 is money in that is not a refund, spending is net of refunds, and money SGA
 took back undoes a reimbursement rather than being spent.
+
+To add a report: write a function here that returns a :class:`Report`, list
+it in :data:`REPORTS`, and give it a branch in
+:func:`finance.views.reports.report`.
 """
 import csv
 import datetime
@@ -1587,8 +1594,10 @@ def budget_draft(today=None, ledger=None):
 # ---------------------------------------------------------------------------
 
 #: ``slug: (title, what it answers, what period it takes)``. The period is
-#: ``'range'`` for any dates, ``'year'`` for a fiscal year only, and
-#: ``'today'`` for a report that is always as of today.
+#: ``'range'`` for a fiscal year or any dates, ``'year'`` for a fiscal year
+#: only, ``'today'`` for a report that is always as of today, ``'trend'`` for
+#: the terms or years up to a fiscal year, and ``'next'`` for next fiscal year.
+#: The order here is the order the Reports tab lists them in.
 REPORTS = OrderedDict((
     ('income-and-spending', ("Income and spending",
                              "What came in, by source and client, and what went out, by "

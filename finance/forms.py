@@ -44,7 +44,7 @@ def finance_form_helper(**attrs):
     """
     The crispy helper every finance form uses, built in one place.
 
-    Two settings are the same on all six of them, and neither is a preference:
+    Two settings are the same on every one of them, and neither is a preference:
 
     ``form_tag = False``
         The finance templates write their own ``<form>``. A second one nested
@@ -285,7 +285,7 @@ class FilterBarForm(forms.Form):
 
 
 # ---------------------------------------------------------------------------
-# CSV ingestion
+# Uploading a Workday export (CSV or .xlsx)
 # ---------------------------------------------------------------------------
 
 class WorkdayCSVUploadForm(forms.Form):
@@ -346,9 +346,11 @@ class BaseAllocationForm(forms.ModelForm):
     entirely, so a revenue form is structurally incapable of submitting a spend
     category even if the client-side JS is bypassed.
 
-    ``linked_event`` and ``fund_source`` are the exceptions, and appear on both:
-    revenue earned by an event and costs incurred for one; money leaving a fund
-    and money arriving in one.
+    The fields in ``ParsedTransaction.SHARED_FIELDS`` are the exceptions, and
+    appear on both: ``linked_event`` (revenue earned by an event, costs
+    incurred for one), ``fund_source`` (money leaving a fund, money arriving in
+    one) and ``funding_request`` (SGA's reimbursement in, money SGA takes back
+    out).
     """
     linked_event = AutoCompleteSelectField('Events', required=False, label="Linked event",
                                            help_text="Search by event name or client")
@@ -381,9 +383,10 @@ class BaseAllocationForm(forms.ModelForm):
         }
         # Through ``field_classes`` rather than declared on the class, because a
         # declared field is added to every subclass whatever its ``Meta.fields``
-        # says -- and three of the subclasses here leave ``refund_of`` out on
-        # purpose. The queue's routing-only form accepting a refund target would
-        # be exactly the mutual exclusion this class exists to make structural.
+        # says -- and two of the subclasses here leave these out on purpose.
+        # An encumbrance has no money to give back and cannot be SGA's payment,
+        # so EncumbranceForm has neither; the split modal has no refund column,
+        # so SplitLineForm has no ``refund_of``.
         field_classes = {'refund_of': RefundTargetChoiceField,
                          'funding_request': FundingRequestChoiceField}
 
@@ -485,7 +488,7 @@ class BaseAllocationForm(forms.ModelForm):
 
     def _narrow_fr_lines(self):
         """
-        Offer this year's funding requests, on this side of the partition.
+        Offer the lines of this year's open funding requests.
 
         Charging an FY25 transaction to an FY26 request is legitimate now and
         then -- an invoice lands late, an award is carried over -- but it is far
@@ -739,9 +742,10 @@ class BaseAllocationForm(forms.ModelForm):
 
         This is the structural half of the Poka-Yoke rule described in the
         class docstring: a revenue form does not validate away a spend
-        category, it has no spend category field at all. ``linked_event`` and
-        ``fund_source`` survive on both sides, and each is relabelled on the
-        side where it means something different.
+        category, it has no spend category field at all. The shared fields --
+        ``linked_event``, ``fund_source`` and ``funding_request`` -- survive on
+        both sides, and each is relabelled on the side where it means something
+        different.
         """
         direction = self._direction()
         request = self.fields.get('funding_request')
@@ -833,8 +837,11 @@ class BaseAllocationForm(forms.ModelForm):
 
         The model knows about fields this form may have deleted, so they are
         explicitly nulled on the instance first -- otherwise a form that
-        dropped ``fund_source`` would leave a stale value on an edited row and
-        model validation would see a revenue entry carrying expense routing.
+        dropped ``lnl_spend_category`` would leave a stale value on an edited
+        row and model validation would see a revenue entry carrying expense
+        routing. The flip side: a subclass that leaves a routing field out of
+        ``Meta.fields`` clears it on every save, so a field an entry must keep
+        has to be rendered.
         """
         cleaned = super(BaseAllocationForm, self).clean()
         # Fields stripped above are absent from cleaned_data; re-assert them as
@@ -1033,7 +1040,7 @@ class ReconcileForm(BaseAllocationForm):
         positive line. :meth:`_apply_direction_rules` drops the field from a
         debit row outright, which is what actually keeps the query from ever
         running -- a queryset is lazy, and an unrendered field never evaluates
-        one. This is the belt to that pair of braces: should the field ever
+        one. This is a second guard behind that one: should the field ever
         survive onto a debit row, it offers nothing rather than offering
         purchases that could only fail validation on the way back.
         """
@@ -1158,10 +1165,11 @@ class ReconcileForm(BaseAllocationForm):
 
 class EncumbranceForm(BaseAllocationForm):
     """
-    A crew member logging a pending purchase to reserve funds before the
-    Workday feed catches up. Always saved as Pending with no parent.
+    An officer logging a pending purchase to reserve funds before the
+    Workday feed catches up (it needs ``edit_subledger``). Always saved as
+    Pending with no parent.
     """
-    # No receipt yet -- the purchase hasn't happened.
+    # The receipt is not required: the purchase has not happened yet.
     REQUIRED_ON_EXPENSES = ('fund_source', 'lnl_spend_category')
 
     amount = forms.DecimalField(
@@ -1489,7 +1497,7 @@ class BulkReconcileForm(BulkSelectionForm):
     Reconcile a batch of queue rows that all take the same routing.
 
     A monthly export arrives with a dozen Amazon supply orders on it, and every
-    one of them is Consumables out of the standing budget. Answering the same
+    one of them is Consumables out of Legacy. Answering the same
     two questions twelve times is the work this page exists to remove, not the
     work it exists to make.
 

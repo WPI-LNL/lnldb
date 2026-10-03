@@ -12,7 +12,8 @@ Three layers, tested from the bottom up:
   is the latest bill (a multi-bill split by price), and an encumbrance is
   reserved rather than spent.
 * **The pages** that show them: the event P&L, the ledger's event filter, the
-  dashboard panel and the event's own Billing tab.
+  dashboard panel, the event's own Billing tab, and the queue row that asks
+  for the event.
 """
 import datetime
 from decimal import Decimal

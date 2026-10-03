@@ -108,7 +108,8 @@
         // and jQuery's clone() does not carry that over. This re-runs it for
         // whatever is new on the page.
         $(window).trigger('init-autocomplete');
-        // Let fund_gate.js hide the FR picker on the row just added.
+        // Let routing.js wire up the row just added -- hide its FR picker,
+        // and the rest of its routing rules.
         $(document).trigger('fin:rows-added', [$clone]);
         recalc();
     });

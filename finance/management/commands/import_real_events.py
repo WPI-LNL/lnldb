@@ -462,9 +462,9 @@ class Command(BaseCommand):
         Delete every row a previous run created, except those now in use.
 
         ``ParsedTransaction.linked_event`` is a ``PROTECT`` foreign key, so an
-        event the Treasurer has already reconciled revenue against cannot be
-        deleted -- and should not be, since deleting it is exactly the mistake
-        that would lose the link. Those are reported and left alone rather than
+        event the Treasurer has already filed revenue or a cost against cannot
+        be deleted -- and should not be, since deleting it is exactly the
+        mistake that would lose the link. Those are reported and left alone rather than
         being allowed to abort the whole run.
         """
         events = BaseEvent.objects.filter(internal_notes__contains=IMPORT_MARKER)

@@ -1,9 +1,15 @@
 """
-Derived figures for the executive dashboard.
+Derived figures: the dashboard's, each event's, and what LNL is owed.
 
-Everything here takes the same ``(fiscal_year, is_projection)`` pair the global
-filter bar produces, so every widget on the page answers the same question for
-the same slice of the ledger.
+The dashboard's figures take the same ``(fiscal_year, is_projection)`` pair the
+global filter bar produces, so every widget on the page answers the same
+question for the same slice of the ledger. The rest are about one thing rather
+than one year: what an event was billed, received and cost
+(:func:`event_financials`, and :func:`event_pnl_rows` for the Events tab), and
+what SGA and clients owe today (:func:`sga_receivables`,
+:func:`billing_receivables`). The reports, the forecast and the events app's
+own Billing tab read the same functions, so a figure means the same thing
+wherever it appears.
 """
 import datetime
 from collections import OrderedDict
@@ -32,9 +38,10 @@ SERIES_COLORS = (
 
 FALLBACK_COLOR = '#BAB0AC'
 
-# Service colours live in the ServiceColor table, keyed to the events app's own
-# Category rows -- see finance.models.service_colors(). A category with no row
-# falls back to the ramp below, so adding a service needs no code and no data.
+# Service colours come from finance.models.service_colors(): defaults for
+# Lighting, Sound and Projection, overridden by any row in the ServiceColor
+# table (keyed to the events app's own Category rows). A category in neither
+# falls back to the ramp above, so adding a service needs no code and no data.
 
 CLIENT_TYPE_COLORS = {
     ClientType.STUDENT_ORG: '#59A14F',
@@ -267,8 +274,8 @@ def client_type_breakdown(fiscal_year=None, is_projection=None, rows=None):
     """
     Department vs Student Organization, by revenue and by number of shows.
 
-    Non-event revenue (SGA baseline, alumni gifts) has no client and is
-    excluded rather than silently bucketed as "Unknown".
+    Non-event revenue (SGA's payments, gifts) has no client and is excluded
+    rather than silently bucketed as "Unknown".
     """
     rows = revenue_rows(fiscal_year, is_projection) if rows is None else rows
 
@@ -329,8 +336,9 @@ def service_mix(fiscal_year=None, is_projection=None, rows=None):
                 share = row['amount'] * (costs[name] / weight_total)
             else:
                 share = row['amount'] / len(names)
-            # Absorb rounding drift into the last slice so the parts still sum
-            # exactly to the whole.
+            # Each share is rounded to the cent on its own, so a show's parts
+            # can miss its total by a cent or two. Nothing absorbs the drift:
+            # this feeds a chart of proportions, where a cent does not show.
             share = share.quantize(Decimal('0.01'))
             totals[name] = totals.get(name, Decimal('0.00')) + share
             shows.setdefault(name, set()).add(event.pk)
@@ -378,8 +386,9 @@ def service_mix(fiscal_year=None, is_projection=None, rows=None):
 # SGA paid for is reported beside it.
 # ---------------------------------------------------------------------------
 
-#: The three ways a linked entry can bear on an event, as filters over
-#: ParsedTransaction. Kept in one place so the single-event figure and the
+#: The three ways a linked entry can bear on an event -- money in, a cost, a
+#: reservation -- as filters over ParsedTransaction, plus the pass-through
+#: part of the costs. Kept in one place so the single-event figure and the
 #: whole-year table cannot disagree about what a cost is.
 _EVENT_REVENUE = Q(amount__gt=0, refund_of__isnull=True)
 _EVENT_COST = Q(parent_transaction__isnull=False) & (Q(amount__lt=0) | Q(refund_of__isnull=False))
@@ -789,7 +798,7 @@ def event_billing_kept(fiscal_year=None, is_projection=None):
     sets every cost filed to the pass-through category against the billing.
     Costs filed there with no event still count: a missing link should not
     make a cost disappear from the figure. A hire SGA paid for -- filed to a
-    funding request -- does not: no billing went to pay for it.
+    funding request or a budget -- does not: no billing went to pay for it.
     """
     entries = _scoped(ParsedTransaction.objects.all(), fiscal_year, is_projection)
     gross = money(entries.revenue().filter(linked_event__isnull=False)

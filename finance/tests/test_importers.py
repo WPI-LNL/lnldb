@@ -349,8 +349,8 @@ class SuggestionTests(TestCase):
     def test_810_is_not_read_as_sga_money(self):
         """
         810-FD is the fund every LNL line is spent out of, so it cannot say
-        whether the money was the SGA standing budget, an award or legacy
-        funds -- and the suggestion does not pretend it did. An answer still
+        whether the money was the SGA budget, an award or legacy funds -- and
+        the suggestion does not pretend it did. An answer still
         arrives, because a Treasurer nominated a fallback in the admin, but it
         is labelled 'default' and the reason never quotes the worktag.
         """
@@ -375,8 +375,9 @@ class SuggestionTests(TestCase):
     def test_an_unrecognised_fund_falls_to_the_default_not_to_a_guess(self):
         """
         No code on the line matches any fund's configured list, so nothing is
-        read off it. What fills the box is the stated fallback, at medium
-        confidence -- the one autofilled answer that is nobody's assertion.
+        read off it. What fills the box is the account's own money -- the line
+        is on 226-AG, so Legacy -- at medium confidence, labelled as a stated
+        default rather than as anything the export said.
         """
         from finance.suggestions import DEFAULT, MEDIUM, suggest_fund_source
         txn = WorkdayTransaction.objects.get(operational_transaction='OT-1001')

@@ -1,11 +1,14 @@
 """
 URL map for the subledger.
 
-The five numbered comments below match the five pages the app is built around,
-and the order here is the order a Treasurer normally walks them: look at the
-dashboard, scan the ledger, clear the queue, drill into a line, then check a
-project tag. Anything reached only from inside one of those pages (bulk
-actions, JSON endpoints) is grouped under the page that links to it.
+The five numbered blocks are the pages the app started with, in the order a
+Treasurer normally walks them: look at the dashboard, scan the ledger, clear the
+queue, drill into a line, then check a project tag. The blocks after them came
+as the app grew: what each event made, fund balances and the year end, funding
+requests, reports, and the forecast with the history it learns from. Anything
+reached only from inside a page (bulk actions, JSON endpoints) is grouped under
+the page that links to it. The pages, and the permission each needs, are listed
+in ``docs/reference/finance.rst`` under *The pages*.
 """
 from django.urls import re_path
 

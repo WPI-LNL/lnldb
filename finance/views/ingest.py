@@ -3,10 +3,10 @@ Page 3 -- the ingestion queue, where bank lines become ledger entries.
 
 This is the busiest module in the app because it owns the whole intake path:
 uploading a Workday export, confirming it, reconciling a line (singly or in
-bulk), undoing that reconciliation, settling an encumbrance, and serving the
-suggestion JSON the queue page fetches as you scroll. Uploads are two-step by
-design -- the file is parsed and staged first so the confirmation page can
-report an exact row count before anything is written.
+bulk), undoing that reconciliation, logging an encumbrance and settling it
+against the line that arrives, and a JSON view of one line's suggestions.
+Uploads are two-step by design -- the file is parsed and staged first so the
+confirmation page can report an exact row count before anything is written.
 """
 from decimal import Decimal
 
@@ -385,7 +385,14 @@ def reconcile(request, pk):
 @login_required
 @permission_required('finance.view_subledger', raise_exception=True)
 def suggestions_json(request, pk):
-    """ Auto-suggest payload for the badge UI, fetched lazily by the queue page. """
+    """
+    Everything the suggesters say about one bank line, as JSON.
+
+    No page fetches this: the queue works its suggestions out on the server
+    and renders them into each row. It is kept, and tested, as the quickest
+    way to see exactly what :func:`finance.suggestions.suggest_all` makes of a
+    line -- useful when a row fills in something unexpected.
+    """
     txn = get_object_or_404(WorkdayTransaction, pk=pk)
     data = suggest_all(txn)
     payload = {'kind': data['kind'],
@@ -494,8 +501,8 @@ def _draw_message(txn, reserved, drawn, exhausted, settled):
     What one drawdown did, in a sentence.
 
     Says all three of what the line took, what the reservation has left, and
-    what the line still needs, because after this change any of them can be
-    non-obvious: a reservation spanning ten lines is neither used up nor
+    what the line still needs, because any of them can be non-obvious after a
+    draw: a reservation spanning ten lines is neither used up nor
     untouched, and the Treasurer has no other way to see where it stands
     without going and looking.
     """
@@ -630,21 +637,22 @@ def match_encumbrance(request, pk):
     """
     Attach a pending encumbrance to the bank line that turned out to be it.
 
-    This is the other half of :func:`encumbrance`, and until now it did not
-    exist: three places in the UI told the Treasurer an encumbrance "stays
-    Pending until it is matched to an imported transaction", and nothing in
-    the app could do the matching. The consequence was not merely a missing
-    convenience -- reconciling the imported line the ordinary way writes a
-    *second* entry, so the funding request line was charged both the estimate
-    and the actual, and the only sign of it was a balance quietly $200 short.
+    This is the other half of :func:`encumbrance`, and the app once lacked it:
+    the UI told the Treasurer an encumbrance "stays Pending until it is
+    matched to an imported transaction", and nothing could do the matching.
+    The consequence was not merely a missing convenience -- reconciling the
+    imported line the ordinary way writes a *second* entry, so the funding
+    request line was charged both the estimate and the actual, and the only
+    sign of it was a balance quietly $200 short.
 
     Three things are settled here, all of which are wrong to leave to the
     person doing it:
 
     * **The amount becomes the actual.** An encumbrance is an estimate and the
       bank line is what happened, so the entry takes the line's unallocated
-      remainder. An over-estimate keeps its difference reserved --
-      see :func:`_carve_remainder`.
+      remainder. An over-estimate keeps its difference reserved, and a line
+      far larger than the estimate is covered only up to it -- see
+      ``_encumbrance_draw`` and :func:`draw_from_encumbrance`.
     * **The date becomes the accounting date.** ``effective_date`` is filled in
       only when blank, so an encumbrance carries the day it was *written*. A
       June reservation settling a July charge would otherwise stay in FY25
@@ -758,8 +766,8 @@ def unreconcile(request, pk):
 
     Reconciling is a judgement call made twenty-five times in a sitting, and
     the moment you notice you filed one wrong is the moment right after you
-    filed it. Until now the way back was to leave the queue, find the line in
-    the ledger, open each slice and delete it one at a time through a
+    filed it. Without this the way back is to leave the queue, find the line
+    in the ledger, open each slice and delete it one at a time through a
     confirmation page -- five navigations to undo one click, which in practice
     meant the wrong answer stayed.
 
@@ -823,8 +831,8 @@ def bulk_reconcile(request):
     Reconcile every selected queue row with one set of answers.
 
     The per-row form is the right tool when the rows differ. When they do not
-    -- a dozen supply orders on one export, all Consumables out of the standing
-    budget -- it asks the same two questions a dozen times, and the Treasurer
+    -- a dozen supply orders on one export, all Consumables out of Legacy --
+    it asks the same two questions a dozen times, and the Treasurer
     answers them a dozen times identically. This is the ledger's bulk bar
     pointed at the queue.
 
@@ -834,7 +842,7 @@ def bulk_reconcile(request):
 
     The answers include a funding request line when the chosen fund draws on
     one -- a dozen invoice lines against a single award is as ordinary a batch
-    as a dozen supply orders against the standing budget. What that adds over
+    as a dozen supply orders out of Legacy. What that adds over
     the other fields is a rule they do not have: the request belongs to a
     fiscal year, and a row from the other side of a July is charged to it only
     if that was asked for.
@@ -859,8 +867,9 @@ def bulk_reconcile(request):
 
     lines = list(WorkdayTransaction.objects.filter(pk__in=ids))
 
-    # Revenue routes to an event, not to a fund; the database refuses expense
-    # routing on it outright. Said plainly rather than silently dropped.
+    # Revenue routes to an event or a revenue source, and the bar's spend
+    # category and FR line are expense routing, which the database refuses on
+    # it outright. Said plainly rather than silently dropped.
     revenue = [t for t in lines if t.net_amount > 0]
     if revenue:
         messages.warning(
