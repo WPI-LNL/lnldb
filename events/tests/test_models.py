@@ -53,6 +53,21 @@ class Event2019PropertyTests(TestCase):
         self.assertEqual(self.event.eventcount, 1)
         ServiceInstanceFactory(service=self.film_service, event=self.event)
         self.assertEqual(self.event.eventcount, 2)
+    
+    def test_pricelist(self):
+        self.setup()
+        pricelist2  = models.Pricelist.objects.create(name="test pricelist 2")
+        self.pricelist.is_default_pricelist = True
+        self.pricelist.save()
+        self.pricelist.refresh_from_db()
+        self.assertTrue(self.pricelist.is_default_pricelist)
+
+        pricelist2.is_default_pricelist = True
+        pricelist2.save()
+        pricelist2.refresh_from_db()
+        self.pricelist.refresh_from_db()
+        self.assertTrue(pricelist2.is_default_pricelist)
+        self.assertFalse(self.pricelist.is_default_pricelist)
         
     def test_services_total(self):
         self.setup()

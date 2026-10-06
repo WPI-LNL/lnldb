@@ -80,31 +80,7 @@
         {% endfor %}
     {% endif %}
 
-    {% for oo in event.oneoffs %}
-    <tr>
-        <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
-        <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
-            {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
-        </td>
-    </tr>
-    {% endfor %}
-    
-    {% if event.discount_applied %}
-    <tr class="warning">
-        <td> Pre Discount Total </td>
-        <td class="tdra">${{ event.cost_total_pre_discount }} </td>
-    </tr>
-    <tr class="warning">
-        <td>Lighting/Sound Combo Discount Applied</td>
-        <td style="color:red;" class="tdra">-${{ event.discount_value|floatformat:2}}</td>
-    </tr>
-    {% endif %}
-    
     {% if event.uses_new_discounts %}
-        <tr class="warning">
-            <td> LNL Services Subtotal </td>
-            <td class="tdra">${{ event.cost_total_pre_discount }} </td>
-        </tr>
         {% for fee_percent, value in event.fee_values.items %}
             <tr class="active">
                 <td>{{ fee_percent.0.name }} ({{ fee_percent.1|floatformat }}% of {{ fee_percent.0.categories.all|join:", " }})</td>
@@ -118,6 +94,25 @@
             </tr>
         {% endfor %}
 
+        <tr class="warning">
+            <td> LNL Services Subtotal </td>
+            <td class="tdra">${{ event.lnl_services_subtotal }} </td>
+        </tr>
+    {% endif %}
+
+
+    {% if event.discount_applied %}
+    <tr class="warning">
+        <td> Pre Discount Total </td>
+        <td class="tdra">${{ event.cost_total_pre_discount }} </td>
+    </tr>
+    <tr class="warning">
+        <td>Lighting/Sound Combo Discount Applied</td>
+        <td style="color:red;" class="tdra">-${{ event.discount_value|floatformat:2}}</td>
+    </tr>
+    {% endif %}
+
+    {% if event.uses_new_discounts %}
         {% if event.rentals.exists %}
             {% if event.rental_fee_total > 0 %}
                 {% for rental in event.rentals.all %}
@@ -146,6 +141,32 @@
                 <td class="tdra">${{ event.rentals_total }} </td>
             </tr>
         {% endif %}
+    {% endif %}
+
+    {% for oo in event.oneoffs %}
+    <tr>
+        <td>{{ oo.key_name }} ({{ oo.key_value }}) <strong>x{{ oo.key_quantity }}</strong></td>
+        <td {% if oo.negative %} style="color:red;" {% endif %} class="tdra">
+            {% if oo.negative %}-{% endif %}${{ oo.abs_cost }}
+        </td>
+    </tr>
+    {% endfor %}
+
+    {% if event.is_sga_funded %}
+        <tr class="info">
+            <td>Pre-SGA Total</td>
+            <td>${{ event.cost_total_pre_sga|floatformat:2 }}</td>
+        </tr>
+
+        <tr>
+            <td>SGA-funded LNL services</td>
+            <td style="color: red" class="tdra">-${{ event.lnl_services_subtotal|floatformat:2 }}</td>
+        </tr>
+
+        <tr>
+            <td>SGA-funded rental fee</td>
+            <td style="color: red" class="tdra">-${{ event.rental_fee_total|floatformat:2 }}</td>
+        </tr>
     {% endif %}
     
     <tr class="info">

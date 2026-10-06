@@ -62,6 +62,7 @@ urlpatterns = [
     re_path(r'^quote/(?P<id>[0-9]+)/$', pdf_views.view_quote, name="view-quote"),
     # re_path(r'^db/events/mk/$', 'events.views.mkedrm.eventnew', name="event-new"),
     re_path(r'^mk/$', mkedrm_views.eventnew, name="new"),
+    re_path(r'^load-pricelist/', mkedrm_views.load_pricelist, name="load-pricelist"),
     re_path(r'^edit/(?P<id>[0-9a-f]+)/$', mkedrm_views.eventnew, name="edit"),
     re_path(r'^duplicate/(?P<id>[0-9a-f]+)/$', mkedrm_views.duplicate_event, name="duplicate"),
     re_path(r'^approve/(?P<id>[0-9a-f]+)/$', flow_views.approval, name="approve"),

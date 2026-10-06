@@ -5,6 +5,7 @@ from django.db.models import (Model, BooleanField, CharField, IntegerField, BigI
                               SET_NULL, signals)
 from multiselectfield import MultiSelectField
 from django.core.validators import MinValueValidator,MaxValueValidator
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.conf import settings
 from six import python_2_unicode_compatible
@@ -43,6 +44,10 @@ class User(AbstractUser):
         if not self.pk and not self.email:
             self.email = "%s@wpi.edu" % self.username
         super(User, self).save(*args, **kwargs)
+    
+    def clean(self):
+        if self.class_year is not None and self.class_year > timezone.now().year + 6:
+            raise ValidationError("Class year must be no greater than 6 years in the future", code="yearerror")
 
     wpibox = IntegerField(null=True, blank=True, verbose_name="WPI Box Number")
     phone = CharField(max_length=24, null=True, blank=True, verbose_name="Phone Number")
@@ -53,7 +58,7 @@ class User(AbstractUser):
     mdc = CharField(max_length=32, null=True, blank=True, verbose_name="MDC")
     nickname = CharField(max_length=32, null=True, blank=True, verbose_name="Nickname")
     student_id = PositiveIntegerField(null=True, blank=True, verbose_name="Student ID")
-    class_year = PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(1962), MaxValueValidator(timezone.now().year + 6)])
+    class_year = PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(1962)])
     locked = BooleanField(default=False)
     away_exp = DateField(verbose_name="Away Status Expiration", null=True, blank=True)
     onboarded = BooleanField(default=False, verbose_name="Onboarding Complete")

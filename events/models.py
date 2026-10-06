@@ -8,7 +8,7 @@ from django import forms
 from django.conf import settings
 # Create your models here.
 from django.core.validators import MinLengthValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Count, Sum
 from django.urls.base import reverse
 from django.utils import timezone
@@ -834,6 +834,8 @@ class Event2019(BaseEvent):
     applied_fees = models.ManyToManyField("Fee", blank=True, help_text="Which fees will be applied to this event.")
     applied_discounts = models.ManyToManyField("Discount", blank=True, help_text="Which discounts will be applied to this event.")
 
+    is_sga_funded = models.BooleanField(default=False, verbose_name="Is SGA-funded", help_text="Whether or not this event is fully funded by SGA and the client should be charged $0.")
+
     @property
     def has_projection(self):
         return self.serviceinstance_set.filter(service__category__name='Projection').exists()
@@ -962,11 +964,25 @@ class Event2019(BaseEvent):
     fee_values = property(get_fee_values)
 
     @property
-    def cost_total(self):
+    def lnl_services_subtotal(self):
+        if self.uses_new_discounts:
+            return self.services_total + self.extras_total - sum(self.discount_values.values()) + sum(self.fee_values.values())
+        else:
+            return self.services_total + self.extras_total - self.discount_value
+
+    @property
+    def cost_total_pre_sga(self):
         if self.uses_new_discounts:
             return self.cost_total_pre_discount - sum(self.discount_values.values()) + sum(self.fee_values.values()) + self.rentals_total
         else:
             return self.cost_total_pre_discount - self.discount_value
+
+    @property
+    def cost_total(self):
+        if self.is_sga_funded:
+            return self.cost_total_pre_sga - self.lnl_services_subtotal - self.rental_fee_total
+        else:
+            return self.cost_total_pre_sga
 
     @property
     def workday_form_hash(self):
@@ -1147,7 +1163,18 @@ class Pricelist(models.Model):
     services = models.ManyToManyField(Service, through="ServicePrice", related_name="pricelists")
     fees = models.ManyToManyField(Fee, through="FeePrice", related_name="pricelists")
     discounts = models.ManyToManyField(Discount, through="DiscountPrice", related_name="pricelists")
+    extras = models.ManyToManyField(Extra, through="ExtraPrice", related_name="pricelists")
     rental_fee_percentage = models.DecimalField(default=15, max_digits=8, decimal_places=2)
+    is_default_pricelist = models.BooleanField(default=False)
+
+    # ensure only one default at a time
+    def save(self, *args, **kwargs):
+        if self.is_default_pricelist:
+            with transaction.atomic():
+                Pricelist.objects.filter(is_default_pricelist=True).update(is_default_pricelist=False)
+                return super(Pricelist, self).save(*args, **kwargs)
+        else:
+            return super(Pricelist, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -1188,7 +1215,7 @@ class ExtraPrice(models.Model):
 
 
 class FeePrice(models.Model):
-    """ a many to many table between services and fees """
+    """ a many to many table between pricelists and fees """
     fee = models.ForeignKey("Fee", on_delete=models.CASCADE)
     pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
     percent = models.DecimalField(max_digits=8, decimal_places=2)
@@ -1205,7 +1232,7 @@ class FeePrice(models.Model):
 
 
 class DiscountPrice(models.Model):
-    """ a many to many table between services and discount """
+    """ a many to many table between pricelists and discount """
     discount = models.ForeignKey("Discount", on_delete=models.CASCADE)
     pricelist = models.ForeignKey("Pricelist", on_delete=models.CASCADE)
     percent = models.DecimalField(max_digits=8, decimal_places=2)

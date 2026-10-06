@@ -21,6 +21,7 @@
                     defaultTime: '',
                     showMeridian: true
                 });
+        $('#form_data').get(0).dispatchEvent(new CustomEvent('formset:row-added'))
     }
     $('#add_form').click(function() {
         add_form();

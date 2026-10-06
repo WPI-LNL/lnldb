@@ -1,5 +1,6 @@
 {% extends 'base_admin.html' %}
 {% load crispy_forms_tags %}
+{% load static %}
 
 {% block title %}{{ msg }} | Lens and Lights at WPI{% endblock %}
 {% block content %}
@@ -23,7 +24,7 @@
                 <div class="tab-content panel-body">
                     {% crispy form %}
                     {% if is_event2019 %}
-                        <div id="services" class="tab-pane">
+                        <div id="services" class="tab-pane" data-load-pricelist-url="{% url 'events:load-pricelist' %}">
                             {{ services_formset.management_form }}
                             <table class="table table-striped">
                                 <thead>
@@ -94,6 +95,9 @@
             });
         });
     </script>
+    {% if is_event2019 %}
+    <script src="{% static 'js/refresh-event-pricelist.js' %}"></script>
+    {% endif %}
     <style>
         .padleft {
             margin-left:65px;

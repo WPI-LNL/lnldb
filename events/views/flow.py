@@ -862,7 +862,7 @@ def extras(request, id):
     context['event'] = event
 
     mk_extra_formset = inlineformset_factory(BaseEvent, ExtraInstance, extra=1, exclude=[])
-    mk_extra_formset.form = ExtraForm
+    mk_extra_formset.form = curry_class(ExtraForm, event=event)
 
     if request.method == 'POST':
         set_revision_comment("Edited extras", None)

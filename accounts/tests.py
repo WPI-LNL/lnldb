@@ -155,6 +155,12 @@ class AccountsTestCase(ViewTestCase):
         # Should not redirect as class year is required
         self.assertOk(self.client.post(reverse("accounts:update", args=[2]), member_data))
 
+        member_data['class_year'] = timezone.localdate().year + 7
+        
+        # max year is 6 years in the future
+        self.assertContains(self.client.post(reverse("accounts:update", args=[2]), member_data),
+                             "Class year must be no greater than 6 years in the future")
+
         member_data['class_year'] = '1962'
 
         self.assertRedirects(self.client.post(reverse("accounts:update", args=[2]), member_data),
