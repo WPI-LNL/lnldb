@@ -28,9 +28,15 @@
 
 .cal-status-approved { background-color: #309f30!important; border-color:#1f6c1f !important}
 
-.cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed { 
+.cal-status-paid, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed { 
   background-color: #545454!important; 
   border-color:rgb(42, 42, 42) !important
+}
+
+.cal-status-cancelled {
+    background-color: #2a2a3e!important;
+    border-color:rgb(42, 42, 42) !important;
+    font-style: italic !important;
 }
 
 .cal-status-awaiting-review { background-color: #e39c2b!important; border-color:#87572a !important}
@@ -164,7 +170,8 @@
     <span class="label cal-status-awaiting-approval">Awaiting Approval</span>
     <span class="label cal-status-approved">Confirmed</span>
     <span class="label cal-status-awaiting-review">Awaiting Billing Review</span>
-    <span class="label cal-status-paid">To be billed, Awaiting payment, Paid, Cancelled, or Closed</span> <!-- .cal-status-paid, .cal-status-cancelled, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed -->
+    <span class="label cal-status-cancelled">Cancelled</span>
+    <span class="label cal-status-paid">To be billed, Awaiting payment, Paid or Closed</span> <!-- .cal-status-paid, .cal-status-closed, .cal-status-awaiting-payment, .cal-status-to-be-billed -->
     <span class="label" style="background-color: blue; border: darkblue;">Other/Unknown</span>
   </h4>
 </div>
