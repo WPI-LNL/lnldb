@@ -26,13 +26,13 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 
-from events.models import Billing, MultiBilling
 from events.tests.generators import Event2019Factory, OrgFactory
 from finance.calculators import (billing_receivables, client_retention, event_billing_kept,
                                  event_financials, event_pnl_rows, revenue_by_source,
                                  sga_receivables)
 from finance.forms import AllocationForm, ReconcileForm, SplitFormSet
-from finance.models import (FRLineItem, FundingRequest, ParsedTransaction, TransactionStatus,
+from finance.models import (Billing, FRLineItem, FundingRequest, MultiBilling, ParsedTransaction,
+                            TransactionStatus,
                             WorkdayTransaction, reimbursement_source, reset_finance_cache,
                             revenue_sources_by_fund)
 from finance.suggestions import (EXPORT, GUESS, MEMO, is_sga_transfer, suggest_all,

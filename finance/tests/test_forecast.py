@@ -24,11 +24,11 @@ from unittest import mock
 from django.test import TestCase
 from django.urls import reverse
 
-from events.models import Billing, Rental
+from events.models import Rental
 from events.tests.generators import Event2019Factory, OrgFactory
 from finance import forecast, history, reports
 from finance.history import Flow
-from finance.models import (FinanceSettings, FRLineItem, FundingRequest, HistoryKind,
+from finance.models import (Billing, FinanceSettings, FRLineItem, FundingRequest, HistoryKind,
                             HistoryOverride, ParsedTransaction, PlannedPurchase,
                             TransactionStatus, reset_finance_cache)
 from finance.tests.test_balances import checkpoint, filed, line

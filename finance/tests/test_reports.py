@@ -22,11 +22,10 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 
-from events.models import Billing
 from events.tests.generators import Event2019Factory, OrgFactory
 from finance import balances
 from finance.calculators import event_billing_kept, event_financials, event_pnl_rows
-from finance.models import FiscalYearClose, FRLineItem, FundingRequest, ParsedTransaction
+from finance.models import Billing, FiscalYearClose, FRLineItem, FundingRequest, ParsedTransaction
 from finance.reports import (AGE_BANDS, Column, Period, Report, Row, Section, age_band,
                              as_csv, event_report, fund_balances, income_and_spending,
                              owed_to_lnl, parse_period)

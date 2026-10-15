@@ -22,11 +22,11 @@ from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 
-from events.models import Billing, EventArbitrary, MultiBilling, Rental
+from events.models import EventArbitrary, Rental
 from events.tests.generators import Event2019Factory, OrgFactory
 from finance.calculators import (event_billed, event_financials, event_pnl_rows,
                                  event_pnl_totals)
-from finance.models import ParsedTransaction, TransactionStatus, WorkdayTransaction
+from finance.models import Billing, MultiBilling, ParsedTransaction, TransactionStatus, WorkdayTransaction
 from finance.suggestions import (EXPORT, GUESS, HIGH, MEMO, Suggestion, lookups_for_form,
                                  suggest_all, suggest_expense_event)
 from finance.tests.test_views import FinanceViewTestCase

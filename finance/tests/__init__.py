@@ -97,6 +97,11 @@ what they cover rather than alphabetically.
 ``test_detail``
     One bank line and one entry -- splitting, deletion, and the audit trail
     reconstructed from django-reversion snapshots.
+``test_billing``
+    The bill and multi-bill pages and the multi-bill invoice, which came from
+    the events app with the bills: creating, editing, deleting, emailing and
+    paying a bill, marking an event entered into Workday, and the old
+    multi-bill address redirecting here.
 
 **Everything else**
 

@@ -9,7 +9,7 @@
 <div class="row">
     <div class="col-md-12">
         <div class="pull-right">
-            <a href="{% url 'events:multibillings:new' %}" class="btn btn-primary">New MultiBill</a>
+            <a href="{% url 'finance:multibill-new' %}" class="btn btn-primary">New MultiBill</a>
         </div>
         <h2>{{h2}}</h2>
     </div>
@@ -71,11 +71,11 @@
                             </td>
                         {% elif field.name == 'tasks' %}
                             <td class="tasks">
-                                <a href="{% url "events:multibillings:pdf" multibilling.id %}">PDF</a>
+                                <a href="{% url "finance:multibill-pdf" multibilling.id %}">PDF</a>
                                 {% if not multibilling.num_closed_events %}
-                                    <a href="{% url "events:multibillings:edit" multibilling.id %}">Update</a>
+                                    <a href="{% url "finance:multibill-edit" multibilling.id %}">Update</a>
                                     {% if not multibilling.date_paid %}
-                                        <a href="{% url "events:multibillings:remove" multibilling.id %}">Delete</a>
+                                        <a href="{% url "finance:multibill-delete" multibilling.id %}">Delete</a>
                                     {% endif %}
                                 {% endif %}
                             </td>

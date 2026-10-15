@@ -5,7 +5,8 @@ The five numbered blocks are the pages the app started with, in the order a
 Treasurer normally walks them: look at the dashboard, scan the ledger, clear the
 queue, drill into a line, then check a project tag. The blocks after them came
 as the app grew: what each event made, fund balances and the year end, funding
-requests, reports, and the forecast with the history it learns from. Anything
+requests, reports, the forecast with the history it learns from, and billing
+events, which moved here from the events app. Anything
 reached only from inside a page (bulk actions, JSON endpoints) is grouped under
 the page that links to it. The pages, and the permission each needs, are listed
 in ``docs/reference/finance.rst`` under *The pages*.
@@ -89,4 +90,28 @@ urlpatterns = [
     re_path(r'^forecast/history/(?P<fiscal_year>\d{4})/$', views.history_year,
             name="history-year"),
     re_path(r'^forecast/history/line/(?P<pk>\d+)/$', views.history_line, name="history-line"),
+
+    # Billing an event: bills, multi-bills and the step into Workday. The
+    # client's own worktag form stays in the events app, where the links in
+    # every bill email already sent point.
+    re_path(r'^billing/event/(?P<event>\d+)/new/$', views.BillingCreate.as_view(), name="bill-new"),
+    re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/edit/$', views.BillingUpdate.as_view(),
+            name="bill-edit"),
+    re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/delete/$', views.BillingDelete.as_view(),
+            name="bill-delete"),
+    re_path(r'^billing/event/(?P<event>\d+)/(?P<billing>\d+)/email/$',
+            views.BillingEmailCreate.as_view(), name="bill-email"),
+    re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/pay/$', views.pay_bill, name="bill-pay"),
+    re_path(r'^billing/event/(?P<id>\d+)/workday-entered/$', views.mark_entered_into_workday,
+            name="workday-entered"),
+    re_path(r'^billing/multibills/$', views.multibill_list, name="multibill-list"),
+    re_path(r'^billing/multibills/new/$', views.MultiBillingCreate.as_view(), name="multibill-new"),
+    re_path(r'^billing/multibills/(?P<pk>\d+)/edit/$', views.MultiBillingUpdate.as_view(),
+            name="multibill-edit"),
+    re_path(r'^billing/multibills/(?P<pk>\d+)/delete/$', views.MultiBillingDelete.as_view(),
+            name="multibill-delete"),
+    re_path(r'^billing/multibills/(?P<multibilling>\d+)/email/$',
+            views.MultiBillingEmailCreate.as_view(), name="multibill-email"),
+    re_path(r'^billing/multibills/(?P<multibilling>\d+)/pdf/$', views.generate_multibill_pdf,
+            name="multibill-pdf"),
 ]

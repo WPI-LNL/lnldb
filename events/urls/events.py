@@ -1,5 +1,6 @@
 from django.conf.urls import include
 from django.urls import re_path
+from django.views.generic import RedirectView
 
 from ..views import list as list_views, flow as flow_views, mkedrm as mkedrm_views, indices
 from pdfs import views as pdf_views
@@ -89,22 +90,14 @@ urlpatterns = [
     re_path(r'^rentals/(?P<id>[0-9a-f]+)/$', flow_views.rentals, name="rentals"),
     re_path(r'^occurrences/(?P<id>[0-9a-f]+)/$', flow_views.occurrences, name="occurrences"),
     re_path(r'^enter-worktag/(?P<pk>[0-9a-f]+)/$', flow_views.WorkdayEntry.as_view(), name="worktag-form"),
-    re_path(r'^workday-entered/(?P<id>[0-9a-f]+)/$', flow_views.mark_entered_into_workday, name="workday-entered"),
 
     re_path(r'^(?P<pk>[0-9a-f]+)/download/ics/$', flow_views.download_ics, name="ics"),
 
     # The nice url structure. TODO: fit the rest in here (with deprecation, of course)
     re_path(r'^view/(?P<event>[0-9]+)/', include([
+        # Bills themselves are created and paid in the finance app; the event's invoice is drawn here,
+        # because it is the same document as its quote.
         re_path(r'^billing/', view=include(([
-            re_path(r'^mk/$', flow_views.BillingCreate.as_view(), name="new"),
-            re_path(r'^update/(?P<pk>[0-9]+)/$', flow_views.BillingUpdate.as_view(),
-                name="edit"),
-            re_path(r'^email/(?P<billing>[0-9]+)/$', flow_views.BillingEmailCreate.as_view(),
-                name="email"),
-            re_path(r'^pay/(?P<pk>[0-9]+)/$', flow_views.pay_bill,
-                name="pay"),
-            re_path(r'^rm/(?P<pk>[0-9]+)/$', flow_views.BillingDelete.as_view(),
-                name="remove"),
             re_path(r'^pdf/$', pdf_views.generate_event_bill_pdf, name="pdf"),
         ], 'lnldb'), namespace="bills")),
         re_path(r'^report/', view=include(([
@@ -113,14 +106,8 @@ urlpatterns = [
             re_path(r'^rm/(?P<pk>[0-9]+)/$', flow_views.CCRDelete.as_view(), name="remove")
         ], 'lnldb'), namespace="reports")),
     ])),
-    re_path(r'^multibills/', include(([
-        re_path(r'^$', list_views.multibillings, name="list"),
-        re_path(r'^mk/$', flow_views.MultiBillingCreate.as_view(), name="new"),
-        re_path(r'^update/(?P<pk>[0-9]+)/$', flow_views.MultiBillingUpdate.as_view(), name="edit"),
-        re_path(r'^rm/(?P<pk>[0-9]+)/$', flow_views.MultiBillingDelete.as_view(), name="remove"),
-        re_path(r'^email/(?P<multibilling>[0-9]+)/$', flow_views.MultiBillingEmailCreate.as_view(), name="email"),
-        re_path(r'^pdf/(?P<multibilling>[0-9]+)/$', pdf_views.generate_multibill_pdf, name="pdf"),
-    ], 'lnldb'), namespace="multibillings")),
+    # Multi-bills moved to the finance app; the old list address still takes you there
+    re_path(r'^multibills/$', RedirectView.as_view(pattern_name='finance:multibill-list', permanent=False)),
 
     re_path(r'^workshops/', include(([
         re_path(r'^manage/$', list_views.workshops_list, name="list"),

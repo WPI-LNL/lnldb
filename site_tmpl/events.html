@@ -197,7 +197,7 @@
                                 {% endif %}
                                 {% if event.reviewed and event.last_bill and not event.paid %}
                                     {% permission request.user has 'events.bill_event' of event %}
-                                        <form class="form-inline" action="{% url 'events:bills:pay' event.id event.last_bill.id %}?next={{ request.get_full_path }}" method="post">
+                                        <form class="form-inline" action="{% url 'finance:bill-pay' event.id event.last_bill.id %}?next={{ request.get_full_path }}" method="post">
                                             {% csrf_token %}
                                             <span class="markpaidtask"><button class="btn btn-link" type="submit">Mark&nbsp;Paid</button></span>
                                         </form>
@@ -205,7 +205,7 @@
                                 {% endif %}
                                 {% if event.reviewed and event.last_bill and event.workday_fund and event.worktag and not event.entered_into_workday %}
                                     {% permission request.user has 'events.bill_event' of event %}
-                                        <form class="form-inline" action="{% url 'events:workday-entered' event.id %}" method="post">
+                                        <form class="form-inline" action="{% url 'finance:workday-entered' event.id %}" method="post">
                                             {% csrf_token %}
                                             <span class="workdayenteredtask"><button class="btn btn-link" type="submit">Mark Entered Into Workday</button></span>
                                         </form>

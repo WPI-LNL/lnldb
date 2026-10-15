@@ -67,7 +67,7 @@
                         {% else %}
                             {% permission request.user has 'events.bill_event' of event %}
                                 <a class="btn btn-primary btn-lg"
-                                   href="{% url "events:bills:new" event.id %}">Create Bill</a>
+                                   href="{% url "finance:bill-new" event.id %}">Create Bill</a>
                             {% endpermission %}
                         {% endif %}
                     {% endif %}
@@ -769,16 +769,16 @@
                                         </td>
                                         <td>
                                             {% if not event.closed %}
-                                                <form class="form-inline" action="{% url "events:bills:pay" event.id billing.id %}" method="post">
+                                                <form class="form-inline" action="{% url "finance:bill-pay" event.id billing.id %}" method="post">
                                                     <div class="form-group">
                                                     {% if not billing.date_paid %}
                                                         {% csrf_token %}
                                                         <button class="btn btn-link" type="submit">Mark Paid</button>
                                                     {% endif %}
                                                     <a class="btn btn-link"
-                                                       href="{% url "events:bills:edit" event.id billing.id %}">Update</a>
+                                                       href="{% url "finance:bill-edit" event.id billing.id %}">Update</a>
                                                     {% if not billing.date_paid %}
-                                                        <a class="btn btn-link" href="{% url "events:bills:remove" event.id billing.id %}">Delete</a>
+                                                        <a class="btn btn-link" href="{% url "finance:bill-delete" event.id billing.id %}">Delete</a>
                                                     {% endif %}
                                                     </div>
                                                 </form>
@@ -791,7 +791,7 @@
                                 <tr>
                                     <td>{{ multibilling.date_billed }}</td>
                                     <td>{{ multibilling.date_paid }}</td>
-                                    <td><a href="{% url 'events:multibillings:pdf' multibilling.id %}">See invoice</a></td>
+                                    <td><a href="{% url 'finance:multibill-pdf' multibilling.id %}">See invoice</a></td>
                                     {% permission request.user has 'events.bill_event' of event %}
                                         <td>
                                             {% for email in multibilling.multibillingemail_set.all %}

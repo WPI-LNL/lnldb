@@ -17,7 +17,7 @@ from mptt.admin import MPTTModelAdmin
 from reversion.admin import VersionAdmin
 
 from finance.importers import COLUMN_ALIASES
-from finance.models import (BalanceCheckpoint, ColumnAlias, FinanceSettings, FiscalYearClose,
+from finance.models import (BalanceCheckpoint, Billing, ColumnAlias, FinanceSettings, FiscalYearClose,
                             FRLineItem, FundingRequest, FundSource, FundTransfer,
                             HistoryOverride, ParsedTransaction, PartitionCode, PlannedPurchase,
                             ProjectTag, RevenueSource, ServiceColor, SpendCategory,
@@ -412,3 +412,8 @@ class HistoryOverrideAdmin(admin.ModelAdmin):
     list_filter = ('kind', 'leave_out', 'spend_category')
     list_select_related = ('line', 'spend_category', 'updated_by')
     raw_id_fields = ('line', 'updated_by')
+
+
+# Bills came from the events app, registered there with the default admin; they
+# kept it when they moved. Each event's own admin page lists its bills too.
+admin.site.register(Billing)

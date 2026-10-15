@@ -21,12 +21,13 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 
-from events.models import (Billing, Discount, DiscountPrice, Event, EventArbitrary, Extra,
+from events.models import (Discount, DiscountPrice, Event, EventArbitrary, Extra,
                            ExtraInstance, ExtraPrice, Fee, FeePrice, Lighting, Pricelist, Rental,
                            Service, ServiceInstance, ServicePrice, Sound)
 from events.tests.generators import CategoryFactory, Event2019Factory, EventFactory, OrgFactory
 from finance import activity, reports
 from finance.activity import _allocate, load_work, term_for, terms_between
+from finance.models import Billing
 from finance.reports import Period, activity_trends, as_csv, work_split
 from finance.tests.test_views import FinanceViewTestCase
 

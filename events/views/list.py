@@ -3,7 +3,7 @@ import re
 
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-from django.db.models import Count, F, Q, Sum, Case, When, IntegerField
+from django.db.models import Count, F, Q
 from django.forms.models import modelformset_factory
 from django.http.response import HttpResponseRedirect
 from django.views.generic.edit import DeleteView
@@ -13,7 +13,7 @@ from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
-from events.models import BaseEvent, Event2019, Category, MultiBilling, Workshop, WorkshopDate
+from events.models import BaseEvent, Event2019, Category, Workshop, WorkshopDate
 from events.forms import WorkshopForm, WorkshopDatesForm
 
 DEFAULT_ENTRY_COUNT = 40
@@ -1055,31 +1055,6 @@ def public_facing(request):
     context['bootcal_endpoint'] = reverse('cal:api-public')
 
     return render(request, "events_public.html", context)
-
-
-@login_required
-@permission_required('events.bill_event', raise_exception=True)
-def multibillings(request):
-    """ Lists all multibills """
-    context = {}
-
-    multibills = MultiBilling.objects.annotate(num_closed_events=Sum(Case(
-            When(events__closed=True, then=1),
-            default=0,
-            output_field=IntegerField())))
-
-    page = request.GET.get('page')
-    sort = request.GET.get('sort') or '-date_billed'
-    multibills = paginate_helper(multibills, page, sort)
-
-    context['h2'] = "MultiBills"
-    context['multibillings'] = multibills
-    context['cols'] = ['events', FakeField('org', verbose_name="Client", sortable=True),
-                       FakeExtendedField('date_billed', model=MultiBilling),
-                       FakeExtendedField('date_paid', model=MultiBilling), 'amount', FakeField('email_sent'),
-                       FakeField('tasks')]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render(request, 'multibillings.html', context)
 
 
 @login_required

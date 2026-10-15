@@ -49,7 +49,7 @@ from django.db.models import DecimalField, F, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils.formats import date_format
 
-from finance.models import (ZERO, FundSource, ProjectTag, SuggestionRule,
+from finance.models import (ZERO, FundSource, MultiBilling, ProjectTag, SuggestionRule,
                             default_fund_source, fund_source_for_tracking,
                             fund_source_for_workday_fund, money, normalise_sga_reference,
                             normalise_term, own_fund_for_account, reimbursement_source,
@@ -600,8 +600,6 @@ def suggest_multibill(txn, linked_event=None):
     Either way the queue only offers a link to the split page, which lays the
     shares out to be checked and saved: nothing here files anything.
     """
-    from events.models import MultiBilling
-
     if txn.net_amount <= 0:
         return None
     amount = money(txn.net_amount)

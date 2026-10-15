@@ -3190,3 +3190,96 @@ class PlannedPurchase(models.Model):
     def is_counted(self):
         """ Whether the forecast counts it: planned or approved, not bought or dropped. """
         return self.status in self.COUNTED
+
+
+# ---------------------------------------------------------------------------
+# Bills
+#
+# What LNL has asked a client to pay for its work: a bill for one event, or a
+# multi-bill covering several with a single figure, and the emails that sent
+# them. They started out in the events app and moved here, because everything
+# after an event is reviewed for billing -- the bill, the client's worktag, the
+# ISD, the payment -- is the Treasurer's. The event keeps its price and its
+# review; finance keeps the bill.
+#
+# The tables kept their events_* names when the models moved (migration
+# 0003_bills_from_events), so no row was copied, and the names the events app
+# reaches them by -- event.billings, event.multibillings -- did not change.
+# ---------------------------------------------------------------------------
+
+class Billing(models.Model):
+    """ A bill for one event, sent to its client """
+    date_billed = models.DateField()
+    date_paid = models.DateField(null=True, blank=True)
+    event = models.ForeignKey('events.BaseEvent', on_delete=models.CASCADE, related_name="billings")
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+
+    def __str__(self):
+        out = "Bill for %s" % self.event.event_name
+        if self.date_paid:
+            out += " (PAID)"
+        return out
+
+    class Meta:
+        db_table = 'events_billing'
+        ordering = ("-date_billed", "date_paid")
+
+
+class MultiBilling(models.Model):
+    """ One bill covering several events, sent to one client """
+    date_billed = models.DateField()
+    date_paid = models.DateField(null=True, blank=True)
+    org = models.ForeignKey('events.Organization', on_delete=models.PROTECT, null=True,
+                            related_name='multibillings')
+    events = models.ManyToManyField('events.BaseEvent', related_name='multibillings',
+                                    db_table='events_multibilling_events')
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+
+    def __str__(self):
+        out = 'MultiBill for ' + ', '.join(map(lambda event: event.event_name, self.events.all()))
+        if self.date_paid:
+            out += ' (PAID)'
+        return out
+
+    class Meta:
+        db_table = 'events_multibilling'
+        ordering = ('-date_billed', 'date_paid')
+
+
+class BillingEmail(models.Model):
+    """ An email that sent a bill to its client """
+    billing = models.ForeignKey(Billing, on_delete=models.CASCADE)
+    subject = models.CharField(max_length=128)
+    message = models.TextField()
+    email_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL,
+                                            db_table='events_billingemail_email_to_users')
+    email_to_orgs = models.ManyToManyField('events.Organization',
+                                           db_table='events_billingemail_email_to_orgs')
+    sent_at = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return 'Billing email sent %s for %s' % (self.sent_at if self.sent_at is not None else 'never',
+                                                 self.billing.event.event_name)
+
+    class Meta:
+        db_table = 'events_billingemail'
+
+
+class MultiBillingEmail(models.Model):
+    """ An email that sent a multi-bill to its client """
+    multibilling = models.ForeignKey(MultiBilling, on_delete=models.CASCADE)
+    subject = models.CharField(max_length=128)
+    message = models.TextField()
+    email_to_users = models.ManyToManyField(settings.AUTH_USER_MODEL,
+                                            db_table='events_multibillingemail_email_to_users')
+    email_to_orgs = models.ManyToManyField('events.Organization',
+                                           db_table='events_multibillingemail_email_to_orgs')
+    sent_at = models.DateTimeField(null=True)
+
+    def __str__(self):
+        return 'MultiBilling email sent %s for %s' % (
+            self.sent_at if self.sent_at is not None else 'never',
+            ', '.join(map(lambda event: event.event_name, self.multibilling.events.all())))
+
+    class Meta:
+        db_table = 'events_multibillingemail'

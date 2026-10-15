@@ -22,7 +22,7 @@ from django.views.decorators.http import require_POST
 from finance.calculators import (EVENT_FLAGS, event_financials, event_pnl_rows,
                                  event_pnl_totals)
 from finance.filters import filter_context, get_filter_state
-from finance.models import ParsedTransaction, money
+from finance.models import MultiBilling, ParsedTransaction, money
 
 
 @login_required
@@ -83,7 +83,7 @@ def mark_bill_paid(request, pk):
     Needs the events app's own permission to mark a bill paid as well as the
     finance one: it is that app's record being changed.
     """
-    from events.models import BaseEvent, MultiBilling
+    from events.models import BaseEvent
 
     event = get_object_or_404(BaseEvent, pk=pk)
     redirect_to = request.POST.get('next') or reverse('finance:events')

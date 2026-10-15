@@ -25,7 +25,7 @@ from reversion.models import Version
 
 from finance.filters import filter_context
 from finance.forms import AllocationForm, SplitFormSet
-from finance.models import ParsedTransaction, WorkdayTransaction, own_fund_for_account
+from finance.models import MultiBilling, ParsedTransaction, WorkdayTransaction, own_fund_for_account
 from finance.suggestions import suggest_all
 
 
@@ -198,8 +198,6 @@ def _multibill_to_split(request, txn):
     over existing slices would ask the Treasurer to save a split that silently
     replaces what was already there.
     """
-    from events.models import MultiBilling
-
     raw = request.GET.get('multibill')
     if not raw or not raw.isdigit() or txn.net_amount <= 0:
         return None

@@ -148,7 +148,8 @@ Lookup, guess             An answer the export states, which fills the  ``Sugges
                           box; our own reading, offered as a chip
 ISD                       Internal Service Delivery: WPI billing WPI.   ``WorkdayTransaction``
                           LNL's event bills arrive as ISDs              ``.document_type``
-Multi-bill                One bill covering several events              ``events.models.MultiBilling``
+Bill                      What LNL asked a client to pay for one event  ``Billing``
+Multi-bill                One bill covering several events              ``MultiBilling``
 Fiscal year               July to June, named for the year it ends:     ``fiscal_year_for``
                           FY26 is July 2025 to June 2026
 Minimum reserve           The least LNL's own money should hold         ``FinanceSettings``
@@ -194,6 +195,21 @@ Three more pages are reached from those: one bank line
 event's figures, and the Django admin's *Financial Subledger* section holds
 everything in *What is editable without a deploy*.
 
+The billing pages are under ``billing/``. They moved here from the events app
+with the bills, and still look and behave as they did there:
+
+* ``billing/event/<event>/``: creating, editing, deleting, emailing and paying
+  one event's bill, and marking the event entered into Workday. They are
+  reached from the event's own page.
+* ``billing/multibills/``: the multi-bill list, which the Events menu links to,
+  and creating, editing, deleting, emailing and drawing the invoice for a
+  multi-bill.
+
+They need ``events.bill_event``, which Officers hold, not ``view_subledger``.
+The invoice needs ``events.view_event_billing``. The client's worktag form is
+not one of them: it stays in the events app, because every bill email ever sent
+links to it there.
+
 Where the code is
 ~~~~~~~~~~~~~~~~~
 
@@ -206,6 +222,9 @@ Where                                        What it holds
 :mod:`finance.suggestions`                   What the queue fills in, and what it only offers
 :mod:`finance.forms`                         Every form, and the rules that remove a field rather than
                                              validate it
+:mod:`finance.billing_forms`                 The bill and multi-bill forms, moved from the events app
+                                             with the bills; see *The bills moved here from the events
+                                             app*
 :mod:`finance.calculators`                   The dashboard's figures, each event's figures, and what
                                              SGA and clients owe
 :mod:`finance.balances`                      Each fund's balance and each account's cash, on any day
@@ -216,7 +235,7 @@ Where                                        What it holds
 :mod:`finance.forecast`                      The forecast, the typical year and the back-test
 :mod:`finance.filters`                       The filter bar: fiscal year and partition
 ``finance/views/``                           One module per tab, plus ``detail`` for the line and entry
-                                             pages
+                                             pages and ``billing`` for the bill and multi-bill pages
 :mod:`finance.lookups`                       The event and project autocompletes
 :mod:`finance.admin`, :mod:`finance.apps`    The admin, and the signals that drop cached settings
 ``finance/management/commands/``             Development tools; see *Management commands*
@@ -2062,6 +2081,42 @@ the app at another database, and on a development machine the default is
 
 Back the real database up before migrating it.
 
+The bills moved here from the events app
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``Billing``, ``MultiBilling`` and their two email records used to be events
+models. Two migrations move them, ``events 0019_move_bills_to_finance`` and
+``finance 0003_bills_from_events``, and neither touches a bill table.
+``sqlmigrate`` prints no SQL for either.
+
+* **The tables stay as they are.** Each model names the ``events_*`` table it
+  always had, linking tables included, so no row is copied.
+* **The events app reads bills the same way.** It still reaches them as
+  ``event.billings`` and ``event.multibillings``.
+* **The one write is to ``django_content_type``.** The four models' rows are
+  relabelled from ``events`` to ``finance`` and keep their ids, so the admin's
+  history and the models' permissions follow them.
+
+**Before deploying this, rehearse it on a MySQL copy of production.** It has
+been run on SQLite, forwards and backwards, with the table definitions and rows
+compared before and after. It has not been run on MySQL. On the copy:
+
+1. For ``events_billing``, ``events_multibilling``,
+   ``events_multibilling_events``, ``events_billingemail`` and
+   ``events_multibillingemail``, note the row counts and save the output of
+   ``SHOW CREATE TABLE``.
+2. Run ``python manage.py migrate``.
+3. Check that:
+
+   * the counts and table definitions are unchanged;
+   * the four rows in ``django_content_type`` now read ``finance``;
+   * an event with a bill still shows it on its *Billing* tab, and the
+     multi-bill list still opens.
+
+To undo it, run ``python manage.py migrate events
+0017_is_sga_funded_squashed_0018_pricelist_extras``. That unapplies both
+migrations and puts the content types back.
+
 Changing reference data
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2162,7 +2217,7 @@ locally::
 Tests
 -----
 
-``python manage.py test finance`` runs 1,388 tests across twenty-five modules. The
+``python manage.py test finance`` runs 1,402 tests across twenty-six modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.
