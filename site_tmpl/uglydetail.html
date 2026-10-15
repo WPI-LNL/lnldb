@@ -676,6 +676,16 @@
                 {% endpermission %}
                 {% permission request.user has 'events.view_event_billing' of event %}
                 <div id="billing" class="tab-pane">
+                    {% comment %}
+                        Where the bill stands and what comes next, from the finance
+                        app's Billing stages. Empty until the event is reviewed. Asked
+                        of the site-wide permission, not the event's: the client's own
+                        billing contacts hold it for their events, and this is the
+                        Treasurer's.
+                    {% endcomment %}
+                    {% permission request.user has 'events.bill_event' %}
+                        {% billing_next_step event %}
+                    {% endpermission %}
                     {% if not event.closed %}
                         {% permission request.user has 'events.adjust_event_charges' of event %}
                             <div class="pull-right btn-group">

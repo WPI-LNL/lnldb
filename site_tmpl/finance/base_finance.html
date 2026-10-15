@@ -128,6 +128,10 @@
                     {% endpermission %}
                     <li {% if fin_page == 'events' %}class="active"{% endif %}>
                         <a href="{% url 'finance:events' %}?{{ filter_state.querystring }}">Events</a></li>
+                    {% permission request.user has 'events.bill_event' %}
+                        <li {% if fin_page == 'billing' %}class="active"{% endif %}>
+                            <a href="{% url 'finance:billing' %}?{{ filter_state.querystring }}">Billing</a></li>
+                    {% endpermission %}
                     <li {% if fin_page == 'balances' %}class="active"{% endif %}>
                         <a href="{% url 'finance:balances' %}?{{ filter_state.querystring }}">Balances</a></li>
                     <li {% if fin_page == 'projects' %}class="active"{% endif %}>

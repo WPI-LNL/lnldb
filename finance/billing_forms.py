@@ -179,13 +179,14 @@ class MultiBillForm(forms.ModelForm):
 
         # The box is offered only when the events disagree about their client:
         # the ones submitted, or, before anything is, the ones already on the
-        # bill -- which were confirmed when it was made, so the box starts ticked.
+        # bill -- which were confirmed when it was made, so the box starts
+        # ticked -- or the ones ticked on the Billing page, which were not.
         self.clients = self._submitted_clients()
         fields = ['events', 'org']
         if len(self.clients) > 1:
             self.fields['confirm_mixed_clients'].label = "Bill these together: they are for %s" % ', '.join(
                 '%s (%s event%s)' % (org.retname, count, '' if count == 1 else 's') for org, count in self.clients)
-            self.fields['confirm_mixed_clients'].initial = not self.is_bound
+            self.fields['confirm_mixed_clients'].initial = not self.is_bound and bool(self.instance.pk)
             fields.append('confirm_mixed_clients')
         self.helper = finance_form_helper()
         self.helper.layout = Layout(*(fields + ['name', 'description', 'date_billed', 'attach_event_invoices']))
@@ -193,10 +194,14 @@ class MultiBillForm(forms.ModelForm):
     def _submitted_clients(self):
         """
         The client tally of the events in the submitted data, before it is
-        validated -- or, on a form not yet submitted, of the bill's own events.
+        validated -- or, on a form not yet submitted, of the bill's own events,
+        or of the events it starts with ticked.
         """
         if not self.is_bound:
-            return client_tally(self.instance.events.all()) if self.instance.pk else []
+            if self.instance.pk:
+                return client_tally(self.instance.events.all())
+            chosen = self.initial.get('events') or []
+            return client_tally(self.fields['events'].queryset.filter(pk__in=chosen)) if chosen else []
         submitted = self.fields['events'].widget.value_from_datadict(self.data, self.files, self.add_prefix('events'))
         pks = [pk for pk in (submitted or []) if str(pk).isdigit()]
         return client_tally(self.fields['events'].queryset.filter(pk__in=pks)) if pks else []

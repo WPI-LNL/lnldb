@@ -564,6 +564,22 @@ class OwedToLNLTests(CacheResetMixin, TestCase):
         report = owed_to_lnl(today=TODAY)
         self.assertEqual(section(report, 'SGA: funding requests').rows, [])
 
+    def test_each_client_debt_says_where_its_bill_stands(self):
+        def stage():
+            return section(owed_to_lnl(today=TODAY), 'Clients: event bills').rows[0].cells['stage']
+
+        # Not yet reviewed for billing, so it has no stage: that step is the VP's.
+        self.assertEqual(stage(), '')
+        self.gala.reviewed = True
+        self.gala.save()
+        self.assertEqual(stage(), 'Ready to bill')  # made, never emailed
+        self.gala.worktag = '1234-CC'
+        self.gala.save()
+        self.assertEqual(stage(), 'Create ISD')
+        self.gala.closed = True
+        self.gala.save()
+        self.assertEqual(stage(), 'Closed')
+
 
 # ---------------------------------------------------------------------------
 # The CSV

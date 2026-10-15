@@ -327,3 +327,19 @@ def indent_px(level):
         return int(level) * 18
     except (TypeError, ValueError):
         return 0
+
+
+@register.inclusion_tag('finance/partials/_billing_next_step.html', takes_context=True)
+def billing_next_step(context, event):
+    """
+    The event page's *Next step* box: the stage the event's bill is at, and a
+    button for what comes next. Nothing for an event with no stage -- one not
+    yet reviewed for billing, which is the VP's, or one already closed.
+
+    The stage comes from :mod:`finance.billing`, the same place the Billing
+    page reads it, so the two cannot disagree.
+    """
+    from finance.billing import item_for_event
+
+    return {'item': item_for_event(event), 'event': event, 'request': context.get('request'),
+            'csrf_token': context.get('csrf_token')}

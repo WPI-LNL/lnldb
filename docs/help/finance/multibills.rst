@@ -8,14 +8,16 @@ department. It has its own page, where you can see what it comes to and why, ema
 .. caution::
     **Permission Required:** Bill event
 
-    Officers can create and change multi-bills. Find them under `Events` > `MultiBills`.
+    Officers can create and change multi-bills. Find them under `Finance` > `Billing` > `All multi-bills`.
 
 -----
 
 Create a Multi-bill
 -------------------
 
-#. On the `MultiBills` page click `New multi-bill`.
+#. On the multi-bills list click `New multi-bill`. Or, on the Billing page's *Ready to bill* tab, tick the events and
+   click `Make a multi-bill of the ticked events`, or click `Make a multi-bill of these` beside a client's events; the
+   form then opens with them ticked (see :doc:`billing`).
 #. Tick the events it covers. The list shows reviewed events that are marked to be billed in bulk and have no bill yet.
    Click `Also show events not marked to be billed in bulk` to see the rest. An event already on another multi-bill is
    never listed, so it cannot be billed twice.
@@ -87,7 +89,7 @@ every time it is made, as it is when you bill an event on its own.
 Email the Client
 ----------------
 
-Click `Email client` on the bill's page or the `MultiBills` list, at any time. The subject and message are written out
+Click `Email client` on the bill's page or the multi-bills list, at any time. The subject and message are written out
 for you -- the events, the total, and a request to reply with the worktag to charge -- and you can edit them before
 sending. The invoice is attached, named after the bill (such as *fall-films-bill.pdf*). Every email sent is listed on
 the bill's page.

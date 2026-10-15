@@ -1,5 +1,6 @@
 from django.conf.urls import include
-from django.urls import re_path
+from django.urls import re_path, reverse_lazy
+from django.utils.text import format_lazy
 from django.views.generic import RedirectView
 
 from ..views import list as list_views, flow as flow_views, mkedrm as mkedrm_views, indices
@@ -13,6 +14,16 @@ def generate_date_patterns(func, name):
         re_path(r'^(?P<start>\d{4}-\d{2}-\d{2})/(?P<end>\d{4}-\d{2}-\d{2})/$', func, name=name),
     ])
 
+
+def billing_tab(stage, anchor=''):
+    """
+    Where one of the old billing lists went: its tab on the finance app's
+    Billing page. Dates in the old address, and its calendar, are dropped.
+    """
+    return RedirectView.as_view(url=format_lazy('{}?stage={}{}', reverse_lazy('finance:billing'), stage, anchor),
+                                permanent=False)
+
+
 app_name = 'lnldb'
 
 # prefix: /db/events
@@ -25,12 +36,6 @@ urlpatterns = [
     re_path(r'^confirmed/', generate_date_patterns(list_views.confirmed, name="confirmed")),
     re_path(r'^open/', generate_date_patterns(list_views.openworkorders, name="open")),
     re_path(r'^unreviewed/', generate_date_patterns(list_views.unreviewed, name="unreviewed")),
-    re_path(r'^unbilled/', generate_date_patterns(list_views.unbilled, name="unbilled")),
-    re_path(r'^unbilledsemester/', generate_date_patterns(list_views.unbilled_semester, name="unbilled-semester")),
-    re_path(r'^paid/', generate_date_patterns(list_views.paid, name="paid")),
-    re_path(r'^unpaid/', generate_date_patterns(list_views.unpaid, name="unpaid")),
-    re_path(r'^workday/', generate_date_patterns(list_views.awaitingworkday, name="awaitingworkday")),
-    re_path(r'^unpaidworkday/', generate_date_patterns(list_views.unpaid_workday, name="unpaid-workday")),
     re_path(r'^closed/', generate_date_patterns(list_views.closed, name="closed")),
     re_path(r'^all/', generate_date_patterns(list_views.all, name="all")),
     re_path(r'^allfuture/', generate_date_patterns(list_views.allfuture, name="allfuture")),
@@ -43,14 +48,18 @@ urlpatterns = [
     re_path(r'^confirmed/calendar/', generate_date_patterns(list_views.confirmed_cal, name="confirmed-cal")),
     re_path(r'^open/calendar/', generate_date_patterns(list_views.openworkorders_cal, name="open-cal")),
     re_path(r'^unreviewed/calendar/', generate_date_patterns(list_views.unreviewed_cal, name="unreviewed-cal")),
-    re_path(r'^unbilled/calendar/', generate_date_patterns(list_views.unbilled_cal, name="unbilled-cal")),
-    re_path(r'^unbilledsemester/calendar/', generate_date_patterns(list_views.unbilled_semester_cal,
-                                                               name="unbilled-semester-cal")),
-    re_path(r'^paid/calendar/', generate_date_patterns(list_views.paid_cal, name="paid-cal")),
-    re_path(r'^unpaid/calendar/', generate_date_patterns(list_views.unpaid_cal, name="unpaid-cal")),
     re_path(r'^closed/calendar/', generate_date_patterns(list_views.closed_cal, name="closed-cal")),
     re_path(r'^all/calendar/', generate_date_patterns(list_views.all_cal, name="all-cal")),
     re_path(r'^allfuture/calendar/', generate_date_patterns(list_views.allfuture_cal, name="all-future-cal")),
+
+    # The billing lists, and their calendars, became the finance app's Billing page. Their old addresses, with or
+    # without dates, open the matching tab.
+    re_path(r'^unbilled/', billing_tab('ready')),
+    re_path(r'^unbilledsemester/', billing_tab('ready', '#bulk')),
+    re_path(r'^unpaid/', billing_tab('waiting-on-client')),
+    re_path(r'^workday/', billing_tab('create-isd')),
+    re_path(r'^unpaidworkday/', billing_tab('waiting-on-approval')),
+    re_path(r'^paid/', billing_tab('paid')),
 
     # Actual event pages
 

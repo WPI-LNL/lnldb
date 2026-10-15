@@ -36,6 +36,7 @@ from django.utils import timezone
 from django.utils.formats import date_format
 
 from finance import activity, balances, history
+from finance.billing import STAGES, stage_of
 from finance.calculators import (_percent, billing_receivables, event_pnl_rows,
                                  event_pnl_totals, sga_receivables)
 from finance.models import (ZERO, ClientType, FiscalYearClose, FundBehaviour, ParsedTransaction,
@@ -890,7 +891,8 @@ def age_band(days):
 def owed_to_lnl(is_projection=None, today=None):
     """
     Everything LNL is owed today, and how long it has been owed: SGA for each
-    funding request's spending, and clients for each bill.
+    funding request's spending, and clients for each bill, with the stage the
+    bill is at (see :mod:`finance.billing`).
     """
     today = today or timezone.localdate()
     columns = [
@@ -906,6 +908,9 @@ def owed_to_lnl(is_projection=None, today=None):
         Column('owed', 'Owed', Column.MONEY),
         Column('days', 'Days', Column.NUMBER),
         Column('age', 'Age'),
+        Column('stage', 'Stage',
+               title="A client: where the bill stands, as the Billing page shows it. Closed means the "
+                     "event was closed with money still owed on it."),
     ]
 
     receivables = sga_receivables(today=today)
@@ -931,11 +936,13 @@ def owed_to_lnl(is_projection=None, today=None):
     for row in billing_receivables(is_projection, today=today):
         event = row['event']
         bill = row['bill']
+        stage = stage_of(event, bill)
         client_rows.append(Row({
             'who': row['client'] or 'No client on file', 'what': event.event_name,
             'since': getattr(bill, 'date_billed', None), 'charged': row['billed'],
             'paid': row['received'], 'owed': row['owed'], 'days': row['days_owed'],
             'age': age_band(row['days_owed']),
+            'stage': STAGES[stage] if stage else ('Closed' if event.closed else ''),
         }, url=reverse('events:detail', args=[event.pk]), link='what',
             note=row['client_type']))
 

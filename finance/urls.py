@@ -91,9 +91,10 @@ urlpatterns = [
             name="history-year"),
     re_path(r'^forecast/history/line/(?P<pk>\d+)/$', views.history_line, name="history-line"),
 
-    # Billing an event: bills, multi-bills and the step into Workday. The
-    # client's own worktag form stays in the events app, where the links in
-    # every bill email already sent point.
+    # Billing an event: the Billing page, bills, multi-bills and the step into
+    # Workday. The client's own worktag form stays in the events app, where the
+    # links in every bill email already sent point.
+    re_path(r'^billing/$', views.billing_page, name="billing"),
     re_path(r'^billing/event/(?P<event>\d+)/new/$', views.BillingCreate.as_view(), name="bill-new"),
     re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/edit/$', views.BillingUpdate.as_view(),
             name="bill-edit"),

@@ -1,6 +1,11 @@
 """
-The pages for billing an event: bills and multi-bills, the multi-bill
-invoice, and marking an event entered into Workday.
+The pages for billing an event: the Billing page, bills and multi-bills, the
+multi-bill invoice, and marking an event entered into Workday.
+
+The Billing page lists every bill by the stage it is at (see
+:mod:`finance.billing`) and offers the next thing to do about each. It
+replaced the events app's six billing lists, whose old addresses lead to its
+tabs.
 
 The bill pages moved here from the events app with the bills, unchanged apart
 from their addresses, which are now under ``/db/finance/billing/``. They
@@ -32,10 +37,12 @@ from pypdf import PdfWriter
 
 from emails.generators import BillingEmailGenerator, DefaultLNLEmailGenerator as DLEG
 from events.models import BaseEvent, Event2019
+from finance.billing import (CREATE_ISD, READY, STAGE_HELP, STAGES, WORKDAY_ENTERED_COMMENT, billing_items,
+                             by_stage, filter_items, ready_sections)
 from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateForm, MultiBillChargeForm,
                                    MultiBillForm, MultiBillingEmailForm, MultiBillPaidForm, client_tally)
 from finance.calculators import bill_payments
-from finance.filters import filter_context
+from finance.filters import filter_context, get_filter_state
 from finance.models import ZERO, Billing, BillingEmail, MultiBilling, MultiBillingCharge, MultiBillingEmail, money
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from helpers.revision import set_revision_comment
@@ -290,20 +297,66 @@ def mark_entered_into_workday(request, id):
     if event.closed:
         messages.add_message(request, messages.ERROR, 'Event is closed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-    if event.entered_into_workday:
-        messages.info(request, "Event has already been marked entered into Workday.", extra_tags="info")
     if not event.reviewed:
         messages.add_message(request, messages.ERROR, 'Event has not been reviewed for billing.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
     if not event.last_bill:
         messages.add_message(request, messages.ERROR, 'Event has not been billed.')
         return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
+    if event.entered_into_workday:
+        messages.info(request, "Event has already been marked entered into Workday.", extra_tags="info")
     else:
         event.entered_into_workday = True
-        set_revision_comment("Marked entered into Workday", None)
+        # The Billing page reads the day this was saved as the day the ISD went in.
+        set_revision_comment(WORKDAY_ENTERED_COMMENT, None)
         event.save()
         messages.success(request, "Marked %s as entered into Workday." % event.event_name, extra_tags="success")
-    return HttpResponseRedirect(reverse('events:awaitingworkday'))
+    return HttpResponseRedirect(_back_to(request, billing_url(CREATE_ISD)))
+
+
+# ---------------------------------------------------------------------------
+# The Billing page
+#
+# Every bill by the stage it is at, one tab per stage, longest-waiting first,
+# each row with the next thing to do about it. The stages are worked out in
+# finance.billing, which the event page's Next step box and the Owed to LNL
+# report read too.
+# ---------------------------------------------------------------------------
+
+def billing_url(stage=None):
+    """ The Billing page, open at a stage's tab. """
+    url = reverse('finance:billing')
+    return '%s?stage=%s' % (url, stage) if stage else url
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def billing_page(request):
+    """
+    The Billing page: one tab per stage, with how many bills are at each.
+
+    The filter bar's fiscal year narrows the rows to events that started in
+    it, and each tab says how many more are waiting in other years, because a
+    bill does not stop needing work when the year turns. The partition keeps
+    film showings (Projection) apart from everything else.
+    """
+    stage = request.GET.get('stage')
+    if stage not in STAGES:
+        stage = READY
+    state = get_filter_state(request)
+    every_year = filter_items(billing_items(request.user), is_projection=state.projection_flag)
+    this_year = by_stage(filter_items(every_year, fiscal_year=state.fiscal_year))
+    all_years = by_stage(every_year)
+    tabs = [{'stage': key, 'label': label, 'count': len(this_year[key]),
+             'elsewhere': len(all_years[key]) - len(this_year[key])}
+            for key, label in STAGES.items()]
+    rows = this_year[stage]
+    context = _billing_context(
+        request, h2="Billing", stage=stage, stage_label=STAGES[stage], stage_help=STAGE_HELP[stage], tabs=tabs,
+        rows=rows, elsewhere=len(all_years[stage]) - len(rows), here=request.get_full_path())
+    if stage == READY:
+        context['ready'] = ready_sections(rows)
+    return render(request, 'finance/billing.html', context)
 
 
 # ---------------------------------------------------------------------------
@@ -317,7 +370,7 @@ def mark_entered_into_workday(request, id):
 # ---------------------------------------------------------------------------
 
 def _billing_context(request, **extra):
-    """ What every multi-bill page needs: the finance chrome, with no tab of its own yet. """
+    """ What every billing page needs: the finance chrome, with the Billing tab lit. """
     context = {'fin_page': 'billing'}
     context.update(extra)
     context.update(filter_context(request))
@@ -390,8 +443,16 @@ def multibill_edit(request, pk=None):
         refused = _refuse_change(request, bill)
         if refused:
             return refused
-    include_unmarked = request.GET.get('show_nonbulk_events') == 'true'
-    form = MultiBillForm(request.POST or None, instance=bill, include_unmarked=include_unmarked)
+    # The events ticked on the Billing page's Ready to bill tab come ticked
+    # here, and the list widens to every billable event when one of them is
+    # not marked to be billed in bulk, so it is there to be ticked. They stay
+    # in the address the form posts back to, so the list is the same then.
+    chosen = [] if bill else [value for value in request.GET.getlist('events') if value.isdigit()]
+    show = request.GET.get('show_nonbulk_events')
+    include_unmarked = (show == 'true' if show else
+                        BaseEvent.objects.filter(pk__in=chosen, billed_in_bulk=False).exists())
+    form = MultiBillForm(request.POST or None, instance=bill, include_unmarked=include_unmarked,
+                         initial={'events': chosen} if chosen else None)
     if request.method == 'POST' and form.is_valid():
         saved = form.save()
         messages.success(request, "%s %s. It comes to %s."

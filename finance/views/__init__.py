@@ -4,7 +4,7 @@ from finance.views.balances import (balance_sheet, checkpoint_delete, checkpoint
                                     close_year, opening_balances, reopen_year, transfer_delete,
                                     transfer_new)
 from finance.views.billing import (BillingCreate, BillingDelete, BillingEmailCreate, BillingUpdate,
-                                   MultiBillingDelete, MultiBillingEmailCreate, generate_multibill_pdf,
+                                   MultiBillingDelete, MultiBillingEmailCreate, billing_page, generate_multibill_pdf,
                                    mark_entered_into_workday, multibill_charge, multibill_charge_delete,
                                    multibill_detail, multibill_edit, multibill_list, multibill_mark_paid,
                                    multibill_mark_unpaid, multibill_update_total, pay_bill)

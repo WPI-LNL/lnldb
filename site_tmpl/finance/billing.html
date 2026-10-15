@@ -1,0 +1,314 @@
+{# The Billing page: every bill by the stage it is at, longest-waiting first, with the next thing to do about it. #}
+{% extends 'finance/base_finance.html' %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    <ul class="nav nav-tabs fin-subnav hidden-print">
+        {% for tab in tabs %}
+            <li {% if tab.stage == stage %}class="active"{% endif %}>
+                <a href="?stage={{ tab.stage }}">{{ tab.label }} <span class="badge">{{ tab.count }}</span></a>
+            </li>
+        {% endfor %}
+        <li class="pull-right"><a href="{% url 'finance:multibill-list' %}">All multi-bills</a></li>
+    </ul>
+
+    <p class="fin-muted">
+        {{ stage_help }}
+        {% if elsewhere %}
+            <a href="{% filter_url fiscal_year='' %}&amp;stage={{ stage }}">{{ elsewhere }} more from other years.</a>
+        {% endif %}
+    </p>
+
+    {% if stage == 'ready' %}
+        {% comment %}
+            One form for the whole tab, so events ticked anywhere on it -- on
+            their own or in bulk -- go to the new multi-bill together.
+        {% endcomment %}
+        <form method="get" action="{% url 'finance:multibill-new' %}">
+            {% if ready.not_sent %}
+                <div class="fin-panel">
+                    <div class="fin-panel-head"><span>Bills made but never sent</span></div>
+                    <div class="fin-table-wrap">
+                        <table class="table fin-table">
+                            <thead>
+                            <tr>
+                                <th>Bill</th>
+                                <th>Client</th>
+                                <th>Made</th>
+                                <th class="fin-num">Amount</th>
+                                <th class="fin-num" title="Days since the bill was made">Days</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for item in ready.not_sent %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ item.url }}">{{ item.name }}</a>
+                                        <span class="fin-tag is-warn">Not sent</span>
+                                        {% if item.is_multibill %}<span class="fin-tag">Multi-bill</span>{% endif %}
+                                    </td>
+                                    <td>{{ item.client.retname|default:"—" }}</td>
+                                    <td class="fin-nowrap">{{ item.bill.date_billed|date:"M j, Y" }}</td>
+                                    <td class="fin-num">{{ item.amount|money }}</td>
+                                    <td class="fin-num">{{ item.days }}</td>
+                                    <td class="text-right fin-nowrap">
+                                        {% if item.is_multibill %}
+                                            <a href="{% url 'finance:multibill-email' item.bill.pk %}" class="btn btn-xs btn-primary">Email client</a>
+                                        {% else %}
+                                            <a href="{% url 'finance:bill-email' item.event.pk item.bill.pk %}" class="btn btn-xs btn-primary">Email client</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="fin-panel">
+                <div class="fin-panel-head"><span>Bill on its own</span></div>
+                {% if ready.alone %}
+                    <div class="fin-table-wrap">
+                        <table class="table fin-table">
+                            <thead>
+                            <tr>
+                                <th style="width:1%;"></th>
+                                <th>Event</th>
+                                <th>Client</th>
+                                <th>Event date</th>
+                                <th class="fin-num" title="What the event would be billed today">Price</th>
+                                <th class="fin-num" title="Days since the event was reviewed for billing">Days</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for item in ready.alone %}
+                                <tr>
+                                    <td><input type="checkbox" name="events" value="{{ item.event.pk }}" aria-label="Add {{ item.name }} to a multi-bill"></td>
+                                    <td><a href="{{ item.url }}">{{ item.name }}</a></td>
+                                    <td>{{ item.client.retname|default:"—" }}</td>
+                                    <td class="fin-nowrap">{{ item.date|date:"M j, Y" }}</td>
+                                    <td class="fin-num">{{ item.price_now|money }}</td>
+                                    <td class="fin-num">{{ item.days }}</td>
+                                    <td class="text-right"><a href="{% url 'finance:bill-new' item.event.pk %}" class="btn btn-xs btn-primary">Bill</a></td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="fin-panel-body fin-muted">No event is waiting to be billed on its own.</div>
+                {% endif %}
+            </div>
+
+            <div class="fin-panel" id="bulk">
+                <div class="fin-panel-head"><span>Bill in bulk</span></div>
+                {% if ready.bulk %}
+                    <div class="fin-table-wrap">
+                        <table class="table fin-table">
+                            <thead>
+                            <tr>
+                                <th style="width:1%;"></th>
+                                <th>Event</th>
+                                <th>Event date</th>
+                                <th class="fin-num" title="What the event would be billed today">Price</th>
+                                <th class="fin-num" title="Days since the event was reviewed for billing">Days</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            {% for group in ready.bulk %}
+                                <tbody>
+                                <tr class="active">
+                                    <td colspan="3">
+                                        <strong>{{ group.client.retname|default:"No client on file" }}</strong>
+                                        <span class="fin-muted">&middot; {{ group.items|length }} event{{ group.items|length|pluralize }}</span>
+                                    </td>
+                                    <td class="fin-num"><strong>{{ group.total|money }}</strong></td>
+                                    <td></td>
+                                    <td class="text-right">
+                                        <a href="{% url 'finance:multibill-new' %}?{% for item in group.items %}events={{ item.event.pk }}{% if not forloop.last %}&amp;{% endif %}{% endfor %}"
+                                           class="btn btn-xs btn-primary">Make a multi-bill of these</a>
+                                    </td>
+                                </tr>
+                                {% for item in group.items %}
+                                    <tr>
+                                        <td><input type="checkbox" name="events" value="{{ item.event.pk }}" aria-label="Add {{ item.name }} to a multi-bill"></td>
+                                        <td><a href="{{ item.url }}">{{ item.name }}</a></td>
+                                        <td class="fin-nowrap">{{ item.date|date:"M j, Y" }}</td>
+                                        <td class="fin-num">{{ item.price_now|money }}</td>
+                                        <td class="fin-num">{{ item.days }}</td>
+                                        <td class="text-right"><a href="{% url 'finance:bill-new' item.event.pk %}" class="btn btn-xs btn-link">Bill on its own</a></td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="fin-panel-body fin-muted">No event marked to be billed in bulk is waiting.</div>
+                {% endif %}
+            </div>
+
+            {% if ready.alone or ready.bulk %}
+                <div class="text-right hidden-print" style="margin-bottom:20px;">
+                    <button type="submit" class="btn btn-primary">Make a multi-bill of the ticked events</button>
+                </div>
+            {% endif %}
+        </form>
+
+    {% elif rows %}
+        <div class="fin-panel">
+            <div class="fin-table-wrap">
+                <table class="table fin-table">
+                    <thead>
+                    <tr>
+                        <th>Bill</th>
+                        <th>Client</th>
+                        {% if stage == 'create-isd' %}
+                            <th class="fin-num">Amount</th>
+                            <th>Worktag</th>
+                            <th>Fund</th>
+                            <th>Requester</th>
+                            <th>Memo</th>
+                        {% else %}
+                            <th>Billed</th>
+                            <th class="fin-num">Amount</th>
+                            {% if stage == 'waiting-on-client' %}<th>Last emailed</th>{% endif %}
+                            {% if stage == 'waiting-on-approval' %}<th>Worktag</th>{% endif %}
+                            {% if stage == 'paid' %}<th>Paid</th>{% endif %}
+                        {% endif %}
+                        <th class="fin-num" title="Days at this stage">Days</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in rows %}
+                        <tr>
+                            <td>
+                                <a href="{{ item.url }}">{{ item.name }}</a>
+                                {% if item.is_multibill %}
+                                    <span class="fin-tag">Multi-bill</span>
+                                    <br><small class="fin-muted">{% for event in item.events %}{{ event.event_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.client.retname|default:"—" }}</td>
+                            {% if stage == 'create-isd' %}
+                                <td class="fin-num fin-nowrap">
+                                    {{ item.amount|money }}
+                                    <button type="button" class="btn btn-xs btn-link fin-copy" data-copy="{{ item.amount }}">Copy</button>
+                                    {% if item.price_differs %}
+                                        <br><span class="fin-tag is-warn" title="The bill was made before the event's price changed. The ISD should charge what the client was billed, unless you send a new bill.">Event now {{ item.price_now|money }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="fin-nowrap">
+                                    {{ item.worktag }}
+                                    <button type="button" class="btn btn-xs btn-link fin-copy" data-copy="{{ item.worktag }}">Copy</button>
+                                    {% if item.event.workday_form_comments %}
+                                        <br><small class="fin-muted" title="What the client wrote with the worktag">&ldquo;{{ item.event.workday_form_comments }}&rdquo;</small>
+                                    {% endif %}
+                                </td>
+                                <td class="fin-nowrap">
+                                    {{ item.fund|default:"—" }}
+                                    {% if item.fund %}<button type="button" class="btn btn-xs btn-link fin-copy" data-copy="{{ item.fund }}">Copy</button>{% endif %}
+                                </td>
+                                <td>
+                                    {% if item.event.contact %}
+                                        {{ item.event.contact.get_full_name|default:item.event.contact.username }}
+                                        <button type="button" class="btn btn-xs btn-link fin-copy" data-copy="{{ item.event.contact.get_full_name|default:item.event.contact.username }}">Copy</button>
+                                        {% if item.event.contact.email %}<br><small class="fin-muted">{{ item.event.contact.email }}</small>{% endif %}
+                                    {% else %}
+                                        <span class="fin-muted">No contact on the event</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ item.memo }}
+                                    <button type="button" class="btn btn-xs btn-link fin-copy" data-copy="{{ item.memo }}">Copy</button>
+                                </td>
+                            {% else %}
+                                <td class="fin-nowrap">{{ item.bill.date_billed|date:"M j, Y" }}</td>
+                                <td class="fin-num">
+                                    {{ item.amount|money }}
+                                    {% if item.price_differs %}
+                                        <br><span class="fin-tag is-warn" title="An event's price changed after the bill was made.">Now {{ item.price_now|money }}</span>
+                                    {% endif %}
+                                </td>
+                                {% if stage == 'waiting-on-client' %}
+                                    <td class="fin-nowrap">{{ item.last_emailed|date:"M j, Y" }}</td>
+                                {% endif %}
+                                {% if stage == 'waiting-on-approval' %}
+                                    <td class="fin-nowrap">{{ item.worktag|default:"—" }}{% if item.fund %} <small class="fin-muted">{{ item.fund }}</small>{% endif %}</td>
+                                {% endif %}
+                                {% if stage == 'paid' %}
+                                    <td class="fin-nowrap">{{ item.bill.date_paid|date:"M j, Y" }}</td>
+                                {% endif %}
+                            {% endif %}
+                            <td class="fin-num" title="{% if item.since %}Since {{ item.since|date:'M j, Y' }}{% endif %}">{{ item.days|default_if_none:"—" }}</td>
+                            <td class="text-right fin-nowrap">
+                                {% if stage == 'waiting-on-client' %}
+                                    {% if item.is_multibill %}
+                                        <a href="{% url 'finance:multibill-email' item.bill.pk %}" class="btn btn-xs btn-default">Email again</a>
+                                        <a href="{% url 'finance:multibill-paid' item.bill.pk %}?next={{ here|urlencode }}" class="btn btn-xs btn-default">Mark paid</a>
+                                    {% else %}
+                                        <a href="{% url 'finance:bill-email' item.event.pk item.bill.pk %}" class="btn btn-xs btn-default">Email again</a>
+                                    {% endif %}
+                                {% elif stage == 'create-isd' %}
+                                    <a href="{% url 'events:bills:pdf' item.event.pk %}" class="btn btn-xs btn-link" target="_blank">Bill PDF</a>
+                                    <form method="post" action="{% url 'finance:workday-entered' item.event.pk %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ here }}">
+                                        <button type="submit" class="btn btn-xs btn-primary">Mark entered into Workday</button>
+                                    </form>
+                                {% elif stage == 'waiting-on-approval' %}
+                                    <form method="post" action="{% url 'finance:bill-pay' item.event.pk item.bill.pk %}?next={{ here|urlencode }}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-xs btn-default">Mark paid</button>
+                                    </form>
+                                {% elif stage == 'paid' %}
+                                    {% if item.is_multibill %}
+                                        {% for event in item.events %}{% if not event.closed %}<a href="{% url 'events:detail' event.pk %}" class="btn btn-xs btn-link">Close {{ event.event_name }}</a>{% endif %}{% endfor %}
+                                    {% else %}
+                                        <a href="{{ item.url }}" class="btn btn-xs btn-link">Close it on its page</a>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if stage == 'create-isd' %}
+            <p class="fin-muted" style="font-size:13px;">
+                Create the ISD in Workday with these. The memo is the one the ingestion queue reads the event back out
+                of when the payment arrives. Then mark the event entered into Workday, which also stops the client
+                changing the worktag.
+            </p>
+        {% endif %}
+    {% else %}
+        <div class="fin-panel"><div class="fin-panel-body fin-muted">Nothing is at this stage.</div></div>
+    {% endif %}
+{% endblock %}
+
+{% block finalsay %}
+    {{ block.super }}
+    {% comment %}
+        Copy buttons for the Create ISD tab, so each value goes into Workday
+        exactly as lnldb has it. Without a clipboard the value is still on
+        screen to copy by hand.
+    {% endcomment %}
+    <script>
+        (function () {
+            document.addEventListener('click', function (event) {
+                var button = event.target.closest ? event.target.closest('.fin-copy') : null;
+                if (!button || !navigator.clipboard) { return; }
+                navigator.clipboard.writeText(button.getAttribute('data-copy')).then(function () {
+                    var label = button.textContent;
+                    button.textContent = 'Copied';
+                    setTimeout(function () { button.textContent = label; }, 1200);
+                });
+            });
+        })();
+    </script>
+{% endblock %}

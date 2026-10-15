@@ -105,6 +105,12 @@ what they cover rather than alphabetically.
     they refuse a change, marking it paid, its invoice and the events'
     invoices that can follow it, and how the rental check and revenue by
     client read it.
+``test_billing_page``
+    The Billing page and the stages it lists bills by: which stage a bill is
+    at and since when, the fiscal-year and partition filters, each tab and what
+    it offers, starting a multi-bill from ticked events, the event page's Next
+    step box, and the menu entries that replaced the events app's billing
+    lists.
 
 **Everything else**
 

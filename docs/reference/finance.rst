@@ -152,6 +152,9 @@ Bill                      What LNL asked a client to pay for one event  ``Billin
 Multi-bill                One bill covering several events              ``MultiBilling``
 Multi-bill charge         A line on a multi-bill other than an event:   ``MultiBillingCharge``
                           a one-off, a rental, or a percentage
+Stage                     Where a bill stands: Ready to bill, Waiting   ``finance.billing``
+                          on client, Create ISD, Waiting on approval,
+                          Paid
 Fiscal year               July to June, named for the year it ends:     ``fiscal_year_for``
                           FY26 is July 2025 to June 2026
 Minimum reserve           The least LNL's own money should hold         ``FinanceSettings``
@@ -167,7 +170,8 @@ Every page is under ``/db/finance/``. Looking needs ``view_subledger`` (the
 *Funding* tab needs ``view_fundingrequest``, which is granted with it); the last
 column is what changing anything there needs. The site's *Finance* menu links
 to the dashboard, the ledger, projects, funding requests, the queue and *Log a
-purchase*; every page is a tab across the top of the others.
+purchase*, and to *Billing* for whoever can bill; every page is a tab across
+the top of the others.
 
 ===========  ==============  ===============================================  ==========================
 Tab          URL             What it is for                                   To change anything
@@ -180,6 +184,8 @@ Queue        ``queue/``      Importing exports, filing each new line,         ``
                                                                               ``import_workdaytransaction``
 Events       ``events/``     What each show made or lost, and *Mark bill      ``edit_subledger`` and
                              paid*                                            ``events.bill_event``
+Billing      ``billing/``    Every bill by the stage it is at; see *Billing   ``events.bill_event``, to
+                             stages*                                          look as well
 Balances     ``balances/``   What each fund holds; Workday balances,          ``edit_subledger``; closing
                              transfers, opening balances, closing a year      needs ``close_fiscalyear``
 Projects     ``projects/``   Spending by project tag                          ``manage_projecttag``
@@ -197,16 +203,18 @@ Three more pages are reached from those: one bank line
 event's figures, and the Django admin's *Financial Subledger* section holds
 everything in *What is editable without a deploy*.
 
-The billing pages are under ``billing/``. They moved here from the events app
-with the bills, and still look and behave as they did there:
+The billing pages are under ``billing/``:
 
+* ``billing/``: the Billing page, every bill by the stage it is at, one tab per
+  stage. It replaced the events app's six billing lists; see *Billing stages*.
 * ``billing/event/<event>/``: creating, editing, deleting, emailing and paying
-  one event's bill, and marking the event entered into Workday. They are
-  reached from the event's own page.
-* ``billing/multibills/``: the multi-bill list, which the Events menu links to.
-  Each multi-bill has its own page (``billing/multibills/<pk>/``), from which it
-  is edited, given charges of its own, emailed, marked paid or unpaid, and drawn
-  as an invoice; see *Multi-bills*.
+  one event's bill, and marking the event entered into Workday. They moved here
+  from the events app with the bills, and still behave as they did there. They
+  are reached from the event's own page and from the Billing page.
+* ``billing/multibills/``: the multi-bill list, which the Billing page links
+  to. Each multi-bill has its own page (``billing/multibills/<pk>/``), from
+  which it is edited, given charges of its own, emailed, marked paid or unpaid,
+  and drawn as an invoice; see *Multi-bills*.
 
 They need ``events.bill_event``, which Officers hold, not ``view_subledger``.
 The invoice needs ``events.view_event_billing``. The client's worktag form is
@@ -225,6 +233,8 @@ Where                                        What it holds
 :mod:`finance.suggestions`                   What the queue fills in, and what it only offers
 :mod:`finance.forms`                         Every form, and the rules that remove a field rather than
                                              validate it
+:mod:`finance.billing`                       The stage each bill is at, which the Billing page, the event
+                                             page's *Next step* box and the Owed to LNL report all read
 :mod:`finance.billing_forms`                 The bill and multi-bill forms, moved from the events app
                                              with the bills; see *The bills moved here from the events
                                              app*
@@ -1604,6 +1614,76 @@ a tie. Events with no client on file do not count as disagreeing.
   today otherwise. :func:`~finance.calculators.bill_payments` is the same sum
   *Mark bill paid* uses.
 
+Billing stages
+~~~~~~~~~~~~~~
+
+Every bill passes through the same stages: *Ready to bill*, *Waiting on
+client*, *Create ISD*, *Waiting on approval* and *Paid*. The Treasurer's guide
+is :doc:`/help/finance/billing`. :mod:`finance.billing` decides which stage a
+bill is at, and three places read it: the Billing page, the *Next step* box at
+the top of an event's *Billing* tab, and the *Stage* column of the Owed to LNL
+report. One function deciding it is what keeps the three from disagreeing.
+The events app's six billing lists each had their own query, and they did
+disagree: "Pending Payment" really meant "waiting on the worktag".
+
+**Nothing new is stored.** A stage is read off what is already recorded:
+
+=====================  ======================================================
+Stage                  Read off
+=====================  ======================================================
+Ready to bill          Reviewed, not closed, and no bill; or a bill with no
+                       email sent, shown as *Not sent*
+Waiting on client      An email sent for the bill, and no worktag on the event
+Create ISD             A worktag on the event. Only the client's worktag form
+                       sets it, so it means the client answered. The fund can
+                       be on the event without one, so the fund is not read.
+Waiting on approval    ``entered_into_workday`` on the event
+Paid                   The bill's ``date_paid``
+=====================  ======================================================
+
+Only events reviewed for billing and still open have a stage: before the
+review the event is the VP's, and closing it is the last step. The bill that
+stands for an event is :func:`~finance.calculators.latest_bill`, the same one
+the event's figures read, so an event billed again after a paid bill is back
+at work. A multi-bill is one row for all its events, listed while any of them
+is open. It has no worktag form and no *entered into Workday* box, so it goes
+from *Waiting on client* to *Paid*.
+
+**How long it has been there.** *Days* counts from the review, the bill, the
+last email or the paid date. Two stages have no date of their own, so they are
+read from the event's history (django-reversion): the latest change saved with
+the comment ``Entered Workday billing info`` (the client's worktag form) or
+``Marked entered into Workday``. Both comments are constants in
+:mod:`finance.billing`. Finance's own view writes the second from that
+constant. The events app's ``WorkdayEntry`` writes the first, so rewording it
+there would quietly stop the date being found. An event with no such history
+counts from the bill's last email instead.
+
+**Filters.** The fiscal year is the one the bill's first event started in. A
+bill does not stop needing work when the year turns, so each tab also says how
+many more are waiting in other years, with a link to them. The partition puts
+film showings -- events whose only services are Projection -- on Projection's
+side and everything else on Event Production's. The old lists had two
+overlapping projection filters, *hide* and *only*, and a show with a screen
+and lighting passed both. A partition needs one clean split.
+
+**The page's cost.** An event's current price (``cost_total``) costs several
+queries, so it is worked out only for the tab on screen: for *Ready to bill*,
+and for the *Event now* warning on a bill whose event has since changed price.
+
+**The old lists and their calendars were removed**, not kept beside the page.
+Kept, they would have been a second answer to "what is waiting", by older
+rules, and the ISD list showed the event's current price rather than what was
+billed. Their addresses in ``events/urls/events.py`` redirect to the matching
+tab, with dates or ``calendar/`` on the end, so bookmarks still work. The
+calendars' data feeds in ``events/cal.py`` went with them.
+
+**The Next step box** is the ``billing_next_step`` template tag, drawn on the
+event page for whoever holds ``events.bill_event`` site-wide. It asks for the
+site-wide permission rather than the event's, because the events app grants
+``bill_event`` on an event to its billing client's own members
+(``BillingOrgPermLogic``), and the box is the Treasurer's.
+
 Dashboard metrics
 -----------------
 
@@ -2304,7 +2384,7 @@ locally::
 Tests
 -----
 
-``python manage.py test finance`` runs 1,436 tests across twenty-six modules. The
+``python manage.py test finance`` runs 1,476 tests across twenty-seven modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.
@@ -2380,6 +2460,14 @@ Auto-suggest
 Calculators
 ~~~~~~~~~~~
 .. automodule:: finance.calculators
+    :members:
+    :undoc-members:
+
+-----
+
+Billing stages
+~~~~~~~~~~~~~~
+.. automodule:: finance.billing
     :members:
     :undoc-members:
 

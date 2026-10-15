@@ -185,55 +185,6 @@ class UnreviewedCalJsonView(BaseCalJsonView):
         return super(UnreviewedCalJsonView, self).get(request, queryset)
 
 
-class UnbilledCalJsonView(BaseCalJsonView):
-    perms = ['events.bill_event']
-
-    def get(self, request, *args, **kwargs):
-        queryset = BaseEvent.objects.filter(closed=False) \
-            .filter(reviewed=True) \
-            .filter(billings__isnull=True, multibillings__isnull=True) \
-            .filter(billed_in_bulk=False) \
-            .distinct()
-        return super(UnbilledCalJsonView, self).get(request, queryset)
-
-
-class UnbilledSemesterCalJsonView(BaseCalJsonView):
-    perms = ['events.bill_event']
-
-    def get(self, request, *args, **kwargs):
-        queryset = BaseEvent.objects.filter(closed=False) \
-            .filter(reviewed=True) \
-            .filter(billings__isnull=True, multibillings__isnull=True) \
-            .filter(billed_in_bulk=True) \
-            .order_by('datetime_start') \
-            .distinct()
-        return super(UnbilledSemesterCalJsonView, self).get(request, queryset)
-
-
-class PaidCalJsonView(BaseCalJsonView):
-    perms = ['events.close_event']
-
-    def get(self, request, *args, **kwargs):
-        queryset = BaseEvent.objects.filter(closed=False) \
-            .filter(Q(billings__date_paid__isnull=False) | Q(multibillings__date_paid__isnull=False)) \
-            .distinct()
-        return super(PaidCalJsonView, self).get(request, queryset)
-
-
-class UnpaidCalJsonView(BaseCalJsonView):
-    perms = ['events.bill_event']
-
-    def get(self, request, *args, **kwargs):
-        queryset = BaseEvent.objects.annotate(
-            numpaid=Count('billings__date_paid')+Count('multibillings__date_paid')) \
-            .filter(closed=False) \
-            .filter(Q(billings__date_billed__isnull=False) | Q(multibillings__date_billed__isnull=False)) \
-            .exclude(numpaid__gt=0) \
-            .filter(reviewed=True) \
-            .distinct()
-        return super(UnpaidCalJsonView, self).get(request, queryset)
-
-
 class ClosedCalJsonView(BaseCalJsonView):
     def get(self, request, *args, **kwargs):
         queryset = BaseEvent.objects.filter(closed=True)

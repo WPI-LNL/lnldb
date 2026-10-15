@@ -12,6 +12,8 @@ This page is the map. The other finance guides each cover one job:
 - :doc:`encumbrances` -- before a purchase shows up in Workday
 - :doc:`funding-requests` -- SGA funding requests, start to finish
 - :doc:`events` -- what each show made or lost, and marking bills paid
+- :doc:`billing` -- every bill at the step it is waiting on, from billing the client to closing the event
+- :doc:`multibills` -- billing several events at once
 - :doc:`balances` -- fund balances, Workday balances and closing the year
 - :doc:`reports` -- reports for the board and for budget requests
 - :doc:`forecast` -- where the money is heading, and whether LNL can afford something
@@ -173,4 +175,4 @@ bill paid once the payment arrives. See :doc:`events`.
     New to the role? Read this page, then :doc:`import-and-file`. Most of the job is the monthly import, and the queue
     fills in most of each line for you.
 
-`Last Modified: October 2, 2026`
+`Last Modified: October 15, 2026`

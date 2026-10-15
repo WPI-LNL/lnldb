@@ -5,6 +5,11 @@ Generate and Send a Bill (Treasurer)
 The LNLDB allows you to easily create an invoice for an event based on the event information in our database and
 automatically generates an email to send to the client for gathering their Workday worktag details.
 
+.. seealso::
+    The finance app's :doc:`Billing page </help/finance/billing>` lists every event waiting to be billed, and every
+    bill at the step it is waiting on, from sending it to closing the event. It replaced the billing lists in the
+    `Events` menu. Once an event is reviewed, the top of its `Billing` tab shows the next step.
+
 
 Generate an Invoice
 -------------------

@@ -3,8 +3,9 @@ The bill and multi-bill pages, and the multi-bill invoice.
 
 The first two classes moved here from the events app along with the bills
 themselves: the page tests were the events app's, the invoice tests the pdfs
-app's. The events app keeps the tests for its own billing lists and for the
-client's worktag form.
+app's. The events app keeps the tests for the client's worktag form, and for
+the addresses of its old billing lists, which now lead to the Billing page
+(tested in :mod:`finance.tests.test_billing_page`).
 
 The rest are the multi-bill's own: what it comes to and how each charge is
 priced, which events it may cover and when the clients differ, its pages and
@@ -449,13 +450,19 @@ class BillingViewTests(ViewTestCase):
 
         Billing.objects.create(event=self.e3, date_billed=timezone.now().date(), amount=26.33)
 
-        # Should now be able to mark as entered into workday
-        self.assertRedirects(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk])),
-                             reverse("events:awaitingworkday"))
+        # Should now be able to mark as entered into workday, and land on the Billing page's Create ISD tab
+        create_isd = reverse("finance:billing") + "?stage=create-isd"
+        self.assertRedirects(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk])), create_isd)
+        self.e3.refresh_from_db()
+        self.assertTrue(self.e3.entered_into_workday)
 
         # Check that we get no errors when trying to mark an event that has already been marked
-        self.assertRedirects(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk])),
-                             reverse("events:awaitingworkday"))
+        self.assertRedirects(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk])), create_isd)
+
+        # A page that asked goes back to that page instead
+        self.assertRedirects(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk]),
+                                              {'next': reverse("events:detail", args=[self.e3.pk])}),
+                             reverse("events:detail", args=[self.e3.pk]))
 
 
 class MultiBillInvoiceTests(TestCase):
