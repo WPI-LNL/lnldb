@@ -116,7 +116,7 @@ Words You'll See
     The first day the finance app keeps books for -- for LNL, July 1, 2025, the start of FY26. Lines from before then
     are **history**: imported so the forecast can learn from past years, and never filed.
 **Fiscal year**
-    July to June, named for the year it ends in. FY26 is July 1st 2025 to June 31st 2026.
+    July to June, named for the year it ends in. FY26 is July 1st 2025 to June 30th 2026.
 
 
 The Pages

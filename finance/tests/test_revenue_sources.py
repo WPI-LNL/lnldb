@@ -19,10 +19,8 @@ Five layers, tested from the bottom up:
 * **The pages**, including marking a bill paid from the event P&L.
 """
 import datetime
-import importlib
 from decimal import Decimal
 
-from django.apps import apps as django_apps
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
@@ -34,9 +32,9 @@ from finance.calculators import (billing_receivables, client_retention, event_bi
                                  event_financials, event_pnl_rows, revenue_by_source,
                                  sga_receivables)
 from finance.forms import AllocationForm, ReconcileForm, SplitFormSet
-from finance.models import (FRLineItem, FundingRequest, ParsedTransaction, RevenueSource,
-                            TransactionStatus, WorkdayTransaction, reimbursement_source,
-                            reset_finance_cache, revenue_sources_by_fund)
+from finance.models import (FRLineItem, FundingRequest, ParsedTransaction, TransactionStatus,
+                            WorkdayTransaction, reimbursement_source, reset_finance_cache,
+                            revenue_sources_by_fund)
 from finance.suggestions import (EXPORT, GUESS, MEMO, is_sga_transfer, suggest_all,
                                  suggest_multibill)
 from finance.tests.test_views import FinanceViewTestCase
@@ -181,73 +179,6 @@ class SeededSourceTests(CacheResetMixin, TestCase):
         index = revenue_sources_by_fund()
         self.assertEqual(index[fund('sga_budget').pk], [revenue_source('sga_baseline')])
         self.assertNotIn(fund('legacy').pk, index)
-
-
-class MigrationTests(CacheResetMixin, TestCase):
-    """ 0006 and 0007 reconcile a database that ran the original seed, keeping edits. """
-
-    def setUp(self):
-        super(MigrationTests, self).setUp()
-        self.migration = importlib.import_module('finance.migrations.0006_revenue_sources')
-
-    def _as_originally_seeded(self):
-        RevenueSource.objects.filter(slug__in=('sga_fr_reimbursement', 'sga_mandatory')).delete()
-        RevenueSource.objects.filter(slug='sga_baseline').update(
-            name='SGA Baseline', sort_order=0, credits_fund=None, description='')
-        RevenueSource.objects.filter(slug='asset_liquidation').update(sort_order=1)
-        RevenueSource.objects.filter(slug='alumni').update(sort_order=2)
-
-    def test_an_untouched_install_gets_the_new_names_order_and_funds(self):
-        self._as_originally_seeded()
-        self.migration.describe_revenue_sources(django_apps, None)
-        self.assertEqual([s.slug for s in RevenueSource.objects.all()],
-                         ['sga_fr_reimbursement', 'sga_baseline', 'sga_mandatory',
-                          'asset_liquidation', 'alumni'])
-        self.assertEqual(revenue_source('sga_baseline').name, 'SGA Budget')
-        self.assertEqual(revenue_source('sga_baseline').credits_fund, fund('sga_budget'))
-        self.assertEqual(revenue_source('sga_fr_reimbursement').credits_fund, fund('sga_fr'))
-
-    def test_a_treasurers_own_name_and_order_are_kept(self):
-        self._as_originally_seeded()
-        RevenueSource.objects.filter(slug='sga_baseline').update(name='SGA Annual Budget',
-                                                                 sort_order=7)
-        self.migration.describe_revenue_sources(django_apps, None)
-        source = revenue_source('sga_baseline')
-        self.assertEqual((source.name, source.sort_order), ('SGA Annual Budget', 7))
-
-    def test_a_chosen_fund_is_not_overwritten(self):
-        RevenueSource.objects.filter(slug='sga_baseline').update(credits_fund=fund('legacy'))
-        self.migration.describe_revenue_sources(django_apps, None)
-        self.assertEqual(revenue_source('sga_baseline').credits_fund, fund('legacy'))
-
-    def test_0007_renames_the_name_0006_used_to_give(self):
-        RevenueSource.objects.filter(slug='sga_baseline').update(name='SGA Budget Deposit')
-        importlib.import_module('finance.migrations.0007_sga_budget_source_name').rename(
-            django_apps, None)
-        self.assertEqual(revenue_source('sga_baseline').name, 'SGA Budget')
-
-    def test_0007_keeps_a_treasurers_own_name(self):
-        RevenueSource.objects.filter(slug='sga_baseline').update(name='SGA Annual Budget')
-        importlib.import_module('finance.migrations.0007_sga_budget_source_name').rename(
-            django_apps, None)
-        self.assertEqual(revenue_source('sga_baseline').name, 'SGA Annual Budget')
-
-    def test_0007_never_takes_a_name_another_source_has(self):
-        RevenueSource.objects.filter(slug='sga_baseline').update(name='SGA Budget Deposit')
-        RevenueSource.objects.filter(slug='alumni').update(name='SGA Budget')
-        importlib.import_module('finance.migrations.0007_sga_budget_source_name').rename(
-            django_apps, None)
-        self.assertEqual(revenue_source('sga_baseline').name, 'SGA Budget Deposit')
-
-    def test_reimbursements_already_filed_are_given_their_request(self):
-        request = make_request()
-        txn = sga_line('F.26.86 Film Posters and Concessions', '500.00')
-        entry = ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=Decimal('500.00'), effective_date=txn.accounting_date,
-            fund_source=fund('sga_fr'), non_event_revenue_type=revenue_source('alumni'))
-        self.migration.link_reimbursements(django_apps, None)
-        entry.refresh_from_db()
-        self.assertEqual(entry.funding_request, request)
 
 
 # ---------------------------------------------------------------------------

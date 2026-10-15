@@ -40,7 +40,7 @@ BOOKS_START = datetime.date(2025, 7, 1)
 
 
 def start_books(day=BOOKS_START):
-    """ Write the books start down, as migration 0008 does on a working install. """
+    """ Write the books start down, as the first import of history does. """
     config = FinanceSettings.load()
     config.ledger_start_date = day
     config.save()

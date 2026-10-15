@@ -114,7 +114,7 @@ class LedgerFixture(object):
 # ---------------------------------------------------------------------------
 
 class SeededFundTests(TestCase):
-    """ What 0005_fund_balances says about the funds every install starts with. """
+    """ What the seed says about the funds every install starts with. """
 
     def test_each_seeded_fund_says_how_it_behaves_and_where_it_is_held(self):
         expected = {

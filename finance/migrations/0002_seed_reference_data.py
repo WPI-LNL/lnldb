@@ -16,15 +16,19 @@ safe to re-run and will never overwrite an edit made in the admin.
 
 .. note::
 
-   This file and ``0001_initial`` together replace the sixteen migrations the
-   app was built through, which were squashed before it was ever deployed. The
-   rows below are not a retyping of those migrations: they were captured from a
-   database built by running all sixteen, so the end state is identical by
-   construction rather than by review.
+   This file and ``0001_initial`` together replace the twenty-two migrations
+   the app was built through, which were collapsed before it was ever deployed
+   (see ``0001_initial``). Six of those changed the starting data after it was
+   first written: the default fund, how each fund behaves at year end, which
+   fund each kind of income goes into, and which categories the forecast takes
+   from plans. Their end state is written out below. A fresh database built
+   from these two files was checked against one built from all of them, row by
+   row and column by column, and they matched.
 """
 from django.db import migrations
 
-# (slug, name, colour, sort order, is_event_passthrough, description)
+# (slug, name, colour, sort order, is_event_passthrough, forecast_from_plans,
+#  description)
 #
 # LNL's own chart of spending, which is not WPI's and is not meant to be: it is
 # the list the Treasurer reports against and the one the dashboard pie is cut
@@ -38,73 +42,98 @@ from django.db import migrations
 # Equipment rows and the two Event rows each take neighbouring shades of one
 # hue, so a glance at the pie reads the pair as one area before it reads the
 # split.
+#
+# The two Equipment rows are forecast from plans only. Gear is bought one
+# decision at a time, so the forecast counts it from planned purchases rather
+# than expecting last year's console to be bought again.
 SPEND_CATEGORIES = [
-    ('equipment_capital', 'Equipment - Capital', '#E15759', 0, False,
+    ('equipment_capital', 'Equipment - Capital', '#E15759', 0, False, True,
      'Gear expensive enough to be carried as an asset rather than written off in the year '
      'it was bought.'),
-    ('equipment_noncapital', 'Equipment - Non Capital', '#FF9D9A', 1, False,
+    ('equipment_noncapital', 'Equipment - Non Capital', '#FF9D9A', 1, False, True,
      'Ordinary gear purchases: everything bought outright and expensed this year.'),
-    ('repairs', 'Maintenance and Repair', '#F28E2B', 2, False,
+    ('repairs', 'Maintenance and Repair', '#F28E2B', 2, False, False,
      'Putting existing gear back into service, and the servicing that keeps it there.'),
-    ('consumables', 'Consumables', '#4E79A7', 3, False,
+    ('consumables', 'Consumables', '#4E79A7', 3, False, False,
      'Stock that gets used up: tape, gel, batteries, cable ties, lamps.'),
-    ('food', 'Food', '#F1CE63', 4, False, ''),
-    ('software', 'Software and Subscriptions', '#59A14F', 5, False,
+    ('food', 'Food', '#F1CE63', 4, False, False, ''),
+    ('software', 'Software and Subscriptions', '#59A14F', 5, False, False,
      'Licences and anything billed on a recurring basis.'),
-    ('film_rights', 'Films Rights and Shipping', '#B07AA1', 6, False,
+    ('film_rights', 'Films Rights and Shipping', '#B07AA1', 6, False, False,
      'The cost of running a film: the rights, getting the print here and back again, and '
      'the popcorn and posters that go with it.'),
-    ('merch', 'Merch', '#FABFD2', 7, False, 'Crew apparel and anything sold or given away.'),
-    ('club_operations', 'Club Operations', '#79706E', 8, False,
+    ('merch', 'Merch', '#FABFD2', 7, False, False, 'Crew apparel and anything sold or given away.'),
+    ('club_operations', 'Club Operations', '#79706E', 8, False, False,
      'Running the club rather than running a show: printing, marketing, recruiting, '
      'internal events, gifts, travel, office supplies and the like.'),
-    ('safety', 'Safety and Inspections', '#86BCB6', 9, False,
+    ('safety', 'Safety and Inspections', '#86BCB6', 9, False, False,
      'Keeping people safe and proving it: PPE, first aid, and the chain motor and rigging '
      'inspections that have to happen on a schedule.'),
-    ('adjustments', 'Adjustments', '#8CD17D', 10, False,
+    ('adjustments', 'Adjustments', '#8CD17D', 10, False, False,
      'Only for mis-billed lines and for making the books balance. Nothing was really '
      'bought, so anything filed here is a correction of something that was.'),
-    ('event_subrental', 'Event - Sub-Rental', '#76B7B2', 11, True,
+    ('event_subrental', 'Event - Sub-Rental', '#76B7B2', 11, True, False,
      'Gear hired in for one show and charged straight on to that show. Filled in '
      'automatically when an expense names the event it was incurred for, because the '
      'linked event already says everything a category could.'),
-    ('event_other', 'Event - Other', '#A0CBE8', 12, False,
+    ('event_other', 'Event - Other', '#A0CBE8', 12, False, False,
      'A non-rental cost passed straight through to a client -- incurred for one event and '
      'billed on to it unchanged.'),
 ]
 
-# (slug, name, workday fund codes, requires a funding request, sort order, description)
+# (slug, name, workday fund codes, requires a funding request, sort order,
+#  is the default, at year end, held in, Workday Tracking values, description)
 #
 # ``workday_fund_codes`` is what lets an import fill the Fund box in by itself.
 # Note that SGA Budget deliberately has none: 810-FD is the agency fund the
 # whole account sits in, so every LNL line carries it whoever actually paid,
 # and reading it as "SGA funded this" was a coin flip presented as a fact.
 #
-# How each one behaves at year end, which account holds it and which Tracking
-# worktag names it are set by 0005_fund_balances, which added those columns.
+# Legacy is the default, on the Treasurer's say-so: the fund an expense is
+# filled in with when neither the memo nor a worktag names one, which in
+# practice means a line carrying only 810-FD. A funding request names its
+# number in the memo, and LNL has no SGA budget yet, so an unlabelled line is
+# LNL's own money. The queue labels it as a stated default, not a reading of
+# the export.
+#
+# "At year end" is what happens to each fund on June 30: Legacy and the
+# Projection mandatory transfer carry forward, the SGA budget's unspent balance
+# goes back to SGA, and a funding request is reimbursed after the spending. The
+# Tracking values are the worktag Workday started exporting in FY27.
 FUND_SOURCES = [
-    ('sga_fr', 'SGA Funding Request', '', True, 0, ''),
-    ('sga_budget', 'SGA Budget', '', False, 1, ''),
-    ('legacy', 'Legacy', '220, 250, 500, 120', False, 2, ''),
-    ('sga_mandatory', 'SGA Mandatory Transfer', '', False, 3, ''),
+    ('sga_fr', 'SGA Funding Request', '', True, 0, False, 'reimbursed', '226-AG',
+     'SGA Funding Request',
+     "Out-of-cycle SGA funding requests. LNL spends first and SGA reimburses what was "
+     "actually spent, so the balance is negative until SGA pays."),
+    ('sga_budget', 'SGA Budget', '', False, 1, False, 'returns', '226-AG', 'SGA Budget',
+     "The annual SGA budget. Deposited before the year's spending; whatever is unspent "
+     "on June 30 goes back to SGA."),
+    ('legacy', 'Legacy', '220, 250, 500, 120', False, 2, True, 'carries', '226-AG',
+     'Student Org Legacy Funds',
+     "LNL's own money: event billing and everything else LNL earns. Carries forward "
+     "from one year to the next."),
+    ('sga_mandatory', 'SGA Mandatory Transfer', '', False, 3, False, 'carries', '315-AG', '',
+     "Projection's yearly SGA mandatory transfer into 315-AG. Deposited automatically, "
+     "and carries forward."),
 ]
 
-# (slug, name, sort order, description)
+# (slug, name, sort order, the fund it goes into, description)
 #
-# The first three are SGA's three ways of paying a club. Which fund each one
-# pays into is set by 0006_revenue_sources, which added that column; the
-# ``sga_baseline`` slug is the row's original name, kept so links survive.
+# The first three are SGA's three ways of paying a club, and each pays into its
+# own fund, so the source decides the fund and filing it anywhere else is
+# refused. The rest are simply the account's own money. The ``sga_baseline``
+# slug is the budget row's original name, kept so links survive.
 REVENUE_SOURCES = [
-    ('sga_fr_reimbursement', 'SGA Funding Request Reimbursement', 0,
+    ('sga_fr_reimbursement', 'SGA Funding Request Reimbursement', 0, 'sga_fr',
      'SGA paying back what LNL spent on a funding request -- actual spending, never the '
      'award. The memo quotes the request, e.g. F.26.86.'),
-    ('sga_baseline', 'SGA Budget', 1,
+    ('sga_baseline', 'SGA Budget', 1, 'sga_budget',
      "The annual SGA budget, deposited before the year's spending. Whatever is unspent on "
      "June 30 goes back to SGA."),
-    ('sga_mandatory', 'SGA Mandatory Transfer', 2,
+    ('sga_mandatory', 'SGA Mandatory Transfer', 2, 'sga_mandatory',
      "Projection's yearly allocation into 315-AG. It carries forward."),
-    ('asset_liquidation', 'Asset Liquidation', 3, ''),
-    ('alumni', 'Alumni / Donation', 4, ''),
+    ('asset_liquidation', 'Asset Liquidation', 3, None, ''),
+    ('alumni', 'Alumni / Donation', 4, None, ''),
 ]
 
 # (code, is projection, crossing needs a written reason, worktag, notes)
@@ -226,29 +255,37 @@ def seed(apps, schema_editor):
     FinanceSettings = apps.get_model('finance', 'FinanceSettings')
 
     categories = {}
-    for slug, name, color, order, passthrough, description in SPEND_CATEGORIES:
+    for slug, name, color, order, passthrough, from_plans, description in SPEND_CATEGORIES:
         categories[slug], _ = SpendCategory.objects.get_or_create(
             slug=slug, defaults={
                 'name': name, 'color': color, 'sort_order': order,
-                'is_event_passthrough': passthrough, 'description': description})
-
-    for slug, name, codes, requires_fr, order, description in FUND_SOURCES:
-        FundSource.objects.get_or_create(
-            slug=slug, defaults={
-                'name': name, 'workday_fund_codes': codes,
-                'requires_funding_request': requires_fr, 'sort_order': order,
+                'is_event_passthrough': passthrough, 'forecast_from_plans': from_plans,
                 'description': description})
 
-    for slug, name, order, description in REVENUE_SOURCES:
-        RevenueSource.objects.get_or_create(
-            slug=slug, defaults={'name': name, 'sort_order': order,
-                                 'description': description})
-
+    # Accounts before funds, because each fund names the account that holds it.
+    accounts = {}
     for code, projection, needs_reason, worktag, notes in PARTITION_CODES:
-        PartitionCode.objects.get_or_create(
+        accounts[code], _ = PartitionCode.objects.get_or_create(
             code=code, defaults={
                 'is_projection': projection, 'crossing_requires_reason': needs_reason,
                 'worktag': worktag, 'notes': notes})
+
+    funds = {}
+    for (slug, name, codes, requires_fr, order, is_default, behaviour, account, tracking,
+         description) in FUND_SOURCES:
+        funds[slug], _ = FundSource.objects.get_or_create(
+            slug=slug, defaults={
+                'name': name, 'workday_fund_codes': codes,
+                'requires_funding_request': requires_fr, 'sort_order': order,
+                'is_default': is_default, 'behaviour': behaviour,
+                'account': accounts.get(account), 'workday_tracking_values': tracking,
+                'description': description})
+
+    for slug, name, order, fund, description in REVENUE_SOURCES:
+        RevenueSource.objects.get_or_create(
+            slug=slug, defaults={'name': name, 'sort_order': order,
+                                 'credits_fund': funds.get(fund),
+                                 'description': description})
 
     for field, mode, pattern, slug, confidence, priority, notes in SUGGESTION_RULES:
         category = categories.get(slug)

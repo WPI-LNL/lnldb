@@ -192,9 +192,10 @@ def workday_fingerprint(accounting_date, net_amount, operational_transaction,
     resolves that ambiguity with :attr:`WorkdayTransaction.fingerprint_ordinal`;
     this function's only job is to say what "the same line" means.
 
-    Kept as a free function so the backfill migration and the live model share
-    one implementation -- two copies that drifted would silently split a row's
-    history in half.
+    Kept as a free function rather than a method because a data migration
+    works on historical models, which carry no custom methods. Any migration
+    that has to recompute fingerprints must import this one implementation --
+    two copies that drifted would silently split a row's history in half.
     """
     parts = [
         accounting_date.isoformat() if hasattr(accounting_date, 'isoformat') else accounting_date,

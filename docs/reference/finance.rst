@@ -247,25 +247,24 @@ Treasurer's questions:
 5. **History and forecasting**: older exports read as history, the *Forecast*
    tab, and the draft budget request.
 
+The stages were built through twenty-two migrations, all against one
+development database. Since none of them had ever run anywhere else, they were
+collapsed into two before the app was first deployed:
+
 ==========================================  ======================================================
 Migration                                   What it does
 ==========================================  ======================================================
-``0001_initial``                            The schema, collapsed from the sixteen migrations it
-                                            was developed through
+``0001_initial``                            Every table, as the models describe them today
 ``0002_seed_reference_data``                What a new install starts with: spend categories,
-                                            funds, revenue sources, account codes, suggestion rules
-``0003_fund_source_default``                The fund an expense falls back to when nothing names one
-``0004_current_spend_categories``           Brings an earlier install onto the revised spend
-                                            categories, moving entries off retired ones
-``0005_fund_balances``                      How each fund behaves at June 30, Workday balances,
-                                            transfers, year closes, and revenue naming a fund
-``0006_revenue_sources``                    Sources that decide the fund, SGA payments naming
-                                            their request, and what SGA owed when the books started
-``0007_sga_budget_source_name``             Renames the budget's revenue source "SGA Budget"
-``0008_forecasting``                        The minimum reserve, the departments' share, planned
-                                            purchases, history corrections, and the books start
-                                            written down before history arrives
+                                            funds and how each behaves at year end, revenue
+                                            sources and the fund each goes into, account codes,
+                                            suggestion rules and the settings row
 ==========================================  ======================================================
+
+Tables and seed rows are kept in separate files because production runs on
+MySQL, where creating a table cannot be rolled back. The docstring of
+``0001_initial`` explains why there is no ``replaces`` list. Any change from
+here on is a new migration; see *Changing reference data*.
 
 
 The ledger
@@ -466,7 +465,7 @@ rows-of-cells shape, and nothing downstream of it knows which one arrived.
 
 Format is decided by the file's own bytes before its name, because browsers and
 operating systems both get content types wrong and a workbook saved as ``.csv``
-is a common mistake. Three things only spreadsheets do are handled there:
+is a common mistake. Four things only spreadsheets do are handled there:
 
 * Workday's export-to-Excel puts a report title and the filters used *above*
   the table, so the header row is searched for rather than assumed to be first;
@@ -685,13 +684,14 @@ runs from the most specific evidence to the coarsest:
    assigned, so it covers Workday categories nobody has mapped yet.
 5. **Anything matched by wording**, which is a guess and stays a chip.
 
-Eleven fiscal years of 226-AG exports contain 2,644 lines, 17 ledger accounts
-and 38 distinct Workday spend categories, and every expense line carries one.
-The seeded table is therefore not an approximation of the chart of accounts — it
+The 226-AG exports from FY18 to FY26 hold 2,057 lines, 17 ledger accounts and
+38 distinct Workday spend categories, and every expense line carries one. The
+seeded table is therefore not an approximation of the chart of accounts — it
 *is* the chart of accounts. Where LNL has no category meaning the same thing
-(Rent - Equipment, Travel, Subscriptions & Memberships) no exact rule is seeded
-on purpose: the ledger-account rule catches those at *Other*, and one admin row
-promotes any of them to a category of their own.
+(Travel Expense, Licenses & Fees, Other General Expense) no exact rule is
+seeded on purpose: the ledger-account rule catches those -- Travel Expense
+under Club Operations, for instance -- and one admin row promotes any of them
+to a category of their own.
 
 The measured effect on the FY26 export, 253 expense lines:
 
@@ -723,9 +723,9 @@ fund. A fund with no codes configured is never chosen for you, which is how an
 SGA award stays identified by its number rather than by a fund code.
 
 **810-FD is mapped to nothing at all**, and that is the important part. It is
-the agency fund the whole 226-AG account sits in, so every LNL line in eleven
-years of exports carries it, whoever actually paid. Standing SGA budget,
-out-of-cycle SGA award and legacy money are identical on the worktag. The
+the agency fund the whole 226-AG account sits in, so every LNL line from FY18
+to FY26 carries it, whoever actually paid. SGA budget money, funding-request
+money and legacy money are identical on the worktag. The
 original ``if '810' in fund`` read it as "SGA budget" and the first pass at this
 table copied that across unexamined, which meant the Fund source box arrived
 pre-filled and high-confidence on nearly every line, on no evidence. An exact
@@ -898,8 +898,8 @@ Reconciling in bulk
 ~~~~~~~~~~~~~~~~~~~
 
 The per-row form is the right tool when the rows differ. When they do not — a
-dozen supply orders on one export, every one of them Consumables out of the
-standing budget — it asks the same two questions a dozen times and gets the
+dozen supply orders on one export, every one of them Consumables out of
+Legacy — it asks the same two questions a dozen times and gets the
 same two answers a dozen times. :func:`finance.views.ingest.bulk_reconcile` is
 the ledger's bulk bar pointed at the queue: select rows, answer once, apply.
 
@@ -996,9 +996,10 @@ reservation *larger* than the charge is the ordinary shape of the whole feature,
 and scoring it by the raw difference would bury a $1,000 reservation under every
 $80 stray on an $80 line — the exact row the Treasurer opened the picker to find.
 So :func:`~finance.suggestions.encumbrance_match_score` sorts on what a
-reservation fails to cover first, ignores a shortfall small enough that the draw
-will stretch over it anyway, and only then prefers the tightest sufficient
-reservation. Nothing is pre-selected: matching the wrong row files a purchase
+reservation fails to cover first, ignoring a shortfall small enough that the
+draw will stretch over it anyway; then on whether the payee is named in what
+somebody typed; and only then prefers the tightest sufficient reservation, with
+the dates last. Nothing is pre-selected: matching the wrong row files a purchase
 against the wrong budget line *and* marks a live commitment spent, and neither
 is visible once done.
 
@@ -1291,10 +1292,7 @@ funding-request fund and brings it back towards zero. The queue fills it in:
 5. the stated default, for a line on no known account.
 
 The spend category and funding request line stay expense-only, and the
-database still refuses them on revenue. ``0005_fund_balances`` gave every
-revenue entry filed before the change its account's own money. That is what the
-arithmetic would have assumed anyway, and saying it outright means the ledger's
-Fund filter finds those entries.
+database still refuses them on revenue.
 
 How the balances are worked out
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1393,23 +1391,18 @@ anywhere else is refused by name: "SGA Funding Request Reimbursement goes into
 SGA Funding Request, not Legacy." A source that names no fund is the account's
 own money like any other income.
 
-===================================  ======================  ===================
-Source                               Goes into               Seeded as
-===================================  ======================  ===================
-SGA Funding Request Reimbursement    SGA Funding Request     new in 0006
-SGA Budget                           SGA Budget              was *SGA Baseline*
-SGA Mandatory Transfer               SGA Mandatory Transfer  new in 0006
+===================================  ======================
+Source                               Goes into
+===================================  ======================
+SGA Funding Request Reimbursement    SGA Funding Request
+SGA Budget                           SGA Budget
+SGA Mandatory Transfer               SGA Mandatory Transfer
 Asset Liquidation                    (the account's own)
 Alumni / Donation                    (the account's own)
-===================================  ======================  ===================
+===================================  ======================
 
-*SGA Baseline* was the annual budget under its older name. It had nothing filed
-against it, and ``0006_revenue_sources`` renamed it, keeping the
-``sga_baseline`` slug so links survive. The migration changes only what still
-matches the original seed, so a row a Treasurer had already renamed or
-reordered keeps their version. An install that ran an earlier 0006 calls it
-"SGA Budget Deposit"; ``0007_sga_budget_source_name`` gives it the name SGA
-uses, under the same rule.
+The *SGA Budget* source has the slug ``sga_baseline``, from its older name
+*SGA Baseline*. The slug was kept when it was renamed, so links survive.
 
 SGA's payments name the request
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1730,10 +1723,9 @@ so history is never work for anybody; a history line cannot take a slice, and
 its own page shows how it is read instead of the split form.
 
 Left blank, the books start where the earliest line does, so importing FY19
-would move the books back six years and put six years of lines in the queue.
-Migration ``0008_forecasting`` writes the start down on an install that has
-lines, and an import that brings in older lines writes it down first if
-nobody has. The confirmation page counts the lines for the queue and the lines
+would move the books back seven years and put seven years of lines in the
+queue. So an import that brings in older lines writes the start down first,
+if nobody has. The confirmation page counts the lines for the queue and the lines
 of history separately. Cash is the one figure history still counts: worked back
 from a Workday balance through every line imported, it gives the cash each past
 year ended on, which the History page shows -- a year that never adds up to the
@@ -1961,7 +1953,7 @@ What stays in code, and why:
 ``HistoryKind``, and the SGA and billing ledger accounts in :mod:`finance.history`
     What a line nobody filed can be. Each kind is projected its own way, and
     the accounts are how an old line is recognised as one -- WPI's chart of
-    accounts, which a forecast reading six years of exports cannot do without.
+    accounts, which a forecast reading seven years of exports cannot do without.
 :data:`finance.models.FINGERPRINT_WORKTAGS`
     Deliberately *not* editable. It defines what makes a bank line that line,
     so changing it would orphan every fingerprint on file and make the next
@@ -2047,7 +2039,7 @@ Setting up a new install
 4. **Import the current fiscal year first.** While *Books start on* is blank,
    the books start on the first day of the fiscal year of the earliest line on
    file, so on an empty install the first export decides it. Importing FY19
-   first would start the books in FY19 and put six years of lines in the
+   first would start the books in FY19 and put seven years of lines in the
    queue. Either import the current year first, or set *Books start on* before
    importing anything.
 5. On the *Balances* tab, record a Workday balance for each account -- today's
@@ -2086,11 +2078,13 @@ install and Django never runs a migration twice:
 
 **A green test run says nothing about whether such a change reached a real
 install**, because the suite builds a fresh database from the seed every time.
-The seeding migrations change only what still matches what they seeded, so a
-Treasurer's own edits survive: ``0006_revenue_sources`` and
-``0007_sga_budget_source_name`` show the pattern. ``0004_current_spend_categories``
-overwrites on purpose, because the Treasurer asked for a new list, and its
-docstring explains how it keeps that safe.
+A catching-up migration should change only what still matches what was seeded,
+so a Treasurer's own edits survive. Three migrations did exactly this before
+the history was collapsed, and are worth copying from git (they are in commit
+``9634c6b``): ``0006_revenue_sources`` and ``0007_sga_budget_source_name`` show
+the pattern, and ``0004_current_spend_categories`` overwrites on purpose,
+because the Treasurer asked for a new list, and its docstring explains how it
+keeps that safe.
 
 Adding to the app
 ~~~~~~~~~~~~~~~~~
@@ -2168,7 +2162,7 @@ locally::
 Tests
 -----
 
-``python manage.py test finance`` runs 1,395 tests across twenty-five modules. The
+``python manage.py test finance`` runs 1,388 tests across twenty-five modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.

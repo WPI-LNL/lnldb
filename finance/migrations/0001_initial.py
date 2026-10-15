@@ -1,20 +1,28 @@
 """
 The finance schema, as one step.
 
-The app was built through sixteen migrations -- text columns that became
-foreign keys, a constraint added and then replaced, several passes of data
-repair against a development database. None of that history is of any use to a
-new installation: it describes how this laptop got here, not what the tables
-should look like. Since the app had never been deployed anywhere when this was
-written, the whole sequence was collapsed into this file plus
-``0002_seed_reference_data``.
+The app was developed through twenty-two migrations: sixteen while the ledger
+and the queue were built, then six more as fund balances, revenue sources and
+the forecast arrived. Most of them were text columns that became foreign keys,
+constraints added and later replaced, and data repairs run against one
+development database. None of that is any use to a new installation. It
+records how one laptop got here, not what the tables should look like. Since
+the app had never been deployed when this was written, the whole sequence was
+collapsed into this file (the tables) and ``0002_seed_reference_data`` (the
+rows a new install starts with).
 
-There is deliberately no ``replaces`` list. That mechanism exists to keep
-installations that already ran the old sequence working, and there are none:
-the only database that ever applied those sixteen is the developer's own, which
-was reconciled by hand when this landed. Carrying a ``replaces`` list naming
-sixteen files that no longer exist would be permanent clutter in service of a
-migration path nobody needs.
+Tables and seed rows are kept in separate files on purpose. lnldb runs on
+MySQL in production, where creating a table cannot be rolled back, so a seed
+that failed halfway through a combined migration would leave the tables
+created and the migration unrecorded.
+
+There is deliberately no ``replaces`` list. That mechanism keeps installations
+that already ran the old sequence working, and there is only one: the
+Treasurer's development database. It already has ``0001_initial`` and
+``0002_seed_reference_data`` recorded under these names, and its tables match
+these exactly, so it carries on without running anything. Its records of the
+retired ``0003`` to ``0008`` name files that no longer exist, which Django
+ignores.
 """
 from decimal import Decimal
 from django.conf import settings
@@ -58,10 +66,29 @@ class Migration(migrations.Migration):
                 ('student_org_workday_fund', models.PositiveIntegerField(default=810, help_text='The Workday fund number that marks a client as a student organization (810 for 810-FD). Everything else billing through Workday is treated as a department. Drives the client-type breakdown on the dashboard.', verbose_name='Student organization fund')),
                 ('fiscal_years_back', models.PositiveSmallIntegerField(default=6, help_text='How many previous fiscal years the filter bar offers.', verbose_name='Past years in the picker')),
                 ('fiscal_years_forward', models.PositiveSmallIntegerField(default=1, help_text='How many upcoming fiscal years to offer, for encumbrances and awards booked ahead of time.', verbose_name='Future years in the picker')),
+                ('ledger_start_date', models.DateField(blank=True, help_text='The first day the subledger accounts for every line. Fund balances are worked out from here: whatever each account held the night before is its opening, and every line on or after it counts. Leave blank to start at the beginning of the fiscal year of the earliest imported line. Lines from before it are history: kept for the forecast, never filed.', null=True, verbose_name='Books start on')),
+                ('minimum_reserve', models.DecimalField(decimal_places=2, default=Decimal('10000.00'), help_text='The least LNL\'s own money should ever hold. The forecast marks any month projected below it, and "Can we afford it?" answers against it.', max_digits=12, validators=[django.core.validators.MinValueValidator(Decimal('0.00'))], verbose_name='Minimum reserve')),
+                ('department_billing_share', models.PositiveSmallIntegerField(blank=True, help_text='Until FY27 LNL billed student organizations as well as departments, and now it bills departments only. The forecast takes this share of past billing as what departments alone bring in. Leave blank to work it out from billing filed against events; until enough is, the forecast leaves past billing out.', null=True, validators=[django.core.validators.MaxValueValidator(100)], verbose_name="Departments' share of billing before FY27 (%)")),
             ],
             options={
                 'verbose_name': 'Finance Configuration',
                 'verbose_name_plural': 'Finance Configuration',
+            },
+        ),
+        migrations.CreateModel(
+            name='FiscalYearClose',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('fiscal_year', models.PositiveIntegerField(unique=True)),
+                ('closed_on', models.DateTimeField(auto_now_add=True)),
+                ('snapshot', models.JSONField(blank=True, default=dict, help_text="Every account's cash and fund balances at the moment of closing.")),
+                ('notes', models.TextField(blank=True)),
+                ('closed_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='finance_year_closes', to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                'verbose_name': 'Fiscal Year Close',
+                'ordering': ('-fiscal_year',),
+                'permissions': (('close_fiscalyear', 'Close a fiscal year and record its year-end transfers'),),
             },
         ),
         migrations.CreateModel(
@@ -83,13 +110,14 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=192)),
-                ('reference', models.CharField(blank=True, max_length=64, verbose_name='SGA reference #')),
+                ('reference', models.CharField(blank=True, help_text="As SGA numbers it: the body that approved it (A for Appropriations Committee, F for Financial Board, S for Senate), the fiscal year, and the request's number -- e.g. A.27.16.", max_length=64, verbose_name='SGA reference #')),
                 ('fiscal_year', models.PositiveIntegerField(db_index=True, default=finance.models.current_fiscal_year)),
                 ('date_submitted', models.DateField(blank=True, null=True)),
                 ('date_approved', models.DateField(blank=True, null=True)),
                 ('is_projection', models.BooleanField(default=False, verbose_name='Projection request')),
                 ('closed', models.BooleanField(default=False, help_text='Closed requests are hidden from the dashboard burndown')),
                 ('notes', models.TextField(blank=True)),
+                ('owed_at_books_start', models.DecimalField(decimal_places=2, default=Decimal('0.00'), help_text="Only for a request whose spending began before the subledger's books start: what SGA still owed LNL for it on that day, spent and not yet reimbursed. A negative figure is what SGA had overpaid. Leave at zero when every charge against the request is in the ledger.", max_digits=10, verbose_name='Owed by SGA when the books started')),
                 ('created_on', models.DateTimeField(auto_now_add=True)),
             ],
             options={
@@ -109,6 +137,9 @@ class Migration(migrations.Migration):
                 ('description', models.TextField(blank=True)),
                 ('workday_fund_codes', models.CharField(blank=True, help_text="Comma-separated Fund codes from the export that mean this bucket and only this bucket. A line whose Fund matches is filled in automatically, so only list a code when it genuinely identifies this fund -- 810-FD is on all of LNL's spending and says nothing about whose money it was. Leave blank and this fund is never chosen for you.", max_length=192, verbose_name='Workday fund codes')),
                 ('requires_funding_request', models.BooleanField(default=False, help_text="Money from a specific SGA funding request has to burn down one of that request's lines, or the request's balance silently drifts. Turn this on and an expense on this fund cannot be saved without an FR line -- and no other fund is allowed to name one.", verbose_name='Must name a funding request line')),
+                ('is_default', models.BooleanField(default=False, help_text='The fund an expense is filled in with when neither the memo nor the Fund worktag identifies one. This is a stated default, not a reading of the export, and the queue labels it as such -- but leaving the one required box on every row blank is what made reconciling a typing job. Tick it on exactly one fund.', verbose_name='Fill this in when nothing else says')),
+                ('behaviour', models.CharField(choices=[('carries', 'Carries forward'), ('returns', 'Unspent returns to SGA at year end'), ('reimbursed', 'Reimbursed by SGA after spending')], default='carries', help_text="What happens to this money on June 30. Legacy and the Projection mandatory transfer carry forward; the SGA budget's unspent balance goes back to SGA; a funding request is reimbursed after the spending, so its balance runs negative until SGA pays.", max_length=16, verbose_name='At year end')),
+                ('workday_tracking_values', models.CharField(blank=True, help_text='Comma-separated values of the Tracking worktag that mean this fund, e.g. "SGA Funding Request". Exports from FY27 on carry it, and a line whose Tracking matches has this fund filled in.', max_length=255, verbose_name='Workday Tracking values')),
             ],
             options={
                 'verbose_name': 'Fund Source',
@@ -132,22 +163,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='RevenueSource',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=96, unique=True)),
-                ('slug', models.SlugField(help_text='Stable key used in links and by the importer. Safe to leave alone; changing it will break saved links and bookmarks.', max_length=48, unique=True)),
-                ('sort_order', models.PositiveIntegerField(default=0, help_text='Lower numbers appear first in dropdowns.')),
-                ('is_active', models.BooleanField(default=True, help_text='Uncheck to retire an option. Existing records keep it; it just stops being offered for new ones.')),
-                ('description', models.TextField(blank=True)),
-            ],
-            options={
-                'verbose_name': 'Non-Event Revenue Source',
-                'ordering': ('sort_order', 'name'),
-                'abstract': False,
-            },
-        ),
-        migrations.CreateModel(
             name='SpendCategory',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -158,6 +173,7 @@ class Migration(migrations.Migration):
                 ('color', models.CharField(default='#BAB0AC', help_text='Used for this category everywhere it appears in a chart.', max_length=7, validators=[django.core.validators.RegexValidator('^#[0-9A-Fa-f]{6}$', 'Use a six-digit hex colour such as #4E79A7.')], verbose_name='Chart colour')),
                 ('description', models.TextField(blank=True)),
                 ('is_event_passthrough', models.BooleanField(default=False, help_text='The category to file an expense under when it names the event it was incurred for -- a sub-rental hired for one show, passed straight through. Filled in automatically so the Treasurer does not have to pick a category that says nothing the linked event does not.', verbose_name='Use for costs billed to an event')),
+                ('forecast_from_plans', models.BooleanField(default=False, help_text='For spending chosen one purchase at a time, like equipment. The forecast leaves it out of a typical year and counts only what is reserved or on the planned purchases list, so one big purchase is not expected again every year.', verbose_name='Forecast from plans only')),
             ],
             options={
                 'verbose_name': 'LNL Spend Category',
@@ -220,6 +236,23 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
+            name='RevenueSource',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=96, unique=True)),
+                ('slug', models.SlugField(help_text='Stable key used in links and by the importer. Safe to leave alone; changing it will break saved links and bookmarks.', max_length=48, unique=True)),
+                ('sort_order', models.PositiveIntegerField(default=0, help_text='Lower numbers appear first in dropdowns.')),
+                ('is_active', models.BooleanField(default=True, help_text='Uncheck to retire an option. Existing records keep it; it just stops being offered for new ones.')),
+                ('description', models.TextField(blank=True)),
+                ('credits_fund', models.ForeignKey(blank=True, help_text="The fund this kind of income always adds to. Picking the source fills it in, and filing the money anywhere else is refused. When the fund draws on funding requests, the income has to name the request it reimburses. Leave blank for income that is simply the account's own money.", null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='revenue_sources', to='finance.fundsource', verbose_name='Goes into')),
+            ],
+            options={
+                'verbose_name': 'Non-Event Revenue Source',
+                'ordering': ('sort_order', 'name'),
+                'abstract': False,
+            },
+        ),
+        migrations.CreateModel(
             name='ProjectTag',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -241,6 +274,26 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
+            name='PlannedPurchase',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=128)),
+                ('amount', models.DecimalField(decimal_places=2, help_text='What it will cost, as a positive figure.', max_digits=12, validators=[django.core.validators.MinValueValidator(Decimal('0.01'))])),
+                ('expected_date', models.DateField(help_text='Roughly when the money will go out.', verbose_name='Expected on')),
+                ('status', models.CharField(choices=[('planned', 'Planned'), ('approved', 'Approved'), ('bought', 'Bought or reserved'), ('dropped', 'Dropped')], default='planned', max_length=12)),
+                ('notes', models.TextField(blank=True)),
+                ('created_on', models.DateTimeField(auto_now_add=True)),
+                ('updated_on', models.DateTimeField(auto_now=True)),
+                ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='finance_planned_purchases', to=settings.AUTH_USER_MODEL)),
+                ('fund_source', models.ForeignKey(help_text='Money from a funding request comes back from SGA after it is spent, so the forecast shows only the wait for it.', on_delete=django.db.models.deletion.PROTECT, related_name='planned_purchases', to='finance.fundsource', verbose_name='Paid from')),
+                ('spend_category', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='planned_purchases', to='finance.spendcategory')),
+            ],
+            options={
+                'verbose_name': 'Planned Purchase',
+                'ordering': ('expected_date', 'pk'),
+            },
+        ),
+        migrations.CreateModel(
             name='ParsedTransaction',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -255,7 +308,8 @@ class Migration(migrations.Migration):
                 ('updated_on', models.DateTimeField(auto_now=True)),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='subledger_entries', to=settings.AUTH_USER_MODEL)),
                 ('fr_line_target', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='allocations', to='finance.frlineitem', verbose_name='Funding request line')),
-                ('fund_source', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='entries', to='finance.fundsource')),
+                ('fund_source', models.ForeignKey(blank=True, help_text='The pot this money came out of, or, for money coming in, the pot it adds to.', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='entries', to='finance.fundsource')),
+                ('funding_request', models.ForeignKey(blank=True, help_text="SGA's own payment for a funding request: the request a reimbursement repays, or the one SGA took money back for. Spending against a request names one of its lines instead.", null=True, on_delete=django.db.models.deletion.PROTECT, related_name='sga_payments', to='finance.fundingrequest', verbose_name='SGA funding request')),
                 ('linked_event', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='subledger_entries', to='events.baseevent', verbose_name='Linked event')),
                 ('lnl_spend_category', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='entries', to='finance.spendcategory', verbose_name='LNL spend category')),
                 ('non_event_revenue_type', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='entries', to='finance.revenuesource', verbose_name='Non-event revenue type')),
@@ -269,6 +323,47 @@ class Migration(migrations.Migration):
                 'ordering': ('-effective_date', '-pk'),
                 'permissions': (('view_subledger', 'View the financial subledger'), ('edit_subledger', 'Create and edit subledger entries'), ('settle_subledger', 'Reconcile and settle transactions'), ('view_subledger_receipts', 'View uploaded receipts')),
             },
+        ),
+        migrations.CreateModel(
+            name='HistoryOverride',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('kind', models.CharField(blank=True, choices=[('billing', 'Client billing'), ('sga', 'SGA funding'), ('spending', 'Spending'), ('other', 'Other: transfers and gifts')], help_text='Leave blank to keep what the line itself says.', max_length=16, verbose_name='What it was')),
+                ('leave_out', models.BooleanField(default=False, help_text='A one-off -- a conversion entry, a purchase that will not recur -- that a typical year should not include.', verbose_name='Leave out of the forecast')),
+                ('note', models.CharField(blank=True, max_length=255)),
+                ('updated_on', models.DateTimeField(auto_now=True)),
+                ('line', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='history_override', to='finance.workdaytransaction')),
+                ('spend_category', models.ForeignKey(blank=True, help_text='For spending. Leave blank to keep the estimate.', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='history_overrides', to='finance.spendcategory')),
+                ('updated_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='finance_history_overrides', to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                'verbose_name': 'History Correction',
+            },
+        ),
+        migrations.CreateModel(
+            name='FundTransfer',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('date', models.DateField(default=django.utils.timezone.localdate)),
+                ('amount', models.DecimalField(decimal_places=2, max_digits=12, validators=[django.core.validators.MinValueValidator(Decimal('0.01'))])),
+                ('kind', models.CharField(choices=[('transfer', 'Transfer'), ('opening', 'Opening balance'), ('year_end', 'Year-end close')], default='transfer', max_length=16)),
+                ('description', models.CharField(help_text='Why the money moved. Shown to auditors.', max_length=255)),
+                ('created_on', models.DateTimeField(auto_now_add=True)),
+                ('account', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='fund_transfers', to='finance.partitioncode')),
+                ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='finance_transfers', to=settings.AUTH_USER_MODEL)),
+                ('fiscal_year_close', models.ForeignKey(blank=True, help_text='The close that wrote this, which takes it away again if reopened.', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='transfers', to='finance.fiscalyearclose')),
+                ('from_fund', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='transfers_out', to='finance.fundsource', verbose_name='From')),
+                ('to_fund', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='transfers_in', to='finance.fundsource', verbose_name='To')),
+            ],
+            options={
+                'verbose_name': 'Fund Transfer',
+                'ordering': ('-date', '-pk'),
+            },
+        ),
+        migrations.AddField(
+            model_name='fundsource',
+            name='account',
+            field=models.ForeignKey(blank=True, help_text="The Workday account this money sits in. The carry-forward fund held in an account is that account's own money: a line nothing else identifies is filed to it, and it absorbs the account's opening balance.", null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='funds', to='finance.partitioncode', verbose_name='Held in'),
         ),
         migrations.AddField(
             model_name='frlineitem',
@@ -285,9 +380,29 @@ class Migration(migrations.Migration):
             name='project_tag',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='fr_line_items', to='finance.projecttag'),
         ),
+        migrations.CreateModel(
+            name='BalanceCheckpoint',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('as_of', models.DateField(help_text="The day Workday's figure is for. Lines dated that day are counted in it.", verbose_name='As of the end of')),
+                ('balance', models.DecimalField(decimal_places=2, help_text="The account's balance exactly as Workday shows it.", max_digits=12, verbose_name='Workday balance')),
+                ('note', models.CharField(blank=True, help_text='Where the figure came from, if that is worth saying.', max_length=255)),
+                ('entered_on', models.DateTimeField(auto_now_add=True)),
+                ('account', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='checkpoints', to='finance.partitioncode')),
+                ('entered_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='finance_checkpoints', to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                'verbose_name': 'Workday Balance',
+                'ordering': ('account__code', '-as_of'),
+            },
+        ),
         migrations.AddConstraint(
             model_name='workdaytransaction',
             constraint=models.UniqueConstraint(fields=('row_fingerprint', 'fingerprint_ordinal'), name='finance_workday_line_occurrence_once'),
+        ),
+        migrations.AddConstraint(
+            model_name='plannedpurchase',
+            constraint=models.CheckConstraint(check=models.Q(('amount__gt', 0)), name='finance_planned_purchase_amount_positive'),
         ),
         migrations.AddConstraint(
             model_name='parsedtransaction',
@@ -303,10 +418,26 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='parsedtransaction',
-            constraint=models.CheckConstraint(check=models.Q(('amount__lt', 0), ('refund_of__isnull', False), models.Q(('fr_line_target__isnull', True), ('fund_source__isnull', True), ('lnl_spend_category__isnull', True)), _connector='OR'), name='finance_no_expense_routing_on_revenue'),
+            constraint=models.CheckConstraint(check=models.Q(('amount__lt', 0), ('refund_of__isnull', False), models.Q(('fr_line_target__isnull', True), ('lnl_spend_category__isnull', True)), _connector='OR'), name='finance_no_expense_routing_on_revenue'),
         ),
         migrations.AddConstraint(
             model_name='parsedtransaction',
             constraint=models.CheckConstraint(check=models.Q(('refund_of__isnull', True), ('amount__gt', 0), _connector='OR'), name='finance_refund_must_be_positive'),
+        ),
+        migrations.AddConstraint(
+            model_name='parsedtransaction',
+            constraint=models.CheckConstraint(check=models.Q(('funding_request__isnull', True), ('fr_line_target__isnull', True), _connector='OR'), name='finance_sga_payment_is_not_a_charge'),
+        ),
+        migrations.AddConstraint(
+            model_name='fundtransfer',
+            constraint=models.CheckConstraint(check=models.Q(('amount__gt', 0)), name='finance_transfer_amount_positive'),
+        ),
+        migrations.AddConstraint(
+            model_name='fundtransfer',
+            constraint=models.CheckConstraint(check=models.Q(('from_fund', models.F('to_fund')), _negated=True), name='finance_transfer_between_two_funds'),
+        ),
+        migrations.AddConstraint(
+            model_name='balancecheckpoint',
+            constraint=models.UniqueConstraint(fields=('account', 'as_of'), name='finance_one_balance_per_account_per_day'),
         ),
     ]

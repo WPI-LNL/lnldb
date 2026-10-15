@@ -88,7 +88,7 @@ category -- in the queue now and in every future import, and in history -- fills
 #. Under `Spend Category Suggestion Rules`, click `Add`.
 #. **Match field:** usually *Workday's own spend category*.
 #. **Match how:** *Is exactly*.
-#. **Pattern:** the Workday category exactly as the warning wrote it, for example ``Rent - Equipment``.
+#. **Pattern:** the Workday category exactly as the warning wrote it.
 #. **Spend category:** the LNL category it means. Save.
 
 **Is exactly** and **Starts with** rules are treated as facts: they fill the box in. **Contains** rules are treated as
