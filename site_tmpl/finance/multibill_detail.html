@@ -90,6 +90,10 @@
             </div>
             {% if bill.description %}<p>{{ bill.description|linebreaksbr }}</p>{% endif %}
             {% if bill.paid_note %}<p class="fin-muted">Paid: {{ bill.paid_note }}</p>{% endif %}
+            <p class="fin-muted">
+                The invoice is the bill's own summary{% if bill.attach_event_invoices %}, followed by each event's itemized
+                invoice{% else %} only{% endif %}.{% if can_change %} Change that under <em>Edit</em>.{% endif %}
+            </p>
             {% if clients|length > 1 %}
                 <p class="fin-muted">
                     These events were booked for

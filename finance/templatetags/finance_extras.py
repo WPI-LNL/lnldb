@@ -158,6 +158,22 @@ def money(value, show_sign=False):
 
 
 @register.filter
+def invoice_money(value):
+    """
+    Currency as an invoice to a client writes it: $1,234.50, or -$50.00 for a
+    credit or discount, as the 2025 invoice writes an event's discounts. The
+    parentheses of :func:`money` are for the Treasurer, not the client.
+    """
+    if value is None or value == '':
+        return ''
+    try:
+        amount = Decimal(value)
+    except (InvalidOperation, TypeError, ValueError):
+        return value
+    return '%s$%s' % ('-' if amount < 0 else '', intcomma('%.2f' % abs(amount)))
+
+
+@register.filter
 def money_class(value):
     """ CSS class matching the sign, for consistent red/green across pages. """
     try:

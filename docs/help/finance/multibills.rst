@@ -22,6 +22,8 @@ Create a Multi-bill
 #. **Bill to** is the client who pays. Leave it blank to bill the client most of the events are for.
 #. Give it a **Name**, such as *Fall films*, and a **Description** if it helps. Both show on the invoice, and the name
    is in the email's subject. With no name, it is called something like *3 events for SocComm*.
+#. Tick **Add each event's invoice** if the client should get each event's itemized invoice as well (see
+   `The Invoice`_).
 #. Click `Create`, or `Create and email the client` to go straight to the email.
 
 There is no total to type. The bill comes to what each event would be billed on its own, plus any charges you add.
@@ -63,12 +65,32 @@ Once a bill is paid, nothing about it can change until you mark it unpaid. Once 
 be changed at all.
 
 
+The Invoice
+-----------
+
+Click `Invoice PDF` on the bill's page, or `PDF` on the list. The invoice is laid out like an event's 2025 invoice:
+the bill's name and description, who it is billed to, its events with their dates and prices, its own charges, and the
+grand total.
+
+- A percentage fee or discount is listed under the events, since it is a percentage of what they come to.
+- Rentals are listed with LNL's rental fee, as on an event. One-offs are listed under *Additional Fees*. A credit shows
+  as a negative amount, such as *-$25.00*.
+- When the events are for different clients, each event's client is shown beside it.
+- An SGA-funded event is marked, with a note that SGA-funded events are charged only for rentals and additional fees.
+
+**Add each event's invoice.** Tick `Add each event's invoice` when you create or edit the bill, and each event's own
+itemized invoice follows the bill's, earliest event first, in the same file. The download and every email get the same
+file. An event priced before the 2025 pricelists gets its old-style invoice. Each event's invoice is saved on the event
+every time it is made, as it is when you bill an event on its own.
+
+
 Email the Client
 ----------------
 
 Click `Email client` on the bill's page or the `MultiBills` list, at any time. The subject and message are written out
 for you -- the events, the total, and a request to reply with the worktag to charge -- and you can edit them before
-sending. The invoice is attached. Every email sent is listed on the bill's page.
+sending. The invoice is attached, named after the bill (such as *fall-films-bill.pdf*). Every email sent is listed on
+the bill's page.
 
 
 Mark It Paid

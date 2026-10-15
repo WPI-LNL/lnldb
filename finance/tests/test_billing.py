@@ -8,19 +8,30 @@ client's worktag form.
 
 The rest are the multi-bill's own: what it comes to and how each charge is
 priced, which events it may cover and when the clients differ, its pages and
-when they refuse a change, marking it paid, and the two places elsewhere in
-finance that read a multi-bill -- the rental check and revenue by client.
+when they refuse a change, marking it paid, its invoice, and the two places
+elsewhere in finance that read a multi-bill -- the rental check and revenue by
+client.
+
+WeasyPrint, which draws the invoice, needs native libraries that CI installs
+and a developer's machine may not have. So the tests swap it for a blank page
+(:func:`blank_page`), apart from one class that draws the invoice for real
+wherever WeasyPrint can.
 """
 import datetime
 from decimal import Decimal
+from io import BytesIO
+from unittest import mock, skipUnless
 
 from django.contrib.auth.models import Permission
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from pypdf import PdfReader, PdfWriter
+from weasyprint import HTML
 
 from data.tests.util import ViewTestCase
-from events.models import EventArbitrary, Organization, Pricelist
+from events.models import EventArbitrary, Organization, Pricelist, Quote
 from events.tests.generators import Event2019Factory, EventFactory, OrgFactory, UserFactory
 from finance.billing_forms import MultiBillChargeForm, MultiBillForm, billable_events
 from finance.calculators import event_financials, revenue_by_client
@@ -394,9 +405,12 @@ class BillingViewTests(ViewTestCase):
             "save": "Send Email"
         }
 
-        self.assertRedirects(self.client.post(reverse("finance:multibill-email", args=[b.pk]), valid_data),
-                             reverse("finance:multibill-detail", args=[b.pk]))
+        with mock.patch('finance.views.billing.write_weasyprint_pdf', blank_page):
+            self.assertRedirects(self.client.post(reverse("finance:multibill-email", args=[b.pk]), valid_data),
+                                 reverse("finance:multibill-detail", args=[b.pk]))
         self.assertIsNotNone(b.multibillingemail_set.get().sent_at)
+        self.assertEqual([(name, kind) for name, _, kind in mail.outbox[-1].attachments],
+                         [("spring-films-bill.pdf", "application/pdf")])
 
     def test_entered_into_workday(self):
         self.setup()
@@ -467,12 +481,15 @@ class MultiBillInvoiceTests(TestCase):
         self.assertEqual(response['total_cost'], self.e.cost_total + self.e2.cost_total)
 
     def test_pdf_multibill(self):
-        response = self.client.get(reverse('finance:multibill-pdf', args=[self.multibilling.pk]))
+        with mock.patch('finance.views.billing.write_weasyprint_pdf', blank_page):
+            response = self.client.get(reverse('finance:multibill-pdf', args=[self.multibilling.pk]))
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
 
-    def test_multibill_pdf_standalone(self):
+    def test_multibill_invoice_pdf(self):
         # Test that a file is successfully returned
-        self.assertIsNotNone(billing_views.generate_multibill_pdf_standalone(multibilling=self.multibilling))
+        with mock.patch('finance.views.billing.write_weasyprint_pdf', blank_page):
+            self.assertTrue(billing_views.multibill_invoice_pdf(self.multibilling).startswith(b'%PDF'))
 
     def test_old_multibill_list_address_redirects(self):
         self.assertRedirects(self.client.get('/db/events/multibills/'), reverse('finance:multibill-list'),
@@ -508,6 +525,26 @@ def charge(bill, kind, description, **kwargs):
     if kind != MultiBillingCharge.PERCENT:
         kwargs.setdefault('unit_price', Decimal('0.00'))
     return MultiBillingCharge.objects.create(multibilling=bill, kind=kind, description=description, **kwargs)
+
+
+def blank_page(html, pdf_file):
+    """ Stands in for ``write_weasyprint_pdf``: one blank page, 200 points square, so it can be told apart. """
+    writer = PdfWriter()
+    writer.add_blank_page(width=200, height=200)
+    writer.write(pdf_file)
+    return pdf_file
+
+
+def _weasyprint_draws():
+    """ Whether WeasyPrint can draw a page on this machine at all. """
+    try:
+        HTML(string='<p>LNL</p>').write_pdf()
+    except (OSError, RuntimeError):
+        return False
+    return True
+
+
+WEASYPRINT_DRAWS = _weasyprint_draws()
 
 
 class MultiBillTotalTests(TestCase):
@@ -774,7 +811,133 @@ class MultiBillPageTests(ViewTestCase):
         response = self.client.get(self.url('multibill-pdf'), {'raw': 'true'})
         self.assertContains(response, 'Fall films')
         self.assertContains(response, 'Projector')
-        self.assertContains(response, '$ 1115.00')
+        self.assertContains(response, '$1,115.00')
+
+
+class MultiBillInvoiceDrawingTests(ViewTestCase):
+    """
+    The invoice: laid out as the 2025 single-event invoice is, with the bill's
+    own charges grouped as an event's are, and each event's own invoice after
+    it when the bill says so.
+    """
+
+    def setUp(self):
+        super(MultiBillInvoiceDrawingTests, self).setUp()
+        self.user.user_permissions.add(Permission.objects.get(codename='bill_event'),
+                                       Permission.objects.get(codename='view_event_billing'))
+        self.socomm = OrgFactory(name='Social Committee', shortname='SocComm')
+        self.first = priced_event('Film One', '500.00', org=self.socomm)
+        self.second = priced_event('Film Two', '300.00', org=self.socomm)
+        self.bill = multibill(self.first, self.second, org=self.socomm, name='Fall films',
+                              description='The fall film series.')
+
+    def html(self):
+        return self.client.get(reverse('finance:multibill-pdf', args=(self.bill.pk,)), {'raw': 'true'})
+
+    def pdf(self):
+        with mock.patch('finance.views.billing.write_weasyprint_pdf', blank_page):
+            return self.client.get(reverse('finance:multibill-pdf', args=(self.bill.pk,)))
+
+    def test_it_is_drawn_like_the_single_event_invoice(self):
+        response = self.html()
+        # The same stylesheet and letterhead, and the same closing line
+        self.assertContains(response, '#quote-box {')
+        self.assertContains(response, 'WPI&nbsp;Lens&nbsp;and&nbsp;Lights')
+        self.assertContains(response, '<h1 id="quote-box">INVOICE</h1>')
+        self.assertContains(response, 'contact our treasurer')
+        self.assertContains(response, 'Fall films')
+        self.assertContains(response, 'The fall film series.')
+        self.assertContains(response, 'Billed on: March 1, 2026')
+        self.assertContains(response, 'Bill To:')
+        # The events' total heads their section, and is the grand total too
+        self.assertContains(response, '$800.00', count=2)
+
+    def test_the_bills_charges_are_grouped_as_an_events_are(self):
+        charge(self.bill, MultiBillingCharge.PERCENT, 'Series discount', percent=Decimal('-10'))
+        charge(self.bill, MultiBillingCharge.RENTAL, 'Screen hire', quantity=2, unit_price=Decimal('40.00'))
+        charge(self.bill, MultiBillingCharge.RENTAL, 'Projector hire', unit_price=Decimal('333.33'),
+               rental_fee_percent=Decimal('15'))
+        charge(self.bill, MultiBillingCharge.ONE_OFF, 'Credit for late start', unit_price=Decimal('-25.00'))
+        self.bill.recalculate()
+        response = self.html()
+        body = response.content.decode()
+        # A discount sits under the events it is a percentage of
+        self.assertContains(response, 'Series discount (-10% of $800.00)')
+        self.assertContains(response, '-$80.00')
+        self.assertContains(response, '$720.00')
+        # The rental carrying LNL's fee, then the fee, then the rest -- whatever order they were added in
+        self.assertLess(body.index('Projector hire'), body.index('LNL Rental Fee'))
+        self.assertLess(body.index('LNL Rental Fee'), body.index('Screen hire'))
+        self.assertContains(response, '$49.99')
+        self.assertContains(response, '$463.32')
+        # A credit is written the way the 2025 invoice writes a discount
+        self.assertContains(response, 'Additional Fees')
+        self.assertContains(response, '-$25.00')
+        self.assertContains(response, '$1,158.32')
+        self.assertEqual(self.bill.amount, Decimal('1158.32'))
+
+    def test_a_client_column_only_when_the_clients_differ(self):
+        self.assertNotContains(self.html(), 'Organization</th>')
+        self.bill.events.add(priced_event('Film Three', '100.00', org=OrgFactory(name='Lens and Lights')))
+        self.assertContains(self.html(), 'Organization</th>')
+
+    def test_sga_funded_events_are_marked(self):
+        self.assertNotContains(self.html(), 'SGA-funded')
+        self.bill.events.add(priced_event('Activities Fair', '40.00', org=self.socomm, is_sga_funded=True))
+        response = self.html()
+        self.assertContains(response, '<span class="sga-funded">SGA-funded</span>')
+        self.assertContains(response, 'charged only for rentals and additional fees')
+
+    def test_the_bills_own_page_alone_unless_it_says_otherwise(self):
+        pages = PdfReader(BytesIO(self.pdf().content)).pages
+        self.assertEqual(len(pages), 1)
+        self.assertFalse(Quote.objects.exists())
+        self.assertNotContains(self.html(), 'itemized invoice follows')
+
+    def test_each_events_invoice_follows_when_asked(self):
+        self.bill.attach_event_invoices = True
+        self.bill.save()
+        self.assertContains(self.html(), "Each event's itemized invoice follows")
+        pages = PdfReader(BytesIO(self.pdf().content)).pages
+        # The bill's own page first, then each event's invoice, earliest event first
+        self.assertEqual(float(pages[0].mediabox.width), 200)
+        self.assertEqual(len(pages), 3)
+        self.assertIn('Film One', pages[1].extract_text())
+        self.assertIn('Film Two', pages[2].extract_text())
+        # Each made as billing the event alone makes it, which keeps a copy on the event
+        self.assertEqual(sorted(Quote.objects.values_list('event', 'is_invoice')),
+                         [(self.first.pk, True), (self.second.pk, True)])
+
+    def test_the_file_is_named_after_the_bill(self):
+        self.assertEqual(self.pdf()['Content-Disposition'], 'inline; filename="fall-films-bill.pdf"')
+        self.bill.name = ''
+        self.assertEqual(billing_views.multibill_invoice_name(self.bill), '2-events-for-soccomm-bill.pdf')
+
+    def test_the_choice_is_made_when_creating_or_changing_the_bill(self):
+        form = MultiBillForm({'events': [str(self.first.pk), str(self.second.pk)], 'date_billed': '2026-03-01',
+                              'attach_event_invoices': 'on'}, instance=self.bill)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertTrue(form.save().attach_event_invoices)
+        self.assertContains(self.client.get(reverse('finance:multibill-detail', args=(self.bill.pk,))),
+                            "followed by each event's itemized")
+
+
+@skipUnless(WEASYPRINT_DRAWS, "WeasyPrint cannot draw on this machine; it needs pango, which CI installs.")
+class MultiBillInvoiceWeasyPrintTests(ViewTestCase):
+    """ The invoice drawn for real, with each event's own invoice after it, old style and 2025 style. """
+
+    def test_it_draws(self):
+        self.user.user_permissions.add(Permission.objects.get(codename='view_event_billing'))
+        org = OrgFactory(name='Social Committee', shortname='SocComm')
+        bill = multibill(priced_event('Film One', '500.00', org=org),
+                         priced_event('Film Two', '300.00', org=org, uses_new_discounts=True),
+                         org=org, name='Fall films', attach_event_invoices=True)
+        charge(bill, MultiBillingCharge.RENTAL, 'Projector hire', unit_price=Decimal('333.33'),
+               rental_fee_percent=Decimal('15'))
+        bill.recalculate()
+        response = self.client.get(reverse('finance:multibill-pdf', args=(bill.pk,)))
+        self.assertEqual(response.status_code, 200)
+        self.assertGreaterEqual(len(PdfReader(BytesIO(response.content)).pages), 3)
 
 
 class MultiBillElsewhereInFinanceTests(TestCase):

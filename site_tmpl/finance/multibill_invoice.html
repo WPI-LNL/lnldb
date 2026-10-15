@@ -1,0 +1,261 @@
+{% load static %}
+{% load tz %}
+{% load humanize %}
+{% load finance_extras %}
+{% comment %}
+    A multi-bill's invoice, in the 2025 style: the same stylesheet as the
+    single-event invoice (pdf_templates/bill-itemized-2025.html), the same
+    letterhead and sections, and the same grand total and closing line.
+    finance.views.billing.get_multibill_data lays out what it draws. When the
+    bill says so, each event's own invoice follows this one in the PDF.
+{% endcomment %}
+<html>
+
+<head>
+    {% include "pdf_templates/invoice-2025-style.html" %}
+    <style>
+        /* The events: date, event, client (only when they differ) and price. */
+        table.events th {
+            font-size: 8pt;
+            font-weight: normal;
+        }
+
+        table.events td {
+            font-size: 10pt;
+        }
+
+        table.events .date {
+            width: 18%;
+            text-align: center;
+        }
+
+        table.events .client {
+            width: 24%;
+        }
+
+        table.events .price {
+            width: 15%;
+            text-align: right;
+            padding-right: 5px;
+        }
+
+        table.events tr:nth-child(2n+4) {
+            background-color: #f3f3f3;
+        }
+
+        span.sga-funded {
+            font-size: 8pt;
+            font-style: italic;
+            color: green;
+        }
+
+        p.description {
+            clear: both;
+            font-size: 10pt;
+            margin: 10px 0 0 0;
+        }
+
+        p.follows {
+            font-size: 10pt;
+            font-style: italic;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <table id="logo-table">
+                        <tr>
+                            <td id="logo"><img id="logo-img" src="{% static 'img/pdf-lnl-logo.png' %}"></td>
+                            <td id="lnl-contact">
+                                <ul class="list-unstyled">
+                                    <h2 id="contact-name">WPI&nbsp;Lens&nbsp;and&nbsp;Lights</h2>
+                                    <li>100 Institute Road</li>
+                                    <li>Worcester, MA 01609</li>
+                                    <li><a href="mailto:lnl@wpi.edu" class="unstyled">lnl@wpi.edu</a></li>
+                                    <br>
+                                </ul>
+                            </td>
+
+                        </tr>
+                    </table>
+                </td>
+                <td>
+                    <table>
+                        <tr>
+                            <td>
+                                <table id="event-info">
+                                    <tr>
+                                        <td></td>
+                                        <td class="centered">
+                                            <h1 id="quote-box">INVOICE</h1>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Bill To:</td>
+                                        <td>{{ billing_org|default:"" }}</td>
+                                    </tr>
+                                    {% if orgs_differ %}
+                                    <tr>
+                                        <td>Organization{{ orgs|length|pluralize }}:</td>
+                                        <td>{{ orgs|join:", " }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    <tr>
+                                        <td>Events:</td>
+                                        <td>{{ events|length }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>First Event:</td>
+                                        <td>{{ first_start|localtime|date:"D, N j, Y" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Last Event:</td>
+                                        <td>{{ last_end|localtime|date:"D, N j, Y" }}</td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+        <p id="event-name">{{ multibilling.display_name }}</p>
+        <hr class="double">
+        <div class="expiry-date">
+            <span class="left expiry-date">Billed on: {{ multibilling.date_billed|date:"F j, Y" }}</span>
+            <span class="right expiry-date">Generated on: {% now "F j, Y" %}</span>
+        </div>
+        {% if multibilling.description %}
+        <p class="description">{{ multibilling.description|linebreaksbr }}</p>
+        {% endif %}
+
+        <div class="category-header">
+            <span class="left category-header">Events</span>
+            <span class="right category-header">{{ events_subtotal|invoice_money }}</span>
+        </div>
+        <hr class="double">
+        <table class="events">
+            <tr>
+                <th class="date">Date</th>
+                <th>Event</th>
+                {% if mixed_clients %}<th class="client">Organization</th>{% endif %}
+                <th class="price">Total Price</th>
+            </tr>
+            <tr>
+                <td colspan="{% if mixed_clients %}4{% else %}3{% endif %}" class="double"></td>
+            </tr>
+
+            {% for row in breakdown.events %}
+            <tr>
+                <td class="date">{{ row.event.datetime_start|localtime|date:"M j, Y" }}</td>
+                <td>
+                    {{ row.event.event_name }}
+                    {% if row.event.is_sga_funded %}<span class="sga-funded">SGA-funded</span>{% endif %}
+                </td>
+                {% if mixed_clients %}<td class="client">{{ row.client|default:"" }}</td>{% endif %}
+                <td class="price">{{ row.price|invoice_money }}</td>
+            </tr>
+            {% endfor %}
+
+            {% for row in adjustments %}
+            <tr>
+                <td class="date">-</td>
+                <td>{{ row.charge.description }} ({{ row.charge.percent|floatformat }}% of {{ breakdown.events_total|invoice_money }})</td>
+                {% if mixed_clients %}<td class="client"></td>{% endif %}
+                <td class="price">{{ row.total|invoice_money }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        {% if rentals_with_fee or rentals_without_fee %}
+        <div class="category-header">
+            <span class="left category-header">Rentals</span>
+            <span class="right category-header">{{ breakdown.rentals_total|invoice_money }}</span>
+        </div>
+        <hr class="double">
+        <table class="category">
+            <tr>
+                <th>Quantity</th>
+                <th>Item/Package</th>
+                <th>Unit Price/Percent</th>
+                <th>Total Price</th>
+            </tr>
+            <tr>
+                <td colspan="4" class="double"></td>
+            </tr>
+            {% for row in rentals_with_fee %}
+            <tr>
+                <td>{{ row.charge.quantity|intcomma }}</td>
+                <td>{{ row.charge.description }}</td>
+                <td>{{ row.charge.unit_price|invoice_money }}</td>
+                <td>{{ row.subtotal|invoice_money }}</td>
+            </tr>
+            {% endfor %}
+            {% for percent, fee in rental_fees %}
+            <tr>
+                <td>-</td>
+                <td>LNL Rental Fee</td>
+                <td>{{ percent|floatformat }}%</td>
+                <td>{{ fee|invoice_money }}</td>
+            </tr>
+            {% endfor %}
+            {% for row in rentals_without_fee %}
+            <tr>
+                <td>{{ row.charge.quantity|intcomma }}</td>
+                <td>{{ row.charge.description }}</td>
+                <td>{{ row.charge.unit_price|invoice_money }}</td>
+                <td>{{ row.subtotal|invoice_money }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        {% if oneoffs %}
+        <div class="category-header">
+            <span class="left category-header">Additional Fees</span>
+            <span class="right category-header">{{ oneoffs_total|invoice_money }}</span>
+        </div>
+        <hr class="double">
+        <table class="category">
+            <tr>
+                <th>Quantity</th>
+                <th>Item/Package</th>
+                <th>Unit Price/Percent</th>
+                <th>Total Price</th>
+            </tr>
+            <tr>
+                <td colspan="4" class="double"></td>
+            </tr>
+            {% for row in oneoffs %}
+            <tr>
+                <td>{{ row.charge.quantity|intcomma }}</td>
+                <td>{{ row.charge.description }}</td>
+                <td>{{ row.charge.unit_price|invoice_money }}</td>
+                <td>{{ row.total|invoice_money }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        <div class="grand-total">
+            <span class="left grand-total">Grand Total</span>
+            <span class="right grand-total">{{ total_cost|invoice_money }}</span>
+        </div>
+
+        {% if has_sga_funded %}
+        <p class="disclaimer">Events marked SGA-funded are charged only for rentals and additional fees.</p>
+        {% endif %}
+        {% if multibilling.attach_event_invoices %}
+        <p class="follows">Each event's itemized invoice follows, in the order listed above.</p>
+        {% endif %}
+        <p class="disclaimer">If you have any questions concerning this invoice, contact our treasurer at
+            <a class="unstyled" href="mailto:lnl-t@wpi.edu">lnl-t@wpi.edu</a>.</p>
+    </div>
+</body>
+
+</html>

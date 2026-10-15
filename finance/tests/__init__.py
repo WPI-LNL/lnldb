@@ -102,8 +102,9 @@ what they cover rather than alphabetically.
     the events app with the bills, tests and all. The rest is the multi-bill's
     own: its total and how each charge is priced and rounded, which events it
     may cover and what happens when their clients differ, its pages and when
-    they refuse a change, marking it paid, and how the rental check and
-    revenue by client read it.
+    they refuse a change, marking it paid, its invoice and the events'
+    invoices that can follow it, and how the rental check and revenue by
+    client read it.
 
 **Everything else**
 

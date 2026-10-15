@@ -1558,6 +1558,31 @@ does not apply to the kind chosen.
 unpaid. A bill with a closed event cannot be changed at all, as a closed event
 locks its own bill.
 
+**The invoice** is ``site_tmpl/finance/multibill_invoice.html``, drawn by
+WeasyPrint in the style of the 2025 single-event invoice.
+``get_multibill_data`` in ``finance/views/billing.py`` groups the bill's
+charges the way that invoice groups an event's: percentage fees and discounts
+under the events, rentals with LNL's fee, and one-offs as additional fees.
+``multibill_invoice_pdf`` makes the PDF for the download and the email alike.
+When the bill's ``attach_event_invoices`` is set, it appends each event's own
+invoice made by ``pdfs.views.generate_event_bill_pdf_standalone``, old style
+or 2025 style as the event's pricing calls for. That function saves a
+``Quote`` on the event each time it runs, as the pdfs app's download of bills
+for several events always has.
+
+Two pieces stay in the pdfs app, because the single-event invoice uses them
+too and copies would drift apart:
+
+* ``site_tmpl/pdf_templates/invoice-2025-style.html``, the stylesheet both
+  invoices include. Changing it changes both.
+* ``pdfs.views.write_weasyprint_pdf``, the WeasyPrint call with the invoice
+  fonts.
+
+The tests swap WeasyPrint for a blank page, because it needs native libraries
+(pango) that CI installs and a developer's machine may not have. One test
+class draws the invoice for real, and skips itself where WeasyPrint cannot
+draw.
+
 **Which events it may cover.** Reviewed, still open, with no bill of their own,
 and on no other multi-bill (:func:`finance.billing_forms.billable_events`).
 Before multi-bills moved here, an event already on an unpaid multi-bill could
@@ -2279,7 +2304,7 @@ locally::
 Tests
 -----
 
-``python manage.py test finance`` runs 1,427 tests across twenty-six modules. The
+``python manage.py test finance`` runs 1,436 tests across twenty-six modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.

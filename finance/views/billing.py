@@ -18,7 +18,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Count, Max, Q
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 from django.urls.base import reverse
@@ -28,7 +28,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, UpdateView
-from xhtml2pdf import pisa
+from pypdf import PdfWriter
 
 from emails.generators import BillingEmailGenerator, DefaultLNLEmailGenerator as DLEG
 from events.models import BaseEvent, Event2019
@@ -36,10 +36,10 @@ from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateF
                                    MultiBillForm, MultiBillingEmailForm, MultiBillPaidForm, client_tally)
 from finance.calculators import bill_payments
 from finance.filters import filter_context
-from finance.models import Billing, BillingEmail, MultiBilling, MultiBillingCharge, MultiBillingEmail, money
+from finance.models import ZERO, Billing, BillingEmail, MultiBilling, MultiBillingCharge, MultiBillingEmail, money
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from helpers.revision import set_revision_comment
-from pdfs.views import generate_event_bill_pdf_standalone, generate_pdf, link_callback
+from pdfs.views import generate_event_bill_pdf_standalone, write_weasyprint_pdf
 
 
 class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
@@ -265,9 +265,8 @@ class MultiBillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin,
         i = form.instance
         to = list(i.email_to_users.values_list('email', flat=True))
         to.extend(list(i.email_to_orgs.values_list('exec_email', flat=True)))
-        pdf_handle = generate_multibill_pdf_standalone(self.multibilling, request=self.request)
-        filename = "bill.pdf"
-        attachments = [{"file_handle": pdf_handle, "name": filename}]
+        pdf_handle = multibill_invoice_pdf(self.multibilling, request=self.request)
+        attachments = [{"file_handle": pdf_handle, "name": multibill_invoice_name(self.multibilling)}]
         email = DLEG(subject=i.subject, body=i.message, to_emails=to, reply_to=[settings.EMAIL_TARGET_T],
                      bcc=[settings.EMAIL_TARGET_T], attachments=attachments)
         email.send()
@@ -534,8 +533,25 @@ def _back_to(request, default):
     return default
 
 
+# ---------------------------------------------------------------------------
+# The multi-bill invoice
+#
+# Drawn in the 2025 invoice's style, by the same engine (WeasyPrint) and from
+# the same stylesheet as the single-event invoice, so the two look alike. When
+# the bill says so, each event's own invoice follows it, made by the code that
+# makes it when the event is billed alone.
+# ---------------------------------------------------------------------------
+
 def get_multibill_data(multibilling):
-    """ What the invoice draws: the bill, its events and charges, and its clients. """
+    """
+    What the invoice draws: the bill and its clients, its events, and its own
+    charges grouped the way the 2025 invoice groups an event's.
+
+    A percentage fee or discount sits under the events it is a percentage of,
+    as an event's sits under its services. Rentals carrying LNL's fee come
+    first, then one fee line for each rate, then the rest, as an event's
+    rentals do. One-offs are the additional fees.
+    """
     breakdown = multibilling.breakdown()
     events = [row['event'] for row in breakdown['events']]
     orgs = []
@@ -543,40 +559,73 @@ def get_multibill_data(multibilling):
         for org in event.org.all():
             if org not in orgs:
                 orgs.append(org)
-    return {'multibilling': multibilling, 'orgs': orgs, 'billing_org': multibilling.org,
-            'events': events, 'breakdown': breakdown, 'total_cost': breakdown['total']}
+    charges = {kind: [] for kind, _ in MultiBillingCharge.KIND_CHOICES}
+    for row in breakdown['charges']:
+        charges[row['charge'].kind].append(row)
+    adjustments = charges[MultiBillingCharge.PERCENT]
+    rentals = charges[MultiBillingCharge.RENTAL]
+    oneoffs = charges[MultiBillingCharge.ONE_OFF]
+    rental_fees = {}
+    for row in rentals:
+        if row['charge'].rental_fee_percent:
+            percent = row['charge'].rental_fee_percent
+            rental_fees[percent] = rental_fees.get(percent, ZERO) + row['fee']
+    return {
+        'multibilling': multibilling, 'breakdown': breakdown, 'events': events, 'orgs': orgs,
+        'billing_org': multibilling.org, 'orgs_differ': bool(orgs) and orgs != [multibilling.org],
+        'mixed_clients': len(client_tally(events)) > 1,
+        'has_sga_funded': any(getattr(event, 'is_sga_funded', False) for event in events),
+        'first_start': events[0].datetime_start if events else None,
+        'last_end': max(event.datetime_end for event in events) if events else None,
+        'adjustments': adjustments,
+        'events_subtotal': breakdown['events_total'] + sum((row['total'] for row in adjustments), ZERO),
+        'rentals_with_fee': [row for row in rentals if row['charge'].rental_fee_percent],
+        'rental_fees': sorted(rental_fees.items()),
+        'rentals_without_fee': [row for row in rentals if not row['charge'].rental_fee_percent],
+        'oneoffs': oneoffs,
+        'oneoffs_total': sum((row['total'] for row in oneoffs), ZERO),
+        'total_cost': breakdown['total'],
+    }
+
+
+def multibill_invoice_name(multibilling):
+    """ The invoice's file name, the same for the download and the email: "fall-films-bill.pdf". """
+    return '%s-bill.pdf' % slugify(multibilling.display_name)
+
+
+def multibill_invoice_pdf(multibilling, request=None):
+    """
+    The invoice as PDF bytes: the bill's own page, followed -- when the bill
+    says so -- by each event's invoice, earliest event first.
+
+    Each event's invoice is the one it would get billed alone: the 2025 style,
+    or the old style for an event priced before the 2025 pricelists. Making
+    one saves a copy on its event, every time, as billing the event alone
+    does.
+    """
+    data = get_multibill_data(multibilling)
+    html = render_to_string('finance/multibill_invoice.html', data, request=request)
+    invoice = write_weasyprint_pdf(html, BytesIO())
+    if not multibilling.attach_event_invoices:
+        return invoice.getvalue()
+    writer = PdfWriter()
+    writer.append(invoice)
+    for event in data['events']:
+        writer.append(generate_event_bill_pdf_standalone(event, request=request, return_stream=True))
+    joined = BytesIO()
+    writer.write(joined)
+    return joined.getvalue()
 
 
 @login_required
 def generate_multibill_pdf(request, multibilling):
+    """ The multi-bill's invoice. ``?raw=true`` gives the bill's own page as HTML, without the events' invoices. """
     if not request.user.has_perm('events.view_event_billing'):
         raise PermissionDenied
-    # Prepare context
-    multibilling = get_object_or_404(MultiBilling.objects.annotate(num_events=Count('events')), pk=multibilling)
-    data = get_multibill_data(multibilling)
-
-    # Render html content through html template with context
-    resp = generate_pdf(data, 'finance/multibill_pdf.html', request)
-
-    resp['Content-Disposition'] = 'inline; filename="bill.pdf"'
+    multibilling = get_object_or_404(MultiBilling, pk=multibilling)
+    if request.GET.get('raw'):
+        return HttpResponse(render_to_string('finance/multibill_invoice.html', get_multibill_data(multibilling),
+                                             request=request))
+    resp = HttpResponse(multibill_invoice_pdf(multibilling, request=request), content_type='application/pdf')
+    resp['Content-Disposition'] = 'inline; filename="%s"' % multibill_invoice_name(multibilling)
     return resp
-
-
-def generate_multibill_pdf_standalone(multibilling, request=None):
-    """
-    Generate multibill PDF without HttpResponse
-
-    :returns: PDF file
-    """
-    # Prepare context
-    multibilling = MultiBilling.objects.annotate(num_events=Count('events')).get(id=multibilling.id)
-    data = get_multibill_data(multibilling)
-
-    # Render html content through html template with context
-    html = render_to_string('finance/multibill_pdf.html', context=data, request=request)
-
-    # Write PDF to file
-    pdf_file = BytesIO()
-    pisa.CreatePDF(html, dest=pdf_file, link_callback=link_callback)
-
-    return pdf_file.getvalue()

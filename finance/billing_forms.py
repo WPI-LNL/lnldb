@@ -143,7 +143,8 @@ class BillableEventField(forms.ModelMultipleChoiceField):
 class MultiBillForm(forms.ModelForm):
     """
     Creating a multi-bill, or changing one that is not paid yet: the events it
-    covers, who it is billed to, and what it is called.
+    covers, who it is billed to, what it is called, and whether its invoice
+    carries each event's own.
 
     There is no total to type. The bill comes to its events' prices plus its
     own charges, worked out by :meth:`MultiBilling.breakdown` and saved when
@@ -161,7 +162,7 @@ class MultiBillForm(forms.ModelForm):
 
     class Meta:
         model = MultiBilling
-        fields = ('events', 'org', 'name', 'description', 'date_billed')
+        fields = ('events', 'org', 'name', 'description', 'date_billed', 'attach_event_invoices')
         widgets = {'date_billed': forms.DateInput(attrs={'type': 'date'}),
                    'description': forms.Textarea(attrs={'rows': 3})}
 
@@ -187,7 +188,7 @@ class MultiBillForm(forms.ModelForm):
             self.fields['confirm_mixed_clients'].initial = not self.is_bound
             fields.append('confirm_mixed_clients')
         self.helper = finance_form_helper()
-        self.helper.layout = Layout(*(fields + ['name', 'description', 'date_billed']))
+        self.helper.layout = Layout(*(fields + ['name', 'description', 'date_billed', 'attach_event_invoices']))
 
     def _submitted_clients(self):
         """

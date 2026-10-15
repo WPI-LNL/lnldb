@@ -199,12 +199,14 @@ def generate_event_bill_pdf(request, event):
 
     return view_quote(request, quote.pk)
 
-def render_quote_to_pdf(quote) -> BytesIO:
-    pdf_file = BytesIO()
 
-    if isinstance(quote.event, Event2019) and quote.event.uses_new_discounts:
-        font_config = FontConfiguration()
-        font_string = """
+def write_weasyprint_pdf(html, pdf_file):
+    """
+    Draw ``html`` into ``pdf_file`` with WeasyPrint, in the 2025 invoice's font.
+    Finance's multi-bill invoice uses it too.
+    """
+    font_config = FontConfiguration()
+    font_string = """
         @font-face {
             font-family: 'Helvetica-Neue';
             src: url('file:///static/fonts/HelveticaNeue.ttf');
@@ -229,10 +231,18 @@ def render_quote_to_pdf(quote) -> BytesIO:
             font-style: italic;
         }
         """
-        HTML(string=quote.html, url_fetcher=url_fetcher, base_url="/").write_pdf(
-            pdf_file,
-            stylesheets=[CSS(string=font_string, font_config=font_config, url_fetcher=url_fetcher)],
-            font_config=font_config)
+    HTML(string=html, url_fetcher=url_fetcher, base_url="/").write_pdf(
+        pdf_file,
+        stylesheets=[CSS(string=font_string, font_config=font_config, url_fetcher=url_fetcher)],
+        font_config=font_config)
+    return pdf_file
+
+
+def render_quote_to_pdf(quote) -> BytesIO:
+    pdf_file = BytesIO()
+
+    if isinstance(quote.event, Event2019) and quote.event.uses_new_discounts:
+        write_weasyprint_pdf(quote.html, pdf_file)
     else:
         pisa.CreatePDF(quote.html, dest=pdf_file, link_callback=link_callback)
 

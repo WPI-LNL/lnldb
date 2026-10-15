@@ -3264,6 +3264,10 @@ class MultiBilling(models.Model):
                             help_text="What the bill is for, such as \"Fall films\". Shown on the "
                                       "invoice and in the email's subject.")
     description = models.TextField(blank=True, help_text="Shown on the invoice under the name.")
+    attach_event_invoices = models.BooleanField(
+        default=False, verbose_name="Add each event's invoice",
+        help_text="Follow the bill's invoice with each event's own itemized invoice. The download and "
+                  "every email get the same document.")
     date_billed = models.DateField()
     date_paid = models.DateField(null=True, blank=True)
     paid_note = models.CharField(max_length=200, blank=True,
