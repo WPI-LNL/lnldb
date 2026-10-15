@@ -1,0 +1,56 @@
+{# Create a multi-bill, or change an unpaid one: its events, who it is billed to, and its name. #}
+{% extends 'finance/base_finance.html' %}
+{% load crispy_forms_tags %}
+
+{% block fin_content %}
+    <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back</a></p>
+    <div class="row">
+        <div class="col-md-8">
+            <div class="fin-panel">
+                <div class="fin-panel-head">{{ h2 }}</div>
+                <div class="fin-panel-body">
+                    <p class="fin-muted" style="font-size:13px;">
+                        {% if include_unmarked %}
+                            <a href="?show_nonbulk_events=false">Show only events marked to be billed in bulk</a>
+                        {% else %}
+                            <a href="?show_nonbulk_events=true">Also show events not marked to be billed in bulk</a>
+                        {% endif %}
+                    </p>
+                    <form method="post">
+                        {% csrf_token %}
+                        {% crispy form %}
+                        <div class="text-right">
+                            <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">{% if bill %}Save{% else %}Create{% endif %}</button>
+                            {% if not bill %}
+                                <button type="submit" name="save-and-email" class="btn btn-default">Create and email the client</button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="fin-panel">
+                <div class="fin-panel-head">The total</div>
+                <div class="fin-panel-body">
+                    <p class="fin-muted" style="font-size:13px;">
+                        There is nothing to type. The bill comes to what each event would be billed on its own, plus
+                        any charges you add on its page: one-offs, rentals, and percentage fees or discounts. It is
+                        worked out again whenever the events or charges change, until the bill is paid.
+                    </p>
+                </div>
+            </div>
+            <div class="fin-panel">
+                <div class="fin-panel-head">Events for different clients</div>
+                <div class="fin-panel-body">
+                    <p class="fin-muted" style="font-size:13px;margin:0;">
+                        Events booked under different clients can share one bill, such as a term of films booked
+                        partly under "LNL" and partly under "LNL + SocComm Films". You are asked to confirm it, and the
+                        bill goes to the client under <em>Bill to</em>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

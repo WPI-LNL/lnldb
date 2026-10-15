@@ -69,7 +69,8 @@ Direct costs                Costs filed against the event. Costs paid from a fun
 Margin                      What came in, less the costs **LNL paid itself**. Costs SGA pays for, and reserved
                             purchases, are left out.
 Rentals billed / cost       What the client was billed for hired-in gear plus LNL's rental fee, against what the
-                            hire actually cost.
+                            hire actually cost. A rental billed on a multi-bill counts for each show by its share
+                            of the bill.
 ==========================  ===========================================================================================
 
 The button at the end of each row, showing how many entries are linked, opens them in the `Ledger`.
@@ -118,4 +119,4 @@ received, costs, reserved purchases and margin, with the same flags and a link t
 .. seealso::
     :doc:`/help/events/create-bill` covers creating and sending the bill itself.
 
-`Last Modified: October 2, 2026`
+`Last Modified: October 15, 2026`

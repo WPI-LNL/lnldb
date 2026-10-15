@@ -141,9 +141,9 @@ def transaction_detail(request, pk):
             # its formset without them, so what is saved is what was submitted.
             formset = SplitFormSet(instance=txn, parent_transaction=txn, initial=shares)
             formset.extra = len(shares)
-            messages.info(request, "Laid out across the %s events on the multi-bill sent %s, "
+            messages.info(request, "Laid out across the %s events on %s, the multi-bill sent %s, "
                                    "each by its share. Check the amounts, then save."
-                          % (len(shares), date_format(multibill.date_billed, 'M j, Y')))
+                          % (len(shares), multibill.display_name, date_format(multibill.date_billed, 'M j, Y')))
 
     slices = list(txn.slices.select_related(
         'project_tag', 'fr_line_target__funding_request', 'linked_event',

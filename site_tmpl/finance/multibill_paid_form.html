@@ -1,0 +1,33 @@
+{# Mark a multi-bill paid, on the day the money arrived. #}
+{% extends 'finance/base_finance.html' %}
+{% load crispy_forms_tags %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back</a></p>
+    <div class="row">
+        <div class="col-md-7">
+            <div class="fin-panel">
+                <div class="fin-panel-head">{{ h2 }}</div>
+                <div class="fin-panel-body">
+                    <p>
+                        {{ received|money }} of the {{ owed|money }} billed has been filed against these events.
+                        {% if covered %}
+                            That covers it, so the date below is the day the last of it reached Workday.
+                        {% else %}
+                            The date below is today. Change it to the day the money arrived.
+                        {% endif %}
+                    </p>
+                    <form method="post">
+                        {% csrf_token %}
+                        {% crispy form %}
+                        <div class="text-right">
+                            <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Mark paid</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

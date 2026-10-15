@@ -1,27 +1,30 @@
 """
-The pages for billing an event: creating, editing, emailing and paying bills
-and multi-bills, the list of multi-bills, the multi-bill invoice, and marking
-an event entered into Workday.
+The pages for billing an event: bills and multi-bills, the multi-bill
+invoice, and marking an event entered into Workday.
 
-They moved here from the events app with the bills themselves, unchanged
-apart from their addresses, which are now under ``/db/finance/billing/``.
-They still check the events app's ``Bill event`` permission, which is what
-Officers hold, and still send people back to the event's own page. The
-client's worktag form stays in the events app: every bill email ever sent
-links to it there.
+The bill pages moved here from the events app with the bills, unchanged apart
+from their addresses, which are now under ``/db/finance/billing/``. They
+still send people back to the event's own page. The multi-bill pages were
+rewritten here; see *Multi-bills* below. All of them check the events app's
+``Bill event`` permission, which is what Officers hold. The client's worktag
+form stays in the events app: every bill email ever sent links to it there.
 """
+import datetime
 from io import BytesIO
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Case, Count, IntegerField, Sum, When
+from django.core.paginator import Paginator
+from django.db.models import Count, Max, Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 from django.urls.base import reverse
 from django.utils import timezone
+from django.utils.formats import date_format
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DeleteView, UpdateView
@@ -29,10 +32,11 @@ from xhtml2pdf import pisa
 
 from emails.generators import BillingEmailGenerator, DefaultLNLEmailGenerator as DLEG
 from events.models import BaseEvent, Event2019
-from events.views.list import FakeExtendedField, FakeField, map_fields, paginate_helper
-from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateForm, MultiBillingEmailForm,
-                                   MultiBillingForm, MultiBillingUpdateForm)
-from finance.models import Billing, BillingEmail, MultiBilling, MultiBillingEmail
+from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateForm, MultiBillChargeForm,
+                                   MultiBillForm, MultiBillingEmailForm, MultiBillPaidForm, client_tally)
+from finance.calculators import bill_payments
+from finance.filters import filter_context
+from finance.models import Billing, BillingEmail, MultiBilling, MultiBillingCharge, MultiBillingEmail, money
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from helpers.revision import set_revision_comment
 from pdfs.views import generate_event_bill_pdf_standalone, generate_pdf, link_callback
@@ -141,52 +145,6 @@ class BillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteVie
         return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
 
 
-class MultiBillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
-    model = MultiBilling
-    form_class = MultiBillingForm
-    template_name = "form_crispy.html"
-    msg = "New MultiBill"
-    perms = 'events.bill_event'
-
-    def get_form_kwargs(self):
-        kwargs = super(MultiBillingCreate, self).get_form_kwargs()
-        kwargs['show_nonbulk_events'] = self.request.GET.get('show_nonbulk_events') == 'true'
-        return kwargs
-
-    def form_valid(self, form):
-        messages.success(self.request, "MultiBill Created!", extra_tags='success')
-        return super(MultiBillingCreate, self).form_valid(form)
-
-    def get_success_url(self):
-        if 'save-and-make-email' in self.request.POST:
-            return reverse("finance:multibill-email", args=(self.object.pk,))
-        else:
-            return reverse("finance:multibill-list")
-
-
-class MultiBillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateView):
-    model = MultiBilling
-    form_class = MultiBillingUpdateForm
-    template_name = "form_crispy.html"
-    msg = "Update MultiBill"
-    perms = 'events.bill_event'
-
-    def get_object(self, *args, **kwargs):
-        """ Validate preconditions for editing a multibill """
-        obj = super(MultiBillingUpdate, self).get_object(*args, **kwargs)
-        if obj.events.filter(closed=True).exists():
-            raise PermissionDenied
-        else:
-            return obj
-
-    def form_valid(self, form):
-        messages.success(self.request, "MultiBill Updated!", extra_tags='success')
-        return super(MultiBillingUpdate, self).form_valid(form)
-
-    def get_success_url(self):
-        return reverse("finance:multibill-list")
-
-
 class MultiBillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, DeleteView):
     model = MultiBilling
     template_name = "form_delete_cbv.html"
@@ -288,9 +246,16 @@ class MultiBillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin,
         return super(MultiBillingEmailCreate, self).dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
-        # pass "user" keyword argument with the current user to your form
         kwargs = super(MultiBillingEmailCreate, self).get_form_kwargs()
         kwargs['multibilling'] = self.multibilling
+        # Written out as for a single bill, so the Treasurer edits a draft
+        # rather than starting from nothing every time it is sent.
+        context = {'bill': self.multibilling, 'breakdown': self.multibilling.breakdown()}
+        kwargs['initial'] = {
+            'subject': render_to_string('finance/emails/multibill_subject.txt', context,
+                                        request=self.request).strip(),
+            'message': render_to_string('finance/emails/multibill_message.txt', context, request=self.request),
+        }
         return kwargs
 
     def form_valid(self, form):
@@ -311,7 +276,7 @@ class MultiBillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin,
         return response
 
     def get_success_url(self):
-        return reverse("finance:multibill-list")
+        return reverse("finance:multibill-detail", args=(self.multibilling.pk,))
 
 
 @require_POST
@@ -342,45 +307,244 @@ def mark_entered_into_workday(request, id):
     return HttpResponseRedirect(reverse('events:awaitingworkday'))
 
 
+# ---------------------------------------------------------------------------
+# Multi-bills
+#
+# One bill for several events. Its total is worked out, not typed (see
+# MultiBilling.breakdown), and saved whenever its events or charges change
+# while it is unpaid. Once it is paid nothing about it can change until it is
+# marked unpaid again, and an event on it that has been closed locks it the way
+# a closed event locks its own bill.
+# ---------------------------------------------------------------------------
+
+def _billing_context(request, **extra):
+    """ What every multi-bill page needs: the finance chrome, with no tab of its own yet. """
+    context = {'fin_page': 'billing'}
+    context.update(extra)
+    context.update(filter_context(request))
+    return context
+
+
+def _refuse_change(request, bill):
+    """
+    Why a multi-bill cannot be changed now, as the response to send instead,
+    or ``None`` when it can.
+
+    A closed event locks the bill outright, as it did before multi-bills moved
+    here. A paid bill only needs marking unpaid first, so that is said rather
+    than refused.
+    """
+    if bill.events.filter(closed=True).exists():
+        raise PermissionDenied
+    if bill.date_paid:
+        messages.error(request, "%s was marked paid on %s, so it cannot be changed. Mark it unpaid first."
+                       % (bill.display_name, date_format(bill.date_paid, 'M j, Y')))
+        return HttpResponseRedirect(reverse('finance:multibill-detail', args=(bill.pk,)))
+    return None
+
+
 @login_required
 @permission_required('events.bill_event', raise_exception=True)
 def multibill_list(request):
-    """ Lists all multibills """
-    context = {}
+    """ Every multi-bill, newest first, with where each stands. """
+    bills = (MultiBilling.objects.select_related('org').prefetch_related('events')
+             .annotate(last_emailed=Max('multibillingemail__sent_at'),
+                       closed_events=Count('events', filter=Q(events__closed=True), distinct=True))
+             .order_by('-date_billed', '-pk'))
+    page = Paginator(bills, 40).get_page(request.GET.get('page'))
+    return render(request, 'finance/multibillings.html',
+                  _billing_context(request, h2="Multi-bills", page=page))
 
-    multibills = MultiBilling.objects.annotate(num_closed_events=Sum(Case(
-        When(events__closed=True, then=1),
-        default=0,
-        output_field=IntegerField())))
 
-    page = request.GET.get('page')
-    sort = request.GET.get('sort') or '-date_billed'
-    multibills = paginate_helper(multibills, page, sort)
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def multibill_detail(request, pk):
+    """
+    One multi-bill: what it covers, what it comes to and why, who it went to
+    and when, and what can be done with it next.
+    """
+    bill = get_object_or_404(MultiBilling.objects.select_related('org').prefetch_related('charges'), pk=pk)
+    breakdown = bill.breakdown()
+    saved = money(bill.amount)
+    has_closed = any(row['event'].closed for row in breakdown['events'])
+    received, last_payment = bill_payments(bill)
+    emails = (bill.multibillingemail_set.order_by('-sent_at', '-pk')
+              .prefetch_related('email_to_users', 'email_to_orgs'))
+    context = _billing_context(
+        request, h2=bill.display_name, bill=bill, breakdown=breakdown, saved_total=saved,
+        total_differs=breakdown['total'] != saved, clients=client_tally(row['event'] for row in breakdown['events']),
+        has_closed_events=has_closed, can_change=not has_closed and not bill.date_paid,
+        received=received, last_payment=last_payment, emails=emails)
+    return render(request, 'finance/multibill_detail.html', context)
 
-    context['h2'] = "MultiBills"
-    context['multibillings'] = multibills
-    context['cols'] = ['events', FakeField('org', verbose_name="Client", sortable=True),
-                       FakeExtendedField('date_billed', model=MultiBilling),
-                       FakeExtendedField('date_paid', model=MultiBilling), 'amount', FakeField('email_sent'),
-                       FakeField('tasks')]
-    context['cols'] = map_fields(context['cols'])  # must use because there are strings
-    return render(request, 'finance/multibillings.html', context)
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def multibill_edit(request, pk=None):
+    """
+    Create a multi-bill, or change an unpaid one: its events, who it is billed
+    to, its name. The total follows on its own.
+    """
+    bill = None
+    if pk:
+        bill = get_object_or_404(MultiBilling, pk=pk)
+        refused = _refuse_change(request, bill)
+        if refused:
+            return refused
+    include_unmarked = request.GET.get('show_nonbulk_events') == 'true'
+    form = MultiBillForm(request.POST or None, instance=bill, include_unmarked=include_unmarked)
+    if request.method == 'POST' and form.is_valid():
+        saved = form.save()
+        messages.success(request, "%s %s. It comes to %s."
+                         % ("Saved" if pk else "Created", saved.display_name, money(saved.amount)))
+        if 'save-and-email' in request.POST:
+            return HttpResponseRedirect(reverse('finance:multibill-email', args=(saved.pk,)))
+        return HttpResponseRedirect(reverse('finance:multibill-detail', args=(saved.pk,)))
+    cancel_url = (reverse('finance:multibill-detail', args=(bill.pk,)) if bill
+                  else reverse('finance:multibill-list'))
+    context = _billing_context(
+        request, h2="Change %s" % bill.display_name if bill else "New multi-bill", bill=bill, form=form,
+        include_unmarked=include_unmarked, cancel_url=cancel_url)
+    return render(request, 'finance/multibill_form.html', context)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def multibill_charge(request, pk, charge_pk=None):
+    """ Add one of a multi-bill's own charges, or change one. The total follows. """
+    bill = get_object_or_404(MultiBilling, pk=pk)
+    refused = _refuse_change(request, bill)
+    if refused:
+        return refused
+    charge = (get_object_or_404(MultiBillingCharge, pk=charge_pk, multibilling=bill) if charge_pk
+              else MultiBillingCharge(multibilling=bill))
+    form = MultiBillChargeForm(request.POST or None, instance=charge)
+    if request.method == 'POST' and form.is_valid():
+        saved = form.save()
+        bill.recalculate()
+        messages.success(request, "%s %s. %s now comes to %s."
+                         % ("Saved" if charge_pk else "Added", saved.description, bill.display_name,
+                            money(bill.amount)))
+        return HttpResponseRedirect(reverse('finance:multibill-detail', args=(bill.pk,)))
+    context = _billing_context(
+        request, h2="Change a charge" if charge_pk else "Add a charge to %s" % bill.display_name,
+        bill=bill, form=form, cancel_url=reverse('finance:multibill-detail', args=(bill.pk,)))
+    return render(request, 'finance/multibill_charge_form.html', context)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+@require_POST
+def multibill_charge_delete(request, pk, charge_pk):
+    """ Take one of a multi-bill's own charges off it. The total follows. """
+    bill = get_object_or_404(MultiBilling, pk=pk)
+    refused = _refuse_change(request, bill)
+    if refused:
+        return refused
+    charge = get_object_or_404(MultiBillingCharge, pk=charge_pk, multibilling=bill)
+    charge.delete()
+    bill.recalculate()
+    messages.success(request, "Removed %s. %s now comes to %s."
+                     % (charge.description, bill.display_name, money(bill.amount)))
+    return HttpResponseRedirect(reverse('finance:multibill-detail', args=(bill.pk,)))
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+@require_POST
+def multibill_update_total(request, pk):
+    """
+    Save what an unpaid multi-bill comes to now, after an event's price
+    changed since the total was last saved.
+    """
+    bill = get_object_or_404(MultiBilling, pk=pk)
+    refused = _refuse_change(request, bill)
+    if refused:
+        return refused
+    before = money(bill.amount)
+    if bill.recalculate():
+        messages.success(request, "%s now comes to %s; it was %s."
+                         % (bill.display_name, money(bill.amount), before))
+    else:
+        messages.info(request, "%s already comes to %s." % (bill.display_name, before))
+    return HttpResponseRedirect(reverse('finance:multibill-detail', args=(bill.pk,)))
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def multibill_mark_paid(request, pk):
+    """
+    Mark a multi-bill paid on a date the Treasurer gives.
+
+    The date starts as the day the last of its payment reached Workday when
+    the payments filed against its events cover it, and today otherwise -- a
+    check handed over, or a bill from before the books start, has nothing
+    filed to read a date from. The note says how, when it was not Workday.
+    """
+    bill = get_object_or_404(MultiBilling, pk=pk)
+    detail = reverse('finance:multibill-detail', args=(bill.pk,))
+    if bill.events.filter(closed=True).exists():
+        messages.error(request, "An event on %s is closed, so the bill cannot be changed." % bill.display_name)
+        return HttpResponseRedirect(detail)
+    if bill.date_paid:
+        messages.info(request, "%s was already marked paid on %s."
+                      % (bill.display_name, date_format(bill.date_paid, 'M j, Y')))
+        return HttpResponseRedirect(detail)
+    received, last_payment = bill_payments(bill)
+    owed = money(bill.amount)
+    covered = owed > 0 and received >= owed and last_payment is not None
+    form = MultiBillPaidForm(request.POST or None,
+                             initial={'date_paid': last_payment if covered else datetime.date.today()})
+    if request.method == 'POST' and form.is_valid():
+        bill.date_paid = form.cleaned_data['date_paid']
+        bill.paid_note = form.cleaned_data['paid_note']
+        bill.save(update_fields=['date_paid', 'paid_note'])
+        messages.success(request, "Marked %s paid on %s."
+                         % (bill.display_name, date_format(bill.date_paid, 'M j, Y')))
+        return HttpResponseRedirect(_back_to(request, detail))
+    context = _billing_context(request, h2="Mark %s paid" % bill.display_name, bill=bill, form=form,
+                               received=received, owed=owed, covered=covered, last_payment=last_payment,
+                               cancel_url=_back_to(request, detail))
+    return render(request, 'finance/multibill_paid_form.html', context)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+@require_POST
+def multibill_mark_unpaid(request, pk):
+    """ Undo marking a multi-bill paid, so it can be changed again. """
+    bill = get_object_or_404(MultiBilling, pk=pk)
+    detail = reverse('finance:multibill-detail', args=(bill.pk,))
+    if bill.events.filter(closed=True).exists():
+        messages.error(request, "An event on %s is closed, so the bill cannot be changed." % bill.display_name)
+        return HttpResponseRedirect(detail)
+    bill.date_paid = None
+    bill.paid_note = ''
+    bill.save(update_fields=['date_paid', 'paid_note'])
+    messages.success(request, "%s is unpaid again." % bill.display_name)
+    return HttpResponseRedirect(detail)
+
+
+def _back_to(request, default):
+    """ Where to go after a save: the page that asked, if it is one of ours. """
+    target = request.POST.get('next') or request.GET.get('next')
+    if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()},
+                                                  require_https=request.is_secure()):
+        return target
+    return default
 
 
 def get_multibill_data(multibilling):
-    data = {'multibilling': multibilling}
-    orgsets = map(lambda event: event.org.all(), multibilling.events.all())
-    orgs = next(iter(orgsets))
-    for orgset in orgsets:
-        orgs |= orgset
-    orgs = orgs.distinct()
-    data['orgs'] = orgs
-    billing_org = multibilling.org
-    data['billing_org'] = billing_org
-    events = multibilling.events.order_by('datetime_start')
-    data['events'] = events
-    data['total_cost'] = sum(map(lambda event: event.cost_total, multibilling.events.all()))
-    return data
+    """ What the invoice draws: the bill, its events and charges, and its clients. """
+    breakdown = multibilling.breakdown()
+    events = [row['event'] for row in breakdown['events']]
+    orgs = []
+    for event in events:
+        for org in event.org.all():
+            if org not in orgs:
+                orgs.append(org)
+    return {'multibilling': multibilling, 'orgs': orgs, 'billing_org': multibilling.org,
+            'events': events, 'breakdown': breakdown, 'total_cost': breakdown['total']}
 
 
 @login_required

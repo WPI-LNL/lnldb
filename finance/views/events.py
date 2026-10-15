@@ -11,7 +11,6 @@ The arithmetic, and the three decisions inside it, live in
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Max, Sum
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
@@ -19,10 +18,10 @@ from django.utils.formats import date_format
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from finance.calculators import (EVENT_FLAGS, event_financials, event_pnl_rows,
+from finance.calculators import (EVENT_FLAGS, bill_payments, event_financials, event_pnl_rows,
                                  event_pnl_totals)
 from finance.filters import filter_context, get_filter_state
-from finance.models import MultiBilling, ParsedTransaction, money
+from finance.models import MultiBilling, money
 
 
 @login_required
@@ -106,22 +105,16 @@ def mark_bill_paid(request, pk):
                       % (event.event_name, date_format(bill.date_paid, 'M j, Y')))
         return HttpResponseRedirect(redirect_to)
 
-    shows = [event.pk]
-    owed = figures['billed']
-    if isinstance(bill, MultiBilling):
-        shows = list(bill.events.values_list('pk', flat=True))
-        owed = money(bill.amount)
-    payments = ParsedTransaction.objects.revenue().filter(
-        linked_event_id__in=shows, parent_transaction__isnull=False)
-    received = money(payments.aggregate(t=Sum('amount'))['t'])
+    multibill = isinstance(bill, MultiBilling)
+    owed = money(bill.amount) if multibill else figures['billed']
+    received, paid_on = bill_payments(bill)
     if owed is None or received < owed:
         messages.error(request, "Only %s of the %s billed has been filed against %s, so the bill "
                                 "is not marked paid. File the rest of the payment first."
                        % (money(received), money(owed or 0),
-                          'the events on its multi-bill' if len(shows) > 1 else event.event_name))
+                          'the events on its multi-bill' if multibill else event.event_name))
         return HttpResponseRedirect(redirect_to)
 
-    paid_on = payments.aggregate(last=Max('effective_date'))['last']
     bill.date_paid = paid_on
     bill.save(update_fields=['date_paid'])
     messages.success(request, "Marked the bill for %s paid on %s, the day the last of its "

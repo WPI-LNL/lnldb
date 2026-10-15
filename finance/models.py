@@ -30,7 +30,7 @@ deploys. What stays hard-coded is listed and justified above
 import datetime
 import hashlib
 import re
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 
 import reversion
 from django.conf import settings
@@ -3225,18 +3225,57 @@ class Billing(models.Model):
         ordering = ("-date_billed", "date_paid")
 
 
+def default_rental_fee_percent():
+    """
+    The rental fee an event on the default pricelist would pay, as a percent.
+
+    15 when no pricelist is marked default, which is the figure
+    ``Event2019.rental_fee_total`` falls back to for an event with none.
+    """
+    from events.models import Pricelist
+
+    percent = (Pricelist.objects.filter(is_default_pricelist=True)
+               .values_list('rental_fee_percentage', flat=True).first())
+    return Decimal('15') if percent is None else Decimal(percent)
+
+
+def _cents_down(value):
+    """
+    Rounded down to the cent, towards zero.
+
+    The events app rounds an event's own fees, discounts and rental fee this
+    way, so a fee on a multi-bill comes out the same as that fee on one event.
+    """
+    return Decimal(value).quantize(CENTS, rounding=ROUND_DOWN)
+
+
 class MultiBilling(models.Model):
-    """ One bill covering several events, sent to one client """
+    """
+    One bill covering several events, sent to one client.
+
+    ``amount`` is the total, and it is worked out rather than typed: the
+    events' prices plus the bill's own charges, laid out by :meth:`breakdown`.
+    It is still saved, because finance matches incoming payments against it
+    and splits it between the events, and that figure must not drift once the
+    client has it. :meth:`recalculate` brings it up to date, and only while the
+    bill is unpaid.
+    """
+    name = models.CharField(max_length=128, blank=True,
+                            help_text="What the bill is for, such as \"Fall films\". Shown on the "
+                                      "invoice and in the email's subject.")
+    description = models.TextField(blank=True, help_text="Shown on the invoice under the name.")
     date_billed = models.DateField()
     date_paid = models.DateField(null=True, blank=True)
+    paid_note = models.CharField(max_length=200, blank=True,
+                                 help_text="How it was paid, if not through Workday: cash, a check.")
     org = models.ForeignKey('events.Organization', on_delete=models.PROTECT, null=True,
-                            related_name='multibillings')
+                            related_name='multibillings', verbose_name="Bill to")
     events = models.ManyToManyField('events.BaseEvent', related_name='multibillings',
                                     db_table='events_multibilling_events')
     amount = models.DecimalField(max_digits=8, decimal_places=2)
 
     def __str__(self):
-        out = 'MultiBill for ' + ', '.join(map(lambda event: event.event_name, self.events.all()))
+        out = 'MultiBill: %s' % self.display_name
         if self.date_paid:
             out += ' (PAID)'
         return out
@@ -3244,6 +3283,119 @@ class MultiBilling(models.Model):
     class Meta:
         db_table = 'events_multibilling'
         ordering = ('-date_billed', 'date_paid')
+
+    @property
+    def display_name(self):
+        """ Its name, or what it covers when it has none: "3 events for SocComm". """
+        if self.name:
+            return self.name
+        count = len(self.events.all())
+        return '%s event%s for %s' % (count, '' if count == 1 else 's',
+                                      self.org.retname if self.org_id else 'no client')
+
+    def breakdown(self):
+        """
+        What the bill comes to, line by line, as a dict.
+
+        ``events`` is each event with its price (``cost_total``, what it would
+        be billed on its own), earliest first, and ``events_total`` their sum.
+        ``charges`` is each of the bill's own charges with its ``subtotal``,
+        its rental ``fee`` and its ``total``; a percentage is of the events'
+        total. ``rentals_total`` is the part of the charges that is hired-in
+        gear, fee included. ``total`` is what the bill comes to now, which is
+        what :meth:`recalculate` saves.
+        """
+        events = sorted(self.events.all(), key=lambda e: (e.datetime_start, e.pk))
+        rows = [{'event': event, 'client': event.org_to_be_billed, 'price': money(event.cost_total)}
+                for event in events]
+        events_total = sum((row['price'] for row in rows), ZERO)
+        charges, charges_total, rentals_total = [], ZERO, ZERO
+        for charge in self.charges.all():
+            subtotal, fee = charge.amounts(events_total)
+            charges.append({'charge': charge, 'subtotal': subtotal, 'fee': fee, 'total': subtotal + fee})
+            charges_total += subtotal + fee
+            if charge.kind == MultiBillingCharge.RENTAL:
+                rentals_total += subtotal + fee
+        return {'events': rows, 'events_total': events_total, 'charges': charges,
+                'charges_total': charges_total, 'rentals_total': rentals_total,
+                'total': events_total + charges_total}
+
+    def rental_charges_total(self):
+        """ The bill's own rentals, fees included, without pricing its events. """
+        return sum((sum(c.amounts(ZERO), ZERO) for c in self.charges.all()
+                    if c.kind == MultiBillingCharge.RENTAL), ZERO)
+
+    def recalculate(self):
+        """
+        Save the total the events and charges come to now. Returns whether it
+        changed.
+
+        Nothing happens once the bill is paid: the client paid the figure they
+        were sent, and a later change to an event's price must not rewrite it.
+        """
+        if self.date_paid is not None:
+            return False
+        total = self.breakdown()['total']
+        if self.amount is not None and money(self.amount) == total:
+            return False
+        self.amount = total
+        self.save(update_fields=['amount'])
+        return True
+
+
+class MultiBillingCharge(models.Model):
+    """
+    A line on a multi-bill that is not one of its events.
+
+    A one-off charge or credit, gear hired in for the whole run, or a fee or
+    discount as a percentage of the events' total. Each is priced the way the
+    same charge on one event would be (see :func:`_cents_down`).
+    """
+    ONE_OFF, RENTAL, PERCENT = 'oneoff', 'rental', 'percent'
+    KIND_CHOICES = (
+        (ONE_OFF, "One-off charge or credit"),
+        (RENTAL, "Rental"),
+        (PERCENT, "Percentage fee or discount"),
+    )
+
+    multibilling = models.ForeignKey(MultiBilling, on_delete=models.CASCADE, related_name='charges')
+    kind = models.CharField(max_length=8, choices=KIND_CHOICES, default=ONE_OFF)
+    description = models.CharField(max_length=128)
+    quantity = models.PositiveSmallIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True,
+                                     help_text="Negative for a credit.")
+    rental_fee_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text="The rental fee added to a rental, fixed when the fee was added so a later "
+                  "change to the default pricelist does not reprice the bill.")
+    percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True,
+                                  help_text="Of the events' total. Negative for a discount.")
+
+    class Meta:
+        ordering = ('pk',)
+        verbose_name = "Multi-bill charge"
+        constraints = (
+            models.CheckConstraint(
+                check=(Q(kind='percent', percent__isnull=False, unit_price__isnull=True)
+                       | (~Q(kind='percent') & Q(unit_price__isnull=False, percent__isnull=True))),
+                name='finance_multibill_charge_priced_by_kind'),
+            models.CheckConstraint(
+                check=Q(kind='rental') | Q(rental_fee_percent__isnull=True),
+                name='finance_multibill_charge_fee_on_rentals_only'),
+        )
+
+    def __str__(self):
+        return self.description
+
+    def amounts(self, events_total):
+        """ ``(subtotal, fee)`` this line adds to a bill whose events come to ``events_total``. """
+        if self.kind == self.PERCENT:
+            return _cents_down(events_total * self.percent / 100), ZERO
+        subtotal = money(self.unit_price * self.quantity)
+        fee = ZERO
+        if self.kind == self.RENTAL and self.rental_fee_percent:
+            fee = _cents_down(subtotal * self.rental_fee_percent / 100)
+        return subtotal, fee
 
 
 class BillingEmail(models.Model):

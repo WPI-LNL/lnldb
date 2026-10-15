@@ -176,7 +176,7 @@
                             <a class="fin-tag is-warn" href="{% url 'finance:txn-detail' row.txn.pk %}?multibill={{ mb.multibill.pk }}"
                                title="{{ mb.reason }}. Split it so each event's P&L sees its share.">
                                 <span class="glyphicon glyphicon-th-list"></span>
-                                Multi-bill: split across {{ mb.multibill.events.all|length }} events
+                                Multi-bill{% if mb.multibill.name %} “{{ mb.multibill.name }}”{% endif %}: split across {{ mb.multibill.events.all|length }} events
                             </a>
                         {% endwith %}
                     {% endif %}

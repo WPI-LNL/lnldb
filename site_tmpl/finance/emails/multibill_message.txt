@@ -1,0 +1,15 @@
+{% load finance_extras %}Dear {{ bill.org|default:"client" }},
+
+Lens and Lights recently provided services for {% if breakdown.events|length == 1 %}your event{% else %}these {{ breakdown.events|length }} events{% endif %}:
+{% for row in breakdown.events %}- {{ row.event.event_name }} ({{ row.event.datetime_start|date:"M j, Y" }})
+{% endfor %}
+Attached is one invoice covering {% if breakdown.events|length == 1 %}it{% else %}all of them{% endif %}, for a total of {{ breakdown.total|money }}.
+
+To pay through Workday, please reply to this email with the funding source and the worktag you would like charged (it looks like 1234-CC or 123-AG). We will then send an Internal Service Delivery for you to approve in Workday. Unfortunately we can not accept cash, check, or credit cards.
+
+If you have any questions, please just reply to this email.
+
+Thank you for the opportunity to support your events! We look forward to working with you again in the near future.
+
+{{ request.user.get_full_name }}
+WPI Lens & Lights Treasurer

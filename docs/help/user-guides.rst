@@ -64,6 +64,7 @@ Finance (Treasurer)
     finance/encumbrances
     finance/funding-requests
     finance/events
+    finance/multibills
     finance/balances
     finance/reports
     finance/forecast

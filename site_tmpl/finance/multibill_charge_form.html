@@ -1,0 +1,72 @@
+{# Add one of a multi-bill's own charges, or change one. #}
+{% extends 'finance/base_finance.html' %}
+{% load crispy_forms_tags %}
+
+{% block fin_content %}
+    <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back to {{ bill.display_name }}</a></p>
+    <div class="row">
+        <div class="col-md-7">
+            <div class="fin-panel">
+                <div class="fin-panel-head">{{ h2 }}</div>
+                <div class="fin-panel-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% crispy form %}
+                        <div class="text-right">
+                            <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="fin-panel">
+                <div class="fin-panel-head">Kinds of charge</div>
+                <div class="fin-panel-body">
+                    <p class="fin-muted" style="font-size:13px;">
+                        <strong>One-off:</strong> something the whole bill pays for once, such as an extra crew call.
+                        A negative price is a credit.
+                    </p>
+                    <p class="fin-muted" style="font-size:13px;">
+                        <strong>Rental:</strong> gear hired in for the whole run. LNL's rental fee is added on top, as
+                        it would be on an event, unless you untick it.
+                    </p>
+                    <p class="fin-muted" style="font-size:13px;margin:0;">
+                        <strong>Percentage:</strong> a fee or discount on what the events come to, such as 10 for a
+                        10% fee or -10 for a 10% discount. It is rounded down to the cent, as an event's own fees and
+                        discounts are.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block finalsay %}
+    {{ block.super }}
+    {% comment %}
+        Shows only the boxes that apply to the kind chosen. Without it every box
+        is on screen and the form clears whichever ones do not apply.
+    {% endcomment %}
+    <script>
+        (function () {
+            var kind = document.getElementById('id_kind');
+            if (!kind) { return; }
+            var shownFor = {
+                quantity: ['oneoff', 'rental'],
+                unit_price: ['oneoff', 'rental'],
+                add_rental_fee: ['rental'],
+                percent: ['percent']
+            };
+            function update() {
+                Object.keys(shownFor).forEach(function (name) {
+                    var row = document.getElementById('div_id_' + name);
+                    if (row) { row.style.display = shownFor[name].indexOf(kind.value) === -1 ? 'none' : ''; }
+                });
+            }
+            kind.addEventListener('change', update);
+            update();
+        })();
+    </script>
+{% endblock %}

@@ -150,6 +150,8 @@ ISD                       Internal Service Delivery: WPI billing WPI.   ``Workda
                           LNL's event bills arrive as ISDs              ``.document_type``
 Bill                      What LNL asked a client to pay for one event  ``Billing``
 Multi-bill                One bill covering several events              ``MultiBilling``
+Multi-bill charge         A line on a multi-bill other than an event:   ``MultiBillingCharge``
+                          a one-off, a rental, or a percentage
 Fiscal year               July to June, named for the year it ends:     ``fiscal_year_for``
                           FY26 is July 2025 to June 2026
 Minimum reserve           The least LNL's own money should hold         ``FinanceSettings``
@@ -201,9 +203,10 @@ with the bills, and still look and behave as they did there:
 * ``billing/event/<event>/``: creating, editing, deleting, emailing and paying
   one event's bill, and marking the event entered into Workday. They are
   reached from the event's own page.
-* ``billing/multibills/``: the multi-bill list, which the Events menu links to,
-  and creating, editing, deleting, emailing and drawing the invoice for a
-  multi-bill.
+* ``billing/multibills/``: the multi-bill list, which the Events menu links to.
+  Each multi-bill has its own page (``billing/multibills/<pk>/``), from which it
+  is edited, given charges of its own, emailed, marked paid or unpaid, and drawn
+  as an invoice; see *Multi-bills*.
 
 They need ``events.bill_event``, which Officers hold, not ``view_subledger``.
 The invoice needs ``events.view_event_billing``. The client's worktag form is
@@ -1517,6 +1520,65 @@ previous year has that amount. The split page then lays out one row per show,
 each with its share, which is the same share the event P&L uses. The rows are
 unsaved until the Treasurer checks them and saves.
 
+Multi-bills
+~~~~~~~~~~~
+
+A multi-bill covers several events with one invoice and one payment. The
+Treasurer's guide is :doc:`/help/finance/multibills`; the code is
+:class:`~finance.models.MultiBilling`, :mod:`finance.billing_forms` and
+``finance/views/billing.py``.
+
+**The total is worked out, not typed.** :meth:`~finance.models.MultiBilling.breakdown`
+adds up each event's price -- ``cost_total``, what it would be billed on its
+own -- and then the bill's own charges. The total is still saved in
+``amount``, because the queue matches deposits against it and the event P&L
+splits it between the events, and that figure must not move once the client
+has it. :meth:`~finance.models.MultiBilling.recalculate` saves the current
+figure, and is called whenever the events or charges change. It does nothing
+once the bill is paid. When an event's price changes after billing, the bill's
+page shows the saved total beside the new one and offers *Update the total*.
+Bills made before totals were worked out kept the figure typed for them, and
+are flagged the same way if it differs.
+
+**The bill's own charges** (:class:`~finance.models.MultiBillingCharge`) are
+priced as the same charge on one event would be:
+
+* A one-off is quantity times price. A negative price is a credit.
+* A rental adds LNL's rental fee. Its rate is copied from the default pricelist
+  (15% if none is marked default) when the fee is added, so a later change to
+  the pricelist does not reprice a bill already sent.
+* A percentage is of the events' total.
+
+Fees, discounts and rental fees round down to the cent, towards zero, as the
+events app rounds an event's own. A database constraint refuses a charge
+priced both ways (a price and a percentage), and the form clears whichever
+does not apply to the kind chosen.
+
+**When it can change.** A paid bill cannot be changed until it is marked
+unpaid. A bill with a closed event cannot be changed at all, as a closed event
+locks its own bill.
+
+**Which events it may cover.** Reviewed, still open, with no bill of their own,
+and on no other multi-bill (:func:`finance.billing_forms.billable_events`).
+Before multi-bills moved here, an event already on an unpaid multi-bill could
+be put on a second one.
+
+**Events for different clients** may share a bill, once the Treasurer has
+ticked the box the form shows when the chosen events disagree. *Bill to*
+defaults to the client most of the events are for, the earlier event breaking
+a tie. Events with no client on file do not count as disagreeing.
+
+**Elsewhere in finance:**
+
+* **Revenue by client and client retention** credit an event on a multi-bill to
+  the bill's *Bill to* (:func:`~finance.calculators.payer_of`).
+* **The rental check** credits each event with its share of the bill's
+  rentals, fee included, split the way the bill is split.
+* **The paid date.** *Mark paid* offers the day the last payment reached
+  Workday when the payments filed against the bill's events cover it, and
+  today otherwise. :func:`~finance.calculators.bill_payments` is the same sum
+  *Mark bill paid* uses.
+
 Dashboard metrics
 -----------------
 
@@ -2217,7 +2279,7 @@ locally::
 Tests
 -----
 
-``python manage.py test finance`` runs 1,402 tests across twenty-six modules. The
+``python manage.py test finance`` runs 1,427 tests across twenty-six modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.

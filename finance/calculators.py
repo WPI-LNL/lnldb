@@ -15,10 +15,10 @@ import datetime
 from collections import OrderedDict
 from decimal import Decimal
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import TruncMonth
 
-from finance.models import (ZERO, ClientType, FundBehaviour, FundingRequest,
+from finance.models import (ZERO, ClientType, FundBehaviour, FundingRequest, MultiBilling,
                             ParsedTransaction, books_start_date, client_of, client_type_for,
                             fiscal_year_bounds, money, service_colors)
 
@@ -226,7 +226,8 @@ def revenue_rows(fiscal_year=None, is_projection=None):
     if event_ids:
         qs = (BaseEvent.objects.filter(pk__in=event_ids)
               .select_related('billing_org')
-              .prefetch_related('org', 'serviceinstance_set__service__category'))
+              .prefetch_related('org', 'serviceinstance_set__service__category',
+                                'billings', 'multibillings__org'))
         events = {event.pk: event for event in qs}
 
     rows = []
@@ -245,7 +246,7 @@ def revenue_by_client(fiscal_year=None, is_projection=None, limit=8, rows=None):
     for row in rows:
         event = row['event']
         if event is not None:
-            org = client_of(event)
+            org = payer_of(event)
             label = org.retname if org else '(no client on file)'
         else:
             source = row['entry'].non_event_revenue_type
@@ -453,7 +454,16 @@ def multibill_shares(multibilling):
     Weighted by what each show would have been billed on its own
     (``cost_total``), and split evenly when none of them has a price. The last
     show takes whatever rounding is left, so the shares add up to the bill to
-    the cent.
+    the cent. The bill's own charges are in that figure, so they are shared
+    out the same way.
+    """
+    return split_by_price(multibilling, money(multibilling.amount))
+
+
+def split_by_price(multibilling, amount):
+    """
+    ``{event pk: share}`` of ``amount``, shared across a multi-bill's events
+    the way :func:`multibill_shares` shares out the bill.
     """
     events = sorted(multibilling.events.all(), key=lambda e: e.pk)
     if not events:
@@ -467,7 +477,7 @@ def multibill_shares(multibilling):
             # on a finance page.
             weights.append(ZERO)
     total = sum(weights, ZERO)
-    amount = money(multibilling.amount)
+    amount = money(amount)
 
     shares, allotted = {}, ZERO
     for index, event in enumerate(events):
@@ -517,6 +527,40 @@ def event_billed(event, _cache=None):
     return None, None
 
 
+def payer_of(event):
+    """
+    Who paid for an event: the *Bill to* of the multi-bill it went out on,
+    else :func:`~finance.models.client_of`.
+
+    They differ when one multi-bill covers events booked under different
+    clients -- a run of films, some under "LNL" and some under "LNL +
+    SocComm Films", billed to one of them. The money came from the bill's
+    client, so that is who revenue by client credits.
+    """
+    bill = latest_bill(event)
+    if isinstance(bill, MultiBilling) and bill.org_id:
+        return bill.org
+    return client_of(event)
+
+
+def bill_payments(bill):
+    """
+    ``(received, last_day)`` of the payments filed against what a bill covers.
+
+    A multi-bill counts every event on it, because one payment settles all of
+    them. ``last_day`` is when the last of it reached Workday, or ``None``
+    when nothing has been filed.
+    """
+    if isinstance(bill, MultiBilling):
+        shows = [event.pk for event in bill.events.all()]
+    else:
+        shows = [bill.event_id]
+    payments = ParsedTransaction.objects.revenue().filter(
+        linked_event_id__in=shows, parent_transaction__isnull=False)
+    sums = payments.aggregate(received=Sum('amount'), last=Max('effective_date'))
+    return money(sums['received']), sums['last']
+
+
 def _event_figures(event, sums, multibill_cache=None, books_start=None, today=None):
     """
     One event's row, from its sums and the events app's own records.
@@ -539,6 +583,19 @@ def _event_figures(event, sums, multibill_cache=None, books_start=None, today=No
     # Only an Event2019 charges a rental fee, and asking for it costs a query,
     # so it is asked only of a show that actually hired something in.
     rental_fee = money(getattr(event, 'rental_fee_total', ZERO)) if rentals else ZERO
+    # Gear hired in for a whole run of shows can be billed once, on their
+    # multi-bill, rather than on each show. Each show is credited with its
+    # share of that, fee included, shared out as the bill is.
+    bill_rentals = ZERO
+    if billed_source == 'multibill':
+        multibill = latest_bill(event)
+        cache = {} if multibill_cache is None else multibill_cache
+        key = ('rentals', multibill.pk)
+        if key not in cache:
+            on_bill = multibill.rental_charges_total()
+            cache[key] = split_by_price(multibill, on_bill) if on_bill else {}
+        bill_rentals = cache[key].get(event.pk, ZERO)
+        rentals_billed += bill_rentals
 
     margin = received - lnl_costs
     org = client_of(event)
@@ -549,11 +606,11 @@ def _event_figures(event, sums, multibill_cache=None, books_start=None, today=No
         flags.append('loss')
     # The fee is part of what the client paid for the hire, so the hire is
     # covered when the two together are at least what the gear cost. Only
-    # asked of an event that itemised its rentals: with none recorded there is
-    # no billed figure to fall short of, and a hire nobody billed for already
-    # shows up as the loss it is.
+    # asked of an event whose rentals were itemised, on it or on its
+    # multi-bill: with none recorded there is no billed figure to fall short
+    # of, and a hire nobody billed for already shows up as the loss it is.
     rentals_recovered = rentals_billed + rental_fee
-    if rentals and passthrough > rentals_recovered:
+    if (rentals or bill_rentals) and passthrough > rentals_recovered:
         flags.append('rental_under_billed')
     if billed is not None and billed > received:
         flags.append('billed_not_received')
@@ -622,7 +679,8 @@ def _event_queryset():
     # revenue_rows(): a base BaseEvent hides Event2019's workday_fund, and with
     # it the client type, and its rental fee.
     return (BaseEvent.objects.select_related('billing_org')
-            .prefetch_related('org', 'rentals', 'billings', 'multibillings__events'))
+            .prefetch_related('org', 'rentals', 'billings', 'multibillings__events',
+                              'multibillings__charges'))
 
 
 def event_financials(event, is_projection=None):
@@ -827,7 +885,7 @@ def client_retention(fiscal_year=None, is_projection=None, rows=None, limit=5):
     clients = {}
     for row in rows:
         event = row['event']
-        org = client_of(event) if event is not None else None
+        org = payer_of(event) if event is not None else None
         if org is None:
             continue
         entry = clients.setdefault(org.pk, {'name': org.retname, 'amount': ZERO})
