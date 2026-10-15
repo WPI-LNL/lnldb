@@ -2,6 +2,7 @@ import logging
 import zoneinfo
 from django.urls import reverse
 from django.contrib.auth.models import Permission, Group
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
 from django.core.cache import cache
@@ -1979,6 +1980,11 @@ class EventBasicViewTest(ViewTestCase):
 
         self.assertOk(self.client.post(reverse("events:worktag-form", args=[self.e3.pk]), invalid_tag))
 
+        # A fund already on the event without a worktag is not a previous submission
+        self.e3.workday_fund = 110
+        self.e3.save()
+        mail.outbox = []
+
         valid_data = {
             "workday_fund": 810,
             "worktag": "1234-AB",
@@ -1996,16 +2002,36 @@ class EventBasicViewTest(ViewTestCase):
         # Check that user is automatically added to the associated users list for the organization if not already on it
         self.assertIn(self.user, self.org.associated_users.all())
 
+        # The Treasurer is told the worktag has arrived -- not that it was "updated"
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, "Worktag Received: 2019 Test Event")
+        self.assertEqual(mail.outbox[0].to, [settings.EMAIL_TARGET_T])
+        self.assertIn("Worktag: 1234-AB", mail.outbox[0].body)
+        self.assertNotIn("updated", mail.outbox[0].body)
+        mail.outbox = []
+
         revised_data = {
             "workday_fund": 810,
             "worktag": "5678-CC",
-            "workday_form_comments": "I made a few adjustments",
+            "workday_form_comments": "I made a few <b>adjustments</b>",
             "submit": "Pay"
         }
 
         # Check that we can reload and submit the form again to edit details
         self.assertRedirects(self.client.post(reverse("events:worktag-form", args=[self.e3.pk]), revised_data),
                              reverse("events:detail", args=[self.e3.pk]))
+
+        # The Treasurer is told exactly what changed, with the client's text escaped
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, "Event Workday Info Updated")
+        self.assertIn("Worktag: 1234-AB → 5678-CC", mail.outbox[0].body)
+        self.assertIn("Comments: (blank) → I made a few &lt;b&gt;adjustments&lt;/b&gt;", mail.outbox[0].body)
+        self.assertNotIn("Funding source", mail.outbox[0].body)
+        self.assertNotIn("<b>adjustments", mail.outbox[0].alternatives[0][0])
+
+        # The client's worktag on file follows the one they used last
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.worktag, "5678-CC")
 
     def test_entered_into_workday(self):
         self.setup()

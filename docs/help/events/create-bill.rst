@@ -43,6 +43,20 @@ Create and Send a Bill
    satisfied with the setup, click `Send Email`. The bill will be added to the email automatically as an attachment.
 
 
+When the Client Sends Their Worktag
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When the client fills out the payment form from the email, the treasurer's address is sent a
+`Worktag Received: <event name>` email listing the funding source, worktag and any comments. The event is then ready
+for you to create the Internal Service Delivery in Workday.
+
+If the client goes back and changes what they sent, you get an `Event Workday Info Updated` email listing exactly what
+changed, old value to new. The form locks once the event is marked as entered into Workday.
+
+The client's form is pre-filled with the funding source and worktag they used last, so a returning client usually only
+has to check it and submit.
+
+
 Updating a Bill
 ^^^^^^^^^^^^^^^
 
@@ -62,4 +76,4 @@ in a few additional places throughout the LNLDB, such as on the `All Events` pag
     `Mark bill paid` button instead, which sets the paid date to the day the payment actually arrived. See
     :doc:`/help/finance/events`.
 
-`Last Modified: May 3, 2021`
+`Last Modified: October 15, 2026`

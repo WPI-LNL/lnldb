@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 from django.urls.base import reverse
 from django.utils import timezone
+from django.utils.html import escape
 from django.utils.text import slugify
 from django.views.generic import CreateView, DeleteView, UpdateView
 from django.views.decorators.http import require_GET, require_POST
@@ -1542,7 +1543,12 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         self.object = self.get_object()
-        is_update = self.object.workday_fund is not None or self.object.worktag is not None
+        # What the client sent last time, read now: by the time form_valid runs, the form has already copied the new
+        # values onto the event. Only this form sets the worktag, so a worktag on the event is what says the form was
+        # filled out before -- the fund alone can be on the event without one.
+        self.previous = {name: getattr(self.object, name) for name in WorkdayForm.Meta.fields}
+        self.previous_entered_by = self.object.workday_entered_by
+        self.is_update = is_update = bool(self.object.worktag)
         if self.object.closed:
             messages.add_message(request, messages.ERROR, 'Event is closed.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.object.pk,)))
@@ -1574,31 +1580,47 @@ class WorkdayEntry(HasPermOrTestMixin, LoginRequiredMixin, UpdateView):
             org.associated_users.add(self.request.user)
         else:
             set_revision_comment("Entered Workday billing info", form)
-        # Add workday info to organization info if not already saved
-        if org.workday_fund is None or org.worktag is None:
+        # Keep the client's workday info on file current, so their next bill's form is pre-filled with what they
+        # used last
+        if org is not None and (org.workday_fund, org.worktag) != (self.object.workday_fund, self.object.worktag):
             org.workday_fund = self.object.workday_fund
             org.worktag = self.object.worktag
             org.save()
-        # If the workday info is being updated as opposed to entered for the first time, send an email to the Treasurer
-        if self.object.workday_fund is not None or self.object.worktag is not None:
-            email_body = "The workday billing info for the following event was updated by {}. The previous version " \
-                         "had been entered by {}.".format(self.request.user, self.object.workday_entered_by)
-            if len(form.changed_data) > 0:
-                email_body += "\nFields changed: "
-                for field_name in form.changed_data:
-                    email_body += field_name + ", "
-                email_body = email_body[:-2]
-            email = EventEmailGenerator(
-                event=self.object,
-                subject='Event Workday Info Updated',
-                to_emails=settings.EMAIL_TARGET_T,
-                body=email_body
-            )
-            email.send()
+        self.email_treasurer(form)
         self.object.workday_entered_by = self.request.user
         messages.success(self.request, "Billing info received. Please approve the Internal Service Delivery in "
                                        "Workday when you receive it.", extra_tags='success')
         return super(WorkdayEntry, self).form_valid(form)
+
+    def email_treasurer(self, form):
+        """
+        Tell the Treasurer the workday info has arrived and the ISD can be created, or, when the client is editing
+        info they already sent, exactly what changed.
+
+        Everything in the body is escaped: the event email template marks it safe, and the worktag and comments are
+        typed by the client.
+        """
+        def shown(name, value):
+            if name == 'workday_fund':
+                value = dict(form.fields[name].choices).get(value, value)
+            return escape(value) if value not in (None, '') else '(blank)'
+
+        if self.is_update:
+            changes = ['{}: {} → {}'.format(form[name].label, shown(name, self.previous[name]),
+                                            shown(name, getattr(self.object, name)))
+                       for name in WorkdayForm.Meta.fields
+                       if (self.previous[name] or None) != (getattr(self.object, name) or None)]
+            subject = 'Event Workday Info Updated'
+            body = '{} updated the workday billing info for this event. It had been entered by {}.\n\n'.format(
+                escape(self.request.user), escape(self.previous_entered_by or 'nobody on record'))
+            body += 'Changed:\n' + '\n'.join(changes) if changes else 'Nothing was changed.'
+        else:
+            subject = 'Worktag Received: {}'.format(self.object.event_name)
+            body = '{} entered the workday billing info for this event. It is ready for an Internal Service ' \
+                   'Delivery.\n\n'.format(escape(self.request.user))
+            body += '\n'.join('{}: {}'.format(form[name].label, shown(name, getattr(self.object, name)))
+                              for name in WorkdayForm.Meta.fields)
+        EventEmailGenerator(event=self.object, subject=subject, to_emails=settings.EMAIL_TARGET_T, body=body).send()
 
     def get_success_url(self):
         return reverse("events:detail", args=(self.object.pk,))
