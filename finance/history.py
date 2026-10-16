@@ -24,10 +24,10 @@ import datetime
 from collections import defaultdict
 from decimal import Decimal
 
-from finance.models import (ZERO, ClientType, FundBehaviour, HistoryKind, HistoryOverride,
+from finance.models import (ZERO, FundBehaviour, HistoryKind, HistoryOverride,
                             ParsedTransaction, SpendCategory, WorkdayTransaction,
-                            books_start_date, client_type_for, fiscal_year_bounds,
-                            fiscal_year_for, money, partition_codes)
+                            books_start_date, fiscal_year_bounds, fiscal_year_for, money,
+                            partition_codes)
 
 #: Ledger accounts LNL's client billing posts to: Internal Service Provider
 #: Revenue, and, before FY20, the interdepartmental transfers LNL invoiced
@@ -176,17 +176,15 @@ class Flow(object):
     ``day`` is the bank's date, because what the forecast learns is when money
     moves. ``account`` is the account code the line came out of, ``None`` when
     no account claims it. ``estimated`` is set on anything read rather than
-    filed. ``client_type`` is known only for billing filed against an event.
-    ``sga_paid`` marks spending SGA pays for: filed to a fund SGA pays, or,
+    filed. ``sga_paid`` marks spending SGA pays for: filed to a fund SGA pays, or,
     on a line read rather than filed, one whose memo quotes an SGA request.
     """
 
     __slots__ = ('day', 'amount', 'kind', 'category', 'account', 'line', 'estimated',
-                 'left_out', 'client_type', 'sga_paid', 'is_projection')
+                 'left_out', 'sga_paid', 'is_projection')
 
     def __init__(self, day, amount, kind, category=None, account=None, line=None,
-                 estimated=False, left_out=False, client_type=None, sga_paid=False,
-                 is_projection=False):
+                 estimated=False, left_out=False, sga_paid=False, is_projection=False):
         self.day = day
         self.amount = amount
         self.kind = kind
@@ -195,7 +193,6 @@ class Flow(object):
         self.line = line
         self.estimated = estimated
         self.left_out = left_out
-        self.client_type = client_type
         self.sga_paid = sga_paid
         self.is_projection = is_projection
 
@@ -231,17 +228,6 @@ def _slice_kind(amount, refund_of, event, request, credits_fund):
     return HistoryKind.SPENDING
 
 
-def _client_types(event_ids):
-    """ ``{event pk: ClientType}`` for the events billing was filed against. """
-    from events.models import BaseEvent
-
-    out = {}
-    for event in (BaseEvent.objects.filter(pk__in=list(event_ids))
-                  .select_related('billing_org').prefetch_related('org')):
-        out[event.pk] = client_type_for(event)
-    return out
-
-
 class Ledger(object):
     """
     Every bank line LNL has imported, as flows, loaded once.
@@ -268,7 +254,6 @@ class Ledger(object):
                                    'non_event_revenue_type__credits_fund_id',
                                    'lnl_spend_category_id', 'fund_source__behaviour',
                                    'is_projection'))
-        types = _client_types({row[5] for row in slices if row[5] is not None})
         for (line, day, worktags, amount, refund_of, event, request, credits_fund, category,
              behaviour, projection) in slices:
             amount = money(amount)
@@ -278,7 +263,6 @@ class Ledger(object):
                 day, amount, kind,
                 category=category if kind == HistoryKind.SPENDING else None,
                 account=_account_of(worktags, codes)[0], line=line,
-                client_type=types.get(event, ClientType.UNKNOWN) if event is not None else None,
                 sga_paid=kind == HistoryKind.SPENDING and behaviour in SGA_PAID_BEHAVIOURS,
                 is_projection=projection))
 
@@ -319,18 +303,19 @@ class Ledger(object):
 
 
 # ---------------------------------------------------------------------------
-# How much of past billing came from departments
+# How much of past billing the same shows would be charged today
 # ---------------------------------------------------------------------------
 
-#: How much of the billing since the books started has to be filed against
-#: events whose client is on file before the split it shows is trusted.
-SHARE_COVERAGE = Decimal('0.5')
+#: How many shows with a price have to have run since FY27 began before the
+#: share they show is trusted.
+SHARE_MIN_SHOWS = 25
 
 
-class DepartmentShare(object):
+class BilledShare(object):
     """
-    The part of billing before FY27 that departments paid, and where that
-    figure came from. ``share`` is a fraction, or ``None`` when nobody knows.
+    The part of billing before FY27 that the same shows would still be
+    charged today, and where that figure came from. ``share`` is a fraction,
+    or ``None`` when nobody knows.
     """
 
     def __init__(self, share, source, detail=''):
@@ -349,54 +334,66 @@ class DepartmentShare(object):
         return None if self.share is None else int((self.share * 100).quantize(Decimal('1')))
 
 
-def measured_department_share(flows, policy_from):
+def measured_billed_share(today=None):
     """
-    The departments' share of billing filed against events before
-    ``policy_from``, or ``None`` when too little is filed to say.
+    What the shows run since FY27 began are charged, as a share of their full
+    price, or ``None`` when too few have run to say.
 
-    Returns ``(share, departments, known, all billing)``.
+    An SGA-funded show is charged its hired gear and one-off charges, any other
+    show its full price (:attr:`finance.activity.Work.charged`). A show marked
+    No bill needed is charged nothing; one marked so for any reason but SGA
+    funding is left out, since it would not have been billed before FY27
+    either. History cannot say which past shows SGA would fund now -- its lines
+    name events, not what they were charged for -- so the shows since are the
+    measure.
+
+    Returns ``(share, charged, full price, shows)``.
     """
-    known = departments = total = ZERO
-    start = books_start_date()
-    for flow in flows:
-        if flow.kind != HistoryKind.BILLING or flow.day >= policy_from:
+    from finance.activity import load_work
+    from finance.models import SGA_FUNDED_FROM, NoBillNeeded
+
+    first = fiscal_year_bounds(SGA_FUNDED_FROM)[0]
+    reasons = dict(NoBillNeeded.objects.values_list('event_id', 'reason'))
+    charged = full = ZERO
+    shows = 0
+    for work in load_work(first=first, today=today):
+        reason = reasons.get(work.event.pk)
+        if reason is not None and reason != NoBillNeeded.SGA_FUNDED:
             continue
-        if start is not None and flow.day < start:
-            # History cannot say who paid, and is not the books.
+        if work.full_price <= 0:
             continue
-        total += flow.amount
-        if flow.client_type in (ClientType.DEPARTMENT, ClientType.STUDENT_ORG):
-            known += flow.amount
-            if flow.client_type == ClientType.DEPARTMENT:
-                departments += flow.amount
-    if total <= 0 or known <= 0 or known < total * SHARE_COVERAGE:
-        return None, departments, known, total
-    return departments / known, departments, known, total
+        shows += 1
+        full += work.full_price
+        if reason is None:
+            charged += work.charged
+    if shows < SHARE_MIN_SHOWS:
+        return None, charged, full, shows
+    return charged / full, charged, full, shows
 
 
-def department_share(flows):
+def billed_share(today=None):
     """
-    The departments' share of billing before FY27: the Treasurer's figure if
-    one is set, else the one the filed billing shows, else unknown.
+    The share of billing before FY27 the same shows would still be charged
+    today: the Treasurer's figure if one is set, else the one the shows run
+    since FY27 began show, else unknown.
     """
-    from finance.models import DEPARTMENTS_ONLY_FROM, finance_settings
+    from finance.models import finance_settings
 
-    configured = finance_settings().department_billing_share
+    configured = finance_settings().still_billed_share
     if configured is not None:
-        return DepartmentShare(Decimal(configured) / 100, 'set',
-                               "%s%%, set in Finance Configuration" % configured)
-    policy_from = fiscal_year_bounds(DEPARTMENTS_ONLY_FROM)[0]
-    share, departments, known, total = measured_department_share(flows, policy_from)
+        return BilledShare(Decimal(configured) / 100, 'set',
+                           "%s%%, set in Finance Configuration" % configured)
+    share, charged, full, shows = measured_billed_share(today)
     if share is None:
-        return DepartmentShare(
+        return BilledShare(
             None, 'unknown',
-            "%s of %s billed before FY27 is filed against an event whose client is on file"
-            % (_dollars(known), _dollars(total)) if total > 0 else
-            "no billing from before FY27 is in the books")
-    return DepartmentShare(
+            "%s show%s with a price %s run since FY27 began, and it is measured once %s have"
+            % (shows, '' if shows == 1 else 's', 'has' if shows == 1 else 'have',
+               SHARE_MIN_SHOWS))
+    return BilledShare(
         share, 'measured',
-        "departments paid %s of the %s billed before FY27 that is filed against an event "
-        "whose client is on file" % (_dollars(departments), _dollars(known)))
+        "the %s shows run since FY27 began came to %s at full price and were charged %s"
+        % (shows, _dollars(full), _dollars(charged)))
 
 
 def _dollars(amount):

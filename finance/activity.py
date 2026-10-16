@@ -4,9 +4,10 @@ What LNL's work was worth, and who it was for, read from the events app.
 The ledger knows what was paid. This module answers a different question --
 what LNL *did* -- from the events lnldb holds: every approved event that has
 run, priced at its own price list whether or not anybody was charged for it.
-From FY27 student organizations are not billed at all, so their shows bring in
-nothing, but the work and the wear on the gear are the same as a department's
-show. Comparing what each kind of client used means pricing every show.
+From FY27 an SGA-funded show is charged only for its rentals and one-off
+charges, so it brings in little or nothing, but the work and the wear on the
+gear are the same as any other show's. Comparing what each kind of client used
+means pricing every show.
 
 **Service value** is what the events app would charge for LNL's own services
 and extras, after its discounts and fees: ``Event2019.lnl_services_subtotal``.
@@ -250,11 +251,33 @@ class Work(object):
         rentals = list(event.rentals.all())
         self.rental_items = sum((rental.quantity for rental in rentals), 0)
         self.rental_cost = sum((money(rental.totalcost) for rental in rentals), ZERO)
+        self.rental_fee = _rental_fee(event, rentals)
+        self.oneoff_cost = sum((money(fee.totalcost) for fee in event.arbitraryfees.all()), ZERO)
+        self.is_sga_funded = getattr(event, 'is_sga_funded', False)
 
     @property
     def value(self):
         """ The show's service value: every line after discounts and fees. """
         return sum((line.net for line in self.lines), ZERO)
+
+    @property
+    def full_price(self):
+        """
+        What the show costs at full price: its service value, its one-off
+        charges, the gear hired in for it and LNL's fee on that gear.
+        """
+        return self.value + self.oneoff_cost + self.rental_cost + self.rental_fee
+
+    @property
+    def charged(self):
+        """
+        What the show is charged: an SGA-funded show only its hired gear, at
+        cost, and its one-off charges (``Event2019.cost_total``), any other
+        show its full price.
+        """
+        if self.is_sga_funded:
+            return self.oneoff_cost + self.rental_cost
+        return self.full_price
 
     def value_in(self, category_name):
         """ The part of its value in one service category. """
@@ -264,6 +287,19 @@ class Work(object):
     def uses(self, category_name):
         """ Whether LNL brought anything in that category. """
         return any(line.category_name == category_name for line in self.lines)
+
+
+def _rental_fee(event, rentals):
+    """
+    LNL's fee on a 2019 event's hired gear, as ``Event2019.rental_fee_total``
+    works it out. A 2012 event charged none.
+    """
+    if not hasattr(event, 'pricelist_id'):
+        return ZERO
+    percent = event.pricelist.rental_fee_percentage if event.pricelist_id else 15
+    applicable = sum((decimal.Decimal(rental.totalcost) for rental in rentals
+                      if rental.rental_fee_applied), ZERO)
+    return (applicable * decimal.Decimal(percent) / 100).quantize(CENT, rounding=decimal.ROUND_DOWN)
 
 
 def load_work(first=None, last=None, today=None):
@@ -287,12 +323,14 @@ def load_work(first=None, last=None, today=None):
         if first is not None:
             queryset = queryset.filter(datetime_start__date__gte=first)
         return (queryset.select_related('billing_org', *selected.get('select', ()))
-                .prefetch_related('org', 'rentals', 'billings', 'multibillings__events',
-                                  'extrainstance_set__extra__category', *related))
+                .prefetch_related('org', 'rentals', 'arbitraryfees', 'billings',
+                                  'multibillings__events', 'extrainstance_set__extra__category',
+                                  *related))
 
     cache, out = {}, []
     for event in shows(Event2019, 'serviceinstance_set__service__category',
-                       'applied_discounts__categories', 'applied_fees__categories'):
+                       'applied_discounts__categories', 'applied_fees__categories',
+                       select=('pricelist',)):
         out.append(Work(event, _lines_2019(event, book), event_billed(event, cache)[0]))
     for event in shows(Event, 'otherservices__category',
                        select=('lighting__category', 'sound__category', 'projection__category')):

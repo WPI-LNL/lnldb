@@ -36,10 +36,11 @@
 
     {% if not share.known %}
         <div class="alert alert-info">
-            <strong>Who paid for the billing?</strong> Until FY27 LNL billed student organizations as well as
-            departments, and history cannot say which was which: {{ share.detail }}. The forecast counts past
-            billing only once it knows the departments' share. Set it under Finance Configuration in the admin,
-            or file FY26's billing against its events and it will be worked out.
+            <strong>How much of past billing would be charged today?</strong> From FY27 an SGA-funded show is
+            charged only for its rentals and one-off charges, so billing from before then overstates what the same
+            shows bring in now: {{ share.detail }}. The forecast counts past billing only once it knows the share
+            still charged. Set it under Finance Configuration in the admin, or it will be measured once enough of
+            FY27's shows have run.
         </div>
     {% endif %}
 

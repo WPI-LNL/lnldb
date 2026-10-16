@@ -857,8 +857,8 @@ def event_report(period, is_projection=None, today=None):
              "Billed is the latest bill, since a re-issued bill replaces the one before. A "
              "multi-bill is shared between its events by what each would have cost alone.",
              "A cost filed to a funding request or the SGA budget is paid by SGA. It is shown, "
-             "but not counted against the margin. From FY27 LNL bills departments only; a "
-             "student organization's show is funded through SGA."]
+             "but not counted against the margin. From FY27 an SGA-funded show is charged "
+             "only for its rentals and one-off charges."]
     if start is not None:
         notes.append("Events before the books start (%s) are left out: their payments were "
                      "never imported." % _day(start))
@@ -1157,8 +1157,8 @@ def work_split(period, today=None):
     notes = [SERVICE_VALUE_NOTE, CLIENT_TYPE_NOTE,
              "Each show's discounts and fees are shared out across the services they "
              "apply to, so the services add up to the show's value to the cent.",
-             "Billed is the events app's latest bill for each event. From FY27 LNL bills "
-             "departments only; a student organization's show is funded through SGA.",
+             "Billed is the events app's latest bill for each event. From FY27 an "
+             "SGA-funded show is charged only for its rentals and one-off charges.",
              EVENTS_COUNTED_NOTE]
     return Report('work-split', 'Student organizations and departments', period.label,
                   period.dates, period.file_part, who, sections, stats, notes, warnings)

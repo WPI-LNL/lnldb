@@ -53,9 +53,10 @@ Books start on                                      The first day the books coun
                                                     every balance is worked out from it.
 Minimum reserve                                     The least LNL's own money should hold. The forecast and *Can we
                                                     afford it?* answer against it.
-Departments' share of billing before FY27 (%)       What share of past billing came from departments. Until it is set or
-                                                    can be measured, the forecast leaves past billing out. See
-                                                    :doc:`forecast`.
+Share of pre-FY27 billing still charged (%)         What share of past billing the same shows would still be charged,
+                                                    now that an SGA-funded show is charged only for its rentals and
+                                                    one-off charges. Until it is set or can be measured from FY27's
+                                                    shows, the forecast leaves past billing out. See :doc:`forecast`.
 Billing digest: waiting on client after (days)      How long after a bill was last emailed the weekly billing digest
                                                     lists it, if the client hasn't sent the worktag (14). See
                                                     :doc:`billing`.

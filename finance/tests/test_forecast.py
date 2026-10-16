@@ -6,7 +6,8 @@ Five layers, tested from the bottom up:
 
 * **A typical year.** The median of the most recent whole years, spread over
   the months the way they spread it; billing from before FY27 scaled to the
-  departments' share, or left out when nobody knows it.
+  share the same shows would still be charged, or left out when nobody knows
+  it.
 * **How long money takes.** SGA's repayment and a client's payment, measured
   from the ledger once it has enough cases.
 * **The projection**, against a ledger small enough to add up by hand: what
@@ -25,11 +26,11 @@ from django.test import TestCase
 from django.urls import reverse
 
 from events.models import Rental
-from events.tests.generators import Event2019Factory, OrgFactory
+from events.tests.generators import Event2019Factory, OrgFactory, UserFactory
 from finance import forecast, history, reports
 from finance.history import Flow
 from finance.models import (Billing, FinanceSettings, FRLineItem, FundingRequest, HistoryKind,
-                            HistoryOverride, ParsedTransaction, PlannedPurchase,
+                            HistoryOverride, NoBillNeeded, ParsedTransaction, PlannedPurchase,
                             TransactionStatus, reset_finance_cache)
 from finance.tests.test_balances import checkpoint, filed, line
 from finance.tests.test_history import old, start_books
@@ -48,7 +49,7 @@ def flow(day, amount, kind=HistoryKind.SPENDING, slug='consumables', **extra):
 
 
 def share(fraction):
-    return history.DepartmentShare(Decimal(fraction), 'set')
+    return history.BilledShare(Decimal(fraction), 'set')
 
 
 def set_config(**values):
@@ -103,12 +104,13 @@ class TypicalYearTests(ForecastTestCase):
         self.assertEqual(typical.annual[('category', category('consumables').pk)],
                          ZERO)
 
-    def test_billing_before_fy27_counts_at_the_departments_share(self):
+    def test_billing_before_fy27_counts_at_the_share_still_charged(self):
+        """ Hired gear is not scaled: it is still hired, and still billed on. """
         flows = [flow(datetime.date(2025, 8, 1), '1000.00', HistoryKind.BILLING),
                  flow(datetime.date(2025, 8, 2), '-400.00', slug='event_subrental')]
         typical = self.typical(flows, years=(2026,), share_=share('0.6'))
         self.assertEqual(typical.annual[forecast.BILLING], Decimal('600.00'))
-        self.assertEqual(typical.annual[forecast.PASSTHROUGH], Decimal('-240.00'))
+        self.assertEqual(typical.annual[forecast.PASSTHROUGH], Decimal('-400.00'))
         self.assertTrue(typical.scaled)
 
     def test_left_out_when_nobody_knows_the_share(self):
@@ -212,7 +214,7 @@ class ProjectionFixture(object):
     that night. The books start on Jul 1, 2025, so FY24 and FY25 are history.
 
     A typical year is therefore $1,200 of tape, $100 a month, and $1,000 of
-    billing in August, at the departments' share once one is set. Today is Oct
+    billing in August, at the share still charged once one is set. Today is Oct
     1, 2026: the forecast runs from October 2026 to June 2028, 21 months.
     """
 
@@ -266,10 +268,11 @@ class ProjectionTests(ProjectionFixture, ForecastTestCase):
         result = self.project()
         self.assertEqual(self.month(result, 2027, 6).own, Decimal('19100.00'))
         self.assertEqual(self.month(result, 2028, 6).own, Decimal('17900.00'))
-        self.assertTrue(any("departments' share" in w for w in result.warnings))
+        self.assertTrue(any("SGA-funded show" in w and "Set the share still charged" in w
+                            for w in result.warnings))
 
-    def test_billing_counts_at_the_departments_share(self):
-        set_config(department_billing_share=50)
+    def test_billing_counts_at_the_share_still_charged(self):
+        set_config(still_billed_share=50)
         result = self.project()
         august = self.month(result, 2027, 8)
         self.assertEqual(august.flows['typical'], Decimal('400.00'))     # $500 in, $100 tape
@@ -386,7 +389,7 @@ class DatedTests(ProjectionFixture, ForecastTestCase):
             Billing.objects.create(event=event, date_billed=day, amount=Decimal(billed))
         return event
 
-    def test_a_departments_show_brings_in_its_quote_and_pays_for_its_gear(self):
+    def test_a_show_brings_in_its_quote_and_pays_for_its_gear(self):
         self.booked('Convocation', datetime.date(2027, 2, 10), 110, rentals=['400.00'])
         with mock.patch('finance.forecast._quote', return_value=Decimal('1500.00')):
             result = self.project()
@@ -396,21 +399,48 @@ class DatedTests(ProjectionFixture, ForecastTestCase):
         self.assertEqual((result.events_booked, result.events_counted), (1, 1))
         self.assertEqual(self.month(result, 2027, 6).own, Decimal('20200.00'))
 
-    def test_a_student_organizations_show_is_paid_for_by_a_funding_request(self):
-        self.booked('Spring Musical', datetime.date(2027, 3, 5), 810, rentals=['600.00'])
+    def test_a_student_organization_is_billed_like_anyone_else(self):
+        """ Client type does not decide it: the quote does. """
+        self.booked('Greek Sing', datetime.date(2027, 3, 5), 810, rentals=['600.00'])
         with mock.patch('finance.forecast._quote', return_value=Decimal('900.00')):
             result = self.project()
-        fr = fund('sga_fr').pk
         self.assertEqual(self.items(result, 'events'),
-                         [(datetime.date(2027, 3, 5), Decimal('-600.00'), fr),
-                          (datetime.date(2027, 4, 4), Decimal('600.00'), fr)])
-        self.assertEqual(self.month(result, 2027, 6).own, Decimal('19100.00'))
+                         [(datetime.date(2027, 3, 5), Decimal('-600.00'), forecast.OWN),
+                          (datetime.date(2027, 4, 4), Decimal('900.00'), forecast.OWN)])
+        self.assertEqual(self.month(result, 2027, 6).own, Decimal('19400.00'))
 
-    def test_a_show_with_no_client_on_file_pays_for_its_own_gear(self):
-        self.booked('Mystery', datetime.date(2027, 3, 5), None, rentals=['250.00'])
+    def test_an_sga_funded_show_brings_in_its_gear_and_one_off_charges(self):
+        event = self.booked('Spring Musical', datetime.date(2027, 3, 5), 810, rentals=['600.00'])
+        event.is_sga_funded = event.uses_new_discounts = True
+        event.save()
         result = self.project()
+        # The events app's quote: the $600 of gear at cost, and no services or fee.
+        self.assertEqual(self.items(result, 'events'),
+                         [(datetime.date(2027, 3, 5), Decimal('-600.00'), forecast.OWN),
+                          (datetime.date(2027, 4, 4), Decimal('600.00'), forecast.OWN)])
+        (billed,) = [i for i in result.items_in('events') if i.amount > 0]
+        self.assertIn('SGA-funded', billed.detail)
+
+    def test_no_bill_needed_brings_in_nothing_and_pays_for_its_gear(self):
+        event = self.booked('LNL Social', datetime.date(2027, 3, 5), 810, rentals=['250.00'])
+        NoBillNeeded.objects.create(event=event, reason=NoBillNeeded.LNL_EVENT,
+                                    decided_by=UserFactory.create())
+        with mock.patch('finance.forecast._quote', return_value=Decimal('900.00')):
+            result = self.project()
         self.assertEqual(self.items(result, 'events'),
                          [(datetime.date(2027, 3, 5), Decimal('-250.00'), forecast.OWN)])
+        self.assertIn("No bill needed (LNL's own event)", result.items_in('events')[0].detail)
+
+    def test_a_show_with_no_client_on_file_pays_for_its_own_gear(self):
+        event = self.booked('Mystery', datetime.date(2027, 3, 5), None, rentals=['250.00'])
+        event.billing_org = None
+        event.save()
+        event.org.clear()
+        with mock.patch('finance.forecast._quote', return_value=Decimal('900.00')):
+            result = self.project()
+        self.assertEqual(self.items(result, 'events'),
+                         [(datetime.date(2027, 3, 5), Decimal('-250.00'), forecast.OWN)])
+        self.assertIn('Nobody on file to bill', result.items_in('events')[0].detail)
 
     def test_a_billed_show_is_owed_rather_than_booked(self):
         self.booked('Gala', datetime.date(2027, 1, 20), 110, rentals=['100.00'], billed='700.00')
@@ -420,7 +450,7 @@ class DatedTests(ProjectionFixture, ForecastTestCase):
                          [(datetime.date(2027, 2, 19), Decimal('700.00'), forecast.OWN)])
 
     def test_booked_billing_counts_instead_of_a_typical_month_not_on_top(self):
-        set_config(department_billing_share=50)
+        set_config(still_billed_share=50)
         # Paid in August 2027, when a typical year brings in $500.
         self.booked('Orientation', datetime.date(2027, 7, 15), 110)
         with mock.patch('finance.forecast._quote', return_value=Decimal('800.00')):

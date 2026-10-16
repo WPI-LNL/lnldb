@@ -242,7 +242,7 @@ def history_page(request):
         history_lines=len(old_lines),
         corrected=corrected,
         whole_years=set(ledger.whole_years(account.code, before=9999)) if account else set(),
-        share=history.department_share(ledger.flows),
+        share=history.billed_share(),
         unmapped=unmapped_spend_categories([t for t in old_lines if t.net_amount < 0]),
     )
     return render(request, 'finance/history.html', context)

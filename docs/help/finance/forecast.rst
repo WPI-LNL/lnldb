@@ -32,9 +32,10 @@ Part                   What it counts
 Reserved purchases     Purchases logged in advance, on their dates.
 Owed to LNL            What SGA owes on each funding request, and what each client owes on their bill, arriving after
                        the usual wait.
-Booked events          Approved shows still to come that haven't been billed. A department's show brings in its quote
-                       and pays for its hired gear. A student organization's show brings in nothing from FY27; its gear
-                       is funding request spending, paid back by SGA later.
+Booked events          Approved shows still to come that haven't been billed. Each brings in its quote, whoever the
+                       client: an SGA-funded show's quote is only its rentals and one-off charges. Its hired gear is
+                       paid for on the day. A show marked *No bill needed*, or with no client to bill, brings in
+                       nothing and LNL pays for its gear.
 A typical year         Billing, gear hired in for shows, and running costs, month by month, as the last three whole
                        years went.
 Planned purchases      Your list of things LNL means to buy, and any "what if" you are asking.
@@ -128,22 +129,26 @@ forecast reads the line; Workday's line itself is never changed.
 and in the queue at once; see :doc:`settings`.
 
 
-The Departments' Share of Past Billing
---------------------------------------
+The Share of Past Billing Still Charged
+---------------------------------------
 
-From FY27, LNL bills departments only. Before that it billed student organizations as well, so a past year's billing
-overstates what the same work brings in now -- and the old Workday lines don't say who paid.
+From FY27, an SGA-funded show is charged only for its rentals and one-off charges. Before that every show was charged
+in full, so a past year's billing overstates what the same shows bring in now -- and the old Workday lines don't say
+which shows SGA would fund today.
 
-So the forecast needs to know **what share of billing before FY27 came from departments**. Until it does, it leaves past
-billing out of the typical year entirely and says so in a warning at the top of the page. A forecast without that
-income errs on the side of caution, but it will look much worse than reality.
+So the forecast needs to know **what share of billing before FY27 the same shows would still be charged**. Until it
+does, it leaves past billing out of the typical year entirely, with the gear hired in for shows, and says so in a
+warning at the top of the page. A forecast without that income errs on the side of caution, but it will look much worse
+than reality. The gear is never scaled: it is still hired, and still billed on.
 
 There are two ways to fix it:
 
-- **Set it.** In the admin, open `Finance Configuration` and fill in *Departments' share of billing before FY27 (%)*. See
+- **Set it.** In the admin, open `Finance Configuration` and fill in *Share of pre-FY27 billing still charged (%)*. See
   :doc:`settings`.
-- **Let it be measured.** File FY26's billing against its events, with each event's client on file. Once at least half
-  of the billing since the books started is linked that way, the share is worked out from it.
+- **Let it be measured.** Once 25 shows with a price have run since FY27 began, the share is worked out from them: what
+  they were charged, against what they would have cost in full. A show marked *No bill needed* counts as charged
+  nothing if the reason is SGA-funded, and is left out for any other reason, since it wouldn't have been billed before
+  FY27 either.
 
 
 The Minimum Reserve
@@ -169,4 +174,4 @@ LNL's years vary a lot -- billing has grown several times over, and some years h
 bottom of the forecast page shows how the same method would have done in past years and its usual miss. Read the
 **range**, not just the line, and use the forecast to spot trouble months ahead, not to promise a figure to the dollar.
 
-`Last Modified: October 2, 2026`
+`Last Modified: October 16, 2026`

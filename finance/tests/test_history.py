@@ -11,14 +11,16 @@ Four layers, tested from the bottom up:
   money, client billing, a transfer, or spending in the category the queue's
   lookups give -- and the Treasurer's correction to it.
 * **Every line as flows.** Filed slices as filed, the rest read; the years
-  side by side, the cash each ended on, and how much of past billing
-  departments paid.
+  side by side, the cash each ended on, and how much of past billing the same
+  shows would still be charged now that SGA funds some.
 * **The pages**: the History page, a year's lines, correcting one, a history
   line's own page, and the import's confirmation.
 """
 import datetime
 import io
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest import mock
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -28,7 +30,7 @@ from django.urls import reverse
 from events.tests.generators import Event2019Factory, OrgFactory
 from finance import balances, history
 from finance.importers import import_workday_export
-from finance.models import (ClientType, FinanceSettings, HistoryKind, HistoryOverride,
+from finance.models import (FinanceSettings, HistoryKind, HistoryOverride, NoBillNeeded,
                             ParsedTransaction, TransactionStatus, WorkdayTransaction,
                             books_start_date, reset_finance_cache)
 from finance.reports import Period, _unfiled
@@ -384,13 +386,12 @@ class LedgerFlowTests(HistoryTestCase):
         self.assertEqual([f.kind for f in self.flows_for(paid) + self.flows_for(taken)],
                          [HistoryKind.SGA, HistoryKind.SGA])
 
-    def test_billing_filed_against_an_event_knows_who_paid(self):
+    def test_billing_filed_against_an_event_is_billing(self):
         event = show('Orientation', datetime.date(2025, 8, 20), student=False)
         txn = line(datetime.date(2025, 9, 1), '1000.00', 'LNL Services for Orientation')
         filed(txn, 'legacy', linked_event=event)
         (flow,) = self.flows_for(txn)
-        self.assertEqual((flow.kind, flow.client_type),
-                         (HistoryKind.BILLING, ClientType.DEPARTMENT))
+        self.assertEqual((flow.kind, flow.amount), (HistoryKind.BILLING, Decimal('1000.00')))
 
     def test_a_left_out_line_is_marked(self):
         txn = old(datetime.date(2024, 10, 1), '-39310.55', 'Conversion',
@@ -457,46 +458,82 @@ class YearSummaryTests(HistoryTestCase):
         self.assertEqual(history.june_cash('226-AG', [2025]), {})
 
 
-class DepartmentShareTests(HistoryTestCase):
-    """ How much of the billing before FY27 departments paid. """
+class BilledShareTests(HistoryTestCase):
+    """
+    How much of the billing before FY27 the same shows would still be charged,
+    measured from the shows run since. What one show is charged is
+    ``finance.tests.test_activity``'s to check; here each is given.
+    """
 
-    def setUp(self):
-        super(DepartmentShareTests, self).setUp()
-        start_books()
+    TODAY = datetime.date(2026, 10, 1)
 
-    def bill(self, name, amount, student):
-        event = show(name, datetime.date(2025, 9, 1), student)
-        txn = line(datetime.date(2025, 10, 1), amount, 'LNL Services for %s' % name)
-        filed(txn, 'legacy', linked_event=event)
+    def work(self, name, full, charged, day=datetime.date(2026, 9, 1)):
+        return SimpleNamespace(event=show(name, day, student=True),
+                               full_price=Decimal(full), charged=Decimal(charged))
+
+    def measure(self, shows, needed=2):
+        """ The share from these shows, with ``needed`` of them enough to trust it. """
+        with mock.patch('finance.activity.load_work', return_value=shows) as load, \
+                mock.patch.object(history, 'SHARE_MIN_SHOWS', needed):
+            share = history.billed_share(self.TODAY)
+        if load.called:
+            self.assertEqual(load.call_args.kwargs['first'], datetime.date(2026, 7, 1))
+        return share
 
     def test_a_share_set_by_hand_wins(self):
         config = FinanceSettings.load()
-        config.department_billing_share = 40
+        config.still_billed_share = 40
         config.save()
         reset_finance_cache()
-        share = history.department_share([])
+        share = self.measure([self.work('Convocation', '1000.00', '1000.00')] * 2)
         self.assertEqual((share.share, share.percent, share.source), (Decimal('0.4'), 40, 'set'))
 
-    def test_worked_out_from_billing_filed_against_events(self):
-        self.bill('Orientation', '600.00', student=False)
-        self.bill('Spring Musical', '400.00', student=True)
-        share = history.department_share(history.Ledger().flows)
-        self.assertEqual((share.share, share.source), (Decimal('0.6'), 'measured'))
+    def test_measured_from_what_the_shows_since_fy27_were_charged(self):
+        share = self.measure([self.work('Convocation', '1500.00', '1500.00'),
+                              self.work('Spring Musical', '500.00', '100.00')])
+        self.assertEqual((share.share, share.percent, share.source), (Decimal('0.8'), 80, 'measured'))
+        self.assertIn('2 shows', share.detail)
+        self.assertIn('$2,000 at full price', share.detail)
+        self.assertIn('charged $1,600', share.detail)
 
-    def test_unknown_until_half_the_billing_is_filed_against_events(self):
-        self.bill('Orientation', '600.00', student=False)
-        old(datetime.date(2025, 11, 1), '1000.00', 'LNL Services for something',
-            ledger_account='70050:Internal Service Provider Revenue')
-        share = history.department_share(history.Ledger().flows)
+    def test_unknown_until_enough_shows_have_run(self):
+        share = self.measure([self.work('Convocation', '1000.00', '1000.00')], needed=25)
         self.assertFalse(share.known)
-        self.assertIn('$600 of $1,600', share.detail)
+        self.assertEqual(share.source, 'unknown')
+        self.assertIn('1 show with a price has run since FY27 began', share.detail)
+        self.assertIn('once 25 have', share.detail)
 
-    def test_history_cannot_say_who_paid(self):
-        old(datetime.date(2024, 11, 1), '1000.00', 'LNL Services for something',
-            ledger_account='70050:Internal Service Provider Revenue')
-        share = history.department_share(history.Ledger().flows)
+    def test_a_show_with_no_price_does_not_count(self):
+        share = self.measure([self.work('Convocation', '1000.00', '1000.00'),
+                              self.work('Meeting', '0.00', '0.00')])
         self.assertFalse(share.known)
-        self.assertIn('no billing from before FY27 is in the books', share.detail)
+
+    def test_no_bill_needed_for_sga_funding_is_charged_nothing(self):
+        funded = self.work('Spring Musical', '500.00', '500.00')
+        NoBillNeeded.objects.create(event=funded.event, reason=NoBillNeeded.SGA_FUNDED)
+        share = self.measure([self.work('Convocation', '1500.00', '1500.00'), funded])
+        self.assertEqual(share.share, Decimal('0.75'))
+
+    def test_no_bill_needed_for_another_reason_is_left_out(self):
+        own = self.work('LNL Social', '500.00', '500.00')
+        NoBillNeeded.objects.create(event=own.event, reason=NoBillNeeded.LNL_EVENT)
+        share = self.measure([self.work('Convocation', '1500.00', '1500.00'),
+                              self.work('Spring Musical', '500.00', '100.00'), own])
+        self.assertEqual(share.share, Decimal('0.8'))
+
+    def test_only_shows_since_fy27_that_have_run(self):
+        """ load_work is asked for the shows from Jul 1, 2026 to today, priced. """
+        from events.models import Rental
+
+        for name, day in (('Before', datetime.date(2026, 6, 20)),
+                          ('Since', datetime.date(2026, 9, 1)),
+                          ('To come', datetime.date(2026, 11, 1))):
+            event = show(name, day, student=False)
+            event.approved = True
+            event.save()
+            Rental.objects.create(event=event, name='Truss', cost=Decimal('100.00'))
+        with mock.patch.object(history, 'SHARE_MIN_SHOWS', 1):
+            self.assertIn('1 show', history.billed_share(self.TODAY).detail)
 
 
 # ---------------------------------------------------------------------------
@@ -527,7 +564,9 @@ class HistoryPageTests(FinanceViewTestCase):
         self.assertContains(response, 'Consumables')
         # A Workday category nothing reads is pointed out.
         self.assertContains(response, 'Licenses &amp; Fees')
-        self.assertContains(response, 'departments')
+        # Nothing yet says how much of past billing would be charged today.
+        self.assertContains(response, 'How much of past billing would be charged today?')
+        self.assertContains(response, '0 shows with a price have run since FY27 began')
 
     def test_a_years_lines_with_how_each_is_read(self):
         response = self.client.get(reverse('finance:history-year', args=[2025]))

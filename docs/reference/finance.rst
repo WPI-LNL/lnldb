@@ -1250,9 +1250,9 @@ out of the margin, which would otherwise report a loss that may never happen.
 SGA budget is still a cost of the event, and is shown as one, but SGA pays for
 it -- after the spending or before. The margin is what came in less what LNL
 paid itself, so such a cost never makes an event a loss. That matters from
-FY27, when LNL bills departments only: a student organization's show is funded
-through LNL's funding requests, so it has costs and no bill without having lost
-anything. LNL's own money spent on an unbilled show is still a loss.
+FY27, when an SGA-funded show (``Event2019.is_sga_funded``) is charged only for
+its rentals and one-off charges: it can have costs and a small bill, or none,
+without having lost anything. LNL's own money spent on it is still a loss.
 
 Rentals are compared separately: what the event billed its client for hired-in
 gear plus LNL's rental fee, against the linked costs in the pass-through
@@ -2005,9 +2005,9 @@ What the work was worth
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 *Student organizations and departments* and *Event activity* read the events
-app, not the ledger. From FY27 LNL bills departments only, so a student
-organization's show brings in nothing and the ledger cannot see it at all --
-but it is the same work, on the same gear. These two reports price every
+app, not the ledger. From FY27 an SGA-funded show is charged only for its
+rentals and one-off charges, so the ledger sees little or nothing of it -- but
+it is the same work, on the same gear. These two reports price every
 approved show that has run, at its own price list, whether or not anybody was
 billed. Cancelled and test events, and shows still to come, are left out. The
 Event Production / Projection switch does not apply; films count under the
@@ -2124,16 +2124,24 @@ like a typical recent one. Left out of a typical year:
   counts;
 * lines the Treasurer left out.
 
-**Billing before FY27.** From FY27 LNL bills departments only (see
-:data:`~finance.models.DEPARTMENTS_ONLY_FROM`), so a year of billing from before
-then overstates what the same work brings in now, and history cannot say who
-paid. Billing from those years -- and the gear hired in for them -- counts at the
-**departments' share**: the figure set in Finance Configuration, or else the
-share billing filed against events shows, once at least half of the billing
-since the books started is filed against an event whose client is on file.
-Until either exists, billing is left out of the typical year altogether, and
-the forecast says so above everything else: a forecast that leaves out income
-errs on the side of not overspending.
+**Billing before FY27.** From FY27 an SGA-funded show is charged only for its
+rentals and one-off charges, and any other show in full, whoever the client is
+(see :data:`~finance.models.SGA_FUNDED_FROM`). Before then every show was
+charged in full, so a year of billing from before it overstates what the same
+shows bring in now, and history cannot say which of them SGA would fund.
+Billing from those years counts at the **share still charged**
+(:func:`~finance.history.billed_share`): the figure set in Finance
+Configuration (``still_billed_share``, migration ``0009_still_billed_share``,
+which replaced the departments' share), or else what the shows run since FY27 began were charged
+against their full price (:attr:`~finance.activity.Work.charged` and
+``full_price``), once ``SHARE_MIN_SHOWS`` (25) with a price have run. A show
+marked No bill needed counts as charged nothing when the reason is SGA
+funding, and is left out for any other reason, since it would not have been
+billed before FY27 either. The gear hired in for shows is not scaled: it is
+still hired, and still billed on. Until a share exists, billing is left out of
+the typical year altogether, and the hired gear with it, since billing is what
+pays for it; the forecast says so above everything else: a forecast that
+leaves out income errs on the side of not overspending.
 
 The projection
 ~~~~~~~~~~~~~~
@@ -2148,11 +2156,12 @@ Part                   What it adds
 Reserved purchases     Each encumbrance, on its date
 Owed to LNL            What SGA owes on each funding request, after SGA's usual wait;
                        each unpaid bill, the client's usual wait after the show
-Booked events          Approved shows still to come that nobody has billed. A
-                       department's show brings in its quote and pays for its hired
-                       gear on the day. From FY27 a student organization's show brings
-                       in nothing and its gear is a funding request's spending, paid
-                       back by SGA. A show with no client on file pays for its gear
+Booked events          Approved shows still to come that nobody has billed. Each
+                       brings in its quote (``cost_total``), whoever the client;
+                       an SGA-funded show's is only its rentals and one-off
+                       charges. Its hired gear goes out on the day. A show marked
+                       No bill needed, or with no client on file, brings in nothing
+                       and pays for its gear
 A typical year         Billing, hired gear and running costs, month by month
 Planned purchases      The Treasurer's list, and any "what if" being asked
 Year end               A budget's unspent balance going back to SGA on June 30
@@ -2251,8 +2260,8 @@ Table                Holds
 ``FinanceSettings``  One row: the month the fiscal year starts, the Workday
                      fund that means "student organisation", how many years
                      the filter bar offers, the day the books start, the
-                     minimum reserve, and the departments' share of billing
-                     before FY27
+                     minimum reserve, the share of billing before FY27 still
+                     charged today, and the billing digest's two limits
 ``ServiceColor``     The colour of each service category on the service-mix
                      chart, keyed to the events app's own ``Category`` row so a
                      rename does not lose it
@@ -2383,8 +2392,8 @@ Setting up a new install
    Officers the finance permissions; see *Who holds them*.
 3. In the admin, open *Financial Subledger* > *Finance Configuration* and check
    the month the fiscal year starts, the student organization fund (810), the
-   minimum reserve, and the departments' share of billing before FY27 if
-   anyone knows it.
+   minimum reserve, and the share of billing before FY27 still charged today
+   if anyone knows it.
 4. **Import the current fiscal year first.** While *Books start on* is blank,
    the books start on the first day of the fiscal year of the earliest line on
    file, so on an empty install the first export decides it. Importing FY19
@@ -2545,10 +2554,12 @@ development and repair.
 Known limits and open questions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* **The departments' share of billing before FY27 is not known.** History says
-  which event a bill was for, not who paid it, so until the share is set in
-  *Finance Configuration*, or enough FY26 billing is filed against events to
-  measure it, the forecast leaves past billing out and says so.
+* **The share of billing before FY27 still charged today is not known yet.**
+  History cannot say which past shows SGA would fund now, so until the share
+  is set in *Finance Configuration*, or 25 of FY27's shows have run to measure
+  it, the forecast leaves past billing out and says so. The measure assumes
+  the shows to come are like the shows so far, and that before FY27 every show
+  was charged in full.
 * **LNL has no SGA budget yet**, so nothing compares a budget with what was
   spent. When it has one, model it as a funding request whose money arrives
   first rather than as new tables; see *Reports to print and hand over*.
@@ -2577,7 +2588,7 @@ locally::
 Tests
 -----
 
-``python manage.py test finance`` runs 1,566 tests across twenty-nine modules. The
+``python manage.py test finance`` runs 1,572 tests across twenty-nine modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.

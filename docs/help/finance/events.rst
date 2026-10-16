@@ -79,9 +79,10 @@ The button at the end of each row, showing how many entries are linked, opens th
 **The year is the year the show ran.** A late-June show is often billed and paid in July. Every entry linked to the
 event counts towards it, whichever fiscal year the entry itself falls in.
 
-**Student organizations' shows.** From FY27, LNL bills departments only. A student organization's show is paid for
-through LNL's funding requests, so it can have costs and no bill without losing money. Its costs show as paid by SGA
-and don't count against the margin. LNL's own money spent on an unbilled show still counts as a loss.
+**SGA-funded shows.** From FY27, a show marked *Is SGA-funded* on its event is charged only for its rentals and one-off
+charges; any other show is charged in full, whoever the client is. So an SGA-funded show can have costs and a small bill,
+or none, without losing money: whatever it cost that was filed to a funding request shows as paid by SGA and doesn't
+count against the margin. LNL's own money spent on it still counts as a loss.
 
 Flags
 ^^^^^

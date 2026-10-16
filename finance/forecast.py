@@ -43,11 +43,10 @@ from django.utils import timezone
 from django.utils.formats import date_format
 
 from finance import history
-from finance.models import (DEPARTMENTS_ONLY_FROM, ZERO, ClientType, FundBehaviour, FundSource,
-                            HistoryKind, ParsedTransaction, PartitionCode, PlannedPurchase,
-                            TransactionStatus, client_type_for, current_fiscal_year,
-                            finance_settings, fiscal_year_bounds, fiscal_year_for, money,
-                            own_fund_for_account)
+from finance.models import (SGA_FUNDED_FROM, ZERO, FundBehaviour, FundSource, HistoryKind,
+                            NoBillNeeded, ParsedTransaction, PartitionCode, PlannedPurchase,
+                            TransactionStatus, client_of, current_fiscal_year, finance_settings,
+                            fiscal_year_bounds, fiscal_year_for, money, own_fund_for_account)
 
 ONE_DAY = datetime.timedelta(days=1)
 
@@ -144,10 +143,13 @@ class TypicalYear(object):
     the spread, so orientation's billing lands in August and not a twelfth of
     it every month.
 
-    From FY27 LNL bills departments only. A year from before that is scaled to
-    the departments' share for billing and for the gear hired in for shows,
-    when the forecast is for FY27 or later; with no share known those two
-    parts are left out altogether rather than guessed at (see ``dropped``).
+    From FY27 an SGA-funded show is charged only for its rentals and one-off
+    charges. When the forecast is for FY27 or later, a year's billing from
+    before then is scaled to the share the same shows would still be charged
+    (:func:`finance.history.billed_share`). The gear hired in for shows is not
+    scaled: it is still hired, and still billed on. With no share known,
+    billing is left out altogether rather than guessed at, and the hired gear
+    with it, since billing is what pays for it (see ``dropped``).
     """
 
     def __init__(self, flows, categories, target_year, whole_years, share=None,
@@ -168,17 +170,14 @@ class TypicalYear(object):
             if stream is not None:
                 actual[stream][year][flow.day.month] += flow.amount
 
-        for stream in (BILLING, PASSTHROUGH):
-            if stream not in actual:
-                continue
-            for year in self.years:
-                factor = self.factor(year)
-                if factor is None:
-                    self.dropped.add(stream)
-                    break
+        factors = {year: self.factor(year) for year in self.years}
+        if any(factor is None for factor in factors.values()):
+            self.dropped = {stream for stream in (BILLING, PASSTHROUGH) if stream in actual}
+        elif BILLING in actual:
+            for year, factor in factors.items():
                 if factor != 1:
                     self.scaled = True
-                    months = actual[stream][year]
+                    months = actual[BILLING][year]
                     for month in list(months):
                         months[month] = money(months[month] * factor)
         for stream in self.dropped:
@@ -201,10 +200,10 @@ class TypicalYear(object):
     def factor(self, year):
         """
         What a year's billing is multiplied by to stand for a year in which
-        only departments are billed: 1, the share, or ``None`` when it is
-        needed and not known.
+        SGA funds shows: 1, the share, or ``None`` when it is needed and not
+        known.
         """
-        if year >= DEPARTMENTS_ONLY_FROM or self.target_year < DEPARTMENTS_ONLY_FROM:
+        if year >= SGA_FUNDED_FROM or self.target_year < SGA_FUNDED_FROM:
             return Decimal(1)
         if self.share is not None and self.share.known:
             return self.share.share
@@ -683,16 +682,15 @@ def _quote(event):
         return ZERO
 
 
-def _events(forecast, funds, since, horizon, sga, bills):
+def _events(forecast, funds, since, horizon, bills):
     """
     Approved shows still to come that nobody has billed yet.
 
-    A department's show brings in what the events app quotes for it, and the
-    gear hired in for it goes out on the day. From FY27 a student
-    organization's show brings in nothing and its hired gear is a funding
-    request's spending, repaid by SGA. A show whose client is not on file
-    brings in nothing and pays for its gear itself, which is the cautious
-    reading of not knowing.
+    A show brings in what the events app quotes for it, whoever the client:
+    the quote of an SGA-funded show is already only its rentals and one-off
+    charges. The gear hired in for it goes out on the day. A show marked No
+    bill needed, or with no client on file to bill, brings in nothing and pays
+    for its gear itself, which is the cautious reading of not knowing.
     """
     from finance.calculators import _event_queryset, event_billed
 
@@ -704,45 +702,44 @@ def _events(forecast, funds, since, horizon, sga, bills):
                       datetime_start__date__gt=since, datetime_start__date__lte=horizon)
               .order_by('datetime_start'))
     cache = {}
+    not_billed = dict(NoBillNeeded.objects.values_list('event_id', 'reason'))
+    reasons = dict(NoBillNeeded.REASONS)
     for event in events:
         forecast.events_booked += 1
         if event_billed(event, cache)[0] is not None:
             # Billed already: what is owed on it is under "Owed to LNL".
             continue
         day = event.datetime_start.date()
-        kind = client_type_for(event)
         rentals = _rentals(event)
         name = "%s (%s)" % (event.event_name, date_format(day, 'M j'))
         url = reverse('events:detail', args=[event.pk])
         counted = False
-        if kind == ClientType.DEPARTMENT:
+        if event.pk in not_billed or client_of(event) is None:
+            if rentals:
+                items.append(Item(
+                    day, -rentals, OWN, 'events', "Gear hired in: %s" % name,
+                    "Marked No bill needed (%s), so LNL pays for its gear"
+                    % reasons.get(not_billed[event.pk], not_billed[event.pk])
+                    if event.pk in not_billed else
+                    "Nobody on file to bill for this show, so LNL pays for its gear",
+                    url, stream=PASSTHROUGH))
+                counted = True
+        else:
             quote = _quote(event)
             if quote:
                 items.append(Item(
                     day + datetime.timedelta(days=bills.days), quote, OWN, 'events', name,
-                    "A department's show, quoted %s; clients pay %s"
+                    ("SGA-funded, so quoted %s for its rentals and one-off charges; clients "
+                     "pay %s" if getattr(event, 'is_sga_funded', False) else
+                     "Quoted %s in full; clients pay %s")
                     % (_dollars(quote), bills.after("the show")), url,
                     is_revenue_for_shows=True))
                 counted = True
             if rentals:
                 items.append(Item(day, -rentals, OWN, 'events', "Gear hired in: %s" % name,
-                                  "Billed on to the department with the show", url,
+                                  "Billed on to the client with the show", url,
                                   stream=PASSTHROUGH))
                 counted = True
-        elif rentals:
-            counted = True
-            if (kind == ClientType.STUDENT_ORG and fiscal_year_for(day) >= DEPARTMENTS_ONLY_FROM
-                    and funds.repaid is not None):
-                _spend(items, day, rentals, funds.repaid, funds, 'events',
-                       "Gear hired in: %s" % name,
-                       "A student organization's show: not billed, so its hired gear is spent "
-                       "from a funding request", url, None, sga)
-            else:
-                items.append(Item(
-                    day, -rentals, OWN, 'events', "Gear hired in: %s" % name,
-                    "Nobody on file to bill for this show, so LNL pays for its gear" if
-                    kind == ClientType.UNKNOWN else "Hired in for a student organization's show",
-                    url, stream=PASSTHROUGH))
         if counted:
             forecast.events_counted += 1
     return items
@@ -900,7 +897,7 @@ def project(account=None, today=None, without=(), extra=(), ledger=None, books=N
     if 'owed' not in forecast.without:
         dated += _owed(funds, forecast.since, forecast.horizon, sga, bills, today, year)
     if 'events' not in forecast.without:
-        dated += _events(forecast, funds, forecast.since, forecast.horizon, sga, bills)
+        dated += _events(forecast, funds, forecast.since, forecast.horizon, bills)
     dated += _planned(funds, forecast.since, forecast.horizon, categories, sga,
                       saved='planned' not in forecast.without, extra=extra)
     dated.sort(key=lambda item: (item.day, item.component, item.label))
@@ -908,7 +905,7 @@ def project(account=None, today=None, without=(), extra=(), ledger=None, books=N
 
     # -- a typical year -----------------------------------------------------------
     flows = ledger.for_account(code)
-    forecast.share = history.department_share(ledger.flows)
+    forecast.share = history.billed_share(today)
     typical = TypicalYear(flows, categories, fiscal_year_for(today),
                           ledger.whole_years(code, before=fiscal_year_for(today)),
                           share=forecast.share)
@@ -1025,17 +1022,18 @@ def _explain(forecast, typical):
     if typical.dropped and 'typical' not in forecast.without:
         forecast.warnings.append(
             "Billing is left out of the typical year, and so is the gear hired in for shows. "
-            "Until FY27 LNL billed student organizations too, and nothing yet says how much of "
-            "that came from departments: %s. Set the departments' share in Finance "
-            "Configuration, or file FY26's billing against its events, and the forecast will "
+            "From FY27 an SGA-funded show is charged only for its rentals and one-off charges, "
+            "so billing from before then overstates what the same shows bring in now, and "
+            "nothing yet says by how much: %s. Set the share still charged in Finance "
+            "Configuration, or wait for more of FY27's shows to run, and the forecast will "
             "count it. Until then it shows LNL's running costs with only booked shows "
             "bringing anything in." % share.detail)
     elif typical.scaled:
         forecast.notes.append(
-            "Billing before FY27, and the gear hired in for it, count at %s%%: the departments' "
-            "share, %s." % (share.percent,
-                            "as set in Finance Configuration" if share.source == 'set'
-                            else "since %s" % share.detail))
+            "Billing before FY27 counts at %s%%: the share the same shows would still be "
+            "charged today, %s." % (share.percent,
+                                    "as set in Finance Configuration" if share.source == 'set'
+                                    else "since %s" % share.detail))
     if not typical.years and 'typical' not in forecast.without:
         forecast.warnings.append(
             "There is not a whole year of lines on %s yet, so there is no typical year to go "
@@ -1077,7 +1075,7 @@ def back_test(ledger, code, today=None, count=TYPICAL_YEARS, share=None):
     Asked on the same day of the year as today, of every whole year with at
     least two whole years before it. The typical year alone is tested:
     nothing was booked or reserved in the past to add to it. Before FY27 every
-    client was billed, so nothing is scaled; a part the typical year has to
+    show was charged in full, so nothing is scaled; a part the typical year has to
     leave out (see :attr:`TypicalYear.dropped`) is left out of what the year
     did too.
 

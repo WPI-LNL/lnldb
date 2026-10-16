@@ -233,11 +233,13 @@ def org_code_matches(value, code):
 MONTH_CHOICES = tuple(
     (n, datetime.date(2000, n, 1).strftime('%B')) for n in range(1, 13))
 
-#: The first fiscal year LNL billed departments only. Until then it billed
-#: student organizations too, so a year of billing from before it overstates
-#: what the same work brings in now. See
-#: :attr:`FinanceSettings.department_billing_share`.
-DEPARTMENTS_ONLY_FROM = 2027
+#: The first fiscal year SGA funded shows (``Event2019.is_sga_funded``). An
+#: SGA-funded show's client is charged only for its rentals and one-off
+#: charges; any other show is charged in full, whoever the client is. Until
+#: then every show was charged in full, so a year of billing from before it
+#: overstates what the same shows bring in now. See
+#: :attr:`FinanceSettings.still_billed_share`.
+SGA_FUNDED_FROM = 2027
 
 
 class FinanceSettings(models.Model):
@@ -279,13 +281,14 @@ class FinanceSettings(models.Model):
         validators=[MinValueValidator(Decimal('0.00'))], verbose_name="Minimum reserve",
         help_text="The least LNL's own money should ever hold. The forecast marks any month "
                   "projected below it, and \"Can we afford it?\" answers against it.")
-    department_billing_share = models.PositiveSmallIntegerField(
+    still_billed_share = models.PositiveSmallIntegerField(
         null=True, blank=True, validators=[MaxValueValidator(100)],
-        verbose_name="Departments' share of billing before FY27 (%)",
-        help_text="Until FY27 LNL billed student organizations as well as departments, and now "
-                  "it bills departments only. The forecast takes this share of past billing as "
-                  "what departments alone bring in. Leave blank to work it out from billing "
-                  "filed against events; until enough is, the forecast leaves past billing out.")
+        verbose_name="Share of pre-FY27 billing still charged (%)",
+        help_text="From FY27 an SGA-funded show is charged only for its rentals and one-off "
+                  "charges; until then every show was charged in full. The forecast takes this "
+                  "share of past billing as what the same shows would bring in now. Leave blank "
+                  "to work it out from the shows run since FY27 began; until enough have run, "
+                  "the forecast leaves past billing out.")
     digest_client_days = models.PositiveSmallIntegerField(
         default=14, verbose_name="Billing digest: waiting on client after (days)",
         help_text="The weekly billing digest lists a bill the client has not answered this many days "

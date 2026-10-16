@@ -8,7 +8,8 @@ Four layers, tested from the bottom up:
 * **Pricing.** A show's service value, worked out in bulk, has to equal what
   the events app says, ``lnl_services_subtotal``, for every pricing path -- price
   lists, the original discount, the newer discounts and fees, and 2012 events.
-  Shared out across the services, it has to add back up to the cent.
+  Shared out across the services, it has to add back up to the cent. What a
+  show is charged, SGA-funded or not, has to equal ``cost_total``.
 * **The reports.** Student organizations against departments with the
   external wear percentage, and activity term over term and year over year.
 * **The pages.**
@@ -217,6 +218,28 @@ class PricingTests(Catalogue, TestCase):
         work = priced(event)
         self.assertEqual(work.value, Decimal('300.00'))
         self.assertEqual((work.rental_items, work.rental_cost), (2, Decimal('4000.00')))
+
+    def test_what_a_show_is_charged_is_the_events_apps_price(self):
+        """ In full, or, SGA-funded, only its hired gear at cost and its one-off charges. """
+        pricelist = Pricelist.objects.create(name='2027', rental_fee_percentage=Decimal('10'))
+        for sga_funded in (False, True):
+            event = self.book(show('Formal %s' % sga_funded, when(2026, 9, 1),
+                                   pricelist=pricelist, uses_new_discounts=True,
+                                   is_sga_funded=sga_funded), self.l2, self.s2)
+            Rental.objects.create(event=event, name='Truss', cost=Decimal('300.00'), quantity=2)
+            Rental.objects.create(event=event, name='Van', cost=Decimal('150.00'),
+                                  rental_fee_applied=False)
+            EventArbitrary.objects.create(event=event, key_name='Gels', key_value=Decimal('20.00'),
+                                          key_quantity=3)
+            work = priced(event)
+            model = type(event).objects.get(pk=event.pk)
+            self.assertEqual(work.rental_fee, model.rental_fee_total)
+            self.assertEqual(work.full_price, model.cost_total_pre_sga)
+            self.assertEqual(work.charged, model.cost_total)
+            # 700 of services, 60 of one-offs, 750 of gear and 10% of the 600 the fee applies to.
+            self.assertEqual((work.full_price, work.charged),
+                             (Decimal('1570.00'), Decimal('810.00') if sga_funded
+                              else Decimal('1570.00')))
 
 
 class LoadWorkTests(Catalogue, TestCase):
