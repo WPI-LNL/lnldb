@@ -28,6 +28,12 @@
             {% endif %}
         </div>
     {% endif %}
+    {% if bill.isd_differs %}
+        <div class="alert alert-danger">
+            ISD {{ bill.isd_number }} charges {{ bill.isd_amount|money }}, but the bill now comes to
+            {{ bill.amount|money }}. Change the ISD in Workday, then record the new amount.
+        </div>
+    {% endif %}
     {% if has_closed_events %}
         <div class="alert alert-info">
             An event on this bill is closed, so the bill can no longer be changed or marked paid.
@@ -50,6 +56,15 @@
                     <a href="{% url 'finance:multibill-charge-new' bill.pk %}" class="btn btn-xs btn-default">Add a charge</a>
                 {% endif %}
                 <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-xs btn-default">Email client</a>
+                {% if can_change %}
+                    {% if bill.isd_number %}
+                        <a href="{% url 'finance:multibill-isd' bill.pk %}" class="btn btn-xs btn-default">Change ISD</a>
+                    {% elif bill.worktag_charged %}
+                        <a href="{% url 'finance:multibill-isd' bill.pk %}" class="btn btn-xs btn-primary">Record ISD</a>
+                    {% else %}
+                        <a href="{% url 'finance:multibill-worktag' bill.pk %}" class="btn btn-xs btn-default">Enter worktag</a>
+                    {% endif %}
+                {% endif %}
                 {% if not has_closed_events %}
                     {% if bill.date_paid %}
                         <form method="post" action="{% url 'finance:multibill-unpaid' bill.pk %}" style="display:inline;">
@@ -89,6 +104,13 @@
                 </div>
             </div>
             {% if bill.description %}<p>{{ bill.description|linebreaksbr }}</p>{% endif %}
+            {% if bill.worktag_charged or bill.isd_number %}
+                <p>
+                    Charged to {{ bill.worktag_charged|default:"—" }}{% if bill.fund_label %} ({{ bill.fund_label }}){% endif %}{% if bill.isd_number %}
+                    on ISD {{ bill.isd_number }}, {{ bill.isd_amount|money }}, created {{ bill.isd_entered_on|date:"M j, Y" }}{% else %}.
+                    The ISD is not recorded yet{% endif %}.
+                </p>
+            {% endif %}
             {% if bill.paid_note %}<p class="fin-muted">Paid: {{ bill.paid_note }}</p>{% endif %}
             <p class="fin-muted">
                 The invoice is the bill's own summary{% if bill.attach_event_invoices %}, followed by each event's itemized

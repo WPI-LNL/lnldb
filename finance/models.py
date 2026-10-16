@@ -3207,12 +3207,81 @@ class PlannedPurchase(models.Model):
 # reaches them by -- event.billings, event.multibillings -- did not change.
 # ---------------------------------------------------------------------------
 
-class Billing(models.Model):
+#: Workday's number for an Internal Service Delivery: digits, then "-ISD", as
+#: it appears when the ISD is created and again in the export's Operational
+#: Transaction column ("Internal Service Delivery: 25090179-ISD").
+ISD_NUMBER_FORMAT = re.compile(r'^\d+-ISD$')
+
+
+def normalise_isd_number(value):
+    """
+    An ISD number as Workday writes it: "25090179-isd" and "25090179" both
+    become "25090179-ISD". Spaces are dropped. Empty for nothing.
+    """
+    text = re.sub(r'\s+', '', value or '').upper()
+    if text.isdigit():
+        text += '-ISD'
+    return text
+
+
+class ISDRecord(models.Model):
+    """
+    What a bill was charged to in Workday: the worktag and fund, the amount,
+    and the number Workday gave the Internal Service Delivery (ISD), and when
+    it was created. Both kinds of bill carry it, and each also records who
+    recorded the ISD (``isd_entered_by``, declared on each model: the docs
+    build cannot describe a relation on an abstract model, which Django never
+    resolves).
+
+    The worktag can come before the ISD. When a client replies to the bill by
+    email instead of through its form, the Treasurer records the worktag here,
+    and the bill is ready for its ISD. The ISD number is unique across bills,
+    because the payment that arrives later names it and is matched by it.
+    """
+    worktag_charged = models.CharField(
+        max_length=20, blank=True, verbose_name="Worktag",
+        help_text="The worktag the ISD charges, such as 1234-CC.")
+    fund_charged = models.PositiveIntegerField(null=True, blank=True, verbose_name="Fund",
+                                               help_text="The Workday fund the ISD charges, such as 110.")
+    worktag_entered_on = models.DateField(
+        null=True, blank=True, help_text="When the Treasurer recorded the worktag, for a client who sent it "
+                                         "by email rather than through the bill's form.")
+    isd_number = models.CharField(
+        max_length=20, null=True, blank=True, unique=True, verbose_name="ISD number",
+        validators=[RegexValidator(ISD_NUMBER_FORMAT, "Workday's ISD numbers are digits, then -ISD, such as "
+                                                      "25090179-ISD.")],
+        help_text="The number Workday gave the Internal Service Delivery, such as 25090179-ISD.")
+    isd_amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True,
+                                     verbose_name="ISD amount", help_text="What the ISD charges.")
+    isd_entered_on = models.DateField(null=True, blank=True, verbose_name="ISD entered on")
+
+    class Meta:
+        abstract = True
+
+    @property
+    def fund_label(self):
+        """ The fund as Workday writes it ("110-FD"), or ``''``. """
+        return '%s-FD' % self.fund_charged if self.fund_charged else ''
+
+    @property
+    def isd_differs(self):
+        """ Whether the ISD charges something other than what the bill now comes to. """
+        return (self.isd_number is not None and self.isd_amount is not None
+                and money(self.isd_amount) != money(self.amount))
+
+
+class Billing(ISDRecord):
     """ A bill for one event, sent to its client """
     date_billed = models.DateField()
     date_paid = models.DateField(null=True, blank=True)
     event = models.ForeignKey('events.BaseEvent', on_delete=models.CASCADE, related_name="billings")
     amount = models.DecimalField(max_digits=8, decimal_places=2)
+    # Who recorded the ISD. Set by the page that records it, never typed: left
+    # out of forms and the admin, which would otherwise offer every user in a
+    # drop-down.
+    isd_entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                       blank=True, editable=False, related_name='+',
+                                       verbose_name="ISD entered by")
 
     def __str__(self):
         out = "Bill for %s" % self.event.event_name
@@ -3249,7 +3318,7 @@ def _cents_down(value):
     return Decimal(value).quantize(CENTS, rounding=ROUND_DOWN)
 
 
-class MultiBilling(models.Model):
+class MultiBilling(ISDRecord):
     """
     One bill covering several events, sent to one client.
 
@@ -3277,6 +3346,12 @@ class MultiBilling(models.Model):
     events = models.ManyToManyField('events.BaseEvent', related_name='multibillings',
                                     db_table='events_multibilling_events')
     amount = models.DecimalField(max_digits=8, decimal_places=2)
+    # Who recorded the ISD. Set by the page that records it, never typed: left
+    # out of forms and the admin, which would otherwise offer every user in a
+    # drop-down.
+    isd_entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                       blank=True, editable=False, related_name='+',
+                                       verbose_name="ISD entered by")
 
     def __str__(self):
         out = 'MultiBill: %s' % self.display_name
@@ -3439,3 +3514,49 @@ class MultiBillingEmail(models.Model):
 
     class Meta:
         db_table = 'events_multibillingemail'
+
+
+@reversion.register()
+class NoBillNeeded(models.Model):
+    """
+    The Treasurer's decision that an event reviewed for billing will not be
+    billed, and why.
+
+    An SGA-funded show with no rentals or one-off charges comes to $0, so the
+    Billing page suggests this for it, with SGA-funded as the reason. It is
+    only ever made by the Treasurer. Undoing it deletes the record, and the
+    event is ready to bill again.
+    """
+    SGA_FUNDED, NOT_APPLICABLE, LNL_EVENT, OTHER = 'sga-funded', 'not-applicable', 'lnl', 'other'
+    REASONS = (
+        (SGA_FUNDED, "SGA-funded"),
+        (NOT_APPLICABLE, "Billing not applicable"),
+        (LNL_EVENT, "LNL's own event"),
+        (OTHER, "Other"),
+    )
+
+    event = models.OneToOneField('events.BaseEvent', on_delete=models.CASCADE, related_name='no_bill_needed')
+    reason = models.CharField(max_length=16, choices=REASONS)
+    note = models.TextField(blank=True, help_text="Why, in a sentence. Needed when the reason is Other.")
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='+')
+    decided_on = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "No bill needed"
+        verbose_name_plural = "No bill needed"
+        constraints = (
+            models.CheckConstraint(check=~Q(reason='other') | ~Q(note=''),
+                                   name='finance_no_bill_needed_other_has_a_note'),
+        )
+
+    def __str__(self):
+        return 'No bill needed for %s: %s' % (self.event.event_name, self.get_reason_display())
+
+
+def no_bill_needed_for(event):
+    """ An event's *No bill needed* record, or ``None``. """
+    try:
+        return event.no_bill_needed
+    except NoBillNeeded.DoesNotExist:
+        return None

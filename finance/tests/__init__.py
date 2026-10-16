@@ -108,9 +108,9 @@ what they cover rather than alphabetically.
 ``test_billing_page``
     The Billing page and the stages it lists bills by: which stage a bill is
     at and since when, the fiscal-year and partition filters, each tab and what
-    it offers, starting a multi-bill from ticked events, the event page's Next
-    step box, and the menu entries that replaced the events app's billing
-    lists.
+    it offers, recording a worktag and an ISD, deciding an event needs no bill,
+    starting a multi-bill from ticked events, the event page's Next step box,
+    and the menu entries that replaced the events app's billing lists.
 
 **Everything else**
 

@@ -1,0 +1,55 @@
+{# Decide an event reviewed for billing will not be billed, and why. #}
+{% extends 'finance/base_finance.html' %}
+{% load crispy_forms_tags %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back</a></p>
+    <div class="row">
+        <div class="col-md-7">
+            <div class="fin-panel">
+                <div class="fin-panel-head">{{ h2 }}</div>
+                <div class="fin-panel-body">
+                    {% if decided %}
+                        <p class="fin-muted">
+                            Decided{% if decided.decided_by %} by {{ decided.decided_by.get_full_name|default:decided.decided_by.username }}{% endif %}
+                            on {{ decided.decided_on|date:"M j, Y" }}. Change the reason below, or undo it on the Billing
+                            page.
+                        </p>
+                    {% endif %}
+                    <form method="post">
+                        {% csrf_token %}
+                        {% crispy form %}
+                        <div class="text-right">
+                            <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">{% if decided %}Save{% else %}No bill needed{% endif %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="fin-panel">
+                <div class="fin-panel-head">The event</div>
+                <div class="fin-panel-body">
+                    <dl class="fin-kv">
+                        <dt>Event</dt>
+                        <dd><a href="{% url 'events:detail' event.pk %}">{{ event.event_name }}</a></dd>
+                        <dt>Client</dt>
+                        <dd>{{ item.client.retname|default:"—" }}</dd>
+                        <dt>Date</dt>
+                        <dd>{{ item.date|date:"M j, Y" }}</dd>
+                        <dt>Price</dt>
+                        <dd>{{ item.price_now|money }}</dd>
+                        <dt>SGA-funded</dt>
+                        <dd>{% if event.is_sga_funded %}Yes{% else %}No{% endif %}</dd>
+                    </dl>
+                    <p class="fin-muted" style="font-size:13px;margin:8px 0 0;">
+                        The event leaves <em>Ready to bill</em> and waits under <em>No bill needed</em> until you close
+                        it. Undo it there if it should be billed after all.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

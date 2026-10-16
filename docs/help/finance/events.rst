@@ -62,8 +62,9 @@ Column                      What it shows
 ==========================  ===========================================================================================
 Billed                      The event's latest bill. A corrected bill replaces the earlier one rather than adding to
                             it. For a multi-bill, this show's share.
-Received                    Payments filed against the event, and where the bill stands: not billed, billed with
-                            nothing received, part received, received in full, or received with no bill.
+Received                    Payments filed against the event, and where the bill stands: not billed, no bill needed
+                            (you decided it is not billed), billed with nothing received, part received, received
+                            in full, or received with no bill.
 Direct costs                Costs filed against the event. Costs paid from a funding request or the SGA budget are
                             shown as *paid by SGA*. Purchases logged in advance are shown as *reserved*.
 Margin                      What came in, less the costs **LNL paid itself**. Costs SGA pays for, and reserved

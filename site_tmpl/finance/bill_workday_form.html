@@ -1,0 +1,85 @@
+{# Record what a bill is charged to in Workday: the worktag a client sent by email, or the ISD and its number. #}
+{% extends 'finance/base_finance.html' %}
+{% load crispy_forms_tags %}
+{% load finance_extras %}
+
+{% block fin_content %}
+    <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back</a></p>
+    <div class="row">
+        <div class="col-md-7">
+            <div class="fin-panel">
+                <div class="fin-panel-head">{{ h2 }}</div>
+                <div class="fin-panel-body">
+                    {% if isd and bill.isd_number %}
+                        <div class="alert alert-info">
+                            ISD {{ bill.isd_number }} was recorded{% if bill.isd_entered_by %} by
+                            {{ bill.isd_entered_by.get_full_name|default:bill.isd_entered_by.username }}{% endif %}, created
+                            in Workday on {{ bill.isd_entered_on|date:"M j, Y" }}. Change it below, or remove it if it was
+                            entered by mistake or cancelled in Workday.
+                        </div>
+                    {% endif %}
+                    {% if item.worktag_disagrees %}
+                        <div class="alert alert-warning">
+                            The bill has {{ bill.worktag_charged }} recorded, but the client's form says
+                            {{ item.client_worktag.0 }}. Check with the client which one to charge.
+                        </div>
+                    {% endif %}
+                    <form method="post">
+                        {% csrf_token %}
+                        {% crispy form %}
+                        <div class="text-right">
+                            <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+                            {% if isd and bill.isd_number %}
+                                <button type="submit" name="remove-isd" class="btn btn-link text-danger" formnovalidate>Remove the ISD</button>
+                            {% endif %}
+                            <button type="submit" class="btn btn-primary">{% if isd %}Record ISD{% else %}Record worktag{% endif %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="fin-panel">
+                <div class="fin-panel-head">The bill</div>
+                <div class="fin-panel-body">
+                    <dl class="fin-kv">
+                        <dt>Bill</dt>
+                        <dd><a href="{{ item.url }}">{{ item.name }}</a>{% if item.is_multibill %} <span class="fin-tag">Multi-bill</span>{% endif %}</dd>
+                        <dt>Client</dt>
+                        <dd>{{ item.client.retname|default:"—" }}</dd>
+                        <dt>Billed</dt>
+                        <dd>{{ bill.amount|money }} on {{ bill.date_billed|date:"M j, Y" }}</dd>
+                        <dt>Last emailed</dt>
+                        <dd>{{ item.last_emailed|date:"M j, Y"|default:"never" }}</dd>
+                        {% if item.is_multibill %}
+                            <dt>Events</dt>
+                            <dd>{% for event in item.events %}{{ event.event_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</dd>
+                        {% endif %}
+                        {% if isd %}
+                            <dt>Memo</dt>
+                            <dd>{{ item.memo }}</dd>
+                            <dt>Requester</dt>
+                            <dd>{% with person=item.requester %}{% if person %}{{ person.get_full_name|default:person.username }}{% if person.email %} ({{ person.email }}){% endif %}{% else %}—{% endif %}{% endwith %}</dd>
+                        {% endif %}
+                    </dl>
+                    <p style="margin:8px 0 0;"><a href="{{ item.pdf_url }}" target="_blank">Bill PDF</a></p>
+                </div>
+            </div>
+            <div class="fin-panel">
+                <div class="fin-panel-body">
+                    <p class="fin-muted" style="font-size:13px;margin:0;">
+                        {% if isd %}
+                            The ISD number is the one Workday shows when the ISD is created, such as 25090179-ISD. It
+                            is the same number the payment carries in the Workday export. Recording it marks the
+                            bill's events entered into Workday, which stops the client changing the worktag.
+                        {% else %}
+                            For a client who replied with the worktag by email instead of using the bill's form. A
+                            multi-bill has no form, so its worktag is always entered here. The bill is then ready for
+                            its ISD.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

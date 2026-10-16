@@ -1,6 +1,7 @@
 """
 The pages for billing an event: the Billing page, bills and multi-bills, the
-multi-bill invoice, and marking an event entered into Workday.
+multi-bill invoice, recording the worktag and the ISD a bill is charged to,
+and deciding an event needs no bill.
 
 The Billing page lists every bill by the stage it is at (see
 :mod:`finance.billing`) and offers the next thing to do about each. It
@@ -36,14 +37,16 @@ from django.views.generic import CreateView, DeleteView, UpdateView
 from pypdf import PdfWriter
 
 from emails.generators import BillingEmailGenerator, DefaultLNLEmailGenerator as DLEG
-from events.models import BaseEvent, Event2019
-from finance.billing import (CREATE_ISD, READY, STAGE_HELP, STAGES, WORKDAY_ENTERED_COMMENT, billing_items,
-                             by_stage, filter_items, ready_sections)
-from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateForm, MultiBillChargeForm,
-                                   MultiBillForm, MultiBillingEmailForm, MultiBillPaidForm, client_tally)
-from finance.calculators import bill_payments
+from events.models import BaseEvent
+from finance.billing import (CREATE_ISD, NO_BILL_NEEDED, READY, STAGE_HELP, STAGES, WAITING_ON_APPROVAL,
+                             BillItem, billing_items, by_stage, event_item, filter_items, ready_sections)
+from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateForm, BillISDForm, BillWorktagForm,
+                                   MultiBillChargeForm, MultiBillForm, MultiBillingEmailForm, MultiBillPaidForm,
+                                   NoBillNeededForm, bill_events, clear_isd, client_tally)
+from finance.calculators import bill_payments, latest_bill
 from finance.filters import filter_context, get_filter_state
-from finance.models import ZERO, Billing, BillingEmail, MultiBilling, MultiBillingCharge, MultiBillingEmail, money
+from finance.models import (ZERO, Billing, BillingEmail, MultiBilling, MultiBillingCharge, MultiBillingEmail,
+                            NoBillNeeded, money, no_bill_needed_for)
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from helpers.revision import set_revision_comment
 from pdfs.views import generate_event_bill_pdf_standalone, write_weasyprint_pdf
@@ -61,6 +64,11 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
         if self.event.closed:
             messages.add_message(request, messages.ERROR, 'Event is closed.')
             return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)))
+        decided = no_bill_needed_for(self.event)
+        if decided is not None:
+            messages.error(request, "%s is marked No bill needed (%s). Undo that first to bill it."
+                           % (self.event.event_name, decided.get_reason_display()))
+            return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)) + "#billing")
         return super(BillingCreate, self).dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -117,9 +125,18 @@ class BillingUpdate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, UpdateVie
         kwargs['event'] = self.event
         return kwargs
 
+    def get(self, request, *args, **kwargs):
+        response = super(BillingUpdate, self).get(request, *args, **kwargs)
+        if self.object.isd_number:
+            messages.warning(request, isd_warning(self.object))
+        return response
+
     def form_valid(self, form):
         messages.success(self.request, "Billing Updated!", extra_tags='success')
-        return super(BillingUpdate, self).form_valid(form)
+        response = super(BillingUpdate, self).form_valid(form)
+        if self.object.isd_differs:
+            messages.warning(self.request, isd_now_differs(self.object))
+        return response
 
     def get_success_url(self):
         return reverse("events:detail", args=(self.kwargs['event'],)) + "#billing"
@@ -285,33 +302,161 @@ class MultiBillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin,
         return reverse("finance:multibill-detail", args=(self.multibilling.pk,))
 
 
-@require_POST
+# ---------------------------------------------------------------------------
+# What a bill is charged to, and events that need no bill
+#
+# The worktag, when the client sent it by email; then the ISD created in
+# Workday for it, with its number. Both kinds of bill take the same forms. And
+# the Treasurer's decision that an event will not be billed, which can be
+# undone.
+# ---------------------------------------------------------------------------
+
+def isd_warning(bill):
+    """ What to say before a bill with a recorded ISD is changed. """
+    return ("ISD %s was created for $%s. If this changes what the bill comes to, the ISD in Workday will no longer "
+            "match it: change the ISD in Workday too, then record the new amount."
+            % (bill.isd_number, money(bill.isd_amount)))
+
+
+def isd_now_differs(bill):
+    """ What to say once a change has left a bill no longer matching its ISD. """
+    return ("ISD %s charges $%s, but the bill now comes to $%s. Change the ISD in Workday, then record the new "
+            "amount." % (bill.isd_number, money(bill.isd_amount), money(bill.amount)))
+
+
+def _bill_closed(request, bill, events):
+    """ The response refusing to change a bill with a closed event, or ``None``. """
+    if any(event.closed for event in events):
+        messages.error(request, "An event on this bill is closed, so the bill cannot be changed.")
+        return HttpResponseRedirect(_bill_url(bill))
+    return None
+
+
+def _bill_url(bill):
+    if isinstance(bill, MultiBilling):
+        return reverse('finance:multibill-detail', args=(bill.pk,))
+    return reverse('events:detail', args=(bill.event_id,)) + '#billing'
+
+
+def _record_workday(request, bill, form_class):
+    """
+    Record a bill's worktag, or its ISD, with ``form_class``, and go back to
+    the Billing page at the stage the bill has reached.
+
+    A paid bill is past both; so is any bill with a closed event, as for every
+    other change to a bill. On the ISD form, *Remove the ISD* takes a recorded
+    ISD off again.
+    """
+    events = bill_events(bill)
+    refused = _bill_closed(request, bill, events)
+    if refused:
+        return refused
+    if bill.date_paid:
+        messages.error(request, "This bill was paid on %s, so what it was charged to is settled."
+                       % date_format(bill.date_paid, 'M j, Y'))
+        return HttpResponseRedirect(_bill_url(bill))
+    item = BillItem(None, events, bill)
+    name = item.name
+    if request.method == 'POST' and 'remove-isd' in request.POST and bill.isd_number:
+        number = bill.isd_number
+        set_revision_comment("Removed ISD %s from the bill" % number, None)
+        clear_isd(bill, events)
+        messages.success(request, "Removed ISD %s from %s. It is back at Create ISD." % (number, name))
+        return HttpResponseRedirect(_back_to(request, billing_url(CREATE_ISD)))
+    form = form_class(request.POST or None, bill=bill, events=events)
+    if request.method == 'POST' and form.is_valid():
+        if form_class is BillISDForm:
+            set_revision_comment("Recorded ISD %s" % form.cleaned_data['isd_number'], None)
+            form.save(user=request.user)
+            messages.success(request, "Recorded ISD %s for %s. It is waiting on approval."
+                             % (bill.isd_number, name))
+            if bill.isd_differs:
+                messages.warning(request, "The ISD charges $%s, and the bill comes to $%s."
+                                 % (money(bill.isd_amount), money(bill.amount)))
+            return HttpResponseRedirect(_back_to(request, billing_url(WAITING_ON_APPROVAL)))
+        form.save(user=request.user)
+        messages.success(request, "Recorded worktag %s for %s. It is ready for its ISD." % (bill.worktag_charged, name))
+        return HttpResponseRedirect(_back_to(request, billing_url(CREATE_ISD)))
+    isd = form_class is BillISDForm
+    context = _billing_context(
+        request, h2=("Record the ISD for %s" if isd else "Record the worktag for %s") % name, bill=bill,
+        item=item, form=form, isd=isd, cancel_url=_back_to(request, billing_url()))
+    return render(request, 'finance/bill_workday_form.html', context)
+
+
 @login_required
-def mark_entered_into_workday(request, id):
+@permission_required('events.bill_event', raise_exception=True)
+def bill_worktag(request, event, pk):
+    """ Record the worktag a client sent by email for their bill. """
+    return _record_workday(request, get_object_or_404(Billing, pk=pk, event_id=event), BillWorktagForm)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def bill_isd(request, event, pk):
+    """ Record the ISD created in Workday for a bill, or change or remove it. """
+    return _record_workday(request, get_object_or_404(Billing, pk=pk, event_id=event), BillISDForm)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def multibill_worktag(request, pk):
+    """ Record the worktag a multi-bill's client sent back. """
+    return _record_workday(request, get_object_or_404(MultiBilling, pk=pk), BillWorktagForm)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def multibill_isd(request, pk):
+    """ Record the ISD created in Workday for a multi-bill, or change or remove it. """
+    return _record_workday(request, get_object_or_404(MultiBilling, pk=pk), BillISDForm)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def no_bill_needed(request, event):
     """
-    Marks an event as entered into Workday. POST only.
+    Decide that an event reviewed for billing will not be billed, and why, or
+    change the reason. Only for an event with no bill: one that has a bill is
+    being billed.
     """
-    event = get_object_or_404(Event2019, id=id)
-    if not request.user.has_perm('events.bill_event', event):
-        raise PermissionDenied
-    if event.closed:
-        messages.add_message(request, messages.ERROR, 'Event is closed.')
-        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-    if not event.reviewed:
-        messages.add_message(request, messages.ERROR, 'Event has not been reviewed for billing.')
-        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-    if not event.last_bill:
-        messages.add_message(request, messages.ERROR, 'Event has not been billed.')
-        return HttpResponseRedirect(reverse('events:detail', args=(event.id,)))
-    if event.entered_into_workday:
-        messages.info(request, "Event has already been marked entered into Workday.", extra_tags="info")
-    else:
-        event.entered_into_workday = True
-        # The Billing page reads the day this was saved as the day the ISD went in.
-        set_revision_comment(WORKDAY_ENTERED_COMMENT, None)
-        event.save()
-        messages.success(request, "Marked %s as entered into Workday." % event.event_name, extra_tags="success")
-    return HttpResponseRedirect(_back_to(request, billing_url(CREATE_ISD)))
+    event = get_object_or_404(BaseEvent, pk=event)
+    page = reverse('events:detail', args=(event.pk,)) + '#billing'
+    if event.closed or not event.reviewed:
+        messages.error(request, "%s is %s." % (event.event_name,
+                                               'closed' if event.closed else 'not reviewed for billing yet'))
+        return HttpResponseRedirect(page)
+    if latest_bill(event) is not None:
+        messages.error(request, "%s has a bill. Delete the bill first if it should not be billed." % event.event_name)
+        return HttpResponseRedirect(page)
+    decided = no_bill_needed_for(event)
+    item = event_item(event, None, no_bill=decided)
+    form = NoBillNeededForm(request.POST or None, instance=decided or NoBillNeeded(event=event),
+                            suggested=decided is None and item.suggest_no_bill)
+    if request.method == 'POST' and form.is_valid():
+        record = form.save(commit=False)
+        record.decided_by = request.user
+        record.decided_on = timezone.now()
+        record.save()
+        messages.success(request, "%s needs no bill: %s." % (event.event_name, record.get_reason_display()))
+        return HttpResponseRedirect(_back_to(request, billing_url(READY)))
+    context = _billing_context(request, h2="No bill needed for %s" % event.event_name, event=event, item=item,
+                               form=form, decided=decided, cancel_url=_back_to(request, billing_url(READY)))
+    return render(request, 'finance/no_bill_needed_form.html', context)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+@require_POST
+def no_bill_needed_undo(request, event):
+    """ Undo deciding an event needs no bill, so it is ready to bill again. """
+    decided = get_object_or_404(NoBillNeeded.objects.select_related('event'), event_id=event)
+    if decided.event.closed:
+        messages.error(request, "%s is closed." % decided.event.event_name)
+        return HttpResponseRedirect(reverse('events:detail', args=(event,)))
+    decided.delete()
+    messages.success(request, "%s is ready to bill again." % decided.event.event_name)
+    return HttpResponseRedirect(_back_to(request, billing_url(NO_BILL_NEEDED)))
 
 
 # ---------------------------------------------------------------------------
@@ -457,6 +602,8 @@ def multibill_edit(request, pk=None):
         saved = form.save()
         messages.success(request, "%s %s. It comes to %s."
                          % ("Saved" if pk else "Created", saved.display_name, money(saved.amount)))
+        if saved.isd_differs:
+            messages.warning(request, isd_now_differs(saved))
         if 'save-and-email' in request.POST:
             return HttpResponseRedirect(reverse('finance:multibill-email', args=(saved.pk,)))
         return HttpResponseRedirect(reverse('finance:multibill-detail', args=(saved.pk,)))
@@ -485,6 +632,8 @@ def multibill_charge(request, pk, charge_pk=None):
         messages.success(request, "%s %s. %s now comes to %s."
                          % ("Saved" if charge_pk else "Added", saved.description, bill.display_name,
                             money(bill.amount)))
+        if bill.isd_differs:
+            messages.warning(request, isd_now_differs(bill))
         return HttpResponseRedirect(reverse('finance:multibill-detail', args=(bill.pk,)))
     context = _billing_context(
         request, h2="Change a charge" if charge_pk else "Add a charge to %s" % bill.display_name,
@@ -506,6 +655,8 @@ def multibill_charge_delete(request, pk, charge_pk):
     bill.recalculate()
     messages.success(request, "Removed %s. %s now comes to %s."
                      % (charge.description, bill.display_name, money(bill.amount)))
+    if bill.isd_differs:
+        messages.warning(request, isd_now_differs(bill))
     return HttpResponseRedirect(reverse('finance:multibill-detail', args=(bill.pk,)))
 
 
@@ -525,6 +676,8 @@ def multibill_update_total(request, pk):
     if bill.recalculate():
         messages.success(request, "%s now comes to %s; it was %s."
                          % (bill.display_name, money(bill.amount), before))
+        if bill.isd_differs:
+            messages.warning(request, isd_now_differs(bill))
     else:
         messages.info(request, "%s already comes to %s." % (bill.display_name, before))
     return HttpResponseRedirect(reverse('finance:multibill-detail', args=(bill.pk,)))

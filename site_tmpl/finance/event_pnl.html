@@ -101,6 +101,8 @@
                                     {% if row.billed_source == 'multibill' %}
                                         <div class="fin-muted" title="This event's share of one bill covering several events, split by what each would have cost on its own.">share of a multi-bill</div>
                                     {% endif %}
+                                {% elif row.payment_state == 'no_bill_needed' %}
+                                    <span class="fin-muted" title="You decided this event is not billed">no bill needed</span>
                                 {% else %}
                                     <span class="fin-muted">not billed</span>
                                 {% endif %}

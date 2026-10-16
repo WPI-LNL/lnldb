@@ -66,6 +66,10 @@ the saved total, so update it before you send the invoice again.
 Once a bill is paid, nothing about it can change until you mark it unpaid. Once any event on it is closed, it cannot
 be changed at all.
 
+**After its ISD is recorded**, the `Edit` and `Add a charge` pages warn you that changing what the bill comes to leaves
+the ISD in Workday charging the old figure. If you change it anyway, the bill's page says what the ISD charges beside
+what the bill now comes to. Change the ISD in Workday, then record the new amount with `Change ISD`.
+
 
 The Invoice
 -----------
@@ -93,6 +97,18 @@ Click `Email client` on the bill's page or the multi-bills list, at any time. Th
 for you -- the events, the total, and a request to reply with the worktag to charge -- and you can edit them before
 sending. The invoice is attached, named after the bill (such as *fall-films-bill.pdf*). Every email sent is listed on
 the bill's page.
+
+
+The Worktag and the ISD
+-----------------------
+
+A multi-bill has no form for the client, so the worktag always comes back by email. Click `Enter worktag` on the bill's
+page, or on its row on the Billing page, and type it in. The form starts with the worktag on file for the client from
+their last bill, if there is one: confirm it with them.
+
+Then create the ISD in Workday and click `Record ISD` with the number Workday gives it. That marks every event on the
+bill entered into Workday. The bill's page shows the worktag and the ISD once they are recorded. See
+:doc:`billing` for the whole sequence.
 
 
 Mark It Paid

@@ -91,9 +91,10 @@ urlpatterns = [
             name="history-year"),
     re_path(r'^forecast/history/line/(?P<pk>\d+)/$', views.history_line, name="history-line"),
 
-    # Billing an event: the Billing page, bills, multi-bills and the step into
-    # Workday. The client's own worktag form stays in the events app, where the
-    # links in every bill email already sent point.
+    # Billing an event: the Billing page, bills, multi-bills, the worktag and
+    # ISD each is charged to, and events that need no bill. The client's own
+    # worktag form stays in the events app, where the links in every bill email
+    # already sent point.
     re_path(r'^billing/$', views.billing_page, name="billing"),
     re_path(r'^billing/event/(?P<event>\d+)/new/$', views.BillingCreate.as_view(), name="bill-new"),
     re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/edit/$', views.BillingUpdate.as_view(),
@@ -103,8 +104,11 @@ urlpatterns = [
     re_path(r'^billing/event/(?P<event>\d+)/(?P<billing>\d+)/email/$',
             views.BillingEmailCreate.as_view(), name="bill-email"),
     re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/pay/$', views.pay_bill, name="bill-pay"),
-    re_path(r'^billing/event/(?P<id>\d+)/workday-entered/$', views.mark_entered_into_workday,
-            name="workday-entered"),
+    re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/worktag/$', views.bill_worktag, name="bill-worktag"),
+    re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/isd/$', views.bill_isd, name="bill-isd"),
+    re_path(r'^billing/event/(?P<event>\d+)/no-bill-needed/$', views.no_bill_needed, name="no-bill-needed"),
+    re_path(r'^billing/event/(?P<event>\d+)/no-bill-needed/undo/$', views.no_bill_needed_undo,
+            name="no-bill-needed-undo"),
     re_path(r'^billing/multibills/$', views.multibill_list, name="multibill-list"),
     re_path(r'^billing/multibills/new/$', views.multibill_edit, name="multibill-new"),
     re_path(r'^billing/multibills/(?P<pk>\d+)/$', views.multibill_detail, name="multibill-detail"),
@@ -122,6 +126,8 @@ urlpatterns = [
     re_path(r'^billing/multibills/(?P<pk>\d+)/paid/$', views.multibill_mark_paid, name="multibill-paid"),
     re_path(r'^billing/multibills/(?P<pk>\d+)/unpaid/$', views.multibill_mark_unpaid,
             name="multibill-unpaid"),
+    re_path(r'^billing/multibills/(?P<pk>\d+)/worktag/$', views.multibill_worktag, name="multibill-worktag"),
+    re_path(r'^billing/multibills/(?P<pk>\d+)/isd/$', views.multibill_isd, name="multibill-isd"),
     re_path(r'^billing/multibills/(?P<multibilling>\d+)/email/$',
             views.MultiBillingEmailCreate.as_view(), name="multibill-email"),
     re_path(r'^billing/multibills/(?P<multibilling>\d+)/pdf/$', views.generate_multibill_pdf,

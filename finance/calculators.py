@@ -20,7 +20,7 @@ from django.db.models.functions import TruncMonth
 
 from finance.models import (ZERO, ClientType, FundBehaviour, FundingRequest, MultiBilling,
                             ParsedTransaction, books_start_date, client_of, client_type_for,
-                            fiscal_year_bounds, money, service_colors)
+                            fiscal_year_bounds, money, no_bill_needed_for, service_colors)
 
 # ---------------------------------------------------------------------------
 # Palette
@@ -435,6 +435,7 @@ EVENT_FLAGS = OrderedDict((
 #: Where an event's bill stands, as the P&L and the event page say it.
 PAYMENT_STATES = {
     'not_billed': 'Not billed',
+    'no_bill_needed': 'No bill needed',
     'awaiting': 'Billed, nothing received',
     'part': 'Part received',
     'paid': 'Received in full',
@@ -624,7 +625,12 @@ def _event_figures(event, sums, multibill_cache=None, books_start=None, today=No
     bill = latest_bill(event)
     paid_on = getattr(bill, 'date_paid', None)
     if billed is None:
-        state = 'unbilled_income' if received > 0 else 'not_billed'
+        if received > 0:
+            state = 'unbilled_income'
+        else:
+            # The Treasurer decided it is not billed, which is different from
+            # not having got round to it.
+            state = 'no_bill_needed' if no_bill_needed_for(event) is not None else 'not_billed'
     elif received <= 0:
         state = 'awaiting'
     elif received < billed:
@@ -680,7 +686,7 @@ def _event_queryset():
     # it the client type, and its rental fee.
     return (BaseEvent.objects.select_related('billing_org')
             .prefetch_related('org', 'rentals', 'billings', 'multibillings__events',
-                              'multibillings__charges'))
+                              'multibillings__charges', 'no_bill_needed'))
 
 
 def event_financials(event, is_projection=None):

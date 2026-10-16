@@ -10,6 +10,7 @@ in finance and follow :mod:`finance.forms`: their templates write the
 :func:`finance.forms.finance_form_helper`.
 """
 import datetime
+import re
 from collections import Counter
 
 from ajax_select.fields import AutoCompleteSelectField, AutoCompleteSelectMultipleField
@@ -22,10 +23,11 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from events.models import BaseEvent, Organization
+from events.models import BaseEvent, Event2019, Organization
 from finance.forms import finance_form_helper
-from finance.models import (ZERO, Billing, BillingEmail, MultiBilling, MultiBillingCharge, MultiBillingEmail,
-                            default_rental_fee_percent)
+from finance.models import (ISD_NUMBER_FORMAT, ZERO, Billing, BillingEmail, MultiBilling, MultiBillingCharge,
+                            MultiBillingEmail, NoBillNeeded, default_rental_fee_percent, money,
+                            normalise_isd_number)
 
 
 class CustomOrganizationEmailModelMultipleChoiceField(forms.ModelMultipleChoiceField):
@@ -103,15 +105,17 @@ def billable_events(bill=None, include_unmarked=False):
     """
     The events a multi-bill may cover, earliest first.
 
-    Reviewed, still open, with no bill of their own, and on no other
-    multi-bill: an event on two bills would be billed twice. Only events
-    marked to be billed in bulk unless ``include_unmarked``. The events
-    already on ``bill`` are always offered, so editing it can keep them.
+    Reviewed, still open, with no bill of their own, on no other multi-bill
+    (an event on two bills would be billed twice), and not marked *No bill
+    needed*. Only events marked to be billed in bulk unless
+    ``include_unmarked``. The events already on ``bill`` are always offered,
+    so editing it can keep them.
     """
     others = MultiBilling.objects.all()
     if bill is not None and bill.pk:
         others = others.exclude(pk=bill.pk)
-    events = (BaseEvent.objects.filter(closed=False, reviewed=True, billings__isnull=True)
+    events = (BaseEvent.objects.filter(closed=False, reviewed=True, billings__isnull=True,
+                                       no_bill_needed__isnull=True)
               .exclude(multibillings__in=others))
     if not include_unmarked:
         events = events.filter(billed_in_bulk=True)
@@ -307,6 +311,210 @@ class MultiBillPaidForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super(MultiBillPaidForm, self).__init__(*args, **kwargs)
         self.helper = finance_form_helper()
+
+
+# ---------------------------------------------------------------------------
+# What a bill is charged to in Workday
+#
+# The worktag usually comes back through the bill's own form, on the event. A
+# client who replies by email instead -- and every multi-bill's client, since
+# a multi-bill has no form -- has it recorded by the Treasurer. Recording the
+# ISD then takes the worktag, the fund and the amount it charged, and the
+# number Workday gave it.
+# ---------------------------------------------------------------------------
+
+#: A worktag as the client's own form accepts it: "1234-CC", "123-AG".
+WORKTAG_FORMAT = re.compile(r'[0-9]+-[A-Z][A-Z]')
+
+
+def bill_events(bill):
+    """ The events a bill is for, as their own kind (an ``Event2019`` reads its worktag). """
+    if isinstance(bill, MultiBilling):
+        pks = list(bill.events.values_list('pk', flat=True))
+    else:
+        pks = [bill.event_id]
+    return sorted(BaseEvent.objects.filter(pk__in=pks), key=lambda e: (e.datetime_start, e.pk))
+
+
+def worktag_prefill(bill, events):
+    """
+    The worktag and fund to start a bill's form with, and where they came
+    from, as ``(worktag, fund, source)``. What the bill already records comes
+    first; then what the client sent through the bill's form; then what is on
+    file for the client from their last bill, which still has to be confirmed
+    with them.
+    """
+    if bill.worktag_charged:
+        return bill.worktag_charged, bill.fund_charged, "recorded on this bill."
+    if not isinstance(bill, MultiBilling) and events:
+        event = events[0]
+        if getattr(event, 'worktag', None):
+            return event.worktag, getattr(event, 'workday_fund', None), \
+                "sent by the client through the bill's form."
+    client = bill.org if isinstance(bill, MultiBilling) else (events[0].org_to_be_billed if events else None)
+    if client is not None and client.worktag:
+        return client.worktag, client.workday_fund, \
+            "on file for %s from their last bill. Confirm it with them." % client.retname
+    return '', None, ''
+
+
+def _fund_choices():
+    return [('', '---------')] + list(Event2019._meta.get_field('workday_fund').choices)
+
+
+class BillWorktagForm(forms.Form):
+    """
+    The worktag and fund to charge, for a client who replied to the bill by
+    email. Saving it moves the bill to *Create ISD*.
+    """
+    worktag = forms.CharField(max_length=20, help_text="Such as 1234-CC.")
+    fund = forms.TypedChoiceField(coerce=int, choices=(), label="Funding source")
+
+    def __init__(self, *args, bill=None, events=(), **kwargs):
+        super(BillWorktagForm, self).__init__(*args, **kwargs)
+        self.bill = bill
+        self.events = list(events)
+        self.fields['fund'].choices = _fund_choices()
+        worktag, fund, source = worktag_prefill(bill, self.events)
+        if not self.is_bound:
+            self.initial.setdefault('worktag', worktag)
+            self.initial.setdefault('fund', fund)
+        if source:
+            self.fields['worktag'].help_text = "Filled in: %s" % source
+        self.helper = finance_form_helper()
+        self.helper.layout = Layout(*self.layout_fields())
+
+    def layout_fields(self):
+        return ['worktag', 'fund']
+
+    def clean_worktag(self):
+        worktag = re.sub(r'\s+', '', self.cleaned_data['worktag']).upper()
+        if not WORKTAG_FORMAT.match(worktag):
+            raise ValidationError("That is not a worktag. Worktags look like 1234-CC or 123-AG.")
+        return worktag
+
+    def save(self, user=None):
+        bill = self.bill
+        worktag, fund = self.cleaned_data['worktag'], self.cleaned_data['fund']
+        if (bill.worktag_charged, bill.fund_charged) != (worktag, fund) or not bill.worktag_entered_on:
+            bill.worktag_entered_on = datetime.date.today()
+        bill.worktag_charged, bill.fund_charged = worktag, fund
+        bill.save(update_fields=['worktag_charged', 'fund_charged', 'worktag_entered_on'])
+        return bill
+
+
+class BillISDForm(BillWorktagForm):
+    """
+    The Internal Service Delivery created in Workday for a bill: the number
+    Workday gave it, the worktag, fund and amount it charges, and the day.
+
+    Saving it moves the bill to *Waiting on approval*, and marks each of its
+    events entered into Workday, which locks the client's worktag form as it
+    always has once the ISD exists.
+    """
+    amount = forms.DecimalField(max_digits=8, decimal_places=2, label="Amount charged")
+    isd_number = forms.CharField(max_length=20, label="ISD number", help_text="Such as 25090179-ISD.")
+    entered_on = forms.DateField(label="Created in Workday on", widget=forms.DateInput(attrs={'type': 'date'}))
+
+    def __init__(self, *args, **kwargs):
+        super(BillISDForm, self).__init__(*args, **kwargs)
+        bill = self.bill
+        if not self.is_bound:
+            self.initial.setdefault('amount', money(bill.isd_amount if bill.isd_amount is not None else bill.amount))
+            self.initial.setdefault('isd_number', bill.isd_number or '')
+            self.initial.setdefault('entered_on', bill.isd_entered_on or datetime.date.today())
+        if bill.isd_amount is None:
+            self.fields['amount'].help_text = "Filled in: what the client was billed."
+
+    def layout_fields(self):
+        return ['isd_number', 'worktag', 'fund', 'amount', 'entered_on']
+
+    def clean_entered_on(self):
+        entered_on = self.cleaned_data['entered_on']
+        if entered_on > datetime.date.today():
+            raise ValidationError("The ISD cannot have been created after today.")
+        return entered_on
+
+    def clean_isd_number(self):
+        number = normalise_isd_number(self.cleaned_data['isd_number'])
+        if not ISD_NUMBER_FORMAT.match(number):
+            raise ValidationError("Workday's ISD numbers are digits, then -ISD, such as 25090179-ISD.")
+        for model in (Billing, MultiBilling):
+            clash = model.objects.filter(isd_number=number)
+            if isinstance(self.bill, model):
+                clash = clash.exclude(pk=self.bill.pk)
+            clash = clash.first()
+            if clash is not None:
+                raise ValidationError("%s is already recorded on %s." % (
+                    number, clash.display_name if isinstance(clash, MultiBilling)
+                    else 'the bill for %s' % clash.event.event_name))
+        return number
+
+    def save(self, user=None):
+        bill = self.bill
+        bill.worktag_charged, bill.fund_charged = self.cleaned_data['worktag'], self.cleaned_data['fund']
+        bill.isd_number = self.cleaned_data['isd_number']
+        bill.isd_amount = self.cleaned_data['amount']
+        bill.isd_entered_on = self.cleaned_data['entered_on']
+        bill.isd_entered_by = user
+        bill.save(update_fields=['worktag_charged', 'fund_charged', 'isd_number', 'isd_amount', 'isd_entered_on',
+                                 'isd_entered_by'])
+        set_entered_into_workday(self.events, True)
+        return bill
+
+
+def set_entered_into_workday(events, entered):
+    """
+    Tick, or untick, the events app's "entered into Workday" box on each of
+    these events that has one. The client's worktag form stays locked while it
+    is ticked.
+    """
+    for event in events:
+        if hasattr(event, 'entered_into_workday') and event.entered_into_workday != entered:
+            event.entered_into_workday = entered
+            event.save(update_fields=['entered_into_workday'])
+
+
+def clear_isd(bill, events):
+    """
+    Take a recorded ISD off a bill -- one entered by mistake, or cancelled in
+    Workday -- so it is back at *Create ISD*, and unlock its events' worktag
+    form. The worktag stays.
+    """
+    bill.isd_number = None
+    bill.isd_amount = None
+    bill.isd_entered_on = None
+    bill.isd_entered_by = None
+    bill.save(update_fields=['isd_number', 'isd_amount', 'isd_entered_on', 'isd_entered_by'])
+    set_entered_into_workday(events, False)
+
+
+class NoBillNeededForm(forms.ModelForm):
+    """
+    Why an event reviewed for billing is not being billed. Offered with
+    SGA-funded already chosen when the event is marked SGA-funded and comes to
+    $0, and saying so; never saved without the Treasurer.
+    """
+
+    class Meta:
+        model = NoBillNeeded
+        fields = ('reason', 'note')
+        widgets = {'note': forms.Textarea(attrs={'rows': 3}), 'reason': forms.RadioSelect}
+
+    def __init__(self, *args, suggested=False, **kwargs):
+        super(NoBillNeededForm, self).__init__(*args, **kwargs)
+        if suggested and not self.is_bound and not self.instance.pk:
+            self.initial['reason'] = NoBillNeeded.SGA_FUNDED
+            self.fields['reason'].help_text = ("Filled in: the event is marked SGA-funded and has no rentals or "
+                                               "one-off charges, so it comes to $0.")
+        self.helper = finance_form_helper()
+        self.helper.layout = Layout('reason', 'note')
+
+    def clean(self):
+        cleaned = super(NoBillNeededForm, self).clean()
+        if cleaned.get('reason') == NoBillNeeded.OTHER and not (cleaned.get('note') or '').strip():
+            self.add_error('note', "Say why, when the reason is Other.")
+        return cleaned
 
 
 class BillingEmailForm(forms.ModelForm):

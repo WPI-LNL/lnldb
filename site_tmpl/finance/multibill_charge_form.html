@@ -1,9 +1,16 @@
 {# Add one of a multi-bill's own charges, or change one. #}
 {% extends 'finance/base_finance.html' %}
 {% load crispy_forms_tags %}
+{% load finance_extras %}
 
 {% block fin_content %}
     <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back to {{ bill.display_name }}</a></p>
+    {% if bill.isd_number %}
+        <div class="alert alert-warning">
+            ISD {{ bill.isd_number }} was created for {{ bill.isd_amount|money }}. If this changes what the bill comes to,
+            the ISD in Workday will no longer match it: change the ISD in Workday too, then record the new amount.
+        </div>
+    {% endif %}
     <div class="row">
         <div class="col-md-7">
             <div class="fin-panel">

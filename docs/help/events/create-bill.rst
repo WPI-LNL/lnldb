@@ -56,7 +56,9 @@ When the client fills out the payment form from the email, the treasurer's addre
 for you to create the Internal Service Delivery in Workday.
 
 If the client goes back and changes what they sent, you get an `Event Workday Info Updated` email listing exactly what
-changed, old value to new. The form locks once the event is marked as entered into Workday.
+changed, old value to new. The form locks once the ISD is recorded on the finance Billing page.
+
+If the client replies with the worktag by email instead, record it yourself with `Enter worktag` on the Billing page.
 
 The client's form is pre-filled with the funding source and worktag they used last, so a returning client usually only
 has to check it and submit.

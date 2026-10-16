@@ -413,57 +413,6 @@ class BillingViewTests(ViewTestCase):
         self.assertEqual([(name, kind) for name, _, kind in mail.outbox[-1].attachments],
                          [("spring-films-bill.pdf", "application/pdf")])
 
-    def test_entered_into_workday(self):
-        self.setup()
-
-        # GET should not be permitted
-        self.assertOk(self.client.get(reverse("finance:workday-entered", args=[self.e3.pk])), 405)
-
-        # User will need permission
-        self.assertOk(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk])), 403)
-
-        permission = Permission.objects.get(codename="bill_event")
-        self.user.user_permissions.add(permission)
-
-        # Will need view_event permission for redirect
-        permission = Permission.objects.get(codename="view_events")
-        self.user.user_permissions.add(permission)
-
-        # Should redirect to event detail page - Event has not yet been reviewed
-        self.assertRedirects(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk])),
-                             reverse("events:detail", args=[self.e3.pk]))
-
-        self.e3.reviewed = True
-        self.e3.closed = True
-        self.e3.save()
-
-        # Should redirect to event detail page - Event is closed
-        self.assertRedirects(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk])),
-                             reverse("events:detail", args=[self.e3.pk]))
-
-        self.e3.closed = False
-        self.e3.save()
-
-        # Should redirect to event detail page - Event has not been billed
-        self.assertRedirects(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk])),
-                             reverse("events:detail", args=[self.e3.pk]))
-
-        Billing.objects.create(event=self.e3, date_billed=timezone.now().date(), amount=26.33)
-
-        # Should now be able to mark as entered into workday, and land on the Billing page's Create ISD tab
-        create_isd = reverse("finance:billing") + "?stage=create-isd"
-        self.assertRedirects(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk])), create_isd)
-        self.e3.refresh_from_db()
-        self.assertTrue(self.e3.entered_into_workday)
-
-        # Check that we get no errors when trying to mark an event that has already been marked
-        self.assertRedirects(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk])), create_isd)
-
-        # A page that asked goes back to that page instead
-        self.assertRedirects(self.client.post(reverse("finance:workday-entered", args=[self.e3.pk]),
-                                              {'next': reverse("events:detail", args=[self.e3.pk])}),
-                             reverse("events:detail", args=[self.e3.pk]))
-
 
 class MultiBillInvoiceTests(TestCase):
     def setUp(self):

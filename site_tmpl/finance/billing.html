@@ -87,12 +87,25 @@
                             {% for item in ready.alone %}
                                 <tr>
                                     <td><input type="checkbox" name="events" value="{{ item.event.pk }}" aria-label="Add {{ item.name }} to a multi-bill"></td>
-                                    <td><a href="{{ item.url }}">{{ item.name }}</a></td>
+                                    <td>
+                                        <a href="{{ item.url }}">{{ item.name }}</a>
+                                        {% if item.suggest_no_bill %}
+                                            <span class="fin-tag" title="Marked SGA-funded, with no rentals or one-off charges, so it comes to $0">SGA-funded, $0</span>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ item.client.retname|default:"—" }}</td>
                                     <td class="fin-nowrap">{{ item.date|date:"M j, Y" }}</td>
                                     <td class="fin-num">{{ item.price_now|money }}</td>
                                     <td class="fin-num">{{ item.days }}</td>
-                                    <td class="text-right"><a href="{% url 'finance:bill-new' item.event.pk %}" class="btn btn-xs btn-primary">Bill</a></td>
+                                    <td class="text-right fin-nowrap">
+                                        {% if item.suggest_no_bill %}
+                                            <a href="{% url 'finance:no-bill-needed' item.event.pk %}?next={{ here|urlencode }}" class="btn btn-xs btn-primary">No bill needed</a>
+                                            <a href="{% url 'finance:bill-new' item.event.pk %}" class="btn btn-xs btn-link">Bill</a>
+                                        {% else %}
+                                            <a href="{% url 'finance:no-bill-needed' item.event.pk %}?next={{ here|urlencode }}" class="btn btn-xs btn-link">No bill needed</a>
+                                            <a href="{% url 'finance:bill-new' item.event.pk %}" class="btn btn-xs btn-primary">Bill</a>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                             {% endfor %}
                             </tbody>
@@ -135,11 +148,19 @@
                                 {% for item in group.items %}
                                     <tr>
                                         <td><input type="checkbox" name="events" value="{{ item.event.pk }}" aria-label="Add {{ item.name }} to a multi-bill"></td>
-                                        <td><a href="{{ item.url }}">{{ item.name }}</a></td>
+                                        <td>
+                                            <a href="{{ item.url }}">{{ item.name }}</a>
+                                            {% if item.suggest_no_bill %}
+                                                <span class="fin-tag" title="Marked SGA-funded, with no rentals or one-off charges, so it comes to $0">SGA-funded, $0</span>
+                                            {% endif %}
+                                        </td>
                                         <td class="fin-nowrap">{{ item.date|date:"M j, Y" }}</td>
                                         <td class="fin-num">{{ item.price_now|money }}</td>
                                         <td class="fin-num">{{ item.days }}</td>
-                                        <td class="text-right"><a href="{% url 'finance:bill-new' item.event.pk %}" class="btn btn-xs btn-link">Bill on its own</a></td>
+                                        <td class="text-right fin-nowrap">
+                                            <a href="{% url 'finance:no-bill-needed' item.event.pk %}?next={{ here|urlencode }}" class="btn btn-xs {% if item.suggest_no_bill %}btn-primary{% else %}btn-link{% endif %}">No bill needed</a>
+                                            <a href="{% url 'finance:bill-new' item.event.pk %}" class="btn btn-xs btn-link">Bill on its own</a>
+                                        </td>
                                     </tr>
                                 {% endfor %}
                                 </tbody>
@@ -157,6 +178,52 @@
                 </div>
             {% endif %}
         </form>
+
+    {% elif stage == 'no-bill-needed' and rows %}
+        <div class="fin-panel">
+            <div class="fin-table-wrap">
+                <table class="table fin-table">
+                    <thead>
+                    <tr>
+                        <th>Event</th>
+                        <th>Client</th>
+                        <th>Event date</th>
+                        <th>Why</th>
+                        <th>Decided</th>
+                        <th class="fin-num" title="Days since the decision">Days</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in rows %}
+                        <tr>
+                            <td><a href="{{ item.url }}">{{ item.name }}</a></td>
+                            <td>{{ item.client.retname|default:"—" }}</td>
+                            <td class="fin-nowrap">{{ item.date|date:"M j, Y" }}</td>
+                            <td>
+                                {{ item.no_bill.get_reason_display }}
+                                {% if item.no_bill.note %}<br><small class="fin-muted">{{ item.no_bill.note }}</small>{% endif %}
+                            </td>
+                            <td class="fin-nowrap">
+                                {{ item.no_bill.decided_on|date:"M j, Y" }}
+                                {% if item.no_bill.decided_by %}<br><small class="fin-muted">{{ item.no_bill.decided_by.get_full_name|default:item.no_bill.decided_by.username }}</small>{% endif %}
+                            </td>
+                            <td class="fin-num">{{ item.days }}</td>
+                            <td class="text-right fin-nowrap">
+                                <a href="{% url 'finance:no-bill-needed' item.event.pk %}?next={{ here|urlencode }}" class="btn btn-xs btn-link">Change</a>
+                                <form method="post" action="{% url 'finance:no-bill-needed-undo' item.event.pk %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ here }}">
+                                    <button type="submit" class="btn btn-xs btn-default">Undo</button>
+                                </form>
+                                <a href="{{ item.url }}" class="btn btn-xs btn-link">Close it on its page</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
     {% elif rows %}
         <div class="fin-panel">
@@ -176,7 +243,7 @@
                             <th>Billed</th>
                             <th class="fin-num">Amount</th>
                             {% if stage == 'waiting-on-client' %}<th>Last emailed</th>{% endif %}
-                            {% if stage == 'waiting-on-approval' %}<th>Worktag</th>{% endif %}
+                            {% if stage == 'waiting-on-approval' %}<th>ISD</th><th>Worktag</th>{% endif %}
                             {% if stage == 'paid' %}<th>Paid</th>{% endif %}
                         {% endif %}
                         <th class="fin-num" title="Days at this stage">Days</th>
@@ -199,13 +266,16 @@
                                     {{ item.amount|money }}
                                     <button type="button" class="btn btn-xs btn-link fin-copy" data-copy="{{ item.amount }}">Copy</button>
                                     {% if item.price_differs %}
-                                        <br><span class="fin-tag is-warn" title="The bill was made before the event's price changed. The ISD should charge what the client was billed, unless you send a new bill.">Event now {{ item.price_now|money }}</span>
+                                        <br><span class="fin-tag is-warn" title="The bill was made before the price changed. The ISD should charge what the client was billed, unless you send a new bill.">Now {{ item.price_now|money }}</span>
                                     {% endif %}
                                 </td>
                                 <td class="fin-nowrap">
                                     {{ item.worktag }}
                                     <button type="button" class="btn btn-xs btn-link fin-copy" data-copy="{{ item.worktag }}">Copy</button>
-                                    {% if item.event.workday_form_comments %}
+                                    {% if item.worktag_disagrees %}
+                                        <br><span class="fin-tag is-warn" title="You recorded {{ item.bill.worktag_charged }} on the bill; the client's form says {{ item.client_worktag.0 }}">Form says {{ item.client_worktag.0 }}</span>
+                                    {% endif %}
+                                    {% if not item.is_multibill and item.event.workday_form_comments %}
                                         <br><small class="fin-muted" title="What the client wrote with the worktag">&ldquo;{{ item.event.workday_form_comments }}&rdquo;</small>
                                     {% endif %}
                                 </td>
@@ -214,13 +284,15 @@
                                     {% if item.fund %}<button type="button" class="btn btn-xs btn-link fin-copy" data-copy="{{ item.fund }}">Copy</button>{% endif %}
                                 </td>
                                 <td>
-                                    {% if item.event.contact %}
-                                        {{ item.event.contact.get_full_name|default:item.event.contact.username }}
-                                        <button type="button" class="btn btn-xs btn-link fin-copy" data-copy="{{ item.event.contact.get_full_name|default:item.event.contact.username }}">Copy</button>
-                                        {% if item.event.contact.email %}<br><small class="fin-muted">{{ item.event.contact.email }}</small>{% endif %}
-                                    {% else %}
-                                        <span class="fin-muted">No contact on the event</span>
-                                    {% endif %}
+                                    {% with person=item.requester %}
+                                        {% if person %}
+                                            {{ person.get_full_name|default:person.username }}
+                                            <button type="button" class="btn btn-xs btn-link fin-copy" data-copy="{{ person.get_full_name|default:person.username }}">Copy</button>
+                                            {% if person.email %}<br><small class="fin-muted">{{ person.email }}</small>{% endif %}
+                                        {% else %}
+                                            <span class="fin-muted">No contact on file</span>
+                                        {% endif %}
+                                    {% endwith %}
                                 </td>
                                 <td>
                                     {{ item.memo }}
@@ -230,14 +302,24 @@
                                 <td class="fin-nowrap">{{ item.bill.date_billed|date:"M j, Y" }}</td>
                                 <td class="fin-num">
                                     {{ item.amount|money }}
-                                    {% if item.price_differs %}
-                                        <br><span class="fin-tag is-warn" title="An event's price changed after the bill was made.">Now {{ item.price_now|money }}</span>
+                                    {% if item.isd_differs %}
+                                        <br><span class="fin-tag is-alert" title="The ISD was created for a different amount from what the bill now comes to. Change the ISD in Workday, then record the new amount.">ISD {{ item.bill.isd_amount|money }}</span>
+                                    {% elif item.price_differs %}
+                                        <br><span class="fin-tag is-warn" title="A price changed after the bill was made.">Now {{ item.price_now|money }}</span>
                                     {% endif %}
                                 </td>
                                 {% if stage == 'waiting-on-client' %}
                                     <td class="fin-nowrap">{{ item.last_emailed|date:"M j, Y" }}</td>
                                 {% endif %}
                                 {% if stage == 'waiting-on-approval' %}
+                                    <td class="fin-nowrap">
+                                        {% if item.bill.isd_number %}
+                                            {{ item.bill.isd_number }}
+                                            <br><small class="fin-muted">{{ item.bill.isd_entered_on|date:"M j, Y" }}</small>
+                                        {% else %}
+                                            <span class="fin-muted" title="Marked entered into Workday before ISD numbers were recorded">not recorded</span>
+                                        {% endif %}
+                                    </td>
                                     <td class="fin-nowrap">{{ item.worktag|default:"—" }}{% if item.fund %} <small class="fin-muted">{{ item.fund }}</small>{% endif %}</td>
                                 {% endif %}
                                 {% if stage == 'paid' %}
@@ -247,24 +329,40 @@
                             <td class="fin-num" title="{% if item.since %}Since {{ item.since|date:'M j, Y' }}{% endif %}">{{ item.days|default_if_none:"—" }}</td>
                             <td class="text-right fin-nowrap">
                                 {% if stage == 'waiting-on-client' %}
+                                    <a href="{{ item.worktag_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-default" title="The client sent the worktag by email">Enter worktag</a>
                                     {% if item.is_multibill %}
                                         <a href="{% url 'finance:multibill-email' item.bill.pk %}" class="btn btn-xs btn-default">Email again</a>
-                                        <a href="{% url 'finance:multibill-paid' item.bill.pk %}?next={{ here|urlencode }}" class="btn btn-xs btn-default">Mark paid</a>
                                     {% else %}
                                         <a href="{% url 'finance:bill-email' item.event.pk item.bill.pk %}" class="btn btn-xs btn-default">Email again</a>
                                     {% endif %}
                                 {% elif stage == 'create-isd' %}
-                                    <a href="{% url 'events:bills:pdf' item.event.pk %}" class="btn btn-xs btn-link" target="_blank">Bill PDF</a>
-                                    <form method="post" action="{% url 'finance:workday-entered' item.event.pk %}" style="display:inline;">
+                                    {% comment %}
+                                        Recording the ISD takes what this row shows. To charge
+                                        anything else, Change opens the whole form.
+                                    {% endcomment %}
+                                    <form method="post" action="{{ item.isd_url }}" class="form-inline" style="display:inline;">
                                         {% csrf_token %}
                                         <input type="hidden" name="next" value="{{ here }}">
-                                        <button type="submit" class="btn btn-xs btn-primary">Mark entered into Workday</button>
+                                        <input type="hidden" name="worktag" value="{{ item.worktag }}">
+                                        <input type="hidden" name="fund" value="{{ item.fund_number|default_if_none:'' }}">
+                                        <input type="hidden" name="amount" value="{{ item.amount }}">
+                                        <input type="hidden" name="entered_on" value="{% now 'Y-m-d' %}">
+                                        <input type="text" name="isd_number" class="form-control input-sm" placeholder="ISD number" aria-label="ISD number for {{ item.name }}" style="width:130px;" required>
+                                        <button type="submit" class="btn btn-xs btn-primary">Record ISD</button>
                                     </form>
+                                    <br>
+                                    <a href="{{ item.pdf_url }}" class="btn btn-xs btn-link" target="_blank">Bill PDF</a>
+                                    <a href="{{ item.isd_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-link">Change</a>
                                 {% elif stage == 'waiting-on-approval' %}
-                                    <form method="post" action="{% url 'finance:bill-pay' item.event.pk item.bill.pk %}?next={{ here|urlencode }}" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-xs btn-default">Mark paid</button>
-                                    </form>
+                                    <a href="{{ item.isd_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-link">{% if item.bill.isd_number %}Change ISD{% else %}Record ISD{% endif %}</a>
+                                    {% if item.is_multibill %}
+                                        <a href="{% url 'finance:multibill-paid' item.bill.pk %}?next={{ here|urlencode }}" class="btn btn-xs btn-default">Mark paid</a>
+                                    {% else %}
+                                        <form method="post" action="{% url 'finance:bill-pay' item.event.pk item.bill.pk %}?next={{ here|urlencode }}" style="display:inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-xs btn-default">Mark paid</button>
+                                        </form>
+                                    {% endif %}
                                 {% elif stage == 'paid' %}
                                     {% if item.is_multibill %}
                                         {% for event in item.events %}{% if not event.closed %}<a href="{% url 'events:detail' event.pk %}" class="btn btn-xs btn-link">Close {{ event.event_name }}</a>{% endif %}{% endfor %}
@@ -281,9 +379,14 @@
         </div>
         {% if stage == 'create-isd' %}
             <p class="fin-muted" style="font-size:13px;">
-                Create the ISD in Workday with these. The memo is the one the ingestion queue reads the event back out
-                of when the payment arrives. Then mark the event entered into Workday, which also stops the client
-                changing the worktag.
+                Create the ISD in Workday with these. Keep the memo as it is: the ingestion queue reads the event back
+                out of it when the payment arrives. Then type the number Workday gives the ISD and click
+                <em>Record ISD</em>. That also stops the client changing the worktag.
+            </p>
+        {% elif stage == 'waiting-on-client' %}
+            <p class="fin-muted" style="font-size:13px;">
+                If a client replies with the worktag by email instead of using the bill's form, click
+                <em>Enter worktag</em>. A multi-bill has no form, so its worktag is always entered here.
             </p>
         {% endif %}
     {% else %}

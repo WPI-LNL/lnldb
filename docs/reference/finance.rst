@@ -152,9 +152,14 @@ Bill                      What LNL asked a client to pay for one event  ``Billin
 Multi-bill                One bill covering several events              ``MultiBilling``
 Multi-bill charge         A line on a multi-bill other than an event:   ``MultiBillingCharge``
                           a one-off, a rental, or a percentage
-Stage                     Where a bill stands: Ready to bill, Waiting   ``finance.billing``
-                          on client, Create ISD, Waiting on approval,
-                          Paid
+Stage                     Where a bill stands: Ready to bill, No bill   ``finance.billing``
+                          needed, Waiting on client, Create ISD,
+                          Waiting on approval, Paid
+ISD number                The number Workday gives an Internal Service  ``ISDRecord.isd_number``
+                          Delivery: digits, then -ISD. The payment
+                          carries the same number
+No bill needed            The Treasurer's decision that a reviewed      ``NoBillNeeded``
+                          event is not billed, and why
 Fiscal year               July to June, named for the year it ends:     ``fiscal_year_for``
                           FY26 is July 2025 to June 2026
 Minimum reserve           The least LNL's own money should hold         ``FinanceSettings``
@@ -208,13 +213,15 @@ The billing pages are under ``billing/``:
 * ``billing/``: the Billing page, every bill by the stage it is at, one tab per
   stage. It replaced the events app's six billing lists; see *Billing stages*.
 * ``billing/event/<event>/``: creating, editing, deleting, emailing and paying
-  one event's bill, and marking the event entered into Workday. They moved here
-  from the events app with the bills, and still behave as they did there. They
-  are reached from the event's own page and from the Billing page.
+  one event's bill, which moved here from the events app with the bills and
+  still behave as they did there; recording the worktag and the ISD the bill is
+  charged to (``<pk>/worktag/``, ``<pk>/isd/``); and deciding the event needs
+  no bill (``no-bill-needed/``). They are reached from the event's own page and
+  from the Billing page.
 * ``billing/multibills/``: the multi-bill list, which the Billing page links
   to. Each multi-bill has its own page (``billing/multibills/<pk>/``), from
-  which it is edited, given charges of its own, emailed, marked paid or unpaid,
-  and drawn as an invoice; see *Multi-bills*.
+  which it is edited, given charges of its own, emailed, given its worktag and
+  ISD, marked paid or unpaid, and drawn as an invoice; see *Multi-bills*.
 
 They need ``events.bill_event``, which Officers hold, not ``view_subledger``.
 The invoice needs ``events.view_event_billing``. The client's worktag form is
@@ -1506,8 +1513,9 @@ What clients owe
 ~~~~~~~~~~~~~~~~
 
 Each event's figures (see *What each event made or lost*) include where its
-bill stands: not billed, billed with nothing received, part received, received
-in full, or received with no bill in lnldb. The amount still owed is shown
+bill stands: not billed, no bill needed (the Treasurer decided so; see *Billing
+stages*), billed with nothing received, part received, received in full, or
+received with no bill in lnldb. The amount still owed is shown
 with how many days it has been since the bill went out. Two flags check
 lnldb's own *paid* date against the ledger:
 
@@ -1618,7 +1626,8 @@ Billing stages
 ~~~~~~~~~~~~~~
 
 Every bill passes through the same stages: *Ready to bill*, *Waiting on
-client*, *Create ISD*, *Waiting on approval* and *Paid*. The Treasurer's guide
+client*, *Create ISD*, *Waiting on approval* and *Paid*. An event can instead
+leave *Ready to bill* for *No bill needed*. The Treasurer's guide
 is :doc:`/help/finance/billing`. :mod:`finance.billing` decides which stage a
 bill is at, and three places read it: the Billing page, the *Next step* box at
 the top of an event's *Billing* tab, and the *Stage* column of the Owed to LNL
@@ -1626,18 +1635,23 @@ report. One function deciding it is what keeps the three from disagreeing.
 The events app's six billing lists each had their own query, and they did
 disagree: "Pending Payment" really meant "waiting on the worktag".
 
-**Nothing new is stored.** A stage is read off what is already recorded:
+**A stage is read, not stored.** It comes from what the bill and its event
+record:
 
 =====================  ======================================================
 Stage                  Read off
 =====================  ======================================================
 Ready to bill          Reviewed, not closed, and no bill; or a bill with no
                        email sent, shown as *Not sent*
-Waiting on client      An email sent for the bill, and no worktag on the event
-Create ISD             A worktag on the event. Only the client's worktag form
-                       sets it, so it means the client answered. The fund can
-                       be on the event without one, so the fund is not read.
-Waiting on approval    ``entered_into_workday`` on the event
+No bill needed         No bill, and a ``NoBillNeeded`` row for the event
+Waiting on client      An email sent for the bill, and no worktag yet
+Create ISD             A worktag: ``worktag_charged`` on the bill, which the
+                       Treasurer records, or a worktag on the event, which
+                       only the client's form sets. The fund can be on the
+                       event without one, so the fund is not read.
+Waiting on approval    ``isd_number`` on the bill; or, for a bill from before
+                       ISD numbers were kept, ``entered_into_workday`` on the
+                       event
 Paid                   The bill's ``date_paid``
 =====================  ======================================================
 
@@ -1646,18 +1660,69 @@ review the event is the VP's, and closing it is the last step. The bill that
 stands for an event is :func:`~finance.calculators.latest_bill`, the same one
 the event's figures read, so an event billed again after a paid bill is back
 at work. A multi-bill is one row for all its events, listed while any of them
-is open. It has no worktag form and no *entered into Workday* box, so it goes
-from *Waiting on client* to *Paid*.
+is open. It has no form for the client, so it reaches *Create ISD* only when
+the Treasurer records its worktag.
 
-**How long it has been there.** *Days* counts from the review, the bill, the
-last email or the paid date. Two stages have no date of their own, so they are
-read from the event's history (django-reversion): the latest change saved with
-the comment ``Entered Workday billing info`` (the client's worktag form) or
-``Marked entered into Workday``. Both comments are constants in
-:mod:`finance.billing`. Finance's own view writes the second from that
-constant. The events app's ``WorkdayEntry`` writes the first, so rewording it
-there would quietly stop the date being found. An event with no such history
-counts from the bill's last email instead.
+**The ISD record.** Both kinds of bill carry the same fields
+(:class:`~finance.models.ISDRecord`, migration ``0006_isd_record_and_no_bill_needed``):
+the worktag, fund and amount charged, the day the Treasurer recorded a
+worktag sent by email, and the ISD's number, the day it was created in Workday
+and who recorded it. The number is stored as Workday writes it, digits then
+``-ISD`` (:func:`~finance.models.normalise_isd_number` accepts the digits
+alone, and lower case), and is unique: each table has a unique constraint, and
+the form refuses a number already on a bill of the other kind. It is unique
+because the payment that arrives later names the ISD, and is matched by it.
+
+* **The worktag form** (:class:`~finance.billing_forms.BillWorktagForm`)
+  starts with what the bill already records, else what the client sent
+  through the bill's form, else the worktag on file for the client from their
+  last bill. It says which, because the Treasurer confirms every worktag with
+  the client.
+* **Recording the ISD** (:class:`~finance.billing_forms.BillISDForm`) ticks
+  the events app's ``entered_into_workday`` on each event the bill covers, so
+  the client's worktag form stays locked once the ISD exists, as it always
+  has. *Remove the ISD* clears the record and unticks the box, for an ISD
+  entered by mistake or cancelled in Workday. The worktag stays. The Billing
+  page records an ISD from its row by posting the same form, with the row's
+  worktag, fund and amount as hidden fields; *Change* opens the whole form.
+* **The old action is gone.** The events app's "entered into Workday" button
+  ticked the box without a number, and matching a payment to its bill by ISD
+  number needs the number. So the action, its route and the button on the
+  event lists were removed; recording the ISD does the same and keeps it. The box
+  itself is still on the event's edit form, for whoever can bill. A bill
+  ticked there, or before this, waits on approval with *not recorded* in place
+  of a number, and offers *Record ISD*.
+* **A bill that changes after its ISD.** The ISD charges ``isd_amount``. When
+  the bill's total moves away from it -- an event added to a multi-bill, a
+  charge, a corrected amount -- :attr:`~finance.models.ISDRecord.isd_differs`
+  says so, the bill's pages and the Billing page show both figures, and the
+  edit and charge pages warn before the change is made.
+
+**No bill needed** (:class:`~finance.models.NoBillNeeded`) is one row per
+event: the reason (SGA-funded, Billing not applicable, LNL's own event, or
+Other), a note, who decided and when. A database constraint requires a note
+when the reason is Other. Undoing it deletes the row. It is only for an event
+with no bill, and while it stands the event cannot be billed (``BillingCreate``
+refuses) or put on a multi-bill (:func:`~finance.billing_forms.billable_events`
+leaves it out). The event's figures read *No bill needed* instead of *Not
+billed*. It is suggested for an event marked SGA-funded whose price is $0 --
+which, by how ``Event2019.cost_total`` prices an SGA-funded show, means it has
+no rentals or one-off charges -- by tagging its row, making its button the
+main one, and opening the form with *SGA-funded* chosen and a note saying why.
+It is never saved without the Treasurer.
+
+**How long it has been there.** *Days* counts from the day the stage began:
+the review, the bill, the decision, the last email, the worktag recorded on
+the bill, the ISD's creation, or the paid date. A worktag sent through the
+client's form has no date of its own, and neither has a bill marked entered
+into Workday before ISD numbers were kept, so those are read from the event's
+history (django-reversion): the latest change saved with the comment ``Entered
+Workday billing info`` (the client's worktag form) or ``Marked entered into
+Workday`` (the old action). Both comments are constants in
+:mod:`finance.billing`. The events app's ``WorkdayEntry`` writes the first, so
+rewording it there would quietly stop the date being found. An event with no
+such history counts from the bill's last email instead. *Days* never goes
+below zero, and the ISD form refuses a creation date after today.
 
 **Filters.** The fiscal year is the one the bill's first event started in. A
 bill does not stop needing work when the year turns, so each tab also says how
@@ -2384,7 +2449,7 @@ locally::
 Tests
 -----
 
-``python manage.py test finance`` runs 1,476 tests across twenty-seven modules. The
+``python manage.py test finance`` runs 1,498 tests across twenty-seven modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.

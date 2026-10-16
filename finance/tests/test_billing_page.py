@@ -1,11 +1,12 @@
 """
 The Billing page, and the stages it lists bills by (:mod:`finance.billing`).
 
-What stage each bill is at and since when, read off the bill, its emails, the
-event's worktag and its history; the fiscal-year and partition filters; the
-page's tabs and what each offers; starting a multi-bill from ticked events;
-the event page's *Next step* box; and the site menu, where the events app's
-billing lists gave way to the page.
+What stage each bill is at and since when, read off the bill, its emails, its
+recorded worktag and ISD, the event's worktag and its history; the
+fiscal-year and partition filters; the page's tabs and what each offers;
+recording a worktag and an ISD; deciding an event needs no bill; starting a
+multi-bill from ticked events; the event page's *Next step* box; and the
+site menu, where the events app's billing lists gave way to the page.
 """
 import datetime
 from decimal import Decimal
@@ -20,8 +21,11 @@ from reversion.models import Revision
 from data.tests.util import ViewTestCase
 from events.models import BaseEvent, Category, ServiceInstance
 from events.tests.generators import Event2019Factory, OrgFactory, ServiceFactory, UserFactory
+from events.models import EventArbitrary
 from finance import billing
-from finance.models import Billing, BillingEmail, MultiBilling, MultiBillingEmail
+from finance.billing_forms import billable_events
+from finance.calculators import event_financials
+from finance.models import Billing, BillingEmail, MultiBilling, MultiBillingEmail, NoBillNeeded
 
 TODAY = timezone.localdate()
 
@@ -125,10 +129,46 @@ class StageTests(TestCase):
         bill(gala, emailed_days_ago=5)
         self.assertEqual(item(gala).stage, billing.WAITING_ON_CLIENT)
 
-    def test_entered_into_workday_waits_on_approval(self):
+    def test_a_recorded_isd_waits_on_approval_from_the_day_it_was_created(self):
+        gala = show('Gala', worktag='1234-CC')
+        made = bill(gala, emailed_days_ago=5)
+        made.isd_number, made.isd_amount, made.isd_entered_on = '25090179-ISD', made.amount, days_ago(2)
+        made.save()
+        self.assertEqual((item(gala).stage, item(gala).since), (billing.WAITING_ON_APPROVAL, days_ago(2)))
+
+    def test_marked_entered_into_workday_before_isd_numbers_still_waits_on_approval(self):
         gala = show('Gala', worktag='1234-CC', entered_into_workday=True)
         bill(gala, emailed_days_ago=5)
         self.assertEqual(item(gala).stage, billing.WAITING_ON_APPROVAL)
+
+    def test_a_worktag_recorded_on_the_bill_means_create_the_isd(self):
+        gala = show('Gala')
+        made = bill(gala, emailed_days_ago=5)
+        made.worktag_charged, made.fund_charged, made.worktag_entered_on = '1234-CC', 110, days_ago(1)
+        made.save()
+        found = item(gala)
+        self.assertEqual((found.stage, found.since, found.worktag, found.fund),
+                         (billing.CREATE_ISD, days_ago(1), '1234-CC', '110-FD'))
+        self.assertFalse(found.worktag_disagrees)
+        gala.worktag = '9999-GR'
+        gala.save()
+        found = item(gala)
+        self.assertEqual(found.worktag, '1234-CC')  # the one recorded on the bill
+        self.assertTrue(found.worktag_disagrees)
+
+    def test_no_bill_needed_from_the_day_it_was_decided(self):
+        gala = show('Gala')
+        NoBillNeeded.objects.create(event=gala, reason=NoBillNeeded.LNL_EVENT, decided_on=evening(days_ago(3)))
+        found = item(gala)
+        self.assertEqual((found.stage, found.since, found.no_bill.reason),
+                         (billing.NO_BILL_NEEDED, days_ago(3), NoBillNeeded.LNL_EVENT))
+
+    def test_no_bill_needed_is_suggested_for_an_sga_funded_show_at_zero(self):
+        show_ = show('SGA show', is_sga_funded=True)
+        self.assertTrue(item(show_).suggest_no_bill)
+        self.assertFalse(item(show('Paid show')).suggest_no_bill)
+        EventArbitrary.objects.create(event=show_, key_name='Popcorn', key_value=Decimal('50.00'), key_quantity=1)
+        self.assertFalse(item(show_).suggest_no_bill)  # a one-off is charged even to an SGA-funded show
 
     def test_a_paid_bill_is_paid_until_the_event_is_closed(self):
         gala = show('Gala', worktag='1234-CC', entered_into_workday=True)
@@ -160,6 +200,13 @@ class StageTests(TestCase):
                                          sent_at=evening(days_ago(4)))
         self.assertEqual((item(films[0]).stage, item(films[0]).since), (billing.WAITING_ON_CLIENT, days_ago(4)))
 
+        bulk.worktag_charged, bulk.fund_charged, bulk.worktag_entered_on = '1234-CC', 810, days_ago(3)
+        bulk.save()
+        self.assertEqual((item(films[0]).stage, item(films[0]).since), (billing.CREATE_ISD, days_ago(3)))
+        bulk.isd_number, bulk.isd_amount, bulk.isd_entered_on = '25090179-ISD', bulk.amount, days_ago(2)
+        bulk.save()
+        self.assertEqual((item(films[0]).stage, item(films[0]).since), (billing.WAITING_ON_APPROVAL, days_ago(2)))
+
         bulk.date_paid = days_ago(1)
         bulk.save()
         self.assertEqual(item(films[1]).stage, billing.PAID)
@@ -178,6 +225,11 @@ class StageTests(TestCase):
         grant(viewer, 'view_hidden_event', 'view_test_event')
         viewer = type(viewer).objects.get(pk=viewer.pk)
         self.assertEqual(sorted(found.name for found in billing.billing_items(viewer)), ['Rehearsal', 'Secret'])
+
+    def test_a_multibills_requester_is_its_clients_person_in_charge(self):
+        soccomm = OrgFactory.create(name='SocComm')
+        bulk = multibill([show('Film 1', soccomm, contact=UserFactory.create(username='booker'))], soccomm)
+        self.assertEqual(billing.multibill_item(bulk).requester, soccomm.user_in_charge)
 
     def test_price_now_and_whether_the_bill_still_matches(self):
         gala = show('Gala', worktag='1234-CC')
@@ -304,7 +356,7 @@ class BillingPageTests(ViewTestCase):
         self.assertOk(resp)
         self.assertEqual(resp.context['stage'], billing.READY)
         self.assertEqual([(tab['label'], tab['count']) for tab in resp.context['tabs']],
-                         [('Ready to bill', 1), ('Waiting on client', 1), ('Create ISD', 1),
+                         [('Ready to bill', 1), ('No bill needed', 0), ('Waiting on client', 1), ('Create ISD', 1),
                           ('Waiting on approval', 0), ('Paid', 0)])
         self.assertContains(resp, 'Gala')
         self.assertNotContains(resp, 'Ball')
@@ -335,19 +387,28 @@ class BillingPageTests(ViewTestCase):
                     contact=ada, workday_form_comments='Spring budget, please')
         bill(gala, '250.00', emailed_days_ago=5)
         resp = self.client.get(self.url + '?stage=create-isd&fy=all')
+        made = Billing.objects.get(event=gala)
         for text in ('$250.00', 'data-copy="250.00"', '1234-CC', '110-FD', 'Ada Lovelace', 'ada@wpi.edu',
-                     'Lens and Lights services for Gala', 'Spring budget, please', 'Event now $0.00',
-                     reverse('events:bills:pdf', args=[gala.pk]), reverse('finance:workday-entered', args=[gala.pk])):
+                     'Lens and Lights services for Gala', 'Spring budget, please', 'Now $0.00',
+                     reverse('events:bills:pdf', args=[gala.pk]), reverse('finance:bill-isd', args=[gala.pk, made.pk]),
+                     'name="isd_number"', 'name="worktag" value="1234-CC"', 'name="fund" value="110"',
+                     'name="amount" value="250.00"'):
             self.assertContains(resp, text)
 
-    def test_marking_it_entered_into_workday_moves_it_on_from_today(self):
-        gala = show('Gala', worktag='1234-CC')
-        bill(gala, emailed_days_ago=5)
+    def test_recording_the_isd_from_its_row_moves_it_on(self):
+        gala = show('Gala', worktag='1234-CC', workday_fund=110)
+        made = bill(gala, '250.00', emailed_days_ago=5)
         tab = self.url + '?stage=create-isd'
-        self.assertRedirects(self.client.post(reverse('finance:workday-entered', args=[gala.pk]), {'next': tab}),
-                             tab)
+        resp = self.client.post(reverse('finance:bill-isd', args=[gala.pk, made.pk]),
+                                {'next': tab, 'worktag': '1234-CC', 'fund': '110', 'amount': '250.00',
+                                 'entered_on': TODAY.isoformat(), 'isd_number': '25090179-isd'})
+        self.assertRedirects(resp, tab)
+        made.refresh_from_db()
+        self.assertEqual((made.isd_number, made.isd_amount, made.isd_entered_on, made.isd_entered_by),
+                         ('25090179-ISD', Decimal('250.00'), TODAY, self.user))
         found = item(gala)
         self.assertEqual((found.stage, found.since), (billing.WAITING_ON_APPROVAL, TODAY))
+        self.assertTrue(found.event.entered_into_workday)
 
     def test_waiting_on_approval_offers_mark_paid(self):
         gala = show('Gala', worktag='1234-CC', entered_into_workday=True)
@@ -355,6 +416,17 @@ class BillingPageTests(ViewTestCase):
         resp = self.client.get(self.url + '?stage=waiting-on-approval&fy=all')
         self.assertContains(resp, reverse('finance:bill-pay', args=[gala.pk, made.pk]))
         self.assertContains(resp, 'Mark paid')
+        self.assertContains(resp, 'not recorded')
+        self.assertContains(resp, reverse('finance:bill-isd', args=[gala.pk, made.pk]))
+
+    def test_no_bill_needed_tab(self):
+        gala = show('Gala')
+        NoBillNeeded.objects.create(event=gala, reason=NoBillNeeded.OTHER, note='Rehearsal only',
+                                    decided_by=self.user)
+        resp = self.client.get(self.url + '?stage=no-bill-needed&fy=all')
+        self.assertContains(resp, 'Gala')
+        self.assertContains(resp, 'Rehearsal only')
+        self.assertContains(resp, reverse('finance:no-bill-needed-undo', args=[gala.pk]))
 
     def test_a_multibill_waiting_on_the_client(self):
         soccomm = OrgFactory.create(name='SocComm')
@@ -363,7 +435,7 @@ class BillingPageTests(ViewTestCase):
         self.assertContains(resp, 'Fall films')
         self.assertContains(resp, 'Film 1, Film 2')
         self.assertContains(resp, reverse('finance:multibill-email', args=[bulk.pk]))
-        self.assertContains(resp, reverse('finance:multibill-paid', args=[bulk.pk]))
+        self.assertContains(resp, reverse('finance:multibill-worktag', args=[bulk.pk]))
 
     def test_paid_points_to_closing_the_event(self):
         gala = show('Gala')
@@ -411,6 +483,186 @@ class MultiBillFromTickedEventsTests(ViewTestCase):
 
 
 # ---------------------------------------------------------------------------
+# Recording the worktag and the ISD
+# ---------------------------------------------------------------------------
+
+class WorktagAndISDTests(ViewTestCase):
+
+    def setUp(self):
+        super(WorktagAndISDTests, self).setUp()
+        grant(self.user, 'bill_event')
+        self.client_org = OrgFactory.create(name='Admissions', worktag='5555-DE', workday_fund=110)
+        self.gala = show('Gala', self.client_org)
+        self.bill = bill(self.gala, '250.00', emailed_days_ago=4)
+        self.worktag_url = reverse('finance:bill-worktag', args=[self.gala.pk, self.bill.pk])
+        self.isd_url = reverse('finance:bill-isd', args=[self.gala.pk, self.bill.pk])
+
+    def isd(self, number, url=None, **extra):
+        data = {'worktag': '1234-CC', 'fund': '110', 'amount': '250.00', 'entered_on': TODAY.isoformat(),
+                'isd_number': number}
+        data.update(extra)
+        return self.client.post(url or self.isd_url, data)
+
+    def test_needs_the_bill_event_permission(self):
+        self.user.user_permissions.clear()
+        self.assertOk(self.client.get(self.worktag_url), 403)
+        self.assertOk(self.client.get(self.isd_url), 403)
+
+    def test_enter_the_worktag_a_client_sent_by_email(self):
+        resp = self.client.get(self.worktag_url)
+        self.assertEqual((resp.context['form'].initial['worktag'], resp.context['form'].initial['fund']),
+                         ('5555-DE', 110))
+        self.assertContains(resp, 'Filled in: on file for Admissions from their last bill. Confirm it with them.')
+        resp = self.client.post(self.worktag_url, {'worktag': ' 1234-cc ', 'fund': '810'})
+        self.assertRedirects(resp, reverse('finance:billing') + '?stage=create-isd')
+        self.bill.refresh_from_db()
+        self.assertEqual((self.bill.worktag_charged, self.bill.fund_charged, self.bill.worktag_entered_on),
+                         ('1234-CC', 810, TODAY))
+        self.assertEqual(item(self.gala).stage, billing.CREATE_ISD)
+
+    def test_a_worktag_must_look_like_one(self):
+        resp = self.client.post(self.worktag_url, {'worktag': 'spring budget', 'fund': '110'})
+        self.assertFormError(resp.context['form'], 'worktag',
+                             "That is not a worktag. Worktags look like 1234-CC or 123-AG.")
+
+    def test_the_isd_form_starts_with_what_the_client_sent(self):
+        self.gala.worktag, self.gala.workday_fund = '7777-GF', 220
+        self.gala.save()
+        resp = self.client.get(self.isd_url)
+        form = resp.context['form']
+        self.assertEqual((form.initial['worktag'], form.initial['fund'], form.initial['amount'],
+                          form.initial['entered_on']), ('7777-GF', 220, Decimal('250.00'), TODAY))
+        self.assertContains(resp, "Filled in: sent by the client through the bill's form.")
+        self.assertContains(resp, 'Lens and Lights services for Gala')
+
+    def test_recording_the_isd_locks_the_clients_form(self):
+        self.isd('25090179-ISD')
+        self.bill.refresh_from_db()
+        self.assertEqual((self.bill.isd_number, self.bill.worktag_charged), ('25090179-ISD', '1234-CC'))
+        self.assertTrue(BaseEvent.objects.get(pk=self.gala.pk).entered_into_workday)
+
+    def test_isd_numbers_are_workdays_and_unique(self):
+        for typed, stored in (('25090179', '25090179-ISD'), (' 25090180-isd', '25090180-ISD')):
+            self.isd(typed)
+            self.bill.refresh_from_db()
+            self.assertEqual(self.bill.isd_number, stored)
+        resp = self.isd('ISD-25090179')
+        self.assertFormError(resp.context['form'], 'isd_number',
+                             "Workday's ISD numbers are digits, then -ISD, such as 25090179-ISD.")
+        resp = self.isd('25090181-ISD', entered_on=(TODAY + datetime.timedelta(days=1)).isoformat())
+        self.assertFormError(resp.context['form'], 'entered_on', "The ISD cannot have been created after today.")
+        soccomm = OrgFactory.create(name='SocComm')
+        bulk = multibill([show('Film', soccomm)], soccomm, emailed_days_ago=1)
+        resp = self.isd('25090180-ISD', url=reverse('finance:multibill-isd', args=[bulk.pk]))
+        self.assertFormError(resp.context['form'], 'isd_number',
+                             '25090180-ISD is already recorded on the bill for Gala.')
+
+    def test_a_multibill_has_its_worktag_entered_and_its_isd_recorded(self):
+        soccomm = OrgFactory.create(name='SocComm', worktag='4242-CC', workday_fund=810)
+        films = [show('Film %s' % n, soccomm) for n in (1, 2)]
+        bulk = multibill(films, soccomm, emailed_days_ago=2)
+        resp = self.client.get(reverse('finance:multibill-worktag', args=[bulk.pk]))
+        self.assertEqual(resp.context['form'].initial['worktag'], '4242-CC')
+        self.client.post(reverse('finance:multibill-worktag', args=[bulk.pk]), {'worktag': '4242-CC', 'fund': '810'})
+        self.assertEqual(item(films[0]).stage, billing.CREATE_ISD)
+        self.isd('25090200-ISD', url=reverse('finance:multibill-isd', args=[bulk.pk]), worktag='4242-CC',
+                 fund='810', amount='300.00')
+        self.assertEqual(item(films[0]).stage, billing.WAITING_ON_APPROVAL)
+        self.assertTrue(all(BaseEvent.objects.get(pk=film.pk).entered_into_workday for film in films))
+
+    def test_remove_a_mistaken_isd(self):
+        self.isd('25090179-ISD')
+        resp = self.client.post(self.isd_url, {'remove-isd': '1'})
+        self.assertRedirects(resp, reverse('finance:billing') + '?stage=create-isd')
+        self.bill.refresh_from_db()
+        self.assertEqual((self.bill.isd_number, self.bill.isd_entered_by, self.bill.worktag_charged),
+                         (None, None, '1234-CC'))
+        self.assertFalse(BaseEvent.objects.get(pk=self.gala.pk).entered_into_workday)
+        self.assertEqual(item(self.gala).stage, billing.CREATE_ISD)
+
+    def test_not_once_paid_or_closed(self):
+        self.bill.date_paid = TODAY
+        self.bill.save()
+        self.assertRedirects(self.client.get(self.isd_url), reverse('events:detail', args=[self.gala.pk]) + '#billing',
+                             fetch_redirect_response=False)
+        self.bill.date_paid = None
+        self.bill.save()
+        BaseEvent.objects.filter(pk=self.gala.pk).update(closed=True)
+        self.isd('25090179-ISD')
+        self.bill.refresh_from_db()
+        self.assertIsNone(self.bill.isd_number)
+
+    def test_changing_a_multibill_after_its_isd_warns(self):
+        soccomm = OrgFactory.create(name='SocComm')
+        bulk = multibill([show('Film', soccomm)], soccomm, emailed_days_ago=2)
+        bulk.recalculate()
+        self.isd('25090300-ISD', url=reverse('finance:multibill-isd', args=[bulk.pk]), amount=str(bulk.amount))
+        self.assertContains(self.client.get(reverse('finance:multibill-edit', args=[bulk.pk])),
+                            'ISD 25090300-ISD was created for $0.00.')
+        resp = self.client.post(reverse('finance:multibill-charge-new', args=[bulk.pk]),
+                                {'kind': 'oneoff', 'description': 'Popcorn', 'quantity': '1', 'unit_price': '40.00'},
+                                follow=True)
+        self.assertContains(resp, 'ISD 25090300-ISD charges $0.00, but the bill now comes to $40.00.')
+        bulk.refresh_from_db()
+        self.assertTrue(bulk.isd_differs)
+
+
+# ---------------------------------------------------------------------------
+# No bill needed
+# ---------------------------------------------------------------------------
+
+class NoBillNeededTests(ViewTestCase):
+
+    def setUp(self):
+        super(NoBillNeededTests, self).setUp()
+        grant(self.user, 'bill_event', 'view_events')
+        self.gala = show('Gala')
+        self.url = reverse('finance:no-bill-needed', args=[self.gala.pk])
+
+    def test_decide_it_then_undo_it(self):
+        resp = self.client.get(self.url)
+        self.assertFalse(resp.context['form'].initial.get('reason'))
+        resp = self.client.post(self.url, {'reason': NoBillNeeded.NOT_APPLICABLE, 'note': ''})
+        self.assertRedirects(resp, reverse('finance:billing') + '?stage=ready')
+        decided = NoBillNeeded.objects.get(event=self.gala)
+        self.assertEqual((decided.reason, decided.decided_by), (NoBillNeeded.NOT_APPLICABLE, self.user))
+        self.assertEqual(item(self.gala).stage, billing.NO_BILL_NEEDED)
+        self.client.post(reverse('finance:no-bill-needed-undo', args=[self.gala.pk]))
+        self.assertFalse(NoBillNeeded.objects.exists())
+        self.assertEqual(item(self.gala).stage, billing.READY)
+
+    def test_suggested_for_an_sga_funded_show_at_zero(self):
+        sga = show('SGA show', is_sga_funded=True)
+        resp = self.client.get(reverse('finance:no-bill-needed', args=[sga.pk]))
+        self.assertEqual(resp.context['form'].initial['reason'], NoBillNeeded.SGA_FUNDED)
+        self.assertContains(resp, 'Filled in: the event is marked SGA-funded')
+        self.assertFalse(NoBillNeeded.objects.exists())  # only ever saved by the Treasurer
+
+    def test_other_needs_a_note(self):
+        resp = self.client.post(self.url, {'reason': NoBillNeeded.OTHER, 'note': ' '})
+        self.assertFormError(resp.context['form'], 'note', "Say why, when the reason is Other.")
+
+    def test_only_for_an_event_with_no_bill(self):
+        bill(self.gala)
+        self.client.post(self.url, {'reason': NoBillNeeded.LNL_EVENT})
+        self.assertFalse(NoBillNeeded.objects.exists())
+
+    def test_it_cannot_be_billed_until_undone(self):
+        NoBillNeeded.objects.create(event=self.gala, reason=NoBillNeeded.LNL_EVENT)
+        resp = self.client.get(reverse('finance:bill-new', args=[self.gala.pk]))
+        self.assertRedirects(resp, reverse('events:detail', args=[self.gala.pk]) + '#billing',
+                             fetch_redirect_response=False)
+        self.gala.billed_in_bulk = True
+        self.gala.save()
+        self.assertNotIn(self.gala, billable_events(include_unmarked=True))
+
+    def test_the_events_figures_say_so(self):
+        self.assertEqual(event_financials(self.gala)['payment_state_label'], 'Not billed')
+        NoBillNeeded.objects.create(event=self.gala, reason=NoBillNeeded.LNL_EVENT)
+        self.assertEqual(event_financials(self.gala)['payment_state_label'], 'No bill needed')
+
+
+# ---------------------------------------------------------------------------
 # The event page's Next step box, and the menu
 # ---------------------------------------------------------------------------
 
@@ -437,16 +689,31 @@ class NextStepBoxTests(ViewTestCase):
         film = show('Film', billed_in_bulk=True)
         self.assertContains(self.page(film), '%s?events=%s' % (reverse('finance:multibill-new'), film.pk))
 
-    def test_create_isd_marks_it_entered_and_comes_back(self):
+    def test_create_isd_records_the_isd_and_comes_back(self):
         gala = show('Gala', worktag='1234-CC', workday_fund=110)
-        bill(gala, '250.00', emailed_days_ago=3)
+        made = bill(gala, '250.00', emailed_days_ago=3)
         resp = self.page(gala)
         self.assertContains(resp, 'The client sent the worktag 1234-CC (110-FD).')
-        self.assertContains(resp, reverse('finance:workday-entered', args=[gala.pk]))
+        isd = reverse('finance:bill-isd', args=[gala.pk, made.pk])
+        self.assertContains(resp, isd)
         here = reverse('events:detail', args=[gala.pk])
-        self.assertRedirects(self.client.post(reverse('finance:workday-entered', args=[gala.pk]),
-                                              {'next': here + '#billing'}), here + '#billing')
-        self.assertContains(self.page(gala), 'Next step: Waiting on approval.')
+        self.assertRedirects(self.client.post(isd, {'next': here + '#billing', 'worktag': '1234-CC', 'fund': '110',
+                                                    'amount': '250.00', 'entered_on': TODAY.isoformat(),
+                                                    'isd_number': '25090179'}),
+                             here + '#billing')
+        resp = self.page(gala)
+        self.assertContains(resp, 'Next step: Waiting on approval.')
+        self.assertContains(resp, 'ISD 25090179-ISD is in Workday')
+
+    def test_offers_no_bill_needed_and_its_undo(self):
+        gala = show('Gala', is_sga_funded=True)
+        resp = self.page(gala)
+        self.assertContains(resp, 'It is marked SGA-funded and comes to $0, so it may need no bill.')
+        self.assertContains(resp, reverse('finance:no-bill-needed', args=[gala.pk]))
+        NoBillNeeded.objects.create(event=gala, reason=NoBillNeeded.SGA_FUNDED)
+        resp = self.page(gala)
+        self.assertContains(resp, 'Not being billed: SGA-funded.')
+        self.assertContains(resp, reverse('finance:no-bill-needed-undo', args=[gala.pk]))
 
     def test_a_multibilled_event_points_to_its_bill(self):
         film = show('Film')
