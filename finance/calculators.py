@@ -544,6 +544,18 @@ def payer_of(event):
     return client_of(event)
 
 
+def received_by_event(event_ids):
+    """
+    ``{event pk: (received, last_day)}`` of the payments filed against each of
+    these events, in one query. ``last_day`` is when the last of the money
+    reached Workday. An event with nothing filed is left out.
+    """
+    rows = (ParsedTransaction.objects.revenue()
+            .filter(linked_event_id__in=list(event_ids), parent_transaction__isnull=False)
+            .values('linked_event').annotate(received=Sum('amount'), last=Max('effective_date')))
+    return {row['linked_event']: (money(row['received']), row['last']) for row in rows}
+
+
 def bill_payments(bill):
     """
     ``(received, last_day)`` of the payments filed against what a bill covers.
@@ -556,10 +568,20 @@ def bill_payments(bill):
         shows = [event.pk for event in bill.events.all()]
     else:
         shows = [bill.event_id]
-    payments = ParsedTransaction.objects.revenue().filter(
-        linked_event_id__in=shows, parent_transaction__isnull=False)
-    sums = payments.aggregate(received=Sum('amount'), last=Max('effective_date'))
-    return money(sums['received']), sums['last']
+    filed = received_by_event(shows).values()
+    days = [last for _, last in filed if last is not None]
+    return sum((received for received, _ in filed), ZERO), (max(days) if days else None)
+
+
+def days_owed(bill, owed, today=None):
+    """
+    How many days ``bill`` has been owed: from the day it was billed to
+    ``today``, or ``None`` when nothing (``owed``) is owed on it. The Owed to
+    LNL report and the Billing page both count it this way, so they agree.
+    """
+    if owed <= 0 or bill is None or not bill.date_billed:
+        return None
+    return ((today or datetime.date.today()) - bill.date_billed).days
 
 
 def _event_figures(event, sums, multibill_cache=None, books_start=None, today=None):
@@ -643,9 +665,6 @@ def _event_figures(event, sums, multibill_cache=None, books_start=None, today=No
     if paid_on is not None and received <= 0 and billed and in_books:
         flags.append('paid_not_received')
     owed = billed - received if billed is not None and billed > received else ZERO
-    today = today or datetime.date.today()
-    days_owed = ((today - bill.date_billed).days
-                 if owed > 0 and bill is not None and bill.date_billed else None)
 
     return {
         'event': event,
@@ -672,7 +691,7 @@ def _event_figures(event, sums, multibill_cache=None, books_start=None, today=No
         'payment_state': state,
         'payment_state_label': PAYMENT_STATES[state],
         'owed': owed,
-        'days_owed': days_owed,
+        'days_owed': days_owed(bill, owed, today),
         'can_mark_paid': 'not_marked_paid' in flags,
     }
 

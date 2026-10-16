@@ -32,12 +32,20 @@
                 {% if item.bill.isd_number %}ISD {{ item.bill.isd_number }} is{% else %}The ISD is{% endif %} in Workday,
                 waiting for the client to approve it and the money to arrive.
             {% elif item.stage == 'paid' %}
-                Paid {{ item.bill.date_paid|date:"M j, Y" }}. Close the event when nothing else is left to do on it.
+                Paid {{ item.bill.date_paid|date:"M j, Y" }}{% if item.bill.paid_note %} ({{ item.bill.paid_note }}){% endif %}. Close the event when nothing else is left to do on it.
             {% endif %}
         </p>
+        {% if item.covered %}
+            <p>The payments filed against it cover the bill, the last on {{ item.last_payment|date:"M j, Y" }}. Mark it paid.</p>
+        {% elif item.received %}
+            <p>{{ item.received|money }} of the {{ item.amount|money }} billed has been filed so far.</p>
+        {% endif %}
         <div style="margin-top:8px;">
+            {% if item.covered %}
+                <a href="{{ item.paid_url }}?next={{ request.get_full_path|urlencode }}%23billing" class="btn btn-sm btn-primary">Mark paid…</a>
+            {% endif %}
             {% if item.is_multibill %}
-                <a href="{{ item.url }}" class="btn btn-sm btn-primary">Open the multi-bill</a>
+                <a href="{{ item.url }}" class="btn btn-sm {% if item.covered %}btn-default{% else %}btn-primary{% endif %}">Open the multi-bill</a>
             {% elif item.stage == 'ready' %}
                 {% if item.not_sent %}
                     <a href="{% url 'finance:bill-email' event.pk item.bill.pk %}" class="btn btn-sm btn-primary">Email the client</a>
@@ -68,11 +76,16 @@
                 <a href="{{ item.isd_url }}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-primary">Record ISD</a>
                 <a href="{% url 'finance:billing' %}?stage=create-isd" class="btn btn-sm btn-default">What to enter in Workday</a>
             {% elif item.stage == 'waiting-on-approval' %}
-                <form method="post" action="{% url 'finance:bill-pay' event.pk item.bill.pk %}" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-default">Mark paid</button>
-                </form>
+                {% if not item.covered %}
+                    <a href="{{ item.paid_url }}?next={{ request.get_full_path|urlencode }}%23billing" class="btn btn-sm btn-default" title="Paid by cash or check, or before the books start: give the day and how">Mark paid…</a>
+                {% endif %}
                 <a href="{{ item.isd_url }}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-link">{% if item.bill.isd_number %}Change ISD{% else %}Record ISD{% endif %}</a>
+            {% elif item.stage == 'paid' %}
+                <form method="post" action="{% url 'finance:bill-unpaid' event.pk item.bill.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}#billing">
+                    <button type="submit" class="btn btn-sm btn-link">Mark unpaid</button>
+                </form>
             {% endif %}
             <a href="{% url 'finance:billing' %}?stage={{ item.stage }}" class="btn btn-sm btn-link">Billing page</a>
         </div>

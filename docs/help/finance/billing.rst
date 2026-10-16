@@ -4,7 +4,7 @@ The Billing Page (Treasurer)
 
 Every event LNL bills goes through the same steps: you bill the client, the client sends the worktag to charge, you
 create the Internal Service Delivery (ISD) in Workday and record its number, the client approves it and the money
-arrives, and you close the event. The Billing page lists every bill at the step it is waiting on, longest-waiting
+arrives, you mark the bill paid, and you close the event. The Billing page lists every bill at the step it is waiting on, longest-waiting
 first, with a button for what comes next.
 
 .. caution::
@@ -35,8 +35,9 @@ Waiting on client      The bill has been emailed, and no worktag has come back. 
 Create ISD             The client sent the worktag.                                  Create the ISD in Workday, then
                                                                                      type its number and click
                                                                                      `Record ISD`.
-Waiting on approval    The ISD is in Workday, waiting for the client to approve it   `Mark paid` when the money
-                       and the money to arrive.                                      arrives.
+Waiting on approval    The ISD is in Workday, waiting for the client to approve it   File the payment when it
+                       and the money to arrive.                                      arrives, which marks the bill
+                                                                                     paid; or `Mark paid...`.
 Paid                   The bill is paid, and the event is still open.                Close the event from its page.
 =====================  ============================================================  ===============================
 
@@ -53,6 +54,11 @@ Events appear only once they are reviewed for billing, and leave once they are c
 
 When the client sends the worktag through the bill's form, the day comes from the event's history. An event with no
 record there, such as one changed outside the site, counts from the day the bill was last emailed.
+
+**Owed**, on the *Waiting on client*, *Create ISD* and *Waiting on approval* tabs, is what is still owed on the bill and
+for how many days since it was billed. These are the same figures as the *Owed to LNL* report (see :doc:`reports`). A
+bill whose payments have all been filed shows *Received in full*, with `Mark paid...`. A bill for an event from before
+the books start shows a dash, because its payments were never imported.
 
 **Fiscal year.** The fiscal year in the top bar shows only events that started in that year. Each tab says how many
 more are in other years, because a show in June is often billed in July. Click the link to see them.
@@ -134,7 +140,8 @@ An ISD number can be recorded only once. The page refuses one that is already on
 Waiting on Approval
 -------------------
 
-Each row shows the ISD's number and the day it was created. Click `Mark paid` when the money arrives.
+Each row shows the ISD's number and the day it was created. When the money arrives, file it in the finance queue: see
+*When the Money Arrives* below.
 
 `Change ISD` opens the form again. Use it to correct a number, or click `Remove the ISD` there if it was entered by
 mistake or cancelled in Workday: the bill goes back to *Create ISD*, and the client's form opens again.
@@ -147,20 +154,45 @@ recorded warns you first that the ISD will no longer match. Afterwards the bill 
 the bill now comes to. Change the ISD in Workday, then record the new amount with `Change ISD`.
 
 
+When the Money Arrives
+----------------------
+
+The payment comes in a Workday export, and you file it in the finance queue (see :doc:`import-and-file`).
+
+- **The queue finds the bill by its ISD number.** The payment names the ISD it pays, such as *Internal Service
+  Delivery: 25090179-ISD*. When that number is recorded on a bill, the queue fills in the event, with the caption *ISD
+  number recorded on the bill*. For a multi-bill, it offers to split the payment across the bill's events instead. A
+  bill with no ISD number recorded is still found by the event the memo names.
+- **Mark the bill paid as you file.** When the payment covers the bill, the row has a ticked box, *Mark bill paid on*
+  the day the money arrived. Click `Allocate`, and the bill is marked paid on that day. Untick the box to leave it
+  unpaid. If you choose the event yourself and the payment covers its bill, the row says so once it is filed: mark it
+  paid from the Billing page. A multi-bill's split page has the same box.
+
+**Mark paid...** is for everything else: a check or cash, a bill from before the books start, or a payment filed with
+the box unticked. It is on the Billing page, the event's page and the multi-bill's page. It asks for the day the bill was
+paid. That starts as the day the last payment arrived when the payments filed cover the bill, and as today when they
+don't. When they don't, it also asks how the bill was paid, such as *check from the department*. The *Paid* tab shows
+what you wrote.
+
+`Mark unpaid`, in the event's *Next step* box or on the multi-bill's page, undoes it. Editing a bill does not change
+whether it is paid.
+
+
 Multi-bills
 -----------
 
 A multi-bill is one row, under its name, with its events listed underneath. It goes through the same stages as a bill
-for one event: enter the worktag the client sends back, record the ISD, then mark it paid. Its page has the same
-buttons.
+for one event: enter the worktag the client sends back, record the ISD, then split its payment across its events,
+which marks it paid. Its page has the same buttons.
 
 
 The Event Page
 --------------
 
 The top of an event's `Billing` tab shows a **Next step** box once the event is reviewed. It says which stage the bill
-is at and gives the button for the next step, such as `Create bill`, `No bill needed`, `Enter worktag` or `Record ISD`.
-The box reads the same stages as the Billing page.
+is at and gives the button for the next step, such as `Create bill`, `No bill needed`, `Enter worktag`, `Record ISD` or
+`Mark paid...`. It also says how much has been filed against the bill so far. The box reads the same stages and figures
+as the Billing page.
 
 
 Where the Old Pages Went
@@ -182,11 +214,12 @@ MultiBills                             Billing > `All multi-bills`
 =====================================  =================================================
 
 *Events Pending Review* is still in the `Events` menu. The `Mark Entered Into Workday` button the event lists had is
-gone: recording the ISD does the same, and keeps its number.
+gone: recording the ISD does the same, and keeps its number. The `Mark Paid` buttons on the event lists and the event's
+bills open the *Mark paid* form, instead of marking the bill paid today.
 
 .. seealso::
     - :doc:`/help/events/create-bill` for making and emailing one event's bill.
     - :doc:`multibills` for billing several events at once.
     - :doc:`reports` for the *Owed to LNL* report, which shows each client's debt with its bill's stage.
 
-`Last Modified: October 15, 2026`
+`Last Modified: October 16, 2026`

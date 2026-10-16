@@ -187,8 +187,8 @@ Ledger       ``ledger/``     Every entry: filtered, sorted, edited in bulk,   ``
 Queue        ``queue/``      Importing exports, filing each new line,         ``edit_subledger``;
                              logging a purchase before it happens             importing needs
                                                                               ``import_workdaytransaction``
-Events       ``events/``     What each show made or lost, and *Mark bill      ``edit_subledger`` and
-                             paid*                                            ``events.bill_event``
+Events       ``events/``     What each show made or lost, and *Mark paid*     ``events.bill_event``, for
+                             for a bill paid in full                          *Mark paid*
 Billing      ``billing/``    Every bill by the stage it is at; see *Billing   ``events.bill_event``, to
                              stages*                                          look as well
 Balances     ``balances/``   What each fund holds; Workday balances,          ``edit_subledger``; closing
@@ -212,11 +212,12 @@ The billing pages are under ``billing/``:
 
 * ``billing/``: the Billing page, every bill by the stage it is at, one tab per
   stage. It replaced the events app's six billing lists; see *Billing stages*.
-* ``billing/event/<event>/``: creating, editing, deleting, emailing and paying
-  one event's bill, which moved here from the events app with the bills and
-  still behave as they did there; recording the worktag and the ISD the bill is
-  charged to (``<pk>/worktag/``, ``<pk>/isd/``); and deciding the event needs
-  no bill (``no-bill-needed/``). They are reached from the event's own page and
+* ``billing/event/<event>/``: creating, editing, deleting and emailing one
+  event's bill, which moved here from the events app with the bills and still
+  behave as they did there; marking it paid or unpaid (``<pk>/paid/``,
+  ``<pk>/unpaid/``); recording the worktag and the ISD the bill is charged to
+  (``<pk>/worktag/``, ``<pk>/isd/``); and deciding the event needs no bill
+  (``no-bill-needed/``). They are reached from the event's own page and
   from the Billing page.
 * ``billing/multibills/``: the multi-bill list, which the Billing page links
   to. Each multi-bill has its own page (``billing/multibills/<pk>/``), from
@@ -698,6 +699,16 @@ the accounting date wins, since an ISD is raised within weeks of the show, and
 the caption names the event's date so the year can be checked at a glance. On
 the FY26 export this fills in every one of the 58 ISD lines that names an
 event, and leaves the journal entries and credit memos alone.
+
+**The ISD number comes first.** The Treasurer records the number Workday gives
+each ISD on its bill (see *Billing stages*), and the payment's Operational
+Transaction names the same ISD -- ``Internal Service Delivery: 25090179-ISD``
+-- so :func:`finance.suggestions.suggest_bill_by_isd` looks the number up among
+the bills before the memo is read. A bill's event fills the box in, captioned
+*ISD number recorded on the bill*. A multi-bill is offered as the split
+instead, since one payment pays all its events. The memo is still read when no
+bill has the number: for bills from before numbers were recorded, and for ISDs
+whose number never was.
 
 The distinction is a field on the rule, not a convention:
 ``SuggestionRule.match_mode`` is one of *is exactly*, *starts with*, *contains*
@@ -1516,27 +1527,29 @@ Each event's figures (see *What each event made or lost*) include where its
 bill stands: not billed, no bill needed (the Treasurer decided so; see *Billing
 stages*), billed with nothing received, part received, received in full, or
 received with no bill in lnldb. The amount still owed is shown
-with how many days it has been since the bill went out. Two flags check
-lnldb's own *paid* date against the ledger:
+with how many days it has been since the bill went out
+(:func:`~finance.calculators.days_owed`, which the Billing page uses too). Two
+flags check lnldb's own *paid* date against the ledger:
 
 * **Paid in full, bill not marked paid.** The payment filed against the event
-  covers the bill, and the events app still has it unpaid. *Mark bill paid*,
-  on the event P&L and the event's Billing tab, sets the bill's paid date to
-  the day the last of the payment reached Workday. It never happens
-  automatically. It needs ``finance.edit_subledger`` and the events app's own
-  ``bill_event``, because it is that app's record being changed. A multi-bill
-  is marked paid once the payments for every show on it cover it.
+  covers the bill, and the bill is still unpaid. The event P&L and the event's
+  Billing tab offer *Mark paid*, the bill's form (see *Billing stages*), with
+  the day the last of the payment reached Workday filled in. It needs the
+  events app's ``bill_event``. A multi-bill is covered once the payments for
+  every show on it add up to it.
 * **Marked paid, no payment filed.** lnldb says the bill was paid, and nothing
   is linked to the event. The payment is probably still in the queue. Shows
   that ran before the books start are not flagged, because their payments were
   never imported.
 
-**One payment for several shows.** When a deposit is exactly the amount of a
-multi-bill, the queue offers to split it. That happens when the memo names one
-of the bill's shows, or, as a guess, when exactly one multi-bill sent in the
-previous year has that amount. The split page then lays out one row per show,
-each with its share, which is the same share the event P&L uses. The rows are
-unsaved until the Treasurer checks them and saves.
+**One payment for several shows.** The queue offers to split a deposit across
+a multi-bill's shows when the ISD number it names is recorded on the bill.
+Failing that, it offers the split when the deposit is exactly the bill's
+amount and the memo names one of the bill's shows, or, as a guess, when
+exactly one multi-bill sent in the previous year has that amount. The split
+page then lays out one row per show, each with its share, which is the same
+share the event P&L uses. The rows are unsaved until the Treasurer checks them
+and saves, and the page offers to mark the bill paid with them.
 
 Multi-bills
 ~~~~~~~~~~~
@@ -1617,10 +1630,11 @@ a tie. Events with no client on file do not count as disagreeing.
   the bill's *Bill to* (:func:`~finance.calculators.payer_of`).
 * **The rental check** credits each event with its share of the bill's
   rentals, fee included, split the way the bill is split.
-* **The paid date.** *Mark paid* offers the day the last payment reached
-  Workday when the payments filed against the bill's events cover it, and
-  today otherwise. :func:`~finance.calculators.bill_payments` is the same sum
-  *Mark bill paid* uses.
+* **The paid date.** *Mark paid*, the same form as a single bill's, offers the
+  day the last payment reached Workday when the payments filed against the
+  bill's events cover it, and today otherwise, when it also asks how the bill
+  was paid. :func:`~finance.calculators.bill_payments` is the sum the split
+  page's *Mark paid* box checks too.
 
 Billing stages
 ~~~~~~~~~~~~~~
@@ -1723,6 +1737,46 @@ Workday`` (the old action). Both comments are constants in
 rewording it there would quietly stop the date being found. An event with no
 such history counts from the bill's last email instead. *Days* never goes
 below zero, and the ISD form refuses a creation date after today.
+
+**Marking a bill paid** is always the Treasurer's, and there are two ways (the
+*Payments* section of :mod:`finance.billing`):
+
+* **As the payment is filed.** When a queue row fills in an event -- by the ISD
+  number or the memo -- and filing the line would cover that event's own bill,
+  the row carries a ticked *Mark bill paid on* box, dated the day the last of
+  the money arrived (:func:`~finance.billing.payment_offer`). Filing with it
+  ticked marks the bill paid on that day
+  (:func:`~finance.billing.mark_paid_from_payments`). The box names its bill,
+  and the bill is marked only if the payment was filed against that bill's
+  event and what is filed now covers it. Unticked, nothing changes. When the
+  Treasurer picked the event by hand and the payment covers its bill, the
+  queue says so instead. A multi-bill's split page offers the same box. Both
+  are offered only to whoever holds ``events.bill_event``.
+* **The *Mark paid* form** (:class:`~finance.billing_forms.BillPaidForm`), for
+  either kind of bill, is the only other way. Its date starts as the day the
+  last payment arrived when the payments filed cover the bill, and as today
+  when they don't. Then it also requires how the bill was paid
+  (``paid_note``, which single bills gained in migration
+  ``0007_bill_paid_note``), so a bill marked paid with nothing in the ledger
+  behind it says why. It refuses a day after today. *Mark unpaid* clears both.
+
+The form replaced two buttons. The events app's one-click *Mark Paid* stamped
+today's date, whenever the money had actually arrived. It also accepted the
+``bill_event`` that the events app grants on an event to its client's own
+members, so a client could mark their own bill paid; the form needs the
+permission site-wide. Finance's *Mark bill paid* on the event P&L copied the
+payment's date across in one click; its button now opens the form with that
+date filled in. The bill's edit form no longer has a paid date. Outside
+finance, the *Mark Paid* buttons on the event lists (``site_tmpl/events.html``)
+and on the event's bills (``site_tmpl/uglydetail.html``) became links to the
+form.
+
+**What is owed.** On the unpaid tabs, each bill shows what has been received
+against it, what is still owed and for how many days
+(:func:`~finance.billing.attach_payments`). These are worked out as the Owed to
+LNL report works them out, and aged by the same
+:func:`~finance.calculators.days_owed`, so the page and the report agree. Like
+the report, a bill for events from before the books start shows none.
 
 **Filters.** The fiscal year is the one the bill's first event started in. A
 bill does not stop needing work when the year turns, so each tab also says how
@@ -2232,9 +2286,9 @@ Permissions
     thing to hand out than a ledger row.
 ``edit_subledger``
     Create and edit allocation slices, run bulk actions, log encumbrances,
-    plan purchases and correct how a line of history is read.
-    *Mark bill paid* also needs the events app's ``bill_event``, which
-    Officers hold.
+    plan purchases and correct how a line of history is read. Marking a bill
+    paid as its payment is filed also needs the events app's ``bill_event``,
+    which Officers hold.
 ``settle_subledger``
     Mark reconciled transactions as Settled.
 ``import_workdaytransaction``
@@ -2449,7 +2503,7 @@ locally::
 Tests
 -----
 
-``python manage.py test finance`` runs 1,498 tests across twenty-seven modules. The
+``python manage.py test finance`` runs 1,537 tests across twenty-eight modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.

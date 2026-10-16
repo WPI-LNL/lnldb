@@ -69,6 +69,11 @@ class BillingForm(forms.ModelForm):
 
 
 class BillingUpdateForm(forms.ModelForm):
+    """
+    The bill's amount. Whether it is paid is not here: marking a bill paid,
+    and saying how when no payment from Workday covers it, is the *Mark paid*
+    form's (:class:`BillPaidForm`).
+    """
     def __init__(self, event, *args, **kwargs):
         self.event = event
         self.helper = FormHelper()
@@ -77,7 +82,6 @@ class BillingUpdateForm(forms.ModelForm):
         self.helper.form_action = ""
 
         self.helper.layout = Layout(
-            PrependedText('date_paid', '<i class="glyphicon glyphicon-calendar"></i>', css_class="datepick"),
             PrependedText('amount', '<strong>$</strong>'),
             FormActions(
                 Submit('save', 'Save Changes'),
@@ -87,7 +91,6 @@ class BillingUpdateForm(forms.ModelForm):
         super(BillingUpdateForm, self).__init__(*args, **kwargs)
 
         self.fields['amount'].initial = str(event.cost_total)
-        self.fields['date_paid'].initial = datetime.date.today()
 
     def save(self, commit=True):
         obj = super(BillingUpdateForm, self).save(commit=False)
@@ -98,7 +101,7 @@ class BillingUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Billing
-        fields = ('date_paid', 'amount')
+        fields = ('amount',)
 
 
 def billable_events(bill=None, include_unmarked=False):
@@ -302,15 +305,37 @@ class MultiBillChargeForm(forms.ModelForm):
         return charge
 
 
-class MultiBillPaidForm(forms.Form):
-    """ When a multi-bill was paid, and how, if it was not through Workday. """
+class BillPaidForm(forms.Form):
+    """
+    When a bill (or a multi-bill) was paid, and how, when it was not through
+    Workday.
+
+    ``covered`` says whether the payments filed against the bill add up to
+    it. When they do, how it was paid may be left blank. When they do not --
+    cash, a check, a bill from before the books start -- it must be said, so
+    that a bill marked paid with no payment behind it always says why.
+    """
     date_paid = forms.DateField(label="Paid on", widget=forms.DateInput(attrs={'type': 'date'}))
-    paid_note = forms.CharField(required=False, max_length=200, label="Note",
-                                help_text="How it was paid, if not through Workday: cash, a check.")
+    paid_note = forms.CharField(required=False, max_length=200, label="How it was paid")
 
     def __init__(self, *args, **kwargs):
-        super(MultiBillPaidForm, self).__init__(*args, **kwargs)
+        covered = kwargs.pop('covered', False)
+        super(BillPaidForm, self).__init__(*args, **kwargs)
         self.helper = finance_form_helper()
+        note = self.fields['paid_note']
+        if covered:
+            note.help_text = "Only if it was not paid through Workday."
+        else:
+            note.required = True
+            note.help_text = ("No payment filed from Workday covers this bill, so say how it was paid: cash, a "
+                              "check, or a bill from before the books start.")
+            note.error_messages['required'] = "Say how it was paid. No payment filed from Workday covers it."
+
+    def clean_date_paid(self):
+        day = self.cleaned_data['date_paid']
+        if day > timezone.localdate():
+            raise ValidationError("A bill cannot have been paid after today.")
+        return day
 
 
 # ---------------------------------------------------------------------------

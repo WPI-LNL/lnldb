@@ -309,15 +309,15 @@ class BillingViewTests(ViewTestCase):
         self.assertFalse(MultiBilling.objects.filter(pk=multibill.pk).exists())
 
     def test_pay(self):
+        """ Mark paid is a form now, asking the day and, with nothing filed, how. """
         self.setup()
 
         b = self.e.billings.create(date_billed=timezone.now().date(), amount=3.14)
-
-        # random clicks wont work
-        self.assertOk(self.client.get(reverse('finance:bill-pay', args=[self.e.pk, b.pk])), 405)
+        url = reverse('finance:bill-paid', args=[self.e.pk, b.pk])
+        paid = {'date_paid': timezone.localdate().isoformat(), 'paid_note': 'Cash'}
 
         # User needs permission
-        self.assertOk(self.client.post(reverse("finance:bill-pay", args=[self.e.pk, b.pk])), 403)
+        self.assertOk(self.client.get(url), 403)
 
         permission = Permission.objects.get(codename="bill_event")
         self.user.user_permissions.add(permission)
@@ -326,28 +326,29 @@ class BillingViewTests(ViewTestCase):
         permission = Permission.objects.get(codename="view_events")
         self.user.user_permissions.add(permission)
 
-        # If event is closed, redirect to detail page
+        self.assertOk(self.client.get(url))
+
+        # If event is closed, redirect to its billing
         self.e.closed = True
         self.e.save()
 
-        self.assertRedirects(self.client.post(reverse("finance:bill-pay", args=[self.e.pk, b.pk])),
-                             reverse("events:detail", args=[self.e.pk]))
+        self.assertRedirects(self.client.post(url, paid), reverse("events:detail", args=[self.e.pk]) + "#billing")
+        b.refresh_from_db()
+        self.assertIsNone(b.date_paid)
 
         self.e.closed = False
         self.e.save()
 
-        # on success, redirects to event page
-        self.assertRedirects(self.client.post(reverse('finance:bill-pay', args=[self.e.pk, b.pk])),
-                             reverse("events:detail", args=[self.e.pk]) + "#billing")
+        # on success, redirects to the page that asked
+        self.assertRedirects(self.client.post(url + "?next=/db/", paid), reverse("home"))
 
         # check it is actually paid
         b.refresh_from_db()
-        self.assertIsNotNone(b.date_paid)
+        self.assertEqual((b.date_paid, b.paid_note), (timezone.localdate(), 'Cash'))
         self.assertTrue(self.e.paid)
 
-        # If bill has already been paid, redirect to next page
-        self.assertRedirects(self.client.post(reverse("finance:bill-pay", args=[self.e.pk, b.pk]) + "?next=/db/"),
-                             reverse("home"))
+        # If bill has already been paid, back to its billing
+        self.assertRedirects(self.client.post(url, paid), reverse("events:detail", args=[self.e.pk]) + "#billing")
 
     def test_billing_email(self):
         self.setup()
@@ -734,7 +735,7 @@ class MultiBillPageTests(ViewTestCase):
 
     def test_marking_paid_offers_today_when_nothing_is_filed(self):
         response = self.client.get(self.url('multibill-paid'))
-        self.assertEqual(response.context['form'].initial['date_paid'], datetime.date.today())
+        self.assertEqual(response.context['form'].initial['date_paid'], timezone.localdate())
         self.assertContains(response, 'The date below is today')
         response = self.client.post(self.url('multibill-paid'),
                                     {'date_paid': '2026-04-02', 'paid_note': 'Check from SAO'})

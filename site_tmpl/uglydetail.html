@@ -779,11 +779,10 @@
                                         </td>
                                         <td>
                                             {% if not event.closed %}
-                                                <form class="form-inline" action="{% url "finance:bill-pay" event.id billing.id %}" method="post">
+                                                <div class="form-inline">
                                                     <div class="form-group">
                                                     {% if not billing.date_paid %}
-                                                        {% csrf_token %}
-                                                        <button class="btn btn-link" type="submit">Mark Paid</button>
+                                                        <a class="btn btn-link" href="{% url "finance:bill-paid" event.id billing.id %}">Mark Paid…</a>
                                                     {% endif %}
                                                     <a class="btn btn-link"
                                                        href="{% url "finance:bill-edit" event.id billing.id %}">Update</a>
@@ -791,7 +790,7 @@
                                                         <a class="btn btn-link" href="{% url "finance:bill-delete" event.id billing.id %}">Delete</a>
                                                     {% endif %}
                                                     </div>
-                                                </form>
+                                                </div>
                                             {% endif %}
                                         </td>
                                     {% endpermission %}
@@ -873,19 +872,14 @@
                         {% endfor %}
                         {% comment %}
                             The payment filed against this show covers its bill,
-                            and the bill above is still unpaid. finance copies the
-                            date the money arrived across, when asked.
+                            and the bill above is still unpaid. finance's Mark paid
+                            form opens with the date the money arrived filled in.
                         {% endcomment %}
                         {% if finance.can_mark_paid %}
-                            {% permission request.user has 'finance.edit_subledger' %}
-                                <form method="post" action="{% url 'finance:event-mark-paid' event.pk %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="next" value="{{ request.get_full_path }}#billing">
-                                    <button type="submit" class="btn btn-xs btn-default"
-                                            title="Set the bill's paid date to the day the last of its payment reached Workday">
-                                        Mark bill paid
-                                    </button>
-                                </form>
+                            {% permission request.user has 'events.bill_event' %}
+                                <a href="{% if finance.billed_source == 'multibill' %}{% url 'finance:multibill-paid' finance.bill.pk %}{% else %}{% url 'finance:bill-paid' event.pk finance.bill.pk %}{% endif %}?next={{ request.get_full_path|urlencode }}%23billing"
+                                   class="btn btn-xs btn-default"
+                                   title="Mark the bill paid on the day the last of its payment reached Workday">Mark paid…</a>
                             {% endpermission %}
                         {% endif %}
                         <p>

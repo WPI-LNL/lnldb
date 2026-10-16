@@ -3207,6 +3207,11 @@ class PlannedPurchase(models.Model):
 # reaches them by -- event.billings, event.multibillings -- did not change.
 # ---------------------------------------------------------------------------
 
+#: Why a bill was marked paid without a payment from Workday that covers it.
+#: Both kinds of bill carry it, and the *Mark paid* form asks for it then.
+PAID_NOTE_HELP = ("How it was paid, when no payment filed from Workday covers it: cash, a check, or a bill "
+                  "from before the books start.")
+
 #: Workday's number for an Internal Service Delivery: digits, then "-ISD", as
 #: it appears when the ISD is created and again in the export's Operational
 #: Transaction column ("Internal Service Delivery: 25090179-ISD").
@@ -3274,6 +3279,8 @@ class Billing(ISDRecord):
     """ A bill for one event, sent to its client """
     date_billed = models.DateField()
     date_paid = models.DateField(null=True, blank=True)
+    paid_note = models.CharField(max_length=200, blank=True, verbose_name="How it was paid",
+                                 help_text=PAID_NOTE_HELP)
     event = models.ForeignKey('events.BaseEvent', on_delete=models.CASCADE, related_name="billings")
     amount = models.DecimalField(max_digits=8, decimal_places=2)
     # Who recorded the ISD. Set by the page that records it, never typed: left
@@ -3339,8 +3346,8 @@ class MultiBilling(ISDRecord):
                   "every email get the same document.")
     date_billed = models.DateField()
     date_paid = models.DateField(null=True, blank=True)
-    paid_note = models.CharField(max_length=200, blank=True,
-                                 help_text="How it was paid, if not through Workday: cash, a check.")
+    paid_note = models.CharField(max_length=200, blank=True, verbose_name="How it was paid",
+                                 help_text=PAID_NOTE_HELP)
     org = models.ForeignKey('events.Organization', on_delete=models.PROTECT, null=True,
                             related_name='multibillings', verbose_name="Bill to")
     events = models.ManyToManyField('events.BaseEvent', related_name='multibillings',

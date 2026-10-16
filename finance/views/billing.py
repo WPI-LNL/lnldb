@@ -14,8 +14,11 @@ still send people back to the event's own page. The multi-bill pages were
 rewritten here; see *Multi-bills* below. All of them check the events app's
 ``Bill event`` permission, which is what Officers hold. The client's worktag
 form stays in the events app: every bill email ever sent links to it there.
+
+Either kind of bill is marked paid through one form, *Mark paid* (see
+*Marking a bill paid* below), unless the payment filed for it in the
+ingestion queue already did.
 """
-import datetime
 from io import BytesIO
 
 from django.conf import settings
@@ -39,14 +42,15 @@ from pypdf import PdfWriter
 from emails.generators import BillingEmailGenerator, DefaultLNLEmailGenerator as DLEG
 from events.models import BaseEvent
 from finance.billing import (CREATE_ISD, NO_BILL_NEEDED, READY, STAGE_HELP, STAGES, WAITING_ON_APPROVAL,
-                             BillItem, billing_items, by_stage, event_item, filter_items, ready_sections)
-from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateForm, BillISDForm, BillWorktagForm,
-                                   MultiBillChargeForm, MultiBillForm, MultiBillingEmailForm, MultiBillPaidForm,
+                             WAITING_ON_CLIENT, BillItem, attach_payments, billing_items, by_stage, event_item,
+                             filter_items, ready_sections)
+from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateForm, BillISDForm, BillPaidForm,
+                                   BillWorktagForm, MultiBillChargeForm, MultiBillForm, MultiBillingEmailForm,
                                    NoBillNeededForm, bill_events, clear_isd, client_tally)
 from finance.calculators import bill_payments, latest_bill
 from finance.filters import filter_context, get_filter_state
 from finance.models import (ZERO, Billing, BillingEmail, MultiBilling, MultiBillingCharge, MultiBillingEmail,
-                            NoBillNeeded, money, no_bill_needed_for)
+                            NoBillNeeded, books_start_date, money, no_bill_needed_for)
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from helpers.revision import set_revision_comment
 from pdfs.views import generate_event_bill_pdf_standalone, write_weasyprint_pdf
@@ -187,33 +191,6 @@ class MultiBillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Dele
 
     def get_success_url(self):
         return reverse("finance:multibill-list")
-
-
-@require_POST
-@login_required
-def pay_bill(request, event, pk):
-    """
-    Quietly pays a bill, showing a message on the next page. POST only.
-    """
-    bill = get_object_or_404(Billing, event_id=event, id=pk)
-    if not request.user.has_perm('events.bill_event', bill.event):
-        raise PermissionDenied
-    if bill.event.closed:
-        messages.add_message(request, messages.ERROR, 'Event is closed.')
-        return HttpResponseRedirect(reverse('events:detail', args=(bill.event_id,)))
-    if bill.date_paid:
-        messages.info(request, "Bill has already been paid", extra_tags="info")
-    else:
-        bill.date_paid = timezone.now()
-        bill.save()
-        if 'next' in request.GET:
-            messages.success(request, "Marked latest bill paid for %s" % bill.event.event_name, extra_tags="success")
-        else:
-            messages.success(request, "Bill paid!", extra_tags="success")
-    if 'next' in request.GET:
-        return HttpResponseRedirect(request.GET['next'])
-    else:
-        return HttpResponseRedirect(reverse('events:detail', args=(bill.event_id,)) + "#billing")
 
 
 class BillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateView):
@@ -496,6 +473,8 @@ def billing_page(request):
              'elsewhere': len(all_years[key]) - len(this_year[key])}
             for key, label in STAGES.items()]
     rows = this_year[stage]
+    if stage in (WAITING_ON_CLIENT, CREATE_ISD, WAITING_ON_APPROVAL):
+        attach_payments(rows)
     context = _billing_context(
         request, h2="Billing", stage=stage, stage_label=STAGES[stage], stage_help=STAGE_HELP[stage], tabs=tabs,
         rows=rows, elsewhere=len(all_years[stage]) - len(rows), here=request.get_full_path())
@@ -686,39 +665,9 @@ def multibill_update_total(request, pk):
 @login_required
 @permission_required('events.bill_event', raise_exception=True)
 def multibill_mark_paid(request, pk):
-    """
-    Mark a multi-bill paid on a date the Treasurer gives.
-
-    The date starts as the day the last of its payment reached Workday when
-    the payments filed against its events cover it, and today otherwise -- a
-    check handed over, or a bill from before the books start, has nothing
-    filed to read a date from. The note says how, when it was not Workday.
-    """
+    """ The *Mark paid* form for a multi-bill. See :func:`_mark_paid`. """
     bill = get_object_or_404(MultiBilling, pk=pk)
-    detail = reverse('finance:multibill-detail', args=(bill.pk,))
-    if bill.events.filter(closed=True).exists():
-        messages.error(request, "An event on %s is closed, so the bill cannot be changed." % bill.display_name)
-        return HttpResponseRedirect(detail)
-    if bill.date_paid:
-        messages.info(request, "%s was already marked paid on %s."
-                      % (bill.display_name, date_format(bill.date_paid, 'M j, Y')))
-        return HttpResponseRedirect(detail)
-    received, last_payment = bill_payments(bill)
-    owed = money(bill.amount)
-    covered = owed > 0 and received >= owed and last_payment is not None
-    form = MultiBillPaidForm(request.POST or None,
-                             initial={'date_paid': last_payment if covered else datetime.date.today()})
-    if request.method == 'POST' and form.is_valid():
-        bill.date_paid = form.cleaned_data['date_paid']
-        bill.paid_note = form.cleaned_data['paid_note']
-        bill.save(update_fields=['date_paid', 'paid_note'])
-        messages.success(request, "Marked %s paid on %s."
-                         % (bill.display_name, date_format(bill.date_paid, 'M j, Y')))
-        return HttpResponseRedirect(_back_to(request, detail))
-    context = _billing_context(request, h2="Mark %s paid" % bill.display_name, bill=bill, form=form,
-                               received=received, owed=owed, covered=covered, last_payment=last_payment,
-                               cancel_url=_back_to(request, detail))
-    return render(request, 'finance/multibill_paid_form.html', context)
+    return _mark_paid(request, bill)
 
 
 @login_required
@@ -727,15 +676,96 @@ def multibill_mark_paid(request, pk):
 def multibill_mark_unpaid(request, pk):
     """ Undo marking a multi-bill paid, so it can be changed again. """
     bill = get_object_or_404(MultiBilling, pk=pk)
-    detail = reverse('finance:multibill-detail', args=(bill.pk,))
-    if bill.events.filter(closed=True).exists():
-        messages.error(request, "An event on %s is closed, so the bill cannot be changed." % bill.display_name)
-        return HttpResponseRedirect(detail)
+    return _mark_unpaid(request, bill)
+
+
+# ---------------------------------------------------------------------------
+# Marking a bill paid
+#
+# A bill is marked paid either when the payment filed for it in the ingestion
+# queue covers it -- the queue offers to, dated the day the money arrived --
+# or here. This form is the only other way, for either kind of bill: it
+# replaced the events app's one-click Mark Paid, which stamped today's date
+# whenever the money had actually arrived, and finance's own Mark bill paid
+# button. When no payment filed from Workday covers the bill it asks how it
+# was paid, so a bill marked paid with nothing behind it always says why.
+# ---------------------------------------------------------------------------
+
+def _bill_name(bill):
+    """ "the bill for Spring Gala", or a multi-bill's name. """
+    if isinstance(bill, MultiBilling):
+        return bill.display_name
+    return "the bill for %s" % bill.event.event_name
+
+
+def _mark_paid(request, bill):
+    """
+    When a bill was paid, and how, if not through Workday.
+
+    The date starts as the day the last of its payment reached Workday when
+    the payments filed against its events cover it, and today otherwise -- a
+    check handed over, or a bill from before the books start, has nothing
+    filed to read a date from, and then how it was paid must be said.
+    """
+    back = _bill_url(bill)
+    refused = _bill_closed(request, bill, bill_events(bill))
+    if refused:
+        return refused
+    name = _bill_name(bill)
+    if bill.date_paid:
+        messages.info(request, "%s was already marked paid on %s."
+                      % (name[0].upper() + name[1:], date_format(bill.date_paid, 'M j, Y')))
+        return HttpResponseRedirect(back)
+    received, last_payment = bill_payments(bill)
+    owed = money(bill.amount)
+    covered = owed > 0 and received >= owed and last_payment is not None
+    form = BillPaidForm(request.POST or None, covered=covered,
+                        initial={'date_paid': last_payment if covered else timezone.localdate()})
+    if request.method == 'POST' and form.is_valid():
+        bill.date_paid = form.cleaned_data['date_paid']
+        bill.paid_note = form.cleaned_data['paid_note']
+        bill.save(update_fields=['date_paid', 'paid_note'])
+        messages.success(request, "Marked %s paid on %s." % (name, date_format(bill.date_paid, 'M j, Y')))
+        return HttpResponseRedirect(_back_to(request, back))
+    start = books_start_date()
+    before_books = start is not None and any(
+        timezone.localtime(event.datetime_start).date() < start for event in bill_events(bill))
+    context = _billing_context(request, h2="Mark %s paid" % name, bill=bill, form=form, received=received,
+                               owed=owed, covered=covered, last_payment=last_payment, books_start=start,
+                               before_books=before_books, is_multibill=isinstance(bill, MultiBilling),
+                               cancel_url=_back_to(request, back))
+    return render(request, 'finance/bill_paid_form.html', context)
+
+
+def _mark_unpaid(request, bill):
+    """ Take a bill's paid date off, and how it was paid, so it can be changed again. """
+    back = _bill_url(bill)
+    refused = _bill_closed(request, bill, bill_events(bill))
+    if refused:
+        return refused
     bill.date_paid = None
     bill.paid_note = ''
     bill.save(update_fields=['date_paid', 'paid_note'])
-    messages.success(request, "%s is unpaid again." % bill.display_name)
-    return HttpResponseRedirect(detail)
+    name = _bill_name(bill)
+    messages.success(request, "%s is unpaid again." % (name[0].upper() + name[1:]))
+    return HttpResponseRedirect(_back_to(request, back))
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def bill_mark_paid(request, event, pk):
+    """ The *Mark paid* form for one event's bill. See :func:`_mark_paid`. """
+    bill = get_object_or_404(Billing.objects.select_related('event'), event_id=event, pk=pk)
+    return _mark_paid(request, bill)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+@require_POST
+def bill_mark_unpaid(request, event, pk):
+    """ Undo marking one event's bill paid. """
+    bill = get_object_or_404(Billing.objects.select_related('event'), event_id=event, pk=pk)
+    return _mark_unpaid(request, bill)
 
 
 def _back_to(request, default):

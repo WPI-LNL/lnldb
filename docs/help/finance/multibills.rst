@@ -114,17 +114,20 @@ bill entered into Workday. The bill's page shows the worktag and the ISD once th
 Mark It Paid
 ------------
 
-Click `Mark paid` on the bill's page or the list.
+Usually you don't need to. When its payment arrives, the finance queue recognises the ISD number recorded on the bill
+and offers to split the payment across its events. The split page has a ticked box to mark the bill paid on the day
+the money arrived: save the split, and it is done. See :doc:`billing`.
 
-- If the payments filed against its events in the finance queue cover the bill, the date is filled in with the day the
-  last of the money reached Workday.
-- Otherwise the date is today; change it to the day the money arrived.
+Otherwise, click `Mark paid...` on the bill's page or the list.
 
-Add a **Note** if it was not paid through Workday, such as *check from SAO*.
+- If the payments filed against its events cover the bill, the date is filled in with the day the last of the money
+  reached Workday.
+- Otherwise the date is today. Change it to the day the money arrived, and say **how it was paid**, such as *check
+  from SAO*. That is required, because no payment in the ledger shows it.
 
 `Mark unpaid` undoes it.
 
 .. seealso::
     :doc:`events` explains how a payment for a multi-bill is split across its events in the finance queue.
 
-`Last Modified: October 15, 2026`
+`Last Modified: October 16, 2026`

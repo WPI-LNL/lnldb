@@ -337,9 +337,13 @@ def billing_next_step(context, event):
     yet reviewed for billing, which is the VP's, or one already closed.
 
     The stage comes from :mod:`finance.billing`, the same place the Billing
-    page reads it, so the two cannot disagree.
+    page reads it, so the two cannot disagree. So do what an unpaid bill has
+    received and still owes.
     """
-    from finance.billing import item_for_event
+    from finance.billing import attach_payments, item_for_event
 
-    return {'item': item_for_event(event), 'event': event, 'request': context.get('request'),
+    item = item_for_event(event)
+    if item is not None:
+        attach_payments([item])
+    return {'item': item, 'event': event, 'request': context.get('request'),
             'csrf_token': context.get('csrf_token')}

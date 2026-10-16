@@ -35,6 +35,10 @@ that stands for an event is its latest own bill, else its latest multi-bill
 (:func:`finance.calculators.latest_bill`), the same one finance's figures
 read. A multi-bill is one row for all its events. It has no form for the
 client, so its worktag is always the one the Treasurer records.
+
+A bill is paid when the Treasurer says so, never on its own. The ingestion
+queue offers to mark it paid when the payment being filed covers it, and the
+*Mark paid* form does it for anything else -- see *Payments* at the end.
 """
 import datetime
 from collections import OrderedDict
@@ -44,8 +48,9 @@ from django.db.models import Max, Q
 from django.urls import reverse
 from django.utils import timezone
 
-from finance.calculators import latest_bill
-from finance.models import ZERO, MultiBilling, client_of, fiscal_year_for, money, no_bill_needed_for
+from finance.calculators import bill_payments, days_owed, latest_bill, received_by_event
+from finance.models import (ZERO, MultiBilling, books_start_date, client_of, fiscal_year_for, money,
+                            no_bill_needed_for)
 
 READY = 'ready'
 NO_BILL_NEEDED = 'no-bill-needed'
@@ -98,6 +103,10 @@ class BillItem(object):
     counted. ``not_sent`` marks a bill that exists but was never emailed,
     which is still ready to bill. ``no_bill`` is the event's *No bill needed*
     record, when it has one.
+
+    ``received``, ``owed``, ``days_owed`` and ``last_payment`` are what has
+    been filed against an unpaid bill, filled in by :func:`attach_payments`;
+    ``None`` until then, and for a bill whose payments were never imported.
     """
 
     def __init__(self, stage, events, bill=None, since=None, not_sent=False, no_bill=None):
@@ -107,6 +116,7 @@ class BillItem(object):
         self.since = since
         self.not_sent = not_sent
         self.no_bill = no_bill
+        self.received = self.owed = self.days_owed = self.last_payment = None
 
     def __repr__(self):
         return '<BillItem %s: %s>' % (self.stage, self.name)
@@ -270,6 +280,18 @@ class BillItem(object):
     @property
     def isd_differs(self):
         return self.bill is not None and self.bill.isd_differs
+
+    @property
+    def covered(self):
+        """ Whether the payments filed against this unpaid bill add up to it. """
+        return bool(self.received) and self.owed == ZERO
+
+    @property
+    def paid_url(self):
+        """ The *Mark paid* form. """
+        if self.is_multibill:
+            return reverse('finance:multibill-paid', args=(self.bill.pk,))
+        return reverse('finance:bill-paid', args=(self.event.pk, self.bill.pk))
 
     @property
     def pdf_url(self):
@@ -525,3 +547,89 @@ def ready_sections(items):
             for client, rows in sorted(groups.items(), key=lambda pair: (
                 pair[0] is None, pair[0].retname.lower() if pair[0] else ''))]
     return {'not_sent': not_sent, 'alone': alone, 'bulk': bulk}
+
+
+# ---------------------------------------------------------------------------
+# Payments
+#
+# The money for a bill arrives in Workday, and is filed against the bill's
+# event (or, for a multi-bill, split across its events) from the ingestion
+# queue. What has been filed is what the bill has received. Marking the bill
+# paid stays the Treasurer's: the queue offers to when the payment it files
+# covers the bill, dated the day the last of the money arrived, and the *Mark
+# paid* form does it for anything else -- cash, a check, a bill from before
+# the books start -- and asks how it was paid.
+# ---------------------------------------------------------------------------
+
+def bill_closed(bill):
+    """ Whether an event the bill covers is closed, which locks the bill. """
+    if isinstance(bill, MultiBilling):
+        return any(event.closed for event in bill.events.all())
+    return bill.event.closed
+
+
+def payment_offer(bill, amount, arrived):
+    """
+    What filing a payment of ``amount`` against ``bill``, which reached Workday
+    on ``arrived``, would do, for the box that offers to mark the bill paid.
+
+    A dict of ``bill``, ``paid_on`` (the day the last of its money arrived,
+    this payment's included), ``received`` (with this payment) and ``owed``,
+    when the payments filed against the bill would then cover it. ``None``
+    when they would not, or the bill is already paid, or an event on it is
+    closed.
+    """
+    if bill is None or bill.date_paid or bill_closed(bill):
+        return None
+    received, last = bill_payments(bill)
+    owed = money(bill.amount)
+    received += money(amount)
+    if owed <= ZERO or received < owed:
+        return None
+    paid_on = max(day for day in (last, arrived) if day is not None)
+    return {'bill': bill, 'paid_on': paid_on, 'received': received, 'owed': owed}
+
+
+def mark_paid_from_payments(bill):
+    """
+    Mark ``bill`` paid on the day the last of its money arrived, when the
+    payments filed against it cover it. Returns that day, or ``None`` when the
+    bill was left as it was: already paid, or not yet covered.
+    """
+    received, last = bill_payments(bill)
+    owed = money(bill.amount)
+    if bill.date_paid or last is None or owed <= ZERO or received < owed:
+        return None
+    bill.date_paid = last
+    bill.paid_note = ''
+    bill.save(update_fields=['date_paid', 'paid_note'])
+    return last
+
+
+def attach_payments(items, today=None):
+    """
+    Give each unpaid bill among ``items`` what has been received against it,
+    what is still owed, how many days it has been owed and when the last
+    payment arrived, in one query for them all.
+
+    Received and owed are worked out as the Owed to LNL report works them
+    out, and the days by the same :func:`~finance.calculators.days_owed`, so
+    the Billing page and the report agree. Like the report, a bill for events
+    from before the books start gets none of them: their payments were never
+    imported.
+    """
+    unpaid = [item for item in items if item.bill is not None and not item.bill.date_paid]
+    if not unpaid:
+        return
+    start = books_start_date()
+    today = today or timezone.localdate()
+    filed = received_by_event({event.pk for item in unpaid for event in item.events})
+    for item in unpaid:
+        if start is not None and any(_local_day(event.datetime_start) < start for event in item.events):
+            continue
+        payments = [filed[event.pk] for event in item.events if event.pk in filed]
+        days = [last for _, last in payments if last is not None]
+        item.received = sum((received for received, _ in payments), ZERO)
+        item.owed = max(item.amount - item.received, ZERO)
+        item.days_owed = days_owed(item.bill, item.owed, today)
+        item.last_payment = max(days) if days else None

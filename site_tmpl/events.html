@@ -197,10 +197,7 @@
                                 {% endif %}
                                 {% if event.reviewed and event.last_bill and not event.paid %}
                                     {% permission request.user has 'events.bill_event' of event %}
-                                        <form class="form-inline" action="{% url 'finance:bill-pay' event.id event.last_bill.id %}?next={{ request.get_full_path }}" method="post">
-                                            {% csrf_token %}
-                                            <span class="markpaidtask"><button class="btn btn-link" type="submit">Mark&nbsp;Paid</button></span>
-                                        </form>
+                                        <span class="markpaidtask"><a class="btn btn-link" href="{% url 'finance:bill-paid' event.id event.last_bill.id %}?next={{ request.get_full_path|urlencode }}">Mark&nbsp;Paid…</a></span>
                                     {% endpermission %}
                                 {% endif %}
                             </td>

@@ -246,6 +246,9 @@
                             {% if stage == 'waiting-on-approval' %}<th>ISD</th><th>Worktag</th>{% endif %}
                             {% if stage == 'paid' %}<th>Paid</th>{% endif %}
                         {% endif %}
+                        {% if stage != 'paid' %}
+                            <th class="fin-num" title="What is still owed, and for how many days since it was billed: the same figures as the Owed to LNL report">Owed</th>
+                        {% endif %}
                         <th class="fin-num" title="Days at this stage">Days</th>
                         <th></th>
                     </tr>
@@ -323,11 +326,37 @@
                                     <td class="fin-nowrap">{{ item.worktag|default:"—" }}{% if item.fund %} <small class="fin-muted">{{ item.fund }}</small>{% endif %}</td>
                                 {% endif %}
                                 {% if stage == 'paid' %}
-                                    <td class="fin-nowrap">{{ item.bill.date_paid|date:"M j, Y" }}</td>
+                                    <td class="fin-nowrap">
+                                        {{ item.bill.date_paid|date:"M j, Y" }}
+                                        {% if item.bill.paid_note %}<br><small class="fin-muted">{{ item.bill.paid_note }}</small>{% endif %}
+                                    </td>
                                 {% endif %}
+                            {% endif %}
+                            {% if stage == 'waiting-on-client' or stage == 'create-isd' or stage == 'waiting-on-approval' %}
+                                {% comment %}
+                                    What is still owed and for how long, counted as the
+                                    Owed to LNL report counts it, so the two agree.
+                                {% endcomment %}
+                                <td class="fin-num fin-nowrap">
+                                    {% if item.owed is None %}
+                                        <span class="fin-muted" title="The event is from before the books start, so its payments were never imported.">—</span>
+                                    {% elif item.covered %}
+                                        <span class="fin-tag is-ok" title="The payments filed against it add up to the bill, the last on {{ item.last_payment|date:'M j, Y' }}.">Received in full</span>
+                                    {% else %}
+                                        {{ item.owed|money }}
+                                        {% if item.received %}<br><small class="fin-muted">{{ item.received|money }} received</small>{% endif %}
+                                        {% if item.days_owed is not None %}<br><small class="fin-muted">{{ item.days_owed }} day{{ item.days_owed|pluralize }}</small>{% endif %}
+                                    {% endif %}
+                                </td>
                             {% endif %}
                             <td class="fin-num" title="{% if item.since %}Since {{ item.since|date:'M j, Y' }}{% endif %}">{{ item.days|default_if_none:"—" }}</td>
                             <td class="text-right fin-nowrap">
+                                {% if item.covered %}
+                                    {% comment %}
+                                        The money is in, whatever stage the bill was left at.
+                                    {% endcomment %}
+                                    <a href="{{ item.paid_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-primary" title="The payments filed against it cover it">Mark paid…</a>
+                                {% endif %}
                                 {% if stage == 'waiting-on-client' %}
                                     <a href="{{ item.worktag_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-default" title="The client sent the worktag by email">Enter worktag</a>
                                     {% if item.is_multibill %}
@@ -355,13 +384,8 @@
                                     <a href="{{ item.isd_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-link">Change</a>
                                 {% elif stage == 'waiting-on-approval' %}
                                     <a href="{{ item.isd_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-link">{% if item.bill.isd_number %}Change ISD{% else %}Record ISD{% endif %}</a>
-                                    {% if item.is_multibill %}
-                                        <a href="{% url 'finance:multibill-paid' item.bill.pk %}?next={{ here|urlencode }}" class="btn btn-xs btn-default">Mark paid</a>
-                                    {% else %}
-                                        <form method="post" action="{% url 'finance:bill-pay' item.event.pk item.bill.pk %}?next={{ here|urlencode }}" style="display:inline;">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-xs btn-default">Mark paid</button>
-                                        </form>
+                                    {% if not item.covered %}
+                                        <a href="{{ item.paid_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-default" title="Paid by cash or check, or before the books start: give the day and how">Mark paid…</a>
                                     {% endif %}
                                 {% elif stage == 'paid' %}
                                     {% if item.is_multibill %}

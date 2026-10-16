@@ -145,18 +145,15 @@
                                 {% endfor %}
                                 {% comment %}
                                     The payment filed against the event covers the
-                                    bill, and lnldb still has it unpaid. Copying the
-                                    date across is a button, never automatic.
+                                    bill, and lnldb still has it unpaid. The bill's
+                                    Mark paid form opens with the day the last of the
+                                    money arrived filled in; nothing is marked until
+                                    it is submitted.
                                 {% endcomment %}
                                 {% if row.can_mark_paid and can_mark_paid %}
-                                    <form method="post" action="{% url 'finance:event-mark-paid' row.event.pk %}" style="display:inline;">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                        <button type="submit" class="btn btn-xs btn-default"
-                                                title="Set the bill's paid date in lnldb to the day the last of its payment reached Workday">
-                                            Mark bill paid
-                                        </button>
-                                    </form>
+                                    <a href="{% if row.billed_source == 'multibill' %}{% url 'finance:multibill-paid' row.bill.pk %}{% else %}{% url 'finance:bill-paid' row.event.pk row.bill.pk %}{% endif %}?next={{ request.get_full_path|urlencode }}"
+                                       class="btn btn-xs btn-default"
+                                       title="Mark the bill paid on the day the last of its payment reached Workday">Mark paid…</a>
                                 {% endif %}
                             </td>
                             <td>

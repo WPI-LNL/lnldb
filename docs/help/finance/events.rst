@@ -94,8 +94,8 @@ Cost LNL more than it brought in         The show lost LNL's own money. Was the 
 Rental cost more than was billed for it  The hire cost more than the client was charged for it plus the rental fee.
 Billed, not yet received                 The client still owes on the bill.
 Received with no bill in lnldb           A payment is linked, but the events app has no bill for the show.
-Paid in full, bill not marked paid       The payment covers the bill, but the events app still shows the bill as unpaid.
-                                         Click `Mark bill paid`.
+Paid in full, bill not marked paid       The payment covers the bill, but the bill is still unpaid. Click
+                                         `Mark paid...`.
 Marked paid, no payment filed            The events app says the bill was paid, but no payment is linked. It is
                                          probably still in the queue.
 =======================================  ==============================================================================
@@ -104,9 +104,12 @@ Marked paid, no payment filed            The events app says the bill was paid, 
 Mark a Bill Paid
 ----------------
 
-When the payment filed against an event covers its bill, the row offers `Mark bill paid`. Clicking it sets the bill's
-paid date in the events app to the day the payment reached Workday. It never happens by itself. A multi-bill is marked
-paid once the payments for every show on it cover it.
+When the payment filed against an event covers its bill, the row offers `Mark paid...`. It opens the bill's *Mark paid*
+form with the day the payment reached Workday filled in; nothing changes until you submit it. A multi-bill is covered
+once the payments for every show on it add up to it.
+
+Most bills never need this: the queue offers to mark a bill paid as you file the payment that covers it. See
+:doc:`billing`.
 
 The same button is on the event's own page, on the `Billing` tab.
 
@@ -120,4 +123,4 @@ received, costs, reserved purchases and margin, with the same flags and a link t
 .. seealso::
     :doc:`/help/events/create-bill` covers creating and sending the bill itself.
 
-`Last Modified: October 15, 2026`
+`Last Modified: October 16, 2026`

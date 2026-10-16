@@ -49,11 +49,11 @@ from django.db.models import DecimalField, F, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.utils.formats import date_format
 
-from finance.models import (ZERO, FundSource, MultiBilling, ProjectTag, SuggestionRule,
-                            default_fund_source, fund_source_for_tracking,
-                            fund_source_for_workday_fund, money, normalise_sga_reference,
-                            normalise_term, own_fund_for_account, reimbursement_source,
-                            revenue_sources_by_fund, spend_category_named)
+from finance.models import (ISD_NUMBER_FORMAT, ZERO, Billing, FundSource, MultiBilling, ProjectTag,
+                            SuggestionRule, default_fund_source, fund_source_for_tracking,
+                            fund_source_for_workday_fund, money, normalise_isd_number,
+                            normalise_sga_reference, normalise_term, own_fund_for_account,
+                            reimbursement_source, revenue_sources_by_fund, spend_category_named)
 
 HIGH, MEDIUM, LOW = 'high', 'medium', 'low'
 
@@ -959,6 +959,44 @@ def suggest_linked_event(txn):
         str(event), source=EXPORT)
 
 
+# -- the bill an ISD pays, by its number ---------------------------------------
+#
+# When the Treasurer creates an ISD they record the number Workday gives it on
+# the bill. The payment that arrives later names the same ISD in its
+# Operational Transaction -- "Internal Service Delivery: 25090179-ISD" -- so
+# finding the bill it pays is a lookup of the Treasurer's own record, exact in
+# a way no reading of the memo can be. It is tried first. The memo's event name
+# stays as the fallback, for bills whose ISD number was never recorded.
+
+def isd_number_of(txn):
+    """ The ISD number a bank line's Operational Transaction names, or ``''``. """
+    if (txn.document_type or '').strip().lower() != ISD_DOCUMENT_TYPE:
+        return ''
+    number = normalise_isd_number((txn.operational_transaction or '').split(':', 1)[-1])
+    return number if ISD_NUMBER_FORMAT.match(number) else ''
+
+
+def suggest_bill_by_isd(txn):
+    """
+    The bill a payment settles, found by the ISD number it names, as
+    ``{'bill', 'number', 'reason'}``, or ``None``. ``bill`` is a
+    :class:`~finance.models.Billing` or a :class:`~finance.models.MultiBilling`.
+    """
+    if txn.net_amount <= 0:
+        return None
+    number = isd_number_of(txn)
+    if not number:
+        return None
+    bill = Billing.objects.filter(isd_number=number).select_related('event').first()
+    if bill is None:
+        bill = MultiBilling.objects.filter(isd_number=number).prefetch_related('events').first()
+    if bill is None:
+        return None
+    kind = 'multi-bill' if isinstance(bill, MultiBilling) else 'bill'
+    return {'bill': bill, 'number': number,
+            'reason': 'ISD number recorded on the %s (%s)' % (kind, number)}
+
+
 # -- the same question asked of a cost ----------------------------------------
 #
 # A sub-rental hired for one show is that show's cost, and the memo usually
@@ -1422,7 +1460,8 @@ def _suggest_revenue(txn, fields, sga_transfer, tags):
     Money coming in is one of four things, and the suggestions say which:
 
     * a purchase credited back, when the export quotes the purchase;
-    * event billing, when an Internal Service Delivery names the show;
+    * event billing, when an Internal Service Delivery's number is recorded
+      on a bill, or else its memo names the show;
     * SGA paying for a funding request, when an SGA journal entry quotes it --
       source, request and fund all follow from the number;
     * some other kind of income, when Workday names the fund it went into.
@@ -1431,7 +1470,16 @@ def _suggest_revenue(txn, fields, sga_transfer, tags):
     the event is missing rather than leaving it to be noticed on the P&L.
     """
     refund = suggest_refund_target(txn)
-    linked_event = suggest_linked_event(txn)
+    # The ISD number names the bill outright; the memo's event name is only
+    # read when it does not.
+    paid_bill = suggest_bill_by_isd(txn)
+    if paid_bill is None:
+        linked_event = suggest_linked_event(txn)
+    elif isinstance(paid_bill['bill'], MultiBilling):
+        linked_event = None
+    else:
+        event = paid_bill['bill'].event
+        linked_event = Suggestion(event.pk, HIGH, paid_bill['reason'], str(event), source=EXPORT)
     # Only SGA's own journal entry makes a quoted request number mean "this is
     # a reimbursement". A supplier's credit quotes the request too, and is a
     # refund; its fund comes from the purchase it gives back to.
@@ -1442,7 +1490,12 @@ def _suggest_revenue(txn, fields, sga_transfer, tags):
         payment, request, near_miss = suggest_sga_payment(txn, fields)
     unmatched = fields.reference if (sga_transfer and request is None) else ''
 
-    multibill = None if refund is not None else suggest_multibill(txn, linked_event)
+    if refund is not None or (paid_bill is not None and linked_event is not None):
+        multibill = None
+    elif paid_bill is not None:
+        multibill = {'multibill': paid_bill['bill'], 'source': EXPORT, 'reason': paid_bill['reason']}
+    else:
+        multibill = suggest_multibill(txn, linked_event)
     is_isd = (txn.document_type or '').strip().lower() == ISD_DOCUMENT_TYPE
     event_named = linked_event is not None and linked_event.is_lookup
 
@@ -1461,6 +1514,8 @@ def _suggest_revenue(txn, fields, sga_transfer, tags):
         'near_miss': near_miss,
         'unknown_request': unknown_request(fields) if unmatched and near_miss is None else None,
         'multibill': multibill,
+        # The bill the ISD number names, which the queue offers to mark paid.
+        'isd_bill': paid_bill['bill'] if paid_bill is not None else None,
         'project_tag': suggest_project_tag(txn, tags=tags),
         # LNL billing that names no event lnldb has. The P&L cannot see money
         # that is not linked to its show.

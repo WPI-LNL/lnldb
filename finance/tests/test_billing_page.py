@@ -414,8 +414,8 @@ class BillingPageTests(ViewTestCase):
         gala = show('Gala', worktag='1234-CC', entered_into_workday=True)
         made = bill(gala, emailed_days_ago=5)
         resp = self.client.get(self.url + '?stage=waiting-on-approval&fy=all')
-        self.assertContains(resp, reverse('finance:bill-pay', args=[gala.pk, made.pk]))
-        self.assertContains(resp, 'Mark paid')
+        self.assertContains(resp, reverse('finance:bill-paid', args=[gala.pk, made.pk]))
+        self.assertContains(resp, 'Mark paid…')
         self.assertContains(resp, 'not recorded')
         self.assertContains(resp, reverse('finance:bill-isd', args=[gala.pk, made.pk]))
 

@@ -1,4 +1,4 @@
-{# Mark a multi-bill paid, on the day the money arrived. #}
+{# Mark a bill or a multi-bill paid: on the day the money arrived, and how, when not through Workday. #}
 {% extends 'finance/base_finance.html' %}
 {% load crispy_forms_tags %}
 {% load finance_extras %}
@@ -11,13 +11,20 @@
                 <div class="fin-panel-head">{{ h2 }}</div>
                 <div class="fin-panel-body">
                     <p>
-                        {{ received|money }} of the {{ owed|money }} billed has been filed against these events.
+                        {{ received|money }} of the {{ owed|money }} billed has been filed against
+                        {% if is_multibill %}these events{% else %}this event{% endif %}.
                         {% if covered %}
                             That covers it, so the date below is the day the last of it reached Workday.
                         {% else %}
-                            The date below is today. Change it to the day the money arrived.
+                            The date below is today. Change it to the day the money arrived, and say how it was paid.
                         {% endif %}
                     </p>
+                    {% if before_books and not covered %}
+                        <p class="fin-muted">
+                            The books start on {{ books_start|date:"M j, Y" }}, after this bill's
+                            event{% if is_multibill %}s{% endif %}, so a payment for it was never imported.
+                        </p>
+                    {% endif %}
                     <form method="post">
                         {% csrf_token %}
                         {% crispy form %}

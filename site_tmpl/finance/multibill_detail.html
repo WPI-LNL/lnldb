@@ -72,7 +72,7 @@
                             <button type="submit" class="btn btn-xs btn-default">Mark unpaid</button>
                         </form>
                     {% else %}
-                        <a href="{% url 'finance:multibill-paid' bill.pk %}" class="btn btn-xs btn-primary">Mark paid</a>
+                        <a href="{% url 'finance:multibill-paid' bill.pk %}" class="btn btn-xs btn-primary">Mark paid…</a>
                     {% endif %}
                 {% endif %}
                 <a href="{% url 'finance:multibill-pdf' bill.pk %}" class="btn btn-xs btn-default">Invoice PDF</a>

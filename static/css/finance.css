@@ -566,6 +566,7 @@
 .fin-tag.is-projection { background: #f3effa; color: #6f42c1; border-color: #e3d9f5; }
 .fin-tag.is-warn { background: #fcf3d9; color: #8a6d3b; border-color: #f0e0b8; }
 .fin-tag.is-alert { background: #fdeceb; color: #a94442; border-color: #f5cfcd; }
+.fin-tag.is-ok { background: #e9f5e9; color: #3c763d; border-color: #cfe8cf; }
 .fin-tag .glyphicon { font-size: 10px; }
 
 .fin-queue-open {

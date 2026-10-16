@@ -29,8 +29,8 @@ Events                                  a fiscal year, or   Every event's billin
                                         any dates           by type of client, with costs SGA paid for shown apart.
 Owed to LNL                             today               What SGA owes on each funding request and each client owes
                                                             on each bill, and for how long: 0-30, 31-60, 61-90 and over
-                                                            90 days. Each bill shows its stage on the
-                                                            :doc:`Billing page <billing>`.
+                                                            90 days. Each bill shows its stage, and the
+                                                            :doc:`Billing page <billing>` shows the same days.
 Student organizations and departments   a fiscal year, or   The value of LNL's work for each kind of client at full
                                         any dates           rates, whether billed or not, service by service -- the
                                                             *external wear percentage*.
@@ -80,4 +80,4 @@ Reading a Report
 - **Costs SGA pays for aren't LNL's losses.** On the *Events* report, costs paid from a funding request or the SGA
   budget are shown separately and don't reduce an event's margin.
 
-`Last Modified: October 15, 2026`
+`Last Modified: October 16, 2026`

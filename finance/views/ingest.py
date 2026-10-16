@@ -19,14 +19,17 @@ from django.db import transaction
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
+from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
 
+from finance.billing import mark_paid_from_payments, payment_offer
+from finance.calculators import bill_payments, latest_bill
 from finance.filters import filter_context, get_filter_state
 from finance.forms import (BulkEncumbranceForm, BulkReconcileForm, EncumbranceForm,
                            ReconcileForm, WorkdayCSVUploadForm)
 from finance.importers import (ImportError_, discard_staged, import_workday_export,
                                purge_stale_staged, read_staged, stage_upload)
-from finance.models import (ZERO, ParsedTransaction, TransactionStatus,  # NOQA
+from finance.models import (ZERO, Billing, ParsedTransaction, TransactionStatus,  # NOQA
                             WorkdayTransaction, fiscal_year_for, money)
 from finance.suggestions import (ENCUMBRANCE_CLOSE_ENOUGH, SUGGESTED_FIELDS,
                                  active_project_tags, active_suggestion_rules,
@@ -53,6 +56,8 @@ def queue(request):
     state = get_filter_state(request)
     upload_form = WorkdayCSVUploadForm()
     can_edit = request.user.has_perm('finance.edit_subledger')
+    # Marking a bill paid is billing, so the box is only offered to whoever can bill.
+    can_bill = can_edit and request.user.has_perm('events.bill_event')
 
     # History -- lines from before the books start -- is never filed, so it
     # is never work: see WorkdayTransaction.objects.in_ledger().
@@ -96,6 +101,7 @@ def queue(request):
             'close_encumbrance': close_encumbrance,
             'is_revenue': txn.net_amount > 0,
             'partially_allocated': txn.slice_count > 0,
+            'bill_offer': _bill_offer(txn, suggestions) if can_bill and txn.net_amount > 0 else None,
             # A cost filed as passed through to a show without saying which
             # show; see finance.suggestions._needs_event.
             'needs_event': suggestions.get('needs_event', False),
@@ -314,6 +320,74 @@ def upload_confirm(request):
     return HttpResponseRedirect(redirect_to)
 
 
+def _bill_offer(txn, suggestions):
+    """
+    The pre-ticked *Mark bill paid* box for a queue row, as
+    :func:`finance.billing.payment_offer` describes it, or ``None``.
+
+    Offered when the row fills in the event -- from the ISD number recorded
+    on the bill, or the memo -- the event's bill is its own, and filing this
+    line would cover it. A multi-bill's payment is split across its events on
+    the line's own page, which offers the same box there.
+    """
+    linked = suggestions.get('linked_event')
+    refund = suggestions.get('refund_of')
+    if linked is None or not linked.is_lookup or (refund is not None and refund.is_lookup):
+        return None
+    bill = suggestions.get('isd_bill')
+    if not isinstance(bill, Billing):
+        from events.models import BaseEvent
+
+        event = BaseEvent.objects.filter(pk=linked.value).prefetch_related('billings', 'multibillings').first()
+        bill = latest_bill(event) if event is not None else None
+    if not isinstance(bill, Billing):
+        return None
+    return payment_offer(bill, txn.unallocated_amount or txn.net_amount, txn.accounting_date)
+
+
+def _mark_paid_on_filing(request, entry):
+    """
+    What filing ``entry`` did to its event's bill, as a sentence for the
+    message, or ``''``.
+
+    When the row's *Mark bill paid* box was ticked, the bill it named is
+    marked paid -- if the payment was filed against that bill's event and
+    what has been filed now covers it -- dated the day the last of the money
+    arrived. When no box was offered (the event was chosen by hand) and the
+    payment now covers the bill, it says so, so the bill is not forgotten.
+    Unticking an offered box leaves the bill alone, and says nothing.
+    """
+    if not request.user.has_perm('events.bill_event'):
+        return ''
+    ticked = request.POST.get('mark_bill_paid', '')
+    if ticked.isdigit():
+        bill = Billing.objects.select_related('event').filter(pk=ticked).first()
+        if bill is None or bill.date_paid or bill.event.closed:
+            return ''
+        if entry.linked_event_id != bill.event_id or entry.refund_of_id:
+            return ("The bill for %s was not marked paid, because the payment was filed against another "
+                    "event." % bill.event.event_name)
+        paid_on = mark_paid_from_payments(bill)
+        if paid_on is None:
+            received, _ = bill_payments(bill)
+            return ("The bill for %s was not marked paid: $%s of its $%s has been filed."
+                    % (bill.event.event_name, money(received), money(bill.amount)))
+        return "Marked the bill for %s paid on %s." % (bill.event.event_name, date_format(paid_on, 'M j, Y'))
+    if request.POST.get('bill_offered') or not entry.linked_event_id or entry.refund_of_id or entry.amount <= 0:
+        return ''
+    from events.models import BaseEvent
+
+    event = BaseEvent.objects.filter(pk=entry.linked_event_id).prefetch_related('billings', 'multibillings').first()
+    bill = latest_bill(event) if event is not None else None
+    if bill is None or bill.date_paid or event.closed:
+        return ''
+    received, _ = bill_payments(bill)
+    if received < money(bill.amount) or money(bill.amount) <= ZERO:
+        return ''
+    return ("What has been filed now covers the bill for %s. Mark it paid from the Billing page."
+            % (bill.display_name if not isinstance(bill, Billing) else event.event_name))
+
+
 @login_required
 @permission_required('finance.edit_subledger', raise_exception=True)
 @require_POST
@@ -365,6 +439,9 @@ def reconcile(request, pk):
         message = "%s reconciled and settled." % txn.reference
     else:
         message = "%s allocated." % txn.reference
+    paid = _mark_paid_on_filing(request, entry)
+    if paid:
+        message = "%s %s" % (message, paid)
 
     if wants_json:
         txn.refresh_from_db()

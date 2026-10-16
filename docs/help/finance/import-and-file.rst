@@ -80,7 +80,9 @@ Money coming in
 Money coming in is one of three things:
 
 - **Payment for an event** -- choose the event under `Link to Event`. Department billing arrives as an Internal Service
-  Delivery whose memo names the show, and the event is usually filled in for you.
+  Delivery, and the event is usually filled in for you: from the bill its ISD number is recorded on, or else from the
+  show the memo names. When the payment covers the event's bill, a ticked **Mark bill paid on** box marks the bill paid
+  as you file; untick it to leave the bill unpaid. See :doc:`billing`.
 - **Other income** -- choose what it was under `or Non-Event Revenue`: an SGA reimbursement, a gift, a sale. The fund
   it goes into (`Into fund`) follows from the choice. An SGA reimbursement also names the request it repays
   (`Reimburses request`).
@@ -109,8 +111,9 @@ Unknown request              The memo quotes an SGA funding request number that 
                              `Add F.26.195` (or whichever number) to enter it, pre-filled, then come back.
 A.27.16 or F.27.16?          The memo's request number isn't in the app, but the same number is under another letter.
                              One of the two is probably a typo; check which, and pick the right line.
-Multi-bill: split across...  One payment for a bill that covered several shows. Click it to lay out each show's share
-                             on the split page, check them, and save.
+Multi-bill: split across...  One payment for a bill that covered several shows, found by the ISD number recorded on
+                             it, or by its amount. Click it to lay out each show's share on the split page, check them,
+                             and save. A ticked box there marks the bill paid as well.
 ===========================  ===========================================================================================
 
 
@@ -154,4 +157,4 @@ Check Against Workday
 Once the queue is empty, open the `Balances` tab and record Workday's current balance for each account. If the app's
 figure disagrees, a line is missing or was imported twice. See :doc:`balances`.
 
-`Last Modified: October 2, 2026`
+`Last Modified: October 16, 2026`

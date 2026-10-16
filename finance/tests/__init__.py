@@ -55,8 +55,8 @@ what they cover rather than alphabetically.
     Where income comes from and what LNL is owed: the source deciding the
     fund, SGA's payments naming their request (reimbursements in, money taken
     back out), what SGA still owes per request and how old it is, the queue's
-    reading of SGA's journal entries and of multi-bills, the dashboard's
-    revenue figures, and marking a bill paid from the event P&L.
+    reading of SGA's journal entries and of multi-bills, and the dashboard's
+    revenue figures.
 ``test_reports``
     The Reports tab: an event's costs that SGA pays for, the period a report
     covers and what it is compared with, the income and spending, fund
@@ -111,6 +111,14 @@ what they cover rather than alphabetically.
     it offers, recording a worktag and an ISD, deciding an event needs no bill,
     starting a multi-bill from ticked events, the event page's Next step box,
     and the menu entries that replaced the events app's billing lists.
+``test_bill_payments``
+    Payments for bills: the queue finding the bill a payment settles by the
+    ISD number recorded on it, before the memo's event name; marking the bill
+    paid when its payment is filed, from the queue or a multi-bill's split;
+    the Mark paid form for either kind of bill, which asks how it was paid
+    when nothing filed covers it, and replaced the one-click buttons; and what
+    an unpaid bill has received and owes, the same on the Billing page as on
+    the Owed to LNL report.
 
 **Everything else**
 

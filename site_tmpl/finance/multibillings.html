@@ -45,7 +45,7 @@
                                 <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-xs btn-default">Email client</a>
                                 {% if not bill.date_paid and not bill.closed_events %}
                                     <a href="{% url 'finance:multibill-paid' bill.pk %}?next={{ request.get_full_path|urlencode }}"
-                                       class="btn btn-xs btn-default">Mark paid</a>
+                                       class="btn btn-xs btn-default">Mark paid…</a>
                                 {% endif %}
                                 <a href="{% url 'finance:multibill-pdf' bill.pk %}" class="btn btn-xs btn-link">PDF</a>
                             </td>

@@ -4,7 +4,9 @@ a page of its own.
 
 Three things make these more than templates. The first is splitting, on the
 bank line's page -- a single Workday line frequently pays for several
-different things, and the formset below is what carves it up. The second is
+different things, and the formset below is what carves it up. A payment for
+a multi-bill is split across its events here, and the page offers to mark
+the bill paid when the split covers it. The second is
 the audit trail, on the entry's page: django-reversion stores each save as an
 opaque field snapshot, so the helpers here diff consecutive versions and
 translate database column names back into the labels a Treasurer actually
@@ -23,9 +25,11 @@ from django.utils.formats import date_format
 from reversion.errors import RevertError
 from reversion.models import Version
 
+from finance.billing import bill_closed, mark_paid_from_payments, payment_offer
+from finance.calculators import bill_payments
 from finance.filters import filter_context
 from finance.forms import AllocationForm, SplitFormSet
-from finance.models import MultiBilling, ParsedTransaction, WorkdayTransaction, own_fund_for_account
+from finance.models import MultiBilling, ParsedTransaction, WorkdayTransaction, money, own_fund_for_account
 from finance.suggestions import suggest_all
 
 
@@ -106,6 +110,7 @@ def transaction_detail(request, pk):
     if txn.is_history:
         return _history_detail(request, txn)
     can_edit = request.user.has_perm('finance.edit_subledger')
+    bill_offer = None
 
     if request.method == 'POST' and can_edit:
         formset = SplitFormSet(request.POST, request.FILES, instance=txn,
@@ -128,10 +133,16 @@ def transaction_detail(request, pk):
                 for obj in formset.deleted_objects:
                     obj.delete()
             messages.success(request, "Split saved — the allocation balances to $0.00.")
+            paid = _mark_paid_on_split(request, txn)
+            if paid:
+                messages.info(request, paid)
             return HttpResponseRedirect(txn.get_absolute_url())
         else:
             for error in formset.non_form_errors():
                 messages.error(request, error)
+            offered = request.POST.get('bill_offered', '')
+            if offered.isdigit():
+                bill_offer = _split_bill_offer(request, txn, MultiBilling.objects.filter(pk=offered).first())
     else:
         formset = SplitFormSet(instance=txn, parent_transaction=txn)
         multibill = _multibill_to_split(request, txn)
@@ -141,9 +152,13 @@ def transaction_detail(request, pk):
             # its formset without them, so what is saved is what was submitted.
             formset = SplitFormSet(instance=txn, parent_transaction=txn, initial=shares)
             formset.extra = len(shares)
-            messages.info(request, "Laid out across the %s events on %s, the multi-bill sent %s, "
+            on_bill = len(multibill.events.all())
+            across = ("the %s events" % on_bill if len(shares) == on_bill
+                      else "%s of the %s events (the others come to $0)" % (len(shares), on_bill))
+            messages.info(request, "Laid out across %s on %s, the multi-bill sent %s, "
                                    "each by its share. Check the amounts, then save."
-                          % (len(shares), multibill.display_name, date_format(multibill.date_billed, 'M j, Y')))
+                          % (across, multibill.display_name, date_format(multibill.date_billed, 'M j, Y')))
+            bill_offer = _split_bill_offer(request, txn, multibill)
 
     slices = list(txn.slices.select_related(
         'project_tag', 'fr_line_target__funding_request', 'linked_event',
@@ -159,11 +174,50 @@ def transaction_detail(request, pk):
         'is_balanced': txn.is_fully_allocated,
         'can_edit': can_edit,
         'can_settle': request.user.has_perm('finance.settle_subledger'),
+        'bill_offer': bill_offer,
         'worktags': sorted((k.replace('_', ' ').title(), v)
                            for k, v in (txn.worktags_json or {}).items()),
     }
     context.update(filter_context(request))
     return render(request, 'finance/transaction_detail.html', context)
+
+
+def _split_bill_offer(request, txn, multibill):
+    """
+    The pre-ticked *Mark paid* box for a multi-bill whose payment this line
+    is being split as, when filing it would cover the bill, or ``None``. Only
+    for someone who can bill.
+    """
+    if multibill is None or not request.user.has_perm('events.bill_event'):
+        return None
+    return payment_offer(multibill, txn.net_amount, txn.accounting_date)
+
+
+def _mark_paid_on_split(request, txn):
+    """
+    Mark the multi-bill paid when the split page's box was ticked, and say
+    what happened, as a sentence or ``''``.
+
+    Only when the split filed money against the bill's events and what has
+    been filed against them now covers it, dated the day the last of the
+    money arrived -- the rules the *Mark paid* form and the queue follow.
+    """
+    ticked = request.POST.get('mark_bill_paid', '')
+    if not ticked.isdigit() or not request.user.has_perm('events.bill_event'):
+        return ''
+    bill = MultiBilling.objects.filter(pk=ticked).prefetch_related('events').first()
+    if bill is None or bill.date_paid or bill_closed(bill):
+        return ''
+    shows = [event.pk for event in bill.events.all()]
+    if not txn.slices.filter(linked_event_id__in=shows).exists():
+        return ("%s was not marked paid, because none of this line was filed against its events."
+                % bill.display_name)
+    paid_on = mark_paid_from_payments(bill)
+    if paid_on is None:
+        received, _ = bill_payments(bill)
+        return ("%s was not marked paid: $%s of its $%s has been filed."
+                % (bill.display_name, money(received), money(bill.amount)))
+    return "Marked %s paid on %s." % (bill.display_name, date_format(paid_on, 'M j, Y'))
 
 
 def _history_detail(request, txn):
@@ -215,7 +269,9 @@ def _multibill_rows(txn, multibill):
     Shares come from :func:`finance.calculators.multibill_shares`, the same
     split the event P&L uses, so each show is credited with what the P&L says
     it was billed. When the payment differs from the bill, the last show takes
-    the difference, so the rows still add up to the bank line.
+    the difference, so the rows still add up to the bank line. A show whose
+    share is $0 -- one SGA pays for, with nothing to charge -- gets no row: a
+    slice cannot be $0, so its row could only be refused.
     """
     from finance.calculators import multibill_shares
 
@@ -231,7 +287,7 @@ def _multibill_rows(txn, multibill):
         rows.append({'amount': amount, 'description': event.event_name,
                      'linked_event': event.pk,
                      'fund_source': fund.pk if fund is not None else None})
-    return rows
+    return [row for row in rows if row['amount']]
 
 
 @login_required

@@ -54,7 +54,6 @@ urlpatterns = [
 
     # What each event made or lost
     re_path(r'^events/$', views.event_pnl, name="events"),
-    re_path(r'^events/(?P<pk>\d+)/mark-paid/$', views.mark_bill_paid, name="event-mark-paid"),
 
     # What each fund holds, and the year-end close
     re_path(r'^balances/$', views.balance_sheet, name="balances"),
@@ -103,7 +102,8 @@ urlpatterns = [
             name="bill-delete"),
     re_path(r'^billing/event/(?P<event>\d+)/(?P<billing>\d+)/email/$',
             views.BillingEmailCreate.as_view(), name="bill-email"),
-    re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/pay/$', views.pay_bill, name="bill-pay"),
+    re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/paid/$', views.bill_mark_paid, name="bill-paid"),
+    re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/unpaid/$', views.bill_mark_unpaid, name="bill-unpaid"),
     re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/worktag/$', views.bill_worktag, name="bill-worktag"),
     re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/isd/$', views.bill_isd, name="bill-isd"),
     re_path(r'^billing/event/(?P<event>\d+)/no-bill-needed/$', views.no_bill_needed, name="no-bill-needed"),

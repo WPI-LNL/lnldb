@@ -67,20 +67,19 @@ has to check it and submit.
 Updating a Bill
 ^^^^^^^^^^^^^^^
 
-To update the details of a bill, click the `Update` button next to the bill you wish to edit. Update the date billed
-and/or the amount then hit `Save Changes`. Clicking `Reset Form` will reset the `Date billed` and `Amount` fields.
+To update the details of a bill, click the `Update` button next to the bill you wish to edit. Update the amount, then
+hit `Save Changes`. Clicking `Reset Form` will reset the `Amount` field. Whether the bill is paid is not changed here;
+see below.
 
 
 Mark a Bill as Paid
 ^^^^^^^^^^^^^^^^^^^
 
-There are a few different ways to mark a bill as paid. One of the easiest methods is to update the bill from the event
-detail page. Under the `Billing` tab, locate the bill then click the `Mark Paid` button. This button will also appear
-in a few additional places throughout the LNLDB, such as on the `All Events` page (`Events` > `All Events`).
+Most bills are marked paid in the finance queue, as the payment from Workday that covers them is filed. See
+:doc:`/help/finance/billing`.
 
-.. tip::
-    Once the payment has been imported from Workday and filed against the event, the finance app offers a
-    `Mark bill paid` button instead, which sets the paid date to the day the payment actually arrived. See
-    :doc:`/help/finance/events`.
+Otherwise, under the `Billing` tab, locate the bill and click `Mark Paid...`. The button also appears on event lists
+such as the `All Events` page (`Events` > `All Events`). It opens a form asking the day the bill was paid. If no
+payment filed from Workday covers the bill, it also asks how it was paid, such as a check or cash.
 
-`Last Modified: October 15, 2026`
+`Last Modified: October 16, 2026`

@@ -16,7 +16,8 @@ Five layers, tested from the bottom up:
   deposit matching a multi-bill offers to split it.
 * **The figures.** Revenue by source, event billing net of what was passed
   through, new and returning clients, and both kinds of receivable.
-* **The pages**, including marking a bill paid from the event P&L.
+* **The pages.** Marking a bill paid from the event P&L is in
+  ``test_bill_payments``.
 """
 import datetime
 from decimal import Decimal
@@ -740,66 +741,6 @@ class EventPaymentStateTests(CacheResetMixin, TestCase):
 # ---------------------------------------------------------------------------
 # The pages
 # ---------------------------------------------------------------------------
-
-class MarkBillPaidTests(CacheResetMixin, FinanceViewTestCase):
-    """ Copying the day the money arrived onto lnldb's bill, when asked. """
-
-    def setUp(self):
-        super(MarkBillPaidTests, self).setUp()
-        self.grant('view_subledger', 'edit_subledger', 'bill_event')
-        self.event = make_event('Spring Gala', when(2026, 4, 25))
-        self.bill = Billing.objects.create(event=self.event, date_billed=datetime.date(2026, 4, 30),
-                                           amount=Decimal('500.00'))
-
-    def _post(self, event=None):
-        return self.client.post(reverse('finance:event-mark-paid', args=[(event or self.event).pk]),
-                                {'next': reverse('finance:events')}, follow=True)
-
-    def test_a_paid_bill_is_dated_by_its_last_payment(self):
-        event_income(self.event, '300.00', date=datetime.date(2026, 5, 10))
-        event_income(self.event, '200.00', date=datetime.date(2026, 5, 20))
-        response = self._post()
-        self.bill.refresh_from_db()
-        self.assertEqual(self.bill.date_paid, datetime.date(2026, 5, 20))
-        self.assertContains(response, 'paid on May 20, 2026')
-
-    def test_a_bill_not_yet_covered_is_left_alone(self):
-        event_income(self.event, '300.00')
-        response = self._post()
-        self.bill.refresh_from_db()
-        self.assertIsNone(self.bill.date_paid)
-        self.assertContains(response, 'File the rest of the payment first')
-
-    def test_the_events_apps_permission_is_needed_too(self):
-        self.user.user_permissions.remove(
-            self.user.user_permissions.get(codename='bill_event'))
-        self.grant()
-        event_income(self.event, '500.00')
-        response = self.client.post(reverse('finance:event-mark-paid', args=[self.event.pk]))
-        self.assertEqual(response.status_code, 403)
-
-    def test_a_multibill_counts_every_show_on_it(self):
-        org = OrgFactory(name='Orientation', shortname='NSO')
-        concert = make_event('NSO Concert', when(2025, 8, 20))
-        social = make_event('NSO Social', when(2025, 8, 21))
-        bill = MultiBilling.objects.create(org=org, date_billed=datetime.date(2025, 9, 1),
-                                           amount=Decimal('900.00'))
-        bill.events.set([concert, social])
-        event_income(concert, '450.00', date=datetime.date(2025, 10, 1))
-        self._post(concert)
-        bill.refresh_from_db()
-        self.assertIsNone(bill.date_paid)
-        event_income(social, '450.00', date=datetime.date(2025, 10, 2))
-        self._post(concert)
-        bill.refresh_from_db()
-        self.assertEqual(bill.date_paid, datetime.date(2025, 10, 2))
-
-    def test_the_pnl_offers_the_button(self):
-        event_income(self.event, '500.00')
-        response = self.client.get(reverse('finance:events'), {'fy': 2026})
-        self.assertContains(response, 'Mark bill paid')
-        self.assertContains(response, 'Paid in full, bill not marked paid')
-
 
 class FundingPageTests(CacheResetMixin, FinanceViewTestCase):
     """ What SGA owes, on the funding request pages. """

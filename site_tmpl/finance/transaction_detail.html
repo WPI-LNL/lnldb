@@ -298,6 +298,22 @@
                                 </table>
                             </div>
 
+                            {% comment %}
+                                The split pays a multi-bill, and with it the payments
+                                filed against its events cover the bill, so marking
+                                it paid is offered, ticked. It is checked again when
+                                the split is saved.
+                            {% endcomment %}
+                            {% if bill_offer %}
+                                <input type="hidden" name="bill_offered" value="{{ bill_offer.bill.pk }}">
+                                <div class="checkbox fin-mark-paid" style="margin:10px 0 0;">
+                                    <label title="The payments filed against its events, this one included, add up to the bill of {{ bill_offer.owed|money }}. Untick to leave it unpaid.">
+                                        <input type="checkbox" name="mark_bill_paid" value="{{ bill_offer.bill.pk }}" checked>
+                                        Mark {{ bill_offer.bill.display_name }} paid on {{ bill_offer.paid_on|date:"M j, Y" }}
+                                    </label>
+                                </div>
+                            {% endif %}
+
                             <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
                                 <button type="button" class="btn btn-default btn-sm" id="fin-add-split">
                                     <span class="glyphicon glyphicon-plus"></span> Add a slice

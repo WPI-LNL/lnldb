@@ -281,6 +281,24 @@
                                 {% endcomment %}
                                 {% include 'finance/_queue_field.html' with field=row.form.refund_of label="Refund of" size="lg" autofilled=row.form.autofilled.refund_of suggestion=row.suggestions.refund_of only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Link to Event" size="lg" autofilled=row.form.autofilled.linked_event only %}
+                                {% comment %}
+                                    This payment covers the event's bill, so marking
+                                    the bill paid -- dated the day the last of its
+                                    money arrived -- is offered, ticked. Untick it to
+                                    leave the bill unpaid. It is checked again when
+                                    the row is filed: only the bill for the event the
+                                    money is filed against, and only once covered.
+                                {% endcomment %}
+                                {% if row.bill_offer %}
+                                    <div class="form-group fin-field fin-field-check fin-mark-paid">
+                                        <input type="hidden" name="bill_offered" value="{{ row.bill_offer.bill.pk }}">
+                                        <label title="The payments filed against the event, this one included, add up to its bill of {{ row.bill_offer.owed|money }}.">Bill</label>
+                                        <label class="fin-inline-check">
+                                            <input type="checkbox" name="mark_bill_paid" value="{{ row.bill_offer.bill.pk }}" checked>
+                                            Mark bill paid on {{ row.bill_offer.paid_on|date:"M j, Y" }}
+                                        </label>
+                                    </div>
+                                {% endif %}
                                 {% include 'finance/_queue_field.html' with field=row.form.non_event_revenue_type label="or Non-Event Revenue" size="md" autofilled=row.form.autofilled.non_event_revenue_type suggestion=row.suggestions.revenue_source only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.fund_source label="Into fund" size="md" autofilled=row.form.autofilled.fund_source suggestion=row.suggestions.fund_source only %}
                                 {% comment %}
