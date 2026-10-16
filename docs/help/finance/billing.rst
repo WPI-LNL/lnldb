@@ -27,8 +27,7 @@ Ready to bill          The VP has reviewed the event for billing, and no bill ha
                        been sent. A bill you made but never emailed is listed here   `Make a multi-bill`, or
                        too, marked *Not sent*.                                       `No bill needed`. For a bill
                                                                                      not sent: `Email client`.
-No bill needed         You decided the event is not billed.                          Close the event from its page,
-                                                                                     or `Undo`.
+No bill needed         You decided the event is not billed.                          `Close`, or `Undo`.
 Waiting on client      The bill has been emailed, and no worktag has come back.      `Email again`, or
                                                                                      `Enter worktag` if the client
                                                                                      replied by email.
@@ -38,7 +37,8 @@ Create ISD             The client sent the worktag.                             
 Waiting on approval    The ISD is in Workday, waiting for the client to approve it   File the payment when it
                        and the money to arrive.                                      arrives, which marks the bill
                                                                                      paid; or `Mark paid...`.
-Paid                   The bill is paid, and the event is still open.                Close the event from its page.
+Paid                   The bill is paid, and the event is still open.                `Close`, or tick several and
+                                                                                     `Close the ticked events`.
 =====================  ============================================================  ===============================
 
 Events appear only once they are reviewed for billing, and leave once they are closed.
@@ -184,6 +184,46 @@ Multi-bills
 A multi-bill is one row, under its name, with its events listed underneath. It goes through the same stages as a bill
 for one event: enter the worktag the client sends back, record the ISD, then split its payment across its events,
 which marks it paid. Its page has the same buttons.
+
+
+Closing Events
+--------------
+
+Closing an event is the last step. It locks the event, so nothing on it can be changed, and takes it off every list.
+Reopening it needs the *Reopen* permission, which officers have.
+
+On the *Paid* and *No bill needed* tabs, click `Close` beside an event, or tick several and click `Close the ticked
+events`. The box at the top of the table ticks them all. This does exactly what the `Close` button on the event's page
+does, recording who closed it and when. Closing a multi-bill's row closes every event on it that is still open.
+
+.. caution::
+    **Permission Required:** Close event
+
+    Officers have it. Without it, the tabs show no `Close` buttons.
+
+**An event with money still owed is not closed here.** A bill can be marked paid with less filed from Workday than it
+was billed for: the money hasn't arrived, or it has arrived and isn't filed yet. The *Paid* tab tags that bill *$...
+not filed*, and gives it no `Close` button or tick box. File the payment from the queue, and it can be closed. If it was
+paid some other way that will never reach Workday, close the event from its own page. A bill for an event from before
+the books start is closed as it is, because its payments were never imported. These are the same figures as the *Owed
+to LNL* report, which would otherwise be the only place still showing the debt.
+
+
+The Weekly Digest
+-----------------
+
+Once a week the site emails you, at lnl-t@wpi.edu, the billing that has waited too long:
+
+- **Waiting on the client** 14 days or more since the bill was last emailed. Email them again from the *Waiting on
+  client* tab: the digest only reminds you, and never emails a client.
+- **Waiting on approval** 21 days or more since the ISD was created. Check the ISD in Workday, or ask the client to
+  approve it.
+- **Ready to close:** events paid, or needing no bill, that are still open. Any that can't be closed from the Billing
+  page because money is still owed say so.
+
+Every line links to its event or multi-bill. Every fiscal year counts, and test events are left out. When nothing is on
+any of the three lists, no email is sent. To change the 14 and 21 days, see :doc:`settings`. The webmaster sets up when
+the digest is sent.
 
 
 The Event Page

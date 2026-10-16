@@ -17,8 +17,10 @@ form stays in the events app: every bill email ever sent links to it there.
 
 Either kind of bill is marked paid through one form, *Mark paid* (see
 *Marking a bill paid* below), unless the payment filed for it in the
-ingestion queue already did.
+ingestion queue already did. The Billing page then closes the events, one at
+a time or ticked together, as long as no money is still owed on them.
 """
+from collections import OrderedDict
 from io import BytesIO
 
 from django.conf import settings
@@ -41,9 +43,9 @@ from pypdf import PdfWriter
 
 from emails.generators import BillingEmailGenerator, DefaultLNLEmailGenerator as DLEG
 from events.models import BaseEvent
-from finance.billing import (CREATE_ISD, NO_BILL_NEEDED, READY, STAGE_HELP, STAGES, WAITING_ON_APPROVAL,
-                             WAITING_ON_CLIENT, BillItem, attach_payments, billing_items, by_stage, event_item,
-                             filter_items, ready_sections)
+from finance.billing import (CLOSABLE, CREATE_ISD, NO_BILL_NEEDED, PAID, READY, STAGE_HELP, STAGES,
+                             WAITING_ON_APPROVAL, WAITING_ON_CLIENT, BillItem, attach_payments, billing_items,
+                             by_stage, closable_items, close_item, event_item, filter_items, ready_sections)
 from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateForm, BillISDForm, BillPaidForm,
                                    BillWorktagForm, MultiBillChargeForm, MultiBillForm, MultiBillingEmailForm,
                                    NoBillNeededForm, bill_events, clear_isd, client_tally)
@@ -475,12 +477,66 @@ def billing_page(request):
     rows = this_year[stage]
     if stage in (WAITING_ON_CLIENT, CREATE_ISD, WAITING_ON_APPROVAL):
         attach_payments(rows)
+    elif stage in CLOSABLE:
+        # A paid bill too, for whether anything is still owed on it.
+        attach_payments(rows, paid=True)
     context = _billing_context(
         request, h2="Billing", stage=stage, stage_label=STAGES[stage], stage_help=STAGE_HELP[stage], tabs=tabs,
-        rows=rows, elsewhere=len(all_years[stage]) - len(rows), here=request.get_full_path())
+        rows=rows, elsewhere=len(all_years[stage]) - len(rows), here=request.get_full_path(),
+        can_close=stage in CLOSABLE and request.user.has_perm('events.close_event'))
     if stage == READY:
         context['ready'] = ready_sections(rows)
     return render(request, 'finance/billing.html', context)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+@permission_required('events.close_event', raise_exception=True)
+@require_POST
+def billing_close(request):
+    """
+    Close events from the Billing page's Paid and No bill needed tabs: the
+    row whose Close button was pressed (``only``), or every ticked row
+    (``close``). A multi-bill's row closes each of its events still open.
+
+    Each event is closed exactly as the event page's Close button closes it,
+    by the same permission, and named "Closed" in its history. A row with
+    money still owed on it is refused (see
+    :func:`finance.billing.close_refusal`), and so is one no longer at either
+    stage -- reopened, paid again, or closed since the page was drawn.
+    """
+    back = _back_to(request, billing_url(PAID))
+    keys = list(OrderedDict.fromkeys(request.POST.getlist('only') or request.POST.getlist('close')))
+    if not keys:
+        messages.info(request, "Tick the events to close first.")
+        return HttpResponseRedirect(back)
+    items = {item.key: item for item in closable_items(request.user)}
+    set_revision_comment("Closed", None)
+    closed, refused, gone = [], [], 0
+    for key in keys:
+        item = items.get(key)
+        if item is None:
+            gone += 1
+        elif item.close_refusal:
+            refused.append("%s: %s" % (item.name, item.close_refusal))
+        else:
+            closed.extend(close_item(item, request.user))
+    if closed:
+        messages.success(request, "Closed %s: %s." % (
+            _count(len(closed), "event"), ", ".join(event.event_name for event in closed)))
+    if refused:
+        messages.error(request, "Not closed, because money is still owed. %s. File the payment from the queue, "
+                                "or, if it was paid some other way, close the event from its own page."
+                       % ". ".join(refused))
+    if gone:
+        messages.warning(request, "%s no longer paid or needing no bill, or already closed, so %s left alone."
+                         % (_count(gone, "row was", "rows were"), "it was" if gone == 1 else "they were"))
+    return HttpResponseRedirect(back)
+
+
+def _count(n, one, many=None):
+    """ "1 event", "3 events". """
+    return "%s %s" % (n, one if n == 1 else (many or one + "s"))
 
 
 # ---------------------------------------------------------------------------

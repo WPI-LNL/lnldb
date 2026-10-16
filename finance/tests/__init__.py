@@ -119,6 +119,12 @@ what they cover rather than alphabetically.
     when nothing filed covers it, and replaced the one-click buttons; and what
     an unpaid bill has received and owes, the same on the Billing page as on
     the Owed to LNL report.
+``test_billing_closing``
+    The end of billing: closing events from the Billing page's Paid and No
+    bill needed tabs, one row or ticked together, as the event page's Close
+    button does, and refusing while money is still owed; and the weekly
+    digest the ``billing_digest`` command emails the Treasurer, with the
+    limits it reads from Finance Configuration.
 
 **Everything else**
 

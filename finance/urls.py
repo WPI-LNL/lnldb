@@ -95,6 +95,7 @@ urlpatterns = [
     # worktag form stays in the events app, where the links in every bill email
     # already sent point.
     re_path(r'^billing/$', views.billing_page, name="billing"),
+    re_path(r'^billing/close/$', views.billing_close, name="billing-close"),
     re_path(r'^billing/event/(?P<event>\d+)/new/$', views.BillingCreate.as_view(), name="bill-new"),
     re_path(r'^billing/event/(?P<event>\d+)/(?P<pk>\d+)/edit/$', views.BillingUpdate.as_view(),
             name="bill-edit"),

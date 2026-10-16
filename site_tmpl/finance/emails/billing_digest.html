@@ -1,0 +1,113 @@
+{% extends "emails/email_base.html" %}
+{% load lnldb_tags finance_extras %}
+{% comment %}
+    The weekly billing digest (finance/management/commands/billing_digest.py):
+    bills waiting too long on the client or on approval, and events ready to
+    close. The plain-text version is billing_digest.txt; keep the two alike.
+{% endcomment %}
+{% block perma %}
+{% endblock %}
+
+{% block unsub %}
+{% endblock %}
+
+{% block content %}
+{% get_base_url as base %}
+<table class="w960" width="960" cellpadding="10" cellspacing="0" border="0">
+    <tbody>
+    <tr>
+        <td class="w960" width="960">
+            <p align="left" class="article-title">Billing digest for {{ today|date:"M j, Y" }}</p>
+            <div align="left" class="article-content">
+                {% if waiting_on_client %}
+                    <h3>Waiting on the client, {{ client_days }} days or more</h3>
+                    <p>
+                        Emailed, and no worktag has come back.
+                        <a href="{{ base }}{% url 'finance:billing' %}?stage=waiting-on-client&amp;fy=all">Email them again from the Billing page</a>.
+                    </p>
+                    <table cellpadding="4" cellspacing="0" border="0" width="100%" style="font-size:13px; line-height:18px; color:#444444; margin-bottom:18px;">
+                        <tr>
+                            <th align="left">Bill</th>
+                            <th align="left">Client</th>
+                            <th align="right">Amount</th>
+                            <th align="left">Last emailed</th>
+                            <th align="right">Days</th>
+                        </tr>
+                        {% for item in waiting_on_client %}
+                            <tr>
+                                <td><a href="{{ base }}{{ item.url }}">{{ item.name }}</a></td>
+                                <td>{{ item.client.retname|default:"—" }}</td>
+                                <td align="right">
+                                    {{ item.amount|money }}
+                                    {% if item.received %}<br><small>{{ item.received|money }} received</small>{% endif %}
+                                </td>
+                                <td>{{ item.last_emailed|date:"M j, Y" }}</td>
+                                <td align="right">{{ item.days }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
+
+                {% if waiting_on_approval %}
+                    <h3>Waiting on approval, {{ approval_days }} days or more</h3>
+                    <p>
+                        The ISD is in Workday, and the money has not arrived. Check the ISD in Workday, or ask the
+                        client to approve it.
+                        <a href="{{ base }}{% url 'finance:billing' %}?stage=waiting-on-approval&amp;fy=all">Billing page</a>.
+                    </p>
+                    <table cellpadding="4" cellspacing="0" border="0" width="100%" style="font-size:13px; line-height:18px; color:#444444; margin-bottom:18px;">
+                        <tr>
+                            <th align="left">Bill</th>
+                            <th align="left">Client</th>
+                            <th align="left">ISD</th>
+                            <th align="right">Amount</th>
+                            <th align="right">Days</th>
+                        </tr>
+                        {% for item in waiting_on_approval %}
+                            <tr>
+                                <td><a href="{{ base }}{{ item.url }}">{{ item.name }}</a></td>
+                                <td>{{ item.client.retname|default:"—" }}</td>
+                                <td>{{ item.bill.isd_number|default:"not recorded" }}</td>
+                                <td align="right">
+                                    {{ item.amount|money }}
+                                    {% if item.covered %}<br><small>Received in full: mark it paid</small>
+                                    {% elif item.received %}<br><small>{{ item.received|money }} received</small>{% endif %}
+                                </td>
+                                <td align="right">{{ item.days }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
+
+                {% if to_close %}
+                    <h3>Ready to close</h3>
+                    <p>
+                        Paid, or needing no bill, and still open. Close them from the Billing page:
+                        <a href="{{ base }}{% url 'finance:billing' %}?stage=paid&amp;fy=all">Paid</a>,
+                        <a href="{{ base }}{% url 'finance:billing' %}?stage=no-bill-needed&amp;fy=all">No bill needed</a>.
+                    </p>
+                    <table cellpadding="4" cellspacing="0" border="0" width="100%" style="font-size:13px; line-height:18px; color:#444444; margin-bottom:18px;">
+                        <tr>
+                            <th align="left">Event or bill</th>
+                            <th align="left">Why it is ready</th>
+                        </tr>
+                        {% for item in to_close %}
+                            <tr>
+                                <td><a href="{{ base }}{{ item.url }}">{{ item.name }}</a></td>
+                                <td>
+                                    {% if item.stage == 'paid' %}Paid {{ item.bill.date_paid|date:"M j, Y" }}{% else %}No bill needed: {{ item.no_bill.get_reason_display }}{% endif %}
+                                    {% if item.close_refusal %}<br><small>Not closed from the Billing page, because {{ item.close_refusal }}.</small>{% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
+
+                <p><small>How many days a bill waits before it is listed here is set in the admin, under Finance
+                    Configuration.</small></p>
+            </div>
+        </td>
+    </tr>
+    </tbody>
+</table>
+{% endblock %}

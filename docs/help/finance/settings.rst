@@ -40,23 +40,28 @@ better changed on the finance pages themselves. Workday lines can't be changed a
 Finance Configuration
 ---------------------
 
-==============================================  ===================================================================
-Setting                                         What it does
-==============================================  ===================================================================
-Fiscal year starts in                           July. Change it only if WPI moves its fiscal year: every line ever
-                                                recorded moves to a different year.
-Student organization fund                       The Workday fund number (810) that marks a client as a student
-                                                organization rather than a department.
-Past years / Future years in the picker         How many fiscal years the filter bar offers.
-Books start on                                  The first day the books count (July 1, 2025). Lines from before it
-                                                are history. Don't change it without talking to the webmaster:
-                                                every balance is worked out from it.
-Minimum reserve                                 The least LNL's own money should hold. The forecast and *Can we
-                                                afford it?* answer against it.
-Departments' share of billing before FY27 (%)   What share of past billing came from departments. Until it is set or
-                                                can be measured, the forecast leaves past billing out. See
-                                                :doc:`forecast`.
-==============================================  ===================================================================
+==================================================  ===================================================================
+Setting                                             What it does
+==================================================  ===================================================================
+Fiscal year starts in                               July. Change it only if WPI moves its fiscal year: every line ever
+                                                    recorded moves to a different year.
+Student organization fund                           The Workday fund number (810) that marks a client as a student
+                                                    organization rather than a department.
+Past years / Future years in the picker             How many fiscal years the filter bar offers.
+Books start on                                      The first day the books count (July 1, 2025). Lines from before it
+                                                    are history. Don't change it without talking to the webmaster:
+                                                    every balance is worked out from it.
+Minimum reserve                                     The least LNL's own money should hold. The forecast and *Can we
+                                                    afford it?* answer against it.
+Departments' share of billing before FY27 (%)       What share of past billing came from departments. Until it is set or
+                                                    can be measured, the forecast leaves past billing out. See
+                                                    :doc:`forecast`.
+Billing digest: waiting on client after (days)      How long after a bill was last emailed the weekly billing digest
+                                                    lists it, if the client hasn't sent the worktag (14). See
+                                                    :doc:`billing`.
+Billing digest: waiting on approval after (days)    How long after an ISD was created the digest lists it, if the
+                                                    money hasn't arrived (21).
+==================================================  ===================================================================
 
 
 Spend Categories
@@ -106,4 +111,4 @@ money **goes into**; the queue then fills that fund in and refuses any other.
 
 A Workday code renamed or renumbered by WPI is fixed here, not in the code: change the code on the matching row.
 
-`Last Modified: October 2, 2026`
+`Last Modified: October 16, 2026`

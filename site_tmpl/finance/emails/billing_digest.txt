@@ -1,0 +1,27 @@
+{% load lnldb_tags finance_extras %}{% get_base_url as base %}Billing digest for {{ today|date:"M j, Y" }}
+{% if waiting_on_client %}
+WAITING ON THE CLIENT, {{ client_days }} DAYS OR MORE
+
+Emailed, and no worktag has come back. Email them again from the Billing page:
+{{ base }}{% url 'finance:billing' %}?stage=waiting-on-client&fy=all
+{% for item in waiting_on_client %}
+- {{ item.name }}{% if item.client %} ({{ item.client.retname }}){% endif %}: {{ item.amount|money }}, last emailed {{ item.last_emailed|date:"M j, Y" }}, {{ item.days }} days ago.{% if item.received %} {{ item.received|money }} received so far.{% endif %}
+  {{ base }}{{ item.url }}{% endfor %}
+{% endif %}{% if waiting_on_approval %}
+WAITING ON APPROVAL, {{ approval_days }} DAYS OR MORE
+
+The ISD is in Workday, and the money has not arrived. Check the ISD in Workday, or ask the client to approve it:
+{{ base }}{% url 'finance:billing' %}?stage=waiting-on-approval&fy=all
+{% for item in waiting_on_approval %}
+- {{ item.name }}{% if item.client %} ({{ item.client.retname }}){% endif %}: {% if item.bill.isd_number %}ISD {{ item.bill.isd_number }}{% else %}ISD{% endif %} for {{ item.amount|money }}, {{ item.days }} days ago.{% if item.covered %} Received in full: mark it paid.{% elif item.received %} {{ item.received|money }} received so far.{% endif %}
+  {{ base }}{{ item.url }}{% endfor %}
+{% endif %}{% if to_close %}
+READY TO CLOSE
+
+Paid, or needing no bill, and still open. Close them from the Billing page:
+{{ base }}{% url 'finance:billing' %}?stage=paid&fy=all
+{{ base }}{% url 'finance:billing' %}?stage=no-bill-needed&fy=all
+{% for item in to_close %}
+- {{ item.name }}: {% if item.stage == 'paid' %}paid {{ item.bill.date_paid|date:"M j, Y" }}{% else %}no bill needed ({{ item.no_bill.get_reason_display }}){% endif %}.{% if item.close_refusal %} Not closed from the Billing page, because {{ item.close_refusal }}.{% endif %}{% endfor %}
+{% endif %}
+How many days a bill waits before it is listed here is set in the admin, under Finance Configuration.

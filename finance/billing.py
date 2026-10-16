@@ -38,7 +38,9 @@ client, so its worktag is always the one the Treasurer records.
 
 A bill is paid when the Treasurer says so, never on its own. The ingestion
 queue offers to mark it paid when the payment being filed covers it, and the
-*Mark paid* form does it for anything else -- see *Payments* at the end.
+*Mark paid* form does it for anything else -- see *Payments* below. Then the
+event is closed, from its own page or the Billing page (*Closing*), and the
+weekly digest lists whatever has waited too long (*The weekly digest*).
 """
 import datetime
 from collections import OrderedDict
@@ -49,8 +51,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from finance.calculators import bill_payments, days_owed, latest_bill, received_by_event
-from finance.models import (ZERO, MultiBilling, books_start_date, client_of, fiscal_year_for, money,
-                            no_bill_needed_for)
+from finance.models import (ZERO, MultiBilling, books_start_date, client_of, finance_settings, fiscal_year_for,
+                            money, no_bill_needed_for)
 
 READY = 'ready'
 NO_BILL_NEEDED = 'no-bill-needed'
@@ -105,8 +107,8 @@ class BillItem(object):
     record, when it has one.
 
     ``received``, ``owed``, ``days_owed`` and ``last_payment`` are what has
-    been filed against an unpaid bill, filled in by :func:`attach_payments`;
-    ``None`` until then, and for a bill whose payments were never imported.
+    been filed against the bill, filled in by :func:`attach_payments`; ``None``
+    until then, and for a bill whose payments were never imported.
     """
 
     def __init__(self, stage, events, bill=None, since=None, not_sent=False, no_bill=None):
@@ -124,6 +126,13 @@ class BillItem(object):
     @property
     def is_multibill(self):
         return isinstance(self.bill, MultiBilling)
+
+    @property
+    def key(self):
+        """ What names the item in a form: ``e`` and the event's pk, or ``m`` and the multi-bill's. """
+        if self.is_multibill:
+            return 'm%s' % self.bill.pk
+        return 'e%s' % self.event.pk
 
     @property
     def event(self):
@@ -284,7 +293,13 @@ class BillItem(object):
     @property
     def covered(self):
         """ Whether the payments filed against this unpaid bill add up to it. """
-        return bool(self.received) and self.owed == ZERO
+        return (self.bill is not None and not self.bill.date_paid
+                and bool(self.received) and self.owed == ZERO)
+
+    @property
+    def close_refusal(self):
+        """ Why the Billing page will not close this item, or ``None``. See :func:`close_refusal`. """
+        return close_refusal(self)
 
     @property
     def paid_url(self):
@@ -606,11 +621,12 @@ def mark_paid_from_payments(bill):
     return last
 
 
-def attach_payments(items, today=None):
+def attach_payments(items, today=None, paid=False):
     """
-    Give each unpaid bill among ``items`` what has been received against it,
-    what is still owed, how many days it has been owed and when the last
-    payment arrived, in one query for them all.
+    Give each unpaid bill among ``items`` -- and with ``paid``, each paid one
+    too -- what has been received against it, what is still owed, how many
+    days it has been owed and when the last payment arrived, in one query for
+    them all.
 
     Received and owed are worked out as the Owed to LNL report works them
     out, and the days by the same :func:`~finance.calculators.days_owed`, so
@@ -618,13 +634,13 @@ def attach_payments(items, today=None):
     from before the books start gets none of them: their payments were never
     imported.
     """
-    unpaid = [item for item in items if item.bill is not None and not item.bill.date_paid]
-    if not unpaid:
+    billed = [item for item in items if item.bill is not None and (paid or not item.bill.date_paid)]
+    if not billed:
         return
     start = books_start_date()
     today = today or timezone.localdate()
-    filed = received_by_event({event.pk for item in unpaid for event in item.events})
-    for item in unpaid:
+    filed = received_by_event({event.pk for item in billed for event in item.events})
+    for item in billed:
         if start is not None and any(_local_day(event.datetime_start) < start for event in item.events):
             continue
         payments = [filed[event.pk] for event in item.events if event.pk in filed]
@@ -633,3 +649,114 @@ def attach_payments(items, today=None):
         item.owed = max(item.amount - item.received, ZERO)
         item.days_owed = days_owed(item.bill, item.owed, today)
         item.last_payment = max(days) if days else None
+
+
+# ---------------------------------------------------------------------------
+# Closing
+#
+# Closing an event is the last step: it locks the event and takes it off every
+# working list. Besides the event page's Close button, the Billing page closes
+# events from its Paid and No bill needed tabs, one at a time or ticked
+# together, and does exactly what that button does. Unlike the button, it will
+# not close an event money is still owed on: a bill marked paid that the
+# payments filed from Workday do not cover stays open, because closing it
+# would hide the debt everywhere but the Owed to LNL report.
+# ---------------------------------------------------------------------------
+
+#: The stages the Billing page closes events from.
+CLOSABLE = (PAID, NO_BILL_NEEDED)
+
+
+def closable_items(user=None):
+    """
+    The items at a stage the Billing page closes events from, each with what
+    has been filed against its bill (see :func:`attach_payments`).
+    """
+    items = [item for item in billing_items(user) if item.stage in CLOSABLE]
+    attach_payments(items, paid=True)
+    return items
+
+
+def close_refusal(item):
+    """
+    Why the Billing page will not close ``item``, as a phrase, or ``None``
+    when it will. The item needs :func:`attach_payments`, with ``paid``.
+
+    Money is still owed when the payments filed against a paid bill come to
+    less than it, counted as the Owed to LNL report counts it. A bill for
+    events from before the books start has no payments on file to count, so
+    its being marked paid is taken as it stands, as the report takes it.
+    """
+    if item.stage not in CLOSABLE:
+        return "it is not paid"
+    if item.owed and not item.received:
+        return "none of the $%s billed has been filed from Workday" % item.amount
+    if item.owed:
+        return "$%s of the $%s billed has not been filed from Workday" % (item.owed, item.amount)
+    return None
+
+
+def close_item(item, user):
+    """
+    Close every event on ``item`` that is still open, as the event page's
+    Close button does: marked closed, by ``user``, now. The caller names the
+    change "Closed" in the events' history. Returns the events closed.
+    """
+    from events.models import BaseEvent
+
+    now = timezone.now()
+    closed = []
+    # Fetched again through the polymorphic manager, as the event page fetches
+    # the event it closes, so each is saved, and kept in its history, as the
+    # kind of event it really is.
+    events = (BaseEvent.objects.filter(pk__in=[event.pk for event in item.events], closed=False)
+              .order_by('datetime_start', 'pk'))
+    for event in events:
+        event.closed = True
+        event.closed_by = user
+        event.closed_on = now
+        event.save()
+        closed.append(event)
+    return closed
+
+
+# ---------------------------------------------------------------------------
+# The weekly digest
+#
+# What the billing_digest command emails the Treasurer each week: bills the
+# client has not answered, ISDs not yet approved, and events ready to close.
+# How long is too long is set in Finance Configuration. The digest only says
+# who is due a reminder. Emailing a client again stays a button the Treasurer
+# presses, because the Treasurer confirms every worktag personally.
+# ---------------------------------------------------------------------------
+
+def digest():
+    """
+    What the weekly billing digest lists, as a dict:
+
+    * ``waiting_on_client``: bills the client has not answered at least
+      ``client_days`` days after they were last emailed (14 to start);
+    * ``waiting_on_approval``: ISDs still waiting at least ``approval_days``
+      days after they were recorded (21 to start);
+    * ``to_close``: events paid, or needing no bill, that are still open.
+      Each item's ``close_refusal`` says why the Billing page will not close
+      it, if it will not.
+
+    Each list is longest-waiting first, and every item has what has been
+    filed against its bill (:func:`attach_payments`). Every fiscal year
+    counts: a bill does not stop needing work when the year turns. Test
+    events are left out.
+    """
+    config = finance_settings()
+    items = [item for item in billing_items()
+             if not all(getattr(event, 'test_event', False) for event in item.events)]
+    stages = by_stage(items)
+    client = [item for item in stages[WAITING_ON_CLIENT]
+              if item.days is not None and item.days >= config.digest_client_days]
+    approval = [item for item in stages[WAITING_ON_APPROVAL]
+                if item.days is not None and item.days >= config.digest_approval_days]
+    to_close = sorted(stages[PAID] + stages[NO_BILL_NEEDED],
+                      key=lambda item: (item.since or datetime.date.max, item.date))
+    attach_payments(client + approval + to_close, paid=True)
+    return {'waiting_on_client': client, 'waiting_on_approval': approval, 'to_close': to_close,
+            'client_days': config.digest_client_days, 'approval_days': config.digest_approval_days}

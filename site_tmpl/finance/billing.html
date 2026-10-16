@@ -19,6 +19,19 @@
         {% endif %}
     </p>
 
+    {% if can_close and rows %}
+        {% comment %}
+            Every Close button and tick box on the Paid and No bill needed tabs
+            belongs to this form through its form attribute, so the rows' own
+            forms (Undo) are not nested inside it. A row's Close button sends
+            only that row; the button under the table sends every ticked one.
+        {% endcomment %}
+        <form method="post" action="{% url 'finance:billing-close' %}" id="fin-close-form">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ here }}">
+        </form>
+    {% endif %}
+
     {% if stage == 'ready' %}
         {% comment %}
             One form for the whole tab, so events ticked anywhere on it -- on
@@ -185,6 +198,7 @@
                 <table class="table fin-table">
                     <thead>
                     <tr>
+                        {% if can_close %}<th style="width:1%;"><input type="checkbox" class="fin-close-all" aria-label="Tick every event"></th>{% endif %}
                         <th>Event</th>
                         <th>Client</th>
                         <th>Event date</th>
@@ -197,6 +211,7 @@
                     <tbody>
                     {% for item in rows %}
                         <tr>
+                            {% if can_close %}<td><input type="checkbox" name="close" value="{{ item.key }}" form="fin-close-form" aria-label="Close {{ item.name }}"></td>{% endif %}
                             <td><a href="{{ item.url }}">{{ item.name }}</a></td>
                             <td>{{ item.client.retname|default:"—" }}</td>
                             <td class="fin-nowrap">{{ item.date|date:"M j, Y" }}</td>
@@ -216,7 +231,10 @@
                                     <input type="hidden" name="next" value="{{ here }}">
                                     <button type="submit" class="btn btn-xs btn-default">Undo</button>
                                 </form>
-                                <a href="{{ item.url }}" class="btn btn-xs btn-link">Close it on its page</a>
+                                {% if can_close %}
+                                    <button type="submit" form="fin-close-form" name="only" value="{{ item.key }}" class="btn btn-xs btn-default"
+                                            onclick="return confirm('Close {% if item.is_multibill %}the events on {% endif %}{{ item.name|escapejs }}? Closing locks {% if item.is_multibill %}each{% else %}the{% endif %} event for edits, and cannot be easily undone.');">Close</button>
+                                {% endif %}
                             </td>
                         </tr>
                     {% endfor %}
@@ -224,6 +242,11 @@
                 </table>
             </div>
         </div>
+        {% if can_close %}
+            <div class="text-right hidden-print" style="margin-bottom:20px;">
+                <button type="submit" form="fin-close-form" class="btn btn-primary" onclick="return confirm('Close the ticked events? Closing locks each event for edits, and cannot be easily undone.');">Close the ticked events</button>
+            </div>
+        {% endif %}
 
     {% elif rows %}
         <div class="fin-panel">
@@ -231,6 +254,7 @@
                 <table class="table fin-table">
                     <thead>
                     <tr>
+                        {% if can_close %}<th style="width:1%;"><input type="checkbox" class="fin-close-all" aria-label="Tick every bill"></th>{% endif %}
                         <th>Bill</th>
                         <th>Client</th>
                         {% if stage == 'create-isd' %}
@@ -256,6 +280,15 @@
                     <tbody>
                     {% for item in rows %}
                         <tr>
+                            {% if can_close %}
+                                <td>
+                                    {% if item.close_refusal %}
+                                        <input type="checkbox" disabled title="Money is still owed on it" aria-label="{{ item.name }} cannot be closed here">
+                                    {% else %}
+                                        <input type="checkbox" name="close" value="{{ item.key }}" form="fin-close-form" aria-label="Close {{ item.name }}">
+                                    {% endif %}
+                                </td>
+                            {% endif %}
                             <td>
                                 <a href="{{ item.url }}">{{ item.name }}</a>
                                 {% if item.is_multibill %}
@@ -329,6 +362,14 @@
                                     <td class="fin-nowrap">
                                         {{ item.bill.date_paid|date:"M j, Y" }}
                                         {% if item.bill.paid_note %}<br><small class="fin-muted">{{ item.bill.paid_note }}</small>{% endif %}
+                                        {% if item.owed %}
+                                            {% comment %}
+                                                Marked paid, but the payments filed from Workday come to
+                                                less than the bill: money still owed, as the Owed to LNL
+                                                report counts it, so it is not closed from here.
+                                            {% endcomment %}
+                                            <br><span class="fin-tag is-warn" title="Marked paid, but the payments filed from Workday come to {{ item.received|money }} of the {{ item.amount|money }} billed">{{ item.owed|money }} not filed</span>
+                                        {% endif %}
                                     </td>
                                 {% endif %}
                             {% endif %}
@@ -387,12 +428,9 @@
                                     {% if not item.covered %}
                                         <a href="{{ item.paid_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-default" title="Paid by cash or check, or before the books start: give the day and how">Mark paid…</a>
                                     {% endif %}
-                                {% elif stage == 'paid' %}
-                                    {% if item.is_multibill %}
-                                        {% for event in item.events %}{% if not event.closed %}<a href="{% url 'events:detail' event.pk %}" class="btn btn-xs btn-link">Close {{ event.event_name }}</a>{% endif %}{% endfor %}
-                                    {% else %}
-                                        <a href="{{ item.url }}" class="btn btn-xs btn-link">Close it on its page</a>
-                                    {% endif %}
+                                {% elif stage == 'paid' and can_close and not item.close_refusal %}
+                                    <button type="submit" form="fin-close-form" name="only" value="{{ item.key }}" class="btn btn-xs btn-default"
+                                            onclick="return confirm('Close {% if item.is_multibill %}the events on {% endif %}{{ item.name|escapejs }}? Closing locks {% if item.is_multibill %}each{% else %}the{% endif %} event for edits, and cannot be easily undone.');">Close</button>
                                 {% endif %}
                             </td>
                         </tr>
@@ -401,7 +439,16 @@
                 </table>
             </div>
         </div>
-        {% if stage == 'create-isd' %}
+        {% if stage == 'paid' and can_close %}
+            <div class="text-right hidden-print" style="margin-bottom:10px;">
+                <button type="submit" form="fin-close-form" class="btn btn-primary" onclick="return confirm('Close the ticked events? Closing locks each event for edits, and cannot be easily undone.');">Close the ticked events</button>
+            </div>
+            <p class="fin-muted" style="font-size:13px;">
+                Closing a multi-bill's row closes each of its events. A bill marked paid with less filed from Workday
+                than it was billed for still has money owed on it, so it is not closed here: file the payment from the
+                queue, or, if it was paid some other way, close the event from its own page.
+            </p>
+        {% elif stage == 'create-isd' %}
             <p class="fin-muted" style="font-size:13px;">
                 Create the ISD in Workday with these. Keep the memo as it is: the ingestion queue reads the event back
                 out of it when the payment arrives. Then type the number Workday gives the ISD and click
@@ -427,6 +474,13 @@
     {% endcomment %}
     <script>
         (function () {
+            // "Tick every" on the Paid and No bill needed tabs, leaving rows that cannot be closed here alone.
+            document.addEventListener('change', function (event) {
+                var all = event.target;
+                if (!all.classList || !all.classList.contains('fin-close-all')) { return; }
+                var boxes = document.querySelectorAll('input[name="close"]');
+                for (var i = 0; i < boxes.length; i++) { boxes[i].checked = all.checked; }
+            });
             document.addEventListener('click', function (event) {
                 var button = event.target.closest ? event.target.closest('.fin-copy') : null;
                 if (!button || !navigator.clipboard) { return; }

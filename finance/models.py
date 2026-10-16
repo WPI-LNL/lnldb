@@ -286,6 +286,14 @@ class FinanceSettings(models.Model):
                   "it bills departments only. The forecast takes this share of past billing as "
                   "what departments alone bring in. Leave blank to work it out from billing "
                   "filed against events; until enough is, the forecast leaves past billing out.")
+    digest_client_days = models.PositiveSmallIntegerField(
+        default=14, verbose_name="Billing digest: waiting on client after (days)",
+        help_text="The weekly billing digest lists a bill the client has not answered this many days "
+                  "after it was last emailed, so you can email it again.")
+    digest_approval_days = models.PositiveSmallIntegerField(
+        default=21, verbose_name="Billing digest: waiting on approval after (days)",
+        help_text="The weekly billing digest lists an ISD still waiting for the client to approve it "
+                  "this many days after it was recorded.")
 
     class Meta:
         verbose_name = "Finance Configuration"

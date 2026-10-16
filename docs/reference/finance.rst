@@ -190,7 +190,9 @@ Queue        ``queue/``      Importing exports, filing each new line,         ``
 Events       ``events/``     What each show made or lost, and *Mark paid*     ``events.bill_event``, for
                              for a bill paid in full                          *Mark paid*
 Billing      ``billing/``    Every bill by the stage it is at; see *Billing   ``events.bill_event``, to
-                             stages*                                          look as well
+                             stages*                                          look as well; closing
+                                                                              events also needs
+                                                                              ``events.close_event``
 Balances     ``balances/``   What each fund holds; Workday balances,          ``edit_subledger``; closing
                              transfers, opening balances, closing a year      needs ``close_fiscalyear``
 Projects     ``projects/``   Spending by project tag                          ``manage_projecttag``
@@ -212,6 +214,8 @@ The billing pages are under ``billing/``:
 
 * ``billing/``: the Billing page, every bill by the stage it is at, one tab per
   stage. It replaced the events app's six billing lists; see *Billing stages*.
+  ``billing/close/`` closes the events on its *Paid* and *No bill needed*
+  tabs.
 * ``billing/event/<event>/``: creating, editing, deleting and emailing one
   event's bill, which moved here from the events app with the bills and still
   behave as they did there; marking it paid or unpaid (``<pk>/paid/``,
@@ -1778,6 +1782,46 @@ LNL report works them out, and aged by the same
 :func:`~finance.calculators.days_owed`, so the page and the report agree. Like
 the report, a bill for events from before the books start shows none.
 
+**Closing from the page.** The *Paid* and *No bill needed* tabs close events,
+one row by its *Close* button or every ticked row at once (the view
+``billing_close``, and :func:`~finance.billing.close_item`). Each event is
+closed as the events app's ``close`` view closes it: ``closed``, ``closed_by``
+and ``closed_on`` set, the event fetched through the polymorphic manager, and
+the change named ``Closed`` in its django-reversion history. It needs
+``events.close_event``, as that view does, besides ``bill_event``; without it
+the tabs show no close controls. A multi-bill's row closes each of its events
+still open. The rows are worked out again when the form arrives, so a row that
+has left both stages since the page was drawn is left alone. The event page's
+own *Close* is the events app's, and unchanged.
+
+**Money still owed refuses it** (:func:`~finance.billing.close_refusal`). A
+row is refused when the payments filed against its bill come to less than the
+bill, even if it is marked paid: the figures are
+:func:`~finance.billing.attach_payments` with ``paid=True``, the same as the
+Owed to LNL report's, and closing such an event would leave that report the
+only place the debt still showed. The *Paid* tab tags the row *$... not filed*
+and offers it no *Close*. A bill for events from before the books start has no
+figures, and is closed as marked. The way to close an event paid some other
+way that will never reach Workday is its own page.
+
+**The weekly digest.** ``manage.py billing_digest`` emails the Treasurer
+(``settings.EMAIL_TARGET_T``, or ``--to``) what :func:`~finance.billing.digest`
+lists: bills waiting on the client at least
+``FinanceSettings.digest_client_days`` (14) days since they were last emailed,
+ISDs waiting on approval at least ``digest_approval_days`` (21) days since
+they were created, and every event at *Paid* or *No bill needed*, saying which
+the page will not close. The two limits are in *Finance Configuration*
+(migration ``0008_billing_digest_limits``). Every fiscal year counts, test
+events are left out, and hidden ones are kept: the Treasurer bills them, and
+every bill email is already copied to that address. Nothing is sent when all
+three lists are empty, and ``--dry-run`` prints the email instead of sending
+it. It only reminds: emailing a client again stays a button, because the
+Treasurer confirms every worktag personally. The email is
+``site_tmpl/finance/emails/billing_digest.txt`` and ``.html``, sent through
+``emails.generators.DefaultLNLEmailGenerator``. With no request to read the
+address from, its links use the first of ``ALLOWED_HOSTS``. The server runs it
+weekly; see *Looking after the app*.
+
 **Filters.** The fiscal year is the one the bill's first event started in. A
 bill does not stop needing work when the year turns, so each tab also says how
 many more are waiting in other years, with a link to them. The partition puts
@@ -2403,6 +2447,30 @@ To undo it, run ``python manage.py migrate events
 0017_is_sga_funded_squashed_0018_pricelist_extras``. That unapplies both
 migrations and puts the content types back.
 
+The weekly billing digest
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**The server needs a weekly cron entry for it.** ``billing_digest`` emails the
+Treasurer the billing that has waited too long, and the events ready to close
+(see *Billing stages*). Nothing sends it until the server runs it on a
+schedule: like the events app's ``send_start_end``, it is a management
+command, and something on the server has to run it. Once a week is enough,
+and early Monday suits the Treasurer's week. For example::
+
+    # m h dom mon dow  command
+    0 8 * * 1  cd /path/to/lnldb && /path/to/venv/bin/python manage.py billing_digest
+
+Run it with the same environment as the site, so it reaches the same database
+and sends mail the same way. Try it first with ``--dry-run``, which prints the
+email and sends nothing, then once with ``--to`` and your own address. It
+sends nothing when there is nothing to report, so a quiet week is not a
+fault. Its links use the first host in ``ALLOWED_HOSTS``, so that should be
+the site's own address.
+
+How many days a bill waits before it is listed is the Treasurer's, in
+*Finance Configuration*: 14 days waiting on the client and 21 waiting on
+approval to start.
+
 Changing reference data
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2454,8 +2522,14 @@ worktag, and the import says so.
 Management commands
 ~~~~~~~~~~~~~~~~~~~
 
-Three commands in ``finance/management/commands/``, all for development and
-repair rather than daily use. Each one's docstring has the details.
+Four commands in ``finance/management/commands/``. Each one's docstring has
+the details. The server runs the first weekly; the other three are for
+development and repair.
+
+``billing_digest``
+    Emails the Treasurer the bills that have waited too long and the events
+    ready to close. ``--to`` sends it somewhere else; ``--dry-run`` prints it.
+    See *The weekly billing digest*.
 
 ``seed_test_events``
     Creates searchable test events, including one named after each billing memo
@@ -2503,7 +2577,7 @@ locally::
 Tests
 -----
 
-``python manage.py test finance`` runs 1,537 tests across twenty-eight modules. The
+``python manage.py test finance`` runs 1,566 tests across twenty-nine modules. The
 module map, and what each one is responsible for, is the docstring of
 :mod:`finance.tests`; the notes here are the things that are not obvious from
 reading it.

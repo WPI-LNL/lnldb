@@ -437,12 +437,19 @@ class BillingPageTests(ViewTestCase):
         self.assertContains(resp, reverse('finance:multibill-email', args=[bulk.pk]))
         self.assertContains(resp, reverse('finance:multibill-worktag', args=[bulk.pk]))
 
-    def test_paid_points_to_closing_the_event(self):
+    def test_paid_offers_close_only_to_whoever_may_close(self):
+        # Closing from the tab is tested in test_billing_closing.
         gala = show('Gala')
         bill(gala, emailed_days_ago=30, paid_days_ago=2)
         resp = self.client.get(self.url + '?stage=paid&fy=all')
-        self.assertContains(resp, 'Close it on its page')
         self.assertContains(resp, reverse('events:detail', args=[gala.pk]))
+        self.assertNotContains(resp, 'Close the ticked events')
+        grant(self.user, 'close_event')
+        self.user = type(self.user).objects.get(pk=self.user.pk)
+        self.client.force_login(self.user)
+        resp = self.client.get(self.url + '?stage=paid&fy=all')
+        self.assertContains(resp, 'id="fin-close-form"')
+        self.assertContains(resp, 'Close the ticked events')
 
 
 class MultiBillFromTickedEventsTests(ViewTestCase):
