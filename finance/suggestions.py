@@ -45,15 +45,15 @@ import datetime
 import re
 from decimal import Decimal
 
-from django.db.models import DecimalField, F, Q, Sum, Value
-from django.db.models.functions import Coalesce
+from django.db.models import F, Q, Value
 from django.utils.formats import date_format
 
 from finance.models import (ISD_NUMBER_FORMAT, ZERO, Billing, FundSource, MultiBilling, ProjectTag,
                             SuggestionRule, default_fund_source, fund_source_for_tracking,
                             fund_source_for_workday_fund, money, normalise_isd_number,
                             normalise_sga_reference, normalise_term, own_fund_for_account,
-                            reimbursement_source, revenue_sources_by_fund, spend_category_named)
+                            reimbursement_source, revenue_sources_by_fund, spend_category_named,
+                            summed_money)
 
 HIGH, MEDIUM, LOW = 'high', 'medium', 'low'
 
@@ -1254,10 +1254,8 @@ def _same_text(one, other):
 
 def _uncredited(queryset):
     """ Purchases not yet given back in full; one that has been can take no more refunds. """
-    return queryset.annotate(_credited=Coalesce(
-        Sum('refunds__amount'), Value(Decimal('0.00')),
-        output_field=DecimalField(max_digits=12, decimal_places=2))
-    ).exclude(_credited__gte=F('amount') * Value(-1))
+    return queryset.annotate(_credited=summed_money('refunds__amount')
+                             ).exclude(_credited__gte=F('amount') * Value(-1))
 
 
 def suggest_refund_target(txn):

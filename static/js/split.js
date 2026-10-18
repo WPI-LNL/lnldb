@@ -17,7 +17,11 @@
         return Math.round(n * 100);
     }
 
-    var targetCents = cents($remainder.data('target'));
+    /* Amounts are typed unsigned, as they read on the receipt: the bank line
+       says which way the money went, and the server gives every slice its
+       sign (SplitLineForm.clean_amount). So everything here is a magnitude,
+       and a minus typed out of habit counts the same. */
+    var targetCents = Math.abs(cents($remainder.data('target')));
 
     function money(c) {
         var sign = c < 0 ? '-' : '';
@@ -33,7 +37,7 @@
             var $row = $(this).closest('tr');
             var $del = $row.find('input[type="checkbox"][name$="-DELETE"]');
             if ($del.length && $del.is(':checked')) { return; }
-            total += cents($(this).val());
+            total += Math.abs(cents($(this).val()));
         });
 
         var remainder = targetCents - total;
@@ -50,13 +54,8 @@
         } else if (total === 0) {
             $hint.text('Enter at least one allocation.').removeClass('text-success text-danger');
         } else {
-            /* The bank line may be negative (an expense), so "over-allocated"
-               is not simply "remainder < 0". A remainder pointing the same way
-               as the target still needs allocating; one pointing the other way
-               means the slices have overshot. */
-            var overshot = (targetCents >= 0) ? (remainder < 0) : (remainder > 0);
             $hint.text(money(Math.abs(remainder)) +
-                       (overshot ? ' over-allocated.' : ' still unallocated.'))
+                       (remainder < 0 ? ' over-allocated.' : ' still unallocated.'))
                  .removeClass('text-success').addClass('text-danger');
         }
     }
@@ -101,6 +100,7 @@
         // The event chosen on the copied row is display, not a value, so
         // clearing the inputs leaves it showing on the new row.
         $clone.find('.results_on_deck').empty();
+        $clone.find('details').prop('open', false);
 
         $clone.appendTo('#fin-split-table tbody');
         $total.val(count + 1);

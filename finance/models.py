@@ -38,7 +38,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models, transaction
 from django.db.models import Count, OuterRef, Prefetch, Q, Subquery, Sum, Value
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, Round
 from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
@@ -84,6 +84,20 @@ def money(value):
     if not value.is_finite():
         return ZERO
     return value.quantize(CENTS, rounding=ROUND_HALF_UP)
+
+
+def summed_money(column):
+    """
+    ``Sum(column)`` in whole cents, and ``$0.00`` over no rows, for the SQL side.
+
+    The same float noise :func:`money` strips from a total read into Python
+    breaks a total *compared in SQL*: SQLite adds -4342.40 and -2982.32 to
+    -7324.719999999999, which is not the -7324.72 the bank line holds, so a
+    split that balanced on the page never left the queue. Rounded here, the
+    database compares cents with cents. MySQL's DECIMAL sums exactly already.
+    """
+    return Coalesce(Round(Sum(column), 2), Value(ZERO),
+                    output_field=models.DecimalField(max_digits=12, decimal_places=2))
 
 
 # ---------------------------------------------------------------------------
@@ -1842,10 +1856,7 @@ class WorkdayTransactionQuerySet(models.QuerySet):
         several hundred queries per dashboard render.
         """
         return self.annotate(
-            _allocated=Coalesce(
-                Sum('slices__amount'),
-                Value(Decimal('0.00')),
-                output_field=models.DecimalField(max_digits=12, decimal_places=2)),
+            _allocated=summed_money('slices__amount'),
             _slice_count=Count('slices'),
             _pending_count=Count('slices', filter=Q(slices__status=TransactionStatus.PENDING)),
         )

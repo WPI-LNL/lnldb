@@ -122,7 +122,16 @@ Split a Line That Paid for Several Things
 
 One card charge can cover tape, a repair and a show's rental. Click `Split` on the row (or open the line from the ledger)
 to reach `Split This Purchase`. Add a row for each part with `Add a slice`, fill in each one, and click `Save split`.
-The parts must add up to the line exactly; the page tells you how much is left over.
+Type each amount as it reads on the receipt, without a minus sign: every part runs the same way as the line. To drop a
+row, tick its `Del` box. The parts must add up to the line exactly; the page tells you how much is left over. Saving
+settles the line and it leaves the queue. To move money between the parts later, change the amounts and save the split
+again.
+
+A part paid from `SGA Funding Request` names the request line it was spent against in `FR Line`. Under it,
+`SGA took money back?` is only for a line where SGA took money back, which names the whole request instead of a line.
+
+If your role can file but not settle, the parts are saved as **Pending** and the line stays in the queue until someone
+who can settle opens it and clicks `Mark settled`.
 
 The same page splits one rental invoice between two shows: one row per show, each with its own `Incurred for event`.
 

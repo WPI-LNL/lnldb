@@ -70,7 +70,22 @@ class SplitFormSetTests(TestCase):
     def test_an_over_allocated_split_is_refused_too(self):
         formset = self._formset('-600.00', '-600.00')
         self.assertFalse(formset.is_valid())
-        self.assertIn('still unallocated', ' '.join(formset.non_form_errors()))
+        self.assertIn('$200.00 too much is allocated', ' '.join(formset.non_form_errors()))
+
+    def test_amounts_are_typed_as_they_read_on_the_receipt(self):
+        """ The line says which way the money went; the boxes take plain amounts. """
+        formset = self._formset('600.00', '400.00')
+        self.assertTrue(formset.is_valid(), formset.non_form_errors())
+        self.assertEqual(sorted(f.cleaned_data['amount'] for f in formset.forms),
+                         [Decimal('-600.00'), Decimal('-400.00')])
+
+    def test_a_saved_slice_is_shown_unsigned(self):
+        from finance.models import ParsedTransaction
+        ParsedTransaction.objects.create(
+            parent_transaction=self.txn, amount=Decimal('-1000.00'), fund_source=fund('legacy'),
+            lnl_spend_category=category('consumables'), effective_date=SEP)
+        formset = SplitFormSet(instance=self.txn, parent_transaction=self.txn)
+        self.assertEqual(formset.forms[0]['amount'].value(), Decimal('1000.00'))
 
     def test_a_split_with_no_live_rows_is_refused(self):
         """ Deleting every slice is not a way to reconcile a line to nothing. """
@@ -86,13 +101,10 @@ class SplitFormSetTests(TestCase):
     def test_a_slice_cannot_flip_the_direction_of_the_line(self):
         """
         Splitting an expense into an expense and a credit would let money be
-        invented: the halves would still sum to the whole.
+        invented: the halves would still sum to the whole. A slice typed the
+        other way, revenue routing and all, is just more of the expense.
         """
         from finance.models import RevenueSource
-        # The flipped slice has to be valid *on its own* to reach this rule --
-        # otherwise the form-level error fires first and the formset stops
-        # before its own clean(). That is the case worth guarding: a
-        # well-formed revenue slice hidden inside an expense.
         formset = self._formset(
             '-1400.00', '400.00',
             **{'slices-1-fund_source': str(fund('legacy').pk),
@@ -101,7 +113,10 @@ class SplitFormSetTests(TestCase):
                'slices-1-non_event_revenue_type': str(
                    RevenueSource.objects.get(slug='alumni').pk)})
         self.assertFalse(formset.is_valid())
-        self.assertIn('same direction', ' '.join(formset.non_form_errors()))
+        flipped = formset.forms[1]
+        self.assertEqual(flipped.cleaned_data['amount'], Decimal('-400.00'))
+        self.assertNotIn('non_event_revenue_type', flipped.fields)
+        self.assertIn('$800.00 too much is allocated', ' '.join(formset.non_form_errors()))
 
     def test_a_revenue_line_splits_into_revenue(self):
         self.txn = bank(op='OT-F2', amount='700.00')

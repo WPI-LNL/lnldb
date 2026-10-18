@@ -132,7 +132,20 @@ def transaction_detail(request, pk):
                     entry.save()
                 for obj in formset.deleted_objects:
                     obj.delete()
-            messages.success(request, "Split saved — the allocation balances to $0.00.")
+            # It cannot be saved unless it balances, so it is finished: settled
+            # now, as the queue settles a line it files whole. Left Pending for
+            # someone without the permission, which keeps it in the queue.
+            if request.user.has_perm('finance.settle_subledger'):
+                # Fetched with its slices prefetched, so it still believes it
+                # has the ones it had before this save.
+                txn.refresh_from_db()
+                txn.settle()
+                messages.success(request, "Split saved and settled — the allocation balances "
+                                          "to $0.00, so the line has left the queue.")
+            else:
+                messages.success(request, "Split saved — the allocation balances to $0.00. It "
+                                          "stays in the queue as Pending until someone who can "
+                                          "settle marks it settled.")
             paid = _mark_paid_on_split(request, txn)
             if paid:
                 messages.info(request, paid)

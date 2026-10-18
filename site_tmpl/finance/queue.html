@@ -126,7 +126,11 @@
                         </span>
                     {% endif %}
 
-                    {% if row.partially_allocated %}
+                    {% if row.partially_allocated and row.txn.is_fully_allocated %}
+                        <span class="fin-tag is-warn" title="Filed to the cent, but its entries are still Pending.">
+                            Waiting to be settled
+                        </span>
+                    {% elif row.partially_allocated %}
                         <span class="fin-tag is-warn" title="Part of this line is already allocated.">
                             {{ row.txn.unallocated_amount|money }} left
                         </span>
@@ -330,9 +334,16 @@
                                     because "Allocate ($26,242.55)" reads as a
                                     negative button rather than an amount.
                                 {% endcomment %}
-                                <button type="submit" class="btn btn-primary btn-sm fin-allocate">
-                                    Allocate {{ row.txn.unallocated_amount|abs_value|money }}
-                                </button>
+                                {% if row.partially_allocated and row.txn.is_fully_allocated %}
+                                    {# Nothing left to allocate: it only needs settling, which its page does. #}
+                                    <a href="{{ row.txn.get_absolute_url }}" class="btn btn-success btn-sm">
+                                        Review &amp; settle
+                                    </a>
+                                {% else %}
+                                    <button type="submit" class="btn btn-primary btn-sm fin-allocate">
+                                        Allocate {{ row.txn.unallocated_amount|abs_value|money }}
+                                    </button>
+                                {% endif %}
                             </div>
                         </div>
 

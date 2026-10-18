@@ -21,8 +21,7 @@ from ajax_select.fields import AutoCompleteSelectField
 from crispy_forms.helper import FormHelper
 from django import forms
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
-from django.db.models import DecimalField, F, Q, Sum, Value
-from django.db.models.functions import Coalesce
+from django.db.models import F, Q, Value
 from django.forms.models import BaseInlineFormSet, inlineformset_factory
 from django.utils import timezone
 from django.utils.formats import date_format
@@ -36,7 +35,7 @@ from finance.models import (ZERO, BalanceCheckpoint, FRLineItem, FundingRequest,
                             WorkdayTransaction, current_fiscal_year,
                             event_passthrough_category, fiscal_year_bounds,
                             fiscal_year_choices, fiscal_year_for, money,
-                            own_fund_for_account)
+                            own_fund_for_account, summed_money)
 from finance.suggestions import AWARD, lookups_for_form, suggest_all, suggest_description
 
 
@@ -556,9 +555,7 @@ class BaseAllocationForm(forms.ModelForm):
               .filter(amount__lt=0, parent_transaction__isnull=False,
                       effective_date__range=(start, end))
               .select_related('parent_transaction')
-              .annotate(_credited=Coalesce(
-                  Sum('refunds__amount'), Value(Decimal('0.00')),
-                  output_field=DecimalField(max_digits=12, decimal_places=2)))
+              .annotate(_credited=summed_money('refunds__amount'))
               .exclude(_credited__gte=F('amount') * Value(-1))
               .order_by('-effective_date', '-pk'))
         if self.instance.pk:
@@ -1116,14 +1113,20 @@ class ReconcileForm(BaseAllocationForm):
         The amount taken is what is *left* on the line, not its full value: a
         line already part-allocated from the split page still appears in the
         queue, and allocating the whole amount again would put more against it
-        than the bank ever paid.
+        than the bank ever paid. A line with nothing left is refused rather
+        than filed again: it used to fall back to the whole amount, so a line
+        already split to the cent took a second copy of itself.
         """
         parent = self.parent_transaction
         if parent is None:
             return
         self.instance.parent_transaction = parent
         remaining = parent.unallocated_amount
-        self.instance.amount = remaining if remaining else parent.net_amount
+        if not remaining:
+            raise ValidationError(
+                "%s is already filed to the cent, so there is nothing left to file. "
+                "Open the line to change how it is split." % parent.reference)
+        self.instance.amount = remaining
         self.instance.effective_date = parent.accounting_date
         if not self.instance.description:
             # The memo's first field: what the line was for, without the FR
@@ -1264,10 +1267,49 @@ class SplitLineForm(BaseAllocationForm):
         if parent is not None:
             self.instance.effective_date = parent.accounting_date
 
+    def _parent(self):
+        return self.parent_transaction or self.instance.parent_transaction
+
+    def _direction(self):
+        """
+        Take the direction from the bank line, not from the typed amount.
+
+        Every slice has to run the same way as the line it splits, so the sign
+        tells the form nothing it does not already know -- and read from what
+        was typed, a cost entered as ``4342.40`` became a revenue row and lost
+        its spend category.
+        """
+        parent = self._parent()
+        if parent is not None:
+            return 'revenue' if parent.net_amount > 0 else 'expense'
+        return super(SplitLineForm, self)._direction()
+
+    def clean_amount(self):
+        """
+        Give the amount the bank line's sign, whichever sign was typed.
+
+        Amounts are typed as they read on the receipt, as the encumbrance form
+        takes them; ``-4342.40`` out of habit is the same answer.
+        """
+        amount = self.cleaned_data.get('amount')
+        parent = self._parent()
+        if amount is None or parent is None:
+            return amount
+        return -abs(amount) if parent.net_amount < 0 else abs(amount)
+
     def clean(self):
-        """ Inherit the purchase date before the model gets a look at it. """
+        """
+        Inherit the purchase date before the model gets a look at it, and
+        reopen the slice.
+
+        Re-saving a split reopens it, and the page settles it again once every
+        slice is saved. Checked while still Settled, each slice is weighed
+        against its siblings' *old* amounts, so moving money from one settled
+        slice to another could never balance one slice at a time.
+        """
         cleaned = super(SplitLineForm, self).clean()
         self._inherit_effective_date()
+        self.instance.status = TransactionStatus.PENDING
         return cleaned
 
     def save(self, commit=True):
@@ -1282,6 +1324,9 @@ class SplitLineForm(BaseAllocationForm):
     def __init__(self, *args, **kwargs):
         """ Mark the amount box so the modal's running total can find it. """
         super(SplitLineForm, self).__init__(*args, **kwargs)
+        # Shown unsigned, as it is typed: see clean_amount().
+        if self.initial.get('amount') is not None:
+            self.initial['amount'] = abs(Decimal(str(self.initial['amount'])))
         # Appended, not assigned: _style_widgets() has already put
         # form-control here and replacing the attribute would strip it.
         amount = self.fields['amount'].widget
@@ -1344,22 +1389,17 @@ class BaseSplitFormSet(BaseInlineFormSet):
             raise ValidationError("A transaction needs at least one allocation slice.")
 
         if total != parent.net_amount:
-            remainder = parent.net_amount - total
+            # Unsigned, as the amounts are typed.
+            remainder = abs(parent.net_amount) - abs(total)
             raise ValidationError(
-                "Allocations total $%s but the bank line is $%s — $%s is still unallocated. "
+                "Allocations total $%s but the bank line is $%s — %s. "
                 "The split must balance to exactly $0.00 before it can be saved."
-                % (total, parent.net_amount, remainder))
-
-        # Every slice must share the sign of the parent: you cannot turn half of
-        # an expense into revenue by splitting it.
-        for form in self.forms:
-            if not form.cleaned_data or form.cleaned_data.get('DELETE'):
-                continue
-            amount = form.cleaned_data.get('amount')
-            if amount is not None and amount != 0 and (amount > 0) != (parent.net_amount > 0):
-                raise ValidationError(
-                    "Every slice must run the same direction as the bank line "
-                    "($%s). Split slices cannot flip revenue into expense." % parent.net_amount)
+                % (abs(total), abs(parent.net_amount),
+                   "$%s is still unallocated" % remainder if remainder > 0
+                   else "$%s too much is allocated" % -remainder))
+        # No check that every slice runs the line's way: SplitLineForm gives
+        # each one the line's sign and direction, so half an expense cannot be
+        # turned into revenue by splitting it.
 
 
 SplitFormSet = inlineformset_factory(

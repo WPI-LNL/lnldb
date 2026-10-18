@@ -13,7 +13,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from finance.models import ParsedTransaction, WorkdayTransaction
+from finance.models import ParsedTransaction, TransactionStatus, WorkdayTransaction
 from finance.tests.test_views import FinanceViewTestCase
 from finance.tests.util import category, fund
 
@@ -176,12 +176,124 @@ class TransactionDetailTests(FinanceViewTestCase):
         self.assertEqual(entry.linked_event_id, event.pk)
         self.assertEqual(entry.audit_explanation, 'Hired for the festival')
 
+    def test_amounts_can_be_typed_without_a_minus(self):
+        """ As they read on the receipt; the bank line says the money went out. """
+        response = self._split('600.00', '400.00')
+        self.assertContains(response, 'balances to $0.00')
+        self.assertEqual(sorted(self.txn.slices.values_list('amount', flat=True)),
+                         [Decimal('-600.00'), Decimal('-400.00')])
+
+    def test_a_new_row_can_be_ticked_to_leave_it_out(self):
+        """ Every row has the box, not only the saved ones. """
+        page = self.client.get(self._url()).content.decode('utf-8')
+        self.assertIn('name="slices-0-DELETE"', page)
+        self.assertIn('name="slices-1-DELETE"', page)
+        self._split('1000.00', '250.00', **{'slices-1-DELETE': 'on'})
+        self.assertEqual(list(self.txn.slices.values_list('amount', flat=True)),
+                         [Decimal('-1000.00')])
+
+    def test_the_request_sga_took_back_is_folded_under_the_line(self):
+        """ One picker for spending; the request alone is the rare clawback. """
+        self.assertContains(self.client.get(self._url()), 'SGA took money back?')
+
     def test_an_expense_slice_can_name_its_event_in_the_split(self):
         """ One rental invoice for two shows is divided here, one slice per show. """
         from events.tests.generators import Event2019Factory
         event = Event2019Factory(event_name='Drag Show')
         self._split('-600.00', '-400.00', **{'slices-1-linked_event': str(event.pk)})
         self.assertEqual(self.txn.slices.get(amount=Decimal('-400.00')).linked_event, event)
+
+
+class SplitLeavesTheQueueTests(FinanceViewTestCase):
+    """
+    A split saved on this page, then the line in the queue.
+
+    The amounts are a real purchase's: one Workday line of $7,324.72, two
+    thirds from a funding request and the rest from Legacy. In floating point
+    -4342.40 + -2982.32 is -7324.719999999999, and SQLite keeps money as
+    floating point, so a balance checked in SQL saw a cent's fraction left over
+    that nothing on the page could show.
+    """
+    _url = TransactionDetailTests._url
+    _split = TransactionDetailTests._split
+
+    def setUp(self):
+        super(SplitLeavesTheQueueTests, self).setUp()
+        self.grant('view_subledger', 'edit_subledger', 'settle_subledger')
+        self.txn = self.make_txn(op='OT-D95', amount='-7324.72')
+
+    def _queue(self):
+        return self.client.get(reverse('finance:queue'), {'fy': 'all'})
+
+    def _in_queue(self):
+        return WorkdayTransaction.objects.unreconciled().filter(pk=self.txn.pk).exists()
+
+    def test_saving_a_balanced_split_takes_the_line_out_of_the_queue(self):
+        """ The split cannot be saved unless it balances, so there is nothing left to settle. """
+        self._split('-4342.40', '-2982.32')
+        self.assertEqual(set(self.txn.slices.values_list('status', flat=True)),
+                         {TransactionStatus.SETTLED})
+        self.assertFalse(self._in_queue())
+        self.assertTrue(WorkdayTransaction.objects.reconciled().filter(pk=self.txn.pk).exists())
+        self.assertNotContains(self._queue(), 'OT-D95')
+
+    def test_a_split_saved_without_the_settle_permission_waits_in_the_queue(self):
+        from django.contrib.auth.models import Permission
+        self.user.user_permissions.remove(Permission.objects.get(codename='settle_subledger'))
+        self.client.force_login(get_user_model().objects.get(pk=self.user.pk))
+        self._split('-4342.40', '-2982.32')
+        self.assertEqual(set(self.txn.slices.values_list('status', flat=True)),
+                         {TransactionStatus.PENDING})
+        self.assertTrue(self._in_queue())
+        # Waiting for a settle, not for more filing: no "Allocate $0.00".
+        queue = self._queue()
+        self.assertContains(queue, 'OT-D95')
+        self.assertContains(queue, 'Waiting to be settled')
+        self.assertNotContains(queue, 'Allocate $0.00')
+
+    def test_marking_it_settled_takes_the_line_out_of_the_queue(self):
+        """ Slices left Pending, by whoever could not settle, settled from the page later. """
+        for amount in ('-4342.40', '-2982.32'):
+            ParsedTransaction.objects.create(
+                parent_transaction=self.txn, amount=Decimal(amount), fund_source=fund('legacy'),
+                lnl_spend_category=category('consumables'), effective_date=self.txn.accounting_date)
+        self.assertTrue(self._in_queue())
+        self.client.post(reverse('finance:settle', args=[self.txn.pk]), follow=True)
+        self.assertFalse(self._in_queue())
+
+    def test_the_queue_will_not_file_a_balanced_line_a_second_time(self):
+        """ With nothing left to file, the queue used to file the whole line again. """
+        self._split('-4342.40', '-2982.32')
+        response = self.client.post(reverse('finance:reconcile', args=[self.txn.pk]), {
+            'txn%s-fund_source' % self.txn.pk: fund('sga_budget').pk,
+            'txn%s-lnl_spend_category' % self.txn.pk: category('consumables').pk,
+        }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('nothing left', str(response.json()['errors']))
+        self.assertEqual(self.txn.slices.count(), 2)
+        self.assertEqual(self.txn.unallocated_amount, Decimal('0.00'))
+
+    def test_a_settled_split_can_be_split_again(self):
+        """ Settling is not a lock: the Treasurer can still move money between the slices. """
+        self._split('-4342.40', '-2982.32')
+        first, second = list(self.txn.slices.order_by('pk'))
+        data = {
+            'slices-TOTAL_FORMS': '2', 'slices-INITIAL_FORMS': '2',
+            'slices-MIN_NUM_FORMS': '0', 'slices-MAX_NUM_FORMS': '1000',
+        }
+        for index, (entry, amount) in enumerate(((first, '-4000.00'), (second, '-3324.72'))):
+            data.update({
+                'slices-%s-id' % index: str(entry.pk),
+                'slices-%s-amount' % index: amount,
+                'slices-%s-description' % index: entry.description,
+                'slices-%s-fund_source' % index: str(entry.fund_source_id),
+                'slices-%s-lnl_spend_category' % index: str(entry.lnl_spend_category_id),
+            })
+        response = self.client.post(self._url(), data, follow=True)
+        self.assertContains(response, 'balances to $0.00')
+        self.assertEqual(sorted(self.txn.slices.values_list('amount', flat=True)),
+                         [Decimal('-4000.00'), Decimal('-3324.72')])
+        self.assertFalse(self._in_queue())
 
 
 class EntryDetailTests(FinanceViewTestCase):

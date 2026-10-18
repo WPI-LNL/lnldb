@@ -112,6 +112,7 @@
                                 Mark settled
                             </button>
                         </form>
+                        <div class="fin-muted">Pending entries keep this line in the queue until it is settled.</div>
                     {% elif txn.is_reconciled %}
                         <span class="label label-success" style="margin-top:6px;display:inline-block;">
                             Reconciled &amp; settled
@@ -246,7 +247,7 @@
                                             {% else %}
                                                 <th>Fund</th>
                                                 <th>Spend Category</th>
-                                                <th title="Spending names a request's line; money SGA took back names the request">FR Line / Request</th>
+                                                <th title="Spending names a request's line; money SGA took back names the request">FR Line</th>
                                                 <th>Incurred for event</th>
                                             {% endif %}
                                             <th>Project</th>
@@ -274,13 +275,28 @@
                                                     <td>{{ form.lnl_spend_category }}</td>
                                                     <td>
                                                         <div class="form-group fin-cell-group">{{ form.fr_line_target }}</div>
-                                                        <div class="form-group fin-cell-group">{{ form.funding_request }}</div>
+                                                        {% comment %}
+                                                            Spending names the line. The request
+                                                            on its own is only for money SGA took
+                                                            back, which has no line, so it is
+                                                            folded away rather than sitting under
+                                                            the line picker looking like a second
+                                                            copy of it. Still rendered, so a
+                                                            re-save keeps what it holds.
+                                                        {% endcomment %}
+                                                        <div class="form-group fin-cell-group">
+                                                            <details class="fin-sga-return"{% if form.funding_request.value %} open{% endif %}>
+                                                                <summary>SGA took money back?</summary>
+                                                                {{ form.funding_request }}
+                                                            </details>
+                                                        </div>
                                                     </td>
                                                     <td>{{ form.linked_event }}</td>
                                                 {% endif %}
                                                 <td>{{ form.project_tag }}</td>
                                                 <td>{{ form.audit_explanation }}</td>
-                                                <td>{% if form.instance.pk %}{{ form.DELETE }}{% endif %}</td>
+                                                {# On new rows too: ticked, a row is left out of the total and not saved. #}
+                                                <td>{{ form.DELETE }}</td>
                                             </tr>
                                             {% if form.errors %}
                                                 <tr><td colspan="9">
@@ -319,7 +335,7 @@
                                     <span class="glyphicon glyphicon-plus"></span> Add a slice
                                 </button>
                                 <span class="fin-muted" id="fin-split-hint">
-                                    Allocations must total exactly {{ txn.net_amount|money }}.
+                                    Allocations must total exactly {{ txn.net_amount|abs_value|money }}.
                                 </span>
                                 {# Disabled until the remainder is exactly $0.00 #}
                                 <button type="submit" class="btn btn-primary btn-sm" id="fin-split-save"

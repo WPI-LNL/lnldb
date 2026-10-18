@@ -307,6 +307,11 @@
 .fin-cell-group { margin-bottom: 4px; }
 .fin-cell-group:last-child { margin-bottom: 0; }
 
+/* The request SGA took money back for, folded under the line picker: rare,
+   and unlabelled it read as a second copy of the line picker. */
+.fin-sga-return > summary { cursor: pointer; font-size: 11px; color: #9aa5b1; white-space: nowrap; }
+.fin-sga-return[open] > summary { margin-bottom: 4px; }
+
 /* ---- Funding request line editor ------------------------------------------ */
 /* Every row removes the same way, with an X. On a row that is already saved
    that X only *stages* the removal -- Django needs the DELETE flag set, and it
