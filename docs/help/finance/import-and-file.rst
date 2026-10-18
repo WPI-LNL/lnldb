@@ -67,9 +67,14 @@ Money going out
 
 - **Fund** -- whose money paid for it. Usually `Legacy` (on 315-AG, `SGA Mandatory Transfer`). If the memo quotes a
   funding request number, it will say `SGA Funding Request`.
-- **Spend Category** -- what it was for.
-- **Funding request line** -- only shown when the fund is `SGA Funding Request`: which line of which request the
-  spending counts against. See :doc:`funding-requests`.
+- **Spend Category** -- what it was for. When the memo quotes a funding request, the category comes from that request
+  (the line it names, or the one category all its lines were awarded for), never from Workday's category. Picking a
+  funding request line replaces any category the app filled in.
+- **Funding request** and **Funding request line** -- only shown when the fund is `SGA Funding Request`. If the memo
+  quotes a request number that is in the app, the request is always filled in, even when the memo doesn't say which
+  line. The line list then shows only that request's lines. The line is filled in too when the memo names it, or when
+  the memo's words match one line's name (for example "10 foot" against `10ft Truss`). That caption ends in "check
+  it". Choosing `Any request` lists every line again. See :doc:`funding-requests`.
 - **Incurred for event** (under `More`) -- for gear hired in for one show, or any other cost that belongs to a single
   event. See :doc:`events`.
 - **Project** (under `More`) -- if the spending belongs to a project.

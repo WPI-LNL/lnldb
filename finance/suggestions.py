@@ -267,9 +267,65 @@ def _named_category(line):
     return normalise_term(category.name) if category is not None else ''
 
 
-def match_fr_line(funding_request, hint):
+#: Words a memo shares with half the lines LNL is ever awarded, so finding one
+#: in both says nothing about which line was meant.
+FR_LINE_STOPWORDS = frozenset((
+    'and', 'for', 'the', 'with', 'from', 'new', 'replacement', 'replacements', 'restock',
+    'lnl', 'wpi',
+))
+
+
+def _line_words(text):
     """
-    The line of ``funding_request`` a memo's middle field names, or ``None``.
+    The words in ``text`` worth matching a funding request line on.
+
+    Digits are split off the letters they are written against, so "10ft Truss"
+    and "10 foot Tomcat sticks" share the 10. A number is kept whatever its
+    length -- it is usually a size, and sizes are what tell two lines of one
+    request apart -- and a word only from three letters up.
+    """
+    words = set()
+    for word in re.findall(r'[a-z]+|\d+', (text or '').lower()):
+        if word.isdigit() or (len(word) >= 3 and word not in FR_LINE_STOPWORDS):
+            words.add(word)
+    return words
+
+
+def _same_word(one, other):
+    """ Two words, allowing for one being the plural of the other. """
+    return (one == other or one + 's' == other or other + 's' == one
+            or one + 'es' == other or other + 'es' == one)
+
+
+def _shared_line_words(fields, line):
+    """ The words of ``line``'s name that the memo also uses, sorted. """
+    memo = _line_words(' '.join(filter(None, (fields.description, fields.line_hint))))
+    return sorted(word for word in _line_words(line.name)
+                  if any(_same_word(word, other) for other in memo))
+
+
+def _line_by_wording(lines, fields):
+    """
+    The one line whose name the memo's wording leads on, or ``None``.
+
+    The line hint is matched as a whole first, by :func:`match_fr_line`; this
+    is for the memo that names its request but not the line, the way nobody
+    writes "10ft Truss" twice in one sentence: ``10 foot Tomcat Guardian+
+    Sticks, Truss, F.27.105``. One line has to lead outright -- two lines each
+    sharing a word is a question, the same as two lines matching the hint.
+    """
+    scored = sorted(((len(_shared_line_words(fields, line)), line) for line in lines),
+                    key=lambda row: row[0], reverse=True)
+    if not scored or not scored[0][0]:
+        return None
+    if len(scored) > 1 and scored[1][0] == scored[0][0]:
+        return None
+    return scored[0][1]
+
+
+def match_fr_line(funding_request, hint, fields=None):
+    """
+    The line of ``funding_request`` a memo names, or ``None``.
 
     Tried in descending order of how sure it makes us:
 
@@ -282,6 +338,9 @@ def match_fr_line(funding_request, hint):
        called "Consumable Supplies" -- but only where exactly one line matches
        that way. Two candidates is not a near miss, it is a question, and
        picking one of them would answer it silently.
+    4. The memo's wording, when ``fields`` is given: the one line whose name
+       shares the most words with the description and hint together. See
+       :func:`_line_by_wording`.
 
     A request with a single line falls through to that line whatever the hint
     said, which is how this behaved before memos were parsed at all: there is
@@ -293,6 +352,8 @@ def match_fr_line(funding_request, hint):
     lines = list(funding_request.line_items.all())
     if not lines:
         return None
+    if len(lines) == 1:
+        return lines[0]
 
     wanted = normalise_term(hint)
     if wanted:
@@ -313,7 +374,7 @@ def match_fr_line(funding_request, hint):
         if len(loose) == 1:
             return loose[0]
 
-    return lines[0] if len(lines) == 1 else None
+    return _line_by_wording(lines, fields) if fields is not None else None
 
 
 def suggest_funding_request(txn, fields=None):
@@ -351,7 +412,7 @@ def suggest_funding_request(txn, fields=None):
                  queryset=FRLineItem.objects.select_related('lnl_spend_category')))
     for funding_request in candidates:
         if normalise_reference(funding_request.reference) == wanted:
-            return funding_request, match_fr_line(funding_request, fields.line_hint)
+            return funding_request, match_fr_line(funding_request, fields.line_hint, fields)
     return None, None
 
 
@@ -410,7 +471,7 @@ def suggest_near_miss_line(reference, funding_request, fields):
     """
     if funding_request is None:
         return None
-    line = match_fr_line(funding_request, fields.line_hint)
+    line = match_fr_line(funding_request, fields.line_hint, fields)
     if line is None:
         return None
     return Suggestion(
@@ -422,20 +483,61 @@ def suggest_near_miss_line(reference, funding_request, fields):
 
 
 def suggest_fr_line(funding_request, line, fields):
-    """ The FR line picker's answer, as a :class:`Suggestion` or ``None``. """
+    """
+    The FR line picker's answer, as a :class:`Suggestion` or ``None``.
+
+    The caption says which way :func:`match_fr_line` found the line, because
+    they are not equally sure: the memo naming the line outright is the
+    Treasurer's answer read back, while a word the memo shares with the line's
+    name is a strong hint among the few lines of one request -- filled in, but
+    worded as something to check.
+    """
     if line is None:
         return None
-    if fields.line_hint and normalise_term(fields.line_hint) != normalise_term(line.name):
-        reason = ('Memo quotes %s and names "%s"'
-                  % (funding_request.reference, fields.line_hint))
-    elif fields.line_hint:
-        reason = 'Memo quotes %s and names its %s line' % (funding_request.reference,
-                                                           line.name)
+    reference = funding_request.reference
+    if normalise_term(fields.line_hint) == normalise_term(line.name):
+        reason = 'Memo quotes %s and names its %s line' % (reference, line.name)
+    elif len(funding_request.line_items.all()) == 1:
+        # Say so -- otherwise the caption claims the memo named a line it
+        # never did.
+        reason = '%s has only the one line' % reference
+    elif match_fr_line(funding_request, fields.line_hint) == line:
+        reason = 'Memo quotes %s and names "%s"' % (reference, fields.line_hint)
     else:
-        # Reached only when the request has exactly one line, so say so --
-        # otherwise the caption claims the memo named a line it never did.
-        reason = '%s has only the one line' % funding_request.reference
+        return Suggestion(
+            line.pk, MEDIUM,
+            'Memo quotes %s; "%s" points to its %s line -- check it'
+            % (reference, '", "'.join(_shared_line_words(fields, line)), line.name),
+            line.picker_label, source=MEMO)
     return Suggestion(line.pk, HIGH, reason, line.picker_label, source=MEMO)
+
+
+def suggest_fr_request(funding_request, line, fields):
+    """
+    The funding request box on spending: the request the memo quotes.
+
+    Filled in whenever lnldb holds the request, whether or not the line could
+    be worked out too. The number in the memo is the Treasurer's own answer
+    about which award paid; which *line* of it is a second question, and not
+    being able to answer the second is no reason to hide the answer to the
+    first. The queue narrows the line picker to this request's lines, so the
+    line left open is a choice among a handful rather than a hunt.
+    """
+    if funding_request is None:
+        return None
+    reference = funding_request.reference
+    count = len(funding_request.line_items.all())
+    if line is not None:
+        reason = 'Memo quotes %s' % reference
+    elif not count:
+        reason = 'Memo quotes %s, which has no lines yet' % reference
+    elif fields.line_hint:
+        reason = ('Memo quotes %s; "%s" is none of its %s lines, so pick one'
+                  % (reference, fields.line_hint, count))
+    else:
+        reason = 'Memo quotes %s but not which of its %s lines' % (reference, count)
+    return Suggestion(funding_request.pk, HIGH, reason,
+                      '%s %s' % (reference, funding_request.name), source=MEMO)
 
 
 # ---------------------------------------------------------------------------
@@ -640,11 +742,25 @@ def rule_reason(rule, txn):
     return 'Memo mentions "%s"' % rule.pattern
 
 
-def suggest_spend_category(txn, rules=None, fr_line=None, fields=None):
+def _awarded_categories(funding_request):
+    """
+    ``{pk: SpendCategory}`` for the categories a request's lines are awarded for.
+
+    Lines with no category recorded are left out: they say nothing either way.
+    """
+    return {line.lnl_spend_category_id: line.lnl_spend_category
+            for line in funding_request.line_items.all()
+            if line.lnl_spend_category_id}
+
+
+def suggest_spend_category(txn, rules=None, fr_line=None, fields=None, funding_request=None):
     """
     Work out the LNL spend category, most specific evidence first.
 
-    Four passes, and the order is the whole of the logic:
+    Everything the memo says comes before anything Workday says, because the
+    memo is the Treasurer writing down the answer and Workday's category is
+    WPI's list, not LNL's -- everything LNL buys arrives as "Supplies" or
+    "Audio Visual Equipment" whatever it was really for. So, in order:
 
     1. **What the funding request line was awarded for.** If the memo named a
        line and somebody recorded a category against that line when the award
@@ -652,22 +768,30 @@ def suggest_spend_category(txn, rules=None, fr_line=None, fields=None):
        already, by the person best placed to answer it.
     2. **What the memo says.** The middle field of the house format is usually
        an LNL category by name: ``Velcro restock, consumables, (A.27.16)``.
-       Matching it back to the row is reading the Treasurer's own answer, and
-       it outranks Workday's category because WPI's list is not LNL's and never
-       was -- everything LNL buys arrives as "Supplies" or "Equipment -
-       General" whatever it was really for.
-    3. **The rule table**, in priority order. The seeded rules put Workday's
+       Matching it back to the row is reading the Treasurer's own answer.
+    3. **What the request the memo quotes was awarded for**, when the line is
+       not known but every line of the request is awarded for the same
+       category: ``Meyer foam, foam, (F.27.82)`` on a request whose three lines
+       are all Equipment - Capital is Equipment - Capital, whichever line it is.
+    4. **The rule table**, in priority order. The seeded rules put Workday's
        own spend category matched exactly first, then the ledger account
        matched on its number. Both are codes somebody at WPI assigned, read
        through a mapping a Treasurer maintains in the admin, so a new code is
        one row rather than a deploy.
-    4. **Wording** -- the rule table's "contains" and "whole word" rules,
+    5. **Wording** -- the rule table's "contains" and "whole word" rules,
        ranked after the codes. A match is a guess and stays a chip.
 
-    Passes 3 and 4 are one walk down the table and the first rule to match
+    Passes 4 and 5 are one walk down the table and the first rule to match
     wins, so a wording rule given a lower priority number than a code rule
     would be tried first.
 
+    When the memo quotes a request whose lines are awarded for several
+    categories, the table may only fill the box with one of those. A Workday
+    category none of the lines was awarded for contradicts the memo, so it is
+    offered as a chip and nothing more; picking the line fills the category
+    in from the award (routing.js, rule 2).
+
+    ``funding_request`` is the request the memo quotes, when lnldb holds it.
     ``rules`` lets a caller rendering many rows load the table once.
     """
     if fr_line is not None and fr_line.lnl_spend_category_id:
@@ -684,11 +808,27 @@ def suggest_spend_category(txn, rules=None, fr_line=None, fields=None):
         return Suggestion(named.pk, HIGH, 'Memo says "%s"' % fields.line_hint,
                           str(named), source=MEMO)
 
+    awarded = _awarded_categories(funding_request) if funding_request is not None else {}
+    if len(awarded) == 1:
+        category = next(iter(awarded.values()))
+        return Suggestion(
+            category.pk, HIGH,
+            'Memo quotes %s, and its lines are awarded for nothing else'
+            % (funding_request.reference or funding_request.name),
+            str(category), source=AWARD)
+
     for rule in (active_suggestion_rules() if rules is None else rules):
-        if rule.matches(txn):
-            return Suggestion(rule.spend_category_id, rule.confidence,
-                              rule_reason(rule, txn), str(rule.spend_category),
-                              source=EXPORT if rule.is_lookup else GUESS)
+        if not rule.matches(txn):
+            continue
+        if awarded and rule.spend_category_id not in awarded:
+            return Suggestion(
+                rule.spend_category_id, LOW,
+                '%s -- but no line of %s is awarded for it'
+                % (rule_reason(rule, txn), funding_request.reference or funding_request.name),
+                str(rule.spend_category), source=GUESS)
+        return Suggestion(rule.spend_category_id, rule.confidence,
+                          rule_reason(rule, txn), str(rule.spend_category),
+                          source=EXPORT if rule.is_lookup else GUESS)
     return None
 
 
@@ -1379,16 +1519,19 @@ def suggest_refund_targets(txn, limit=8):
 #: Fields ``suggest_all`` may return a :class:`Suggestion` for. The form walks
 #: this rather than a list of its own, so adding a suggester here is enough to
 #: have it pre-fill.
-SUGGESTED_FIELDS = ('spend_category', 'fund_source', 'fr_line_target',
+SUGGESTED_FIELDS = ('spend_category', 'fund_source', 'fr_request', 'fr_line_target',
                     'project_tag', 'linked_event', 'refund_of', 'revenue_source',
                     'funding_request')
 
 #: The form field each of those maps to. Spend category is the odd one out
 #: because LNL's category and Workday's share a name but are different things,
 #: and revenue source because the model calls it a non-event revenue type.
+#: ``fr_request`` is the request a spending line's FR line is picked from; the
+#: model's own ``funding_request`` is the one SGA pays back or takes back.
 FIELD_NAMES = {
     'spend_category': 'lnl_spend_category',
     'fund_source': 'fund_source',
+    'fr_request': 'fr_request',
     'fr_line_target': 'fr_line_target',
     'project_tag': 'project_tag',
     'linked_event': 'linked_event',
@@ -1417,8 +1560,8 @@ def suggest_all(txn, tags=None, rules=None):
     if sga_transfer:
         return _suggest_sga_return(txn, fields, tags)
 
-    # Looked up once: the request drives the fund, the FR line and, through the
-    # line, the spend category.
+    # Looked up once: the request drives the fund, the request box, the FR line
+    # and, through the line or the request's awards, the spend category.
     funding_request, fr_line = suggest_funding_request(txn, fields=fields)
 
     # A number the memo quotes that lnldb has never heard of. Worth saying out
@@ -1429,7 +1572,8 @@ def suggest_all(txn, tags=None, rules=None):
     unmatched = fields.reference if (fields.reference and funding_request is None) else ''
     near_miss = near_miss_funding_request(unmatched) if unmatched else None
 
-    spend_category = suggest_spend_category(txn, rules=rules, fr_line=fr_line, fields=fields)
+    spend_category = suggest_spend_category(txn, rules=rules, fr_line=fr_line, fields=fields,
+                                            funding_request=funding_request)
     linked_event = suggest_expense_event(txn, spend_category=spend_category)
 
     return {
@@ -1439,6 +1583,7 @@ def suggest_all(txn, tags=None, rules=None):
         'spend_category': spend_category,
         'fund_source': suggest_fund_source(txn, funding_request=funding_request,
                                            reference=fields.reference),
+        'fr_request': suggest_fr_request(funding_request, fr_line, fields),
         'fr_line_target': (suggest_fr_line(funding_request, fr_line, fields)
                            or suggest_near_miss_line(unmatched, near_miss, fields)),
         'matched_request': funding_request,

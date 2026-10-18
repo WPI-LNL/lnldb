@@ -1,9 +1,9 @@
 /* How the routing fields react to each other on any allocation form.
 
-   Five rules. The first two and the fifth are about not making the Treasurer
-   type something the database already knows; the third is about asking only
-   when it matters; the fourth is about not asking two questions where only one
-   can be answered:
+   Six rules. The first two, the fifth and the sixth are about not making the
+   Treasurer type something the database already knows; the third is about
+   asking only when it matters; the fourth is about not asking two questions
+   where only one can be answered:
 
      1. The funding request pickers only appear when the chosen fund draws on
         funding requests: the line on spending, and the request itself on
@@ -44,7 +44,14 @@
         source's <option>, set from the Revenue Source admin. Like rule 2 it
         only overwrites a box it filled in itself.
 
-   The server enforces all five either way (ParsedTransaction.clean(),
+     6. The funding request narrows its lines. In the queue a spending row
+        has a request box beside the line picker, filled in from the request
+        number in the memo even when the memo does not say which line. Choosing
+        a request leaves only that request's lines in the picker (each line's
+        <option> carries data-request); choosing a line sets the request to
+        the one it is on. "Any request" puts every line back.
+
+   The server enforces all six either way (ParsedTransaction.clean(),
    BaseAllocationForm._check_fund_and_fr_line and _default_fund_from_source,
    and, for rule 4, the direction rules that drop the revenue fields from a
    refund outright). None of this is validation. */
@@ -74,6 +81,9 @@
         return {
             fund: $scope.find('[name$="fund_source"]').first(),
             line: $scope.find('[name$="fr_line_target"]').first(),
+            /* The request the line is picked from (rule 6) -- not the model's
+               funding_request, which is the one SGA pays back or takes back. */
+            lineRequest: $scope.find('select[name$="fr_request"]').first(),
             request: $scope.find('select[name$="funding_request"]').first(),
             cross: $scope.find('[name$="allow_cross_year_fr"]').first(),
             category: $scope.find('[name$="lnl_spend_category"]').first(),
@@ -98,6 +108,13 @@
         if (f.line.length) {
             container(f.line).toggle(required);
             if (f.cross.length) { container(f.cross).toggle(required); }
+            if (f.lineRequest.length) {
+                container(f.lineRequest).toggle(required);
+                if (!required && f.lineRequest.val()) {
+                    f.lineRequest.val('');
+                    narrowLines(f.lineRequest);
+                }
+            }
 
             if (!required && f.line.val()) {
                 // A stale line would be rejected on save, with the error landing
@@ -155,6 +172,46 @@
         adopt(f.fund, $source.find('option:selected').attr('data-credits-fund') || '');
         // The fund may now draw on requests, which brings rule 1 in.
         gate(f.fund);
+    }
+
+    /* ---- 6. The request narrows its lines --------------------------------- */
+
+    /* Options are taken out rather than hidden: a hidden <option> can still be
+       reached from the keyboard, and some browsers show it anyway. The whole
+       list is kept on the picker the first time, and every narrowing starts
+       again from it. */
+    function narrowLines($lineRequest) {
+        var f = fields($lineRequest);
+        if (!f.line.length) { return; }
+        var $all = f.line.data('fin-all-lines');
+        if (!$all) {
+            $all = f.line.children('option').clone();
+            f.line.data('fin-all-lines', $all);
+        }
+        var request = String($lineRequest.val() || '');
+        var current = String(f.line.val() || '');
+        f.line.empty().append($all.filter(function () {
+            return !this.value || !request || $(this).attr('data-request') === request;
+        }).clone());
+
+        var kept = current && f.line.find('option[value="' + current + '"]').length;
+        f.line.val(kept ? current : '');
+        if (current && !kept) {
+            // The line lent the category and project; one that has gone takes
+            // them back (rule 2).
+            f.line.trigger('change');
+        }
+    }
+
+    function followLine($line) {
+        var f = fields($line);
+        if (!f.lineRequest.length || !$line.val()) { return; }
+        var owner = $line.find('option:selected').attr('data-request') || '';
+        if (owner && String(f.lineRequest.val() || '') !== owner &&
+                f.lineRequest.find('option[value="' + owner + '"]').length) {
+            f.lineRequest.val(owner);
+            narrowLines(f.lineRequest);
+        }
     }
 
     /* A hand-edit of either target releases it from inheritance. Namespaced
@@ -265,7 +322,19 @@
             if ($line.data('fin-inherit')) { return; }
             $line.data('fin-inherit', true);
             watchManualEdits($line);
-            $line.on('change', function () { inherit($line); });
+            $line.on('change', function () {
+                inherit($line);
+                followLine($line);
+            });
+        });
+
+        $(root).find('select[name$="fr_request"]').each(function () {
+            var $request = $(this);
+            if ($request.data('fin-narrow')) { return; }
+            $request.data('fin-narrow', true);
+            $request.on('change', function () { narrowLines($request); });
+            // Filled in from the memo, so the line picker starts narrowed.
+            if ($request.val()) { narrowLines($request); }
         });
     }
 

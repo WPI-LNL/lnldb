@@ -114,10 +114,16 @@ class FRLineSelect(forms.Select):
     """
 
     def create_option(self, name, value, *args, **kwargs):
-        """ Attach the line's category and project tag as data attributes. """
+        """
+        Attach the line's request, category and project tag as data attributes.
+
+        The request is how the queue's "Funding request" box narrows this
+        picker to one request's lines (routing.js, rule 6).
+        """
         option = super(FRLineSelect, self).create_option(name, value, *args, **kwargs)
         line = getattr(value, 'instance', None)
         if line is not None:
+            option['attrs']['data-request'] = str(line.funding_request_id)
             if line.lnl_spend_category_id:
                 option['attrs']['data-spend-category'] = str(line.lnl_spend_category_id)
             if line.project_tag_id:
@@ -149,6 +155,32 @@ class FRLineChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         """ Label the line with its year and remaining balance. """
         return obj.picker_label
+
+
+class LineRequestChoiceField(forms.ModelChoiceField):
+    """
+    The request a spending line's FR line is picked from.
+
+    Not a column of its own: the line is what is saved, and it already says
+    which request it belongs to. This box exists so the request the memo quotes
+    is filled in even when the line it names cannot be worked out -- and so the
+    line picker beside it can be narrowed to that request's lines. The form
+    keeps its options in step with the line picker's; see
+    :meth:`BaseAllocationForm._narrow_fr_lines`.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """ Start empty; the form narrows this alongside the line picker. """
+        kwargs.setdefault('queryset', FundingRequest.objects.none())
+        kwargs.setdefault('required', False)
+        kwargs.setdefault('label', "Funding request")
+        kwargs.setdefault('empty_label', "Any request")
+        super(LineRequestChoiceField, self).__init__(*args, **kwargs)
+
+    def label_from_instance(self, obj):
+        """ The year and the number, which are what the memo quotes. """
+        name = "%s %s" % (obj.reference, obj.name) if obj.reference else obj.name
+        return "FY%s · %s" % (obj.fiscal_year, name)
 
 
 class RefundTargetChoiceField(forms.ModelChoiceField):
@@ -498,7 +530,18 @@ class BaseAllocationForm(forms.ModelForm):
         field = self.fields.get('fr_line_target')
         if field is None:
             return
+        self._offer_lines(field)
 
+        # The request box offers exactly the requests the line picker has
+        # lines from, so the two can never disagree about what is on offer.
+        request = self.fields.get('fr_request')
+        if request is not None:
+            request.queryset = (FundingRequest.objects
+                                .filter(pk__in=field.queryset.values('funding_request'))
+                                .order_by('fiscal_year', 'reference', 'name'))
+
+    def _offer_lines(self, field):
+        """ Narrow the FR line picker itself; see :meth:`_narrow_fr_lines`. """
         lines = (FRLineItem.objects
                  .filter(funding_request__closed=False)
                  .select_related('funding_request')
@@ -638,21 +681,28 @@ class BaseAllocationForm(forms.ModelForm):
     @staticmethod
     def _mark_inherited(field, suggestion, name=None):
         """
-        Tell routing.js which pre-filled boxes came off the funding request line.
+        Tell routing.js which pre-filled boxes may give way to a chosen line.
 
         Rule 2 in ``static/js/routing.js`` fills the spend category and project
         in from whichever FR line is chosen, and it will only ever overwrite a
         box it filled in itself -- a value the Treasurer picked by hand survives
         switching lines. A box *this* method filled in belongs in the first
-        group, not the second: it is the same answer from the same place, and
-        it has to follow along when the line changes. Saying so is one data
+        group, not the second: nobody chose it by hand. Saying so is one data
         attribute, which is what jQuery's ``.data('fin-inherited')`` reads.
+
+        The spend category is marked whatever answered it. One that came off
+        the award is the same answer from the same place and has to follow the
+        line; one read off Workday's category is weaker than the award of the
+        line the Treasurer then picks, and must give way to it -- otherwise a
+        wrong guess from the export outlives the line that corrects it. The
+        project is marked only when the award answered it.
 
         A filled-in fund is marked whatever answered it, for rule 5: choosing
         the kind of income decides the fund, and a fund nobody chose by hand
         must give way to that rather than be refused on save.
         """
-        if suggestion.source != AWARD and name != 'fund_source':
+        if (suggestion.source != AWARD
+                and name not in ('fund_source', 'lnl_spend_category')):
             return
         widget = getattr(field, 'widget', None)
         if widget is not None:
@@ -776,9 +826,11 @@ class BaseAllocationForm(forms.ModelForm):
         # direction is None (a brand-new encumbrance with no amount yet): keep
         # everything and let clean() arbitrate once an amount is typed.
 
-        # The cross-year opt-in is meaningless without the picker it widens.
+        # The cross-year opt-in and the request box are meaningless without the
+        # picker they widen and narrow.
         if 'fr_line_target' not in self.fields:
             self.fields.pop('allow_cross_year_fr', None)
+            self.fields.pop('fr_request', None)
 
     def _revenue_fund_help(self):
         """
@@ -930,6 +982,20 @@ class BaseAllocationForm(forms.ModelForm):
                 "not. Change the fund, or clear this." % (fund or "no fund"))
             return
 
+        # The request box only narrows the line picker, and routing.js keeps
+        # the two in step; a line from another request means one of them was
+        # changed without the other, and only the Treasurer knows which.
+        chosen = cleaned.get('fr_request')
+        if chosen is not None and line.funding_request_id != chosen.pk:
+            self.add_error(
+                'fr_line_target',
+                "The %s line belongs to %s, not to %s chosen beside it. Pick a line of %s, "
+                "or change the request." % (line.name, line.funding_request.reference
+                                            or line.funding_request.name,
+                                            chosen.reference or chosen.name,
+                                            chosen.reference or chosen.name))
+            return
+
         # Crossing fiscal years is legal, but has to be deliberate.
         entry_year = self._entry_fiscal_year()
         request_year = line.funding_request.fiscal_year
@@ -1007,6 +1073,11 @@ class ReconcileForm(BaseAllocationForm):
     # page. A refund names none of its own: it inherits the purchase's.
     REQUIRED_ON_EXPENSES = ('fund_source',)
     REQUIRED_ON_REVENUE = ('fund_source',)
+
+    # Not saved -- the line says which request it is on. It is filled in from
+    # the memo's request number even when the line cannot be, and narrows the
+    # line picker to that request's lines. See LineRequestChoiceField.
+    fr_request = LineRequestChoiceField()
 
     #: Routing a credit takes from the purchase it reverses, rather than asking
     #: for it again. A refund filed anywhere other than where the money went
@@ -1088,7 +1159,7 @@ class ReconcileForm(BaseAllocationForm):
         if self.parent_transaction is not None and self.parent_transaction.net_amount <= 0:
             self.fields.pop('refund_of', None)
         elif self._refund_selected():
-            for name in self.REFUND_INHERITED + ('allow_cross_year_fr',):
+            for name in self.REFUND_INHERITED + ('allow_cross_year_fr', 'fr_request'):
                 self.fields.pop(name, None)
 
     def _inherit_refund_routing(self, original):

@@ -667,7 +667,7 @@ class FundingRequestFromMemoTests(TestCase):
         from finance.suggestions import suggest_funding_request
         FRLineItem.objects.create(funding_request=self.fr, name='Publicity',
                                   amount_awarded=Decimal('500.00'))
-        found, line = suggest_funding_request(self._txn('Rights (F.26.6)'))
+        found, line = suggest_funding_request(self._txn('Truman Show (F.26.6)'))
         self.assertEqual(found, self.fr)
         self.assertIsNone(line, "nothing in the memo says which of two lines it is")
 
@@ -914,8 +914,9 @@ class HouseFormatMemoTests(TestCase):
         self.assertEqual(form.initial['fund_source'], fund('sga_fr').pk)
         self.assertEqual(form.initial['fr_line_target'], self.consumables.pk)
         self.assertEqual(form.initial['lnl_spend_category'], category('consumables').pk)
+        self.assertEqual(form.initial['fr_request'], self.fr.pk)
         self.assertEqual(sorted(form.autofilled),
-                         ['fr_line_target', 'fund_source', 'lnl_spend_category'])
+                         ['fr_line_target', 'fr_request', 'fund_source', 'lnl_spend_category'])
 
     def test_a_filled_row_submits_as_it_stands(self):
         """ Open the queue, read the row, press Allocate. """
@@ -943,13 +944,175 @@ class HouseFormatMemoTests(TestCase):
         attrs = form.fields['lnl_spend_category'].widget.attrs
         self.assertEqual(attrs.get('data-fin-inherited'), str(category('consumables').pk))
 
-    def test_a_category_read_off_the_export_is_not_marked(self):
-        """ Nothing lent it, so nothing may take it away when a line changes. """
+    def test_a_category_read_off_the_export_gives_way_to_a_line(self):
+        """
+        Workday's category is weaker than the award of whichever line the
+        Treasurer picks, so it is marked as lent too. Left unmarked, a wrong
+        guess from the export outlived the line that should have corrected it.
+        """
         form = ReconcileForm(parent_transaction=bank(op='OT-HF10', amount='-42.00',
                                                      line_memo='Gaff tape'),
                              prefix='t')
+        self.assertEqual(form.fields['lnl_spend_category'].widget.attrs.get('data-fin-inherited'),
+                         str(category('consumables').pk))
+
+    def test_a_hand_picked_category_is_not_marked(self):
+        """ A value nobody filled in automatically is the Treasurer's, and stays. """
+        form = ReconcileForm(parent_transaction=bank(op='OT-HF13', amount='-42.00',
+                                                     line_memo='Gaff tape'),
+                             prefix='t', initial={'lnl_spend_category': category('food').pk})
         self.assertNotIn('data-fin-inherited',
                          form.fields['lnl_spend_category'].widget.attrs)
+
+
+class MemoRequestBeatsWorkdayTests(TestCase):
+    """
+    A memo quoting a request lnldb holds, but naming no line of it.
+
+    Taken from real rows: ``Meyer foam, foam, (F.27.82)``, ``LED COLOR FORCE II
+    48" RGBA, Fixtures, (F.27.83)``, ``10 foot Tomcat Guardian+ Sticks, Truss,
+    F.27.105``. Workday called them "Supplies" or "Audio Visual Equipment", and
+    the queue used to believe it over the memo -- filling Consumables in on a
+    request awarded only for capital equipment, and leaving the request itself
+    blank because the line could not be told.
+    """
+
+    def setUp(self):
+        capital = category('equipment_capital')
+        self.speakers = FundingRequest.objects.create(
+            name='Compact Speakers', reference='F.26.82', fiscal_year=2026)
+        for name in ('Speakers', 'Road Case', 'Shipping'):
+            FRLineItem.objects.create(funding_request=self.speakers, name=name,
+                                      amount_awarded=Decimal('1000.00'),
+                                      lnl_spend_category=capital)
+        self.truss = FundingRequest.objects.create(
+            name='Truss', reference='F.26.105', fiscal_year=2026)
+        self.ten_foot = FRLineItem.objects.create(
+            funding_request=self.truss, name='10ft Truss', amount_awarded=Decimal('2000.00'),
+            lnl_spend_category=capital)
+        self.five_foot = FRLineItem.objects.create(
+            funding_request=self.truss, name='5ft Truss', amount_awarded=Decimal('1000.00'),
+            lnl_spend_category=capital)
+        FRLineItem.objects.create(funding_request=self.truss, name='Shipping',
+                                  amount_awarded=Decimal('200.00'), lnl_spend_category=capital)
+        self.opex = FundingRequest.objects.create(
+            name='Shop Restock', reference='A.26.16', fiscal_year=2026)
+        FRLineItem.objects.create(funding_request=self.opex, name='Consumables',
+                                  amount_awarded=Decimal('600.00'),
+                                  lnl_spend_category=category('consumables'))
+        FRLineItem.objects.create(funding_request=self.opex, name='Hand tools',
+                                  amount_awarded=Decimal('400.00'),
+                                  lnl_spend_category=category('equipment_noncapital'))
+
+    def _txn(self, memo, op, workday='Supplies'):
+        return bank(op=op, amount='-42.00', line_memo=memo,
+                    worktags={'fund': '810-FD Agency', 'spend_category': workday})
+
+    def _payload(self, memo, op, workday='Supplies'):
+        from finance.suggestions import suggest_all
+        return suggest_all(self._txn(memo, op, workday))
+
+    def test_the_request_is_filled_when_the_line_cannot_be(self):
+        """ The number is the Treasurer's answer, whatever the middle field says. """
+        from finance.suggestions import MEMO
+        payload = self._payload('Meyer foam, foam, (F.26.82)', 'OT-MR1')
+        self.assertEqual(payload['fr_request'].value, self.speakers.pk)
+        self.assertEqual(payload['fr_request'].source, MEMO)
+        self.assertIn('pick one', payload['fr_request'].reason)
+        self.assertIsNone(payload['fr_line_target'])
+
+    def test_the_requests_award_beats_workdays_category(self):
+        """ Every line is capital equipment, so the foam is, whatever Workday says. """
+        from finance.suggestions import AWARD
+        payload = self._payload('Meyer foam, foam, (F.26.82)', 'OT-MR2')
+        self.assertEqual(payload['spend_category'].value, category('equipment_capital').pk)
+        self.assertEqual(payload['spend_category'].source, AWARD)
+
+    def test_the_row_fills_the_request_and_category_in(self):
+        form = ReconcileForm(parent_transaction=self._txn(
+            'LED COLOR FORCE II 48" RGBA, Fixtures, (F.26.82)', 'OT-MR3',
+            workday='Audio Visual Equipment'), prefix='t')
+        self.assertEqual(form.initial['fr_request'], self.speakers.pk)
+        self.assertEqual(form.initial['lnl_spend_category'], category('equipment_capital').pk)
+        self.assertNotIn('fr_line_target', form.autofilled)
+
+    def test_the_memos_wording_picks_the_line(self):
+        """ "10 foot" and "10ft Truss" share the 10; the 5ft line does not. """
+        from finance.suggestions import MEDIUM, MEMO
+        payload = self._payload('10 foot Tomcat Guardian+ Sticks, Truss, F.26.105', 'OT-MR4')
+        self.assertEqual(payload['fr_line_target'].value, self.ten_foot.pk)
+        self.assertEqual(payload['fr_line_target'].source, MEMO)
+        self.assertEqual(payload['fr_line_target'].confidence, MEDIUM)
+        self.assertIn('check it', payload['fr_line_target'].reason)
+        payload = self._payload('5 foot Tomcat Guardian+ Sticks, Truss, F.26.105', 'OT-MR5')
+        self.assertEqual(payload['fr_line_target'].value, self.five_foot.pk)
+
+    def test_a_tie_on_wording_names_no_line(self):
+        """ "Truss" fits both truss lines equally, which is a question. """
+        payload = self._payload('Truss clamps, Truss, F.26.105', 'OT-MR6')
+        self.assertIsNone(payload['fr_line_target'])
+        self.assertEqual(payload['fr_request'].value, self.truss.pk)
+
+    def test_a_workday_category_the_request_was_not_awarded_for_is_only_offered(self):
+        """
+        The request's lines are Consumables and Non Capital; Workday's "Supplies
+        - Office" maps to Club Operations, which contradicts the memo. Picking
+        the line fills the category in instead.
+        """
+        from finance.suggestions import GUESS, suggest_all
+        txn = self._txn('Foam, foam, (A.26.16)', 'OT-MR7', workday='Supplies - Office')
+        payload = suggest_all(txn)
+        self.assertEqual(payload['spend_category'].source, GUESS)
+        self.assertIn('A.26.16', payload['spend_category'].reason)
+        form = ReconcileForm(parent_transaction=txn, prefix='t')
+        self.assertNotIn('lnl_spend_category', form.autofilled)
+
+    def test_a_workday_category_the_request_was_awarded_for_still_fills(self):
+        from finance.suggestions import EXPORT
+        payload = self._payload('Foam, foam, (A.26.16)', 'OT-MR8')
+        self.assertEqual(payload['spend_category'].value, category('consumables').pk)
+        self.assertEqual(payload['spend_category'].source, EXPORT)
+
+    def test_the_line_options_say_which_request_they_are_on(self):
+        form = ReconcileForm(parent_transaction=self._txn('Foam, foam, (F.26.82)', 'OT-MR9'),
+                             prefix='t')
+        self.assertIn('data-request="%s"' % self.truss.pk, str(form['fr_line_target']))
+
+    def test_the_request_box_offers_what_the_line_picker_does(self):
+        """ Last year's request has no line on offer, so it is not offered either. """
+        old = FundingRequest.objects.create(name='Old', reference='F.25.1', fiscal_year=2025)
+        FRLineItem.objects.create(funding_request=old, name='Cable',
+                                  amount_awarded=Decimal('10.00'))
+        form = ReconcileForm(parent_transaction=self._txn('Foam, foam, (F.26.82)', 'OT-MR10'),
+                             prefix='t')
+        offered = set(form.fields['fr_request'].queryset)
+        self.assertEqual(offered, {self.speakers, self.truss, self.opex})
+
+    def test_a_line_from_another_request_is_refused(self):
+        txn = self._txn('Foam, foam, (F.26.82)', 'OT-MR11')
+        form = ReconcileForm({
+            't-fund_source': str(fund('sga_fr').pk),
+            't-lnl_spend_category': str(category('equipment_capital').pk),
+            't-fr_request': str(self.speakers.pk),
+            't-fr_line_target': str(self.ten_foot.pk),
+        }, parent_transaction=txn, prefix='t')
+        self.assertFalse(form.is_valid())
+        self.assertIn('F.26.105', str(form.errors['fr_line_target']))
+
+    def test_a_line_and_its_own_request_file(self):
+        txn = self._txn('10 foot sticks, Truss, F.26.105', 'OT-MR12')
+        form = ReconcileForm({
+            't-fund_source': str(fund('sga_fr').pk),
+            't-lnl_spend_category': str(category('equipment_capital').pk),
+            't-fr_request': str(self.truss.pk),
+            't-fr_line_target': str(self.ten_foot.pk),
+        }, parent_transaction=txn, prefix='t')
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().fr_line_target, self.ten_foot)
+
+    def test_money_coming_in_has_no_request_box(self):
+        form = ReconcileForm(parent_transaction=bank(op='OT-MR13', amount='42.00'), prefix='t')
+        self.assertNotIn('fr_request', form.fields)
 
 
 class DescriptionFromMemoTests(TestCase):
@@ -1389,11 +1552,14 @@ class AutofillFundingRequestTests(TestCase):
         form = ReconcileForm(parent_transaction=self.txn, prefix='t')
         self.assertNotEqual(form.initial['fund_source'], fund('sga_budget').pk)
 
-    def test_an_ambiguous_request_fills_the_fund_but_not_the_line(self):
+    def test_an_ambiguous_request_fills_the_fund_and_request_but_not_the_line(self):
         FRLineItem.objects.create(funding_request=self.fr, name='Publicity',
                                   amount_awarded=Decimal('500.00'))
-        form = ReconcileForm(parent_transaction=self.txn, prefix='t')
+        txn = bank(op='OT-FR2', amount='-1100.00', line_memo='Truman Show (F.26.6)',
+                   worktags={'fund': '810-FD Agency'})
+        form = ReconcileForm(parent_transaction=txn, prefix='t')
         self.assertEqual(form.initial['fund_source'], fund('sga_fr').pk)
+        self.assertEqual(form.initial['fr_request'], self.fr.pk)
         self.assertIsNone(form.initial.get('fr_line_target'),
                           "nothing in the memo says which of two lines it is")
 

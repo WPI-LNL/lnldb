@@ -315,10 +315,15 @@
                                 {% include 'finance/_queue_field.html' with field=row.form.fund_source label="Fund" size="md" autofilled=row.form.autofilled.fund_source suggestion=row.suggestions.fund_source only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.lnl_spend_category label="Spend Category" size="md" autofilled=row.form.autofilled.lnl_spend_category suggestion=row.suggestions.spend_category only %}
                                 {% comment %}
-                                    Hidden by routing.js unless the chosen fund
-                                    draws on a funding request, so the common
-                                    case never sees it.
+                                    Both hidden by routing.js unless the chosen
+                                    fund draws on a funding request, so the
+                                    common case never sees them. The request is
+                                    filled in whenever the memo quotes one lnldb
+                                    holds, even when which line it means cannot
+                                    be told, and narrows the line picker to that
+                                    request's lines.
                                 {% endcomment %}
+                                {% include 'finance/_queue_field.html' with field=row.form.fr_request label="Funding request" size="md" autofilled=row.form.autofilled.fr_request suggestion=row.suggestions.fr_request only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.fr_line_target label="Funding request line" size="lg" autofilled=row.form.autofilled.fr_line_target suggestion=row.suggestions.fr_line_target only %}
                             {% endif %}
 

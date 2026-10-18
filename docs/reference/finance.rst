@@ -722,7 +722,8 @@ matched anywhere — which left an exact account code and a keyword spotted in
 prose indistinguishable to whatever consumed the result.
 
 For the spend category, :func:`~finance.suggestions.suggest_spend_category`
-runs from the most specific evidence to the coarsest:
+runs from the most specific evidence to the coarsest. Everything the memo says
+comes before anything Workday says:
 
 1. **What the funding request line was awarded for.** If the memo names a line
    and a category was recorded against it when the award was entered, the
@@ -730,13 +731,39 @@ runs from the most specific evidence to the coarsest:
 2. **What the memo says.** The middle field of LNL's house format is usually a
    category by name -- ``Velcro restock, consumables, (A.27.16)`` -- and it
    outranks Workday's, because WPI's list is not LNL's: everything LNL buys
-   arrives as "Supplies" or "Equipment - General" whatever it was for.
-3. **Workday's own Spend Category, matched exactly.** The finest code in the
+   arrives as "Supplies" or "Audio Visual Equipment" whatever it was for.
+3. **What the quoted request was awarded for**, when the line is not known
+   but every line of the request is awarded for the same category.
+   ``Meyer foam, foam, (F.27.82)`` on a request whose lines are all
+   Equipment - Capital is Equipment - Capital, whichever line it is.
+4. **Workday's own Spend Category, matched exactly.** The finest code in the
    export. "Printing", "Supplies - Office" and "Supplies - Medical" all sit
    under the ledger account ``71100:Supplies`` and are not the same thing.
-4. **The ledger account, matched on its number.** Coarser, but still a code WPI
+5. **The ledger account, matched on its number.** Coarser, but still a code WPI
    assigned, so it covers Workday categories nobody has mapped yet.
-5. **Anything matched by wording**, which is a guess and stays a chip.
+6. **Anything matched by wording**, which is a guess and stays a chip.
+
+When the memo quotes a request whose lines are awarded for several categories,
+passes 4-6 may only fill the box with one of those. A Workday category no line
+was awarded for contradicts the memo, so it is offered as a chip only. Every
+filled-in category is marked ``data-fin-inherited``, so picking an FR line
+replaces it with that line's award (``routing.js``, rule 2). Before this, a
+wrong category from Workday stayed put when a line was picked.
+
+**The request comes before the line.** A memo that quotes a request lnldb holds
+always fills in the queue's *Funding request* box
+(``ReconcileForm.fr_request``, see
+:func:`~finance.suggestions.suggest_fr_request`), even when the line cannot be
+told. The box is not saved, because the line already names its request. It
+narrows the line picker to that request's lines (``routing.js``, rule 6), and
+the form refuses a line from a different request. Finding the line is
+:func:`~finance.suggestions.match_fr_line`. It tries, in order: the hint as the
+line's name, as its awarded category, or as part of one name; then the memo's
+wording. The wording pass picks the one line whose name shares the most words
+with the description and hint, with digits split from letters so that
+``10 foot ... sticks`` meets ``10ft Truss``. It must lead outright. A wording
+match fills the box in at medium confidence, with a caption that says to check
+it.
 
 The 226-AG exports from FY18 to FY26 hold 2,057 lines, 17 ledger accounts and
 38 distinct Workday spend categories, and every expense line carries one. The
