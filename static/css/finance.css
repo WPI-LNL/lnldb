@@ -372,8 +372,8 @@
 .fin-bulk-bar.is-visible { transform: translateY(0); }
 .fin-bulk-inner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .fin-bulk-count { font-weight: 600; margin-right: 4px; }
-/* The queue's bar carries several pickers rather than one -- fund, FR line,
-   category, project -- so each says which it is: a row of unlabelled
+/* The queue's bar carries several pickers rather than one -- fund, request,
+   FR line, category, project -- so each says which it is: a row of unlabelled
    dropdowns is a guessing game. */
 .fin-bulk-label { font-weight: 400; font-size: 12px; margin: 0 -4px 0 4px; opacity: 0.85; }
 
@@ -391,16 +391,16 @@
 }
 .fin-bulk-bar .form-control { display: inline-block; width: auto; }
 
-/* The funding request picker and its "other year" tick box, which routing.js
-   shows only once a fund that draws on a request is chosen. The wrapper is
-   what gets folded away, so the label travels with its box.
+/* The funding request and line pickers and their "other year" tick box, which
+   routing.js shows only once a fund that draws on a request is chosen. The
+   wrapper is what gets folded away, so the labels travel with their boxes.
 
-   An FR line's option text is its year, its request, its purpose and its
-   remaining balance, which at width:auto is wide enough to wrap the bar onto a
-   second line and push the buttons off the bottom of the screen. Capped here;
-   the full text is still there in the open dropdown. */
-.fin-bulk-fr { display: inline-flex; align-items: center; }
-.fin-bulk-bar .fin-bulk-fr .form-control { max-width: 320px; }
+   A request's option text is its year, its number and its name, which at
+   width:auto is wide enough to wrap the bar onto a second line and push the
+   buttons off the bottom of the screen. Capped here; the full text is still
+   there in the open dropdown. */
+.fin-bulk-fr { display: inline-flex; align-items: center; gap: 12px; }
+.fin-bulk-bar .fin-bulk-fr .form-control { max-width: 240px; }
 .fin-bulk-check {
     font-weight: 400;
     font-size: 12px;
@@ -424,6 +424,7 @@
     color: #323f4b;
     background-color: #fff;
 }
+.fin-bulk-bar select optgroup,
 .fin-bulk-bar select option { color: #323f4b; background-color: #fff; }
 
 /* ---- Ingestion queue ------------------------------------------------------

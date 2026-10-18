@@ -53,8 +53,16 @@ Spending Against a Request
 --------------------------
 
 When filing a purchase paid for by a funding request, set the **Fund** to `SGA Funding Request` and choose the
-**Funding request line**. Each line in the list shows its year and how much is left, for example
-``FY2026 · F.26.6 Fixtures — $340.00 left``.
+**Funding request line**. The list is grouped by request: each request is a heading with its year and number, and its
+lines are indented under it with how much is left on each, the same way the project list nests a project's parts::
+
+    FY26 · F.26.6 A Term Films
+        └ Fixtures — $340.00 left
+        └ Film Rights — $5000.00 left
+
+The **Funding request** box beside it narrows the list to one request's lines, and picking a line fills it in. Choosing
+`Any request` lists every line again. The two boxes work the same way everywhere a line is picked: the queue, the bulk
+bar, a split, an entry's own page and a purchase logged in advance.
 
 You often won't have to: if the Workday memo is written as ``what it was, which line, (request number)`` -- for example
 ``Velcro restock, consumables, (A.27.16)`` -- the queue fills in the fund, the line and the category for you.

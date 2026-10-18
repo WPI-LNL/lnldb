@@ -990,7 +990,8 @@ def bulk_reconcile(request):
                 refused.append((txn, ValidationError({'fr_line_target': [
                     "This is FY%s spending but %s is an FY%s request. If that is genuinely "
                     "intended, tick “Other year”."
-                    % (entry_year, line.funding_request.name, line_year)]})))
+                    % (str(entry_year)[-2:], line.funding_request.name,
+                       str(line_year)[-2:])]})))
                 continue
 
             remaining = txn.unallocated_amount

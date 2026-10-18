@@ -264,6 +264,118 @@ class ProjectDropdownIndentationTests(TestCase):
         self.assertTrue(any('└' in label for label in labels))
 
 
+class FundingRequestLineDropdownTests(TestCase):
+    """
+    Every FR line picker lists each request's lines indented under it, the way
+    a project picker nests a sub-project, and has the request box beside it --
+    so a line is picked the same way on every page.
+    """
+
+    def setUp(self):
+        # Sept 2025 is FY26.
+        self.txn = bank(op='OT-LD1', amount='-250.00')
+        self.films = FundingRequest.objects.create(name='A Term Films', reference='F.26.6',
+                                                   fiscal_year=2026)
+        self.rights = FRLineItem.objects.create(funding_request=self.films, name='Film Rights',
+                                                amount_awarded=Decimal('5000.00'), sort_order=0)
+        self.posters = FRLineItem.objects.create(funding_request=self.films, name='Posters',
+                                                 amount_awarded=Decimal('120.00'), sort_order=1)
+        self.speakers = FundingRequest.objects.create(name='Speakers', reference='A.26.16',
+                                                      fiscal_year=2026)
+        self.mains = FRLineItem.objects.create(funding_request=self.speakers, name='Mains',
+                                               amount_awarded=Decimal('900.00'))
+
+    def _entry(self, line):
+        return ParsedTransaction.objects.create(
+            parent_transaction=self.txn, amount=self.txn.net_amount,
+            effective_date=self.txn.accounting_date, fund_source=fund('sga_fr'),
+            lnl_spend_category=category('equipment_noncapital'), fr_line_target=line)
+
+    def _forms(self):
+        from finance.forms import BulkReconcileForm
+        return [
+            ('ReconcileForm', ReconcileForm(parent_transaction=self.txn, prefix='t')),
+            ('AllocationForm', AllocationForm(instance=self._entry(self.mains),
+                                              parent_transaction=self.txn)),
+            # Logged today, which is not FY26, so the other years are asked for.
+            ('EncumbranceForm', EncumbranceForm(initial={'allow_cross_year_fr': True})),
+            ('SplitLineForm', SplitLineForm(parent_transaction=self.txn, prefix='s')),
+            ('BulkReconcileForm', BulkReconcileForm()),
+        ]
+
+    @staticmethod
+    def _groups(field):
+        return [(group, [str(label) for value, label in choices])
+                for group, choices in field.choices if group]
+
+    def test_every_line_picker_nests_the_lines_under_their_request(self):
+        # The entry the entry page edits has spent $250 of Mains.
+        for name, form in self._forms():
+            self.assertEqual(self._groups(form.fields['fr_line_target']), [
+                ('FY26 · A.26.16 Speakers', ['\xa0' * 4 + '└ Mains — $650.00 left']),
+                ('FY26 · F.26.6 A Term Films', ['\xa0' * 4 + '└ Film Rights — $5000.00 left',
+                                                '\xa0' * 4 + '└ Posters — $120.00 left']),
+            ], name)
+
+    def test_the_requests_render_as_headings_that_cannot_be_picked(self):
+        rendered = str(ReconcileForm(parent_transaction=self.txn, prefix='t')['fr_line_target'])
+        self.assertIn('<optgroup label="FY26 · F.26.6 A Term Films">', rendered)
+        self.assertNotIn('>FY26 · F.26.6 A Term Films</option>', rendered)
+
+    def test_a_line_is_indented_exactly_as_a_sub_project_is(self):
+        parent = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
+        child = ProjectTag.objects.create(name='D60 Lustrs', code='D60', parent=parent)
+        child = ProjectTag.objects.get(pk=child.pk)
+        indent = '\xa0' * 4 + '└ '
+        self.assertTrue(child.indented_label.startswith(indent))
+        self.assertTrue(self.mains.nested_label.startswith(indent))
+
+    def test_every_line_picker_has_the_request_box_beside_it(self):
+        for name, form in self._forms():
+            self.assertIn('fr_request', form.fields, name)
+            self.assertEqual(list(form.fields['fr_request'].queryset),
+                             [self.speakers, self.films], name)
+
+    def test_the_request_box_reads_as_the_headings_do(self):
+        form = ReconcileForm(parent_transaction=self.txn, prefix='t')
+        labels = [str(label) for value, label in form.fields['fr_request'].choices if value]
+        self.assertEqual(labels, [group for group, _ in self._groups(form.fields['fr_line_target'])])
+
+    def test_a_saved_entry_opens_on_the_request_of_its_line(self):
+        form = AllocationForm(instance=self._entry(self.posters), parent_transaction=self.txn)
+        self.assertEqual(form.initial['fr_request'], self.films.pk)
+
+    def test_the_request_box_the_line_and_the_tick_box_sit_together(self):
+        """ The entry and encumbrance pages render their fields in this order. """
+        for form in (AllocationForm(instance=self._entry(self.mains), parent_transaction=self.txn),
+                     EncumbranceForm()):
+            names = list(form.fields)
+            at = names.index('fr_request')
+            self.assertEqual(names[at:at + 3],
+                             ['fr_request', 'fr_line_target', 'allow_cross_year_fr'])
+
+    def test_money_coming_in_has_no_request_box_on_any_form(self):
+        credit = bank(op='OT-LD2', amount='42.00')
+        self.assertNotIn('fr_request', SplitLineForm(parent_transaction=credit, prefix='s').fields)
+
+    def test_the_bulk_bar_refuses_a_line_from_another_request(self):
+        from finance.forms import BulkReconcileForm
+        form = BulkReconcileForm({'selected': str(self.txn.pk),
+                                  'fund_source': str(fund('sga_fr').pk),
+                                  'fr_request': str(self.speakers.pk),
+                                  'fr_line_target': str(self.rights.pk)})
+        self.assertFalse(form.is_valid())
+        self.assertIn('F.26.6', str(form.errors['fr_line_target']))
+
+    def test_the_bulk_bar_takes_a_line_with_its_own_request(self):
+        from finance.forms import BulkReconcileForm
+        form = BulkReconcileForm({'selected': str(self.txn.pk),
+                                  'fund_source': str(fund('sga_fr').pk),
+                                  'fr_request': str(self.films.pk),
+                                  'fr_line_target': str(self.rights.pk)})
+        self.assertTrue(form.is_valid(), form.errors)
+
+
 class FundingRequestLineTests(TestCase):
     """ Line items carry a description and are not capped at three. """
 
@@ -457,11 +569,12 @@ class CrossFiscalYearTests(TestCase):
         form = ReconcileForm(parent_transaction=self.txn, prefix='t')
         self.assertEqual(list(form.fields['fr_line_target'].queryset), [self.this_year])
 
-    def test_the_offered_label_carries_the_year_and_the_balance(self):
+    def test_the_offered_line_carries_the_year_and_the_balance(self):
+        """ The year is on the request heading the line sits under. """
         form = ReconcileForm(parent_transaction=self.txn, prefix='t')
-        label = form.fields['fr_line_target'].label_from_instance(self.this_year)
-        self.assertIn('FY2026', label)
-        self.assertIn('$1000.00 left', label)
+        rendered = str(form['fr_line_target'])
+        self.assertIn('<optgroup label="FY26 · FY26 Grant">', rendered)
+        self.assertIn('$1000.00 left', rendered)
 
     def test_same_year_needs_no_ceremony(self):
         self.assertTrue(self._post(self.this_year).is_valid())
@@ -469,7 +582,7 @@ class CrossFiscalYearTests(TestCase):
     def test_another_year_is_refused_by_default(self):
         form = self._post(self.last_year)
         self.assertFalse(form.is_valid())
-        self.assertIn('FY2025 request', str(form.errors['fr_line_target']))
+        self.assertIn('FY25 request', str(form.errors['fr_line_target']))
 
     def test_another_year_goes_through_when_asked_for(self):
         self.assertTrue(self._post(self.last_year, cross=True).is_valid())

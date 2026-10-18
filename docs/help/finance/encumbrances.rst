@@ -26,7 +26,7 @@ Log a Purchase
    - **Date** -- roughly when the money will go out.
    - **Description** and **What is this for?** -- both required. Nobody else will know later.
    - **Fund** and **Spend Category** -- as you would file the purchase. For a funding request, also choose the
-     **Funding request line**.
+     **Funding request line**; pick the **Funding request** first to list only its lines. See :doc:`funding-requests`.
    - **Incurred for event** -- for gear hired in for a show. Booking a rental is exactly when you know which show it is
      for, so it is worth filling in here.
    - **Project** and a **receipt or quote**, if you have them.

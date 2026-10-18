@@ -434,16 +434,19 @@
 
                     {% comment %}
                         Hidden by routing.js unless the chosen fund draws on a
-                        funding request, the same rule it applies to the picker
+                        funding request, the same rule it applies to the pickers
                         on a queue row -- the wrapper is what gets folded away,
-                        so the label goes with the box rather than being left
-                        behind as a stray word on the bar.
+                        so the labels go with the boxes rather than being left
+                        behind as stray words on the bar. The request box
+                        narrows the line picker, as it does on a row.
 
                         Charging a whole batch to one award is why the fund
                         list includes funding-request money at all; see
                         finance.forms.BulkReconcileForm.
                     {% endcomment %}
                     <span class="fin-bulk-fr">
+                        <label class="fin-bulk-label" for="{{ bulk_reconcile_form.fr_request.id_for_label }}">Request</label>
+                        {{ bulk_reconcile_form.fr_request }}
                         <label class="fin-bulk-label" for="{{ bulk_reconcile_form.fr_line_target.id_for_label }}">FR line</label>
                         {{ bulk_reconcile_form.fr_line_target }}
                     </span>

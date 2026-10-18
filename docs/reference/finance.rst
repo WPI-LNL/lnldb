@@ -752,11 +752,16 @@ wrong category from Workday stayed put when a line was picked.
 
 **The request comes before the line.** A memo that quotes a request lnldb holds
 always fills in the queue's *Funding request* box
-(``ReconcileForm.fr_request``, see
+(``BaseAllocationForm.fr_request``, see
 :func:`~finance.suggestions.suggest_fr_request`), even when the line cannot be
 told. The box is not saved, because the line already names its request. It
 narrows the line picker to that request's lines (``routing.js``, rule 6), and
-the form refuses a line from a different request. Finding the line is
+the form refuses a line from a different request
+(:func:`~finance.forms.fr_request_mismatch`). The same box sits beside every
+line picker -- the entry page, the encumbrance form, the split modal and the
+queue's bulk bar as well as a queue row -- and :func:`~finance.forms.offer_fr_lines`
+fills both in, so a line is picked the same way everywhere. On a saved entry
+the box starts on the request of the line it holds. Finding the line is
 :func:`~finance.suggestions.match_fr_line`. It tries, in order: the hint as the
 line's name, as its awarded category, or as part of one name; then the memo's
 wording. The wording pass picks the one line whose name shares the most words
@@ -914,13 +919,22 @@ mistake, the usual case is the default and the exception costs one deliberate
 tick. Charging FY25 spending to an FY26 funding request is the worked example:
 the picker lists this year's requests, and *"Charge a different fiscal year"*
 widens it. Submitting another year's line without that tick is refused by name
-— "This is FY2026 spending but FY25 Grant is an FY2025 request." The same
+— "This is FY26 spending but FY25 Grant is an FY25 request." The same
 thinking narrows the refund target list to the current year.
 
-**Put the number where the decision is.** Every funding request line reads
-``FY2026 · F.26.6 Fixtures — $340.00 left`` in the dropdown, so the year and
-the remaining balance are in front of you at the moment you choose, rather than
-on a page you would have to go and look at.
+**Put the number where the decision is.** The funding request line picker
+lists each request as a heading carrying its year, with its lines indented
+under it carrying what is left on each, the way the project pickers nest a
+sub-project (:func:`finance.models.nested_option_label` is the format for
+both)::
+
+    FY26 · F.26.6 A Term Films
+        └ Fixtures — $340.00 left
+
+So the year and the remaining balance are in front of you at the moment you
+choose, rather than on a page you would have to go and look at. The headings
+are ``<optgroup>``\ s (:class:`finance.forms.FRLineChoiceIterator`), so a
+request cannot be picked in place of a line.
 
 **Match what is written down, do not guess at it.** Workday memos routinely
 quote the SGA request a purchase was approved under — "Truman Show Film Rights

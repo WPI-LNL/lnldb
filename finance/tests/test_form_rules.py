@@ -263,7 +263,7 @@ class FundAndFundingRequestTests(TestCase):
                               't-fr_line_target': str(old_line.pk)},
                              parent_transaction=self.txn, prefix='t')
         self.assertFalse(form.is_valid())
-        self.assertIn('FY2025', ' '.join(form.errors['fr_line_target']))
+        self.assertIn('FY25', ' '.join(form.errors['fr_line_target']))
 
     def test_ticking_the_box_allows_it(self):
         old = FundingRequest.objects.create(name='Last Year', reference='F.25.1',

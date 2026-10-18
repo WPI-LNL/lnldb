@@ -1378,7 +1378,7 @@ class BulkReconcileTests(FinanceViewTestCase):
         response = self._post(fund_source=fund('sga_fr').pk,
                               fr_line_target=self.old_line.pk)
         self.assertEqual(self.a.slices.count(), 0)
-        self.assertContains(response, "FY2025 request")
+        self.assertContains(response, "FY25 request")
 
     def test_the_other_year_tick_box_allows_it(self):
         self._post(fund_source=fund('sga_fr').pk, fr_line_target=self.old_line.pk,
@@ -1396,7 +1396,7 @@ class BulkReconcileTests(FinanceViewTestCase):
                               fr_line_target=self.line.pk)
         self.assertEqual(self.a.slices.count(), 1)
         self.assertEqual(stray.slices.count(), 0)
-        self.assertContains(response, "FY2025 spending")
+        self.assertContains(response, "FY25 spending")
 
     def test_the_bar_offers_the_line_picker_beside_the_fund(self):
         """

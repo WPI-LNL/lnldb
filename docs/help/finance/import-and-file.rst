@@ -132,8 +132,9 @@ row, tick its `Del` box. The parts must add up to the line exactly; the page tel
 settles the line and it leaves the queue. To move money between the parts later, change the amounts and save the split
 again.
 
-A part paid from `SGA Funding Request` names the request line it was spent against in `FR Line`. Under it,
-`SGA took money back?` is only for a line where SGA took money back, which names the whole request instead of a line.
+A part paid from `SGA Funding Request` names the request line it was spent against in `FR Line`, with the request box
+above it as on a queue row. Under them, `SGA took money back?` is only for a line where SGA took money back, which names
+the whole request instead of a line.
 
 If your role can file but not settle, the parts are saved as **Pending** and the line stays in the queue until someone
 who can settle opens it and clicks `Mark settled`.
@@ -149,8 +150,8 @@ row, choose the fund, category and (if you like) project in the bar at the botto
 line is checked on its own, and any the settings don't suit are listed and left in the queue. Only money going out can
 be filed this way.
 
-If the fund is `SGA Funding Request`, the bar also asks for the request line. It lists every open request, so check the
-year on the line you pick.
+If the fund is `SGA Funding Request`, the bar also asks for the request and its line, as a queue row does. It lists every
+open request, so check the year on the request you pick from.
 
 
 Fix a Mistake

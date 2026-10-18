@@ -274,15 +274,22 @@
                                                     <td>{{ form.fund_source }}</td>
                                                     <td>{{ form.lnl_spend_category }}</td>
                                                     <td>
+                                                        {% comment %}
+                                                            The request box narrows the line
+                                                            picker under it, as on a queue row;
+                                                            the line is what is saved.
+                                                        {% endcomment %}
+                                                        <div class="form-group fin-cell-group">{{ form.fr_request }}</div>
                                                         <div class="form-group fin-cell-group">{{ form.fr_line_target }}</div>
                                                         {% comment %}
                                                             Spending names the line. The request
-                                                            on its own is only for money SGA took
-                                                            back, which has no line, so it is
-                                                            folded away rather than sitting under
-                                                            the line picker looking like a second
-                                                            copy of it. Still rendered, so a
-                                                            re-save keeps what it holds.
+                                                            SGA took money back for is only for
+                                                            money SGA took back, which has no
+                                                            line, so it is folded away rather than
+                                                            sitting under the line picker looking
+                                                            like a third copy of it. Still
+                                                            rendered, so a re-save keeps what it
+                                                            holds.
                                                         {% endcomment %}
                                                         <div class="form-group fin-cell-group">
                                                             <details class="fin-sga-return"{% if form.funding_request.value %} open{% endif %}>

@@ -1230,6 +1230,25 @@ class SuggestionRule(models.Model):
 # Project tags
 # ---------------------------------------------------------------------------
 
+def nested_option_label(text, depth):
+    """
+    ``text`` set at ``depth`` in a nested dropdown::
+
+        NEL26 — New Equipment List 2026
+            └ D60-LUSTR — D60 Lustr Fixtures
+
+    The one format every nested picker in the finance pages uses -- projects
+    under their parent, and funding request lines under their request -- so
+    the two read as the same kind of list.
+
+    Non-breaking spaces because HTML collapses ordinary leading whitespace
+    inside ``<option>``.
+    """
+    indent = '\xa0' * (4 * depth)
+    marker = '└ ' if depth else ''
+    return '%s%s%s' % (indent, marker, text)
+
+
 @reversion.register()
 class ProjectTag(MPTTModel):
     """
@@ -1274,17 +1293,11 @@ class ProjectTag(MPTTModel):
         """
         Option label for every project picker, nested by depth.
 
-        Non-breaking spaces because HTML collapses ordinary leading whitespace
-        inside ``<option>``. Kept on the model so the forms and the raw ledger
-        filter cannot drift apart::
-
-            NEL26 — New Equipment List 2026
-                └ D60-LUSTR — D60 Lustr Fixtures
+        Kept on the model so the forms and the raw ledger filter cannot drift
+        apart; :func:`nested_option_label` is the format.
         """
-        depth = getattr(self, 'level', 0) or 0
-        indent = ' ' * (4 * depth)
-        marker = '└ ' if depth else ''
-        return '%s%s%s — %s' % (indent, marker, self.code, self.name)
+        return nested_option_label('%s — %s' % (self.code, self.name),
+                                   getattr(self, 'level', 0) or 0)
 
     def get_absolute_url(self):
         """ This tag's branch of the project explorer. """
@@ -1695,6 +1708,22 @@ class FundingRequest(models.Model):
         return None
 
     @property
+    def short_label(self):
+        """
+        The year and the number, which are what a memo quotes::
+
+            FY26 · F.26.6 A Term Films
+
+        Every funding request picker starts from this, so a request reads the
+        same wherever it is offered: as the heading its lines sit under in a
+        line picker (:class:`finance.forms.FRLineChoiceField`), as the whole
+        option in the request box beside one, and as the front of
+        :attr:`picker_label`.
+        """
+        name = "%s %s" % (self.reference, self.name) if self.reference else self.name
+        return "FY%s · %s" % (str(self.fiscal_year)[-2:], name)
+
+    @property
     def picker_label(self):
         """
         How this request reads in the reimbursement picker.
@@ -1703,9 +1732,7 @@ class FundingRequest(models.Model):
         names the request it repays, and the one still owed money is nearly
         always the one being repaid.
         """
-        name = "%s %s" % (self.reference, self.name) if self.reference else self.name
-        return "FY%s · %s — %s" % (str(self.fiscal_year)[-2:], name,
-                                   self.reimbursement_status.lower())
+        return "%s — %s" % (self.short_label, self.reimbursement_status.lower())
 
 
 def _dollars(amount):
@@ -1796,22 +1823,39 @@ class FRLineItem(models.Model):
         return -self.remaining if self.is_overspent else Decimal('0.00')
 
     @property
+    def balance_label(self):
+        """ ``$120.00 left``, or ``OVER by $29.00`` rather than a negative. """
+        remaining = self.remaining
+        if remaining < 0:
+            return "OVER by $%s" % (-remaining)
+        return "$%s left" % remaining
+
+    @property
+    def nested_label(self):
+        """
+        How this line reads in a line picker, indented under its request::
+
+            FY26 · F.26.6 A Term Films
+                └ Film Rights — $5000.00 left
+
+        The request heading carries the year, so the line itself only has to
+        say what it is for and what is left -- the remaining balance because
+        pushing a line past its award is easy to do without noticing.
+        """
+        return nested_option_label('%s — %s' % (self.name, self.balance_label), 1)
+
+    @property
     def picker_label(self):
         """
-        How this line reads in an allocation dropdown.
+        How this line reads on its own, where its request is not beside it --
+        a suggestion offered under the box, say.
 
         The fiscal year and the remaining balance are both on the label because
         both are things you can get wrong without noticing: charging FY26 money
         to an FY25 request, or pushing a line past its award.
         """
-        fr = self.funding_request
-        name = "%s %s" % (fr.reference, fr.name) if fr.reference else fr.name
-        remaining = self.remaining
-        if remaining < 0:
-            balance = "OVER by $%s" % (-remaining)
-        else:
-            balance = "$%s left" % remaining
-        return "FY%s · %s · %s — %s" % (fr.fiscal_year, name, self.name, balance)
+        return "%s · %s — %s" % (self.funding_request.short_label, self.name,
+                                 self.balance_label)
 
 
 # ---------------------------------------------------------------------------

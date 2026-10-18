@@ -217,7 +217,7 @@ class LabelTests(TestCase):
         line = FRLineItem.objects.create(funding_request=request, name='Film Rights',
                                          amount_awarded=Decimal('5000.00'))
         label = line.picker_label
-        self.assertIn('FY2026', label)
+        self.assertIn('FY26', label)
         self.assertIn('F.26.6', label)
         self.assertIn('$5000.00 left', label)
 

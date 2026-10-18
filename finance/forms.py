@@ -22,7 +22,7 @@ from crispy_forms.helper import FormHelper
 from django import forms
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db.models import F, Q, Value
-from django.forms.models import BaseInlineFormSet, inlineformset_factory
+from django.forms.models import BaseInlineFormSet, ModelChoiceIterator, inlineformset_factory
 from django.utils import timezone
 from django.utils.formats import date_format
 from mptt.forms import TreeNodeChoiceField
@@ -131,13 +131,46 @@ class FRLineSelect(forms.Select):
         return option
 
 
+class FRLineChoiceIterator(ModelChoiceIterator):
+    """
+    Groups the lines under the request each belongs to, one ``<optgroup>`` a
+    request, the way the project pickers nest a sub-project under its parent::
+
+        FY26 · F.26.6 A Term Films
+            └ Film Rights — $5000.00 left
+            └ Concessions — $120.00 left
+
+    Requests come in the order their lines first appear, which
+    :func:`open_fr_lines` makes the order the request box beside the picker
+    lists them in.
+    """
+
+    def __iter__(self):
+        if self.field.empty_label is not None:
+            yield ("", self.field.empty_label)
+        groups = {}
+        for line in self.queryset:
+            request, choices = groups.setdefault(line.funding_request_id,
+                                                 (line.funding_request, []))
+            choices.append(self.choice(line))
+        for request, choices in groups.values():
+            yield (request.short_label, choices)
+
+
 class FRLineChoiceField(forms.ModelChoiceField):
     """
-    Funding request lines, labelled with the two things you can silently get
-    wrong: the fiscal year the request belongs to, and how much of the line is
-    left. See :attr:`finance.models.FRLineItem.picker_label`.
+    Funding request lines, each indented under its request.
+
+    Labelled with the two things you can silently get wrong: the fiscal year
+    the request belongs to, which is on the request's heading, and how much of
+    the line is left, which is on the line. See
+    :attr:`finance.models.FRLineItem.nested_label`.
+
+    Every form that picks a line pairs this with a :class:`LineRequestChoiceField`
+    and fills both in with :func:`offer_fr_lines`.
     """
     widget = FRLineSelect
+    iterator = FRLineChoiceIterator
 
     def __init__(self, *args, **kwargs):
         """
@@ -153,8 +186,8 @@ class FRLineChoiceField(forms.ModelChoiceField):
         super(FRLineChoiceField, self).__init__(*args, **kwargs)
 
     def label_from_instance(self, obj):
-        """ Label the line with its year and remaining balance. """
-        return obj.picker_label
+        """ Label the line with what it is for and its remaining balance. """
+        return obj.nested_label
 
 
 class LineRequestChoiceField(forms.ModelChoiceField):
@@ -164,9 +197,10 @@ class LineRequestChoiceField(forms.ModelChoiceField):
     Not a column of its own: the line is what is saved, and it already says
     which request it belongs to. This box exists so the request the memo quotes
     is filled in even when the line it names cannot be worked out -- and so the
-    line picker beside it can be narrowed to that request's lines. The form
-    keeps its options in step with the line picker's; see
-    :meth:`BaseAllocationForm._narrow_fr_lines`.
+    line picker beside it can be narrowed to that request's lines. It sits
+    beside the line picker on every form that has one, so a line is picked the
+    same way everywhere; :func:`offer_fr_lines` keeps its options in step with
+    the picker's.
     """
 
     def __init__(self, *args, **kwargs):
@@ -175,12 +209,64 @@ class LineRequestChoiceField(forms.ModelChoiceField):
         kwargs.setdefault('required', False)
         kwargs.setdefault('label', "Funding request")
         kwargs.setdefault('empty_label', "Any request")
+        kwargs.setdefault('help_text', "Lists only this request's lines in the line picker.")
         super(LineRequestChoiceField, self).__init__(*args, **kwargs)
 
     def label_from_instance(self, obj):
         """ The year and the number, which are what the memo quotes. """
-        name = "%s %s" % (obj.reference, obj.name) if obj.reference else obj.name
-        return "FY%s · %s" % (obj.fiscal_year, name)
+        return obj.short_label
+
+
+#: How every funding request picker orders requests. The line pickers order
+#: their lines request by request in the same order, so the headings there
+#: and the options in the request box come in step.
+REQUEST_ORDER = ('fiscal_year', 'reference', 'name', 'pk')
+
+
+def open_fr_lines():
+    """
+    The lines of every open funding request, request by request.
+
+    Spend is annotated because every option says what is left on its line,
+    which would otherwise be a query per line per form.
+    """
+    return (FRLineItem.objects
+            .filter(funding_request__closed=False)
+            .select_related('funding_request')
+            .with_spend()
+            .order_by(*['funding_request__%s' % key for key in REQUEST_ORDER]
+                      + ['sort_order', 'pk']))
+
+
+def offer_fr_lines(form, lines):
+    """
+    Offer ``lines`` in a form's line picker, and their requests in the box beside it.
+
+    The request box offers exactly the requests the line picker has lines
+    from, so the two can never disagree about what is on offer.
+    """
+    form.fields['fr_line_target'].queryset = lines
+    request = form.fields.get('fr_request')
+    if request is not None:
+        request.queryset = (FundingRequest.objects
+                            .filter(pk__in=lines.values('funding_request'))
+                            .order_by(*REQUEST_ORDER))
+
+
+def fr_request_mismatch(line, chosen):
+    """
+    Why ``line`` cannot be filed with ``chosen`` in the request box, or ``None``.
+
+    The request box only narrows the line picker, and routing.js keeps the two
+    in step; a line from another request means one of them was changed without
+    the other, and only the Treasurer knows which.
+    """
+    if chosen is None or line.funding_request_id == chosen.pk:
+        return None
+    request = line.funding_request.reference or line.funding_request.name
+    named = chosen.reference or chosen.name
+    return ("The %s line belongs to %s, not to %s chosen beside it. Pick a line of %s, "
+            "or change the request." % (line.name, request, named, named))
 
 
 class RefundTargetChoiceField(forms.ModelChoiceField):
@@ -386,6 +472,11 @@ class BaseAllocationForm(forms.ModelForm):
     linked_event = AutoCompleteSelectField('Events', required=False, label="Linked event",
                                            help_text="Search by event name or client")
     project_tag = ProjectTagChoiceField()
+    # Not saved -- the line says which request it is on. It narrows the line
+    # picker to that request's lines, and in the queue it is filled in from the
+    # memo's request number even when the line cannot be. See
+    # LineRequestChoiceField.
+    fr_request = LineRequestChoiceField()
     fr_line_target = FRLineChoiceField()
 
     # Ticking this widens the FR picker to other years. It is not a model
@@ -467,6 +558,7 @@ class BaseAllocationForm(forms.ModelForm):
         self._style_widgets()
         self._narrow_fr_lines()
         self._apply_direction_rules()
+        self._seat_fr_pickers()
         self._apply_partition_default()
         self._apply_required_fields()
         self._seed_description()
@@ -530,48 +622,61 @@ class BaseAllocationForm(forms.ModelForm):
         field = self.fields.get('fr_line_target')
         if field is None:
             return
-        self._offer_lines(field)
+        offer_fr_lines(self, self._offer_lines(field))
 
-        # The request box offers exactly the requests the line picker has
-        # lines from, so the two can never disagree about what is on offer.
-        request = self.fields.get('fr_request')
-        if request is not None:
-            request.queryset = (FundingRequest.objects
-                                .filter(pk__in=field.queryset.values('funding_request'))
-                                .order_by('fiscal_year', 'reference', 'name'))
+        # A saved line names its request, so the request box starts on it and
+        # the line picker opens on that request's lines -- the way a queue row
+        # opens on the request its memo quotes.
+        current = self.instance.fr_line_target if self.instance.pk else None
+        if current is not None and 'fr_request' in self.fields:
+            self.initial.setdefault('fr_request', current.funding_request_id)
 
     def _offer_lines(self, field):
-        """ Narrow the FR line picker itself; see :meth:`_narrow_fr_lines`. """
-        lines = (FRLineItem.objects
-                 .filter(funding_request__closed=False)
-                 .select_related('funding_request')
-                 .with_spend()
-                 .order_by('funding_request__fiscal_year', 'funding_request__name',
-                           'sort_order', 'pk'))
-
+        """ The lines the FR line picker offers; see :meth:`_narrow_fr_lines`. """
+        lines = open_fr_lines()
         fiscal_year = self._entry_fiscal_year()
 
         # A submitted form keeps the full list so that picking another year
         # fails in clean() with an explanation, rather than as a bare "select a
         # valid choice". The narrowing below is about what gets *offered*.
         if self.is_bound or self._cross_year_requested():
-            field.queryset = lines
             field.help_text = ("Every open funding request is listed — check the year on the "
-                               "line you pick.")
-            return
+                               "request you pick from.")
+            return lines
 
         same_year = lines.filter(funding_request__fiscal_year=fiscal_year)
         # Whatever is already saved stays selectable, or editing an entry that
         # was deliberately charged across years would silently drop its line.
         current = self.instance.fr_line_target_id if self.instance.pk else None
         if current and not same_year.filter(pk=current).exists():
-            field.queryset = lines.filter(
-                Q(funding_request__fiscal_year=fiscal_year) | Q(pk=current))
             self.initial.setdefault('allow_cross_year_fr', True)
             field.help_text = "This entry is deliberately charged to another fiscal year."
-        else:
-            field.queryset = same_year
-            field.help_text = "FY%s requests. Tick the box below to use another year." % fiscal_year
+            return lines.filter(Q(funding_request__fiscal_year=fiscal_year) | Q(pk=current))
+        field.help_text = ("FY%s requests. Tick the box below to use another year."
+                           % str(fiscal_year)[-2:])
+        return same_year
+
+    def _seat_fr_pickers(self):
+        """
+        Put the request box, the line picker and the cross-year tick box together.
+
+        Two of the three are not model fields, and a ModelForm puts declared
+        extras after every model field -- so on a page crispy renders whole,
+        the box that narrows the line picker and the one that widens it came
+        out at the bottom of the form, under the receipt. The queue and the
+        split modal place each field by hand, and are unaffected.
+        """
+        if 'fr_line_target' not in self.fields:
+            return
+        group = [name for name in ('fr_request', 'fr_line_target', 'allow_cross_year_fr')
+                 if name in self.fields]
+        order = []
+        for name in self.fields:
+            if name == 'fr_line_target':
+                order.extend(group)
+            elif name not in group:
+                order.append(name)
+        self.order_fields(order)
 
     def _refundable_queryset(self):
         """
@@ -982,18 +1087,9 @@ class BaseAllocationForm(forms.ModelForm):
                 "not. Change the fund, or clear this." % (fund or "no fund"))
             return
 
-        # The request box only narrows the line picker, and routing.js keeps
-        # the two in step; a line from another request means one of them was
-        # changed without the other, and only the Treasurer knows which.
-        chosen = cleaned.get('fr_request')
-        if chosen is not None and line.funding_request_id != chosen.pk:
-            self.add_error(
-                'fr_line_target',
-                "The %s line belongs to %s, not to %s chosen beside it. Pick a line of %s, "
-                "or change the request." % (line.name, line.funding_request.reference
-                                            or line.funding_request.name,
-                                            chosen.reference or chosen.name,
-                                            chosen.reference or chosen.name))
+        mismatch = fr_request_mismatch(line, cleaned.get('fr_request'))
+        if mismatch:
+            self.add_error('fr_line_target', mismatch)
             return
 
         # Crossing fiscal years is legal, but has to be deliberate.
@@ -1004,7 +1100,7 @@ class BaseAllocationForm(forms.ModelForm):
                 'fr_line_target',
                 "This is FY%s spending but %s is an FY%s request. If that is genuinely "
                 "intended, tick “Charge a different fiscal year”."
-                % (entry_year, line.funding_request.name, request_year))
+                % (str(entry_year)[-2:], line.funding_request.name, str(request_year)[-2:]))
 
     def _update_errors(self, errors):
         """
@@ -1073,11 +1169,6 @@ class ReconcileForm(BaseAllocationForm):
     # page. A refund names none of its own: it inherits the purchase's.
     REQUIRED_ON_EXPENSES = ('fund_source',)
     REQUIRED_ON_REVENUE = ('fund_source',)
-
-    # Not saved -- the line says which request it is on. It is filled in from
-    # the memo's request number even when the line cannot be, and narrows the
-    # line picker to that request's lines. See LineRequestChoiceField.
-    fr_request = LineRequestChoiceField()
 
     #: Routing a credit takes from the purchase it reverses, rather than asking
     #: for it again. A refund filed anywhere other than where the money went
@@ -1631,8 +1722,11 @@ class BulkReconcileForm(BulkSelectionForm):
     # do.
     fund_source = forms.ModelChoiceField(
         queryset=FundSource.objects.none(), label="Fund")
-    # Blank unless the chosen fund needs it, which is also when routing.js
-    # unhides it -- exactly as on a queue row. clean() below pairs the two.
+    # Blank unless the chosen fund needs them, which is also when routing.js
+    # unhides them -- exactly as on a queue row, request box included, so a
+    # line is picked here the way it is picked everywhere else. clean() below
+    # pairs the line with the fund and with the request.
+    fr_request = LineRequestChoiceField()
     fr_line_target = FRLineChoiceField()
     # The same tick box the per-row form carries, for the same reason: charging
     # spending to another year's request is legitimate -- a late invoice, a
@@ -1653,17 +1747,12 @@ class BulkReconcileForm(BulkSelectionForm):
 
         # Every open request, not one fiscal year's, because a selection has no
         # one year to narrow to -- the rows in it can be from either side of a
-        # July. Each label leads with its year (FRLineItem.picker_label) and the
-        # view checks the year row by row, so nothing crosses unnoticed.
-        line = self.fields['fr_line_target']
-        line.queryset = (FRLineItem.objects
-                         .filter(funding_request__closed=False)
-                         .select_related('funding_request')
-                         .with_spend()
-                         .order_by('funding_request__fiscal_year', 'funding_request__name',
-                                   'sort_order', 'pk'))
-        line.help_text = ("Every open funding request is listed — check the year on the "
-                          "line you pick.")
+        # July. Each request leads with its year (FundingRequest.short_label)
+        # and the view checks the year row by row, so nothing crosses unnoticed.
+        offer_fr_lines(self, open_fr_lines())
+        self.fields['fr_line_target'].help_text = (
+            "Every open funding request is listed — check the year on the request you "
+            "pick from.")
 
         fund = self.fields['fund_source']
         fund.widget = FundSourceSelect(attrs={'class': 'fin-fund-source'})
@@ -1678,7 +1767,8 @@ class BulkReconcileForm(BulkSelectionForm):
         the fix being a field on a bar that has already been dismissed. Said
         here it is one error against the box to change, before anything is
         written. The rules are ParsedTransaction.clean()'s, worded as
-        BaseAllocationForm._check_fund_and_fr_line words them.
+        BaseAllocationForm._check_fund_and_fr_line words them, and the line has
+        to be on the request chosen beside it, as on a queue row.
         """
         cleaned = super(BulkReconcileForm, self).clean()
         fund = cleaned.get('fund_source')
@@ -1694,6 +1784,10 @@ class BulkReconcileForm(BulkSelectionForm):
                 'fr_line_target',
                 "Only a fund that draws on a funding request may name an FR line — %s does "
                 "not. Change the fund, or clear this." % (fund or "no fund"))
+        else:
+            mismatch = fr_request_mismatch(line, cleaned.get('fr_request'))
+            if mismatch:
+                self.add_error('fr_line_target', mismatch)
         return cleaned
 
 

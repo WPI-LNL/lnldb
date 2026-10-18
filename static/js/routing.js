@@ -44,12 +44,14 @@
         source's <option>, set from the Revenue Source admin. Like rule 2 it
         only overwrites a box it filled in itself.
 
-     6. The funding request narrows its lines. In the queue a spending row
-        has a request box beside the line picker, filled in from the request
-        number in the memo even when the memo does not say which line. Choosing
-        a request leaves only that request's lines in the picker (each line's
-        <option> carries data-request); choosing a line sets the request to
-        the one it is on. "Any request" puts every line back.
+     6. The funding request narrows its lines. Every line picker has a
+        request box beside it -- in the queue filled in from the request number
+        in the memo even when the memo does not say which line, on a saved
+        entry from the line it holds. The picker lists each request's lines
+        indented under it, one <optgroup> a request. Choosing a request leaves
+        only that request's group in the picker (each line's <option> carries
+        data-request); choosing a line sets the request to the one it is on.
+        "Any request" puts every line back.
 
    The server enforces all six either way (ParsedTransaction.clean(),
    BaseAllocationForm._check_fund_and_fr_line and _default_fund_from_source,
@@ -176,22 +178,33 @@
 
     /* ---- 6. The request narrows its lines --------------------------------- */
 
-    /* Options are taken out rather than hidden: a hidden <option> can still be
+    /* Groups are taken out rather than hidden: a hidden <option> can still be
        reached from the keyboard, and some browsers show it anyway. The whole
        list is kept on the picker the first time, and every narrowing starts
-       again from it. */
+       again from it.
+
+       A request's <optgroup> is the request of the lines in it; the empty
+       "---------" option sits outside every group and always stays. */
+    function allLines($line) {
+        var $all = $line.data('fin-all-lines');
+        if (!$all) {
+            $all = $line.children().clone();
+            $line.data('fin-all-lines', $all);
+        }
+        return $all;
+    }
+
     function narrowLines($lineRequest) {
         var f = fields($lineRequest);
         if (!f.line.length) { return; }
-        var $all = f.line.data('fin-all-lines');
-        if (!$all) {
-            $all = f.line.children('option').clone();
-            f.line.data('fin-all-lines', $all);
-        }
+        var $all = allLines(f.line);
         var request = String($lineRequest.val() || '');
         var current = String(f.line.val() || '');
         f.line.empty().append($all.filter(function () {
-            return !this.value || !request || $(this).attr('data-request') === request;
+            var $item = $(this);
+            if (!request) { return true; }
+            if (!$item.is('optgroup')) { return !this.value || $item.attr('data-request') === request; }
+            return $item.children('option').first().attr('data-request') === request;
         }).clone());
 
         var kept = current && f.line.find('option[value="' + current + '"]').length;
@@ -338,8 +351,24 @@
         });
     }
 
+    /* A row copied from another copies the line picker as it stands on
+       screen, which is only one request's lines if that row's picker was
+       narrowed (rule 6) -- clone() takes the <option>s showing, not the whole
+       list kept aside. So the copy takes the whole list back from the row it
+       was copied from before it is wired up. */
+    function restoreLines(root, source) {
+        var $line = $(root).find('select[name$="fr_line_target"]').first();
+        var $from = $(source).find('select[name$="fr_line_target"]').first();
+        if (!$line.length || !$from.data('fin-all-lines')) { return; }
+        $line.empty().append(allLines($from).clone()).val('');
+    }
+
     $(function () { bind(document); });
 
-    // The split modal and the queue both add rows after load.
-    $(document).on('fin:rows-added', function (event, root) { bind(root || document); });
+    // The split modal and the queue both add rows after load; a row copied
+    // from another says which as `source`.
+    $(document).on('fin:rows-added', function (event, root, source) {
+        if (root && source) { restoreLines(root, source); }
+        bind(root || document);
+    });
 })(jQuery);
