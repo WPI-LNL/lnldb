@@ -70,7 +70,7 @@ You often won't have to: if the Workday memo is written as ``what it was, which 
 Normally only this year's requests are listed. To charge spending to another year's request (a late invoice, say), tick
 `Charge a different fiscal year` under `More`.
 
-To reserve money on a request before the purchase reaches Workday, log it as a purchase in advance; see
+To encumber money on a request before the purchase reaches Workday, log it as a purchase in advance; see
 :doc:`encumbrances`.
 
 
@@ -94,7 +94,7 @@ What SGA Still Owes
 
 The top of the `Funding` tab lists every request SGA still owes money on, from every year: what was spent in Workday,
 what SGA has paid back, what it still owes, and how long the oldest unpaid spending has been waiting. Purchases that are
-only reserved don't count until they are spent.
+only encumbered don't count until they are spent.
 
 The total should match how far below zero the `SGA Funding Request` fund is on the `Balances` tab. If the two disagree,
 the page says by how much; the usual cause is a starting balance entered in one place and not the other.
@@ -112,4 +112,4 @@ Closing a Request
 Once a request is finished, edit it and tick **Closed**. It disappears from the dashboard's burndown, but its history
 stays, and SGA's reimbursements are still matched to it.
 
-`Last Modified: October 2, 2026`
+`Last Modified: October 19, 2026`

@@ -374,7 +374,7 @@ def service_mix(fiscal_year=None, is_projection=None, rows=None):
 #   one bill and its correction. A multi-bill covers several shows with one
 #   figure, so each show's share is split by what it would have cost alone.
 # * **What counts as a cost.** Linked expenses that have reached Workday, net
-#   of refunds. An encumbrance is reported beside it as *reserved*, because it
+#   of refunds. An encumbrance is reported beside it as *encumbered*, because it
 #   is money not yet spent, and adding it in would show a loss that may never
 #   happen.
 #

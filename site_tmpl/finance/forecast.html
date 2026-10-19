@@ -35,7 +35,7 @@
         </div>
         <div class="fin-panel-body">
             <p style="margin:0;">
-                Today's balances carried forward month by month: what is reserved, what LNL is owed,
+                Today's balances carried forward month by month: what is encumbered, what LNL is owed,
                 the shows booked, a typical year's billing and running costs, and the purchases you plan.
                 The figure that matters is <strong>LNL's own money</strong> &mdash;
                 {{ forecast.fund_names.own }} &mdash; against the
@@ -170,7 +170,7 @@
     <div class="fin-panel">
         <div class="fin-panel-head">
             <span>Dated, one by one</span>
-            <span class="fin-locked-note">reserved, owed, booked and planned</span>
+            <span class="fin-locked-note">encumbered, owed, booked and planned</span>
         </div>
         {% if forecast.items %}
             <div class="fin-table-wrap">
@@ -240,7 +240,7 @@
                 Each part is the middle of the three years, spread over the months the way they spread it.
                 {% if forecast.typical.scaled %}Years before FY27 show billing at the share the same shows would still be charged today.{% endif %}
                 &ldquo;Counted&rdquo; is what is left of it after the day the forecast starts, less what booked shows and
-                reserved purchases already account for.
+                encumbrances already account for.
                 <a href="{% url 'finance:history' %}">See every year</a>.
             </div>
         </div>

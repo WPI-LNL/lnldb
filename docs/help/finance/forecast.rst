@@ -29,7 +29,7 @@ one to leave it out and see the difference:
 =====================  ================================================================================================
 Part                   What it counts
 =====================  ================================================================================================
-Reserved purchases     Purchases logged in advance, on their dates.
+Encumbrances           Purchases logged in advance, on their dates.
 Owed to LNL            What SGA owes on each funding request, and what each client owes on their bill, arriving after
                        the usual wait.
 Booked events          Approved shows still to come that haven't been billed. Each brings in its quote, whoever the
@@ -42,8 +42,8 @@ Planned purchases      Your list of things LNL means to buy, and any "what if" y
 Year end               An SGA budget's unspent balance going back to SGA on June 30.
 =====================  ================================================================================================
 
-**Equipment is not in the typical year.** It is bought one decision at a time, so it only counts once it is reserved or
-planned. The **room to spend** is what's left for it.
+**Equipment is not in the typical year.** It is bought one decision at a time, so it only counts once it is encumbered
+or planned. The **room to spend** is what's left for it.
 
 **The waits** -- how long SGA takes to pay back a funding request, and how long a client takes to pay a bill -- are
 measured from the ledger once it has two of each, and assumed to be thirty days until then. The page says which.
@@ -100,8 +100,8 @@ Planned Purchases
 The `Planned purchases` page lists what LNL means to buy. The forecast counts every purchase marked **Planned** or
 **Approved** on its date. Click `Plan a purchase` to add one, or open one to edit it.
 
-Once a purchase is reserved or bought, it is in the ledger -- as an encumbrance or a Workday line -- so mark it **Bought
-or reserved** here, or it will be counted twice. Mark one **Dropped** if LNL decides against it.
+Once a purchase is encumbered or bought, it is in the ledger -- as an encumbrance or a Workday line -- so mark it
+**Bought or encumbered** here, or it will be counted twice. Mark one **Dropped** if LNL decides against it.
 
 
 History
@@ -174,4 +174,4 @@ LNL's years vary a lot -- billing has grown several times over, and some years h
 bottom of the forecast page shows how the same method would have done in past years and its usual miss. Read the
 **range**, not just the line, and use the forecast to spot trouble months ahead, not to promise a figure to the dollar.
 
-`Last Modified: October 16, 2026`
+`Last Modified: October 19, 2026`

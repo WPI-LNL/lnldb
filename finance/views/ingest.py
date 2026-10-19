@@ -552,7 +552,7 @@ def encumbrance(request, pk=None):
         'h2': "Log a Pending Purchase" if instance is None else "Edit Encumbrance",
         'form': form,
         'instance': instance,
-        'msg': "Reserve funds now so the budget reflects this spend before it clears Workday.",
+        'msg': "Encumber funds now so the budget reflects this spend before it clears Workday.",
     }
     context.update(filter_context(request))
     return render(request, 'finance/encumbrance.html', context)
@@ -590,15 +590,15 @@ def _draw_message(txn, reserved, drawn, exhausted, settled):
     if exhausted and took == estimate:
         message = "%s %s an encumbrance of $%s." % (txn.reference, verb, took)
     elif exhausted:
-        message = ("%s %s an encumbrance reserved at $%s; $%s was drawn."
+        message = ("%s %s an encumbrance of $%s; $%s was drawn."
                    % (txn.reference, verb, estimate, took))
     else:
-        message = ("%s %s $%s of a $%s encumbrance — $%s stays reserved."
+        message = ("%s %s $%s of a $%s encumbrance — $%s stays encumbered."
                    % (txn.reference, verb, took, estimate, estimate - took))
 
     left = abs(money(txn.unallocated_amount))
     if left:
-        message += (" $%s of this line is still unallocated — the reservation did not "
+        message += (" $%s of this line is still unallocated — the encumbrance did not "
                     "cover it." % left)
     return message
 
@@ -773,7 +773,7 @@ def match_encumbrance(request, pk):
                     "to settle." % txn.reference, status=409)
     if (remaining > 0) != (entry.amount > 0):
         # An encumbrance is always money out; a positive line is a receipt.
-        return fail("%s is money coming in, and an encumbrance reserves money going out."
+        return fail("%s is money coming in, and an encumbrance is for money going out."
                     % txn.reference)
 
     reserved = entry.amount
@@ -1077,7 +1077,7 @@ def bulk_match_encumbrance(request):
     revenue = [t for t in lines if t.net_amount > 0]
     if revenue:
         messages.warning(
-            request, "%s revenue line%s skipped — an encumbrance reserves money going out."
+            request, "%s revenue line%s skipped — an encumbrance is for money going out."
             % (len(revenue), '' if len(revenue) == 1 else 's'))
     lines = [t for t in lines if t.net_amount < 0 and t.unallocated_amount]
 
@@ -1120,8 +1120,8 @@ def bulk_match_encumbrance(request):
             request, "Drew $%s from the encumbrance across %s line%s%s. %s" % (
                 total, len(covered), '' if len(covered) == 1 else 's',
                 " and settled %s" % settled if settled else '',
-                "The reservation is now closed." if exhausted else
-                "$%s stays reserved." % (abs(money(reserved)) - total)))
+                "The encumbrance is now closed." if exhausted else
+                "$%s stays encumbered." % (abs(money(reserved)) - total)))
 
     # A line the reservation reached but did not finish. It stays in the queue,
     # which is correct and easy to miss among nine that left it -- the eye reads
@@ -1129,7 +1129,7 @@ def bulk_match_encumbrance(request):
     short = [(t, t.unallocated_amount) for t, _ in covered if t.unallocated_amount]
     if short:
         messages.info(
-            request, "The reservation did not cover all of %s: %s. %s still in the queue."
+            request, "The encumbrance did not cover all of %s: %s. %s still in the queue."
             % ("one line" if len(short) == 1 else "%s lines" % len(short),
                _name_a_few("%s ($%s left)" % (t.reference, abs(money(left)))
                            for t, left in short),
@@ -1148,7 +1148,7 @@ def bulk_match_encumbrance(request):
     for txn, exc in refused[:5]:
         messages.warning(request, "%s unchanged: %s" % (txn.reference, " ".join(exc.messages)))
     if len(refused) > 5:
-        messages.warning(request, "...and %s more the reservation would have invalidated."
+        messages.warning(request, "...and %s more the encumbrance would have invalidated."
                          % (len(refused) - 5))
 
     return HttpResponseRedirect(redirect_to)

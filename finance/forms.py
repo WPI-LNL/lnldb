@@ -1795,8 +1795,8 @@ class OpenEncumbranceChoiceField(forms.ModelChoiceField):
     """ Open reservations, labelled with what is left rather than what was asked for. """
 
     def label_from_instance(self, obj):
-        """ ``Whole gear order — $296.45 still reserved · Aug 20, 2025``. """
-        return "%s — $%s still reserved · %s" % (
+        """ ``Whole gear order — $296.45 still encumbered · Aug 20, 2025``. """
+        return "%s — $%s still encumbered · %s" % (
             obj.description or "(no description)", abs(obj.amount),
             date_format(obj.effective_date, 'M j, Y'))
 

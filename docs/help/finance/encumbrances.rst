@@ -1,9 +1,9 @@
-===========================================
-Reserve Money Before a Purchase (Treasurer)
-===========================================
+============================================
+Encumber Money Before a Purchase (Treasurer)
+============================================
 
 A purchase can take weeks to reach Workday. Until it does, the money looks unspent, and a funding request looks like it
-has more left than it really does. An **encumbrance** reserves the money now: it counts as spent on the funding request,
+has more left than it really does. An **encumbrance** sets the money aside now: it counts as spent on the funding request,
 on the `Balances` tab and in the forecast, until the real Workday line arrives and you match the two up.
 
 Log one whenever you commit to spending money that won't show up in Workday for a while -- an order placed, a rental
@@ -33,15 +33,15 @@ Log a Purchase
 
 #. Click `Encumber funds`.
 
-The encumbrance shows in the `Ledger` with the type *Encumbrance*, and as *reserved* beside its fund on the `Balances`
-tab.
+The encumbrance shows in the `Ledger` with the type *Encumbrance*, and under *Encumbrances* beside its fund on the
+`Balances` tab.
 
 
 When the Charge Arrives
 -----------------------
 
 When the matching line is imported, its row in the queue is tagged `Maybe encumbered`, and `Already encumbered?` above
-the row's boxes lists the open encumbrances that could be it, each with what was reserved, when, and how far it is from
+the row's boxes lists the open encumbrances that could be it, each with what was encumbered, when, and how far it is from
 the real amount.
 
 #. Choose the right one. Nothing is chosen for you, because matching the wrong one charges the wrong budget line.
@@ -52,14 +52,14 @@ again -- and its date becomes the date the money actually went out.
 
 .. warning::
     **Don't file the line the ordinary way** while its encumbrance is open. That records the purchase twice: once as
-    reserved and once as spent, and the funding request looks short by the reserved amount.
+    encumbered and once as spent, and the funding request looks short by the encumbered amount.
 
 **If the amounts differ:**
 
-- **The charge is smaller** than what was reserved: the line takes what it needs and the rest stays reserved, ready for
+- **The charge is smaller** than what was encumbered: the line takes what it needs and the rest stays encumbered, ready for
   the next charge. A rental invoiced in parts works this way.
 - **The charge is a little larger:** the encumbrance stretches to cover it and closes.
-- **The charge is a lot larger:** the encumbrance covers only what it reserved, and the rest of the line stays in the
+- **The charge is a lot larger:** the encumbrance covers only what it was for, and the rest of the line stays in the
   queue for you to file separately.
 
 
@@ -76,9 +76,9 @@ Change or Cancel an Encumbrance
 
 Find it in the `Ledger` -- search for its description, or choose the `Pending` status -- and open it to change any
 detail. If the
-purchase is cancelled, delete it from the same page and the money stops counting as reserved.
+purchase is cancelled, delete it from the same page and the money stops counting as encumbered.
 
 Matching a line to the wrong encumbrance can't be undone from the queue, because undoing would also throw away the
 encumbrance. Open the entry from the `Ledger` and correct it instead.
 
-`Last Modified: October 2, 2026`
+`Last Modified: October 19, 2026`

@@ -703,7 +703,7 @@ class SpendCategory(Vocabulary):
     forecast_from_plans = models.BooleanField(
         default=False, verbose_name="Forecast from plans only",
         help_text="For spending chosen one purchase at a time, like equipment. The forecast "
-                  "leaves it out of a typical year and counts only what is reserved or on the "
+                  "leaves it out of a typical year and counts only what is encumbered or on the "
                   "planned purchases list, so one big purchase is not expected again every "
                   "year.")
 
@@ -3204,7 +3204,7 @@ class PlannedPurchase(models.Model):
     Something LNL means to buy and has not yet: the forecast's list of plans.
 
     Nothing here touches a balance. The forecast counts a planned or approved
-    purchase on its expected date; once it is reserved or bought it is in the
+    purchase on its expected date; once it is encumbered or bought it is in the
     ledger instead, and marking it so here stops it counting twice.
     """
     glyphicon = 'shopping-cart'
@@ -3213,7 +3213,7 @@ class PlannedPurchase(models.Model):
     STATUS_CHOICES = (
         (PLANNED, 'Planned'),
         (APPROVED, 'Approved'),
-        (BOUGHT, 'Bought or reserved'),
+        (BOUGHT, 'Bought or encumbered'),
         (DROPPED, 'Dropped'),
     )
     #: The statuses the forecast counts. A bought one is in the ledger already,

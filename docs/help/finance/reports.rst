@@ -23,7 +23,7 @@ Income and spending                     a fiscal year, or   What came in, by cli
                                                             The starting point for a budget request. Can be narrowed
                                                             to one fund.
 Fund balances                           a fiscal year       Each fund's opening balance, what moved, its closing
-                                                            balance and what is reserved, account by account, adding
+                                                            balance and its encumbrances, account by account, adding
                                                             up to Workday's cash.
 Events                                  a fiscal year, or   Every event's billing, payments, costs and margin, grouped
                                         any dates           by type of client, with costs SGA paid for shown apart.
@@ -80,4 +80,4 @@ Reading a Report
 - **Costs SGA pays for aren't LNL's losses.** On the *Events* report, costs paid from a funding request or the SGA
   budget are shown separately and don't reduce an event's margin.
 
-`Last Modified: October 16, 2026`
+`Last Modified: October 19, 2026`

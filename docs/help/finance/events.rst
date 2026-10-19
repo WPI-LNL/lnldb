@@ -66,9 +66,9 @@ Received                    Payments filed against the event, and where the bill
                             (you decided it is not billed), billed with nothing received, part received, received
                             in full, or received with no bill.
 Direct costs                Costs filed against the event. Costs paid from a funding request or the SGA budget are
-                            shown as *paid by SGA*. Purchases logged in advance are shown as *reserved*.
-Margin                      What came in, less the costs **LNL paid itself**. Costs SGA pays for, and reserved
-                            purchases, are left out.
+                            shown as *paid by SGA*. Purchases logged in advance are shown as *encumbered*.
+Margin                      What came in, less the costs **LNL paid itself**. Costs SGA pays for, and encumbrances,
+                            are left out.
 Rentals billed / cost       What the client was billed for hired-in gear plus LNL's rental fee, against what the
                             hire actually cost. A rental billed on a multi-bill counts for each show by its share
                             of the bill.
@@ -119,9 +119,9 @@ On the Event's Page
 -------------------
 
 Anyone who can see the finance pages also sees a small summary on each event's `Billing` tab, under the bills: billed,
-received, costs, reserved purchases and margin, with the same flags and a link to the entries in the `Ledger`.
+received, costs, encumbrances and margin, with the same flags and a link to the entries in the `Ledger`.
 
 .. seealso::
     :doc:`/help/events/create-bill` covers creating and sending the bill itself.
 
-`Last Modified: October 16, 2026`
+`Last Modified: October 19, 2026`

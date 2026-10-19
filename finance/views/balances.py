@@ -303,7 +303,7 @@ def _year_checklist(year):
         (pending_encumbrances == 0,
          "No encumbrances left open" if not pending_encumbrances else
          "%s encumbrance%s from this year still open. They carry into next year as "
-         "reserved money." % (pending_encumbrances, '' if pending_encumbrances == 1 else 's'),
+         "encumbrances." % (pending_encumbrances, '' if pending_encumbrances == 1 else 's'),
          None if not pending_encumbrances else ledger),
     ]
     for account in year.accounts:

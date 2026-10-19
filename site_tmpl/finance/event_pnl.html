@@ -22,7 +22,7 @@
             <div class="fin-stat-label">Direct costs</div>
             <div class="fin-stat-value text-danger">{{ totals.costs|money }}</div>
             <div class="fin-stat-sub">
-                {% if totals.sga_funded %}{{ totals.sga_funded|money }} paid by SGA &middot; {% endif %}{{ totals.passthrough_cost|money }} passed through{% if totals.reserved %} &middot; {{ totals.reserved|money }} reserved{% endif %}
+                {% if totals.sga_funded %}{{ totals.sga_funded|money }} paid by SGA &middot; {% endif %}{{ totals.passthrough_cost|money }} passed through{% if totals.reserved %} &middot; {{ totals.reserved|money }} encumbered{% endif %}
             </div>
         </div>
         <div class="fin-stat">
@@ -123,7 +123,7 @@
                                     <div class="fin-muted" title="Filed to a funding request or the SGA budget, so SGA pays for it and it does not count against the margin">{{ row.sga_funded|money }} paid by SGA</div>
                                 {% endif %}
                                 {% if row.reserved %}
-                                    <div class="fin-muted" title="Encumbered for this event and not yet charged. Not counted in the cost or the margin.">+ {{ row.reserved|money }} reserved</div>
+                                    <div class="fin-muted" title="Encumbered for this event and not yet charged. Not counted in the cost or the margin.">+ {{ row.reserved|money }} encumbered</div>
                                 {% endif %}
                             </td>
                             <td class="fin-num {{ row.margin|money_class }}">

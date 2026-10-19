@@ -95,7 +95,7 @@ Words You'll See
 **The queue**
     Every line that hasn't been filed yet.
 **Encumbrance**
-    Money reserved for a purchase that Workday hasn't shown yet. It counts as spent until the real line arrives and
+    Money set aside for a purchase that Workday hasn't shown yet. It counts as spent until the real line arrives and
     you match the two up.
 **Refund**
     Money back for a purchase. It undoes the spending rather than counting as income.
@@ -175,4 +175,4 @@ bill paid once the payment arrives. See :doc:`events`.
     New to the role? Read this page, then :doc:`import-and-file`. Most of the job is the monthly import, and the queue
     fills in most of each line for you.
 
-`Last Modified: October 15, 2026`
+`Last Modified: October 19, 2026`

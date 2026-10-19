@@ -1881,6 +1881,6 @@ def encumbrance_match_label(entry, txn):
         gap = "exact match"
     else:
         gap = "%s %s" % (money(abs(difference)), "over" if difference > 0 else "under")
-    return "%s — $%s reserved %s · %s" % (
+    return "%s — $%s encumbered %s · %s" % (
         entry.description or "(no description)", reserved,
         date_format(entry.effective_date, 'M j, Y'), gap)

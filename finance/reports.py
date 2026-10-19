@@ -557,8 +557,8 @@ def income_and_spending(period, is_projection=None, fund=None):
 
     notes = ["Money in is income filed in the ledger: event billing, split by who was "
              "billed, and each other source. Money out is spending that has reached "
-             "Workday, net of refunds, by spend category. Reserved money that has not "
-             "been charged yet is not counted.",
+             "Workday, net of refunds, by spend category. Encumbrances that have not "
+             "been charged yet are not counted.",
              "Each entry counts on its own date, so an event billed after it ran counts "
              "when the money arrived."]
     if taken_back:
@@ -620,9 +620,9 @@ def fund_balances(fiscal_year, today=None):
         Column('spent', 'Money out', Column.MONEY, title="Net of refunds"),
         Column('transferred', 'Transfers', Column.MONEY, signed=True),
         Column('closing', 'Closing', Column.MONEY),
-        Column('reserved', 'Reserved', Column.MONEY,
+        Column('reserved', 'Encumbrances', Column.MONEY,
                title="Encumbered for purchases not yet charged"),
-        Column('available', 'Available', Column.MONEY, title="Closing less reserved"),
+        Column('available', 'Available', Column.MONEY, title="Closing less encumbrances"),
         Column('status', 'What it means'),
     ]
 
@@ -1629,7 +1629,7 @@ REPORTS = OrderedDict((
                   'trend')),
     ('forecast', ("Forecast",
                   "Where LNL's own money is heading, month by month to the end of next fiscal "
-                  "year: what is reserved, owed, booked and planned, and a typical year.",
+                  "year: what is encumbered, owed, booked and planned, and a typical year.",
                   'today')),
     ('budget-draft', ("Draft budget request",
                       "Next year's SGA budget request, line by line: each spend category's "

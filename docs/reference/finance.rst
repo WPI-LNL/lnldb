@@ -110,7 +110,7 @@ Settled                   A line's entries are complete. Officers       ``Workda
                           settle in the same click as filing
 The queue                 Every line from the books start on that is    ``WorkdayTransactionQuerySet``
                           not filed in full                             ``.unreconciled``
-Encumbrance               Money reserved for a purchase Workday has     A ``ParsedTransaction`` with no
+Encumbrance               Money set aside for a purchase Workday has    A ``ParsedTransaction`` with no
                           not shown yet, drawn down when it does        ``parent_transaction``
 Refund                    Money back for a purchase. It un-spends       ``refund_of``
                           rather than earning
@@ -354,7 +354,7 @@ A refund is a *contra-expense*, not revenue. Because expenses are stored
 negative and refunds positive, a return credit restores the budget line it came
 out of purely by arithmetic — no special-casing in the burndown code.
 
-An encumbrance is money reserved for a purchase that has not happened yet, and
+An encumbrance is money set aside for a purchase that has not happened yet, and
 it read as *Expense* in the ledger's Type column until it got a word of its own.
 That is not a synonym: no money has left the account, there is no bank line
 behind it, and it stops being an encumbrance when the real charge is imported.
@@ -1066,44 +1066,44 @@ for somebody else's purchase, or inventing a sentence about it. A line missing
 its paperwork is a line to chase, not a line to lock; the entry page says
 plainly when a receipt is absent, and the ledger has a Receipt column to sort
 by. The encumbrance form still asks what the money is for at the point of
-reserving it, which is the one moment somebody actually knows.
+encumbering it, which is the one moment somebody actually knows.
 
 Closing an encumbrance
 ~~~~~~~~~~~~~~~~~~~~~~
 
 An encumbrance stops being one when the real charge is imported, but nothing
-makes that happen by itself: the reservation was written before Workday had
+makes that happen by itself: the encumbrance was written before Workday had
 ever heard of the purchase, so there is no shared identifier and there cannot
 be one. The two have to be matched by a person.
 
 The ingestion queue offers that on the bank line itself. Above the routing form
 — above, because it answers a question asked earlier than "where does this go"
-— a line that resembles an open reservation carries an *Already encumbered?*
-picker listing the candidates, each labelled with what was reserved, when, and
+— a line that resembles an open encumbrance carries an *Already encumbered?*
+picker listing the candidates, each labelled with what was encumbered, when, and
 how far it is from the amount that actually cleared::
 
-    Gaff tape order — $200.00 reserved Aug 20, 2025 · 3.55 over
+    Gaff tape order — $200.00 encumbered Aug 20, 2025 · 3.55 over
 
 The ranking behind that list is deliberately **not** symmetric about the line's
-amount, because the two directions mean opposite things. A reservation smaller
+amount, because the two directions mean opposite things. An encumbrance smaller
 than the charge has failed to cover it and something else will have to; a
-reservation *larger* than the charge is the ordinary shape of the whole feature,
-and scoring it by the raw difference would bury a $1,000 reservation under every
+encumbrance *larger* than the charge is the ordinary shape of the whole feature,
+and scoring it by the raw difference would bury a $1,000 encumbrance under every
 $80 stray on an $80 line — the exact row the Treasurer opened the picker to find.
 So :func:`~finance.suggestions.encumbrance_match_score` sorts on what a
-reservation fails to cover first, ignoring a shortfall small enough that the
+encumbrance fails to cover first, ignoring a shortfall small enough that the
 draw will stretch over it anyway; then on whether the payee is named in what
-somebody typed; and only then prefers the tightest sufficient reservation, with
+somebody typed; and only then prefers the tightest sufficient encumbrance, with
 the dates last. Nothing is pre-selected: matching the wrong row files a purchase
 against the wrong budget line *and* marks a live commitment spent, and neither
 is visible once done.
 
-Choosing one draws that line's share out of the reservation. Two things are
+Choosing one draws that line's share out of the encumbrance. Two things are
 decided there rather than left to the person doing it:
 
 * **The date becomes the accounting date.** ``effective_date`` is filled in
   only when blank, so an encumbrance otherwise keeps the day it was *written*.
-  A June reservation settling a July charge would sit in FY25 while its own
+  A June encumbrance settling a July charge would sit in FY25 while its own
   bank line sits in FY26, splitting one purchase across two fiscal years on the
   ledger, the cash-flow chart and the award balance.
 * **Routing is left alone.** Somebody already decided what the money was for.
@@ -1112,32 +1112,32 @@ decided there rather than left to the person doing it:
 Drawing down
 ^^^^^^^^^^^^
 
-One reservation usually pays for more than one bank line. A single encumbrance
-is written for a job and Workday then delivers it as ten invoice lines weeks
-apart, so the reservation is not consumed by the first line that matches it: it
+One encumbrance usually pays for more than one bank line. It is often
+written for a job and Workday then delivers it as ten invoice lines weeks
+apart, so the encumbrance is not consumed by the first line that matches it: it
 is *drawn down*, and :func:`finance.views.ingest.draw_from_encumbrance` decides
 how much each line takes. Three shapes, and the arithmetic has to tell them
 apart because charging the wrong one to a budget line is invisible afterwards:
 
 ============================  =========================================================
-Reservation **larger**        The line takes what it needs; the reservation stays open
+Encumbrance **larger**        The line takes what it needs; the encumbrance stays open
                               for the rest.
 Line larger, **not by much**  Within :data:`~finance.suggestions.ENCUMBRANCE_CLOSE_ENOUGH`
-                              the difference is estimate noise, so the reservation
+                              the difference is estimate noise, so the encumbrance
                               stretches to cover the line and closes.
-Line larger **by a lot**      The reservation covers only what it says. The rest of the
+Line larger **by a lot**      The encumbrance covers only what it says. The rest of the
                               line stays in the queue to be routed on its own —
                               swallowing the difference would charge the budget line
-                              money nobody reserved.
+                              money nobody encumbered.
 ============================  =========================================================
 
-The reservation is the row that persists. It keeps its primary key, its author
+The encumbrance is the row that persists. It keeps its primary key, its author
 and its whole revision history across every line it pays for, and only the line
 that finishes it off takes the row itself. That is what lets ten Workday lines
-map to one encumbrance without the reservation's identity churning underneath
+map to one encumbrance without the encumbrance's identity churning underneath
 the Treasurer: it is the same row in the picker on the tenth match as on the
 first, reading down towards zero. ``created_by`` on each drawn slice is the
-person allocating, while the reservation keeps whoever wrote it — two different
+person allocating, while the encumbrance keeps whoever wrote it — two different
 facts, and the ledger has room for both.
 
 Ten lines at once
@@ -1146,20 +1146,20 @@ Ten lines at once
 Matching ten lines one at a time works, but it is the same repetition the bulk
 bar exists to remove, with a running balance to keep in your head between
 clicks. So the queue's bulk bar carries a second action beside *Reconcile
-selected*: tick the rows, pick the reservation, and *Draw selected* runs the
+selected*: tick the rows, pick the encumbrance, and *Draw selected* runs the
 drawdown across all of them —
 :func:`finance.views.ingest.bulk_match_encumbrance`.
 
 Oldest line first, because that is the order the money actually left and it
-makes the result reproducible: the same selection and the same reservation
+makes the result reproducible: the same selection and the same encumbrance
 always produce the same allocation, whichever order the rows were ticked in. It
-stops when the reservation runs out rather than stretching it, and reports all
+stops when the encumbrance runs out rather than stretching it, and reports all
 three outcomes by name — what was covered, what was covered only partly, and
 which lines it never reached. A batch that half-worked and said only
 "reconciled 9 lines" is how the other half gets found a month later.
 
 It takes no routing fields of its own, unlike the ordinary bulk reconcile: the
-answer to *where does this money go* is written on the reservation already, and
+answer to *where does this money go* is written on the encumbrance already, and
 asking again here would let a bulk action contradict the thing it is drawing
 from.
 
@@ -1167,7 +1167,7 @@ Reconciling the line the ordinary way instead is the failure this exists to
 prevent: it writes a *second* entry, so the funding request line is charged the
 estimate **and** the actual, and the only symptom is a balance quietly a couple
 of hundred dollars short. Hence the *Maybe encumbered* tag on any row with a
-reservation of roughly the right size open against it.
+encumbrance of roughly the right size open against it.
 
 Nothing here is auto-applied and nothing is pre-selected. Matching the wrong
 row files a purchase against the wrong budget line *and* marks a live
@@ -1176,13 +1176,13 @@ commitment spent, and neither is visible once done, so
 shortlist and stops there. It ranks on the amount first — the one signal a crew
 member cannot be vague about — then on whether the payee appears in what they
 typed, then on how close the dates are. It filters only what would be *wrong*
-to offer: revenue lines, entries already on a bank line, and reservations dated
+to offer: revenue lines, entries already on a bank line, and encumbrances dated
 absurdly far from the charge.
 
 The queue's *Undo* is deliberately not offered after a match. Undo deletes a
 row's allocations, which is the right way back out of an allocation typed a
 second ago and the wrong way back out of an encumbrance logged weeks ago — it
-would take the description, the reason and the reservation with it, none of
+would take the description, the reason and the encumbrance with it, none of
 which came from the bank line. Correcting a wrong match is an edit on the
 entry.
 
@@ -1252,7 +1252,7 @@ the one thing that makes the cost count against the show.
 
 The event can also be named on an encumbrance -- a sub-rental is booked before
 its invoice exists, which is exactly when somebody knows which show it is for --
-and drawing the reservation down carries it onto every bank line it pays for.
+and drawing the encumbrance down carries it onto every bank line it pays for.
 
 .. note::
 
@@ -1284,7 +1284,7 @@ with one figure, so each show's share is split by what it would have cost alone
 (``cost_total``), evenly if none has a price, with the last show taking the
 rounding so the shares add up to the bill.
 
-**An encumbrance is reserved, not spent.** It is shown beside the cost and left
+**An encumbrance is set aside, not spent.** It is shown beside the cost and left
 out of the margin, which would otherwise report a loss that may never happen.
 
 **A cost SGA pays for is not LNL's.** A cost filed to a funding request or the
@@ -1430,7 +1430,7 @@ every fund held in the account except its own money, which is whatever is
 left. Saving replaces the split rather than adding to it. The split counts
 as the opening, not as a first-year transfer.
 
-Encumbrances show beside each fund as *reserved*. They are not cash, and they
+Encumbrances show beside each fund in their own column. They are not cash, and they
 belong to the account their fund is held in.
 
 Closing a year
@@ -1989,7 +1989,7 @@ Income and spending     a fiscal year, or any   What came in, by client type and
                         dates                   and what went out, by spend category,
                                                 beside the same dates a year earlier
 Fund balances           a fiscal year           Each fund's opening, movements, closing
-                                                and reserved money, account by account,
+                                                and encumbrances, account by account,
                                                 totalled to Workday's cash
 Events                  a fiscal year, or any   Every event's billing, payments, costs
                         dates                   and margin, grouped by who the client was
@@ -2161,7 +2161,7 @@ like a typical recent one. Left out of a typical year:
 * SGA's money, which pays for particular things, and spending SGA pays for;
 * transfers and gifts;
 * **equipment**, and any other category marked *forecast from plans only* --
-  it is chosen one purchase at a time, so only what is reserved or planned
+  it is chosen one purchase at a time, so only what is encumbered or planned
   counts;
 * lines the Treasurer left out.
 
@@ -2194,7 +2194,7 @@ what it contributes:
 =====================  ===================================================================
 Part                   What it adds
 =====================  ===================================================================
-Reserved purchases     Each encumbrance, on its date
+Encumbrances           Each encumbrance, on its date
 Owed to LNL            What SGA owes on each funding request, after SGA's usual wait;
                        each unpaid bill, the client's usual wait after the show
 Booked events          Approved shows still to come that nobody has billed. Each
@@ -2215,7 +2215,7 @@ A wait already over lands on the first day of the forecast.
 
 Nothing counts twice. A month brings in whichever is more, what is dated for it
 (booked shows, bills owed) or what a typical month does; hired gear the same.
-A reserved or planned purchase in a running-cost category is part of that
+An encumbered or planned purchase in a running-cost category is part of that
 category's year, so the rest of that year shrinks by it.
 
 The forecast starts the day after the last Workday line imported, not today:
@@ -2245,7 +2245,7 @@ side. It is asked by ``GET``, so an answer is a link to send to somebody. One
 click adds it to the **planned purchases** list, a
 :class:`~finance.models.PlannedPurchase` per thing LNL means to buy. The
 forecast counts the planned and approved ones on their dates; marking one
-*bought or reserved* stops it counting once the ledger has it as an encumbrance
+*bought or encumbered* stops it counting once the ledger has it as an encumbrance
 or a Workday line.
 
 How well it does

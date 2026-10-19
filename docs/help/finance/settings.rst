@@ -79,7 +79,7 @@ Two tick boxes change how the app treats a category:
 - **Use for costs billed to an event** -- the category a cost is given when it is filed against one show without a
   category. `Event - Sub-Rental` has it.
 - **Forecast from plans only** -- for spending chosen one purchase at a time, like equipment. The forecast leaves it out
-  of the typical year and counts only what is reserved or planned. Both equipment categories have it.
+  of the typical year and counts only what is encumbered or planned. Both equipment categories have it.
 
 .. warning::
     Leave the **slug** alone. It is the name links and bookmarks use, and the admin says so on the field.
@@ -112,4 +112,4 @@ money **goes into**; the queue then fills that fund in and refuses any other.
 
 A Workday code renamed or renumbered by WPI is fixed here, not in the code: change the code on the matching row.
 
-`Last Modified: October 16, 2026`
+`Last Modified: October 19, 2026`

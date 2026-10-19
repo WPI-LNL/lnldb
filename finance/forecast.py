@@ -7,7 +7,7 @@ from. Every projected movement says where it came from, so the forecast can be
 checked line by line rather than taken on trust. There are six kinds, and each
 can be switched off to see what it contributes:
 
-* **Reserved purchases** -- encumbrances, on their dates.
+* **Encumbrances** -- purchases logged in advance, on their dates.
 * **Owed to LNL** -- what SGA still owes on each funding request, and what
   clients owe on their bills, paid after the wait the ledger shows is usual.
 * **Booked events** -- approved shows still to come. A department's show
@@ -23,8 +23,8 @@ can be switched off to see what it contributes:
 * **Year end** -- a budget's unspent balance going back to SGA on June 30.
 
 Equipment is chosen, not incurred, so it is never projected from the past:
-a category marked *forecast from plans only* counts only what is reserved or
-planned. The forecast's answer to "how much can we spend?" is
+a category marked *forecast from plans only* counts only what is encumbered
+or planned. The forecast's answer to "how much can we spend?" is
 :attr:`Forecast.room`.
 
 The figure that matters is **LNL's own money**: the account's own fund
@@ -66,7 +66,7 @@ OWN = 'own'
 
 #: The parts of a forecast, in the order the page lists them.
 COMPONENTS = OrderedDict((
-    ('reserved', "Reserved purchases"),
+    ('reserved', "Encumbrances"),
     ('owed', "Owed to LNL"),
     ('events', "Booked events"),
     ('typical', "A typical year"),
@@ -617,8 +617,8 @@ def _reserved(funds, since, horizon, categories, wait):
         day = _after(entry.effective_date, since)
         overdue = entry.effective_date <= since
         _spend(items, day, amount, entry.fund_source_id, funds, 'reserved',
-               entry.description or "Reserved purchase",
-               "Reserved for %s%s" % (date_format(entry.effective_date, 'M j, Y'),
+               entry.description or "Encumbrance",
+               "Encumbered for %s%s" % (date_format(entry.effective_date, 'M j, Y'),
                                       ", and still waiting" if overdue else ""),
                reverse('finance:entry-detail', args=[entry.pk]),
                _category_stream(entry.lnl_spend_category_id, categories), wait)
@@ -1046,7 +1046,7 @@ def _explain(forecast, typical):
             "it. No growth is assumed: next year looks like a typical recent one."
             % typical.span)
     forecast.notes.append(
-        "Equipment is never projected from past years. Only what is reserved or on the "
+        "Equipment is never projected from past years. Only what is encumbered or on the "
         "planned purchases list counts.")
     if forecast.since < forecast.today:
         forecast.notes.append(

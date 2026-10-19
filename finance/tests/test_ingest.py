@@ -769,7 +769,7 @@ class EncumbranceMatchingTests(FinanceViewTestCase):
         message = self.messages(response)[0]
         self.assertIn('$500.00', message)
         self.assertIn('$203.55', message)
-        self.assertIn('$296.45 stays reserved', message)
+        self.assertIn('$296.45 stays encumbered', message)
 
     # -- refusals ----------------------------------------------------------
     def test_choosing_nothing_says_so(self):
@@ -1121,7 +1121,7 @@ class EncumbranceDrawdownTests(FinanceViewTestCase):
         response = self.client.get(reverse('finance:queue') + '?fy=2026')
         self.assertContains(response, 'Draw selected')
         self.assertContains(response, 'PCDI kit build')
-        self.assertContains(response, 'still reserved')
+        self.assertContains(response, 'still encumbered')
 
 
 class EncumbranceMatchRankingTests(TestCase):
@@ -1243,7 +1243,7 @@ class EncumbranceMatchRankingTests(TestCase):
         txn = self._txn('-203.55')
         label = encumbrance_match_label(self._encumbrance('-200.00', 'Cable order'), txn)
         self.assertIn('Cable order', label)
-        self.assertIn('$200.00 reserved', label)
+        self.assertIn('$200.00 encumbered', label)
         self.assertIn('3.55 over', label)
 
     def test_an_exact_match_says_so(self):

@@ -26,7 +26,8 @@ For each account there is a table with one row per fund:
 - **Came in** and **Spent** -- what was filed to it during the year. Refunds reduce what was spent.
 - **Transfers** -- money moved in or out by a transfer between funds.
 - **Closing** (or **Now**, for the current year) -- what it holds.
-- **Reserved** -- purchases logged in advance against it. Not spent yet, but spoken for.
+- **Encumbrances** -- purchases logged in advance against it. Not spent yet, but spoken for. The *free* figure
+  under it is what is left once they are paid.
 - **What it means** -- for example, that a negative funding request balance is money SGA owes LNL.
 
 The **Not filed yet** row is every line still in the queue. With it, the funds always add up to the account's cash; once
@@ -101,4 +102,4 @@ Closing records every account's cash and fund balances as they stood, and makes 
 since the close. If the new figures are right, click `Reopen` and close the year again to record them. Reopening takes
 back the year-end transfers; the Workday balances you entered stay.
 
-`Last Modified: October 2, 2026`
+`Last Modified: October 19, 2026`
