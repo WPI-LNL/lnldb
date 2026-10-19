@@ -235,7 +235,7 @@ class BulkActionGuardTests(FinanceViewTestCase):
             description='Deposit on a console', fund_source=fund('sga_budget'),
             lnl_spend_category=category('equipment_noncapital'))
         response = self._act('status', TransactionStatus.SETTLED, [encumbrance])
-        self.assertContains(response, 'not fully allocated yet')
+        self.assertContains(response, 'still have money left to settle')
         encumbrance.refresh_from_db()
         self.assertEqual(encumbrance.status, TransactionStatus.PENDING)
 

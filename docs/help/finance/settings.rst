@@ -69,14 +69,14 @@ Spend Categories
 ----------------
 
 To **add** a category, click `Add` and give it a name and a chart colour. To **rename** one, just change its name:
-everything filed under it follows.
+everything in it follows.
 
-To **retire** a category, untick `Is active`. It disappears from the dropdowns, but everything already filed under it
-keeps it. A category with money filed against it can't be deleted, so nothing is ever lost.
+To **retire** a category, untick `Is active`. It disappears from the dropdowns, but everything already in it
+keeps it. A category with money in it can't be deleted, so nothing is ever lost.
 
 Two tick boxes change how the app treats a category:
 
-- **Use for costs billed to an event** -- the category a cost is given when it is filed against one show without a
+- **Use for costs billed to an event** -- the category a cost is given when it is linked to one show without a
   category. `Event - Sub-Rental` has it.
 - **Forecast from plans only** -- for spending chosen one purchase at a time, like equipment. The forecast leaves it out
   of the typical year and counts only what is encumbered or planned. Both equipment categories have it.

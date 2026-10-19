@@ -327,9 +327,9 @@ class BillPaidForm(forms.Form):
             note.help_text = "Only if it was not paid through Workday."
         else:
             note.required = True
-            note.help_text = ("No payment filed from Workday covers this bill, so say how it was paid: cash, a "
+            note.help_text = ("No payment received in Workday covers this bill, so say how it was paid: cash, a "
                               "check, or a bill from before the books start.")
-            note.error_messages['required'] = "Say how it was paid. No payment filed from Workday covers it."
+            note.error_messages['required'] = "Say how it was paid. No payment received in Workday covers it."
 
     def clean_date_paid(self):
         day = self.cleaned_data['date_paid']

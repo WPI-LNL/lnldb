@@ -70,7 +70,7 @@ class SplitFormSetTests(TestCase):
     def test_an_over_allocated_split_is_refused_too(self):
         formset = self._formset('-600.00', '-600.00')
         self.assertFalse(formset.is_valid())
-        self.assertIn('$200.00 too much is allocated', ' '.join(formset.non_form_errors()))
+        self.assertIn('$200.00 too much is entered', ' '.join(formset.non_form_errors()))
 
     def test_amounts_are_typed_as_they_read_on_the_receipt(self):
         """ The line says which way the money went; the boxes take plain amounts. """
@@ -91,7 +91,7 @@ class SplitFormSetTests(TestCase):
         """ Deleting every slice is not a way to reconcile a line to nothing. """
         formset = self._formset()
         self.assertFalse(formset.is_valid())
-        self.assertIn('at least one allocation slice', ' '.join(formset.non_form_errors()))
+        self.assertIn('at least one entry', ' '.join(formset.non_form_errors()))
 
     def test_deleted_rows_do_not_count_toward_the_total(self):
         formset = self._formset('-1000.00', '-999.00',
@@ -116,7 +116,7 @@ class SplitFormSetTests(TestCase):
         flipped = formset.forms[1]
         self.assertEqual(flipped.cleaned_data['amount'], Decimal('-400.00'))
         self.assertNotIn('non_event_revenue_type', flipped.fields)
-        self.assertIn('$800.00 too much is allocated', ' '.join(formset.non_form_errors()))
+        self.assertIn('$800.00 too much is entered', ' '.join(formset.non_form_errors()))
 
     def test_a_revenue_line_splits_into_revenue(self):
         self.txn = bank(op='OT-F2', amount='700.00')

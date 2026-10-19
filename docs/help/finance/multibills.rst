@@ -120,7 +120,7 @@ the money arrived: save the split, and it is done. See :doc:`billing`.
 
 Otherwise, click `Mark paid...` on the bill's page or the list.
 
-- If the payments filed against its events cover the bill, the date is filled in with the day the last of the money
+- If the payments linked to its events cover the bill, the date is filled in with the day the last of the money
   reached Workday.
 - Otherwise the date is today. Change it to the day the money arrived, and say **how it was paid**, such as *check
   from SAO*. That is required, because no payment in the ledger shows it.
@@ -130,4 +130,4 @@ Otherwise, click `Mark paid...` on the bill's page or the list.
 .. seealso::
     :doc:`events` explains how a payment for a multi-bill is split across its events in the finance queue.
 
-`Last Modified: October 16, 2026`
+`Last Modified: October 19, 2026`

@@ -25,7 +25,7 @@
                         </dl>
                         {% if txn.is_split %}
                             <div class="alert alert-info" style="margin-bottom:0;">
-                                This bank line is split across {{ txn.slices.count }} allocations.
+                                This bank line is split across {{ txn.slices.count }} entries.
                                 <a href="{% url 'finance:txn-detail' txn.pk %}">View the whole split &rarr;</a>
                             </div>
                         {% endif %}
@@ -38,7 +38,7 @@
                             </div>
                         {% elif txn.default_partition %}
                             <div class="alert alert-info" style="margin-bottom:0;margin-top:8px;">
-                                Paid out of <code>{{ txn.partition_code_label }}</code>, and filed
+                                Paid out of <code>{{ txn.partition_code_label }}</code>, and counted
                                 on that side.
                             </div>
                         {% endif %}

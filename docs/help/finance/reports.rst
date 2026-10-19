@@ -74,7 +74,7 @@ every column.
 Reading a Report
 ----------------
 
-- **Lines still in the queue aren't counted.** The report says how many there are; file them first for final figures.
+- **Lines still in the queue aren't counted.** The report says how many there are; settle them first for final figures.
 - **Figures are always as they stand today.** A closed year's report shows today's figures, with anything that has
   changed since the close listed at the top.
 - **Costs SGA pays for aren't LNL's losses.** On the *Events* report, costs paid from a funding request or the SGA

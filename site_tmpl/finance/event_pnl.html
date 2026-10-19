@@ -78,7 +78,7 @@
                         <th class="fin-num">Billed</th>
                         <th class="fin-num">Received</th>
                         <th class="fin-num">Direct costs</th>
-                        <th class="fin-num" title="What came in, less the costs LNL paid itself. A cost filed to a funding request or the SGA budget is paid by SGA, so it is not counted against the event.">Margin</th>
+                        <th class="fin-num" title="What came in, less the costs LNL paid itself. A cost charged to a funding request or the SGA budget is paid by SGA, so it is not counted against the event.">Margin</th>
                         <th class="fin-num" title="What the event billed its client for hired-in gear, plus LNL's rental fee, against what the hire actually cost">Rentals billed / cost</th>
                         <th></th>
                         <th></th>
@@ -120,7 +120,7 @@
                             <td class="fin-num">
                                 {{ row.costs|money }}
                                 {% if row.sga_funded %}
-                                    <div class="fin-muted" title="Filed to a funding request or the SGA budget, so SGA pays for it and it does not count against the margin">{{ row.sga_funded|money }} paid by SGA</div>
+                                    <div class="fin-muted" title="Charged to a funding request or the SGA budget, so SGA pays for it and it does not count against the margin">{{ row.sga_funded|money }} paid by SGA</div>
                                 {% endif %}
                                 {% if row.reserved %}
                                     <div class="fin-muted" title="Encumbered for this event and not yet charged. Not counted in the cost or the margin.">+ {{ row.reserved|money }} encumbered</div>

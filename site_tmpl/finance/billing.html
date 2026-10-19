@@ -368,7 +368,7 @@
                                                 less than the bill: money still owed, as the Owed to LNL
                                                 report counts it, so it is not closed from here.
                                             {% endcomment %}
-                                            <br><span class="fin-tag is-warn" title="Marked paid, but the payments filed from Workday come to {{ item.received|money }} of the {{ item.amount|money }} billed">{{ item.owed|money }} not filed</span>
+                                            <br><span class="fin-tag is-warn" title="Marked paid, but the payments received come to {{ item.received|money }} of the {{ item.amount|money }} billed">{{ item.owed|money }} not received</span>
                                         {% endif %}
                                     </td>
                                 {% endif %}
@@ -382,7 +382,7 @@
                                     {% if item.owed is None %}
                                         <span class="fin-muted" title="The event is from before the books start, so its payments were never imported.">—</span>
                                     {% elif item.covered %}
-                                        <span class="fin-tag is-ok" title="The payments filed against it add up to the bill, the last on {{ item.last_payment|date:'M j, Y' }}.">Received in full</span>
+                                        <span class="fin-tag is-ok" title="The payments received for it add up to the bill, the last on {{ item.last_payment|date:'M j, Y' }}.">Received in full</span>
                                     {% else %}
                                         {{ item.owed|money }}
                                         {% if item.received %}<br><small class="fin-muted">{{ item.received|money }} received</small>{% endif %}
@@ -396,7 +396,7 @@
                                     {% comment %}
                                         The money is in, whatever stage the bill was left at.
                                     {% endcomment %}
-                                    <a href="{{ item.paid_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-primary" title="The payments filed against it cover it">Mark paid…</a>
+                                    <a href="{{ item.paid_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-primary" title="The payments received for it cover it">Mark paid…</a>
                                 {% endif %}
                                 {% if stage == 'waiting-on-client' %}
                                     <a href="{{ item.worktag_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-default" title="The client sent the worktag by email">Enter worktag</a>
@@ -444,8 +444,8 @@
                 <button type="submit" form="fin-close-form" class="btn btn-primary" onclick="return confirm('Close the ticked events? Closing locks each event for edits, and cannot be easily undone.');">Close the ticked events</button>
             </div>
             <p class="fin-muted" style="font-size:13px;">
-                Closing a multi-bill's row closes each of its events. A bill marked paid with less filed from Workday
-                than it was billed for still has money owed on it, so it is not closed here: file the payment from the
+                Closing a multi-bill's row closes each of its events. A bill marked paid with less received in Workday
+                than it was billed for still has money owed on it, so it is not closed here: settle the payment in the
                 queue, or, if it was paid some other way, close the event from its own page.
             </p>
         {% elif stage == 'create-isd' %}

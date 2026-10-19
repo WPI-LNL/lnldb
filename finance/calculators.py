@@ -429,7 +429,7 @@ EVENT_FLAGS = OrderedDict((
     ('billed_not_received', 'Billed, not yet received'),
     ('received_without_bill', 'Received with no bill in lnldb'),
     ('not_marked_paid', 'Paid in full, bill not marked paid'),
-    ('paid_not_received', 'Marked paid, no payment filed'),
+    ('paid_not_received', 'Marked paid, no payment received'),
 ))
 
 #: Where an event's bill stands, as the P&L and the event page say it.

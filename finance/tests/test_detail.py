@@ -58,7 +58,7 @@ class TransactionDetailTests(FinanceViewTestCase):
 
     def test_a_balancing_split_is_saved(self):
         response = self._split('-600.00', '-400.00')
-        self.assertContains(response, 'balances to $0.00')
+        self.assertContains(response, 'add up to the')
         self.assertEqual(self.txn.slices.count(), 2)
         self.assertEqual(self.txn.unallocated_amount, Decimal('0.00'))
 
@@ -69,7 +69,7 @@ class TransactionDetailTests(FinanceViewTestCase):
         """
         response = self._split('-600.00', '-300.00')
         self.assertEqual(self.txn.slices.count(), 0)
-        self.assertContains(response, 'unallocated')
+        self.assertContains(response, 'left to settle')
 
     def test_each_slice_inherits_the_bank_lines_date(self):
         """ Typed nowhere in the modal, so it has to come from the parent. """
@@ -85,7 +85,7 @@ class TransactionDetailTests(FinanceViewTestCase):
         self._split('-600.00', '-400.00')
         entry = self.txn.slices.first()
         comment = Version.objects.get_for_object(entry)[0].revision.get_comment()
-        self.assertIn('Split purchase across 2 allocations', comment)
+        self.assertIn('Split purchase across 2 entries', comment)
 
     def test_removing_a_slice_from_the_formset_deletes_it(self):
         self._split('-600.00', '-400.00')
@@ -179,7 +179,7 @@ class TransactionDetailTests(FinanceViewTestCase):
     def test_amounts_can_be_typed_without_a_minus(self):
         """ As they read on the receipt; the bank line says the money went out. """
         response = self._split('600.00', '400.00')
-        self.assertContains(response, 'balances to $0.00')
+        self.assertContains(response, 'add up to the')
         self.assertEqual(sorted(self.txn.slices.values_list('amount', flat=True)),
                          [Decimal('-600.00'), Decimal('-400.00')])
 
@@ -248,8 +248,8 @@ class SplitLeavesTheQueueTests(FinanceViewTestCase):
         # Waiting for a settle, not for more filing: no "Allocate $0.00".
         queue = self._queue()
         self.assertContains(queue, 'OT-D95')
-        self.assertContains(queue, 'Waiting to be settled')
-        self.assertNotContains(queue, 'Allocate $0.00')
+        self.assertContains(queue, 'Ready to settle')
+        self.assertNotContains(queue, 'Settle $0.00')
 
     def test_marking_it_settled_takes_the_line_out_of_the_queue(self):
         """ Slices left Pending, by whoever could not settle, settled from the page later. """
@@ -290,7 +290,7 @@ class SplitLeavesTheQueueTests(FinanceViewTestCase):
                 'slices-%s-lnl_spend_category' % index: str(entry.lnl_spend_category_id),
             })
         response = self.client.post(self._url(), data, follow=True)
-        self.assertContains(response, 'balances to $0.00')
+        self.assertContains(response, 'add up to the')
         self.assertEqual(sorted(self.txn.slices.values_list('amount', flat=True)),
                          [Decimal('-4000.00'), Decimal('-3324.72')])
         self.assertFalse(self._in_queue())
@@ -421,7 +421,7 @@ class EntryDeleteTests(FinanceViewTestCase):
     def test_a_get_only_asks(self):
         """ A destructive action never happens on a link being followed. """
         response = self.client.get(self._url())
-        self.assertContains(response, 'Remove this allocation?')
+        self.assertContains(response, 'Remove this entry?')
         self.assertTrue(ParsedTransaction.objects.filter(pk=self.entry.pk).exists())
 
     def test_a_post_removes_the_slice(self):

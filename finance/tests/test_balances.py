@@ -581,7 +581,7 @@ class BalancePageTests(LedgerFixture, FinanceViewTestCase):
         self.assertContains(response, 'Legacy')
         self.assertContains(response, '$11,000.00')
         self.assertContains(response, 'Awaiting reimbursement from SGA')
-        self.assertContains(response, 'Not filed yet')
+        self.assertContains(response, 'Not settled yet')
         self.assertNotContains(response, 'miss the cash')
 
     def test_a_finished_year_offers_to_close_only_with_the_permission(self):

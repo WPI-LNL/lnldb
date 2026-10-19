@@ -295,9 +295,9 @@ def _year_checklist(year):
 
     out = [
         (unreconciled == 0,
-         "Every line in FY%s is filed and settled" % str(year.fiscal_year)[-2:]
+         "Every line in FY%s is settled" % str(year.fiscal_year)[-2:]
          if not unreconciled else
-         "%s line%s still in the queue. Unfiled money shows as its own row and belongs to "
+         "%s line%s still in the queue. Unsettled money shows as its own row and belongs to "
          "no fund." % (unreconciled, '' if unreconciled == 1 else 's'),
          None if not unreconciled else queue),
         (pending_encumbrances == 0,

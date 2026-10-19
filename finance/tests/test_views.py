@@ -132,7 +132,7 @@ class DashboardTests(FinanceViewTestCase):
     def test_action_banner_appears_when_unreconciled(self):
         self.make_txn(op='OT-A')
         response = self.client.get(reverse('finance:dashboard') + '?fy=2026')
-        self.assertContains(response, "awaiting reconciliation")
+        self.assertContains(response, "waiting to be settled")
 
     def test_action_banner_absent_when_clear(self):
         txn = self.make_txn(op='OT-B')
@@ -141,7 +141,7 @@ class DashboardTests(FinanceViewTestCase):
             lnl_spend_category=category('consumables'),
             effective_date=txn.accounting_date, status=TransactionStatus.SETTLED)
         response = self.client.get(reverse('finance:dashboard') + '?fy=2026')
-        self.assertNotContains(response, "awaiting reconciliation")
+        self.assertNotContains(response, "waiting to be settled")
 
     def test_pie_chart_renders_with_data(self):
         txn = self.make_txn(op='OT-C')
@@ -458,7 +458,7 @@ class IngestionTests(FinanceViewTestCase):
         """
         response = self._upload()
         self.assertContains(response, "about to add")
-        self.assertContains(response, "1 unreconciled line")
+        self.assertContains(response, "1 line to settle")
         self.assertFalse(WorkdayTransaction.objects.exists())
 
     def test_confirming_creates_the_transactions(self):
@@ -758,7 +758,7 @@ class SplitViewTests(FinanceViewTestCase):
         ])
         self.assertEqual(response.status_code, 200)  # re-rendered with errors
         self.assertEqual(self.txn.slices.count(), 0)
-        self.assertContains(response, "unallocated")
+        self.assertContains(response, "left to settle")
 
     def test_split_cannot_flip_direction(self):
         response = self._post([
@@ -1002,7 +1002,7 @@ class ReconcileJsonTests(FinanceViewTestCase):
         self.assertTrue(payload['ok'])
         self.assertTrue(payload['done'])
         self.assertTrue(payload['settled'])
-        self.assertIn('reconciled and settled', payload['message'])
+        self.assertIn(' settled.', payload['message'])
         self.assertEqual(ParsedTransaction.objects.count(), 1)
 
     def test_a_bad_row_answers_with_field_errors(self):
@@ -1214,7 +1214,7 @@ class UnreconcileTests(FinanceViewTestCase):
     def test_undoing_nothing_says_so_rather_than_failing(self):
         self.txn.slices.all().delete()
         response = self._undo()
-        self.assertContains(response, "nothing allocated")
+        self.assertContains(response, "had no entries")
 
     def test_it_answers_xhr_with_json(self):
         response = self.client.post(
@@ -1320,7 +1320,7 @@ class BulkReconcileTests(FinanceViewTestCase):
             effective_date=self.a.accounting_date, fund_source=fund('sga_budget'),
             lnl_spend_category=category('consumables'))
         response = self._post(ids=[self.a])
-        self.assertContains(response, "already fully allocated")
+        self.assertContains(response, "nothing was left to settle")
         self.assertEqual(self.a.slices.count(), 1)
 
     def test_the_category_is_optional(self):

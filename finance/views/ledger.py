@@ -289,7 +289,7 @@ def bulk_action(request):
             messages.warning(
                 request,
                 "%s revenue entr%s skipped — a spend category is expense routing and cannot "
-                "be filed against money coming in."
+                "be used on money coming in."
                 % (len(wrong_direction), 'y was' if len(wrong_direction) == 1 else 'ies were'))
             entries = [e for e in entries if not e.is_revenue]
 
@@ -321,7 +321,7 @@ def bulk_action(request):
         if blocked:
             messages.warning(
                 request,
-                "%s entr%s left Pending — their bank lines are not fully allocated yet."
+                "%s entr%s left Pending — their Workday lines still have money left to settle."
                 % (len(blocked), 'y was' if len(blocked) == 1 else 'ies were'))
         entries = allowed
 

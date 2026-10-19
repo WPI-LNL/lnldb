@@ -331,7 +331,7 @@ def _record_workday(request, bill, form_class):
     if refused:
         return refused
     if bill.date_paid:
-        messages.error(request, "This bill was paid on %s, so what it was charged to is settled."
+        messages.error(request, "This bill was paid on %s, so what it was charged to can no longer change."
                        % date_format(bill.date_paid, 'M j, Y'))
         return HttpResponseRedirect(_bill_url(bill))
     item = BillItem(None, events, bill)
@@ -525,7 +525,7 @@ def billing_close(request):
         messages.success(request, "Closed %s: %s." % (
             _count(len(closed), "event"), ", ".join(event.event_name for event in closed)))
     if refused:
-        messages.error(request, "Not closed, because money is still owed. %s. File the payment from the queue, "
+        messages.error(request, "Not closed, because money is still owed. %s. Settle the payment in the queue, "
                                 "or, if it was paid some other way, close the event from its own page."
                        % ". ".join(refused))
     if gone:

@@ -36,9 +36,9 @@
             {% endif %}
         </p>
         {% if item.covered %}
-            <p>The payments filed against it cover the bill, the last on {{ item.last_payment|date:"M j, Y" }}. Mark it paid.</p>
+            <p>The payments received for it cover the bill, the last on {{ item.last_payment|date:"M j, Y" }}. Mark it paid.</p>
         {% elif item.received %}
-            <p>{{ item.received|money }} of the {{ item.amount|money }} billed has been filed so far.</p>
+            <p>{{ item.received|money }} of the {{ item.amount|money }} billed has been received so far.</p>
         {% endif %}
         <div style="margin-top:8px;">
             {% if item.covered %}

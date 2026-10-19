@@ -229,7 +229,7 @@ class HistoryOutOfThePagesTests(FinanceViewTestCase):
                 '2025-10-01,-30.00,OT-B,B&H,New tape,%s\n' % (MAIN, MAIN))
         upload = SimpleUploadedFile('journal.csv', body.encode('utf-8'), content_type='text/csv')
         response = self.client.post(reverse('finance:upload'), {'csv_file': upload})
-        self.assertContains(response, '1 unreconciled line')
+        self.assertContains(response, '1 line to settle')
         self.assertContains(response, '1 line of history')
         self.assertContains(response, 'kept for the forecast')
 

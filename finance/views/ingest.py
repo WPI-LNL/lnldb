@@ -365,12 +365,12 @@ def _mark_paid_on_filing(request, entry):
         if bill is None or bill.date_paid or bill.event.closed:
             return ''
         if entry.linked_event_id != bill.event_id or entry.refund_of_id:
-            return ("The bill for %s was not marked paid, because the payment was filed against another "
+            return ("The bill for %s was not marked paid, because the payment was linked to another "
                     "event." % bill.event.event_name)
         paid_on = mark_paid_from_payments(bill)
         if paid_on is None:
             received, _ = bill_payments(bill)
-            return ("The bill for %s was not marked paid: $%s of its $%s has been filed."
+            return ("The bill for %s was not marked paid: $%s of its $%s has been received."
                     % (bill.event.event_name, money(received), money(bill.amount)))
         return "Marked the bill for %s paid on %s." % (bill.event.event_name, date_format(paid_on, 'M j, Y'))
     if request.POST.get('bill_offered') or not entry.linked_event_id or entry.refund_of_id or entry.amount <= 0:
@@ -384,7 +384,7 @@ def _mark_paid_on_filing(request, entry):
     received, _ = bill_payments(bill)
     if received < money(bill.amount) or money(bill.amount) <= ZERO:
         return ''
-    return ("What has been filed now covers the bill for %s. Mark it paid from the Billing page."
+    return ("The payments received now cover the bill for %s. Mark it paid from the Billing page."
             % (bill.display_name if not isinstance(bill, Billing) else event.event_name))
 
 
@@ -425,7 +425,7 @@ def reconcile(request, pk):
 
     with reversion.create_revision():
         reversion.set_user(request.user)
-        reversion.set_comment("Reconciled from the ingestion queue")
+        reversion.set_comment("Settled from the ingestion queue")
         entry = form.save(commit=False)
         entry.created_by = request.user
         entry.full_clean()
@@ -436,9 +436,9 @@ def reconcile(request, pk):
     settled = txn.is_fully_allocated and request.user.has_perm('finance.settle_subledger')
     if settled:
         txn.settle()
-        message = "%s reconciled and settled." % txn.reference
+        message = "%s settled." % txn.reference
     else:
-        message = "%s allocated." % txn.reference
+        message = "%s: entry saved." % txn.reference
     paid = _mark_paid_on_filing(request, entry)
     if paid:
         message = "%s %s" % (message, paid)
@@ -598,7 +598,7 @@ def _draw_message(txn, reserved, drawn, exhausted, settled):
 
     left = abs(money(txn.unallocated_amount))
     if left:
-        message += (" $%s of this line is still unallocated — the encumbrance did not "
+        message += (" $%s of this line is left to settle — the encumbrance did not "
                     "cover it." % left)
     return message
 
@@ -754,7 +754,7 @@ def match_encumbrance(request, pk):
     # the common one -- it just is not this button's answer.
     chosen = (request.POST.get('encumbrance') or '').strip()
     if not chosen.isdigit():
-        return fail("Pick an encumbrance from the list first, or reconcile %s with the form "
+        return fail("Pick an encumbrance from the list first, or settle %s with the form "
                     "below if it was never encumbered." % txn.reference)
 
     entry = ParsedTransaction.objects.filter(
@@ -769,8 +769,8 @@ def match_encumbrance(request, pk):
 
     remaining = txn.unallocated_amount
     if not remaining:
-        return fail("%s is already fully allocated, so there is nothing for an encumbrance "
-                    "to settle." % txn.reference, status=409)
+        return fail("%s already has entries for its whole amount, so there is nothing left for an "
+                    "encumbrance to cover." % txn.reference, status=409)
     if (remaining > 0) != (entry.amount > 0):
         # An encumbrance is always money out; a positive line is a receipt.
         return fail("%s is money coming in, and an encumbrance is for money going out."
@@ -858,7 +858,7 @@ def unreconcile(request, pk):
 
     slices = list(txn.slices.all())
     if not slices:
-        message = "%s had nothing allocated to it." % txn.reference
+        message = "%s had no entries." % txn.reference
         if wants_json:
             return JsonResponse({'ok': True, 'reference': txn.reference, 'message': message})
         messages.info(request, message)
@@ -869,7 +869,7 @@ def unreconcile(request, pk):
     # orphan it. Saying so beats a 500 from ProtectedError.
     refunded = [s for s in slices if s.refunds.exists()]
     if refunded:
-        message = ("%s cannot be undone: %s of its allocations %s a refund filed against "
+        message = ("%s cannot be undone: %s of its entries %s a refund recorded against "
                    "%s. Remove the refund first."
                    % (txn.reference, len(refunded),
                       'has' if len(refunded) == 1 else 'have',
@@ -882,12 +882,12 @@ def unreconcile(request, pk):
 
     with reversion.create_revision():
         reversion.set_user(request.user)
-        reversion.set_comment("Reconciliation undone — allocations removed")
+        reversion.set_comment("Settling undone — entries removed")
         for entry in slices:
             entry.delete()
 
     txn.refresh_from_db()
-    message = ("Undone. %s is back in the queue with $%s to allocate."
+    message = ("Undone. %s is back in the queue with $%s to settle."
                % (txn.reference, abs(txn.unallocated_amount)))
     if wants_json:
         return JsonResponse({
@@ -952,7 +952,7 @@ def bulk_reconcile(request):
         messages.warning(
             request,
             "%s revenue line%s skipped — money coming in is linked to an event or a "
-            "revenue type, which is a different question from a fund. Reconcile %s on "
+            "revenue type, which is a different question from a fund. Settle %s on "
             "%s own row."
             % (len(revenue), '' if len(revenue) == 1 else 's',
                'it' if len(revenue) == 1 else 'them',
@@ -961,7 +961,7 @@ def bulk_reconcile(request):
 
     already = [t for t in lines if t.is_fully_allocated and t.slice_count]
     if already:
-        messages.info(request, "%s line%s already fully allocated and left alone."
+        messages.info(request, "%s line%s left alone: nothing was left to settle."
                       % (len(already), ' was' if len(already) == 1 else 's were'))
         lines = [t for t in lines if not (t.is_fully_allocated and t.slice_count)]
 
@@ -983,7 +983,7 @@ def bulk_reconcile(request):
 
     with reversion.create_revision():
         reversion.set_user(request.user)
-        reversion.set_comment("Reconciled in bulk from the ingestion queue")
+        reversion.set_comment("Settled in bulk from the ingestion queue")
         for txn in lines:
             entry_year = fiscal_year_for(txn.accounting_date)
             if line_year is not None and line_year != entry_year and not cross_year_allowed:
@@ -1018,11 +1018,13 @@ def bulk_reconcile(request):
                 txn.settle()
                 settled += 1
 
-    if done:
+    if done and settled == done:
+        messages.success(request, "Settled %s line%s." % (done, '' if done == 1 else 's'))
+    elif done:
         messages.success(
-            request, "Reconciled %s line%s%s." % (
-                done, '' if done == 1 else 's',
-                " and settled %s" % settled if settled else ''))
+            request, "Saved entries on %s line%s%s. The rest stay Pending until someone who can "
+                     "settle them does." % (done, '' if done == 1 else 's',
+                                            ", and settled %s" % settled if settled else ''))
     for txn, exc in refused[:5]:
         messages.warning(request, "%s unchanged: %s" % (
             txn.reference, '; '.join(m for msgs in exc.message_dict.values() for m in msgs)))
@@ -1082,7 +1084,7 @@ def bulk_match_encumbrance(request):
     lines = [t for t in lines if t.net_amount < 0 and t.unallocated_amount]
 
     if not lines:
-        messages.info(request, "Nothing was left to allocate on the selected lines.")
+        messages.info(request, "Nothing was left to settle on the selected lines.")
         return HttpResponseRedirect(redirect_to)
 
     reserved = entry.amount
@@ -1139,7 +1141,7 @@ def bulk_match_encumbrance(request):
     # Treasurer has to route them by hand and needs to know which.
     if untouched:
         messages.info(
-            request, "The encumbrance ran out before %s line%s: %s. Reconcile %s on %s own."
+            request, "The encumbrance ran out before %s line%s: %s. Settle %s on %s own."
             % (len(untouched), '' if len(untouched) == 1 else 's',
                _name_a_few(t.reference for t in untouched),
                'it' if len(untouched) == 1 else 'them',

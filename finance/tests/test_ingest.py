@@ -82,7 +82,7 @@ class ImportReportingTests(FinanceViewTestCase):
         """ There is nothing to reconcile, so it is a data problem, not a line. """
         zero = CSV_ROW.replace('"(1,200.00)"', '0.00')
         response = self._upload(CSV_HEADER + "\n" + zero + "\n")
-        self.assertContains(response, 'nothing to reconcile')
+        self.assertContains(response, 'nothing to settle')
         self.assertFalse(WorkdayTransaction.objects.exists())
 
     def test_only_the_first_ten_bad_rows_are_listed(self):
@@ -372,7 +372,7 @@ class SettleViewTests(FinanceViewTestCase):
 
     def test_a_line_with_no_allocations_is_refused_with_a_reason(self):
         response = self._settle()
-        self.assertContains(response, 'no allocation slices')
+        self.assertContains(response, 'no entries')
 
     def test_an_unbalanced_line_is_refused_with_the_numbers(self):
         """ The message names both totals, because "it does not balance" is not enough. """
@@ -793,7 +793,7 @@ class EncumbranceMatchingTests(FinanceViewTestCase):
         txn = self.make_txn(op='OT-ENC13', amount='-200.00')
         self.match(txn, self.encumber('-200.00'))
         response = self.match(txn, self.encumber('-200.00', description='Another'))
-        self.assertIn('already fully allocated', self.messages(response)[0])
+        self.assertIn('already has entries for its whole amount', self.messages(response)[0])
 
     def test_revenue_cannot_settle_an_encumbrance(self):
         """ You cannot reserve money coming in. """
@@ -1012,7 +1012,7 @@ class EncumbranceDrawdownTests(FinanceViewTestCase):
 
     def test_the_message_says_what_is_left_on_the_line(self):
         response = self.match(self.bank_line('SINV-BIG', '-5000.00'), self.encumbrance)
-        self.assertIn('$4000.00 of this line is still unallocated',
+        self.assertIn('$4000.00 of this line is left to settle',
                       self.messages(response)[0])
 
     def test_a_slightly_larger_line_is_still_covered_whole(self):

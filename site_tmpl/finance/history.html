@@ -22,9 +22,9 @@
         <div class="fin-panel-body">
             <p style="margin:0 0 6px;">
                 Lines from before the books start are <strong>history</strong>: imported so the forecast can learn
-                what a year looks like, and never filed. Each is read by the lookups the queue fills its boxes
+                what a year looks like, and never settled. Each is read by the lookups the queue fills its boxes
                 from &mdash; the memo naming a category, Workday's spend category, the ledger account &mdash; and
-                never by the wording rules, which guess. Years in the books show what was filed, with anything
+                never by the wording rules, which guess. Years in the books show what was settled, with anything
                 still in the queue read the same way.
             </p>
             <p class="fin-muted" style="margin:0;">
@@ -66,7 +66,7 @@
                             {% endfor %}
                         </tr>
                         <tr class="fin-muted">
-                            <td>Lines read rather than filed</td>
+                            <td>Lines read rather than settled</td>
                             {% for row in years %}<td class="fin-num">{{ row.estimated }} of {{ row.lines }}</td>{% endfor %}
                         </tr>
                     </thead>

@@ -878,7 +878,7 @@ def project(account=None, today=None, without=(), extra=(), ledger=None, books=N
                                     else None)
     forecast.opening[OWN] = forecast.opening.get(OWN, ZERO) + statement_.unfiled_closing
     own = funds.funds.get(funds.own_id)
-    forecast.fund_names[OWN] = "%s and anything not filed" % own if own else "Not filed"
+    forecast.fund_names[OWN] = "%s and anything not settled" % own if own else "Not settled"
 
     latest = max((day for day, _, line_code in books.lines.values()
                   if line_code == code and day <= today), default=None)

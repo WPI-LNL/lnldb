@@ -9,7 +9,7 @@
     {# ---- Import + summary, one strip ---- #}
     <div class="fin-queue-toolbar">
         <div class="fin-queue-counts">
-            <div class="fin-stat-label">Awaiting reconciliation</div>
+            <div class="fin-stat-label">Waiting to be settled</div>
             <div class="fin-stat-value {% if queue_count %}text-warning{% else %}text-success{% endif %}">
                 {{ queue_count }}
             </div>
@@ -91,7 +91,7 @@
                     offer this bar and does not pretend otherwise.
                 {% endcomment %}
                 {% if can_edit and not row.is_revenue %}
-                    <label class="fin-queue-select" title="Select for bulk reconcile">
+                    <label class="fin-queue-select" title="Select to settle in bulk">
                         <input type="checkbox" class="fin-queue-check" value="{{ row.txn.pk }}">
                     </label>
                 {% elif can_edit %}
@@ -127,11 +127,11 @@
                     {% endif %}
 
                     {% if row.partially_allocated and row.txn.is_fully_allocated %}
-                        <span class="fin-tag is-warn" title="Filed to the cent, but its entries are still Pending.">
-                            Waiting to be settled
+                        <span class="fin-tag is-warn" title="Its entries add up to the line, but are still Pending.">
+                            Ready to settle
                         </span>
                     {% elif row.partially_allocated %}
-                        <span class="fin-tag is-warn" title="Part of this line is already allocated.">
+                        <span class="fin-tag is-warn" title="Part of this line already has entries.">
                             {{ row.txn.unallocated_amount|money }} left
                         </span>
                     {% endif %}
@@ -193,7 +193,7 @@
                     {% endcomment %}
                     {% if row.close_encumbrance %}
                         <span class="fin-tag is-warn"
-                              title="A pending encumbrance of about this amount is open. Match it below rather than reconciling, or the budget line is charged twice.">
+                              title="A pending encumbrance of about this amount is open. Match it below rather than settling the line the ordinary way, or the budget line is charged twice.">
                             <span class="glyphicon glyphicon-lock"></span> Maybe encumbered
                         </span>
                     {% endif %}
@@ -248,7 +248,7 @@
                                     budget line and marks a live commitment
                                     spent, and neither shows up afterwards.
                                 {% endcomment %}
-                                <option value="">Not encumbered — reconcile below</option>
+                                <option value="">Not encumbered — settle below</option>
                                 {% for candidate in row.encumbrances %}
                                     <option value="{{ candidate.entry.pk }}">{{ candidate.label }}</option>
                                 {% endfor %}
@@ -296,7 +296,7 @@
                                 {% if row.bill_offer %}
                                     <div class="form-group fin-field fin-field-check fin-mark-paid">
                                         <input type="hidden" name="bill_offered" value="{{ row.bill_offer.bill.pk }}">
-                                        <label title="The payments filed against the event, this one included, add up to its bill of {{ row.bill_offer.owed|money }}.">Bill</label>
+                                        <label title="The payments received for the event, this one included, add up to its bill of {{ row.bill_offer.owed|money }}.">Bill</label>
                                         <label class="fin-inline-check">
                                             <input type="checkbox" name="mark_bill_paid" value="{{ row.bill_offer.bill.pk }}" checked>
                                             Mark bill paid on {{ row.bill_offer.paid_on|date:"M j, Y" }}
@@ -336,7 +336,7 @@
                                     The remainder rather than the full line: a
                                     part-allocated line stays in the queue and
                                     this finishes it off. Shown unsigned,
-                                    because "Allocate ($26,242.55)" reads as a
+                                    because "Settle ($26,242.55)" reads as a
                                     negative button rather than an amount.
                                 {% endcomment %}
                                 {% if row.partially_allocated and row.txn.is_fully_allocated %}
@@ -346,7 +346,7 @@
                                     </a>
                                 {% else %}
                                     <button type="submit" class="btn btn-primary btn-sm fin-allocate">
-                                        Allocate {{ row.txn.unallocated_amount|abs_value|money }}
+                                        Settle {{ row.txn.unallocated_amount|abs_value|money }}
                                     </button>
                                 {% endif %}
                             </div>
@@ -409,7 +409,7 @@
             <div class="fin-empty">
                 <span class="glyphicon glyphicon-ok-circle"></span>
                 <strong>Queue is clear.</strong>
-                <div>Every imported Workday line is fully allocated and settled.</div>
+                <div>Every imported Workday line is settled.</div>
             </div>
         </div>
     {% endfor %}
@@ -460,7 +460,7 @@
                     <label class="fin-bulk-label" for="{{ bulk_reconcile_form.project_tag.id_for_label }}">Project</label>
                     {{ bulk_reconcile_form.project_tag }}
 
-                    <button type="submit" class="btn btn-primary btn-sm">Reconcile selected</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Settle selected</button>
 
                     {% comment %}
                         The other thing a batch of rows can be: ten Workday

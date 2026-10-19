@@ -690,9 +690,9 @@ def close_refusal(item):
     if item.stage not in CLOSABLE:
         return "it is not paid"
     if item.owed and not item.received:
-        return "none of the $%s billed has been filed from Workday" % item.amount
+        return "none of the $%s billed has been received" % item.amount
     if item.owed:
-        return "$%s of the $%s billed has not been filed from Workday" % (item.owed, item.amount)
+        return "$%s of the $%s billed has not been received" % (item.owed, item.amount)
     return None
 
 

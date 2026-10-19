@@ -367,7 +367,7 @@ class IncomeAndSpendingTests(CacheResetMixin, TestCase):
         self.assertTrue(any('The ledger starts on Jul 1, 2025' in w for w in report.warnings))
 
     def test_lines_still_in_the_queue_are_counted_and_named(self):
-        line(datetime.date(2026, 9, 2), '-75.00', 'Not yet filed')
+        line(datetime.date(2026, 9, 2), '-75.00', 'Not settled yet')
         report = self.report()
         self.assertTrue(any('1 Workday line' in w and '-$75.00' in w for w in report.warnings))
 
@@ -402,7 +402,7 @@ class FundBalanceReportTests(LedgerFixture, TestCase):
         self.assertIn('Overspent', budget['status'])
 
     def test_what_is_unfiled_is_its_own_row_and_the_total_is_the_cash(self):
-        self.assertEqual(cells(self.main, 'Not yet filed', 'fund')['closing'],
+        self.assertEqual(cells(self.main, 'Not settled yet', 'fund')['closing'],
                          Decimal('-200.00'))
         total = self.main.total.cells
         self.assertEqual((total['opening'], total['closing']),
@@ -680,7 +680,7 @@ class ReportPageTests(FinanceViewTestCase):
     def test_one_fund(self):
         response = self.client.get(reverse('finance:report', args=['income-and-spending']),
                                    {'fy': '2027', 'fund': 'sga_fr'})
-        self.assertContains(response, 'Only money filed to SGA Funding Request.')
+        self.assertContains(response, 'Only money in SGA Funding Request.')
 
     def test_the_tab_is_in_the_nav(self):
         response = self.client.get(reverse('finance:dashboard'))

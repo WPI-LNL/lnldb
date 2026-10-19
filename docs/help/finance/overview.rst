@@ -8,7 +8,7 @@ that works out what each fund holds, what each event made or lost, what LNL is o
 
 This page is the map. The other finance guides each cover one job:
 
-- :doc:`import-and-file` -- every month
+- :doc:`import-and-settle` -- every month
 - :doc:`encumbrances` -- before a purchase shows up in Workday
 - :doc:`funding-requests` -- SGA funding requests, start to finish
 - :doc:`events` -- what each show made or lost, and marking bills paid
@@ -44,8 +44,8 @@ else -- balances, what is owed, each event's margin, reports, the forecast -- is
 Three things are worth knowing from the start:
 
 - **It never changes Workday.** An imported line can't be edited. If a line is wrong, it is wrong in Workday; what you
-  *can* change is how it is filed.
-- **It never files anything for you.** It fills in every box it can, and says where each answer came from, but nothing
+  *can* change is the entries you write for it.
+- **It never settles anything for you.** It fills in every box it can, and says where each answer came from, but nothing
   is saved until you press the button.
 - **It doesn't store totals.** Every balance and report is worked out fresh each time you open the page, so a late
   line imported in August fixes June's figures automatically.
@@ -89,11 +89,11 @@ Words You'll See
     One row of a Workday export: a date, an amount, a memo, and Workday's tags.
 **Entry**
     Your record of what all or part of a line was for. A line that paid for three different things gets three entries.
-**Filing a line**
-    Writing entries for it until they add up to the line exactly. The app also calls this *allocating* or
-    *reconciling*. A filed line is **settled**.
+**Settling a line**
+    Writing entries for it until they add up to the line exactly. A settled line leaves the queue; until then
+    its entries are **Pending**.
 **The queue**
-    Every line that hasn't been filed yet.
+    Every line that hasn't been settled yet.
 **Encumbrance**
     Money set aside for a purchase that Workday hasn't shown yet. It counts as spent until the real line arrives and
     you match the two up.
@@ -116,7 +116,7 @@ Words You'll See
     What Workday said an account held at the end of a day. You enter these periodically so the app can check itself.
 **Books start**
     The first day the finance app keeps books for -- for LNL, July 1, 2025, the start of FY26. Lines from before then
-    are **history**: imported so the forecast can learn from past years, and never filed.
+    are **history**: imported so the forecast can learn from past years, and never settled.
 **Fiscal year**
     July to June, named for the year it ends in. FY26 is July 1st 2025 to June 30th 2026.
 
@@ -132,7 +132,7 @@ Tab            Use it to
 Dashboard      See the year at a glance: money in and out, spending by category, what each fund holds, where LNL's own
                money is heading, what is owed, and the events that lost money.
 Ledger         Find any entry. Filter, sort, change many at once, or download as a spreadsheet.
-Queue          Import Workday exports and file each new line. Also where you log a purchase in advance.
+Queue          Import Workday exports and settle each new line. Also where you log a purchase in advance.
 Events         See what each show made or lost, and mark a bill paid.
 Balances       See what each fund holds; record Workday balances, move money between funds, and close a year.
 Projects       See spending grouped by project.
@@ -153,7 +153,7 @@ Your Routine
 **Every month** (At a minimum every month, it is recommended to do it more frequently)
 
 #. Export the month's lines from Workday and import them, then work the queue until it is empty. See
-   :doc:`import-and-file`.
+   :doc:`import-and-settle`.
 #. Record Workday's current balance for each account on the `Balances` tab. If the app's figure disagrees, something
    is missing. See :doc:`balances`.
 
@@ -162,7 +162,7 @@ counts as spoken for. See :doc:`encumbrances`.
 
 **When SGA approves a funding request** -- enter it on the `Funding` tab, with its lines. See :doc:`funding-requests`.
 
-**After a show** -- make sure any gear hired in for it is filed against the show, check the `Events` tab, and mark the
+**After a show** -- make sure any gear hired in for it is linked to the show, check the `Events` tab, and mark the
 bill paid once the payment arrives. See :doc:`events`.
 
 **After June 30** -- once June's lines are in, close the fiscal year from the `Balances` tab. See :doc:`balances`.
@@ -172,7 +172,7 @@ bill paid once the payment arrives. See :doc:`events`.
 **For a board meeting or a budget request** -- see :doc:`reports`.
 
 .. tip::
-    New to the role? Read this page, then :doc:`import-and-file`. Most of the job is the monthly import, and the queue
+    New to the role? Read this page, then :doc:`import-and-settle`. Most of the job is the monthly import, and the queue
     fills in most of each line for you.
 
 `Last Modified: October 19, 2026`

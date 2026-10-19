@@ -23,14 +23,14 @@ imported line: nothing after that date is counted yet, so import the latest expo
 For each account there is a table with one row per fund:
 
 - **Opening** -- what the fund held at the start of the year.
-- **Came in** and **Spent** -- what was filed to it during the year. Refunds reduce what was spent.
+- **Came in** and **Spent** -- what went into it and out of it during the year. Refunds reduce what was spent.
 - **Transfers** -- money moved in or out by a transfer between funds.
 - **Closing** (or **Now**, for the current year) -- what it holds.
 - **Encumbrances** -- purchases logged in advance against it. Not spent yet, but spoken for. The *free* figure
   under it is what is left once they are paid.
 - **What it means** -- for example, that a negative funding request balance is money SGA owes LNL.
 
-The **Not filed yet** row is every line still in the queue. With it, the funds always add up to the account's cash; once
+The **Not settled yet** row is every line still in the queue. With it, the funds always add up to the account's cash; once
 the queue is empty it is zero.
 
 .. note::
@@ -79,7 +79,7 @@ at the bottom of the page and can be deleted there.
 Close the Year
 --------------
 
-After June 30, once June's lines are imported and filed, close the year. Click `Close FY26` (or whichever year) on the
+After June 30, once June's lines are imported and settled, close the year. Click `Close FY26` (or whichever year) on the
 `Balances` tab. The page has four steps:
 
 #. **Still open** -- lines still in the queue, open encumbrances, and whether each account has a June 30 Workday
@@ -91,7 +91,7 @@ After June 30, once June's lines are imported and filed, close the year. Click `
    - An **overspent SGA budget** has to be covered from LNL's own money. This is ticked by default.
    - **Funding request money SGA still owes** carries into next year. If SGA has refused to pay some of it, write that
      much off to LNL's own money.
-   - An **unspent SGA budget** needs nothing here: SGA takes it back with a Workday line of its own, and filing that line
+   - An **unspent SGA budget** needs nothing here: SGA takes it back with a Workday line of its own, and settling that line
      to the budget fund brings it to zero.
 
 #. **Close** -- add any notes and click `Close FY26`.

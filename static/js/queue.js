@@ -255,7 +255,7 @@
                 // A partial allocation leaves work behind, so the row stays and
                 // says how much is still loose.
                 $submit.prop('disabled', false).removeClass('fin-busy');
-                rowMessage($row, data.message + ' ' + data.unallocated + ' still unallocated.',
+                rowMessage($row, data.message + ' ' + data.unallocated + ' left to settle.',
                            'success');
                 $form[0].reset();
             }

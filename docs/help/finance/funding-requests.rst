@@ -52,7 +52,7 @@ As soon as SGA approves a request:
 Spending Against a Request
 --------------------------
 
-When filing a purchase paid for by a funding request, set the **Fund** to `SGA Funding Request` and choose the
+When settling a purchase paid for by a funding request, set the **Fund** to `SGA Funding Request` and choose the
 **Funding request line**. The list is grouped by request: each request is a heading with its year and number, and its
 lines are indented under it with how much is left on each, the same way the project list nests a project's parts::
 
@@ -79,7 +79,7 @@ When SGA Pays LNL Back
 
 SGA's reimbursement arrives as a journal entry with nobody's name on it and the request number in the memo, such as
 ``F.26.86 Film Posters and Concessions``. The queue recognises it and fills in the source (`SGA Funding Request
-Reimbursement`), the fund (`SGA Funding Request`) and the request it repays (`Reimburses request`). Check them and file
+Reimbursement`), the fund (`SGA Funding Request`) and the request it repays (`Reimburses request`). Check them and settle
 the line.
 
 SGA often pays in the next fiscal year, and often after a request is closed. Both are fine.

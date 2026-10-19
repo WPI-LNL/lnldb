@@ -63,10 +63,10 @@
                             {% if txn.defaults_to_projection %}Projection{% else %}Event
                             Production{% endif %} spending.
                             {% if txn.crossing_requires_reason %}
-                                Filing one the other way is allowed but has to be explained,
+                                Counting one on the other side is allowed but has to be explained,
                                 because SGA funds this account for Projection directly.
                             {% else %}
-                                Filing one the other way is normal when SGA reimburses this
+                                Counting one on the other side is normal when SGA reimburses this
                                 account for the other side’s spending.
                             {% endif %}
                         </div>
@@ -94,7 +94,7 @@
             {% else %}
             <div class="fin-split-summary">
                 <span>
-                    <span class="fin-stat-label">Unallocated remainder</span>
+                    <span class="fin-stat-label">Left to settle</span>
                     <div class="fin-remainder {% if is_balanced %}is-balanced{% else %}is-unbalanced{% endif %}"
                          id="fin-remainder" data-target="{{ txn.net_amount }}">
                         {{ unallocated|money }}
@@ -102,7 +102,7 @@
                 </span>
                 <span class="text-right">
                     <div class="fin-muted">
-                        {{ txn.allocated_amount|money }} of {{ txn.net_amount|money }} allocated
+                        {{ txn.allocated_amount|money }} of {{ txn.net_amount|money }} in entries
                     </div>
                     {% if is_balanced and can_settle and not txn.is_reconciled %}
                         <form method="post" action="{% url 'finance:settle' txn.pk %}" style="display:inline;">
@@ -115,7 +115,7 @@
                         <div class="fin-muted">Pending entries keep this line in the queue until it is settled.</div>
                     {% elif txn.is_reconciled %}
                         <span class="label label-success" style="margin-top:6px;display:inline-block;">
-                            Reconciled &amp; settled
+                            Settled
                         </span>
                     {% endif %}
                 </span>
@@ -124,7 +124,7 @@
             {# ---- Existing allocations ---- #}
             {% if slices %}
                 <div class="fin-panel">
-                    <div class="fin-panel-head">Current Allocations ({{ slices|length }})</div>
+                    <div class="fin-panel-head">Entries ({{ slices|length }})</div>
                     <div class="fin-table-wrap">
                         <table class="table fin-table">
                             <thead>
@@ -189,15 +189,15 @@
                     {% if can_edit %}
                         <div class="fin-panel-body fin-panel-actions">
                             <form method="post" action="{% url 'finance:unreconcile' txn.pk %}"
-                                  onsubmit="return confirm('Remove all {{ slices|length }} allocation{{ slices|length|pluralize }} and put this line back in the queue? The Workday record itself is not touched.');">
+                                  onsubmit="return confirm('Remove all {{ slices|length }} entr{{ slices|length|pluralize:'y,ies' }} and put this line back in the queue? The Workday record itself is not touched.');">
                                 {% csrf_token %}
                                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
                                 <button type="submit" class="btn btn-default btn-sm">
                                     <span class="glyphicon glyphicon-repeat"></span>
-                                    Undo reconciliation
+                                    Undo settling
                                 </button>
                                 <span class="fin-muted">
-                                    Returns this line to the queue with everything unallocated.
+                                    Returns this line to the queue with no entries.
                                 </span>
                             </form>
                         </div>
@@ -330,7 +330,7 @@
                             {% if bill_offer %}
                                 <input type="hidden" name="bill_offered" value="{{ bill_offer.bill.pk }}">
                                 <div class="checkbox fin-mark-paid" style="margin:10px 0 0;">
-                                    <label title="The payments filed against its events, this one included, add up to the bill of {{ bill_offer.owed|money }}. Untick to leave it unpaid.">
+                                    <label title="The payments received for its events, this one included, add up to the bill of {{ bill_offer.owed|money }}. Untick to leave it unpaid.">
                                         <input type="checkbox" name="mark_bill_paid" value="{{ bill_offer.bill.pk }}" checked>
                                         Mark {{ bill_offer.bill.display_name }} paid on {{ bill_offer.paid_on|date:"M j, Y" }}
                                     </label>
@@ -342,7 +342,7 @@
                                     <span class="glyphicon glyphicon-plus"></span> Add a slice
                                 </button>
                                 <span class="fin-muted" id="fin-split-hint">
-                                    Allocations must total exactly {{ txn.net_amount|abs_value|money }}.
+                                    The entries must add up to exactly {{ txn.net_amount|abs_value|money }}.
                                 </span>
                                 {# Disabled until the remainder is exactly $0.00 #}
                                 <button type="submit" class="btn btn-primary btn-sm" id="fin-split-save"

@@ -118,7 +118,7 @@ def transaction_detail(request, pk):
         if formset.is_valid():
             with reversion.create_revision():
                 reversion.set_user(request.user)
-                reversion.set_comment("Split purchase across %s allocations"
+                reversion.set_comment("Split purchase across %s entries"
                                       % len([f for f in formset.forms
                                              if f.cleaned_data and not f.cleaned_data.get('DELETE')]))
                 entries = formset.save(commit=False)
@@ -140,12 +140,12 @@ def transaction_detail(request, pk):
                 # has the ones it had before this save.
                 txn.refresh_from_db()
                 txn.settle()
-                messages.success(request, "Split saved and settled — the allocation balances "
-                                          "to $0.00, so the line has left the queue.")
+                messages.success(request, "Split saved and settled — the entries add up to the "
+                                          "line, so it has left the queue.")
             else:
-                messages.success(request, "Split saved — the allocation balances to $0.00. It "
+                messages.success(request, "Split saved — the entries add up to the line. It "
                                           "stays in the queue as Pending until someone who can "
-                                          "settle marks it settled.")
+                                          "settle it clicks Mark settled.")
             paid = _mark_paid_on_split(request, txn)
             if paid:
                 messages.info(request, paid)
@@ -223,12 +223,12 @@ def _mark_paid_on_split(request, txn):
         return ''
     shows = [event.pk for event in bill.events.all()]
     if not txn.slices.filter(linked_event_id__in=shows).exists():
-        return ("%s was not marked paid, because none of this line was filed against its events."
+        return ("%s was not marked paid, because none of this line was linked to its events."
                 % bill.display_name)
     paid_on = mark_paid_from_payments(bill)
     if paid_on is None:
         received, _ = bill_payments(bill)
-        return ("%s was not marked paid: $%s of its $%s has been filed."
+        return ("%s was not marked paid: $%s of its $%s has been received."
                 % (bill.display_name, money(received), money(bill.amount)))
     return "Marked %s paid on %s." % (bill.display_name, date_format(paid_on, 'M j, Y'))
 
@@ -269,7 +269,7 @@ def _multibill_to_split(request, txn):
     if not raw or not raw.isdigit() or txn.net_amount <= 0:
         return None
     if txn.slices.exists():
-        messages.warning(request, "This line already has allocations. Undo them first to "
+        messages.warning(request, "This line already has entries. Undo them first to "
                                   "split it across a multi-bill.")
         return None
     return MultiBilling.objects.filter(pk=raw).prefetch_related('events').first()
@@ -373,14 +373,14 @@ def entry_delete(request, pk):
     if request.method == 'POST':
         with reversion.create_revision():
             reversion.set_user(request.user)
-            reversion.set_comment("Allocation slice removed")
+            reversion.set_comment("Entry removed")
             entry.delete()
-        messages.success(request, "Allocation removed. The Workday line itself is untouched.")
+        messages.success(request, "Entry removed. The Workday line itself is untouched.")
         return HttpResponseRedirect(
             parent.get_absolute_url() if parent else reverse('finance:ledger'))
 
     context = {
-        'h2': "Remove allocation?",
+        'h2': "Remove entry?",
         'entry': entry,
         'txn': parent,
     }

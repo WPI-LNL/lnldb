@@ -115,13 +115,13 @@ class CloseTests(CacheResetMixin, FinanceViewTestCase):
         gala = self.paid('Spring Gala')
         response = self.close('e%s' % gala.pk)
         self.assertContains(response, 'Not closed, because money is still owed. Spring Gala: none of the $500.00 '
-                                      'billed has been filed from Workday. File the payment from the queue')
+                                      'billed has been received. Settle the payment in the queue')
         self.assertFalse(BaseEvent.objects.get(pk=gala.pk).closed)
 
     def test_part_filed_is_refused_with_what_is_missing(self):
         gala = self.paid('Spring Gala', received='200.00')
         response = self.close('e%s' % gala.pk)
-        self.assertContains(response, 'Spring Gala: $300.00 of the $500.00 billed has not been filed from Workday')
+        self.assertContains(response, 'Spring Gala: $300.00 of the $500.00 billed has not been received')
         self.assertFalse(BaseEvent.objects.get(pk=gala.pk).closed)
 
     def test_overpaid_is_closed(self):
@@ -188,7 +188,7 @@ class CloseTests(CacheResetMixin, FinanceViewTestCase):
         self.assertContains(response, 'name="close" value="e%s"' % gala.pk)
         self.assertContains(response, 'name="only" value="e%s"' % gala.pk)
         self.assertNotContains(response, 'value="e%s"' % ball.pk)
-        self.assertContains(response, '$300.00 not filed')
+        self.assertContains(response, '$300.00 not received')
         self.assertContains(response, 'Close the ticked events')
         # Paid, so not offered Mark paid again, though what was filed covers it.
         self.assertNotContains(response, 'Mark paid…')
@@ -251,7 +251,7 @@ class DigestTests(CacheResetMixin, TestCase):
         bill(show('Unpaid'), emailed_days_ago=3)
         found = billing.digest()
         self.assertEqual([item.name for item in found['to_close']], ['Spring Gala', 'Rehearsal'])
-        self.assertEqual(found['to_close'][0].close_refusal, 'none of the $100.00 billed has been filed from Workday')
+        self.assertEqual(found['to_close'][0].close_refusal, 'none of the $100.00 billed has been received')
         self.assertIsNone(found['to_close'][1].close_refusal)
 
     def test_test_events_are_left_out(self):

@@ -977,7 +977,7 @@ class BaseAllocationForm(forms.ModelForm):
         other = "Event Production" if match['is_projection'] else "Projection"
         if match.get('crossing_requires_reason'):
             field.help_text = (
-                "Paid out of %s, so it starts as %s spending. Filing it as %s is allowed "
+                "Paid out of %s, so it starts as %s spending. Counting it as %s is allowed "
                 "but has to be explained in the audit note." % (match['code'], side, other))
         else:
             field.help_text = (
@@ -1286,7 +1286,7 @@ class ReconcileForm(BaseAllocationForm):
         remaining = parent.unallocated_amount
         if not remaining:
             raise ValidationError(
-                "%s is already filed to the cent, so there is nothing left to file. "
+                "%s already has entries for its whole amount, so there is nothing left to settle. "
                 "Open the line to change how it is split." % parent.reference)
         self.instance.amount = remaining
         self.instance.effective_date = parent.accounting_date
@@ -1548,17 +1548,17 @@ class BaseSplitFormSet(BaseInlineFormSet):
             live_forms += 1
 
         if live_forms == 0:
-            raise ValidationError("A transaction needs at least one allocation slice.")
+            raise ValidationError("A line needs at least one entry.")
 
         if total != parent.net_amount:
             # Unsigned, as the amounts are typed.
             remainder = abs(parent.net_amount) - abs(total)
             raise ValidationError(
-                "Allocations total $%s but the bank line is $%s — %s. "
-                "The split must balance to exactly $0.00 before it can be saved."
+                "The entries add up to $%s but the line is $%s — %s. "
+                "They must add up to the line exactly before it can be saved."
                 % (abs(total), abs(parent.net_amount),
-                   "$%s is still unallocated" % remainder if remainder > 0
-                   else "$%s too much is allocated" % -remainder))
+                   "$%s is left to settle" % remainder if remainder > 0
+                   else "$%s too much is entered" % -remainder))
         # No check that every slice runs the line's way: SplitLineForm gives
         # each one the line's sign and direction, so half an expense cannot be
         # turned into revenue by splitting it.
@@ -1913,7 +1913,7 @@ class FRLineItemForm(forms.ModelForm):
             spent = self.instance.spent
             if awarded is not None and awarded < spent:
                 self.add_error('amount_awarded',
-                               "$%s is already allocated against this line; the award cannot be "
+                               "$%s is already spent against this line; the award cannot be "
                                "lowered below that." % spent)
         return cleaned
 

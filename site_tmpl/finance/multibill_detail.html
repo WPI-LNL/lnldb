@@ -98,7 +98,7 @@
                     <div class="fin-stat-value" style="font-size:16px;">{{ bill.date_billed|date:"M j, Y" }}</div>
                 </div>
                 <div class="fin-stat">
-                    <div class="fin-stat-label">Payments filed</div>
+                    <div class="fin-stat-label">Payments received</div>
                     <div class="fin-stat-value" style="font-size:16px;">{{ received|money }}</div>
                     {% if last_payment %}<div class="fin-stat-sub">last on {{ last_payment|date:"M j, Y" }}</div>{% endif %}
                 </div>

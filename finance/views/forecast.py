@@ -303,7 +303,7 @@ def history_line(request, pk):
     """
     txn = get_object_or_404(WorkdayTransaction, pk=pk)
     if not txn.is_history:
-        raise Http404("That line is in the books: file it in the queue.")
+        raise Http404("That line is in the books: settle it in the queue.")
     override = HistoryOverride.objects.filter(line=txn).first()
     can_edit = request.user.has_perm('finance.edit_subledger')
     form = HistoryOverrideForm(request.POST or None, instance=override)

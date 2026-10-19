@@ -43,7 +43,7 @@
                 {% if year.books_start %}
                     The books start on {{ year.books_start|date:"M j, Y" }}.
                     {% if year.latest_line_date %}The newest imported line is from {{ year.latest_line_date|date:"M j, Y" }}, so nothing later is counted yet.{% endif %}
-                    Balances count every filed line, whichever Projection or Event Production side it was for.
+                    Balances count every settled line, whichever Projection or Event Production side it was for.
                 {% else %}
                     Nothing has been imported yet. The books start with the fiscal year of the first Workday line.
                 {% endif %}
@@ -71,7 +71,7 @@
                         <li>{{ code }} {{ what }}: {{ then|money }} when closed, {{ now|money }} now</li>
                     {% endfor %}
                 </ul>
-                Usually a line imported or re-filed after the close. If the new figures are
+                Usually a line imported or settled again after the close. If the new figures are
                 right, reopen the year and close it again to record them.
             {% else %}
                 Nothing has changed since.
@@ -168,14 +168,14 @@
                         {% if account.unfiled_opening or account.unfiled_closing %}
                             <tr>
                                 <td>
-                                    <a href="{% url 'finance:queue' %}?fy={{ year.fiscal_year }}">Not filed yet</a>
-                                    <div class="fin-muted">lines in the queue, in no fund until they are filed</div>
+                                    <a href="{% url 'finance:queue' %}?fy={{ year.fiscal_year }}">Not settled yet</a>
+                                    <div class="fin-muted">lines in the queue, in no fund until they are settled</div>
                                 </td>
                                 <td class="fin-num">{{ account.unfiled_opening|money }}</td>
                                 <td></td><td></td><td></td>
                                 <td class="fin-num"><strong>{{ account.unfiled_closing|money }}</strong></td>
                                 <td></td>
-                                <td>File these and the money moves into its funds</td>
+                                <td>Settle these and the money moves into its funds</td>
                             </tr>
                         {% endif %}
                     </tbody>

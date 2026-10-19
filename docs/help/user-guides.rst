@@ -60,7 +60,7 @@ Finance (Treasurer)
     :maxdepth: 1
 
     finance/overview
-    finance/import-and-file
+    finance/import-and-settle
     finance/encumbrances
     finance/funding-requests
     finance/events

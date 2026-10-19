@@ -6,7 +6,7 @@
     <div class="row">
         <div class="col-md-6">
             <div class="fin-panel">
-                <div class="fin-panel-head">Remove this allocation?</div>
+                <div class="fin-panel-head">Remove this entry?</div>
                 <div class="fin-panel-body">
                     <dl class="fin-kv">
                         <dt>Amount</dt>
@@ -21,8 +21,8 @@
                     {% if txn %}
                         <div class="alert alert-info">
                             The Workday record <code>{{ txn.reference }}</code> is
-                            immutable and will not be touched. Removing this slice returns
-                            {{ entry.amount|money }} to the unallocated remainder.
+                            immutable and will not be touched. Removing this entry puts
+                            {{ entry.amount|money }} back in what is left to settle.
                         </div>
                     {% endif %}
 
@@ -36,7 +36,7 @@
                         {% csrf_token %}
                         <a href="{% if txn %}{% url 'finance:txn-detail' txn.pk %}{% else %}{% url 'finance:ledger' %}{% endif %}"
                            class="btn btn-default">Cancel</a>
-                        <button type="submit" class="btn btn-danger">Remove allocation</button>
+                        <button type="submit" class="btn btn-danger">Remove entry</button>
                     </form>
                 </div>
             </div>

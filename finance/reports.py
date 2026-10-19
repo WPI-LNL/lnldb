@@ -555,7 +555,7 @@ def income_and_spending(period, is_projection=None, fund=None):
              tone='text-success' if net['current'] >= 0 else 'text-danger'),
     ]
 
-    notes = ["Money in is income filed in the ledger: event billing, split by who was "
+    notes = ["Money in is income in the ledger: event billing, split by who was "
              "billed, and each other source. Money out is spending that has reached "
              "Workday, net of refunds, by spend category. Encumbrances that have not "
              "been charged yet are not counted.",
@@ -565,14 +565,14 @@ def income_and_spending(period, is_projection=None, fund=None):
         notes.append("Money in is after %s SGA took back, which undoes a reimbursement "
                      "rather than being spending." % _dollars(taken_back))
     if fund is not None:
-        notes.append("Only money filed to %s." % fund.name)
+        notes.append("Only money in %s." % fund.name)
     if _partition_words(is_projection):
         notes.append(_partition_words(is_projection))
 
     warnings = []
     count, left = _unfiled(period, is_projection)
     if count:
-        warnings.append("%s Workday line%s from these dates %s still not fully filed (%s "
+        warnings.append("%s Workday line%s from these dates %s still not settled (%s "
                         "net), so %s not counted here yet."
                         % (count, '' if count == 1 else 's', 'is' if count == 1 else 'are',
                            _dollars(left), 'it is' if count == 1 else 'they are'))
@@ -653,11 +653,11 @@ def fund_balances(fiscal_year, today=None):
                 awaiting -= row.closing
         if account.unfiled_closing:
             warnings.append("%s of %s's lines (net) are still in the queue. Until they are "
-                            "filed, the funds they belong to are short or over by that much; "
+                            "settled, the funds they belong to are short or over by that much; "
                             "the account total is right." % (_dollars(account.unfiled_closing),
                                                              account.code))
         if account.unfiled_opening or account.unfiled_closing:
-            rows.append(Row({'fund': 'Not yet filed', 'opening': account.unfiled_opening,
+            rows.append(Row({'fund': 'Not settled yet', 'opening': account.unfiled_opening,
                              'closing': account.unfiled_closing,
                              'status': 'Lines still in the queue'}, tone='muted'))
         reserved = sum((row.encumbered for row in account.rows), ZERO)
@@ -712,7 +712,7 @@ def fund_balances(fiscal_year, today=None):
         warnings.append("%s is before the books start, so there is nothing to report."
                         % period.label)
     if year.books_start is not None:
-        notes.insert(0, "The books start on %s.%s Balances count every filed line, whichever "
+        notes.insert(0, "The books start on %s.%s Balances count every settled line, whichever "
                         "side of the partition it was for."
                      % (_day(year.books_start),
                         " The newest imported line is from %s." % _day(year.latest_line_date)
@@ -784,7 +784,7 @@ def event_report(period, is_projection=None, today=None):
         Column('costs', 'Costs', Column.MONEY, title="Linked costs that reached Workday, net "
                                                      "of refunds"),
         Column('sga', 'Paid by SGA', Column.MONEY,
-               title="The part of the costs filed to a funding request or the SGA budget"),
+               title="The part of the costs charged to a funding request or the SGA budget"),
         Column('margin', 'Margin', Column.MONEY, coloured=True,
                title="Received less the costs LNL paid itself"),
         Column('margin_percent', 'Margin %', Column.PERCENT),
@@ -856,7 +856,7 @@ def event_report(period, is_projection=None, today=None):
              "whenever it landed.",
              "Billed is the latest bill, since a re-issued bill replaces the one before. A "
              "multi-bill is shared between its events by what each would have cost alone.",
-             "A cost filed to a funding request or the SGA budget is paid by SGA. It is shown, "
+             "A cost charged to a funding request or the SGA budget is paid by SGA. It is shown, "
              "but not counted against the margin. From FY27 an SGA-funded show is charged "
              "only for its rentals and one-off charges."]
     if start is not None:
@@ -1588,7 +1588,7 @@ def budget_draft(today=None, ledger=None):
         "Spending is net of refunds. Spending SGA paid for through funding requests is "
         "included, because with a budget it is what the budget would pay for.",
         "A budget covers expected spending only; nothing here counts what LNL brings in.",
-        "Years before the books start are read from the Workday lines, not filed: see the "
+        "Years before the books start are read from the Workday lines, not settled: see the "
         "History page, where any line can be corrected.",
     ]
     return Report('budget-draft', "Draft budget request for %s" % _short(target),

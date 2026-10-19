@@ -52,10 +52,10 @@
         if (balanced) {
             $hint.text('Balanced — ready to save.').removeClass('text-danger').addClass('text-success');
         } else if (total === 0) {
-            $hint.text('Enter at least one allocation.').removeClass('text-success text-danger');
+            $hint.text('Enter at least one entry.').removeClass('text-success text-danger');
         } else {
             $hint.text(money(Math.abs(remainder)) +
-                       (remainder < 0 ? ' over-allocated.' : ' still unallocated.'))
+                       (remainder < 0 ? ' more than the line.' : ' left to settle.'))
                  .removeClass('text-success').addClass('text-danger');
         }
     }

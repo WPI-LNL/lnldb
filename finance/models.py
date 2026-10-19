@@ -289,7 +289,7 @@ class FinanceSettings(models.Model):
                   "worked out from here: whatever each account held the night before is its "
                   "opening, and every line on or after it counts. Leave blank to start at the "
                   "beginning of the fiscal year of the earliest imported line. Lines from "
-                  "before it are history: kept for the forecast, never filed.")
+                  "before it are history: kept for the forecast, never settled.")
     minimum_reserve = models.DecimalField(
         max_digits=12, decimal_places=2, default=Decimal('10000.00'),
         validators=[MinValueValidator(Decimal('0.00'))], verbose_name="Minimum reserve",
@@ -696,7 +696,7 @@ class SpendCategory(Vocabulary):
     description = models.TextField(blank=True)
     is_event_passthrough = models.BooleanField(
         default=False, verbose_name="Use for costs billed to an event",
-        help_text="The category to file an expense under when it names the event it was "
+        help_text="The category an expense gets when it names the event it was "
                   "incurred for -- a sub-rental hired for one show, passed straight "
                   "through. Filled in automatically so the Treasurer does not have to "
                   "pick a category that says nothing the linked event does not.")
@@ -734,7 +734,7 @@ class FundSource(Vocabulary):
         help_text="The fund an expense is filled in with when neither the memo nor the "
                   "Fund worktag identifies one. This is a stated default, not a reading of "
                   "the export, and the queue labels it as such -- but leaving the one "
-                  "required box on every row blank is what made reconciling a typing job. "
+                  "required box on every row blank is what made settling a typing job. "
                   "Tick it on exactly one fund.")
     behaviour = models.CharField(
         max_length=16, choices=FundBehaviour.choices, default=FundBehaviour.CARRIES,
@@ -748,7 +748,7 @@ class FundSource(Vocabulary):
         related_name='funds', verbose_name="Held in",
         help_text="The Workday account this money sits in. The carry-forward fund held in an "
                   "account is that account's own money: a line nothing else identifies is "
-                  "filed to it, and it absorbs the account's opening balance.")
+                  "settled to it, and it absorbs the account's opening balance.")
     workday_tracking_values = models.CharField(
         max_length=255, blank=True, verbose_name="Workday Tracking values",
         help_text="Comma-separated values of the Tracking worktag that mean this fund, e.g. "
@@ -888,7 +888,7 @@ class RevenueSource(Vocabulary):
         FundSource, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='revenue_sources', verbose_name="Goes into",
         help_text="The fund this kind of income always adds to. Picking the source fills it in, "
-                  "and filing the money anywhere else is refused. When the fund draws on "
+                  "and putting the money anywhere else is refused. When the fund draws on "
                   "funding requests, the income has to name the request it reimburses. Leave "
                   "blank for income that is simply the account's own money.")
 
@@ -966,7 +966,7 @@ class PartitionCode(models.Model):
                   "otherwise. Unchecked: Event Production unless told otherwise. This is "
                   "the starting position, not a rule -- see the field below.")
     crossing_requires_reason = models.BooleanField(
-        default=False, verbose_name="Filing it the other way needs an explanation",
+        default=False, verbose_name="Counting it on the other side needs an explanation",
         help_text="Off: moving money off this side is allowed and merely shows a warning, "
                   "which is right for the main account -- a Projection purchase paid out of "
                   "it and reimbursed by SGA is normal. On: it is still allowed, but the "
@@ -1159,7 +1159,7 @@ class SuggestionRule(models.Model):
     match_mode = models.CharField(
         max_length=12, choices=MODE_CHOICES, default=EXACT, verbose_name="Match how",
         help_text="Exact and starts-with count as lookups: what they find is filled into "
-                  "the reconciliation form, because the export itself said it. Contains "
+                  "the queue's form, because the export itself said it. Contains "
                   "counts as a guess and is only ever offered as a chip to click.")
     pattern = models.CharField(
         max_length=128,
@@ -1554,7 +1554,7 @@ class FundingRequest(models.Model):
                 "the fiscal year, then the request's number.")})
         if self.fiscal_year and int(match.group(2)) != int(self.fiscal_year) % 100:
             raise ValidationError({'reference': (
-                "%s is an FY%s number, but this request is filed under FY%s. Fix whichever "
+                "%s is an FY%s number, but this request is for FY%s. Fix whichever "
                 "one is wrong." % (self.reference, match.group(2),
                                    str(self.fiscal_year)[-2:]))})
 
@@ -1881,7 +1881,7 @@ class WorkdayTransactionQuerySet(models.QuerySet):
         """ Refuse: a bulk update would bypass every guard on the model. """
         raise ValidationError(
             "WorkdayTransaction rows are immutable. Correct the record in Workday and "
-            "re-import, or adjust the allocation slices instead.")
+            "re-import, or adjust its entries instead.")
 
     def hard_delete(self):
         """
@@ -2053,7 +2053,7 @@ class WorkdayTransaction(models.Model):
         if self.pk is not None and not kwargs.pop('_allow_update', False):
             raise ValidationError(
                 "WorkdayTransaction rows are immutable. Correct the record in Workday and "
-                "re-import, or adjust the allocation slices instead.")
+                "re-import, or adjust its entries instead.")
         if not self.row_fingerprint:
             self.assign_identity()
         return super(WorkdayTransaction, self).save(*args, **kwargs)
@@ -2061,8 +2061,8 @@ class WorkdayTransaction(models.Model):
     def delete(self, *args, **kwargs):
         """ Refuse. Delete the slices instead, or use the queryset escape hatch. """
         raise ValidationError(
-            "WorkdayTransaction rows are immutable and cannot be deleted. Delete the "
-            "allocation slices if you need to re-do the reconciliation.")
+            "WorkdayTransaction rows are immutable and cannot be deleted. Delete its "
+            "entries if you need to settle it again.")
 
     # -- convenience --------------------------------------------------------
     @property
@@ -2296,10 +2296,10 @@ class WorkdayTransaction(models.Model):
     def settle(self):
         """ Mark every slice settled. Refuses unless the split balances exactly. """
         if not self.slices.exists():
-            raise ValidationError("Cannot settle a transaction with no allocation slices.")
+            raise ValidationError("Cannot settle a line with no entries.")
         if not self.is_fully_allocated:
             raise ValidationError(
-                "Cannot settle: allocations total %s but the bank line is %s (%s unallocated)."
+                "Cannot settle: the entries add up to %s but the line is %s (%s left to settle)."
                 % (self.allocated_amount, self.net_amount, self.unallocated_amount))
         self.slices.update(status=TransactionStatus.SETTLED)
 
@@ -2467,7 +2467,7 @@ class ParsedTransaction(models.Model):
         permissions = (
             ('view_subledger', 'View the financial subledger'),
             ('edit_subledger', 'Create and edit subledger entries'),
-            ('settle_subledger', 'Reconcile and settle transactions'),
+            ('settle_subledger', 'Settle Workday lines'),
             ('view_subledger_receipts', 'View uploaded receipts'),
         )
         constraints = [
@@ -2744,7 +2744,7 @@ class ParsedTransaction(models.Model):
         if parent is not None and parent.is_history:
             raise ValidationError(
                 "This line is from %s, before the books start on %s. It is kept as history "
-                "for the forecast and is not filed." % (
+                "for the forecast and is never settled." % (
                     date_format(parent.accounting_date, 'M j, Y'),
                     date_format(books_start_date(), 'M j, Y')))
 
@@ -2810,7 +2810,7 @@ class ParsedTransaction(models.Model):
             if fund is not None and fund.requires_funding_request and payment_for is None:
                 errors['funding_request'] = (
                     "Money coming into %s has to name the request SGA is reimbursing. A "
-                    "supplier's credit is not a reimbursement: file it as a refund of the "
+                    "supplier's credit is not a reimbursement: record it as a refund of the "
                     "purchase instead." % fund)
         else:
             line = self.fr_line_target
@@ -2853,7 +2853,7 @@ class ParsedTransaction(models.Model):
         if parent is not None and self.crosses_partition and parent.crossing_requires_reason:
             if not (self.audit_explanation or '').strip():
                 errors['audit_explanation'] = (
-                    "This is %s money being filed as %s spending. That is allowed, but say "
+                    "This is %s money being counted as %s spending. That is allowed, but say "
                     "why here -- %s is funded by SGA for Projection, so money leaving that "
                     "side has to be explained." % (
                         parent.partition_code_label,
@@ -2872,8 +2872,8 @@ class ParsedTransaction(models.Model):
                 allocated = siblings + money(self.amount)
                 if allocated != money(parent.net_amount):
                     errors['status'] = (
-                        "Allocations total %s but the bank line is %s. Settle only once the "
-                        "unallocated remainder is exactly $0.00."
+                        "The entries add up to %s but the line is %s. Settle only once they "
+                        "add up to the line exactly."
                         % (allocated, money(parent.net_amount)))
 
         if errors:
@@ -2978,7 +2978,7 @@ class ParsedTransaction(models.Model):
         """ One sentence for the badge, or ``''`` when nothing crossed. """
         if not self.crosses_partition:
             return ''
-        return ("Paid out of %s but filed as %s spending."
+        return ("Paid out of %s but counted as %s spending."
                 % (self.parent_transaction.partition_code_label,
                    "Projection" if self.is_projection else "Event Production"))
 
@@ -3275,7 +3275,7 @@ class PlannedPurchase(models.Model):
 
 #: Why a bill was marked paid without a payment from Workday that covers it.
 #: Both kinds of bill carry it, and the *Mark paid* form asks for it then.
-PAID_NOTE_HELP = ("How it was paid, when no payment filed from Workday covers it: cash, a check, or a bill "
+PAID_NOTE_HELP = ("How it was paid, when no payment received in Workday covers it: cash, a check, or a bill "
                   "from before the books start.")
 
 #: Workday's number for an Internal Service Delivery: digits, then "-ISD", as

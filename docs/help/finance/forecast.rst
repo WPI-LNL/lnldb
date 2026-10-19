@@ -19,7 +19,7 @@ The tab has four pages: `Forecast`, `Can we afford it?`, `Planned purchases` and
 What the Forecast Is About
 --------------------------
 
-The figure that matters is **LNL's own money**: the Legacy fund, plus anything not filed yet. Funding request money is
+The figure that matters is **LNL's own money**: the Legacy fund, plus anything not settled yet. Funding request money is
 SGA's -- spending it only means waiting for SGA to pay it back -- so it moves the account's cash but never decides
 whether LNL can afford something.
 
@@ -112,8 +112,8 @@ imported side by side: client billing, SGA funding, spending by category, other 
 with.
 
 **Importing past years.** Import older Workday exports through the queue exactly like a monthly one (see
-:doc:`import-and-file`). Every line dated before the books start becomes **history**: it never enters the queue or any
-balance, and you never file it. Instead, the app reads each line -- billing, SGA funding, spending in a category, or
+:doc:`import-and-settle`). Every line dated before the books start becomes **history**: it never enters the queue or any
+balance, and you never settle it. Instead, the app reads each line -- billing, SGA funding, spending in a category, or
 other money -- using the same rules that fill in the queue. A line no rule covers is shown as *not worked out*.
 
 **Checking the import.** The bottom row shows the cash each year ended with, worked back from the Workday balance you

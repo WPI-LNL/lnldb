@@ -84,8 +84,8 @@
                                 {% if row.fund.returns_to_sga and row.closing > 0 %}
                                     <p class="fin-muted" style="font-size:13px;">
                                         {{ row.name }} has {{ row.closing|money }} unspent, which goes back to SGA.
-                                        No transfer is needed: when SGA's Workday line taking it back arrives, file
-                                        it to {{ row.name }} and the balance comes to zero.
+                                        No transfer is needed: when SGA's Workday line taking it back arrives, settle
+                                        it with the fund set to {{ row.name }} and the balance comes to zero.
                                     </p>
                                 {% endif %}
                             {% endfor %}
@@ -128,7 +128,7 @@
                                 {% endfor %}
                                 {% if account.unfiled_closing %}
                                     <tr>
-                                        <td>Not filed yet</td>
+                                        <td>Not settled yet</td>
                                         <td class="fin-num">{{ account.unfiled_closing|money }}</td>
                                     </tr>
                                 {% endif %}

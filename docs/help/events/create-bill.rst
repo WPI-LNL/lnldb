@@ -75,11 +75,11 @@ see below.
 Mark a Bill as Paid
 ^^^^^^^^^^^^^^^^^^^
 
-Most bills are marked paid in the finance queue, as the payment from Workday that covers them is filed. See
+Most bills are marked paid in the finance queue, as the payment from Workday that covers them is settled. See
 :doc:`/help/finance/billing`.
 
 Otherwise, under the `Billing` tab, locate the bill and click `Mark Paid...`. The button also appears on event lists
 such as the `All Events` page (`Events` > `All Events`). It opens a form asking the day the bill was paid. If no
-payment filed from Workday covers the bill, it also asks how it was paid, such as a check or cash.
+payment received in Workday covers the bill, it also asks how it was paid, such as a check or cash.
 
 `Last Modified: October 16, 2026`

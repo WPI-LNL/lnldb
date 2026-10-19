@@ -6,7 +6,7 @@ The `Events` tab answers the question that comes up after every big show: *did w
 sets what was billed and received against what the show cost LNL -- above all the gear hired in for it -- and flags the
 ones that lost money or haven't been paid.
 
-It only knows what you tell it. A cost counts against a show once it is filed against that show, so the job is mostly
+It only knows what you tell it. A cost counts against a show once it is linked to that show, so the job is mostly
 making sure hired gear and payments are linked to the right event.
 
 .. caution::
@@ -20,7 +20,7 @@ making sure hired gear and payments are linked to the right event.
 Link a Cost to Its Show
 -----------------------
 
-When you file a line for gear hired in for one show -- a console, a video wall, a projector -- open `More` on the queue
+When you settle a line for gear hired in for one show -- a console, a video wall, a projector -- open `More` on the queue
 row and choose the show under **Incurred for event**. If you leave the spend category blank, it becomes
 `Event - Sub-Rental` by itself.
 
@@ -28,7 +28,7 @@ Often it is done for you. If the memo names the show exactly -- in brackets, lik
 or as the whole memo -- the event is filled in. A term code such as ``D25`` tells it which year's show. If the memo only
 resembles one show's name, that show is offered as a chip to click instead.
 
-A row filed as `Event - Sub-Rental` without an event is tagged `Which event?`, because without the event the cost
+A row with the category `Event - Sub-Rental` but no event is tagged `Which event?`, because without the event the cost
 can't count against the show.
 
 **Book it early.** A rental is usually booked well before the invoice arrives, and that's when you know which show it is
@@ -36,7 +36,7 @@ for. Log it as a purchase in advance with `Incurred for event` filled in, and th
 charge when you match it. See :doc:`encumbrances`.
 
 **One invoice, two shows.** Split the line, with one row per show, each with its own event. See
-:doc:`import-and-file`.
+:doc:`import-and-settle`.
 
 
 Link a Payment to Its Show
@@ -55,17 +55,17 @@ The Events Tab
 
 Choose a fiscal year in the filter bar. The tab lists every event that **ran** in that year and has anything linked to
 it, worst result first, with a summary of the whole year above. Tick `Include billed events with nothing linked yet` and
-click `Apply` to also see shows that were billed but have nothing filed against them.
+click `Apply` to also see shows that were billed but have nothing linked to them.
 
 ==========================  ===========================================================================================
 Column                      What it shows
 ==========================  ===========================================================================================
 Billed                      The event's latest bill. A corrected bill replaces the earlier one rather than adding to
                             it. For a multi-bill, this show's share.
-Received                    Payments filed against the event, and where the bill stands: not billed, no bill needed
+Received                    Payments linked to the event, and where the bill stands: not billed, no bill needed
                             (you decided it is not billed), billed with nothing received, part received, received
                             in full, or received with no bill.
-Direct costs                Costs filed against the event. Costs paid from a funding request or the SGA budget are
+Direct costs                Costs linked to the event. Costs paid from a funding request or the SGA budget are
                             shown as *paid by SGA*. Purchases logged in advance are shown as *encumbered*.
 Margin                      What came in, less the costs **LNL paid itself**. Costs SGA pays for, and encumbrances,
                             are left out.
@@ -81,7 +81,7 @@ event counts towards it, whichever fiscal year the entry itself falls in.
 
 **SGA-funded shows.** From FY27, a show marked *Is SGA-funded* on its event is charged only for its rentals and one-off
 charges; any other show is charged in full, whoever the client is. So an SGA-funded show can have costs and a small bill,
-or none, without losing money: whatever it cost that was filed to a funding request shows as paid by SGA and doesn't
+or none, without losing money: whatever it cost that was charged to a funding request shows as paid by SGA and doesn't
 count against the margin. LNL's own money spent on it still counts as a loss.
 
 Flags
@@ -97,7 +97,7 @@ Billed, not yet received                 The client still owes on the bill.
 Received with no bill in lnldb           A payment is linked, but the events app has no bill for the show.
 Paid in full, bill not marked paid       The payment covers the bill, but the bill is still unpaid. Click
                                          `Mark paid...`.
-Marked paid, no payment filed            The events app says the bill was paid, but no payment is linked. It is
+Marked paid, no payment received         The events app says the bill was paid, but no payment is linked. It is
                                          probably still in the queue.
 =======================================  ==============================================================================
 
@@ -105,11 +105,11 @@ Marked paid, no payment filed            The events app says the bill was paid, 
 Mark a Bill Paid
 ----------------
 
-When the payment filed against an event covers its bill, the row offers `Mark paid...`. It opens the bill's *Mark paid*
+When the payment linked to an event covers its bill, the row offers `Mark paid...`. It opens the bill's *Mark paid*
 form with the day the payment reached Workday filled in; nothing changes until you submit it. A multi-bill is covered
 once the payments for every show on it add up to it.
 
-Most bills never need this: the queue offers to mark a bill paid as you file the payment that covers it. See
+Most bills never need this: the queue offers to mark a bill paid as you settle the payment that covers it. See
 :doc:`billing`.
 
 The same button is on the event's own page, on the `Billing` tab.

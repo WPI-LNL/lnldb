@@ -187,21 +187,21 @@ class QueueMarkPaidTests(CacheResetMixin, FinanceViewTestCase):
                                   bill_offered=str(self.bill.pk))
         self.bill.refresh_from_db()
         self.assertIsNone(self.bill.date_paid)
-        self.assertIn('filed against another event', response.json()['message'])
+        self.assertIn('linked to another event', response.json()['message'])
 
     def test_a_payment_that_falls_short_is_not_marked(self):
         line = payment('26090179-ISD', '400.00', days_ago(2))
         response = self.reconcile(line, mark_bill_paid=str(self.bill.pk))
         self.bill.refresh_from_db()
         self.assertIsNone(self.bill.date_paid)
-        self.assertIn('$400.00 of its $500.00 has been filed', response.json()['message'])
+        self.assertIn('$400.00 of its $500.00 has been received', response.json()['message'])
 
     def test_an_event_picked_by_hand_says_the_bill_is_covered(self):
         line = payment('26099999-ISD', '500.00', days_ago(2), memo='Payment')
         response = self.reconcile(line)
         self.bill.refresh_from_db()
         self.assertIsNone(self.bill.date_paid)
-        self.assertIn('now covers the bill for Spring Gala', response.json()['message'])
+        self.assertIn('now cover the bill for Spring Gala', response.json()['message'])
 
     def test_someone_who_cannot_bill_sees_the_match_but_no_box(self):
         self.user.user_permissions.remove(Permission.objects.get(codename='bill_event'))
@@ -293,7 +293,7 @@ class MarkPaidFormTests(CacheResetMixin, FinanceViewTestCase):
         self.assertEqual(response.context['form'].initial['date_paid'], timezone.localdate())
         self.assertContains(response, 'say how it was paid')
         response = self.client.post(self.url(), {'date_paid': days_ago(4).isoformat()})
-        self.assertContains(response, 'Say how it was paid. No payment filed from Workday covers it.')
+        self.assertContains(response, 'Say how it was paid. No payment received in Workday covers it.')
         self.bill.refresh_from_db()
         self.assertIsNone(self.bill.date_paid)
 
@@ -364,7 +364,7 @@ class MarkPaidFormTests(CacheResetMixin, FinanceViewTestCase):
         films = [show('Film %s' % n, start=days_ago(40)) for n in (1, 2)]
         bills = multibill(films)
         url = reverse('finance:multibill-paid', args=[bills.pk])
-        self.assertContains(self.client.get(url), 'filed against\n                        these events')
+        self.assertContains(self.client.get(url), 'received for\n                        these events')
         response = self.client.post(url, {'date_paid': days_ago(1).isoformat()})
         self.assertContains(response, 'Say how it was paid')
         filed(films[0], '150.00', days_ago(3))
@@ -469,7 +469,7 @@ class SharedFiguresTests(CacheResetMixin, FinanceViewTestCase):
     def test_the_next_step_box_says_the_bill_is_covered(self):
         filed(self.gala, '500.00', days_ago(3))
         response = self.client.get(reverse('events:detail', args=[self.gala.pk]))
-        self.assertContains(response, 'The payments filed against it cover the bill, the last on')
+        self.assertContains(response, 'The payments received for it cover the bill, the last on')
 
     def test_a_bill_from_before_the_books_has_no_figures(self):
         old = show('Old Show', start=days_ago(800))

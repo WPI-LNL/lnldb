@@ -11,7 +11,7 @@
                 <div class="fin-panel-head">{{ h2 }}</div>
                 <div class="fin-panel-body">
                     <p>
-                        {{ received|money }} of the {{ owed|money }} billed has been filed against
+                        {{ received|money }} of the {{ owed|money }} billed has been received for
                         {% if is_multibill %}these events{% else %}this event{% endif %}.
                         {% if covered %}
                             That covers it, so the date below is the day the last of it reached Workday.

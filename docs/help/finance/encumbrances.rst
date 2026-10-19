@@ -25,7 +25,7 @@ Log a Purchase
    - **Amount to encumber** -- what you expect it to cost. Type it as a positive number.
    - **Date** -- roughly when the money will go out.
    - **Description** and **What is this for?** -- both required. Nobody else will know later.
-   - **Fund** and **Spend Category** -- as you would file the purchase. For a funding request, also choose the
+   - **Fund** and **Spend Category** -- as you would settle the purchase. For a funding request, also choose the
      **Funding request line**; pick the **Funding request** first to list only its lines. See :doc:`funding-requests`.
    - **Incurred for event** -- for gear hired in for a show. Booking a rental is exactly when you know which show it is
      for, so it is worth filling in here.
@@ -51,7 +51,7 @@ The line takes its fund, category, event and funding request line from the encum
 again -- and its date becomes the date the money actually went out.
 
 .. warning::
-    **Don't file the line the ordinary way** while its encumbrance is open. That records the purchase twice: once as
+    **Don't settle the line the ordinary way** while its encumbrance is open. That records the purchase twice: once as
     encumbered and once as spent, and the funding request looks short by the encumbered amount.
 
 **If the amounts differ:**
@@ -60,7 +60,7 @@ again -- and its date becomes the date the money actually went out.
   the next charge. A rental invoiced in parts works this way.
 - **The charge is a little larger:** the encumbrance stretches to cover it and closes.
 - **The charge is a lot larger:** the encumbrance covers only what it was for, and the rest of the line stays in the
-  queue for you to file separately.
+  queue for you to settle separately.
 
 
 One Encumbrance, Many Lines

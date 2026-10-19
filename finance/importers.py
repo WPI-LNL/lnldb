@@ -784,7 +784,7 @@ def import_workday_export(file_obj, user=None, filename='', dry_run=False):
             continue
         if net_amount == 0:
             result.add(RowResult(line_number, RowResult.ERROR,
-                                 "Net amount is $0.00 — nothing to reconcile."))
+                                 "Net amount is $0.00 — nothing to settle."))
             continue
 
         accounting_date = parse_date(row.get('accounting_date'))

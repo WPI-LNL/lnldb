@@ -11,7 +11,7 @@
             <div class="fin-banner-text">
                 <span class="glyphicon glyphicon-exclamation-sign"></span>
                 <strong>{{ unreconciled_count }}</strong>
-                transaction{{ unreconciled_count|pluralize }} awaiting reconciliation
+                line{{ unreconciled_count|pluralize }} waiting to be settled,
                 covering <strong>{{ unreconciled_total|money }}</strong> of activity.
                 {% if pending_encumbrances %}
                     <span class="fin-muted">
@@ -59,7 +59,7 @@
             </div>
         </div>
         <div class="fin-stat">
-            <div class="fin-stat-label">Unreconciled</div>
+            <div class="fin-stat-label">Not settled</div>
             <div class="fin-stat-value {% if unreconciled_count %}text-warning{% else %}text-muted{% endif %}">
                 {{ unreconciled_count }}
             </div>
@@ -358,9 +358,9 @@
                         {% endfor %}
                         {% if account.unfiled_closing %}
                             <tr>
-                                <td><a href="{% url 'finance:queue' %}">Not filed yet</a></td>
+                                <td><a href="{% url 'finance:queue' %}">Not settled yet</a></td>
                                 <td class="fin-num">{{ account.unfiled_closing|money }}</td>
-                                <td class="fin-muted">in no fund until it is filed</td>
+                                <td class="fin-muted">in no fund until it is settled</td>
                             </tr>
                         {% endif %}
                     {% endfor %}

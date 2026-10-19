@@ -1,14 +1,14 @@
-=========================================
-Import and File Workday Lines (Treasurer)
-=========================================
+===========================================
+Import and Settle Workday Lines (Treasurer)
+===========================================
 
 Once a month, bring Workday's latest lines into the finance app and say what each one was for. The app fills in most of
 each line for you; your job is mostly to read and confirm.
 
 .. caution::
-    **Permission Required:** Import Workday transactions, Edit subledger
+    **Permission Required:** Import Workday transactions, Edit subledger, Settle Workday lines
 
-    Importing needs permission to import Workday transactions, and filing lines needs permission to edit the subledger.
+    Importing needs permission to import Workday transactions, and settling lines needs permission to edit the subledger and settle Workday lines.
     Officers have both. If you do not see `Import an export` on the `Queue` tab, your role does not allow importing.
 
 -----
@@ -37,7 +37,7 @@ Import the File
 
 .. note::
     Lines dated before the books start (July 1, 2025) are counted separately as **history**. They never go into the
-    queue and are never filed -- they are there so the forecast can learn from past years. See :doc:`forecast`.
+    queue and are never settled -- they are there so the forecast can learn from past years. See :doc:`forecast`.
 
 If the import warns that **no spend category rule covers** a Workday category, every line with that category will need
 its category picked by hand until a rule is added. One rule fixes it for good; see :doc:`settings`.
@@ -46,7 +46,7 @@ its category picked by hand until a rule is added. One rule fixes it for good; s
 Work the Queue
 --------------
 
-The queue lists every line that hasn't been filed yet, newest first, twenty-five to a page. Each row shows the date, who
+The queue lists every line that hasn't been settled yet, newest first, twenty-five to a page. Each row shows the date, who
 was paid or who paid LNL, Workday's memo and the amount, followed by boxes to fill in.
 
 Filled-in boxes and suggestions
@@ -54,7 +54,7 @@ Filled-in boxes and suggestions
 
 **A box that is already filled in** has a small caption underneath saying where the answer came from: Workday's spend
 category, the ledger account, a funding request number in the memo, an event named in the memo, and so on. These come
-from what Workday or the memo actually says, so they are usually right -- but read them before you file the line.
+from what Workday or the memo actually says, so they are usually right -- but read them before you settle the line.
 
 **A coloured chip** under an empty box is a suggestion: the app's best guess. Click it to fill the box in, or ignore
 it. Guesses are never filled in for you.
@@ -87,17 +87,17 @@ Money coming in is one of three things:
 - **Payment for an event** -- choose the event under `Link to Event`. Department billing arrives as an Internal Service
   Delivery, and the event is usually filled in for you: from the bill its ISD number is recorded on, or else from the
   show the memo names. When the payment covers the event's bill, a ticked **Mark bill paid on** box marks the bill paid
-  as you file; untick it to leave the bill unpaid. See :doc:`billing`.
+  as you settle; untick it to leave the bill unpaid. See :doc:`billing`.
 - **Other income** -- choose what it was under `or Non-Event Revenue`: an SGA reimbursement, a gift, a sale. The fund
   it goes into (`Into fund`) follows from the choice. An SGA reimbursement also names the request it repays
   (`Reimburses request`).
 - **A refund** -- choose the purchase it refunds under `Refund of`. A refund needs nothing else: it takes everything from
   the purchase it reverses.
 
-File the line
-^^^^^^^^^^^^^
+Settle the line
+^^^^^^^^^^^^^^^
 
-Click the blue `Allocate` button on the row (it shows the amount being filed). The row leaves the queue, and an `Undo`
+Click the blue `Settle` button on the row (it shows the amount being settled). The row leaves the queue, and an `Undo`
 button stays in its place for a few seconds in case you clicked too soon.
 
 Tags on a row
@@ -109,8 +109,8 @@ Some rows carry a tag pointing out something to check first:
 Tag                          What to do
 ===========================  ===========================================================================================
 Maybe encumbered             You logged a purchase in advance that might be this line. Use `Already encumbered?` on the
-                             row instead of filing it the ordinary way; see :doc:`encumbrances`.
-Which event?                 The line is filed as gear hired in for a show, but doesn't say which show. Choose the
+                             row instead of settling it the ordinary way; see :doc:`encumbrances`.
+Which event?                 The line's category is gear hired in for a show, but it doesn't say which show. Choose the
                              event under `More`.
 Unknown request              The memo quotes an SGA funding request number that isn't in the app yet. Click
                              `Add F.26.195` (or whichever number) to enter it, pre-filled, then come back.
@@ -136,19 +136,19 @@ A part paid from `SGA Funding Request` names the request line it was spent again
 above it as on a queue row. Under them, `SGA took money back?` is only for a line where SGA took money back, which names
 the whole request instead of a line.
 
-If your role can file but not settle, the parts are saved as **Pending** and the line stays in the queue until someone
+If your role can write entries but not settle, the parts are saved as **Pending** and the line stays in the queue until someone
 who can settle opens it and clicks `Mark settled`.
 
 The same page splits one rental invoice between two shows: one row per show, each with its own `Incurred for event`.
 
 
-File Many Lines at Once
------------------------
+Settle Many Lines at Once
+-------------------------
 
 When a dozen lines all get the same answer -- a run of supply orders, all Consumables from Legacy -- tick the box on each
-row, choose the fund, category and (if you like) project in the bar at the bottom, and click `Reconcile selected`. Each
+row, choose the fund, category and (if you like) project in the bar at the bottom, and click `Settle selected`. Each
 line is checked on its own, and any the settings don't suit are listed and left in the queue. Only money going out can
-be filed this way.
+be settled this way.
 
 If the fund is `SGA Funding Request`, the bar also asks for the request and its line, as a queue row does. It lists every
 open request, so check the year on the request you pick from.
@@ -158,12 +158,12 @@ Fix a Mistake
 -------------
 
 - **Just now:** click `Undo` on the row before it disappears.
-- **Later:** find the entry in the `Ledger`, click through to its Workday line, and click `Undo reconciliation`. The
-  line goes back to the queue with nothing filed, and the Workday line itself is untouched.
+- **Later:** find the entry in the `Ledger`, click through to its Workday line, and click `Undo settling`. The
+  line goes back to the queue with no entries, and the Workday line itself is untouched.
 - **To change one detail** (a category, a project), open the entry from the `Ledger` and edit it.
 - **Many entries at once:** tick them in the `Ledger` and use the bar at the bottom.
 
-A purchase that has a refund filed against it can't be undone until the refund is undone, since the refund points at it.
+A purchase that has a refund recorded against it can't be undone until the refund is undone, since the refund points at it.
 
 
 Check Against Workday
@@ -172,4 +172,4 @@ Check Against Workday
 Once the queue is empty, open the `Balances` tab and record Workday's current balance for each account. If the app's
 figure disagrees, a line is missing or was imported twice. See :doc:`balances`.
 
-`Last Modified: October 16, 2026`
+`Last Modified: October 19, 2026`

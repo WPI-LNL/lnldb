@@ -521,7 +521,7 @@ def drift(close, year):
         before, after = then.get(code, {}), now.get(code, {})
         pairs = [('Opening cash', before.get('opening_cash'), after.get('opening_cash')),
                  ('Cash', before.get('cash'), after.get('cash')),
-                 ('Unfiled', before.get('unfiled'), after.get('unfiled'))]
+                 ('Unsettled', before.get('unfiled'), after.get('unfiled'))]
         for key, suffix in (('opening_funds', ' at the start'), ('funds', '')):
             old_funds, new_funds = before.get(key, {}), after.get(key, {})
             pairs += [(name + suffix, old_funds.get(name), new_funds.get(name))

@@ -54,12 +54,12 @@ How money moves through it
         v
     Bank lines (WorkdayTransaction) -- dated before the books start? --> History
         |  never edited after import                 read for the forecast,
-        |                                            never filed
+        |                                            never settled
         v
-    The queue: every line not yet filed in full     finance.views.ingest
+    The queue: every line not yet settled           finance.views.ingest
         |  boxes arrive filled in wherever the        finance.suggestions
         |  export states the answer; a person
-        |  checks them and presses Allocate
+        |  checks them and presses Settle
         v
     Entries (ParsedTransaction): how much, which fund, which spend category
     or event, which funding request, which project
@@ -88,7 +88,7 @@ once. The only figures anybody types are ones nothing else knows: what Workday
 said an account held on a day, an opening split, a transfer between funds, a
 purchase being planned.
 
-**Nothing is filed without a person.** The queue fills in every box the export
+**Nothing is settled without a person.** The queue fills in every box the export
 answers, and says which column each answer came from, but a person presses the
 button. A guess is only ever offered as a chip to click; see *Lookups and
 guesses*.
@@ -101,15 +101,15 @@ Word                      Means                                         In the c
 ========================  ============================================  ===============================
 Bank line, Workday line   One row of a Workday export: a date, an       ``WorkdayTransaction``
                           amount, a memo and the worktags
-Entry, slice, allocation  LNL's account of all or part of a bank line:  ``ParsedTransaction``
+Entry, slice              LNL's account of all or part of a bank line:  ``ParsedTransaction``
                           what the money paid for or came from. One
                           line can carry several
-Filing, allocating,       Writing entries against a line until they     ``views.ingest.reconcile``
-reconciling               add up to it exactly
-Settled                   A line's entries are complete. Officers       ``WorkdayTransaction.settle``
-                          settle in the same click as filing
+Settling                  Writing entries against a line until they     ``views.ingest.reconcile``,
+                          add up to it exactly, then marking them       ``WorkdayTransaction.settle``
+                          Settled, in one click. The UI never says
+                          filed, allocated or reconciled
 The queue                 Every line from the books start on that is    ``WorkdayTransactionQuerySet``
-                          not filed in full                             ``.unreconciled``
+                          not settled                                   ``.unreconciled``
 Encumbrance               Money set aside for a purchase Workday has    A ``ParsedTransaction`` with no
                           not shown yet, drawn down when it does        ``parent_transaction``
 Refund                    Money back for a purchase. It un-spends       ``refund_of``
@@ -137,7 +137,7 @@ Project tag               An optional grouping across categories, in a  ``Projec
                           tree
 Books start               The first day the ledger counts               ``books_start_date``
 History                   Lines from before the books start, imported   ``finance.history``,
-                          for the forecast and never filed              ``.before_books``
+                          for the forecast and never settled            ``.before_books``
 Workday balance           What Workday said an account held at the end  ``BalanceCheckpoint``
                           of a day
 Transfer                  Money moved between two funds in one          ``FundTransfer``
@@ -184,7 +184,7 @@ Tab          URL             What it is for                                   To
 Dashboard    (the root)      The year at a glance; see *Dashboard metrics*
 Ledger       ``ledger/``     Every entry: filtered, sorted, edited in bulk,   ``edit_subledger``
                              downloaded as CSV
-Queue        ``queue/``      Importing exports, filing each new line,         ``edit_subledger``;
+Queue        ``queue/``      Importing exports, settling each new line,       ``edit_subledger``;
                              logging a purchase before it happens             importing needs
                                                                               ``import_workdaytransaction``
 Events       ``events/``     What each show made or lost, and *Mark paid*     ``events.bill_event``, for
@@ -256,7 +256,7 @@ Where                                        What it holds
 :mod:`finance.reports`                       The reports, as data one template draws and one function
                                              writes as CSV
 :mod:`finance.activity`                      What LNL's work was worth, priced from the events app
-:mod:`finance.history`                       Every line, filed or not, reduced to what it was
+:mod:`finance.history`                       Every line, settled or not, reduced to what it was
 :mod:`finance.forecast`                      The forecast, the typical year and the back-test
 :mod:`finance.filters`                       The filter bar: fiscal year and partition
 ``finance/views/``                           One module per tab, plus ``detail`` for the line and entry
@@ -394,7 +394,7 @@ Three further rules depend on other rows or on a setting, so they live in
   ``clean()``, so they hold regardless of the code path;
 * a line from before the books start takes no entry at all
   (:attr:`~finance.models.WorkdayTransaction.is_history`). It is history, read for the forecast
-  and never filed -- see *History* -- and which lines are history depends on a
+  and never settled -- see *History* -- and which lines are history depends on a
   setting, which a database constraint cannot see.
 
 Cents, and only cents
@@ -425,7 +425,7 @@ questions, and for a while this module answered both with one field.
 Two organisation codes say which account a Workday line came out of:
 
 ==========  ==================  ==============================================
-Org code    Side by default     Filing it the other way
+Org code    Side by default     Counting it on the other side
 ==========  ==================  ==============================================
 ``315-AG``  Projection          Allowed, but the entry needs a written reason
 ``226-AG``  Event Production    Allowed, with a warning
@@ -490,7 +490,7 @@ as ``226-AGX``.
 The Event | Projection filter treats "Event Production" as *everything that is
 not* Projection, rather than ``226-AG`` only, so a line with a blank or
 unfamiliar org code appears in one view rather than neither. On a bank line the
-filter asks about the account, since nothing in the queue has been filed yet; on
+filter asks about the account, since nothing in the queue has been settled yet; on
 the ledger it asks about the entry, since by then somebody has decided.
 
 Getting Workday lines in
@@ -573,7 +573,7 @@ a file full of new transactions.
 
 That still leaves a genuine ambiguity, because two identical rows can be two
 real charges — the same Spotify subscription billed twice in a month. It is
-settled by counting rather than guessing:
+decided by counting rather than guessing:
 
     the ledger holds as many copies of a line as the fullest export has
     ever shown
@@ -611,7 +611,7 @@ Two-step import
 
 Choosing a file writes nothing. :func:`finance.views.ingest.upload` parses it
 with ``dry_run``, stages the bytes in the file store and renders a confirmation
-naming the count: *you are about to add 253 unreconciled lines*.
+naming the count: *you are about to add 253 lines to settle*.
 :func:`finance.views.ingest.upload_confirm` re-reads the same bytes and does the
 real insert.
 
@@ -643,8 +643,8 @@ import that brings history writes it down first -- where it stood before the
 file arrived, in the same transaction. Otherwise an export older than
 everything on file would move the books back to meet it.
 
-Filing lines in the queue
--------------------------
+Settling lines in the queue
+---------------------------
 
 The queue is where a bank line is given its meaning. These sections cover what
 is filled in for the Treasurer and why, how a row is laid out, and the guard
@@ -653,7 +653,7 @@ rails, bulk actions and undo around it.
 Lookups and guesses
 ~~~~~~~~~~~~~~~~~~~
 
-Reconciling should be confirming rather than typing, so the reconciliation form
+Settling should be confirming rather than typing, so the queue's form
 arrives with the boxes already answered. What may be answered, and what may only
 be offered, is decided by where the answer came from.
 
@@ -673,7 +673,7 @@ There used to be a scorer that ranked candidate events by how close they ran to
 the accounting date, whether the client worktag matched, and whether the billed
 total came out the same, then offered its best five under the box. Every one of
 those was a genuine guess, and five guesses is not a shortlist — it is a puzzle
-handed to somebody who was trying to file a deposit.
+handed to somebody who was trying to settle a deposit.
 
 What replaced it reads the memo. LNL bills event work through Internal Service
 Deliveries, and those memos are written to a house format that names the event
@@ -685,7 +685,7 @@ outright::
 
 That is not evidence *about* which event the money is for. It is the person who
 raised the invoice writing down which event the money is for, at the time, from
-the same lnldb the reconciliation form is reading. Matching it is a lookup in
+the same lnldb the queue's form is reading. Matching it is a lookup in
 exactly the sense a funding request number quoted in an expense memo is, so it
 fills the box in and captions it.
 
@@ -865,7 +865,7 @@ Two smaller things follow the same logic. Every widget gets ``form-control`` fro
 ``<select>``, crispy adds the class itself and django-ajax-selects does its own
 thing, so one row could look like three different form libraries depending on
 the page. And the import drop zone is collapsed behind a button: importing
-happens once a month, reconciling is what the page is for, and the drop zone was
+happens once a month, settling is what the page is for, and the drop zone was
 the first thing between the Treasurer and the work.
 
 An answered box never also nags. A field the export filled in gets a quiet
@@ -989,8 +989,8 @@ routing (a database constraint would otherwise turn the whole action into a
 every row individually before writing — anything the rest of the app would have
 rejected is reported and left untouched.
 
-Reconciling in bulk
-~~~~~~~~~~~~~~~~~~~
+Settling in bulk
+~~~~~~~~~~~~~~~~
 
 The per-row form is the right tool when the rows differ. When they do not — a
 dozen supply orders on one export, every one of them Consumables out of
@@ -998,8 +998,8 @@ Legacy — it asks the same two questions a dozen times and gets the
 same two answers a dozen times. :func:`finance.views.ingest.bulk_reconcile` is
 the ledger's bulk bar pointed at the queue: select rows, answer once, apply.
 
-Each selected line gets one slice for whatever is still unallocated on it,
-which is what the single-row form does, so a part-allocated line is finished
+Each selected line gets one slice for whatever is still left to settle on it,
+which is what the single-row form does, so a part-settled line is finished
 off rather than double-counted. Every row is then validated on its own and the
 failures are named — a bulk action must never be the thing that writes a row
 the rest of the app would have rejected.
@@ -1010,7 +1010,7 @@ Three kinds of row are reported and left alone rather than forced:
   event", which is a different question with a different picker and is seldom
   true of a batch. The database refuses expense routing on revenue anyway, so
   including them would take the whole action down;
-* **lines already fully allocated**, which have nothing left to slice;
+* **lines with nothing left to settle**, which have nothing left to slice;
 * **anything the chosen settings would invalidate**, named individually.
 
 Every fund is offered, funding-request money included. Choosing a fund that
@@ -1026,26 +1026,26 @@ entry it touched would be left invalid.
 The checkbox appears on expense rows only. A revenue row has nothing to offer
 this bar, and an empty slot keeps the amounts in their column.
 
-Undoing a reconciliation
-~~~~~~~~~~~~~~~~~~~~~~~~
+Undoing settling
+~~~~~~~~~~~~~~~~
 
-The moment you notice a line was filed wrong is the moment right after you
-filed it. Until :func:`finance.views.ingest.unreconcile` existed, the way back
+The moment you notice a line was settled wrong is the moment right after you
+settled it. Until :func:`finance.views.ingest.unreconcile` existed, the way back
 was to leave the queue, find the line in the ledger, open each slice and delete
 it through a confirmation page -- five navigations to take back one click, which
 in practice meant the wrong answer stayed.
 
-Undo deletes every slice of one bank line, settled or not; settling happens in
-the same click as reconciling whenever the line balances, so an undo that
-refused to touch settled slices could never undo anything. The Workday row
-itself is untouched -- it is immutable bank truth, and only what LNL decided
+Undo deletes every slice of one bank line, settled or not; slices are marked
+Settled in the same click that writes them whenever the line balances, so an
+undo that refused to touch settled slices could never undo anything. The Workday
+row itself is untouched -- it is immutable bank truth, and only what LNL decided
 *about* it is being withdrawn.
 
-One case is refused rather than forced: a slice with a refund filed against it
+One case is refused rather than forced: a slice with a refund recorded against it
 is load-bearing, since the refund exists to reverse *that* purchase, and the
 database will not orphan it. The queue says so instead of returning a 500.
 
-In the queue the undo is offered in the row that was just allocated, for twelve
+In the queue the undo is offered in the row that was just settled, for twelve
 seconds, before the row is removed. The row stays in the DOM for exactly that
 reason -- undoing has to put the Treasurer's own answers back in front of them,
 and the only copy of those answers is the form still sitting in that row. The
@@ -1137,7 +1137,7 @@ that finishes it off takes the row itself. That is what lets ten Workday lines
 map to one encumbrance without the encumbrance's identity churning underneath
 the Treasurer: it is the same row in the picker on the tenth match as on the
 first, reading down towards zero. ``created_by`` on each drawn slice is the
-person allocating, while the encumbrance keeps whoever wrote it — two different
+person settling, while the encumbrance keeps whoever wrote it — two different
 facts, and the ledger has room for both.
 
 Ten lines at once
@@ -1145,32 +1145,32 @@ Ten lines at once
 
 Matching ten lines one at a time works, but it is the same repetition the bulk
 bar exists to remove, with a running balance to keep in your head between
-clicks. So the queue's bulk bar carries a second action beside *Reconcile
+clicks. So the queue's bulk bar carries a second action beside *Settle
 selected*: tick the rows, pick the encumbrance, and *Draw selected* runs the
 drawdown across all of them —
 :func:`finance.views.ingest.bulk_match_encumbrance`.
 
 Oldest line first, because that is the order the money actually left and it
 makes the result reproducible: the same selection and the same encumbrance
-always produce the same allocation, whichever order the rows were ticked in. It
+always produce the same entries, whichever order the rows were ticked in. It
 stops when the encumbrance runs out rather than stretching it, and reports all
 three outcomes by name — what was covered, what was covered only partly, and
 which lines it never reached. A batch that half-worked and said only
-"reconciled 9 lines" is how the other half gets found a month later.
+"settled 9 lines" is how the other half gets found a month later.
 
-It takes no routing fields of its own, unlike the ordinary bulk reconcile: the
+It takes no routing fields of its own, unlike the ordinary bulk settle: the
 answer to *where does this money go* is written on the encumbrance already, and
 asking again here would let a bulk action contradict the thing it is drawing
 from.
 
-Reconciling the line the ordinary way instead is the failure this exists to
+Settling the line the ordinary way instead is the failure this exists to
 prevent: it writes a *second* entry, so the funding request line is charged the
 estimate **and** the actual, and the only symptom is a balance quietly a couple
 of hundred dollars short. Hence the *Maybe encumbered* tag on any row with a
 encumbrance of roughly the right size open against it.
 
 Nothing here is auto-applied and nothing is pre-selected. Matching the wrong
-row files a purchase against the wrong budget line *and* marks a live
+row charges a purchase to the wrong budget line *and* marks a live
 commitment spent, and neither is visible once done, so
 :func:`finance.suggestions.suggest_encumbrance_matches` returns a ranked
 shortlist and stops there. It ranks on the amount first — the one signal a crew
@@ -1180,7 +1180,7 @@ to offer: revenue lines, entries already on a bank line, and encumbrances dated
 absurdly far from the charge.
 
 The queue's *Undo* is deliberately not offered after a match. Undo deletes a
-row's allocations, which is the right way back out of an allocation typed a
+row's entries, which is the right way back out of an entry typed a
 second ago and the wrong way back out of an encumbrance logged weeks ago — it
 would take the description, the reason and the encumbrance with it, none of
 which came from the bank line. Correcting a wrong match is an edit on the
@@ -1246,7 +1246,7 @@ the charge. A show from another term is left blank rather than filled in.
 Event names are matched with and without their term code, since lnldb has both
 ``Goat Talent C26`` and ``Pan Asian Festival``.
 
-A line filed to the pass-through category with no event filled in is tagged
+A line in the pass-through category with no event filled in is tagged
 *Which event?* in the queue and its **More** fold opens, because the event is
 the one thing that makes the cost count against the show.
 
@@ -1273,7 +1273,7 @@ the events that cost more than they brought in all read
 rather than arithmetic:
 
 **The year is the year the event ran.** All of an event's entries count, in
-whatever fiscal year each one landed. A late-June show is billed in July; filing
+whatever fiscal year each one landed. A late-June show is billed in July; counting
 its revenue and its rental in different years would report half a show twice.
 The ledger's ``?event=`` filter sets the year aside for the same reason, and
 says so.
@@ -1287,7 +1287,7 @@ rounding so the shares add up to the bill.
 **An encumbrance is set aside, not spent.** It is shown beside the cost and left
 out of the margin, which would otherwise report a loss that may never happen.
 
-**A cost SGA pays for is not LNL's.** A cost filed to a funding request or the
+**A cost SGA pays for is not LNL's.** A cost charged to a funding request or the
 SGA budget is still a cost of the event, and is shown as one, but SGA pays for
 it -- after the spending or before. The margin is what came in less what LNL
 paid itself, so such a cost never makes an event a loss. That matters from
@@ -1410,11 +1410,11 @@ enough to work out what the account held when the books started. Each later
 Workday balance is a check, and a difference means lines are missing from the
 ledger or a figure was copied wrong.
 
-**A fund's balance** is everything filed to it since the books started:
+**A fund's balance** is everything settled to it since the books started:
 money in, less money out (net of refunds, which un-spend rather than earn),
 plus or minus transfers. The account's own money also holds the opening cash.
 
-**Unfiled** lines are a row of their own. With that row, the funds always add up
+**Unsettled** lines are a row of their own. With that row, the funds always add up
 to the cash, so a half-finished queue makes the split vague rather than wrong.
 
 **Transfers** (:class:`~finance.models.FundTransfer`) move money between two
@@ -1448,7 +1448,7 @@ ended. It has four parts:
    funding-request balance still awaiting SGA carries into next year, but
    any part SGA has refused can be written off to the account's own money.
    Both are year-end transfers dated June 30. An unspent budget needs no
-   transfer: SGA takes it back with a Workday line of its own, and filing that
+   transfer: SGA takes it back with a Workday line of its own, and settling that
    line to the budget fund brings it to zero.
 4. **The record** (:class:`~finance.models.FiscalYearClose`): every account's
    cash and fund balances as closed, with notes.
@@ -1465,13 +1465,13 @@ Workday said.
    almost every entry would be "226-AG cash", and new treasurers would have to
    learn debits and credits to record nothing new. What the subledger adds is
    what Workday cannot see: how each account's money divides between funds.
-   One-row transfers, Workday balances as the trial balance, and the unfiled
+   One-row transfers, Workday balances as the trial balance, and the unsettled
    row do that without a chart of accounts.
 
 Where income comes from, and what LNL is owed
 ---------------------------------------------
 
-Money coming in is one of four things, and each is filed differently: a
+Money coming in is one of four things, and each is settled differently: a
 purchase credited back (a refund), event billing (linked to the event), SGA
 paying LNL, or some other income. The third is where a balance goes wrong most
 easily, because SGA pays three kinds of money into three different funds.
@@ -1481,7 +1481,7 @@ The source decides the fund
 
 A :class:`~finance.models.RevenueSource` can name the fund its money goes into
 (``credits_fund``, *Goes into* in the admin). Picking the source then fills the
-fund in, on the queue, the split page and the entry page, and filing the money
+fund in, on the queue, the split page and the entry page, and putting the money
 anywhere else is refused by name: "SGA Funding Request Reimbursement goes into
 SGA Funding Request, not Legacy." A source that names no fund is the account's
 own money like any other income.
@@ -1510,7 +1510,7 @@ funding request*). There are two cases:
   requests has to name the request it repays. Without that, it is money in the
   fund that no request can be credited with.
 * **Money SGA takes back**, going out. The FY26 export opens with one: "SGA FR
-  F.25.33 was doubled paid to 226-AG", -$15,000. It is filed on the expense
+  F.25.33 was doubled paid to 226-AG", -$15,000. It is settled on the expense
   side, because money left the account, but it is not LNL spending anything.
   So it names the request instead of a line, and needs no spend category.
 
@@ -1553,7 +1553,7 @@ for that earlier spending would make SGA look overpaid. It can be negative:
 before the books started, SGA had paid F.25.33 twice, so it held -$15,000, and
 taking the money back brings it to zero.
 
-Payments are taken to settle the oldest spending first, so what is still owed
+Payments are taken to cover the oldest spending first, so what is still owed
 ages from the oldest charge SGA has not yet paid for
 (:meth:`~finance.models.FundingRequest.unreimbursed_since`).
 
@@ -1576,13 +1576,13 @@ with how many days it has been since the bill went out
 (:func:`~finance.calculators.days_owed`, which the Billing page uses too). Two
 flags check lnldb's own *paid* date against the ledger:
 
-* **Paid in full, bill not marked paid.** The payment filed against the event
+* **Paid in full, bill not marked paid.** The payment linked to the event
   covers the bill, and the bill is still unpaid. The event P&L and the event's
   Billing tab offer *Mark paid*, the bill's form (see *Billing stages*), with
   the day the last of the payment reached Workday filled in. It needs the
   events app's ``bill_event``. A multi-bill is covered once the payments for
   every show on it add up to it.
-* **Marked paid, no payment filed.** lnldb says the bill was paid, and nothing
+* **Marked paid, no payment received.** lnldb says the bill was paid, and nothing
   is linked to the event. The payment is probably still in the queue. Shows
   that ran before the books start are not flagged, because their payments were
   never imported.
@@ -1676,7 +1676,7 @@ a tie. Events with no client on file do not count as disagreeing.
 * **The rental check** credits each event with its share of the bill's
   rentals, fee included, split the way the bill is split.
 * **The paid date.** *Mark paid*, the same form as a single bill's, offers the
-  day the last payment reached Workday when the payments filed against the
+  day the last payment reached Workday when the payments linked to the
   bill's events cover it, and today otherwise, when it also asks how the bill
   was paid. :func:`~finance.calculators.bill_payments` is the sum the split
   page's *Mark paid* box checks too.
@@ -1786,8 +1786,8 @@ below zero, and the ISD form refuses a creation date after today.
 **Marking a bill paid** is always the Treasurer's, and there are two ways (the
 *Payments* section of :mod:`finance.billing`):
 
-* **As the payment is filed.** When a queue row fills in an event -- by the ISD
-  number or the memo -- and filing the line would cover that event's own bill,
+* **As the payment is settled.** When a queue row fills in an event -- by the ISD
+  number or the memo -- and settling the line would cover that event's own bill,
   the row carries a ticked *Mark bill paid on* box, dated the day the last of
   the money arrived (:func:`~finance.billing.payment_offer`). Filing with it
   ticked marks the bill paid on that day
@@ -1799,7 +1799,7 @@ below zero, and the ISD form refuses a creation date after today.
   are offered only to whoever holds ``events.bill_event``.
 * **The *Mark paid* form** (:class:`~finance.billing_forms.BillPaidForm`), for
   either kind of bill, is the only other way. Its date starts as the day the
-  last payment arrived when the payments filed cover the bill, and as today
+  last payment arrived when the payments received cover the bill, and as today
   when they don't. Then it also requires how the bill was paid
   (``paid_note``, which single bills gained in migration
   ``0007_bill_paid_note``), so a bill marked paid with nothing in the ledger
@@ -1836,11 +1836,11 @@ has left both stages since the page was drawn is left alone. The event page's
 own *Close* is the events app's, and unchanged.
 
 **Money still owed refuses it** (:func:`~finance.billing.close_refusal`). A
-row is refused when the payments filed against its bill come to less than the
+row is refused when the payments received for its bill come to less than the
 bill, even if it is marked paid: the figures are
 :func:`~finance.billing.attach_payments` with ``paid=True``, the same as the
 Owed to LNL report's, and closing such an event would leave that report the
-only place the debt still showed. The *Paid* tab tags the row *$... not filed*
+only place the debt still showed. The *Paid* tab tags the row *$... not received*
 and offers it no *Close*. A bill for events from before the books start has no
 figures, and is closed as marked. The way to close an event paid some other
 way that will never reach Workday is its own page.
@@ -1920,7 +1920,7 @@ client and is excluded rather than silently bucketed as "Unknown".
 Money SGA took back is netted off the reimbursement source, with a note saying
 how much, because it undoes income rather than being spending.
 
-**Event billing, kept** sets every cost filed to the pass-through category
+**Event billing, kept** sets every cost in the pass-through category
 against event billing. A $26,000 video wall billed to a client goes straight
 back out to the rental house, and counting it as income makes LNL look like a
 much bigger business than it is. Pass-through costs with no event linked still
@@ -2107,7 +2107,7 @@ History
 A forecast needs years to learn from, and the books start in FY26. Older Workday
 exports import through the queue's ordinary upload, and every line dated before
 the books start is **history**: kept for the forecast, outside every balance,
-and never filed. :meth:`~finance.models.WorkdayTransactionQuerySet.in_ledger`
+and never settled. :meth:`~finance.models.WorkdayTransactionQuerySet.in_ledger`
 is what the queue, the dashboard, the year-end checklist and the reports read,
 so history is never work for anybody; a history line cannot take a slice, and
 its own page shows how it is read instead of the split form.
@@ -2121,7 +2121,7 @@ from a Workday balance through every line imported, it gives the cash each past
 year ended on, which the History page shows -- a year that never adds up to the
 next balance Workday reported has lines missing.
 
-A history line is **read** rather than filed (:mod:`finance.history`):
+A history line is **read** rather than settled (:mod:`finance.history`):
 
 1. **SGA funding**: anything on the SGA account (74600), or shaped like SGA's
    own journal entries, paying in or taking back.
@@ -2139,8 +2139,8 @@ A reading is an estimate and is labelled as one. The Treasurer can correct any
 line -- what it was, its category, or leaving a one-off out of the forecast --
 with a :class:`~finance.models.HistoryOverride`, and the forecast follows at
 once. A line in the books that is still in the queue is read the same way until
-it is filed. The History page also lists the Workday categories no lookup reads,
-since one rule in the admin settles each of them here and in the queue.
+it is settled. The History page also lists the Workday categories no lookup reads,
+since one rule in the admin fixes each of them here and in the queue.
 
 A typical year
 ~~~~~~~~~~~~~~
@@ -2221,7 +2221,7 @@ category's year, so the rest of that year shrinks by it.
 The forecast starts the day after the last Workday line imported, not today:
 until the export catches up, the days in between are the typical year's. The
 figure that matters is **LNL's own money** -- the account's own fund (Legacy)
-and anything not filed yet. A funding request's money is SGA's, so running it
+and anything not settled yet. A funding request's money is SGA's, so running it
 down moves the account's cash, which the chart and the table show too, but never
 the verdict. Projection's account is forecast the same way once a Workday
 balance is entered for it.
@@ -2295,7 +2295,7 @@ Table                Holds
                      the code is read from
 ``SuggestionRule``   "Spend Category is exactly *Printing* → Printing",
                      "ledger account starts 74100 → Repairs" — what fills the
-                     reconciliation form in. Exact and starts-with matches are
+                     queue's form in. Exact and starts-with matches are
                      treated as lookups and answer the box; *contains* is
                      treated as a guess and is only offered
 ``FinanceSettings``  One row: the month the fiscal year starts, the Workday
@@ -2321,7 +2321,7 @@ changing a *slug* is the breaking edit, and the admin says so on the field.
 
 Retiring is not deleting. Clearing ``is_active`` removes a row from new
 dropdowns while existing records keep it; deletion is blocked by ``PROTECT``
-and the admin hides the button entirely once money is filed against the row, so
+and the admin hides the button entirely once money is recorded against the row, so
 a category can never take transactions with it.
 
 Some tables carry a default in code so a fresh install works before anyone
@@ -2350,7 +2350,7 @@ What stays in code, and why:
     rows; what SGA does with money at June 30 is one of three things, and the
     balance page and the year-end close branch on which.
 ``HistoryKind``, and the SGA and billing ledger accounts in :mod:`finance.history`
-    What a line nobody filed can be. Each kind is projected its own way, and
+    What a line nobody settled can be. Each kind is projected its own way, and
     the accounts are how an old line is recognised as one -- WPI's chart of
     accounts, which a forecast reading seven years of exports cannot do without.
 :data:`finance.models.FINGERPRINT_WORKTAGS`
@@ -2379,12 +2379,13 @@ Permissions
     because a receipt is a scan of somebody's purchase, which is a narrower
     thing to hand out than a ledger row.
 ``edit_subledger``
-    Create and edit allocation slices, run bulk actions, log encumbrances,
+    Create and edit entries, run bulk actions, log encumbrances,
     plan purchases and correct how a line of history is read. Marking a bill
-    paid as its payment is filed also needs the events app's ``bill_event``,
+    paid as its payment is settled also needs the events app's ``bill_event``,
     which Officers hold.
 ``settle_subledger``
-    Mark reconciled transactions as Settled.
+    Settle Workday lines: mark their entries Settled. Shown as *Settle
+    Workday lines*.
 ``import_workdaytransaction``
     Upload Workday journal exports.
 ``manage_projecttag`` / ``manage_fundingrequest``
