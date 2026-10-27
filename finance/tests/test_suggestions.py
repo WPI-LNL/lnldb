@@ -98,6 +98,12 @@ class MemoFormatTests(TestCase):
         self.assertEqual(fields.line_hint, 'consumables')
         self.assertEqual(fields.reference, 'A.27.16')
 
+    def test_the_house_format_with_sgas_question_mark(self):
+        fields = parse_memo('Gels, consumables, (?.27.5)')
+        self.assertEqual(fields.description, 'Gels')
+        self.assertEqual(fields.line_hint, 'consumables')
+        self.assertEqual(fields.reference, '?.27.5')
+
     def test_a_reference_written_inline_still_leaves_a_description(self):
         """ The other common shape: no line named, number in the sentence. """
         fields = parse_memo('Truman Show Film Rights (F.26.6)')

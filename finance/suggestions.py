@@ -121,11 +121,15 @@ class Suggestion(object):
 
 #: An SGA request number as it appears in a memo: F.26.6, A.26.115, F.25.33.
 #: The letter is the body that heard it -- A for Appropriations Committee, F for
-#: Financial Board, S for Senate, by the size of the ask -- then the fiscal
-#: year, then the number within that body's year. Only those three letters, so
-#: "Invoice B.4.12" is not read as a funding request. See
-#: :data:`finance.models.SGA_REFERENCE`.
-FR_REFERENCE = re.compile(r'\b([AFSafs])\.(\d{2})\.(\d+)\b')
+#: Financial Board, S for Senate, by the size of the ask, and the rare E for
+#: Exec -- then the fiscal year, then the number within that body's year. Only
+#: those letters, so "Invoice B.4.12" is not read as a funding request. A ``?``
+#: in place of the letter is SGA's own mistake, and still the number it quotes.
+#: See :data:`finance.models.SGA_REFERENCE`.
+#:
+#: The lookbehind does what ``\b`` would for a letter: ``\b`` cannot stand in
+#: front of a ``?``, which is not a word character.
+FR_REFERENCE = re.compile(r'(?<![\w?])([AEFSaefs?])\.(\d{2})\.(\d+)\b')
 
 
 def funding_request_references(text):
@@ -426,7 +430,9 @@ def near_miss_funding_request(reference, include_closed=False):
     A.27.81 beside F.27.81: a memo whose number lnldb lacks, while the same year
     and number exist under another letter, is far more often a typo on one side
     than a coincidence. So the request is offered as a chip, labelled as the
-    question it is, and only a person decides which side has the typo.
+    question it is, and only a person decides which side has the typo. A ``?``
+    number is the same question from the other side: SGA left the letter out,
+    and either side may since have put one in.
 
     ``None`` when the reference is not SGA's format, when nothing matches, or
     when two do -- two candidates is a question this cannot narrow down.

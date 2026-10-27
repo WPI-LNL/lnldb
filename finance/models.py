@@ -1469,13 +1469,21 @@ class FundingRequestQuerySet(models.QuerySet):
 #: year. So A.27.16 and F.27.16 are two different requests, not one request
 #: written two ways -- see :func:`finance.suggestions.near_miss_funding_request`
 #: for what the queue does when a memo's letter and lnldb's disagree.
-SGA_REFERENCE = re.compile(r'^([AFS])\.(\d{2})\.(\d+)$')
+#:
+#: SGA's numbering sometimes goes wrong and hands out ``?.27.16`` instead of a
+#: letter. That is still the request's number -- it is what SGA's own memos
+#: quote -- so it is accepted as written, and names no body.
+SGA_REFERENCE = re.compile(r'^([AEFS?])\.(\d{2})\.(\d+)$')
 
-#: Who each letter means, smallest awards first.
+#: Who each letter means: A, F and S by the size of the ask, smallest first --
+#: nearly every request is heard by one of those -- then the rare Exec. SGA's
+#: Cabinet and chair-exec hear requests too, almost never; their letters are
+#: not known, so they are not accepted until one is seen.
 SGA_BODIES = {
     'A': 'Appropriations Committee',
     'F': 'Financial Board',
     'S': 'Senate',
+    'E': 'Exec',
 }
 
 
@@ -1498,8 +1506,9 @@ class FundingRequest(models.Model):
     reference = models.CharField(
         max_length=64, blank=True, verbose_name="SGA reference #",
         help_text="As SGA numbers it: the body that approved it (A for Appropriations "
-                  "Committee, F for Financial Board, S for Senate), the fiscal year, and the "
-                  "request's number -- e.g. A.27.16.")
+                  "Committee, F for Financial Board, S for Senate, E for Exec), the fiscal "
+                  "year, and the request's number -- e.g. A.27.16. When SGA's number came "
+                  "with ? for the letter, enter it that way.")
     fiscal_year = models.PositiveIntegerField(default=current_fiscal_year, db_index=True)
     date_submitted = models.DateField(null=True, blank=True)
     date_approved = models.DateField(null=True, blank=True)
@@ -1550,8 +1559,9 @@ class FundingRequest(models.Model):
         match = SGA_REFERENCE.match(self.reference)
         if match is None:
             raise ValidationError({'reference': (
-                "SGA numbers requests like A.27.16: A, F or S for the body that approved it, "
-                "the fiscal year, then the request's number.")})
+                "SGA numbers requests like A.27.16: A, F, S or E for the body that "
+                "approved it (or ? when SGA's number had no letter), the fiscal year, then "
+                "the request's number.")})
         if self.fiscal_year and int(match.group(2)) != int(self.fiscal_year) % 100:
             raise ValidationError({'reference': (
                 "%s is an FY%s number, but this request is for FY%s. Fix whichever "
@@ -1560,7 +1570,11 @@ class FundingRequest(models.Model):
 
     @property
     def approving_body(self):
-        """ Which part of SGA heard this request, read off its number, or ``''``. """
+        """
+        Which part of SGA heard this request, read off its number, or ``''``.
+
+        ``''`` for a ``?`` number too: SGA's mistake left nothing to read.
+        """
         match = SGA_REFERENCE.match(normalise_sga_reference(self.reference))
         return SGA_BODIES.get(match.group(1), '') if match else ''
 

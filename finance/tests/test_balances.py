@@ -178,14 +178,28 @@ class RevenueFundRuleTests(TestCase):
 
 
 class SGAReferenceTests(TestCase):
-    """ A, F or S for the body; the fiscal year; the number within that body's year. """
+    """
+    A, F, S or E for the body, or SGA's mistaken ?; the fiscal year; the number
+    within that body's year.
+    """
 
     def _request(self, reference, fiscal_year=2027):
         return FundingRequest(name='Summer OpEx', reference=reference, fiscal_year=fiscal_year)
 
     def test_each_body_letter_is_accepted(self):
-        for reference in ('A.27.16', 'F.27.16', 'S.27.2'):
+        for reference in ('A.27.16', 'F.27.16', 'S.27.2', 'E.27.3'):
             self._request(reference).full_clean()
+
+    def test_a_question_mark_for_the_letter_is_accepted(self):
+        """ SGA sometimes numbers a request ?.27.5, and its memos quote it that way. """
+        request = self._request('?. 27. 5')
+        request.full_clean()
+        self.assertEqual(request.reference, '?.27.5')
+
+    def test_a_question_mark_still_has_to_carry_the_requests_year(self):
+        with self.assertRaises(ValidationError) as ctx:
+            self._request('?.26.5', fiscal_year=2027).full_clean()
+        self.assertIn('FY26', str(ctx.exception))
 
     def test_the_reference_is_tidied_up(self):
         request = self._request('f. 27. 16')
@@ -209,12 +223,22 @@ class SGAReferenceTests(TestCase):
         self.assertEqual(self._request('A.27.16').approving_body, 'Appropriations Committee')
         self.assertEqual(self._request('F.27.16').approving_body, 'Financial Board')
         self.assertEqual(self._request('S.27.2').approving_body, 'Senate')
+        self.assertEqual(self._request('E.27.3').approving_body, 'Exec')
+        self.assertEqual(self._request('?.27.5').approving_body, '')
         self.assertEqual(self._request('').approving_body, '')
 
-    def test_a_memo_is_only_read_for_those_three_letters(self):
+    def test_a_memo_is_only_read_for_those_letters(self):
         self.assertEqual(funding_request_references('Velcro, consumables, (a.27.16)'),
                          ['A.27.16'])
+        self.assertEqual(funding_request_references('Crew pizza, food, (e.27.3)'), ['E.27.3'])
         self.assertEqual(funding_request_references('Invoice B.25.12 for cable'), [])
+
+    def test_a_memo_is_read_for_a_question_mark(self):
+        self.assertEqual(funding_request_references('Gels, consumables, (?.27.5)'), ['?.27.5'])
+        self.assertEqual(funding_request_references('?.27.5 Spring Concert'), ['?.27.5'])
+
+    def test_a_question_mark_ending_a_word_is_not_a_reference(self):
+        self.assertEqual(funding_request_references('Paid?.27.5'), [])
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +303,28 @@ class NearMissReferenceTests(TestCase):
         self.assertIsNone(found['near_miss'])
         self.assertEqual(found['fr_line_target'].source, MEMO)
         self.assertEqual(found['warning'], '')
+
+    def test_a_question_mark_in_the_memo_is_a_near_miss(self):
+        """ SGA's ?.27.16 may be the F.27.16 lnldb holds -- a question, not a match. """
+        txn = line(datetime.date(2026, 7, 22), '-15.45', 'Velcro, consumables, (?.27.16)')
+        found = suggest_all(txn)
+        self.assertEqual(found['near_miss'], self.request)
+        self.assertEqual(found['fr_line_target'].source, GUESS)
+
+    def test_a_question_mark_in_lnldb_is_a_near_miss(self):
+        self.request.reference = '?.27.16'
+        self.request.save()
+        self.assertEqual(near_miss_funding_request('F.27.16'), self.request)
+
+    def test_a_question_mark_on_both_sides_is_an_exact_match(self):
+        self.request.reference = '?.27.16'
+        self.request.save()
+        txn = line(datetime.date(2026, 7, 22), '-15.45', 'Velcro, consumables, (?.27.16)')
+        found = suggest_all(txn)
+        self.assertIsNone(found['near_miss'])
+        self.assertEqual(found['fr_request'].value, self.request.pk)
+        self.assertEqual(found['fr_line_target'].value, self.consumables.pk)
+        self.assertEqual(found['fr_line_target'].source, MEMO)
 
 
 class FundSuggestionTests(TestCase):

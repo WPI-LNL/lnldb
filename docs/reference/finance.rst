@@ -1348,13 +1348,21 @@ SGA reference numbers
 SGA numbers every funding request as ``[letter].[year].[number]``. The letter
 is the body that approved it, by the size of the ask: **A** for the
 Appropriations Committee, **F** for the Financial Board, **S** for the Senate.
-The year is the last two digits of the fiscal year, so every FY2027 request has
-27 in the middle. The number counts up within each body's year, so A.27.16 and
-F.27.16 are two different requests. Budgets and mandatory transfers have no
-number: any SGA number in a memo means funding-request money.
+Nearly every request is heard by one of those three. Exec hears a few, numbered
+**E** (``SGA_BODIES``). SGA's Cabinet and chair-exec almost never hear one, and
+their letters are not known, so lnldb does not accept them; add the letter to
+``SGA_REFERENCE`` and ``SGA_BODIES`` once one is seen. The year is the last two digits of the fiscal year, so every
+FY2027 request has 27 in the middle. The number counts up within each body's
+year, so A.27.16 and F.27.16 are two different requests. Budgets and mandatory
+transfers have no number: any SGA number in a memo means funding-request money.
+
+SGA's numbering sometimes goes wrong and issues a number with **?** for the
+letter, such as ?.27.16. That is still the request's number, because SGA's own
+memos quote it, so it is accepted and read like any other. It names no body,
+so the request page shows no *approved by* for it.
 
 A funding request's reference is held to that format, and its year has to be
-the request's own. The queue only reads A, F and S out of a memo, so
+the request's own. The queue only reads A, F, S, E and ? out of a memo, so
 "Invoice B.25.12" is not taken for a request.
 
 **When the letters disagree.** LNL's FY27 memos quote A.27.16 while lnldb holds
@@ -1364,7 +1372,9 @@ lnldb but the same year and number exist under another letter, the row is
 tagged *A.27.16 or F.27.16?* and that request's line is offered as a chip, not
 filled in. The fund is still filled in, because the memo has said it is
 funding-request money whichever request it is. Only the Treasurer can say
-which side has the typo.
+which side has the typo. A ? number takes part the same way: a memo quoting
+?.27.16 while lnldb holds F.27.16, or the other way round, is tagged
+*?.27.16 or F.27.16?*, because SGA may since have given it a letter.
 
 Money coming in names a fund
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

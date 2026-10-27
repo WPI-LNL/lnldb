@@ -26,9 +26,10 @@ SGA funds clubs in three ways, and each goes into its own fund:
 - **The mandatory transfer** -- Projection's yearly allocation, paid straight into 315-AG.
 
 **Reference numbers.** SGA numbers each request like ``F.27.16``. The letter is the body that approved it -- **A** for
-the Appropriations Committee, **F** for the Financial Board, **S** for the Senate -- the middle number is the fiscal
-year (27 for FY27), and the last counts up within that body's year. ``A.27.16`` and ``F.27.16`` are two different
-requests.
+the Appropriations Committee, **F** for the Financial Board, **S** for the Senate, and rarely **E** for Exec -- the
+middle number is the fiscal year (27 for FY27), and the last counts up within that body's year. ``A.27.16`` and ``F.27.16`` are two different requests. Sometimes SGA's system makes a mistake and the number
+comes with a ``?`` instead of a letter, like ``?.27.16``. Enter it exactly that way: it is the number SGA's memos
+will quote.
 
 
 Enter a New Request
