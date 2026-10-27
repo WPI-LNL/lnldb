@@ -40,6 +40,8 @@ urlpatterns = [
     re_path(r'^queue/(?P<pk>\d+)/suggestions/$', views.suggestions_json, name="suggestions"),
     re_path(r'^encumbrance/new/$', views.encumbrance, name="encumbrance-new"),
     re_path(r'^encumbrance/(?P<pk>\d+)/$', views.encumbrance, name="encumbrance-edit"),
+    re_path(r'^encumbrance/(?P<pk>\d+)/delete/$', views.encumbrance_delete,
+            name="encumbrance-delete"),
 
     # Page 4 -- line item detail & splitting
     re_path(r'^transaction/(?P<pk>\d+)/$', views.transaction_detail, name="txn-detail"),

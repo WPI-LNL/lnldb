@@ -229,7 +229,7 @@
                             {% permission request.user has 'finance.edit_subledger' %}
                                 <li class="divider"></li>
                                 <li><a href="{% url "finance:queue" %}">Ingestion Queue</a></li>
-                                <li><a href="{% url "finance:encumbrance-new" %}">Log a Purchase</a></li>
+                                <li><a href="{% url "finance:encumbrance-new" %}">Add Encumbrance</a></li>
                             {% endpermission %}
                         </ul>
                     </li>

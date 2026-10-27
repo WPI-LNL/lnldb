@@ -110,8 +110,9 @@ Settling                  Writing entries against a line until they     ``views.
                           filed, allocated or reconciled
 The queue                 Every line from the books start on that is    ``WorkdayTransactionQuerySet``
                           not settled                                   ``.unreconciled``
-Encumbrance               Money set aside for a purchase Workday has    A ``ParsedTransaction`` with no
-                          not shown yet, drawn down when it does        ``parent_transaction``
+Encumbrance               Money set aside for a purchase Workday has    An ``Encumbrance``; each of its
+                          not shown yet, drawn down when it does. One   lines is a ``ParsedTransaction``
+                          or more lines, each on its own fund           with no ``parent_transaction``
 Refund                    Money back for a purchase. It un-spends       ``refund_of``
                           rather than earning
 Account, org code         226-AG or 315-AG, read from Workday's         ``PartitionCode``
@@ -205,8 +206,9 @@ Reports      ``reports/``    Eight reports to print or download
 
 Three more pages are reached from those: one bank line
 (``transaction/<pk>/``, with its split form and undo), one entry
-(``entry/<pk>/``, with its receipt and audit trail), and *Log a purchase*
-(``encumbrance/new/``). Outside the app, an event's *Billing* tab shows that
+(``entry/<pk>/``, with its receipt and audit trail), and *Add Encumbrance*
+(``encumbrance/new/``; an existing one is changed at ``encumbrance/<pk>/`` and
+deleted at ``encumbrance/<pk>/delete/``). Outside the app, an event's *Billing* tab shows that
 event's figures, and the Django admin's *Financial Subledger* section holds
 everything in *What is editable without a deploy*.
 
@@ -362,6 +364,15 @@ The one column whose entire job is telling rows apart was showing the two as
 identical. Only the label is new — an encumbrance still carries expense routing,
 still answers yes to ``is_expense``, and is still counted as spending
 everywhere it was before.
+
+An encumbrance can have several lines. One order paid partly out of Legacy and
+partly off a funding request is one ``Encumbrance`` row -- the description, the
+date and the quote -- with a line on each fund. The lines are the
+``ParsedTransaction`` rows described above, linked by ``encumbrance``, so every
+balance, burndown and forecast reads them exactly as it read a single-line
+encumbrance and never reads the ``Encumbrance`` row at all. A line keeps the
+link after it is matched, so the entry it became can say where it came from.
+A line with no description of its own takes the encumbrance's.
 
 Enforced accounting rules
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1065,8 +1076,9 @@ a spend category chosen wrong three weeks ago meant first producing a receipt
 for somebody else's purchase, or inventing a sentence about it. A line missing
 its paperwork is a line to chase, not a line to lock; the entry page says
 plainly when a receipt is absent, and the ledger has a Receipt column to sort
-by. The encumbrance form still asks what the money is for at the point of
-encumbering it, which is the one moment somebody actually knows.
+by. The encumbrance form asks for one description, of the whole purchase; it
+used to ask "What is this for?" as well, which nearly always got the
+description typed twice.
 
 Closing an encumbrance
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -1083,6 +1095,22 @@ picker listing the candidates, each labelled with what was encumbered, when, and
 how far it is from the amount that actually cleared::
 
     Gaff tape order — $200.00 encumbered Aug 20, 2025 · 3.55 over
+
+An encumbrance with more than one open line is offered whole, with its lines
+indented under it (:func:`~finance.suggestions.encumbrance_match_options`)::
+
+    Spring gear order — all 2 lines, $500.00 encumbered Oct 1, 2026 · 3.55 over
+      ↳ Lights — $300.00 from Legacy · 203.55 over
+      ↳ Cable — $200.00 from SGA Funding Request · 303.55 over
+
+Choosing the whole encumbrance divides the bank line the way its lines are
+divided, line by line in the order they were written
+(:func:`finance.views.ingest.draw_whole_encumbrance`). Only the last line may
+stretch over an estimate's difference: if each could, a $480 line would stretch
+over a $500 charge on its own and leave the $20 line beside it encumbered for
+money already spent. Choosing one line matches only that line, for an order
+that arrives a piece at a time; the bulk bar's *Draw selected* also works one
+line at a time.
 
 The ranking behind that list is deliberately **not** symmetric about the line's
 amount, because the two directions mean opposite things. An encumbrance smaller

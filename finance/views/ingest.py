@@ -26,15 +26,14 @@ from finance.billing import mark_paid_from_payments, payment_offer
 from finance.calculators import bill_payments, latest_bill
 from finance.filters import filter_context, get_filter_state
 from finance.forms import (BulkEncumbranceForm, BulkReconcileForm, EncumbranceForm,
-                           ReconcileForm, WorkdayCSVUploadForm)
+                           EncumbranceLineFormSet, ReconcileForm, WorkdayCSVUploadForm)
 from finance.importers import (ImportError_, discard_staged, import_workday_export,
                                purge_stale_staged, read_staged, stage_upload)
-from finance.models import (ZERO, Billing, ParsedTransaction, TransactionStatus,  # NOQA
-                            WorkdayTransaction, fiscal_year_for, money)
+from finance.models import (ZERO, Billing, Encumbrance, ParsedTransaction,  # NOQA
+                            TransactionStatus, WorkdayTransaction, fiscal_year_for, money)
 from finance.suggestions import (ENCUMBRANCE_CLOSE_ENOUGH, SUGGESTED_FIELDS,
                                  active_project_tags, active_suggestion_rules,
-                                 encumbrance_match_is_close, encumbrance_match_label,
-                                 suggest_all, suggest_encumbrance_matches,
+                                 encumbrance_match_options, suggest_all,
                                  suggest_refund_targets)
 
 #: Where a staged upload's details live between the two halves of an import.
@@ -85,13 +84,10 @@ def queue(request):
         # than prefetched: the queryset is narrow (pending, parentless, dated
         # near this line) and most ledgers carry a handful of open
         # encumbrances at a time, not a page of them.
-        encumbrances = [
-            {'entry': entry, 'label': encumbrance_match_label(entry, txn)}
-            for entry in suggest_encumbrance_matches(txn)]
+        encumbrances = encumbrance_match_options(txn)
         # Everything in the window is offered; only a candidate of roughly the
         # right size earns the warning on the row itself.
-        close_encumbrance = any(encumbrance_match_is_close(c['entry'], txn)
-                                for c in encumbrances)
+        close_encumbrance = any(option['close'] for option in encumbrances)
 
         rows.append({
             'txn': txn,
@@ -511,10 +507,8 @@ def suggestions_json(request, pk):
             'label': "%s — %s" % (entry.description or entry.parent_transaction.payee, entry.amount),
         } for entry in suggest_refund_targets(txn)]
     else:
-        payload['encumbrances'] = [{
-            'value': str(entry.pk),
-            'label': encumbrance_match_label(entry, txn),
-        } for entry in suggest_encumbrance_matches(txn)]
+        payload['encumbrances'] = [{'value': option['value'], 'label': option['label']}
+                                   for option in encumbrance_match_options(txn)]
 
     return JsonResponse(payload)
 
@@ -522,40 +516,104 @@ def suggestions_json(request, pk):
 @login_required
 @permission_required('finance.edit_subledger', raise_exception=True)
 def encumbrance(request, pk=None):
-    """ Log (or edit) a pending purchase that hasn't hit the bank feed yet. """
-    instance = None
-    if pk is not None:
-        instance = get_object_or_404(ParsedTransaction, pk=pk, parent_transaction__isnull=True)
+    """
+    Add (or change) an encumbrance: money set aside for a purchase Workday has
+    not seen yet, in one or more lines.
+    """
+    instance = get_object_or_404(Encumbrance, pk=pk) if pk is not None else None
+    data = request.POST if request.method == 'POST' else None
+    form = EncumbranceForm(data, request.FILES or None, instance=instance)
+    old_description = instance.description if instance else None
 
-    if request.method == 'POST':
-        form = EncumbranceForm(request.POST, request.FILES, instance=instance)
-        if form.is_valid():
-            with reversion.create_revision():
-                reversion.set_user(request.user)
-                reversion.set_comment("Encumbrance logged" if instance is None
-                                      else "Encumbrance updated")
-                entry = form.save(commit=False)
-                if instance is None:
-                    entry.created_by = request.user
-                entry.full_clean()
-                entry.save()
-            messages.success(
-                request,
-                "Encumbered $%s. It stays Pending until the matching Workday line is "
-                "imported — that line will then offer this row under “Already "
-                "encumbered?” in the queue." % abs(entry.amount))
-            return HttpResponseRedirect(reverse('finance:ledger'))
-    else:
-        form = EncumbranceForm(instance=instance)
+    # The lines take the encumbrance's date and, when they have none of their
+    # own, its description -- the submitted ones once they are known to be good.
+    date = instance.effective_date if instance else None
+    description = old_description or ''
+    form_ok = data is not None and form.is_valid()
+    if form_ok:
+        date = form.cleaned_data['effective_date']
+        description = form.cleaned_data['description']
+
+    formset = EncumbranceLineFormSet(
+        data, instance=instance or Encumbrance(), prefix='lines',
+        encumbrance_date=date, encumbrance_description=description)
+
+    # Both validated, so a bad line and a missing description show together.
+    if data is not None and formset.is_valid() and form_ok:
+        with transaction.atomic(), reversion.create_revision():
+            reversion.set_user(request.user)
+            reversion.set_comment("Encumbrance added" if instance is None else "Encumbrance updated")
+            header = form.save(commit=False)
+            if instance is None:
+                header.created_by = request.user
+            header.save()
+            formset.instance = header
+            for line in formset.save(commit=False):
+                line.encumbrance = header
+                if line.pk is None:
+                    line.created_by = request.user
+                line.full_clean()
+                line.save()
+            for line in formset.deleted_objects:
+                line.delete()
+            # A line nobody touched still follows a new date, and a new
+            # description when it only ever had the old one.
+            for line in header.open_lines():
+                changed = line.effective_date != header.effective_date
+                line.effective_date = header.effective_date
+                if old_description is not None and line.description == old_description:
+                    changed = changed or line.description != header.description
+                    line.description = header.description
+                if changed:
+                    line.full_clean()
+                    line.save()
+
+        lines = list(header.open_lines())
+        total = abs(sum((money(line.amount) for line in lines), ZERO))
+        messages.success(
+            request,
+            "Encumbered $%s%s. %s Pending until the matching Workday line is imported — "
+            "that line will then offer it under “Already encumbered?” in the queue."
+            % (total, " across %s lines" % len(lines) if len(lines) > 1 else "",
+               "It stays"))
+        return HttpResponseRedirect(reverse('finance:ledger'))
 
     context = {
-        'h2': "Log a Pending Purchase" if instance is None else "Edit Encumbrance",
+        'h2': "Add Encumbrance" if instance is None else "Edit Encumbrance",
         'form': form,
+        'formset': formset,
         'instance': instance,
-        'msg': "Encumber funds now so the budget reflects this spend before it clears Workday.",
+        # Lines already matched are entries on a bank line now, changed from
+        # their own page; listed so the encumbrance still adds up on screen.
+        'matched': (instance.lines.filter(parent_transaction__isnull=False)
+                    .select_related('parent_transaction', 'fund_source')
+                    if instance else []),
+        'msg': "Encumber funds now so the budget reflects this spend before it clears Workday. "
+               "A purchase charged to more than one fund gets a line for each.",
     }
     context.update(filter_context(request))
     return render(request, 'finance/encumbrance.html', context)
+
+
+@login_required
+@permission_required('finance.edit_subledger', raise_exception=True)
+@require_POST
+def encumbrance_delete(request, pk):
+    """
+    Cancel an encumbrance: its open lines stop counting as encumbered.
+
+    Lines already matched to a Workday charge are entries on that line now and
+    are left alone; they only lose the link back to this row.
+    """
+    header = get_object_or_404(Encumbrance, pk=pk)
+    with transaction.atomic(), reversion.create_revision():
+        reversion.set_user(request.user)
+        reversion.set_comment("Encumbrance deleted")
+        for line in header.open_lines():
+            line.delete()
+        header.delete()
+    messages.success(request, "Deleted the encumbrance “%s”." % header.description)
+    return HttpResponseRedirect(reverse('finance:ledger'))
 
 
 def _name_a_few(labels, limit=5):
@@ -603,7 +661,7 @@ def _draw_message(txn, reserved, drawn, exhausted, settled):
     return message
 
 
-def _encumbrance_draw(reserved, remaining):
+def _encumbrance_draw(reserved, remaining, stretch=True):
     """
     How much of one reservation this bank line takes, and whether that ends it.
 
@@ -624,12 +682,18 @@ def _encumbrance_draw(reserved, remaining):
       difference would charge the budget line $1,800 nobody reserved, which is
       the exact failure this whole feature exists to prevent.
 
+    With ``stretch`` off, the second shape is treated as the third: the
+    reservation covers what it says and no more. See
+    :func:`draw_whole_encumbrance`, where only the last line may stretch.
+
     :returns: ``(draw, exhausted)`` -- what this line takes, and whether the
         reservation has nothing left afterwards.
     """
     reserved, remaining = money(reserved), money(remaining)
     if abs(reserved) > abs(remaining):
         return remaining, False
+    if not stretch:
+        return reserved, True
     # Within the tolerance the difference is estimate noise, so the reservation
     # stretches to cover the line; beyond it, it covers only what it says.
     slack = abs(money(remaining)) * ENCUMBRANCE_CLOSE_ENOUGH
@@ -662,11 +726,12 @@ def _slice_from_encumbrance(entry, txn, amount, user):
         fr_line_target=entry.fr_line_target,
         project_tag=entry.project_tag,
         linked_event=entry.linked_event,
+        encumbrance_id=entry.encumbrance_id,
         created_by=user,
     )
 
 
-def draw_from_encumbrance(entry, txn, user):
+def draw_from_encumbrance(entry, txn, user, stretch=True):
     """
     Charge as much of ``entry`` as ``txn`` accounts for against ``txn``.
 
@@ -684,7 +749,7 @@ def draw_from_encumbrance(entry, txn, user):
         reservation is now closed.
     """
     remaining = txn.unallocated_amount
-    draw, exhausted = _encumbrance_draw(entry.amount, remaining)
+    draw, exhausted = _encumbrance_draw(entry.amount, remaining, stretch=stretch)
 
     if not exhausted:
         # The reservation outlives this line, so the line gets a copy and the
@@ -705,6 +770,47 @@ def draw_from_encumbrance(entry, txn, user):
     entry.full_clean()
     entry.save()
     return draw, True
+
+
+def draw_whole_encumbrance(lines, txn, user):
+    """
+    Charge every open line of one encumbrance to one bank line, in order.
+
+    The ordinary case is an order charged to two funds that Workday delivers
+    as one line: each encumbrance line becomes an entry for its own amount, on
+    its own fund, and the bank line is divided the way the encumbrance was.
+
+    Only the last line may stretch over an estimate's small difference. If
+    every line could, a $480 line would stretch over a $500 charge on its own
+    and leave the $20 line beside it encumbered for money already spent.
+
+    :returns: ``[(line, drawn, exhausted)]`` for each line the bank line reached.
+    """
+    results = []
+    for index, line in enumerate(lines):
+        if not txn.unallocated_amount:
+            break
+        drawn, exhausted = draw_from_encumbrance(line, txn, user,
+                                                 stretch=index == len(lines) - 1)
+        results.append((line, drawn, exhausted))
+    return results
+
+
+def _whole_draw_message(txn, header, results, settled):
+    """ What matching a whole encumbrance did, in a sentence or two. """
+    took = abs(sum((money(drawn) for _, drawn, _ in results), ZERO))
+    message = "%s %s “%s”: $%s across %s line%s." % (
+        txn.reference, "settled against" if settled else "matched to", header.description, took,
+        len(results), '' if len(results) == 1 else 's')
+    still = header.open_lines().count()
+    if still:
+        message += " %s line%s of it %s encumbered." % (
+            still, '' if still == 1 else 's', 'stays' if still == 1 else 'stay')
+    left = abs(money(txn.unallocated_amount))
+    if left:
+        message += (" $%s of this line is left to settle — the encumbrance did not "
+                    "cover it." % left)
+    return message
 
 
 @login_required
@@ -751,16 +857,22 @@ def match_encumbrance(request, pk):
         return HttpResponseRedirect(redirect_to)
 
     # The picker's first option is "not encumbered", which is a real answer and
-    # the common one -- it just is not this button's answer.
+    # the common one -- it just is not this button's answer. "all-<pk>" is a
+    # whole encumbrance; a bare number is one of its lines.
     chosen = (request.POST.get('encumbrance') or '').strip()
-    if not chosen.isdigit():
+    whole = chosen.startswith('all-') and chosen[4:].isdigit()
+    if not (whole or chosen.isdigit()):
         return fail("Pick an encumbrance from the list first, or settle %s with the form "
                     "below if it was never encumbered." % txn.reference)
 
-    entry = ParsedTransaction.objects.filter(
-        pk=int(chosen),
-        parent_transaction__isnull=True,
-        status=TransactionStatus.PENDING).first()
+    open_lines = ParsedTransaction.objects.filter(parent_transaction__isnull=True,
+                                                  status=TransactionStatus.PENDING)
+    if whole:
+        header = Encumbrance.objects.filter(pk=int(chosen[4:])).first()
+        lines = list(open_lines.filter(encumbrance=header).order_by('pk')) if header else []
+        entry = lines[0] if lines else None
+    else:
+        entry = open_lines.filter(pk=int(chosen)).first()
     if entry is None:
         # Nearly always two people working the queue at once: the row was on
         # screen when the page rendered and matched by someone else since.
@@ -779,10 +891,13 @@ def match_encumbrance(request, pk):
     reserved = entry.amount
 
     try:
-        with reversion.create_revision():
+        with transaction.atomic(), reversion.create_revision():
             reversion.set_user(request.user)
             reversion.set_comment("Matched to %s from the ingestion queue" % txn.reference)
-            drawn, exhausted = draw_from_encumbrance(entry, txn, request.user)
+            if whole:
+                results = draw_whole_encumbrance(lines, txn, request.user)
+            else:
+                drawn, exhausted = draw_from_encumbrance(entry, txn, request.user)
     except ValidationError as exc:
         # Attaching a parent brings the partition rules into play for the first
         # time, so a cross-partition encumbrance can fail here having been
@@ -794,7 +909,10 @@ def match_encumbrance(request, pk):
     if settled:
         txn.settle()
 
-    message = _draw_message(txn, reserved, drawn, exhausted, settled)
+    if whole:
+        message = _whole_draw_message(txn, header, results, settled)
+    else:
+        message = _draw_message(txn, reserved, drawn, exhausted, settled)
 
     if wants_json:
         txn.refresh_from_db()

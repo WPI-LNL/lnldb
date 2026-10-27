@@ -16,7 +16,7 @@ from decimal import Decimal
 
 from django.test import TestCase
 
-from finance.forms import (BulkReconcileForm, EncumbranceForm, FilterBarForm, FRLineItemForm,
+from finance.forms import (BulkReconcileForm, EncumbranceLineForm, FilterBarForm, FRLineItemForm,
                            ReconcileForm, SplitFormSet, WorkdayCSVUploadForm)
 from finance.models import FRLineItem, FundingRequest, WorkdayTransaction
 from finance.tests.util import category, fund
@@ -193,23 +193,21 @@ class DirectionRuleTests(TestCase):
 
     def test_an_encumbrance_is_always_an_expense(self):
         """ It reserves money for a purchase; there is no revenue reading. """
-        form = EncumbranceForm()
+        form = EncumbranceLineForm()
         self.assertNotIn('non_event_revenue_type', form.fields)
         self.assertIn('fund_source', form.fields)
 
     def test_an_encumbrance_normalises_the_sign(self):
-        form = EncumbranceForm(data={
-            'amount': '75.00', 'effective_date': '2025-09-15',
-            'description': 'Gaff tape run', 'audit_explanation': 'Restocking',
+        form = EncumbranceLineForm(data={
+            'amount': '75.00', 'description': 'Gaff tape run',
             'fund_source': str(fund('sga_budget').pk),
             'lnl_spend_category': str(category('consumables').pk)})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data['amount'], Decimal('-75.00'))
 
     def test_a_negative_encumbrance_stays_negative(self):
-        form = EncumbranceForm(data={
-            'amount': '-75.00', 'effective_date': '2025-09-15',
-            'description': 'Gaff tape run', 'audit_explanation': 'Restocking',
+        form = EncumbranceLineForm(data={
+            'amount': '-75.00', 'description': 'Gaff tape run',
             'fund_source': str(fund('sga_budget').pk),
             'lnl_spend_category': str(category('consumables').pk)})
         self.assertTrue(form.is_valid(), form.errors)

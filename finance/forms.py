@@ -28,7 +28,8 @@ from django.utils.formats import date_format
 from mptt.forms import TreeNodeChoiceField
 
 from finance.importers import CSV_EXTENSIONS, XLSX_EXTENSIONS
-from finance.models import (ZERO, BalanceCheckpoint, FRLineItem, FundingRequest, FundSource,
+from finance.models import (ZERO, BalanceCheckpoint, Encumbrance, FRLineItem, FundingRequest,
+                            FundSource,
                             FundTransfer, HistoryOverride, ParsedTransaction, PartitionCode,
                             PlannedPurchase, ProjectTag, RevenueSource, SpendCategory,
                             TransactionStatus,
@@ -1328,44 +1329,74 @@ class ReconcileForm(BaseAllocationForm):
         return instance
 
 
-class EncumbranceForm(BaseAllocationForm):
+class EncumbranceForm(forms.ModelForm):
     """
-    An officer logging a pending purchase to reserve funds before the
-    Workday feed catches up (it needs ``edit_subledger``). Always saved as
-    Pending with no parent.
+    What an encumbrance's lines share: what the purchase is, roughly when the
+    money goes out, and the quote. The money itself is on the lines -- see
+    :class:`EncumbranceLineFormSet`.
+
+    One description is all it asks for. There used to be a second required
+    box, "What is this for?", which on nearly every encumbrance was the
+    description typed again.
     """
-    # The receipt is not required: the purchase has not happened yet.
+
+    class Meta:
+        model = Encumbrance
+        fields = ('description', 'effective_date', 'receipt_file')
+        widgets = {
+            'effective_date': forms.DateInput(attrs={'type': 'date'}),
+            'description': forms.TextInput(attrs={'placeholder': 'e.g. Spring gear order'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(EncumbranceForm, self).__init__(*args, **kwargs)
+        self.helper = finance_form_helper()
+
+
+class EncumbranceLineForm(BaseAllocationForm):
+    """
+    One line of an encumbrance: an amount, and where it is charged.
+
+    Always an expense, always Pending, and never on a bank line. The date is the
+    encumbrance's, as a split's entries take the bank line's. A line left
+    without a description of its own takes the encumbrance's, so the ledger
+    never shows a blank; and the box starts empty again on the edit page when
+    the line only ever had that, so renaming the encumbrance renames it too.
+    """
+    # The receipt is not asked for: the purchase has not happened yet, and the
+    # quote, if there is one, is the encumbrance's.
     REQUIRED_ON_EXPENSES = ('fund_source', 'lnl_spend_category')
 
-    amount = forms.DecimalField(
-        max_digits=12, decimal_places=2, label="Amount to encumber",
-        help_text="Enter the expected cost as a positive number; it is recorded as an expense.")
+    amount = forms.DecimalField(max_digits=12, decimal_places=2, label="Amount")
 
     class Meta(BaseAllocationForm.Meta):
         # linked_event has to be listed here, not merely declared on the base
-        # class. Declared, it rendered -- "Incurred for event" was on the page
-        # -- but a ModelForm only reads and writes the fields in Meta.fields,
-        # so whatever was picked was thrown away on save, and an event set on
-        # the entry page showed here as blank. A sub-rental is usually booked
-        # before its invoice exists, so reserving it is exactly when somebody
-        # knows which show it is for.
-        fields = ('amount', 'effective_date', 'description', 'fund_source', 'lnl_spend_category',
-                  'fr_line_target', 'project_tag', 'linked_event', 'is_projection',
-                  'audit_explanation', 'receipt_file')
+        # class: a ModelForm only saves the fields in Meta.fields. A sub-rental
+        # is usually booked before its invoice exists, so encumbering it is
+        # exactly when somebody knows which show it is for.
+        fields = ('amount', 'description', 'fund_source', 'lnl_spend_category',
+                  'fr_line_target', 'project_tag', 'linked_event', 'is_projection')
+        widgets = dict(BaseAllocationForm.Meta.widgets, description=forms.TextInput(
+            attrs={'placeholder': 'Same as the encumbrance'}))
 
     def __init__(self, *args, **kwargs):
-        """
-        Insist on a description and a reason.
+        self.encumbrance_date = kwargs.pop('encumbrance_date', None)
+        self.encumbrance_description = kwargs.pop('encumbrance_description', '')
+        super(EncumbranceLineForm, self).__init__(*args, **kwargs)
+        # Shown unsigned, as it is typed: see clean_amount().
+        if self.instance.pk and not self.is_bound:
+            self.initial['amount'] = abs(self.instance.amount)
+            if self.instance.description == self.encumbrance_description:
+                self.initial['description'] = ''
+        amount = self.fields['amount'].widget
+        amount.attrs['step'] = '0.01'
+        amount.attrs['class'] = (amount.attrs.get('class', '') + ' fin-line-amount').strip()
 
-        There is no bank line to fall back on here -- nothing has happened in
-        Workday yet -- so if the person entering it does not say what the
-        money is for, nothing else ever will.
-        """
-        super(EncumbranceForm, self).__init__(*args, **kwargs)
-        self.fields['description'].required = True
-        self.fields['audit_explanation'].required = True
-        self.fields['audit_explanation'].label = "What is this for?"
-        self.helper = finance_form_helper()
+    def _entry_fiscal_year(self):
+        """ The encumbrance's year: a new line has no date of its own yet. """
+        if self.encumbrance_date:
+            return fiscal_year_for(self.encumbrance_date)
+        return super(EncumbranceLineForm, self)._entry_fiscal_year()
 
     def _direction(self):
         """ Always an expense: you cannot encumber money coming in. """
@@ -1380,15 +1411,67 @@ class EncumbranceForm(BaseAllocationForm):
         # user and normalise, rather than making them remember the convention.
         return -abs(amount)
 
-    def save(self, commit=True):
-        """ Save with no parent and Pending status, whatever the form said. """
-        instance = super(EncumbranceForm, self).save(commit=False)
-        instance.parent_transaction = None
-        instance.status = TransactionStatus.PENDING
-        if commit:
-            instance.full_clean()
-            instance.save()
-        return instance
+    def clean(self):
+        """ Take the encumbrance's date, and its description when the line has none. """
+        cleaned = super(EncumbranceLineForm, self).clean()
+        if self.encumbrance_date:
+            self.instance.effective_date = self.encumbrance_date
+        if not (cleaned.get('description') or '').strip():
+            cleaned['description'] = self.encumbrance_description
+            self.instance.description = self.encumbrance_description
+        self.instance.parent_transaction = None
+        self.instance.status = TransactionStatus.PENDING
+        return cleaned
+
+
+class BaseEncumbranceLineFormSet(BaseInlineFormSet):
+    """
+    The lines of one encumbrance that are still open.
+
+    A line already matched to its Workday charge is an ordinary entry now, and
+    is changed from its own page; offering it here would let one form undo a
+    match by editing the amount.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.encumbrance_date = kwargs.pop('encumbrance_date', None)
+        self.encumbrance_description = kwargs.pop('encumbrance_description', '')
+        super(BaseEncumbranceLineFormSet, self).__init__(*args, **kwargs)
+        # One empty line to fill in on a new encumbrance; none under the lines
+        # an existing one already has. "Add a line" adds more.
+        self.extra = 0 if self.instance.pk else 1
+
+    def get_queryset(self):
+        return (super(BaseEncumbranceLineFormSet, self).get_queryset()
+                .filter(parent_transaction__isnull=True).order_by('pk'))
+
+    def get_form_kwargs(self, index):
+        kwargs = super(BaseEncumbranceLineFormSet, self).get_form_kwargs(index)
+        kwargs['encumbrance_date'] = self.encumbrance_date
+        kwargs['encumbrance_description'] = self.encumbrance_description
+        return kwargs
+
+    def clean(self):
+        """ An encumbrance with no money on it sets nothing aside. """
+        super(BaseEncumbranceLineFormSet, self).clean()
+        if any(self.errors):
+            return
+        live = [form for form in self.forms
+                if form.cleaned_data and not form.cleaned_data.get('DELETE')]
+        if live:
+            return
+        if self.instance.pk and self.instance.lines.filter(parent_transaction__isnull=False).exists():
+            # Every open line was taken off, but some were matched already:
+            # what is left is simply done.
+            return
+        raise ValidationError("An encumbrance needs at least one line with an amount. To "
+                              "cancel it altogether, delete it instead.")
+
+
+EncumbranceLineFormSet = inlineformset_factory(
+    Encumbrance, ParsedTransaction, form=EncumbranceLineForm,
+    formset=BaseEncumbranceLineFormSet, fk_name='encumbrance', extra=1, can_delete=True,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -1795,9 +1878,9 @@ class OpenEncumbranceChoiceField(forms.ModelChoiceField):
     """ Open reservations, labelled with what is left rather than what was asked for. """
 
     def label_from_instance(self, obj):
-        """ ``Whole gear order — $296.45 still encumbered · Aug 20, 2025``. """
+        """ ``Spring gear order · Lights — $296.45 still encumbered · Aug 20, 2025``. """
         return "%s — $%s still encumbered · %s" % (
-            obj.description or "(no description)", abs(obj.amount),
+            obj.encumbrance_label, abs(obj.amount),
             date_format(obj.effective_date, 'M j, Y'))
 
 
@@ -1826,7 +1909,8 @@ class BulkEncumbranceForm(BulkSelectionForm):
             .filter(parent_transaction__isnull=True,
                     status=TransactionStatus.PENDING,
                     amount__lt=0)
-            .order_by('-effective_date', '-pk'))
+            .select_related('encumbrance')
+            .order_by('-effective_date', 'encumbrance', 'pk'))
 
 
 # ---------------------------------------------------------------------------

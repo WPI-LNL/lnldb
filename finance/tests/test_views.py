@@ -702,12 +702,12 @@ class IngestionTests(FinanceViewTestCase):
 
     def test_encumbrance_creation(self):
         response = self.client.post(reverse('finance:encumbrance-new'), {
-            'amount': '75.00',
             'effective_date': '2025-09-15',
             'description': 'Gaff tape run',
-            'audit_explanation': 'Restocking the shop',
-            'fund_source': fund('sga_budget').pk,
-            'lnl_spend_category': category('consumables').pk,
+            'lines-TOTAL_FORMS': '1', 'lines-INITIAL_FORMS': '0',
+            'lines-0-amount': '75.00',
+            'lines-0-fund_source': fund('sga_budget').pk,
+            'lines-0-lnl_spend_category': category('consumables').pk,
         })
         self.assertEqual(response.status_code, 302)
         entry = ParsedTransaction.objects.get(description='Gaff tape run')

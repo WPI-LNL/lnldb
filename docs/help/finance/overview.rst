@@ -132,7 +132,7 @@ Tab            Use it to
 Dashboard      See the year at a glance: money in and out, spending by category, what each fund holds, where LNL's own
                money is heading, what is owed, and the events that lost money.
 Ledger         Find any entry. Filter, sort, change many at once, or download as a spreadsheet.
-Queue          Import Workday exports and settle each new line. Also where you log a purchase in advance.
+Queue          Import Workday exports and settle each new line. Also where you add an encumbrance.
 Events         See what each show made or lost, and mark a bill paid.
 Balances       See what each fund holds; record Workday balances, move money between funds, and close a year.
 Projects       See spending grouped by project.
@@ -175,4 +175,4 @@ bill paid once the payment arrives. See :doc:`events`.
     New to the role? Read this page, then :doc:`import-and-settle`. Most of the job is the monthly import, and the queue
     fills in most of each line for you.
 
-`Last Modified: October 19, 2026`
+`Last Modified: October 27, 2026`

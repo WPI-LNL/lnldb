@@ -1,0 +1,31 @@
+{# One row of an encumbrance's lines table, and the template "Add a line" copies. #}
+<tr class="fin-encumbrance-line">
+    {{ line.id }}
+    <td>{{ line.amount }}</td>
+    <td>{{ line.description }}</td>
+    <td>{{ line.fund_source }}</td>
+    <td>{{ line.lnl_spend_category }}</td>
+    <td>
+        {# The request box narrows the line picker under it, as on a queue row; the line is what is saved. #}
+        <div class="form-group fin-cell-group">{{ line.fr_request }}</div>
+        <div class="form-group fin-cell-group">{{ line.fr_line_target }}</div>
+        <div class="checkbox fin-cell-group" style="margin:0;font-size:12px;">
+            <label title="{{ line.allow_cross_year_fr.help_text }}">{{ line.allow_cross_year_fr }} Other year</label>
+        </div>
+    </td>
+    <td>{{ line.linked_event }}</td>
+    <td>{{ line.project_tag }}</td>
+    <td class="text-center">{{ line.is_projection }}</td>
+    <td>{{ line.DELETE }}</td>
+</tr>
+{% if line.errors %}
+    <tr><td colspan="9">
+        <div class="text-danger" style="font-size:12px;">
+            {% for field, errors in line.errors.items %}
+                {% for error in errors %}
+                    <div>{% if field != '__all__' %}{{ field }}: {% endif %}{{ error }}</div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </td></tr>
+{% endif %}

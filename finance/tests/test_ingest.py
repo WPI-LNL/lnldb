@@ -20,10 +20,10 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from finance.models import (FRLineItem, FundingRequest, ParsedTransaction, SpendCategory,
-                            SuggestionRule, TransactionStatus, WorkdayTransaction)
-from finance.suggestions import (encumbrance_match_label, suggest_all,
-                                 suggest_encumbrance_matches)
+from finance.models import (Encumbrance, FRLineItem, FundingRequest, ParsedTransaction,
+                            SpendCategory, SuggestionRule, TransactionStatus, WorkdayTransaction)
+from finance.suggestions import (encumbrance_match_label, encumbrance_match_options,
+                                 suggest_all, suggest_encumbrance_matches)
 from finance.tests.test_views import CSV_HEADER, CSV_ROW, FinanceViewTestCase
 from finance.tests.util import category, fund, revenue_source
 
@@ -274,27 +274,53 @@ class StagedImportTests(FinanceViewTestCase):
 
 
 class EncumbranceViewTests(FinanceViewTestCase):
-    """ Reserving funds for a purchase the bank feed has not seen yet. """
+    """ Encumbering funds for a purchase the bank feed has not seen yet. """
 
     def setUp(self):
         super(EncumbranceViewTests, self).setUp()
         self.grant('view_subledger', 'edit_subledger')
 
-    def _post(self, url, **overrides):
+    def _post(self, url, lines=None, existing=0, **overrides):
+        """ The encumbrance's own fields, then its lines as the formset posts them. """
+        if lines is None:
+            lines = [{'amount': '75.00', 'fund_source': str(fund('sga_budget').pk),
+                      'lnl_spend_category': str(category('consumables').pk)}]
         data = {
-            'amount': '75.00',
-            'effective_date': '2025-09-15',
             'description': 'Gaff tape run',
-            'audit_explanation': 'Restocking the shop',
-            'fund_source': str(fund('sga_budget').pk),
-            'lnl_spend_category': str(category('consumables').pk),
+            'effective_date': '2025-09-15',
+            'lines-TOTAL_FORMS': str(len(lines)),
+            'lines-INITIAL_FORMS': str(existing),
+            'lines-MIN_NUM_FORMS': '0',
+            'lines-MAX_NUM_FORMS': '1000',
         }
+        for index, line in enumerate(lines):
+            for name, value in line.items():
+                data['lines-%s-%s' % (index, name)] = value
         data.update(overrides)
         return self.client.post(url, data, follow=True)
 
+    def _edit_lines(self, header, **changes):
+        """ Every open line of ``header`` as the edit page posts it back, with ``changes``. """
+        lines = []
+        for line in header.open_lines():
+            lines.append(dict({
+                'id': str(line.pk), 'amount': str(abs(line.amount)),
+                'description': '' if line.description == header.description else line.description,
+                'fund_source': str(line.fund_source_id),
+                'lnl_spend_category': str(line.lnl_spend_category_id),
+            }, **changes))
+        return lines
+
     def test_the_form_renders(self):
         response = self.client.get(reverse('finance:encumbrance-new'))
-        self.assertContains(response, 'Log a Pending Purchase')
+        self.assertContains(response, 'Add Encumbrance')
+        self.assertContains(response, 'Add a line')
+        self.assertNotContains(response, 'What is this for?')
+
+    def test_the_queue_button_says_add_encumbrance(self):
+        response = self.client.get(reverse('finance:queue'))
+        self.assertContains(response, 'Add Encumbrance')
+        self.assertNotContains(response, 'Log a purchase')
 
     def test_a_positive_amount_is_recorded_as_money_going_out(self):
         """
@@ -311,43 +337,128 @@ class EncumbranceViewTests(FinanceViewTestCase):
         self.assertIsNone(entry.parent_transaction)
         self.assertEqual(entry.status, TransactionStatus.PENDING)
         self.assertTrue(entry.is_encumbrance)
+        self.assertEqual(entry.effective_date, datetime.date(2025, 9, 15))
+        self.assertEqual(entry.encumbrance.description, 'Gaff tape run')
+
+    def test_one_description_is_enough(self):
+        """ No second "What is this for?" box to fill in. """
+        response = self._post(reverse('finance:encumbrance-new'))
+        self.assertRedirects(response, reverse('finance:ledger'))
+        self.assertEqual(ParsedTransaction.objects.get().audit_explanation, '')
+
+    def test_a_description_is_still_needed(self):
+        self._post(reverse('finance:encumbrance-new'), description='')
+        self.assertFalse(Encumbrance.objects.exists())
+        self.assertFalse(ParsedTransaction.objects.exists())
+
+    def test_lines_can_go_to_different_funds(self):
+        """ One order, part out of Legacy and part out of the SGA budget. """
+        self._post(reverse('finance:encumbrance-new'), lines=[
+            {'amount': '300.00', 'description': 'Lights',
+             'fund_source': str(fund('legacy').pk),
+             'lnl_spend_category': str(category('consumables').pk)},
+            {'amount': '200.00', 'description': 'Cable',
+             'fund_source': str(fund('sga_budget').pk),
+             'lnl_spend_category': str(category('consumables').pk)},
+        ], description='Spring gear order')
+        header = Encumbrance.objects.get()
+        lines = list(header.open_lines())
+        self.assertEqual([(line.description, line.amount, line.fund_source) for line in lines], [
+            ('Lights', Decimal('-300.00'), fund('legacy')),
+            ('Cable', Decimal('-200.00'), fund('sga_budget')),
+        ])
+        self.assertTrue(all(line.is_encumbrance for line in lines))
+
+    def test_a_line_with_no_description_takes_the_encumbrances(self):
+        self._post(reverse('finance:encumbrance-new'))
+        self.assertEqual(ParsedTransaction.objects.get().description, 'Gaff tape run')
 
     def test_a_zero_amount_is_refused(self):
-        self._post(reverse('finance:encumbrance-new'), amount='0')
-        self.assertFalse(ParsedTransaction.objects.filter(description='Gaff tape run').exists())
+        self._post(reverse('finance:encumbrance-new'), lines=[
+            {'amount': '0', 'fund_source': str(fund('sga_budget').pk),
+             'lnl_spend_category': str(category('consumables').pk)}])
+        self.assertFalse(ParsedTransaction.objects.exists())
+        self.assertFalse(Encumbrance.objects.exists())
+
+    def test_an_encumbrance_with_no_lines_is_refused(self):
+        response = self._post(reverse('finance:encumbrance-new'), lines=[{}])
+        self.assertContains(response, 'at least one line')
+        self.assertFalse(Encumbrance.objects.exists())
 
     def test_an_encumbrance_can_be_edited(self):
         self._post(reverse('finance:encumbrance-new'))
-        entry = ParsedTransaction.objects.get(description='Gaff tape run')
-        url = reverse('finance:encumbrance-edit', args=[entry.pk])
+        header = Encumbrance.objects.get()
+        url = reverse('finance:encumbrance-edit', args=[header.pk])
         self.assertContains(self.client.get(url), 'Edit Encumbrance')
-        self._post(url, description='Spike tape run')
-        entry.refresh_from_db()
+        self._post(url, lines=self._edit_lines(header, amount='80.00'), existing=1,
+                   description='Spike tape run')
+        entry = ParsedTransaction.objects.get()
+        self.assertEqual(entry.amount, Decimal('-80.00'))
+        # It only ever had the encumbrance's description, so it follows it.
         self.assertEqual(entry.description, 'Spike tape run')
 
-    def test_editing_does_not_reassign_the_author(self):
-        """ ``created_by`` records who reserved the money, not who last touched it. """
+    def test_a_new_date_reaches_every_line(self):
         self._post(reverse('finance:encumbrance-new'))
-        entry = ParsedTransaction.objects.get(description='Gaff tape run')
+        header = Encumbrance.objects.get()
+        self._post(reverse('finance:encumbrance-edit', args=[header.pk]),
+                   lines=self._edit_lines(header), existing=1, effective_date='2025-10-01')
+        self.assertEqual(ParsedTransaction.objects.get().effective_date, datetime.date(2025, 10, 1))
+
+    def test_a_line_can_be_added_and_one_removed(self):
+        self._post(reverse('finance:encumbrance-new'))
+        header = Encumbrance.objects.get()
+        lines = self._edit_lines(header, DELETE='on')
+        lines.append({'amount': '40.00', 'description': 'Spike tape',
+                      'fund_source': str(fund('legacy').pk),
+                      'lnl_spend_category': str(category('consumables').pk)})
+        self._post(reverse('finance:encumbrance-edit', args=[header.pk]), lines=lines, existing=1)
+        entry = ParsedTransaction.objects.get()
+        self.assertEqual((entry.description, entry.amount), ('Spike tape', Decimal('-40.00')))
+        self.assertEqual(entry.encumbrance, header)
+
+    def test_editing_does_not_reassign_the_author(self):
+        """ ``created_by`` records who encumbered the money, not who last touched it. """
+        self._post(reverse('finance:encumbrance-new'))
+        header = Encumbrance.objects.get()
         other = get_user_model().objects.create_user(
             username='second', email='second@wpi.edu', password='x')
         for codename in ('view_subledger', 'edit_subledger'):
             other.user_permissions.add(Permission.objects.get(codename=codename))
         self.client.force_login(get_user_model().objects.get(pk=other.pk))
-        self._post(reverse('finance:encumbrance-edit', args=[entry.pk]),
-                   description='Spike tape run')
-        entry.refresh_from_db()
-        self.assertEqual(entry.created_by, self.user)
+        self._post(reverse('finance:encumbrance-edit', args=[header.pk]),
+                   lines=self._edit_lines(header), existing=1, description='Spike tape run')
+        header.refresh_from_db()
+        self.assertEqual(header.created_by, self.user)
+        self.assertEqual(ParsedTransaction.objects.get().created_by, self.user)
 
-    def test_a_reconciled_slice_cannot_be_edited_as_an_encumbrance(self):
-        """ The URL only accepts rows with no bank line behind them. """
-        txn = self.make_txn(op='OT-EN1', amount='-40.00')
-        slice_ = ParsedTransaction.objects.create(
-            parent_transaction=txn, amount=Decimal('-40.00'),
-            effective_date=txn.accounting_date, fund_source=fund('sga_budget'),
-            lnl_spend_category=category('consumables'))
-        response = self.client.get(reverse('finance:encumbrance-edit', args=[slice_.pk]))
-        self.assertEqual(response.status_code, 404)
+    def test_a_matched_line_is_not_on_the_edit_form(self):
+        """ It is an entry on a bank line now, changed from its own page. """
+        self._post(reverse('finance:encumbrance-new'))
+        header = Encumbrance.objects.get()
+        txn = self.make_txn(op='OT-EN1', amount='-75.00')
+        ParsedTransaction.objects.filter(encumbrance=header).update(
+            parent_transaction=txn, status=TransactionStatus.SETTLED)
+        response = self.client.get(reverse('finance:encumbrance-edit', args=[header.pk]))
+        self.assertEqual(len(response.context['formset'].forms), 0)
+        self.assertContains(response, 'Already matched to Workday')
+
+    def test_deleting_removes_only_the_open_lines(self):
+        self._post(reverse('finance:encumbrance-new'), lines=[
+            {'amount': '30.00', 'fund_source': str(fund('legacy').pk),
+             'lnl_spend_category': str(category('consumables').pk)},
+            {'amount': '45.00', 'fund_source': str(fund('sga_budget').pk),
+             'lnl_spend_category': str(category('consumables').pk)},
+        ])
+        header = Encumbrance.objects.get()
+        matched = header.open_lines().first()
+        txn = self.make_txn(op='OT-EN2', amount='-30.00')
+        ParsedTransaction.objects.filter(pk=matched.pk).update(parent_transaction=txn)
+
+        self.client.post(reverse('finance:encumbrance-delete', args=[header.pk]))
+        self.assertFalse(Encumbrance.objects.exists())
+        self.assertEqual(list(ParsedTransaction.objects.all()), [matched])
+        matched.refresh_from_db()
+        self.assertIsNone(matched.encumbrance)
 
 
 class SettleViewTests(FinanceViewTestCase):
@@ -897,6 +1008,119 @@ class EncumbranceMatchingTests(FinanceViewTestCase):
         payload = response.json()
         self.assertEqual([c['value'] for c in payload['encumbrances']], [str(entry.pk)])
         self.assertIn('Gaff tape order', payload['encumbrances'][0]['label'])
+
+
+class WholeEncumbranceMatchingTests(FinanceViewTestCase):
+    """
+    One encumbrance with lines on two funds, and the single Workday line that
+    turns out to be the whole order.
+    """
+
+    def setUp(self):
+        super(WholeEncumbranceMatchingTests, self).setUp()
+        self.grant('view_subledger', 'edit_subledger', 'settle_subledger')
+        request = FundingRequest.objects.create(name='Fall Load-ins', fiscal_year=2026)
+        self.fr_line = FRLineItem.objects.create(
+            funding_request=request, name='Consumables', amount_awarded=Decimal('500.00'))
+        self.header = Encumbrance.objects.create(
+            description='Spring gear order', effective_date=datetime.date(2025, 8, 20))
+
+    def line(self, amount, description, **routing):
+        fields = {
+            'parent_transaction': None,
+            'amount': Decimal(amount),
+            'status': TransactionStatus.PENDING,
+            'effective_date': self.header.effective_date,
+            'description': description,
+            'fund_source': fund('sga_budget'),
+            'lnl_spend_category': category('consumables'),
+            'encumbrance': self.header,
+        }
+        fields.update(routing)
+        return ParsedTransaction.objects.create(**fields)
+
+    def on_the_award(self, amount, description):
+        return self.line(amount, description, fund_source=fund('sga_fr'), fr_line_target=self.fr_line)
+
+    def match(self, txn, value):
+        return self.client.post(reverse('finance:match-encumbrance', args=[txn.pk]),
+                                {'encumbrance': value}, follow=True)
+
+    def test_the_bank_line_is_divided_the_way_the_lines_are(self):
+        budget = self.line('-300.00', 'Lights')
+        award = self.on_the_award('-200.00', 'Cable')
+        txn = self.make_txn(op='OT-W1', amount='-503.55')
+
+        self.match(txn, 'all-%s' % self.header.pk)
+
+        budget.refresh_from_db()
+        award.refresh_from_db()
+        self.assertEqual((budget.parent_transaction, budget.amount), (txn, Decimal('-300.00')))
+        # The last line takes the estimate's difference.
+        self.assertEqual((award.parent_transaction, award.amount), (txn, Decimal('-203.55')))
+        self.assertEqual(self.fr_line.spent, Decimal('203.55'))
+        txn.refresh_from_db()
+        self.assertTrue(txn.is_fully_allocated)
+        self.assertFalse(self.header.open_lines().exists())
+
+    def test_only_the_last_line_stretches(self):
+        """
+        $480 is within a quarter of $500, so on its own it would stretch over the
+        whole charge and leave the $20 line encumbered for money already spent.
+        """
+        big = self.line('-480.00', 'Console')
+        small = self.line('-20.00', 'Cable')
+        txn = self.make_txn(op='OT-W2', amount='-500.00')
+
+        self.match(txn, 'all-%s' % self.header.pk)
+
+        big.refresh_from_db()
+        small.refresh_from_db()
+        self.assertEqual(big.amount, Decimal('-480.00'))
+        self.assertEqual((small.parent_transaction, small.amount), (txn, Decimal('-20.00')))
+
+    def test_one_line_can_still_be_matched_on_its_own(self):
+        budget = self.line('-300.00', 'Lights')
+        award = self.on_the_award('-200.00', 'Cable')
+        txn = self.make_txn(op='OT-W3', amount='-300.00')
+
+        self.match(txn, str(budget.pk))
+
+        budget.refresh_from_db()
+        award.refresh_from_db()
+        self.assertEqual(budget.parent_transaction, txn)
+        self.assertIsNone(award.parent_transaction)
+        self.assertEqual(list(self.header.open_lines()), [award])
+
+    def test_the_picker_offers_the_whole_encumbrance_and_then_its_lines(self):
+        self.line('-300.00', 'Lights')
+        self.on_the_award('-200.00', 'Cable')
+        txn = self.make_txn(op='OT-W4', amount='-500.00')
+
+        options = encumbrance_match_options(txn)
+
+        self.assertEqual(options[0]['value'], 'all-%s' % self.header.pk)
+        self.assertIn('Spring gear order — all 2 lines, $500.00', options[0]['label'])
+        self.assertIn('exact match', options[0]['label'])
+        self.assertTrue(options[0]['close'])
+        self.assertEqual(len(options), 3)
+        self.assertTrue(options[1]['label'].startswith(' ↳ Lights — $300.00'))
+        self.assertTrue(options[2]['label'].startswith(' ↳ Cable — $200.00'))
+
+    def test_the_queue_renders_the_whole_option(self):
+        self.line('-300.00', 'Lights')
+        self.on_the_award('-200.00', 'Cable')
+        self.make_txn(op='OT-W5', amount='-500.00')
+        # ?fy= so the filter bar does not default to today's year and hide it.
+        response = self.client.get(reverse('finance:queue') + '?fy=2026')
+        self.assertContains(response, 'value="all-%s"' % self.header.pk)
+
+    def test_a_single_line_encumbrance_is_offered_as_before(self):
+        only = self.line('-200.00', 'Gaff tape')
+        txn = self.make_txn(op='OT-W6', amount='-200.00')
+        options = encumbrance_match_options(txn)
+        self.assertEqual([option['value'] for option in options], [str(only.pk)])
+        self.assertIn('Spring gear order · Gaff tape', options[0]['label'])
 
 
 class EncumbranceDrawdownTests(FinanceViewTestCase):

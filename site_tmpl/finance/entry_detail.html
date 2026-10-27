@@ -7,6 +7,13 @@
     <div class="row">
         {# ---- LEFT: locked source record ---- #}
         <div class="col-md-5">
+            {% if entry.encumbrance %}
+                <div class="alert alert-info">
+                    {% if txn %}Encumbered as a line of{% else %}A line of the encumbrance{% endif %}
+                    <a href="{{ entry.encumbrance.get_absolute_url }}">{{ entry.encumbrance }}</a>.
+                    {% if not txn %}Change its lines, or delete it, from there.{% endif %}
+                </div>
+            {% endif %}
             {% if txn %}
                 <div class="fin-panel fin-immutable">
                     <div class="fin-panel-head">

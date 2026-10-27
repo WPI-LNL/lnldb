@@ -2319,6 +2319,52 @@ class WorkdayTransaction(models.Model):
 
 
 # ---------------------------------------------------------------------------
+# Encumbrances
+# ---------------------------------------------------------------------------
+
+@reversion.register()
+class Encumbrance(models.Model):
+    """
+    Money set aside for one purchase before it reaches Workday.
+
+    The money itself is on its lines, which are ordinary
+    :class:`ParsedTransaction` rows with no bank line yet. One order paid
+    partly out of Legacy and partly off a funding request is one encumbrance
+    with two lines, each charged to its own fund. Every balance, forecast and
+    burndown reads the lines and never this row, so a line counts exactly as a
+    single-line encumbrance always has.
+
+    A line keeps pointing here after it is matched to a Workday line, so the
+    entry it became can say which encumbrance it came from.
+    """
+    glyphicon = 'lock'
+
+    description = models.CharField(max_length=255, help_text="What the purchase is.")
+    effective_date = models.DateField(
+        default=timezone.localdate, verbose_name="Date",
+        help_text="Roughly when the money will go out.")
+    receipt_file = models.FileField(upload_to='finance/receipts/%Y/%m/', null=True, blank=True,
+                                    verbose_name="Receipt or quote")
+
+    created_on = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                   blank=True, related_name='encumbrances')
+
+    class Meta:
+        ordering = ('-effective_date', '-pk')
+
+    def __str__(self):
+        return self.description
+
+    def get_absolute_url(self):
+        return reverse('finance:encumbrance-edit', args=[self.pk])
+
+    def open_lines(self):
+        """ The lines still waiting for their Workday charge, in the order they were written. """
+        return self.lines.filter(parent_transaction__isnull=True).order_by('pk')
+
+
+# ---------------------------------------------------------------------------
 # Table B: the mutable allocation slice
 # ---------------------------------------------------------------------------
 
@@ -2446,6 +2492,12 @@ class ParsedTransaction(models.Model):
     project_tag = models.ForeignKey(ProjectTag, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='transactions')
 
+    # Set on an encumbrance's lines, and kept once a line is matched, so the
+    # entry it became still says where it came from.
+    encumbrance = models.ForeignKey(
+        Encumbrance, on_delete=models.SET_NULL, null=True, blank=True, related_name='lines',
+        help_text="The encumbrance this entry was written as a line of.")
+
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
@@ -2570,6 +2622,18 @@ class ParsedTransaction(models.Model):
         if parent is not None and parent.payee:
             return parent.payee
         return ''
+
+    @property
+    def encumbrance_label(self):
+        """
+        How an encumbrance line reads in a picker: the encumbrance, then the
+        line's own description when it says something more.
+        """
+        head = self.encumbrance.description if self.encumbrance_id else ''
+        own = (self.description or '').strip()
+        if head and own and own.lower() != head.lower():
+            return "%s · %s" % (head, own)
+        return head or own or "(no description)"
 
     @property
     def refundable_remaining(self):

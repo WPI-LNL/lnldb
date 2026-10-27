@@ -1,28 +1,110 @@
-{# Page 3 -- log a purchase that has not reached Workday yet, to reserve the funds. #}
+{# Page 3 -- add or change an encumbrance: money set aside for a purchase that has not reached Workday yet. #}
 {% extends 'finance/base_finance.html' %}
 {% load crispy_forms_tags %}
+{% load finance_extras %}
 
 {% block fin_content %}
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-9">
             <div class="fin-panel">
                 <div class="fin-panel-head">{{ h2 }}</div>
                 <div class="fin-panel-body">
                     {% if msg %}<p class="fin-muted">{{ msg }}</p>{% endif %}
-                    <form method="post" enctype="multipart/form-data">
+                    <form method="post" enctype="multipart/form-data" id="fin-encumbrance-form">
                         {% csrf_token %}
                         {% crispy form %}
+
+                        {{ formset.management_form }}
+                        {% if formset.non_form_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in formset.non_form_errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% comment %}
+                            Every field EncumbranceLineForm declares is rendered
+                            here. One the table left out would be posted blank
+                            and saved over the line, as the split table warns.
+                        {% endcomment %}
+                        <label>Lines</label>
+                        <div class="fin-table-wrap">
+                            <table class="table fin-table" id="fin-encumbrance-lines">
+                                <thead>
+                                    <tr>
+                                        <th style="width:110px;">Amount</th>
+                                        <th>Description</th>
+                                        <th>Fund</th>
+                                        <th>Spend Category</th>
+                                        <th>FR Line</th>
+                                        <th>Incurred for event</th>
+                                        <th>Project</th>
+                                        <th title="Projection spending rather than Event Production">Projection</th>
+                                        <th style="width:40px;">Del</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for line in formset %}
+                                        {% include 'finance/partials/_encumbrance_line.html' with line=line %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {# Copied for each new line; it is outside the document, so nothing wires it up until then. #}
+                        <template id="fin-encumbrance-empty">
+                            {% include 'finance/partials/_encumbrance_line.html' with line=formset.empty_form %}
+                        </template>
+
+                        <div style="display:flex;align-items:center;gap:12px;margin:10px 0 15px;">
+                            <button type="button" class="btn btn-default btn-sm" id="fin-add-line">
+                                <span class="glyphicon glyphicon-plus"></span> Add a line
+                            </button>
+                            <span class="fin-muted">Total <strong id="fin-encumbrance-total">$0.00</strong></span>
+                        </div>
+
                         <div class="text-right">
+                            {% if instance %}
+                                {# Posts the form below: forms cannot nest. #}
+                                <button type="submit" form="fin-encumbrance-delete"
+                                        class="btn btn-danger pull-left">Delete</button>
+                            {% endif %}
                             <a href="{% url 'finance:ledger' %}" class="btn btn-default">Cancel</a>
                             <button type="submit" class="btn btn-primary">
                                 {% if instance %}Save{% else %}Encumber funds{% endif %}
                             </button>
                         </div>
                     </form>
+
+                    {% if instance %}
+                        <form method="post" id="fin-encumbrance-delete"
+                              action="{% url 'finance:encumbrance-delete' instance.pk %}"
+                              onsubmit="return confirm('Delete this encumbrance? Its open lines stop counting as encumbered.');">
+                            {% csrf_token %}
+                        </form>
+                    {% endif %}
+
+                    {% if matched %}
+                        <hr>
+                        <p><strong>Already matched to Workday</strong></p>
+                        <p class="fin-muted" style="font-size:13px;">
+                            These lines are entries on a Workday line now. Open one to change it.
+                        </p>
+                        <table class="table fin-table">
+                            <tbody>
+                                {% for entry in matched %}
+                                    <tr>
+                                        <td><a href="{{ entry.get_absolute_url }}">{{ entry.description }}</a></td>
+                                        <td>{{ entry.fund_source|default:"" }}</td>
+                                        <td>{{ entry.parent_transaction.reference }}</td>
+                                        <td class="text-right">{{ entry.amount|abs_value|money }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="fin-panel">
                 <div class="fin-panel-head">How this works</div>
                 <div class="fin-panel-body">
@@ -32,6 +114,10 @@
                         not just what Workday has charged.
                     </p>
                     <p class="fin-muted" style="font-size:13px;">
+                        Give it a line for each fund the purchase is charged to. A line with no
+                        description of its own uses the encumbrance's.
+                    </p>
+                    <p class="fin-muted" style="font-size:13px;">
                         It stays <span class="label label-warning">Pending</span> until the
                         matching line shows up in a Workday export. Encumbrances can never be
                         marked Settled on their own.
@@ -39,12 +125,17 @@
                     <p class="fin-muted" style="font-size:13px;">
                         When that line is imported it appears in the
                         <a href="{% url 'finance:queue' %}">ingestion queue</a> under
-                        <em>Already encumbered?</em>, with this row on the list. Matching it
-                        there closes the encumbrance against the real charge &mdash; settling
+                        <em>Already encumbered?</em>, with this encumbrance on the list. Matching
+                        it there closes the encumbrance against the real charge &mdash; settling
                         the line the ordinary way instead would charge the budget twice.
                     </p>
                 </div>
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block finalsay %}
+{{ block.super }}
+<script src="{% asset 'js/encumbrance.js' %}"></script>
 {% endblock %}

@@ -6,8 +6,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 from events.tests.generators import Event2019Factory
-from finance.forms import (AllocationForm, EncumbranceForm, FRLineItemForm, ProjectTagForm,
-                           ReconcileForm, SplitLineForm)
+from finance.forms import (AllocationForm, EncumbranceForm, EncumbranceLineForm, FRLineItemForm,
+                           ProjectTagForm, ReconcileForm, SplitLineForm)
 from finance.models import (FRLineItem, FundingRequest, FundSource, ParsedTransaction,
                             ProjectTag, SpendCategory, SuggestionRule, WorkdayTransaction,
                             fund_source_for_workday_fund, reset_finance_cache)
@@ -198,10 +198,17 @@ class RequiredFieldTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
 
     def test_encumbrance_needs_routing_but_not_a_receipt(self):
-        form = EncumbranceForm()
-        self.assertTrue(form.fields['fund_source'].required)
-        self.assertTrue(form.fields['lnl_spend_category'].required)
-        self.assertFalse(form.fields['receipt_file'].required)
+        line = EncumbranceLineForm()
+        self.assertTrue(line.fields['fund_source'].required)
+        self.assertTrue(line.fields['lnl_spend_category'].required)
+        self.assertFalse(EncumbranceForm().fields['receipt_file'].required)
+
+    def test_an_encumbrance_asks_for_one_description_only(self):
+        """ "What is this for?" was the description typed twice; it is gone. """
+        self.assertTrue(EncumbranceForm().fields['description'].required)
+        line = EncumbranceLineForm()
+        self.assertNotIn('audit_explanation', line.fields)
+        self.assertFalse(line.fields['description'].required)
 
 
 class DescriptionSeedTests(TestCase):
@@ -241,7 +248,7 @@ class ProjectDropdownIndentationTests(TestCase):
         txn = bank(op='OT-P1')
         forms_to_check = [
             ('ReconcileForm', ReconcileForm(parent_transaction=txn, prefix='t'), 'project_tag'),
-            ('EncumbranceForm', EncumbranceForm(), 'project_tag'),
+            ('EncumbranceLineForm', EncumbranceLineForm(), 'project_tag'),
             ('FRLineItemForm', FRLineItemForm(), 'project_tag'),
             ('ProjectTagForm.parent', ProjectTagForm(), 'parent'),
         ]
@@ -298,7 +305,7 @@ class FundingRequestLineDropdownTests(TestCase):
             ('AllocationForm', AllocationForm(instance=self._entry(self.mains),
                                               parent_transaction=self.txn)),
             # Logged today, which is not FY26, so the other years are asked for.
-            ('EncumbranceForm', EncumbranceForm(initial={'allow_cross_year_fr': True})),
+            ('EncumbranceLineForm', EncumbranceLineForm(initial={'allow_cross_year_fr': True})),
             ('SplitLineForm', SplitLineForm(parent_transaction=self.txn, prefix='s')),
             ('BulkReconcileForm', BulkReconcileForm()),
         ]
@@ -348,7 +355,7 @@ class FundingRequestLineDropdownTests(TestCase):
     def test_the_request_box_the_line_and_the_tick_box_sit_together(self):
         """ The entry and encumbrance pages render their fields in this order. """
         for form in (AllocationForm(instance=self._entry(self.mains), parent_transaction=self.txn),
-                     EncumbranceForm()):
+                     EncumbranceLineForm()):
             names = list(form.fields)
             at = names.index('fr_request')
             self.assertEqual(names[at:at + 3],
@@ -1864,7 +1871,7 @@ class RefundPickerTests(TestCase):
         from a debit row -- money going out is not a credit against anything --
         and offers it only on money coming in.
         """
-        for cls in (ReconcileForm, EncumbranceForm, SplitLineForm):
+        for cls in (ReconcileForm, EncumbranceLineForm, SplitLineForm):
             form = cls(parent_transaction=self.txn)
             self.assertNotIn('refund_of', form.fields, cls.__name__)
         self.assertIn('refund_of', self._form().fields)
@@ -1904,24 +1911,24 @@ class EncumbranceEventTests(TestCase):
 
     def _data(self, **overrides):
         data = {
-            'amount': '400.00', 'effective_date': '2025-09-20', 'description': 'Video wall',
+            'amount': '400.00', 'description': 'Video wall',
             'fund_source': fund('legacy').pk, 'lnl_spend_category': category('event_subrental').pk,
-            'linked_event': str(self.event.pk), 'audit_explanation': 'Reserved for the festival',
+            'linked_event': str(self.event.pk),
         }
         data.update(overrides)
         return data
 
     def test_the_form_offers_the_event_as_a_cost(self):
-        field = EncumbranceForm().fields['linked_event']
+        field = EncumbranceLineForm().fields['linked_event']
         self.assertEqual(field.label, 'Incurred for event')
 
     def test_editing_an_encumbrance_keeps_its_event(self):
-        entry = EncumbranceForm(data=self._data()).save()
+        entry = EncumbranceLineForm(data=self._data()).save()
         self.assertEqual(entry.linked_event, self.event)
 
-        form = EncumbranceForm(instance=entry)
+        form = EncumbranceLineForm(instance=entry)
         self.assertEqual(form['linked_event'].value(), self.event.pk)
-        edited = EncumbranceForm(data=self._data(description='Video wall hire'), instance=entry)
+        edited = EncumbranceLineForm(data=self._data(description='Video wall hire'), instance=entry)
         self.assertTrue(edited.is_valid(), edited.errors)
         edited.save()
         entry.refresh_from_db()
@@ -1930,6 +1937,6 @@ class EncumbranceEventTests(TestCase):
 
     def test_a_reservation_for_an_event_takes_the_pass_through_category(self):
         """ The event already says what the money is for. """
-        form = EncumbranceForm(data=self._data(lnl_spend_category=''))
+        form = EncumbranceLineForm(data=self._data(lnl_spend_category=''))
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.save().lnl_spend_category, category('event_subrental'))

@@ -1852,7 +1852,7 @@ def suggest_encumbrance_matches(txn, limit=8):
                           status=TransactionStatus.PENDING,
                           amount__lt=0,
                           effective_date__range=(earliest, latest))
-                  .select_related('lnl_spend_category', 'fund_source',
+                  .select_related('lnl_spend_category', 'fund_source', 'encumbrance',
                                   'fr_line_target__funding_request'))
 
     return sorted(candidates, key=lambda entry: encumbrance_match_score(entry, txn))[:limit]
@@ -1865,10 +1865,15 @@ def encumbrance_match_is_close(entry, txn):
     The picker offers everything in the window; this decides what the row says
     before anyone opens it. See :data:`ENCUMBRANCE_CLOSE_ENOUGH`.
     """
+    return _close_enough(entry.amount, txn)
+
+
+def _close_enough(amount, txn):
+    """ Whether ``amount`` is within :data:`ENCUMBRANCE_CLOSE_ENOUGH` of the line. """
     target = abs(money(txn.net_amount))
     if not target:                                          # pragma: no cover
         return False
-    return abs(abs(money(entry.amount)) - target) / target <= ENCUMBRANCE_CLOSE_ENOUGH
+    return abs(abs(money(amount)) - target) / target <= ENCUMBRANCE_CLOSE_ENOUGH
 
 
 def encumbrance_match_label(entry, txn):
@@ -1880,13 +1885,88 @@ def encumbrance_match_label(entry, txn):
     two numbers on opposite sides of a dropdown is exactly the sort of small
     arithmetic that gets skipped.
     """
-    reserved = abs(money(entry.amount))
-    actual = abs(money(txn.net_amount))
-    difference = actual - reserved
-    if not difference:
-        gap = "exact match"
-    else:
-        gap = "%s %s" % (money(abs(difference)), "over" if difference > 0 else "under")
     return "%s — $%s encumbered %s · %s" % (
-        entry.description or "(no description)", reserved,
-        date_format(entry.effective_date, 'M j, Y'), gap)
+        entry.encumbrance_label, abs(money(entry.amount)),
+        date_format(entry.effective_date, 'M j, Y'), _encumbrance_gap(entry.amount, txn))
+
+
+def _encumbrance_gap(amount, txn):
+    """ ``exact match``, ``12.50 over`` or ``12.50 under``: the bank line against ``amount``. """
+    difference = abs(money(txn.net_amount)) - abs(money(amount))
+    if not difference:
+        return "exact match"
+    return "%s %s" % (money(abs(difference)), "over" if difference > 0 else "under")
+
+
+def encumbrance_match_options(txn):
+    """
+    The queue's "Already encumbered?" picker for one bank line, in order.
+
+    ``[{'value', 'label', 'close'}]``. An encumbrance with one open line is one
+    option, as it always was. One with several is offered whole, with its lines
+    indented under it: an order charged partly to Legacy and partly to a
+    funding request usually arrives as a single Workday line, and choosing the
+    whole encumbrance divides that line the way the lines do. Each line can
+    still be chosen on its own, for the order that arrives a piece at a time.
+
+    Value ``all-<pk>`` is the whole encumbrance, a bare number one line; see
+    :func:`finance.views.ingest.match_encumbrance`. ``close`` says whether the
+    option is near enough in size to flag the row.
+    """
+    from types import SimpleNamespace
+    from finance.models import ParsedTransaction, TransactionStatus
+
+    candidates = suggest_encumbrance_matches(txn)
+    headers = {entry.encumbrance_id for entry in candidates if entry.encumbrance_id}
+    siblings = {}
+    for line in (ParsedTransaction.objects
+                 .filter(encumbrance_id__in=headers, parent_transaction__isnull=True,
+                         status=TransactionStatus.PENDING, amount__lt=0)
+                 .select_related('encumbrance', 'fund_source').order_by('pk')):
+        siblings.setdefault(line.encumbrance_id, []).append(line)
+
+    groups = []
+    for entry in candidates:
+        lines = siblings.get(entry.encumbrance_id) if entry.encumbrance_id else None
+        if not lines or len(lines) == 1:
+            groups.append((encumbrance_match_score(entry, txn), [entry]))
+            continue
+        if any(entry in group for _, group in groups):
+            continue
+        header = entry.encumbrance
+        whole = SimpleNamespace(amount=sum(money(line.amount) for line in lines),
+                                description=header.description, audit_explanation='',
+                                effective_date=header.effective_date)
+        # Ranked by the better of the whole and its best line, so a two-line
+        # order that adds up to the charge is not buried under its own halves.
+        score = min(encumbrance_match_score(whole, txn), encumbrance_match_score(entry, txn))
+        groups.append((score, lines))
+    groups.sort(key=lambda group: group[0])
+
+    options = []
+    for _, lines in groups:
+        if len(lines) == 1:
+            entry = lines[0]
+            options.append({'value': str(entry.pk), 'label': encumbrance_match_label(entry, txn),
+                            'close': _close_enough(entry.amount, txn)})
+            continue
+        header = lines[0].encumbrance
+        total = sum(money(line.amount) for line in lines)
+        options.append({
+            'value': 'all-%s' % header.pk,
+            'label': "%s — all %s lines, $%s encumbered %s · %s" % (
+                header.description, len(lines), abs(total),
+                date_format(header.effective_date, 'M j, Y'), _encumbrance_gap(total, txn)),
+            'close': _close_enough(total, txn)})
+        for line in lines:
+            own = (line.description or '').strip()
+            if own.lower() == header.description.lower():
+                own = ''
+            options.append({
+                'value': str(line.pk),
+                # Indented with em spaces, which a <select> does not collapse.
+                'label': " ↳ %s — $%s from %s · %s" % (
+                    own or "One line", abs(money(line.amount)), line.fund_source or "no fund",
+                    _encumbrance_gap(line.amount, txn)),
+                'close': _close_enough(line.amount, txn)})
+    return options
