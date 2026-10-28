@@ -268,19 +268,7 @@
     </div>
 
     {# ---- Pagination ---- #}
-    {% if page_obj.has_other_pages %}
-        <nav class="text-center">
-            <ul class="pagination pagination-sm">
-                {% if page_obj.has_previous %}
-                    <li><a href="?page={{ page_obj.previous_page_number }}&amp;{{ querystring }}">&laquo;</a></li>
-                {% else %}<li class="disabled"><span>&laquo;</span></li>{% endif %}
-                <li class="disabled"><span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
-                {% if page_obj.has_next %}
-                    <li><a href="?page={{ page_obj.next_page_number }}&amp;{{ querystring }}">&raquo;</a></li>
-                {% else %}<li class="disabled"><span>&raquo;</span></li>{% endif %}
-            </ul>
-        </nav>
-    {% endif %}
+    {% pager page_obj %}
 
     {# ---- Slide-up bulk action bar ---- #}
     {% if can_edit %}

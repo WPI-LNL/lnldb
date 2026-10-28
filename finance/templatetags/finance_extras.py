@@ -17,6 +17,7 @@ from django.conf import settings
 from django.contrib.humanize.templatetags.humanize import intcomma
 from django.contrib.staticfiles import finders
 from django.contrib.staticfiles.storage import staticfiles_storage
+from django.http import QueryDict
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
@@ -327,6 +328,47 @@ def indent_px(level):
         return int(level) * 18
     except (TypeError, ValueError):
         return 0
+
+
+@register.inclusion_tag('finance/partials/_pager.html', takes_context=True)
+def pager(context, page, window=2):
+    """
+    The page links under a long list: first and last, the pages either side of
+    this one, and a box to jump straight to any page -- so the end of a
+    hundred-page queue is one click away, not a hundred.
+
+    Every link keeps the rest of the querystring (the ledger's search, sort
+    and filters) and swaps only ``page``. The jump box is a GET form, so it
+    carries the same values as hidden fields; ``Paginator.get_page`` already
+    turns a number past the end into the last page.
+    """
+    request = context.get('request')
+    params = request.GET.copy() if request is not None else QueryDict(mutable=True)
+    params.pop('page', None)
+    rest = params.urlencode()
+
+    def url(number):
+        return '?page=%d%s' % (number, '&' + rest if rest else '')
+
+    last = page.paginator.num_pages
+    shown = sorted({1, last} | set(range(max(1, page.number - window),
+                                         min(last, page.number + window) + 1)))
+    links = []
+    for number in shown:
+        # A gap of one page is drawn as that page; anything wider as a dash.
+        if links and number - links[-1]['number'] == 2:
+            links.append({'number': number - 1, 'url': url(number - 1)})
+        elif links and number - links[-1]['number'] > 2:
+            links.append({'number': None})
+        links.append({'number': number, 'url': url(number), 'current': number == page.number})
+
+    return {
+        'page': page,
+        'links': links,
+        'previous_url': url(page.previous_page_number()) if page.has_previous() else None,
+        'next_url': url(page.next_page_number()) if page.has_next() else None,
+        'hidden': [(key, value) for key in params for value in params.getlist(key)],
+    }
 
 
 @register.inclusion_tag('finance/partials/_billing_next_step.html', takes_context=True)

@@ -1,0 +1,35 @@
+{% comment %}
+    The page links under a long finance list: previous and next, first and
+    last, the pages around this one, and a box to jump to any page. Drawn by
+    the finance_extras.pager tag, which keeps the rest of the querystring on
+    every link. Nothing is drawn for a list that fits on one page.
+{% endcomment %}
+{% if page.has_other_pages %}
+    <nav class="fin-pager fin-no-print" aria-label="Pages">
+        <ul class="pagination pagination-sm">
+            {% if previous_url %}
+                <li><a href="{{ previous_url }}" aria-label="Previous page">&laquo;</a></li>
+            {% else %}<li class="disabled"><span>&laquo;</span></li>{% endif %}
+            {% for link in links %}
+                {% if link.number is None %}
+                    <li class="disabled"><span>&hellip;</span></li>
+                {% elif link.current %}
+                    <li class="active"><span aria-current="page">{{ link.number }}</span></li>
+                {% else %}
+                    <li><a href="{{ link.url }}">{{ link.number }}</a></li>
+                {% endif %}
+            {% endfor %}
+            {% if next_url %}
+                <li><a href="{{ next_url }}" aria-label="Next page">&raquo;</a></li>
+            {% else %}<li class="disabled"><span>&raquo;</span></li>{% endif %}
+        </ul>
+        <form method="get" class="form-inline fin-pager-jump">
+            {% for key, value in hidden %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+            <label for="fin-pager-page" class="fin-muted">Go to page</label>
+            <input type="number" name="page" id="fin-pager-page" class="form-control input-sm"
+                   min="1" max="{{ page.paginator.num_pages }}" value="{{ page.number }}" required>
+            <span class="fin-muted">of {{ page.paginator.num_pages }}</span>
+            <button type="submit" class="btn btn-default btn-sm">Go</button>
+        </form>
+    </nav>
+{% endif %}

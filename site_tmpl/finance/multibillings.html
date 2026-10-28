@@ -55,11 +55,7 @@
                 </table>
             </div>
             {% if page.has_other_pages %}
-                <div class="fin-panel-body text-center">
-                    {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">&larr; Newer</a>{% endif %}
-                    <span class="fin-muted" style="margin:0 12px;">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-                    {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Older &rarr;</a>{% endif %}
-                </div>
+                <div class="fin-panel-body">{% pager page %}</div>
             {% endif %}
         {% else %}
             <div class="fin-panel-body fin-muted">

@@ -12,13 +12,15 @@ import datetime
 import os
 from decimal import Decimal
 
+from django.core.paginator import Paginator
+from django.template import Context, Template
 from django.test import RequestFactory, TestCase, override_settings
 
 from finance.models import ParsedTransaction, TransactionStatus, WorkdayTransaction
 from finance.templatetags.finance_extras import (abs_value, asset, autocomplete_media,
                                                  burndown_bar, entry_badge, filter_url,
                                                  get_item, indent_px, money, money_class,
-                                                 percent_of, sort_indicator, sort_url,
+                                                 pager, percent_of, sort_indicator, sort_url,
                                                  status_badge)
 from finance.tests.util import category, fund
 
@@ -285,6 +287,64 @@ class FilterUrlTests(TestCase):
         descending = RequestFactory().get('/?sort=amount&dir=desc')
         self.assertIn('9650', sort_indicator({'request': ascending}, 'amount'))
         self.assertIn('9660', sort_indicator({'request': descending}, 'amount'))
+
+
+class PagerTests(TestCase):
+    """ The page links under the queue, the ledger and the multi-bills. """
+
+    def _pager(self, number, pages=100, query=''):
+        request = RequestFactory().get('/' + query)
+        page = Paginator(range(pages), 1).get_page(number)
+        return pager({'request': request}, page)
+
+    def _numbers(self, result):
+        return [link['number'] for link in result['links']]
+
+    def test_the_first_and_last_pages_are_always_offered(self):
+        """ The end of a hundred-page queue is one click away. """
+        self.assertEqual(self._numbers(self._pager(50)), [1, None, 48, 49, 50, 51, 52, None, 100])
+
+    def test_a_gap_of_one_page_is_that_page_not_a_dash(self):
+        self.assertEqual(self._numbers(self._pager(4)), [1, 2, 3, 4, 5, 6, None, 100])
+
+    def test_a_short_list_shows_every_page(self):
+        self.assertEqual(self._numbers(self._pager(2, pages=4)), [1, 2, 3, 4])
+
+    def test_only_this_page_is_current(self):
+        current = [link['number'] for link in self._pager(7)['links'] if link.get('current')]
+        self.assertEqual(current, [7])
+
+    def test_the_ends_have_no_previous_or_next(self):
+        self.assertIsNone(self._pager(1)['previous_url'])
+        self.assertIsNone(self._pager(100)['next_url'])
+        self.assertEqual(self._pager(1)['next_url'], '?page=2')
+
+    def test_links_keep_the_search_and_swap_only_the_page(self):
+        result = self._pager(3, query='?q=sound&sort=amount&page=3')
+        self.assertEqual(result['next_url'], '?page=4&q=sound&sort=amount')
+
+    def test_the_jump_box_carries_the_search_but_not_the_page(self):
+        """ It is a GET form: whatever it does not carry, the page loses. """
+        result = self._pager(3, query='?q=sound&status=pending&status=settled&page=3')
+        self.assertEqual(sorted(result['hidden']),
+                         [('q', 'sound'), ('status', 'pending'), ('status', 'settled')])
+
+    def test_one_page_draws_nothing(self):
+        request = RequestFactory().get('/')
+        page = Paginator(range(3), 10).get_page(1)
+        html = Template('{% load finance_extras %}{% pager page %}').render(
+            Context({'request': request, 'page': page}))
+        self.assertNotIn('fin-pager', html)
+
+    def test_it_renders_the_jump_box(self):
+        request = RequestFactory().get('/?q=a%22b')
+        page = Paginator(range(100), 1).get_page(5)
+        html = Template('{% load finance_extras %}{% pager page %}').render(
+            Context({'request': request, 'page': page}))
+        self.assertIn('name="page"', html)
+        self.assertIn('max="100"', html)
+        # The search goes back out escaped, not as markup.
+        self.assertIn('value="a&quot;b"', html)
 
 
 class AutocompleteMediaTests(TestCase):

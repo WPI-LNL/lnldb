@@ -138,6 +138,22 @@
 
 .fin-panel-body { padding: 14px; }
 
+/* The page links under a long list, with the box to jump straight to a page
+   beside them. Wraps under them on a narrow screen. */
+.fin-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 16px;
+    margin: 20px 0;
+}
+.fin-pager .pagination { margin: 0; }
+.fin-pager-jump { display: flex; align-items: center; gap: 6px; }
+.fin-pager-jump label { margin: 0; font-weight: normal; }
+.fin-pager-jump input[type=number] { width: 80px; }
+.fin-panel-body > .fin-pager { margin: 0; }
+
 /* Separates logically-related sections inside one panel, instead of splitting
    them into two boxes that imply they are unrelated. */
 .fin-panel-divider {

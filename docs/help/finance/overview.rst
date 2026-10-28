@@ -143,6 +143,10 @@ Reports        Print or download reports for the board, for SGA and for budget r
 or both. Every page follows it, except where the page says it is about today (what each fund holds now, and what is
 owed).
 
+**Long lists** (the queue, the ledger and the multi-bills) are split into pages. The links under the list go to the
+first page, the last page or the pages around the one you are on. To jump straight to a page, type its number in the
+**Go to page** box and click `Go`. Any search, sort or filter stays as it is.
+
 
 Your Routine
 ------------

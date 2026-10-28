@@ -495,19 +495,7 @@
         </form>
     {% endif %}
 
-    {% if page_obj.has_other_pages %}
-        <nav class="text-center">
-            <ul class="pagination pagination-sm">
-                {% if page_obj.has_previous %}
-                    <li><a href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
-                {% endif %}
-                <li class="disabled"><span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
-                {% if page_obj.has_next %}
-                    <li><a href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
-                {% endif %}
-            </ul>
-        </nav>
-    {% endif %}
+    {% pager page_obj %}
 {% endblock %}
 
 {% block finalsay %}
