@@ -619,18 +619,32 @@ def fund_balances(fiscal_year, today=None):
         Column('closing', 'Closing', Column.MONEY),
         Column('reserved', 'Encumbrances', Column.MONEY,
                title="Encumbered for purchases not yet charged"),
-        Column('available', 'Available', Column.MONEY, title="Closing less encumbrances"),
+        Column('available', 'Available', Column.MONEY,
+               title="Closing less encumbrances. Blank for a funding request, whose money "
+                     "comes after the spending"),
         Column('status', 'What it means'),
     ]
 
     sections, stats, notes, warnings = [], [], [], []
-    carries = unspent = awaiting = ZERO
+    carries = unspent = awaiting = event_costs = ZERO
     for account in year.accounts:
         rows = []
         for row in account.rows:
+            if row.is_own:
+                note = "the account's own money"
+            elif row.encumbered and row.to_reimburse is not None:
+                note = "%s to reimburse once the encumbrances are charged" % _dollars(
+                    row.to_reimburse)
+            elif row.events:
+                note = "; ".join("%s %s" % (event, _dollars(amount))
+                                 for event, amount in row.events)
+            else:
+                note = ''
+            if row.is_waiting:
+                event_costs -= row.closing
             rows.append(Row({
                 'fund': row.name,
-                'kind': row.fund.get_behaviour_display() if row.fund is not None else '',
+                'kind': row.behaviour_label,
                 'opening': row.opening,
                 'received': row.received,
                 'spent': row.spent,
@@ -639,7 +653,7 @@ def fund_balances(fiscal_year, today=None):
                 'reserved': row.encumbered,
                 'available': row.available,
                 'status': row.status,
-            }, note="the account's own money" if row.is_own else ''))
+            }, note=note))
             if row.closing is None:
                 continue
             if row.behaviour == FundBehaviour.CARRIES:
@@ -657,16 +671,16 @@ def fund_balances(fiscal_year, today=None):
             rows.append(Row({'fund': 'Not settled yet', 'opening': account.unfiled_opening,
                              'closing': account.unfiled_closing,
                              'status': 'Lines still in the queue'}, tone='muted'))
-        reserved = sum((row.encumbered for row in account.rows), ZERO)
         total = Row({
             'fund': 'Account total',
             'opening': account.opening_cash,
-            'received': sum((row.received for row in account.rows), ZERO),
-            'spent': sum((row.spent for row in account.rows), ZERO),
-            'transferred': sum((row.transferred for row in account.rows), ZERO),
+            'received': account.received,
+            'spent': account.spent,
+            'transferred': account.transferred,
             'closing': account.closing_cash,
-            'reserved': reserved,
-            'available': (account.closing_cash - reserved) if account.cash_known else None,
+            'reserved': account.encumbered,
+            'available': ((account.closing_cash - account.encumbered) if account.cash_known
+                          else None),
             'status': 'What Workday holds' if account.cash_known
                       else 'Enter a Workday balance to see this',
         })
@@ -704,13 +718,19 @@ def fund_balances(fiscal_year, today=None):
     if awaiting:
         stats.append(Stat('Awaiting SGA', awaiting, "spent on funding requests, not yet repaid",
                           tone='text-warning'))
+    if event_costs:
+        stats.append(Stat('Event costs awaiting payment', event_costs,
+                          "spent on events not yet paid for, not yet taken from Legacy",
+                          tone='text-warning'))
 
     if year.before_books:
         warnings.append("%s is before the books start, so there is nothing to report."
                         % period.label)
     if year.books_start is not None:
         notes.insert(0, "The books start on %s.%s Balances count every settled line, whichever "
-                        "side of the partition it was for."
+                        "side of the partition it was for. An expense linked to an event is not "
+                        "taken from Legacy (or any fund that carries forward) until the event is "
+                        "paid for, marked No bill needed, or closed."
                      % (_day(year.books_start),
                         " The newest imported line is from %s." % _day(year.latest_line_date)
                         if year.latest_line_date else ''))

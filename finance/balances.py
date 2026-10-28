@@ -21,6 +21,17 @@ to Workday's figure. The arithmetic, for one account on one day:
   yet. It is a row of its own so the funds plus it always equal the cash: a
   queue left half-done makes the split vague, not wrong.
 
+* **An event's costs wait for its payment.** An expense on LNL's own money (a
+  fund that carries forward) that names the event it was for is not counted
+  against that fund until the event is paid for: a sub-rental hired for a show
+  the client has yet to pay would otherwise make Legacy look short by money
+  that is coming back. Until then it sits in a row of its own, *Event costs
+  awaiting payment*, so the account still adds up to its cash. On the day the
+  event's bill is marked paid it moves into the fund, as a transfer. An event
+  marked *No bill needed*, or closed unpaid, will never be paid for, so its
+  costs move on that day instead. An encumbrance naming an event waits the
+  same way. See :func:`event_paid_days`.
+
 Nothing is carried from one year to the next by copying a closing balance into
 an opening one. Every figure is a sum from the start of the books, so a line
 imported in August for a June purchase corrects last year's closing balance
@@ -39,6 +50,51 @@ from finance.models import (ZERO, BalanceCheckpoint, FiscalYearClose, FundBehavi
                             org_code_matches, partition_codes, worktag_value)
 
 ONE_DAY = datetime.timedelta(days=1)
+
+#: The key the costs still waiting for their event's payment are held under,
+#: in place of a fund's pk.
+WAITING = 'waiting'
+
+
+def _local_day(value):
+    """ The local date of a stored datetime. """
+    return timezone.localdate(value) if timezone.is_aware(value) else value.date()
+
+
+def event_paid_days(event_ids):
+    """
+    ``{event pk: day}`` the day each of these events stopped waiting for its
+    payment, leaving out those still waiting.
+
+    That is the day its bill was marked paid -- the bill that stands for it, its
+    own or its multi-bill's -- or, for an event that will never be paid for,
+    the day it was marked *No bill needed* or closed, whichever came first. A
+    bill is marked paid on the day the last of its money reached Workday, so the
+    cost and the payment covering it land in the fund together.
+    """
+    from events.models import BaseEvent
+    from finance.calculators import latest_bill
+    from finance.models import no_bill_needed_for
+
+    if not event_ids:
+        return {}
+    out = {}
+    events = (BaseEvent.objects.non_polymorphic().filter(pk__in=list(event_ids))
+              .select_related('no_bill_needed').prefetch_related('billings', 'multibillings'))
+    for event in events:
+        days = []
+        bill = latest_bill(event)
+        if bill is not None and bill.date_paid:
+            days.append(bill.date_paid)
+        no_bill = no_bill_needed_for(event)
+        if no_bill is not None:
+            days.append(_local_day(no_bill.decided_on))
+        if event.closed:
+            # Closed before the day was recorded: it has stopped waiting, since when is unknown.
+            days.append(_local_day(event.closed_on) if event.closed_on else datetime.date.min)
+        if days:
+            out[event.pk] = min(days)
+    return out
 
 
 def account_code_for(worktags, codes=None):
@@ -85,19 +141,32 @@ class Books(object):
                 self.unassigned_lines += 1
             self.lines[pk] = (date, money(amount), code)
 
-        #: ``(line pk, fund pk, amount, is_refund)`` for every slice of a bank line.
-        self.slices = [
-            (line, fund, money(amount), refund is not None)
-            for line, fund, amount, refund in ParsedTransaction.objects
-            .filter(parent_transaction__isnull=False)
-            .values_list('parent_transaction_id', 'fund_source_id', 'amount', 'refund_of_id')]
+        #: ``(line pk, fund pk, amount, is_refund, event pk)`` for every slice of
+        #: a bank line. The event is there only on a cost that waits for it to be
+        #: paid for (see :meth:`waits_for_event`), and is ``None`` otherwise.
+        self.slices = []
+        for line, fund, amount, refund, event in (
+                ParsedTransaction.objects.filter(parent_transaction__isnull=False)
+                .values_list('parent_transaction_id', 'fund_source_id', 'amount',
+                             'refund_of_id', 'linked_event_id')):
+            amount, is_refund = money(amount), refund is not None
+            is_cost = amount < 0 or is_refund
+            self.slices.append((line, fund, amount, is_refund,
+                                event if is_cost and self.waits_for_event(fund) else None))
 
-        #: ``(fund pk, amount, date)`` for every reservation still waiting.
+        #: ``(fund pk, amount, date, event pk)`` for every encumbrance still
+        #: open, the event as on :attr:`slices`.
         self.encumbrances = [
-            (fund, money(amount), date)
-            for fund, amount, date in ParsedTransaction.objects
+            (fund, money(amount), date, event if self.waits_for_event(fund) else None)
+            for fund, amount, date, event in ParsedTransaction.objects
             .filter(parent_transaction__isnull=True, status=TransactionStatus.PENDING)
-            .values_list('fund_source_id', 'amount', 'effective_date')]
+            .values_list('fund_source_id', 'amount', 'effective_date', 'linked_event_id')]
+
+        #: ``{event pk: day}`` each event a cost waits for was paid for. See
+        #: :func:`event_paid_days`.
+        self.paid_on = event_paid_days(
+            {entry[4] for entry in self.slices if entry[4] is not None}
+            | {entry[3] for entry in self.encumbrances if entry[3] is not None})
 
         self.transfers = list(FundTransfer.objects.select_related(
             'account', 'from_fund', 'to_fund'))
@@ -107,6 +176,25 @@ class Books(object):
             self.checkpoints[checkpoint.account.code].append(checkpoint)
 
         self.latest_line_date = max((date for date, _, _ in self.lines.values()), default=None)
+
+    def waits_for_event(self, fund):
+        """
+        Whether a cost on ``fund`` that names an event waits for the event to
+        be paid for: one on LNL's own money does, one SGA pays for does not --
+        a funding request already shows what SGA owes for it. A cost naming no
+        fund is the account's own money.
+        """
+        if fund is None:
+            return True
+        source = self.funds.get(fund)
+        return source is not None and source.behaviour == FundBehaviour.CARRIES
+
+    def waiting(self, event, day):
+        """ Whether a cost waiting for ``event`` (or ``None``) still waits at the end of ``day``. """
+        if event is None:
+            return False
+        paid = self.paid_on.get(event)
+        return paid is None or paid > day
 
     # -- cash -----------------------------------------------------------------
     def anchor(self, code):
@@ -152,7 +240,8 @@ class Books(object):
 
         Returns ``(balances, unfiled, opening_cash)``: ``balances`` is
         ``{fund pk: amount}``, with ``None`` standing for slices that name no
-        fund on an account with no fund of its own. ``opening_cash`` is what
+        fund on an account with no fund of its own, and :data:`WAITING` for
+        event costs still waiting for their payment. ``opening_cash`` is what
         the account held the night before the books started, or ``None``.
         """
         balances = defaultdict(lambda: ZERO)
@@ -164,11 +253,14 @@ class Books(object):
             balances[own] += opening_cash
 
         filed = defaultdict(lambda: ZERO)
-        for line, fund, amount, _ in self.slices:
+        for line, fund, amount, _, event in self.slices:
             date, _, line_code = self.lines[line]
             if line_code != code or not (self.start <= date <= day):
                 continue
-            balances[fund if fund is not None else own] += amount
+            if self.waiting(event, day):
+                balances[WAITING] += amount
+            else:
+                balances[fund if fund is not None else own] += amount
             filed[line] += amount
 
         unfiled = ZERO
@@ -191,14 +283,28 @@ class Books(object):
         ``{fund pk: {'received', 'spent', 'transferred'}}``. Spending is net of
         refunds, because a credit back on a purchase un-spends it rather than
         earning anything. Opening splits are left out: they are the opening.
+
+        An event cost still waiting on the day it was charged is spent by
+        :data:`WAITING`, and moves to its fund as a transfer on the day the
+        event is paid for. Counting it as the fund's spending then would count
+        it twice in the account's total.
         """
         own = self.own_fund_ids.get(code)
         out = defaultdict(lambda: {'received': ZERO, 'spent': ZERO, 'transferred': ZERO})
-        for line, fund, amount, is_refund in self.slices:
+        for line, fund, amount, is_refund, event in self.slices:
             date, _, line_code = self.lines[line]
-            if line_code != code or not (first <= date <= last):
+            if line_code != code or date > last:
                 continue
-            row = out[fund if fund is not None else own]
+            target = fund if fund is not None else own
+            waited = self.waiting(event, date)
+            if waited and not self.waiting(event, last):
+                paid = self.paid_on[event]
+                if paid >= first:
+                    out[target]['transferred'] += amount
+                    out[WAITING]['transferred'] -= amount
+            if date < first:
+                continue
+            row = out[WAITING if waited else target]
             if amount > 0 and not is_refund:
                 row['received'] += amount
             else:
@@ -214,18 +320,37 @@ class Books(object):
 
     def encumbered(self, code, day):
         """
-        ``{fund pk: amount}`` reserved and not yet charged, for funds held in
+        ``{fund pk: amount}`` encumbered and not yet charged, for funds held in
         this account. An encumbrance has no bank line, so it belongs to the
-        account its fund is held in.
+        account its fund is held in. One for an event not yet paid for is
+        under :data:`WAITING`, as its cost will be once charged.
         """
         out = defaultdict(lambda: ZERO)
-        for fund, amount, date in self.encumbrances:
-            source = self.funds.get(fund)
-            if source is None or source.account is None or source.account.code != code:
-                continue
-            if date <= day:
-                out[fund] -= amount
+        for fund, amount, date, event in self.encumbrances:
+            if self._held_in(fund, code) and date <= day:
+                out[WAITING if self.waiting(event, day) else fund] -= amount
         return out
+
+    def waiting_events(self, code, day):
+        """
+        ``{event pk: amount}`` of what still waits for each event at the end of
+        ``day`` in this account: its costs and encumbrances together, as a
+        positive figure.
+        """
+        out = defaultdict(lambda: ZERO)
+        for line, _, amount, _, event in self.slices:
+            date, _, line_code = self.lines[line]
+            if line_code == code and self.start <= date <= day and self.waiting(event, day):
+                out[event] -= amount
+        for fund, amount, date, event in self.encumbrances:
+            if self._held_in(fund, code) and date <= day and self.waiting(event, day):
+                out[event] -= amount
+        return out
+
+    def _held_in(self, fund, code):
+        """ Whether ``fund`` is held in the account ``code``. """
+        source = self.funds.get(fund)
+        return source is not None and source.account is not None and source.account.code == code
 
 
 # ---------------------------------------------------------------------------
@@ -234,6 +359,11 @@ class Books(object):
 
 class FundRow(object):
     """ One fund's line on an account's statement. """
+
+    #: Whether this is the row of event costs waiting for their payment, and
+    #: the events it waits for. See :class:`WaitingRow`.
+    is_waiting = False
+    events = ()
 
     def __init__(self, fund, opening, received, spent, transferred, closing, encumbered,
                  is_own, year_over):
@@ -258,9 +388,31 @@ class FundRow(object):
         return self.fund.behaviour if self.fund is not None else FundBehaviour.CARRIES
 
     @property
+    def behaviour_label(self):
+        """ What happens to the fund at year end, in words, or nothing for an unnamed one. """
+        return self.fund.get_behaviour_display() if self.fund is not None else ''
+
+    @property
     def available(self):
-        """ What can still be spent: the balance less what is reserved. """
-        return self.closing - self.encumbered if self.closing is not None else None
+        """
+        What can still be spent: the balance less what is encumbered. ``None``
+        for a fund SGA reimburses, which never holds money to spend -- see
+        :attr:`to_reimburse` for what its figure means instead.
+        """
+        if self.closing is None or self.behaviour == FundBehaviour.REIMBURSED:
+            return None
+        return self.closing - self.encumbered
+
+    @property
+    def to_reimburse(self):
+        """
+        For a fund SGA reimburses: what SGA will owe once the encumbered
+        purchases are charged, as a positive figure. ``None`` for any other
+        kind of fund.
+        """
+        if self.closing is None or self.behaviour != FundBehaviour.REIMBURSED:
+            return None
+        return self.encumbered - self.closing
 
     @property
     def status(self):
@@ -293,6 +445,57 @@ class FundRow(object):
         if closing < 0:
             return "Overdrawn"
         return "Carries forward" if self.year_over else "Carries forward at year end"
+
+
+class WaitingRow(FundRow):
+    """
+    The costs of events not yet paid for, kept out of the fund they were
+    charged to until the client pays. See :data:`WAITING`.
+
+    ``events`` is ``[(event, amount)]``: each event still waited on at the end,
+    with what its costs and encumbrances come to.
+    """
+
+    is_waiting = True
+
+    def __init__(self, opening, received, spent, transferred, closing, encumbered, year_over,
+                 events):
+        super(WaitingRow, self).__init__(None, opening, received, spent, transferred, closing,
+                                         encumbered, is_own=False, year_over=year_over)
+        self.events = events
+
+    @property
+    def name(self):
+        return "Event costs awaiting payment"
+
+    @property
+    def behaviour(self):
+        """ None: the row is no fund, and nothing happens to it at year end. """
+        return None
+
+    @property
+    def behaviour_label(self):
+        return "Waits for each event's payment"
+
+    @property
+    def available(self):
+        return None
+
+    @property
+    def to_reimburse(self):
+        return None
+
+    @property
+    def status(self):
+        if self.closing or self.encumbered:
+            return "Moves into the fund it was charged to when the event is paid for"
+        return "Every event paid for"
+
+    @property
+    def is_empty(self):
+        """ Nothing waiting, and nothing waited during the period. """
+        return not any((self.opening, self.received, self.spent, self.transferred,
+                        self.closing, self.encumbered))
 
 
 class CheckpointRow(object):
@@ -334,6 +537,30 @@ class AccountStatement(object):
     def cash_known(self):
         """ Whether a Workday balance has been entered for this account. """
         return self.closing_cash is not None
+
+    def _sum(self, attribute):
+        """ One column of the fund rows, added up. """
+        return sum((getattr(row, attribute) for row in self.rows), ZERO)
+
+    @property
+    def received(self):
+        """ What came into the account's funds over the period. """
+        return self._sum('received')
+
+    @property
+    def spent(self):
+        """ What the account's funds spent over the period, net of refunds. """
+        return self._sum('spent')
+
+    @property
+    def transferred(self):
+        """ Transfers between funds, added up: zero, since none leaves the account. """
+        return self._sum('transferred')
+
+    @property
+    def encumbered(self):
+        """ What is encumbered against the account's funds. """
+        return self._sum('encumbered')
 
     @property
     def funds_total(self):
@@ -395,9 +622,32 @@ class Statement(object):
 
 
 def _row_order(row):
-    """ The account's own money first, then the funds in their admin order. """
+    """
+    The account's own money first, then what waits to join it, then the funds
+    in their admin order.
+    """
     fund = row.fund
-    return (not row.is_own, fund.sort_order if fund else 999, row.name)
+    return (0 if row.is_own else 1 if row.is_waiting else 2,
+            fund.sort_order if fund else 999, row.name)
+
+
+def _waiting_row(books, code, opening, moved, closing, reserved, last, year_over):
+    """
+    The account's row of event costs awaiting payment, or ``None`` when nothing
+    waits or waited. Takes its figures out of the funds' dicts as it goes.
+    """
+    from events.models import BaseEvent
+
+    movement = moved.pop(WAITING, None) or {'received': ZERO, 'spent': ZERO,
+                                            'transferred': ZERO}
+    waiting = {pk: amount for pk, amount in books.waiting_events(code, last).items() if amount}
+    names = BaseEvent.objects.non_polymorphic().in_bulk(list(waiting))
+    events = sorted(((names[pk], amount) for pk, amount in waiting.items() if pk in names),
+                    key=lambda pair: (pair[0].datetime_start, pair[0].pk))
+    row = WaitingRow(opening.pop(WAITING, ZERO), movement['received'], movement['spent'],
+                     movement['transferred'], closing.pop(WAITING, ZERO),
+                     reserved.pop(WAITING, ZERO), year_over, events)
+    return None if row.is_empty else row
 
 
 def statement(fiscal_year, books=None, today=None):
@@ -428,11 +678,12 @@ def statement(fiscal_year, books=None, today=None):
         moved = books.movements(code, first, last)
         reserved = books.encumbered(code, last)
         cash_known = opening_cash is not None
+        waiting = _waiting_row(books, code, opening, moved, closing, reserved, last, year_over)
 
         held_here = {pk for pk, fund in books.funds.items()
                      if fund.account_id == account.pk and fund.is_active}
         fund_ids = set(opening) | set(closing) | set(moved) | set(reserved) | held_here
-        rows = []
+        rows = [waiting] if waiting is not None else []
         for fund_id in fund_ids:
             fund = books.funds.get(fund_id)
             is_own = fund_id == own_id
@@ -445,7 +696,7 @@ def statement(fiscal_year, books=None, today=None):
                 # everything that rests on it. Its movements are still real.
                 row_opening = row_closing = None
             if fund_id is None and not any((row_closing, movement['received'],
-                                            movement['spent'])):
+                                            movement['spent'], movement['transferred'])):
                 continue
             rows.append(FundRow(fund, row_opening, movement['received'], movement['spent'],
                                 movement['transferred'], row_closing,

@@ -44,6 +44,7 @@
                     The books start on {{ year.books_start|date:"M j, Y" }}.
                     {% if year.latest_line_date %}The newest imported line is from {{ year.latest_line_date|date:"M j, Y" }}, so nothing later is counted yet.{% endif %}
                     Balances count every settled line, whichever Projection or Event Production side it was for.
+                    An expense linked to an event is not taken from Legacy (or any fund that carries forward) until the event is paid for: until then it waits under Event costs awaiting payment.
                 {% else %}
                     Nothing has been imported yet. The books start with the fiscal year of the first Workday line.
                 {% endif %}
@@ -134,7 +135,7 @@
                             <th class="fin-num">Opening</th>
                             <th class="fin-num">Came in</th>
                             <th class="fin-num">Spent</th>
-                            <th class="fin-num" title="Money moved between funds inside this account. Workday never sees these: no cash moves.">Transfers</th>
+                            <th class="fin-num" title="Money moved between funds inside this account, and an event's costs moving into the fund they were charged to once the event is paid for. Workday never sees these: no cash moves.">Transfers</th>
                             <th class="fin-num">{% if year.year_over %}Closing{% else %}Now{% endif %}</th>
                             <th class="fin-num" title="Purchases encumbered against this fund and not yet charged">Encumbrances</th>
                             <th>What it means</th>
@@ -148,8 +149,11 @@
                                         <a href="{% url 'finance:ledger' %}?fy={{ year.fiscal_year }}&amp;fund={{ row.fund.slug }}">{{ row.name }}</a>
                                     {% else %}{{ row.name }}{% endif %}
                                     <div class="fin-muted">
-                                        {% if row.is_own %}{{ account.code }}'s own money &middot; {% endif %}{{ row.fund.get_behaviour_display|default:"" }}
+                                        {% if row.is_own %}{{ account.code }}'s own money &middot; {% endif %}{{ row.behaviour_label }}
                                     </div>
+                                    {% for event, amount in row.events %}
+                                        <div class="fin-muted"><a href="{% url 'events:detail' event.pk %}">{{ event }}</a> &middot; {{ amount|money }}</div>
+                                    {% endfor %}
                                 </td>
                                 <td class="fin-num">{{ row.opening|money }}</td>
                                 <td class="fin-num">{% if row.received %}{{ row.received|money }}{% else %}<span class="fin-muted">—</span>{% endif %}</td>
@@ -159,7 +163,11 @@
                                 <td class="fin-num">
                                     {% if row.encumbered %}
                                         {{ row.encumbered|money }}
-                                        {% if row.available is not None %}<div class="fin-muted">{{ row.available|money }} free</div>{% endif %}
+                                        {% if row.to_reimburse is not None %}
+                                            <div class="fin-muted" title="What SGA will owe once these purchases are charged">{{ row.to_reimburse|money }} to reimburse</div>
+                                        {% elif row.available is not None %}
+                                            <div class="fin-muted">{{ row.available|money }} free</div>
+                                        {% endif %}
                                     {% else %}<span class="fin-muted">—</span>{% endif %}
                                 </td>
                                 <td>{{ row.status }}</td>
@@ -179,21 +187,23 @@
                             </tr>
                         {% endif %}
                     </tbody>
-                    {% if account.cash_known %}
-                        <tfoot>
-                            <tr>
-                                <th>{{ account.code }} in total</th>
-                                <th class="fin-num">{{ account.opening_cash|money }}</th>
-                                <th colspan="3"></th>
-                                <th class="fin-num">{{ account.closing_cash|money }}</th>
-                                <th colspan="2">
-                                    {% if account.out_of_balance %}
-                                        <span class="text-danger">The funds miss the cash by {{ account.out_of_balance|money }}</span>
-                                    {% endif %}
-                                </th>
-                            </tr>
-                        </tfoot>
-                    {% endif %}
+                    {# Opening and closing are the account's cash, which the rows above add up to; without a Workday balance they are unknown, but the movements are not. #}
+                    <tfoot>
+                        <tr>
+                            <th>{{ account.code }} in total</th>
+                            <th class="fin-num">{{ account.opening_cash|money }}</th>
+                            <th class="fin-num">{{ account.received|money }}</th>
+                            <th class="fin-num">{{ account.spent|money }}</th>
+                            <th class="fin-num">{{ account.transferred|money }}</th>
+                            <th class="fin-num">{{ account.closing_cash|money }}</th>
+                            <th class="fin-num">{{ account.encumbered|money }}</th>
+                            <th>
+                                {% if account.out_of_balance %}
+                                    <span class="text-danger">The funds miss the cash by {{ account.out_of_balance|money }}</span>
+                                {% endif %}
+                            </th>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
 

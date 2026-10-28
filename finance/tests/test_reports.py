@@ -408,6 +408,17 @@ class FundBalanceReportTests(LedgerFixture, TestCase):
         self.assertEqual((total['opening'], total['closing']),
                          (Decimal('10000.00'), Decimal('9500.00')))
 
+    def test_a_funding_request_has_nothing_available_but_says_what_is_to_reimburse(self):
+        ParsedTransaction.objects.create(
+            amount=Decimal('-150.00'), effective_date=datetime.date(2026, 5, 1),
+            fund_source=fund('sga_fr'), lnl_spend_category=category('consumables'),
+            description='Film posters')
+        main = section(fund_balances(2026, TODAY), '226-AG: Event Production account')
+        requests = cells(main, 'SGA Funding Request', 'fund')
+        self.assertIsNone(requests['available'])
+        row = next(row for row, _ in main.lines if row.cells['fund'] == 'SGA Funding Request')
+        self.assertEqual(row.note, '$450.00 to reimburse once the encumbrances are charged')
+
     def test_the_headlines(self):
         stats = {stat.label: stat.value for stat in self.report.stats}
         self.assertEqual(stats['226-AG cash'], Decimal('9500.00'))

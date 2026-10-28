@@ -1436,6 +1436,22 @@ plus or minus transfers. The account's own money also holds the opening cash.
 **Unsettled** lines are a row of their own. With that row, the funds always add up
 to the cash, so a half-finished queue makes the split vague rather than wrong.
 
+**An event's costs wait for its payment.** An expense (or a refund of one) on a
+fund that carries forward and is linked to an event, whatever its spend category,
+is not taken from that fund until the event is paid for. Until then it sits in
+*Event costs awaiting payment*, a row of its own, so a big sub-rental for a show
+the client has not paid yet doesn't make Legacy look short. An event is paid for
+on its bill's *Paid on* date: the bill that stands for it, as
+:func:`~finance.calculators.latest_bill` chooses, its own or its multi-bill's.
+An event marked *No bill needed*, or closed unpaid, will never be paid for, so its
+costs move on that day instead (:func:`~finance.balances.event_paid_days`). On
+that day the cost moves into the fund as a transfer. It was spent by the waiting
+row, so the account's *Spent* total counts it once. A cost charged after the
+event was paid for goes straight to the fund. A cost on a fund SGA pays for
+doesn't wait, because the funding request's own balance already says what SGA
+owes. An open encumbrance linked to an event waits the same way, in the row's
+Encumbrances column. Income from the event goes to its fund at once.
+
 **Transfers** (:class:`~finance.models.FundTransfer`) move money between two
 funds inside one account. No cash moves, so Workday never sees them. Each is
 one row taking an amount from one fund and giving it to another, which keeps

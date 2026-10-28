@@ -23,13 +23,16 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
+from events.tests.generators import Event2019Factory
 from finance import balances
 from finance.forms import ReconcileForm
-from finance.models import (BalanceCheckpoint, FiscalYearClose, FRLineItem, FundBehaviour,
-                            FundingRequest, FundTransfer, ParsedTransaction, PartitionCode,
-                            TransactionStatus, WorkdayTransaction, account_own_funds,
-                            books_start_date, own_fund_for_account, reset_finance_cache)
+from finance.models import (BalanceCheckpoint, Billing, FiscalYearClose, FRLineItem,
+                            FundBehaviour, FundingRequest, FundTransfer, MultiBilling,
+                            NoBillNeeded, ParsedTransaction, PartitionCode, TransactionStatus,
+                            WorkdayTransaction, account_own_funds, books_start_date,
+                            own_fund_for_account, reset_finance_cache)
 from finance.suggestions import (DEFAULT, EXPORT, GUESS, MEMO, funding_request_references,
                                  near_miss_funding_request, suggest_all, suggest_fund_source)
 from finance.tests.test_views import FinanceViewTestCase
@@ -495,6 +498,39 @@ class StatementTests(LedgerFixture, TestCase):
         self.assertEqual(legacy.closing, Decimal('11000.00'))
         self.assertEqual(legacy.encumbered, Decimal('250.00'))
         self.assertEqual(legacy.available, Decimal('10750.00'))
+        self.assertIsNone(legacy.to_reimburse)
+
+    def test_an_encumbered_funding_request_has_more_to_reimburse_not_less_free(self):
+        """ SGA pays after the spending, so nothing on it is ever free to spend. """
+        ParsedTransaction.objects.create(
+            amount=Decimal('-150.00'), effective_date=datetime.date(2026, 5, 1),
+            fund_source=fund('sga_fr'), lnl_spend_category=category('consumables'),
+            description='Film posters')
+        requests = row_for(balances.statement(FY26), '226-AG', 'sga_fr')
+        self.assertEqual((requests.closing, requests.encumbered),
+                         (Decimal('-300.00'), Decimal('150.00')))
+        self.assertIsNone(requests.available)
+        self.assertEqual(requests.to_reimburse, Decimal('450.00'))
+
+    def test_each_column_adds_up_across_the_funds(self):
+        ParsedTransaction.objects.create(
+            amount=Decimal('-250.00'), effective_date=datetime.date(2026, 5, 1),
+            fund_source=fund('legacy'), lnl_spend_category=category('consumables'),
+            description='Hazer fluid')
+        main = balances.statement(FY26).account('226-AG')
+        self.assertEqual((main.received, main.spent, main.transferred, main.encumbered),
+                         (Decimal('6500.00'), Decimal('6800.00'), Decimal('0.00'),
+                          Decimal('250.00')))
+
+    def test_each_column_adds_up_across_the_funds_with_an_event_cost_waiting(self):
+        """ The waiting row's spending and its move into Legacy count once each. """
+        show = Event2019Factory.create(event_name='Spring Concert')
+        filed(line(datetime.date(2025, 11, 1), '-1500.00', 'Truss hire'), 'legacy',
+              linked_event=show, lnl_spend_category=category('event_subrental'))
+        Billing.objects.create(event=show, date_billed=datetime.date(2026, 1, 5),
+                               amount=Decimal('2000.00'), date_paid=datetime.date(2026, 3, 1))
+        main = balances.statement(FY26).account('226-AG')
+        self.assertEqual((main.spent, main.transferred), (Decimal('8300.00'), Decimal('0.00')))
 
     def test_a_transfer_moves_money_without_changing_the_total(self):
         FundTransfer.objects.create(
@@ -602,6 +638,150 @@ class YearEndProposalTests(LedgerFixture, TestCase):
         self.assertNotIn('sga_budget', kinds)
 
 
+def waiting_events(row):
+    """ ``[(event pk, amount)]`` of what a waiting row waits for. """
+    return [(event.pk, amount) for event, amount in row.events]
+
+
+def aware(year, month, day):
+    """ Noon on a day, as the datetime a record stores. """
+    return timezone.make_aware(datetime.datetime(year, month, day, 12))
+
+
+class EventCostTests(LedgerFixture, TestCase):
+    """
+    A $1,500 sub-rental for a show, charged to Legacy on Nov 1 2025, waits for
+    the show to be paid for. See LedgerFixture for the rest of the year.
+    """
+
+    def setUp(self):
+        self.build_year()
+        # Counted forwards from the night the books started, so the hire moves
+        # the closing cash and not the opening.
+        self.year_end.delete()
+        checkpoint('226-AG', datetime.date(2025, 6, 30), '10000.00')
+        self.show = Event2019Factory.create(event_name='Spring Concert')
+        self.hire = line(datetime.date(2025, 11, 1), '-1500.00', 'Truss hire')
+        filed(self.hire, 'legacy', linked_event=self.show,
+              lnl_spend_category=category('event_subrental'))
+
+    def waiting_row(self, year):
+        rows = [row for row in year.account('226-AG').rows if row.is_waiting]
+        return rows[0] if rows else None
+
+    def paid(self, day):
+        Billing.objects.create(event=self.show, date_billed=datetime.date(2025, 12, 1),
+                               amount=Decimal('2000.00'), date_paid=day)
+
+    def test_an_unpaid_events_cost_waits_outside_legacy(self):
+        year = balances.statement(FY26)
+        legacy = row_for(year, '226-AG', 'legacy')
+        self.assertEqual((legacy.spent, legacy.closing), (Decimal('0.00'), Decimal('11000.00')))
+        waiting = self.waiting_row(year)
+        self.assertEqual((waiting.spent, waiting.closing),
+                         (Decimal('1500.00'), Decimal('-1500.00')))
+        self.assertEqual(waiting_events(waiting), [(self.show.pk, Decimal('1500.00'))])
+        main = year.account('226-AG')
+        self.assertEqual(main.closing_cash, Decimal('8000.00'))
+        self.assertEqual(main.out_of_balance, Decimal('0.00'))
+
+    def test_it_is_taken_from_legacy_the_day_the_bill_is_paid(self):
+        self.paid(datetime.date(2026, 3, 1))
+        year = balances.statement(FY26)
+        legacy = row_for(year, '226-AG', 'legacy')
+        self.assertEqual((legacy.spent, legacy.transferred, legacy.closing),
+                         (Decimal('0.00'), Decimal('-1500.00'), Decimal('9500.00')))
+        waiting = self.waiting_row(year)
+        self.assertEqual((waiting.spent, waiting.transferred, waiting.closing),
+                         (Decimal('1500.00'), Decimal('1500.00'), Decimal('0.00')))
+        self.assertEqual(waiting_events(waiting), [])
+        self.assertEqual(waiting.status, "Every event paid for")
+
+    def test_paid_next_year_it_waits_into_the_next_year(self):
+        self.paid(datetime.date(2026, 8, 1))
+        self.assertEqual(self.waiting_row(balances.statement(FY26)).closing, Decimal('-1500.00'))
+        next_year = balances.statement(FY26 + 1)
+        waiting = self.waiting_row(next_year)
+        self.assertEqual((waiting.opening, waiting.transferred, waiting.closing),
+                         (Decimal('-1500.00'), Decimal('1500.00'), Decimal('0.00')))
+        self.assertEqual(row_for(next_year, '226-AG', 'legacy').transferred, Decimal('-1500.00'))
+
+    def test_a_cost_charged_after_the_payment_never_waits(self):
+        self.paid(datetime.date(2025, 10, 15))
+        year = balances.statement(FY26)
+        self.assertIsNone(self.waiting_row(year))
+        self.assertEqual(row_for(year, '226-AG', 'legacy').spent, Decimal('1500.00'))
+
+    def test_a_multibill_paid_pays_for_every_show_on_it(self):
+        bill = MultiBilling.objects.create(date_billed=datetime.date(2025, 12, 1),
+                                           amount=Decimal('2000.00'),
+                                           date_paid=datetime.date(2026, 3, 1))
+        bill.events.add(self.show)
+        self.assertEqual(self.waiting_row(balances.statement(FY26)).closing, Decimal('0.00'))
+
+    def test_no_bill_needed_takes_it_from_legacy_that_day(self):
+        NoBillNeeded.objects.create(event=self.show, reason=NoBillNeeded.LNL_EVENT,
+                                    decided_on=aware(2026, 2, 1))
+        self.assertEqual(row_for(balances.statement(FY26), '226-AG', 'legacy').closing,
+                         Decimal('9500.00'))
+
+    def test_closing_an_unpaid_event_takes_it_from_legacy_that_day(self):
+        self.show.closed, self.show.closed_on = True, aware(2026, 2, 1)
+        self.show.save()
+        year = balances.statement(FY26)
+        self.assertEqual(row_for(year, '226-AG', 'legacy').closing, Decimal('9500.00'))
+        self.assertEqual(self.waiting_row(year).closing, Decimal('0.00'))
+
+    def test_a_cost_sga_pays_for_does_not_wait(self):
+        """ The funding request's own balance already says SGA owes it. """
+        filed(line(datetime.date(2025, 11, 2), '-400.00', 'Hazer hire'), 'sga_fr',
+              linked_event=self.show, lnl_spend_category=category('event_subrental'))
+        year = balances.statement(FY26)
+        self.assertEqual(row_for(year, '226-AG', 'sga_fr').closing, Decimal('-700.00'))
+        self.assertEqual(self.waiting_row(year).closing, Decimal('-1500.00'))
+
+    def test_any_cost_linked_to_an_event_waits_whatever_its_category(self):
+        filed(line(datetime.date(2025, 11, 2), '-60.00', 'Gaff tape'), 'legacy',
+              linked_event=self.show, lnl_spend_category=category('consumables'))
+        self.assertEqual(self.waiting_row(balances.statement(FY26)).closing,
+                         Decimal('-1560.00'))
+
+    def test_a_refund_on_the_hire_waits_with_it(self):
+        refund = filed(line(datetime.date(2025, 12, 1), '200.00', 'Truss hire credit'), 'legacy',
+                       linked_event=self.show, lnl_spend_category=category('event_subrental'),
+                       refund_of=ParsedTransaction.objects.get(parent_transaction=self.hire))
+        self.assertIsNotNone(refund)
+        self.assertEqual(self.waiting_row(balances.statement(FY26)).closing,
+                         Decimal('-1300.00'))
+
+    def test_the_events_payment_goes_to_legacy_at_once(self):
+        filed(line(datetime.date(2026, 3, 1), '2000.00', 'ISD Spring Concert'), 'legacy',
+              linked_event=self.show)
+        year = balances.statement(FY26)
+        self.assertEqual(row_for(year, '226-AG', 'legacy').received, Decimal('3000.00'))
+
+    def test_an_encumbrance_for_an_unpaid_event_waits_too(self):
+        ParsedTransaction.objects.create(
+            amount=Decimal('-900.00'), effective_date=datetime.date(2026, 5, 1),
+            fund_source=fund('legacy'), linked_event=self.show,
+            lnl_spend_category=category('event_subrental'), description='Lifts')
+        year = balances.statement(FY26)
+        self.assertEqual(row_for(year, '226-AG', 'legacy').encumbered, Decimal('0.00'))
+        waiting = self.waiting_row(year)
+        self.assertEqual(waiting.encumbered, Decimal('900.00'))
+        self.assertEqual(waiting_events(waiting), [(self.show.pk, Decimal('2400.00'))])
+        self.paid(datetime.date(2026, 3, 1))
+        year = balances.statement(FY26)
+        self.assertEqual(row_for(year, '226-AG', 'legacy').encumbered, Decimal('900.00'))
+
+    def test_the_report_counts_what_waits(self):
+        from finance.reports import fund_balances
+        report = fund_balances(FY26)
+        stats = {stat.label: stat.value for stat in report.stats}
+        self.assertEqual(stats['Event costs awaiting payment'], Decimal('1500.00'))
+        self.assertEqual(stats['Carries forward'], Decimal('11000.00'))
+
+
 # ---------------------------------------------------------------------------
 # The pages
 # ---------------------------------------------------------------------------
@@ -624,6 +804,30 @@ class BalancePageTests(LedgerFixture, FinanceViewTestCase):
         self.assertContains(response, 'Awaiting reimbursement from SGA')
         self.assertContains(response, 'Not settled yet')
         self.assertNotContains(response, 'miss the cash')
+
+    def test_the_last_row_adds_up_every_column(self):
+        self.grant('view_subledger')
+        response = self.client.get(reverse('finance:balances'), {'fy': FY26})
+        footer = response.content.decode().split('<tfoot>')[1].split('</tfoot>')[0]
+        for figure in ('$10,000.00', '$6,500.00', '$6,800.00', '$9,500.00'):
+            self.assertIn(figure, footer)
+
+    def test_an_event_cost_waiting_for_payment_is_a_row_naming_the_event(self):
+        show = Event2019Factory.create(event_name='Spring Concert')
+        filed(line(datetime.date(2025, 11, 1), '-1500.00', 'Truss hire'), 'legacy',
+              linked_event=show, lnl_spend_category=category('event_subrental'))
+        self.grant('view_subledger')
+        response = self.client.get(reverse('finance:balances'), {'fy': FY26})
+        self.assertContains(response, 'Event costs awaiting payment')
+        self.assertContains(response, reverse('events:detail', args=[show.pk]))
+        self.assertNotContains(response, 'miss the cash')
+
+    def test_an_account_with_no_workday_balance_still_adds_up_what_moved(self):
+        self.year_end.delete()
+        self.grant('view_subledger')
+        response = self.client.get(reverse('finance:balances'), {'fy': FY26})
+        footer = response.content.decode().split('<tfoot>')[1].split('</tfoot>')[0]
+        self.assertIn('$6,500.00', footer)
 
     def test_a_finished_year_offers_to_close_only_with_the_permission(self):
         self.grant('view_subledger')

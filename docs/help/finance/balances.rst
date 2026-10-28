@@ -24,14 +24,31 @@ For each account there is a table with one row per fund:
 
 - **Opening** -- what the fund held at the start of the year.
 - **Came in** and **Spent** -- what went into it and out of it during the year. Refunds reduce what was spent.
-- **Transfers** -- money moved in or out by a transfer between funds.
+- **Transfers** -- money moved in or out by a transfer between funds, and event costs moving into Legacy once the event
+  is paid for (see below).
 - **Closing** (or **Now**, for the current year) -- what it holds.
 - **Encumbrances** -- purchases logged in advance against it. Not spent yet, but spoken for. The *free* figure
-  under it is what is left once they are paid.
+  under it is what is left once they are paid. A funding request never holds money to spend, since SGA pays after the
+  spending, so under it the figure is *to reimburse*: what SGA will owe once the encumbered purchases are charged.
 - **What it means** -- for example, that a negative funding request balance is money SGA owes LNL.
 
 The **Not settled yet** row is every line still in the queue. With it, the funds always add up to the account's cash; once
 the queue is empty it is zero.
+
+The **Event costs awaiting payment** row holds every expense on Legacy (or another fund that carries forward) that is
+linked to an event the client hasn't paid for yet, with the events listed under it. A big sub-rental for a show doesn't
+make Legacy look short while you wait for the client to pay you back:
+
+- On the day the event's bill is marked paid, the cost moves into Legacy, shown under **Transfers**. The bill is marked
+  paid on the day the last of its payment reached Workday, so the cost and the payment land in Legacy together.
+- If you mark the event *No bill needed*, or close it without being paid, nobody will pay the cost back, so it moves into
+  Legacy that day instead.
+- An encumbrance linked to an event waits in the same row until the event is paid for.
+- Spending on a funding request doesn't wait. The funding request's own row already shows what SGA owes.
+
+The last row adds up every column for the account. Its opening and closing are the account's cash, so they need a Workday
+balance; the money that came in, was spent and is encumbered is added up either way. Transfers always add up to zero,
+because no money leaves the account.
 
 .. note::
     The Balances tab counts both sides, Event Production and Projection, whichever is chosen in the filter bar.
