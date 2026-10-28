@@ -61,24 +61,17 @@ what they cover rather than alphabetically.
     The Reports tab: an event's costs that SGA pays for, the period a report
     covers and what it is compared with, the income and spending, fund
     balances, events and owed-to-LNL reports against figures small enough to
-    add up by hand, the CSV, and the ledger's download. The activity, forecast
-    and draft budget reports are tested with what they report on, in
-    ``test_activity`` and ``test_forecast``.
+    add up by hand, the CSV, and the ledger's download. The activity reports
+    are tested with what they report on, in ``test_activity``.
 ``test_activity``
     What LNL's work was worth, from the events app: WPI terms, pricing every
     show in bulk exactly as the events app does, student organizations against
     departments with the external wear percentage, and activity term over
     term and year over year.
-``test_history``
-    Lines from before the books start: keeping them out of the queue, the
-    balances and the reports, writing the books start down before they
-    arrive, reading each one by the queue's lookups, the Treasurer's
-    corrections, every line as flows, and the History pages.
-``test_forecast``
-    The forecast: a typical year from the most recent whole years, SGA's and
-    clients' waits, the projection against a ledger small enough to add up by
-    hand, the back-test, and the Forecast tab, planned purchases and the draft
-    budget.
+``test_books_start``
+    Every line imported is in the books: the queue, the balances and the
+    reports count old lines like any other, and an older export moves the
+    books' start back and says so on the import's confirmation.
 
 **Forms and pages**
 

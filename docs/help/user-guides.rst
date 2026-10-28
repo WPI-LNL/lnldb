@@ -68,7 +68,6 @@ Finance (Treasurer)
     finance/multibills
     finance/balances
     finance/reports
-    finance/forecast
     finance/settings
 
 Meetings

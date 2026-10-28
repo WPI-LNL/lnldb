@@ -218,7 +218,7 @@ class DashboardTests(FinanceViewTestCase):
     def test_year_end_calculator_is_gone(self):
         """
         Removed at the Treasurer's request. The year end is now closed from the
-        Balances tab, and where the money is heading is the Forecast tab's job.
+        Balances tab.
         """
         response = self.client.get(reverse('finance:dashboard'))
         self.assertNotContains(response, "Year-End Calculator")

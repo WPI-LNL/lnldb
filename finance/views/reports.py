@@ -10,9 +10,9 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 
-from finance import forecast, reports
+from finance import reports
 from finance.filters import filter_context, get_filter_state
-from finance.models import FundSource, PartitionCode, current_fiscal_year
+from finance.models import FundSource, current_fiscal_year
 
 #: The partition as a report's printed header says it.
 PARTITION_WORDS = {True: 'Projection only', False: 'Event Production only'}
@@ -48,8 +48,7 @@ def report(request, slug):
     ``?from=&to=`` reports on any dates instead of the year, for the reports
     that can; ``?fund=<slug>`` narrows income and spending to one fund;
     ``?by=term|year`` and ``?measure=events|value`` cut and count event
-    activity; ``?account=`` and ``?without=`` choose the forecast's account
-    and leave parts of it out; and ``?format=csv`` downloads it.
+    activity; and ``?format=csv`` downloads it.
     """
     if slug not in reports.REPORTS:
         raise Http404
@@ -84,18 +83,6 @@ def report(request, slug):
         projection = None
         built = reports.activity_trends(state.fiscal_year or current_fiscal_year(), by, measure,
                                         today)
-    elif slug == 'forecast':
-        # The whole forecast from today -- the event account's, unless
-        # ``?account=`` names another -- so neither the year nor the side
-        # applies. ``?without=`` and ``?account=`` work as on the Forecast tab.
-        projection = None
-        account = PartitionCode.objects.filter(code=request.GET.get('account', '')).first()
-        built = reports.forecast_report(forecast.project(
-            account, today=today,
-            without=[k for k in request.GET.getlist('without') if k in forecast.COMPONENTS]))
-    elif slug == 'budget-draft':
-        projection = None
-        built = reports.budget_draft(today)
     else:
         built = reports.owed_to_lnl(projection, today)
 

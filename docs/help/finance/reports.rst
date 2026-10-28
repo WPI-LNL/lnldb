@@ -36,12 +36,9 @@ Student organizations and departments   a fiscal year, or   The value of LNL's w
                                                             *external wear percentage*.
 Event activity                          terms or years      What LNL is doing more or less of, term over term or year
                                                             over year: who for, which services and which clients.
-Forecast                                today               The forecast, to print. See :doc:`forecast`.
-Draft budget request                    next fiscal year    A first draft of an SGA budget request, line by line, from
-                                                            the last three whole years. See :doc:`forecast`.
 ======================================  ==================  ===========================================================
 
-Below the reports, the tab also links to **History** -- every past year side by side -- and to the **Ledger** download.
+Below the reports, the tab also links to the **Ledger** download.
 
 
 Choosing What a Report Covers
@@ -80,4 +77,4 @@ Reading a Report
 - **Costs SGA pays for aren't LNL's losses.** On the *Events* report, costs paid from a funding request or the SGA
   budget are shown separately and don't reduce an event's margin.
 
-`Last Modified: October 19, 2026`
+`Last Modified: October 27, 2026`

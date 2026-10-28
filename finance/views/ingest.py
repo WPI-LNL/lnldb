@@ -29,8 +29,9 @@ from finance.forms import (BulkEncumbranceForm, BulkReconcileForm, EncumbranceFo
                            EncumbranceLineFormSet, ReconcileForm, WorkdayCSVUploadForm)
 from finance.importers import (ImportError_, discard_staged, import_workday_export,
                                purge_stale_staged, read_staged, stage_upload)
-from finance.models import (ZERO, Billing, Encumbrance, ParsedTransaction,  # NOQA
-                            TransactionStatus, WorkdayTransaction, fiscal_year_for, money)
+from finance.models import (ZERO, Billing, Encumbrance, FundingRequest, FundTransfer,  # NOQA
+                            ParsedTransaction, TransactionStatus, WorkdayTransaction,
+                            fiscal_year_for, money)
 from finance.suggestions import (ENCUMBRANCE_CLOSE_ENOUGH, SUGGESTED_FIELDS,
                                  active_project_tags, active_suggestion_rules,
                                  encumbrance_match_options, suggest_all,
@@ -58,10 +59,8 @@ def queue(request):
     # Marking a bill paid is billing, so the box is only offered to whoever can bill.
     can_bill = can_edit and request.user.has_perm('events.bill_event')
 
-    # History -- lines from before the books start -- is never filed, so it
-    # is never work: see WorkdayTransaction.objects.in_ledger().
     unreconciled = list(
-        state.apply_to_workday(WorkdayTransaction.objects.in_ledger().unreconciled())
+        state.apply_to_workday(WorkdayTransaction.objects.unreconciled())
         .order_by('-accounting_date', '-pk'))
 
     paginator = Paginator(unreconciled, 25)
@@ -255,14 +254,23 @@ def upload(request):
         'filename': upload_file.name,
     }
 
+    # An export older than everything on file moves the books back. What was
+    # entered for the old start -- the opening split, and what SGA owed on each
+    # request then -- is only right for that day, so the page names it. It is
+    # not changed here: the Treasurer decides once the older lines are settled.
+    moved = result.new_books_start
     context = {
         'h2': "Confirm import",
         'fin_page': 'queue',
         'filename': upload_file.name,
         'created_count': result.created_count,
-        'queue_count': result.queue_count,
-        'history_count': result.history_count,
         'books_start': result.books_start,
+        'new_books_start': moved,
+        'opening_splits': (FundTransfer.objects.filter(kind=FundTransfer.OPENING).count()
+                           if moved else 0),
+        'owed_at_start': (list(FundingRequest.objects.exclude(owed_at_books_start=0)
+                               .order_by('reference'))
+                          if moved else []),
         'duplicate_count': result.duplicate_count,
         'error_count': result.error_count,
         'errors': result.errors[:5],

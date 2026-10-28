@@ -17,31 +17,45 @@
                 <div class="fin-panel-body">
 
                     <div class="alert alert-warning fin-import-confirm-lede">
-                        {% if queue_count %}
-                            You are about to add
-                            <strong>{{ queue_count }} line{{ queue_count|pluralize }} to settle</strong>
-                            to the queue{% if history_count %}, and {{ history_count }} line{{ history_count|pluralize }} of history{% endif %}.
-                        {% else %}
-                            You are about to add
-                            <strong>{{ history_count }} line{{ history_count|pluralize }} of history</strong>,
-                            and nothing to the queue.
-                        {% endif %}
-                        Are you sure you want to proceed?
+                        You are about to add
+                        <strong>{{ created_count }} line{{ created_count|pluralize }} to settle</strong>
+                        to the queue. Are you sure you want to proceed?
                     </div>
+
+                    {% if new_books_start %}
+                        <div class="alert alert-info">
+                            This export goes back further than anything on file, so the books will start on
+                            <strong>{{ new_books_start|date:"M j, Y" }}</strong> instead of
+                            {{ books_start|date:"M j, Y" }}. Every one of its lines joins the queue to be settled.
+                            {% if opening_splits or owed_at_start %}
+                                <div style="margin-top:8px;">
+                                    These were entered for {{ books_start|date:"M j, Y" }} and will need another
+                                    look once the older lines are settled. Nothing is changed for you:
+                                </div>
+                                <ul style="margin:6px 0 0;">
+                                    {% if opening_splits %}
+                                        <li>
+                                            The <a href="{% url 'finance:opening-balances' %}">opening balances</a>
+                                            ({{ opening_splits }} split{{ opening_splits|pluralize }}). They will count
+                                            the night before the new start, alongside the older lines that now say
+                                            what each fund held.
+                                        </li>
+                                    {% endif %}
+                                    {% for request in owed_at_start %}
+                                        <li>
+                                            <a href="{% url 'finance:fr-detail' request.pk %}">{{ request.reference }}</a>:
+                                            {{ request.owed_at_books_start|money }} owed by SGA when the books started.
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
+                    {% endif %}
 
                     <dl class="fin-kv">
                         <dt>File</dt><dd><code>{{ filename }}</code></dd>
                         <dt>New lines</dt>
-                        {% if queue_count %}
-                            <dd><strong>{{ queue_count }}</strong> for the queue &mdash; each one work for somebody</dd>
-                        {% endif %}
-                        {% if history_count %}
-                            <dd>
-                                <strong>{{ history_count }}</strong> from before the books start on
-                                {{ books_start|date:"M j, Y" }}: history, kept for the forecast. They stay out
-                                of the queue and out of every balance, and are never settled.
-                            </dd>
-                        {% endif %}
+                        <dd><strong>{{ created_count }}</strong> for the queue &mdash; each one work for somebody</dd>
                         <dd class="fin-muted">Net {{ net_total|money }}</dd>
                         {% if duplicate_count %}
                             <dt>Already imported</dt>
@@ -123,9 +137,6 @@
                         <button type="submit" class="btn btn-primary">
                             Import {{ created_count }} line{{ created_count|pluralize }}
                         </button>
-                        {% if history_count %}
-                            <a href="{% url 'finance:history' %}" class="btn btn-link">What history is for</a>
-                        {% endif %}
                     </form>
                 </div>
             </div>

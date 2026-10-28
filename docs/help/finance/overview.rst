@@ -4,7 +4,7 @@ The Finance App (Treasurer)
 
 The finance app is where the Treasurer keeps LNL's books. Workday says how much money is in each of LNL's accounts; the
 finance app records *why* -- what each purchase was for, whose money paid for it, which show it belongs to -- and from
-that works out what each fund holds, what each event made or lost, what LNL is owed, and where the money is heading.
+that works out what each fund holds, what each event made or lost, and what LNL is owed.
 
 This page is the map. The other finance guides each cover one job:
 
@@ -16,7 +16,6 @@ This page is the map. The other finance guides each cover one job:
 - :doc:`multibills` -- billing several events at once
 - :doc:`balances` -- fund balances, Workday balances and closing the year
 - :doc:`reports` -- reports for the board and for budget requests
-- :doc:`forecast` -- where the money is heading, and whether LNL can afford something
 - :doc:`settings` -- categories, suggestion rules and settings
 
 .. caution::
@@ -39,7 +38,7 @@ What It Does, and What It Doesn't
 know which of that money is LNL's own and which is SGA's, what SGA still owes, or whether a show made money.
 
 **The finance app explains Workday.** You import Workday's lines, and for each one you say what it was for. Everything
-else -- balances, what is owed, each event's margin, reports, the forecast -- is worked out from that.
+else -- balances, what is owed, each event's margin, reports -- is worked out from that.
 
 Three things are worth knowing from the start:
 
@@ -115,8 +114,8 @@ Words You'll See
 **Workday balance**
     What Workday said an account held at the end of a day. You enter these periodically so the app can check itself.
 **Books start**
-    The first day the finance app keeps books for -- for LNL, July 1, 2025, the start of FY26. Lines from before then
-    are **history**: imported so the forecast can learn from past years, and never settled.
+    The first day the finance app keeps books for: always the start of the fiscal year of the oldest line imported.
+    It isn't a setting. Import an older export and the books move back to meet it.
 **Fiscal year**
     July to June, named for the year it ends in. FY26 is July 1st 2025 to June 30th 2026.
 
@@ -129,22 +128,20 @@ Open `Finance` in the navigation bar, then use the tabs across the top of every 
 =============  ========================================================================================================
 Tab            Use it to
 =============  ========================================================================================================
-Dashboard      See the year at a glance: money in and out, spending by category, what each fund holds, where LNL's own
-               money is heading, what is owed, and the events that lost money.
+Dashboard      See the year at a glance: money in and out, spending by category, what each fund holds, what is owed,
+               and the events that lost money.
 Ledger         Find any entry. Filter, sort, change many at once, or download as a spreadsheet.
 Queue          Import Workday exports and settle each new line. Also where you add an encumbrance.
 Events         See what each show made or lost, and mark a bill paid.
 Balances       See what each fund holds; record Workday balances, move money between funds, and close a year.
 Projects       See spending grouped by project.
 Funding        Enter SGA funding requests, and see what SGA still owes on each.
-Forecast       See where LNL's own money is heading, ask "can we afford it?", list planned purchases, and look at past
-               years.
 Reports        Print or download reports for the board, for SGA and for budget requests.
 =============  ========================================================================================================
 
 **The filter bar** at the top of every page chooses the **fiscal year** and the side: `Event Production`, `Projection`
-or both. Every page follows it, except where the page says it is about today (what each fund holds now, what is owed,
-and the forecast).
+or both. Every page follows it, except where the page says it is about today (what each fund holds now, and what is
+owed).
 
 
 Your Routine
@@ -166,8 +163,6 @@ counts as spoken for. See :doc:`encumbrances`.
 bill paid once the payment arrives. See :doc:`events`.
 
 **After June 30** -- once June's lines are in, close the fiscal year from the `Balances` tab. See :doc:`balances`.
-
-**Before a big purchase** -- ask the forecast. See :doc:`forecast`.
 
 **For a board meeting or a budget request** -- see :doc:`reports`.
 

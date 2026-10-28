@@ -2,9 +2,8 @@
 Categories, Rules and Settings (Treasurer)
 ==========================================
 
-Most of what the finance app knows about LNL -- its spend categories, its funds, which Workday codes mean what, the
-minimum reserve -- is kept in tables you can change yourself, without asking the webmaster for a new version of the
-site. They are all in the Django admin.
+Most of what the finance app knows about LNL -- its spend categories, its funds, which Workday codes mean what -- is
+kept in tables you can change yourself, without asking the webmaster for a new version of the site. They are all in the Django admin.
 
 .. caution::
     **Permission Required:** Admin access
@@ -33,8 +32,8 @@ CSV Column Aliases                  Other names for Workday's columns, for when 
 Service Colours                     The colour of each service on the dashboard's charts.
 ==================================  ===================================================================================
 
-The admin also shows funding requests, Workday lines, entries, planned purchases and history corrections, but those are
-better changed on the finance pages themselves. Workday lines can't be changed at all.
+The admin also shows funding requests, Workday lines and entries, but those are better changed on the finance pages
+themselves. Workday lines can't be changed at all.
 
 
 Finance Configuration
@@ -48,15 +47,6 @@ Fiscal year starts in                               July. Change it only if WPI 
 Student organization fund                           The Workday fund number (810) that marks a client as a student
                                                     organization rather than a department.
 Past years / Future years in the picker             How many fiscal years the filter bar offers.
-Books start on                                      The first day the books count (July 1, 2025). Lines from before it
-                                                    are history. Don't change it without talking to the webmaster:
-                                                    every balance is worked out from it.
-Minimum reserve                                     The least LNL's own money should hold. The forecast and *Can we
-                                                    afford it?* answer against it.
-Share of pre-FY27 billing still charged (%)         What share of past billing the same shows would still be charged,
-                                                    now that an SGA-funded show is charged only for its rentals and
-                                                    one-off charges. Until it is set or can be measured from FY27's
-                                                    shows, the forecast leaves past billing out. See :doc:`forecast`.
 Billing digest: waiting on client after (days)      How long after a bill was last emailed the weekly billing digest
                                                     lists it, if the client hasn't sent the worktag (14). See
                                                     :doc:`billing`.
@@ -74,12 +64,8 @@ everything in it follows.
 To **retire** a category, untick `Is active`. It disappears from the dropdowns, but everything already in it
 keeps it. A category with money in it can't be deleted, so nothing is ever lost.
 
-Two tick boxes change how the app treats a category:
-
-- **Use for costs billed to an event** -- the category a cost is given when it is linked to one show without a
-  category. `Event - Sub-Rental` has it.
-- **Forecast from plans only** -- for spending chosen one purchase at a time, like equipment. The forecast leaves it out
-  of the typical year and counts only what is encumbered or planned. Both equipment categories have it.
+One tick box changes how the app treats a category: **Use for costs billed to an event** -- the category a cost is
+given when it is linked to one show without a category. `Event - Sub-Rental` has it.
 
 .. warning::
     Leave the **slug** alone. It is the name links and bookmarks use, and the admin says so on the field.
@@ -89,7 +75,7 @@ Suggestion Rules
 ----------------
 
 When an import warns that **no spend category rule covers** a Workday category, add a rule and every line with that
-category -- in the queue now and in every future import, and in history -- fills itself in.
+category -- in the queue now and in every future import -- fills itself in.
 
 #. Under `Spend Category Suggestion Rules`, click `Add`.
 #. **Match field:** usually *Workday's own spend category*.
@@ -112,4 +98,4 @@ money **goes into**; the queue then fills that fund in and refuses any other.
 
 A Workday code renamed or renumbered by WPI is fixed here, not in the code: change the code on the matching row.
 
-`Last Modified: October 19, 2026`
+`Last Modified: October 27, 2026`

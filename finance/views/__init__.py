@@ -14,8 +14,6 @@ from finance.views.billing import (BillingCreate, BillingDelete, BillingEmailCre
 from finance.views.dashboard import dashboard
 from finance.views.detail import entry_delete, entry_detail, transaction_detail
 from finance.views.events import event_pnl
-from finance.views.forecast import (afford, forecast_page, history_line, history_page,
-                                    history_year, plan_delete, plan_edit, plans)
 from finance.views.ingest import (bulk_match_encumbrance, bulk_reconcile, encumbrance,
                                  encumbrance_delete, match_encumbrance, queue, reconcile,
                                  settle, suggestions_json, unreconcile, upload, upload_confirm)

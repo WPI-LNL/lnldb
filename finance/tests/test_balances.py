@@ -417,15 +417,10 @@ class BooksStartTests(TestCase):
         line(datetime.date(2025, 9, 12), '-10.00')
         self.assertEqual(books_start_date(), datetime.date(2025, 7, 1))
 
-    def test_a_date_the_treasurer_set_wins(self):
-        from finance.models import FinanceSettings
+    def test_an_older_line_moves_the_books_back(self):
         line(datetime.date(2025, 9, 12), '-10.00')
-        config = FinanceSettings.load()
-        config.ledger_start_date = datetime.date(2025, 9, 1)
-        config.save()
-        reset_finance_cache('config')
-        self.addCleanup(reset_finance_cache, 'config')
-        self.assertEqual(books_start_date(), datetime.date(2025, 9, 1))
+        line(datetime.date(2018, 9, 4), '-10.00')
+        self.assertEqual(books_start_date(), datetime.date(2018, 7, 1))
 
 
 class StatementTests(LedgerFixture, TestCase):

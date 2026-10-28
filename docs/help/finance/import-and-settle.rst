@@ -36,8 +36,11 @@ Import the File
 #. Click `Import`. The new lines appear in the queue.
 
 .. note::
-    Lines dated before the books start (July 1, 2025) are counted separately as **history**. They never go into the
-    queue and are never settled -- they are there so the forecast can learn from past years. See :doc:`forecast`.
+    Every line you import goes into the queue and is settled by you, however old it is. An export that goes back
+    further than anything already imported moves the books back to the start of its first fiscal year, and the
+    confirmation page says so before anything is saved. It also lists the opening balances and the "owed by SGA when
+    the books started" figures that were entered for the old start: nothing changes them for you, so look at each one
+    again once the older lines are settled.
 
 If the import warns that **no spend category rule covers** a Workday category, every line with that category will need
 its category picked by hand until a rule is added. One rule fixes it for good; see :doc:`settings`.
@@ -172,4 +175,4 @@ Check Against Workday
 Once the queue is empty, open the `Balances` tab and record Workday's current balance for each account. If the app's
 figure disagrees, a line is missing or was imported twice. See :doc:`balances`.
 
-`Last Modified: October 19, 2026`
+`Last Modified: October 27, 2026`

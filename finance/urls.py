@@ -5,11 +5,10 @@ The five numbered blocks are the pages the app started with, in the order a
 Treasurer normally walks them: look at the dashboard, scan the ledger, clear the
 queue, drill into a line, then check a project tag. The blocks after them came
 as the app grew: what each event made, fund balances and the year end, funding
-requests, reports, the forecast with the history it learns from, and billing
-events, which moved here from the events app. Anything
-reached only from inside a page (bulk actions, JSON endpoints) is grouped under
-the page that links to it. The pages, and the permission each needs, are listed
-in ``docs/reference/finance.rst`` under *The pages*.
+requests, reports, and billing events, which moved here from the events app.
+Anything reached only from inside a page (bulk actions, JSON endpoints) is
+grouped under the page that links to it. The pages, and the permission each
+needs, are listed in ``docs/reference/finance.rst`` under *The pages*.
 """
 from django.urls import re_path
 
@@ -79,18 +78,6 @@ urlpatterns = [
     # Reports to print and download
     re_path(r'^reports/$', views.report_list, name="reports"),
     re_path(r'^reports/(?P<slug>[a-z-]+)/$', views.report, name="report"),
-
-    # Where the money is heading, and the past it is worked out from
-    re_path(r'^forecast/$', views.forecast_page, name="forecast"),
-    re_path(r'^forecast/afford/$', views.afford, name="afford"),
-    re_path(r'^forecast/plans/$', views.plans, name="plans"),
-    re_path(r'^forecast/plans/new/$', views.plan_edit, name="plan-new"),
-    re_path(r'^forecast/plans/(?P<pk>\d+)/$', views.plan_edit, name="plan-edit"),
-    re_path(r'^forecast/plans/(?P<pk>\d+)/delete/$', views.plan_delete, name="plan-delete"),
-    re_path(r'^forecast/history/$', views.history_page, name="history"),
-    re_path(r'^forecast/history/(?P<fiscal_year>\d{4})/$', views.history_year,
-            name="history-year"),
-    re_path(r'^forecast/history/line/(?P<pk>\d+)/$', views.history_line, name="history-line"),
 
     # Billing an event: the Billing page, bills, multi-bills, the worktag and
     # ISD each is charged to, and events that need no bill. The client's own

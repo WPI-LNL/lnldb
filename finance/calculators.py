@@ -7,9 +7,9 @@ question for the same slice of the ledger. The rest are about one thing rather
 than one year: what an event was billed, received and cost
 (:func:`event_financials`, and :func:`event_pnl_rows` for the Events tab), and
 what SGA and clients owe today (:func:`sga_receivables`,
-:func:`billing_receivables`). The reports, the forecast and the events app's
-own Billing tab read the same functions, so a figure means the same thing
-wherever it appears.
+:func:`billing_receivables`). The reports and the events app's own Billing
+tab read the same functions, so a figure means the same thing wherever it
+appears.
 """
 import datetime
 from collections import OrderedDict

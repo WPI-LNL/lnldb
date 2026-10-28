@@ -27,8 +27,8 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
-from finance.models import (MEMO_SEPARATOR, FinanceSettings, WorkdayTransaction,
-                            books_start_date, column_aliases, finance_settings, identity_text)
+from finance.models import (MEMO_SEPARATOR, WorkdayTransaction, books_start_date,
+                            column_aliases, fiscal_year_bounds, fiscal_year_for, identity_text)
 
 # Canonical Workday columns. Keys are the normalised header, values are the
 # aliases we have actually seen come out of Workday.
@@ -300,20 +300,22 @@ class ImportResult(object):
         return self._count(RowResult.CREATED)
 
     @property
-    def history_count(self):
+    def new_books_start(self):
         """
-        How many of the new lines are from before the books start: history,
-        kept for the forecast and never filed, so not work for anybody.
+        The day the books will start once this import is in, if it moves them.
+
+        Every line imported is in the books, so an export older than everything
+        on file moves the start back to the beginning of its first fiscal year.
+        ``None`` when the start stays where it is, and on an empty install,
+        where there is nothing to move.
         """
         if self.books_start is None:
-            return 0
-        return sum(1 for r in self.created
-                   if r.preview.get('accounting_date') and r.preview['accounting_date'] < self.books_start)
-
-    @property
-    def queue_count(self):
-        """ How many of the new lines land in the queue to be filed. """
-        return self.created_count - self.history_count
+            return None
+        dates = [r.preview['accounting_date'] for r in self.created
+                 if r.preview.get('accounting_date')]
+        if not dates or min(dates) >= self.books_start:
+            return None
+        return fiscal_year_bounds(fiscal_year_for(min(dates)))[0]
 
     @property
     def duplicate_count(self):
@@ -364,10 +366,8 @@ class ImportResult(object):
 
     def summary(self):
         """ One-line tally for the confirmation page and the messages framework. """
-        history = (" (%s of them history, from before the books start)" % self.history_count
-                   if self.history_count else "")
-        return "%s imported%s, %s skipped as duplicates, %s errors" % (
-            self.created_count, history, self.duplicate_count, self.error_count)
+        return "%s imported, %s skipped as duplicates, %s errors" % (
+            self.created_count, self.duplicate_count, self.error_count)
 
     def unmapped_spend_categories(self):
         """
@@ -857,29 +857,11 @@ def import_workday_export(file_obj, user=None, filename='', dry_run=False):
 
     if not dry_run and to_create:
         with transaction.atomic():
-            if result.history_count:
-                _pin_books_start(result.books_start)
             # bulk_create bypasses the immutability guard in save(), which is
             # correct here: these are all first-time inserts.
             WorkdayTransaction.objects.bulk_create(to_create)
 
     return result
-
-
-def _pin_books_start(start):
-    """
-    Write down the day the books start, if nobody has, before older lines land.
-
-    Left blank, the books start where the earliest line does -- so an older
-    export imported for the forecast would drag them back with it and put
-    every one of its lines in the queue. Writing today's answer down first
-    keeps the books where they are, and the older lines become history.
-    """
-    if start is None or finance_settings().ledger_start_date:
-        return
-    config = FinanceSettings.load()
-    config.ledger_start_date = start
-    config.save()
 
 
 # ---------------------------------------------------------------------------

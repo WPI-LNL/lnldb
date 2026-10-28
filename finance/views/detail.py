@@ -2,17 +2,14 @@
 Page 4 -- one bank line and the entries posted against it, and one entry on
 a page of its own.
 
-Three things make these more than templates. The first is splitting, on the
+Two things make these more than templates. The first is splitting, on the
 bank line's page -- a single Workday line frequently pays for several
 different things, and the formset below is what carves it up. A payment for
 a multi-bill is split across its events here, and the page offers to mark
-the bill paid when the split covers it. The second is
-the audit trail, on the entry's page: django-reversion stores each save as an
-opaque field snapshot, so the helpers here diff consecutive versions and
-translate database column names back into the labels a Treasurer actually
-recognises. The third is history: a line from before the books start has no
-entries and is never split, so its page shows how the forecast reads it
-instead.
+the bill paid when the split covers it. The second is the audit trail, on the
+entry's page: django-reversion stores each save as an opaque field snapshot,
+so the helpers here diff consecutive versions and translate database column
+names back into the labels a Treasurer actually recognises.
 """
 import reversion
 from django.contrib import messages
@@ -107,8 +104,6 @@ def transaction_detail(request, pk):
     """
     txn = get_object_or_404(
         WorkdayTransaction.objects.prefetch_related('slices__project_tag'), pk=pk)
-    if txn.is_history:
-        return _history_detail(request, txn)
     can_edit = request.user.has_perm('finance.edit_subledger')
     bill_offer = None
 
@@ -231,30 +226,6 @@ def _mark_paid_on_split(request, txn):
         return ("%s was not marked paid: $%s of its $%s has been received."
                 % (bill.display_name, money(received), money(bill.amount)))
     return "Marked %s paid on %s." % (bill.display_name, date_format(paid_on, 'M j, Y'))
-
-
-def _history_detail(request, txn):
-    """
-    A line from before the books start. It is never filed, so there is nothing
-    to split: the page shows the Workday record and how the forecast reads it.
-    """
-    from finance import history
-    from finance.models import HistoryOverride, books_start_date
-
-    override = HistoryOverride.objects.filter(line=txn).first()
-    reading = history.reading_for(txn, override)
-    context = {
-        'h2': "Transaction %s" % txn.reference,
-        'txn': txn,
-        'history': reading,
-        'history_category': history.spending_categories().get(reading.category),
-        'books_start': books_start_date(),
-        'can_edit': request.user.has_perm('finance.edit_subledger'),
-        'worktags': sorted((k.replace('_', ' ').title(), v)
-                           for k, v in (txn.worktags_json or {}).items()),
-    }
-    context.update(filter_context(request))
-    return render(request, 'finance/transaction_detail.html', context)
 
 
 def _multibill_to_split(request, txn):

@@ -4,7 +4,7 @@ Encumber Money Before a Purchase (Treasurer)
 
 A purchase can take weeks to reach Workday. Until it does, the money looks unspent, and a funding request looks like it
 has more left than it really does. An **encumbrance** sets the money aside now: it counts as spent on the funding request,
-on the `Balances` tab and in the forecast, until the real Workday line arrives and you match the two up.
+on the `Balances` tab, until the real Workday line arrives and you match the two up.
 
 Log one whenever you commit to spending money that won't show up in Workday for a while -- an order placed, a rental
 booked for a show, an invoice on its way.
