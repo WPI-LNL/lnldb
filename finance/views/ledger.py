@@ -155,8 +155,7 @@ def ledger(request):
             Q(parent_transaction__memo__icontains=query) |
             Q(parent_transaction__operational_transaction__icontains=query) |
             Q(linked_event__event_name__icontains=query) |
-            Q(project_tag__name__icontains=query) |
-            Q(project_tag__code__icontains=query))
+            Q(project_tag__name__icontains=query))
 
     # -- facet filters ------------------------------------------------------
     status = request.GET.get('status')

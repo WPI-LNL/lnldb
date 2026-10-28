@@ -6,7 +6,7 @@
 {% block fin_content %}
     <div class="fin-print-header">
         <h3>
-            {% if selected %}{{ selected.name }} ({{ selected.code }}){% else %}Project Ledger{% endif %}
+            {% if selected %}{{ selected.name }}{% else %}Project Ledger{% endif %}
         </h3>
         <div>
             Fully-loaded cost report &middot;
@@ -56,7 +56,6 @@
                     <div class="fin-panel-head">
                         <span>
                             {{ selected.name }}
-                            <code class="fin-muted">{{ selected.code }}</code>
                             {% if selected.parent %}
                                 <span class="fin-muted" style="font-weight:400;font-size:12px;">
                                     in <a href="{% url 'finance:projects-detail' selected.parent.pk %}">{{ selected.parent.name }}</a>
@@ -122,13 +121,12 @@
                         <div class="fin-panel-head">Sub-assets</div>
                         <div class="fin-table-wrap">
                             <table class="table fin-table">
-                                <thead><tr><th>Asset</th><th>Code</th><th class="fin-num">Fully-loaded cost</th></tr></thead>
+                                <thead><tr><th>Asset</th><th class="fin-num">Fully-loaded cost</th></tr></thead>
                                 <tbody>
                                     {% for child in children %}
                                         <tr>
                                             <td><a href="{% url 'finance:projects-detail' child.node.pk %}?{{ filter_state.querystring }}">
                                                 {{ child.node.name }}</a></td>
-                                            <td><code>{{ child.node.code }}</code></td>
                                             <td class="fin-num">{{ child.cost|money }}</td>
                                         </tr>
                                     {% endfor %}
@@ -169,7 +167,7 @@
                                         <td class="fin-num {{ entry.amount|money_class }}">{{ entry.amount|money }}</td>
                                         <td>{{ entry.lnl_spend_category|default:"—" }}</td>
                                         <td>{{ entry.fund_source|default:"—" }}</td>
-                                        <td>{% if entry.project_tag %}{{ entry.project_tag.code }}{% endif %}</td>
+                                        <td>{% if entry.project_tag %}{{ entry.project_tag.name }}{% endif %}</td>
                                         <td>{% if entry.parent_transaction %}<code>{{ entry.parent_transaction.reference }}</code>{% else %}—{% endif %}</td>
                                     </tr>
                                 {% empty %}

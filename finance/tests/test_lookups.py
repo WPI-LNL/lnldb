@@ -209,31 +209,27 @@ class EventLookupTests(TestCase):
 class ProjectTagLookupTests(TestCase):
     def setUp(self):
         self.channel = ProjectTagLookup()
-        self.tag = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
+        self.tag = ProjectTag.objects.create(name='New Equipment List 2026')
 
-    def _codes(self, query):
-        return [t.code for t in self.channel.get_query(query, _request(None))]
+    def _names(self, query):
+        return [t.name for t in self.channel.get_query(query, _request(None))]
 
     def test_it_matches_on_the_name(self):
-        self.assertIn('NEL26', self._codes('equipment'))
-
-    def test_it_matches_on_the_code(self):
-        self.assertIn('NEL26', self._codes('nel'))
+        self.assertIn('New Equipment List 2026', self._names('equipment'))
 
     def test_an_archived_project_is_not_offered(self):
         """ Archived means "file no new spending here". """
-        ProjectTag.objects.create(name='Old Rig', code='OLDRIG', archived=True)
-        self.assertNotIn('OLDRIG', self._codes('old'))
+        ProjectTag.objects.create(name='Old Rig', archived=True)
+        self.assertNotIn('Old Rig', self._names('old'))
 
     def test_the_list_is_capped(self):
         for index in range(30):
-            ProjectTag.objects.create(name='Rig %s' % index, code='RIG%s' % index)
-        self.assertEqual(len(self._codes('rig')), 25)
+            ProjectTag.objects.create(name='Rig %s' % index)
+        self.assertEqual(len(self._names('rig')), 25)
 
-    def test_the_display_leads_with_the_code(self):
-        """ The code is what appears on a memo, so it is what gets scanned for. """
+    def test_the_display_is_the_name(self):
         html = self.channel.format_item_display(self.tag)
-        self.assertLess(html.index('NEL26'), html.index('New Equipment List'))
+        self.assertIn('New Equipment List 2026', html)
 
     def test_the_display_escapes_what_people_typed(self):
         self.tag.name = '<b>bold</b>'

@@ -1203,15 +1203,12 @@ class ProjectTag(MPTTModel):
     A self-referential grouping used to answer "what did this thing really cost
     us, across every fiscal year and funding source?"
 
-    Parent nodes are projects (``NEL26``); children are the individual assets
-    bought under them (``D60 Lustrs``).
+    Parent nodes are projects (*New Equipment List 2026*); children are the
+    individual assets bought under them (*D60 Lustrs*).
     """
     glyphicon = 'tags'
 
     name = models.CharField(max_length=128)
-    code = models.SlugField(
-        max_length=32, unique=True,
-        help_text="Short unique key used on reports, e.g. NEL26 or D60-LUSTR")
     parent = TreeForeignKey('self', on_delete=models.PROTECT, null=True, blank=True,
                             related_name='children', verbose_name="Parent project",
                             help_text="Leave blank to create a top-level project")
@@ -1234,7 +1231,7 @@ class ProjectTag(MPTTModel):
         )
 
     def __str__(self):
-        return "%s (%s)" % (self.name, self.code)
+        return self.name
 
     @property
     def indented_label(self):
@@ -1244,8 +1241,7 @@ class ProjectTag(MPTTModel):
         Kept on the model so the forms and the raw ledger filter cannot drift
         apart; :func:`nested_option_label` is the format.
         """
-        return nested_option_label('%s — %s' % (self.code, self.name),
-                                   getattr(self, 'level', 0) or 0)
+        return nested_option_label(self.name, getattr(self, 'level', 0) or 0)
 
     def get_absolute_url(self):
         """ This tag's branch of the project explorer. """

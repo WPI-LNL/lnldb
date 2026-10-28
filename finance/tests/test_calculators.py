@@ -187,10 +187,10 @@ class RevenueBreakdownTests(TestCase):
 
 class ProjectCompositionTests(TestCase):
     def setUp(self):
-        self.nel = ProjectTag.objects.create(name='New Equipment List', code='NEL26')
-        self.lustr = ProjectTag.objects.create(name='D60 Lustrs', code='D60', parent=self.nel)
-        self.cable = ProjectTag.objects.create(name='Cable', code='CBL', parent=self.nel)
-        self.booth = ProjectTag.objects.create(name='Booth Refit', code='BOOTH', is_projection=True)
+        self.nel = ProjectTag.objects.create(name='New Equipment List')
+        self.lustr = ProjectTag.objects.create(name='D60 Lustrs', parent=self.nel)
+        self.cable = ProjectTag.objects.create(name='Cable', parent=self.nel)
+        self.booth = ProjectTag.objects.create(name='Booth Refit', is_projection=True)
 
     def _spend(self, tag, amount, op, **kwargs):
         return slice_(bank(op, amount), amount, fund_source=fund('sga_budget'),
@@ -223,10 +223,10 @@ class ProjectCompositionTests(TestCase):
         self._spend(self.booth, '-200.00', 'P6', is_projection=True)
         event_side = project_composition(fiscal_year=FY26, is_projection=False)
         proj_side = project_composition(fiscal_year=FY26, is_projection=True)
-        self.assertEqual([p['code'] for p in event_side], ['NEL26'])
-        self.assertEqual([p['code'] for p in proj_side], ['BOOTH'])
+        self.assertEqual([p['label'] for p in event_side], ['New Equipment List'])
+        self.assertEqual([p['label'] for p in proj_side], ['Booth Refit'])
 
     def test_only_top_level_projects_get_their_own_bar(self):
         self._spend(self.lustr, '-100.00', 'P7')
         rows = project_composition(fiscal_year=FY26)
-        self.assertEqual([p['code'] for p in rows], ['NEL26'])
+        self.assertEqual([p['label'] for p in rows], ['New Equipment List'])

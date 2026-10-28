@@ -82,8 +82,8 @@ class ProjectTagChoiceField(TreeNodeChoiceField):
     A project picker whose options are nested by depth, so a sub-project is
     never mistaken for a top-level one::
 
-        NEL26 — New Equipment List 2026
-            └ D60-LUSTR — D60 Lustr Fixtures
+        New Equipment List 2026
+            └ D60 Lustr Fixtures
 
     MPTT's default manager already orders by tree position, so children render
     directly beneath their parent.
@@ -757,8 +757,7 @@ class BaseAllocationForm(forms.ModelForm):
         What lands here is whatever :mod:`finance.suggestions` did not have to
         guess at: the spend category a funding request line was awarded for,
         the routing LNL wrote into the Workday memo, an LNL category mapped to
-        a Workday account, a project code appearing verbatim, and the fund a
-        Treasurer nominated as the fallback. Each arrives with a note saying
+        a Workday account, and the fund a Treasurer nominated as the fallback. Each arrives with a note saying
         which of those it was, which the queue prints under the box -- a filled
         box is allowed, a filled box that overstates where it came from is not.
 
@@ -801,7 +800,7 @@ class BaseAllocationForm(forms.ModelForm):
         line; one read off Workday's category is weaker than the award of the
         line the Treasurer then picks, and must give way to it -- otherwise a
         wrong guess from the export outlives the line that corrects it. The
-        project is marked only when the award answered it.
+        project is never filled in here, so a line's project always lands.
 
         A filled-in fund is marked whatever answered it, for rule 5: choosing
         the kind of income decides the fund, and a fund nobody chose by hand
@@ -2039,7 +2038,7 @@ class ProjectTagForm(forms.ModelForm):
 
     class Meta:
         model = ProjectTag
-        fields = ('name', 'code', 'parent', 'description', 'is_projection', 'archived')
+        fields = ('name', 'parent', 'description', 'is_projection', 'archived')
         widgets = {'description': forms.Textarea(attrs={'rows': 3})}
 
     def __init__(self, *args, **kwargs):

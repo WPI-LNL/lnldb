@@ -20,7 +20,7 @@ records:
 
 ``EXPORT``
     Workday stated it, through a table a Treasurer maintains: the ledger
-    account, Workday's own spend category, a Fund code, a project code.
+    account, Workday's own spend category, a Fund code.
 
 ``DEFAULT``
     Nothing said, so the fallback configured in the admin. Only the fund has
@@ -48,7 +48,7 @@ from decimal import Decimal
 from django.db.models import F, Q, Value
 from django.utils.formats import date_format
 
-from finance.models import (ISD_NUMBER_FORMAT, ZERO, Billing, FundSource, MultiBilling, ProjectTag,
+from finance.models import (ISD_NUMBER_FORMAT, ZERO, Billing, FundSource, MultiBilling,
                             SuggestionRule, default_fund_source, fund_source_for_tracking,
                             fund_source_for_workday_fund, money, normalise_isd_number,
                             normalise_sga_reference, normalise_term, own_fund_for_account,
@@ -950,36 +950,6 @@ def suggest_fund_source(txn, funding_request=None, reference=''):
 
 
 # ---------------------------------------------------------------------------
-# Project tags
-# ---------------------------------------------------------------------------
-
-def active_project_tags():
-    """ The candidate pool for :func:`suggest_project_tag`, loaded once. """
-    return list(ProjectTag.objects.filter(archived=False))
-
-
-def suggest_project_tag(txn, tags=None):
-    """
-    Match a project tag code appearing in the memo or Workday Program worktag.
-
-    ``tags`` lets a caller rendering many rows load the pool once instead of
-    re-querying it per transaction.
-    """
-    haystack = " ".join(filter(None, [txn.memo or '', txn.worktag('program'),
-                                      txn.worktag('activity')])).upper()
-    if not haystack:
-        return None
-    for tag in (active_project_tags() if tags is None else tags):
-        if tag.code and re.search(r'\b%s\b' % re.escape(tag.code.upper()), haystack):
-            # The code is LNL's own and appears verbatim in a column Workday
-            # exports, so this is a lookup rather than a reading of prose.
-            return Suggestion(tag.pk, HIGH,
-                              'Project code %s appears in the export' % tag.code,
-                              str(tag), source=EXPORT)
-    return None
-
-
-# ---------------------------------------------------------------------------
 # Linking an event
 # ---------------------------------------------------------------------------
 
@@ -1526,8 +1496,7 @@ def suggest_refund_targets(txn, limit=8):
 #: this rather than a list of its own, so adding a suggester here is enough to
 #: have it pre-fill.
 SUGGESTED_FIELDS = ('spend_category', 'fund_source', 'fr_request', 'fr_line_target',
-                    'project_tag', 'linked_event', 'refund_of', 'revenue_source',
-                    'funding_request')
+                    'linked_event', 'refund_of', 'revenue_source', 'funding_request')
 
 #: The form field each of those maps to. Spend category is the odd one out
 #: because LNL's category and Workday's share a name but are different things,
@@ -1539,7 +1508,6 @@ FIELD_NAMES = {
     'fund_source': 'fund_source',
     'fr_request': 'fr_request',
     'fr_line_target': 'fr_line_target',
-    'project_tag': 'project_tag',
     'linked_event': 'linked_event',
     'refund_of': 'refund_of',
     'revenue_source': 'non_event_revenue_type',
@@ -1547,24 +1515,24 @@ FIELD_NAMES = {
 }
 
 
-def suggest_all(txn, tags=None, rules=None):
+def suggest_all(txn, rules=None):
     """
     Everything the ingestion queue needs for one bank line, in one call.
 
     The memo is parsed once here and handed down, because most of the
     suggesters below read it and it is the same sentence every time.
 
-    ``tags`` and ``rules`` let the queue load the project list and the rule
-    table once for the whole page instead of per row.
+    ``rules`` lets the queue load the rule table once for the whole page
+    instead of per row.
     """
     fields = memo_fields(txn)
     sga_transfer = is_sga_transfer(txn, fields)
 
     if txn.net_amount > 0:
-        return _suggest_revenue(txn, fields, sga_transfer, tags)
+        return _suggest_revenue(txn, fields, sga_transfer)
 
     if sga_transfer:
-        return _suggest_sga_return(txn, fields, tags)
+        return _suggest_sga_return(txn, fields)
 
     # Looked up once: the request drives the fund, the request box, the FR line
     # and, through the line or the request's awards, the spend category.
@@ -1595,14 +1563,13 @@ def suggest_all(txn, tags=None, rules=None):
         'matched_request': funding_request,
         'near_miss': near_miss,
         'unknown_request': unknown_request(fields) if unmatched and near_miss is None else None,
-        'project_tag': suggest_project_tag(txn, tags=tags),
         'linked_event': linked_event,
         'needs_event': _needs_event(spend_category, linked_event),
         'warning': _unmatched_reference_warning(unmatched, near_miss),
     }
 
 
-def _suggest_revenue(txn, fields, sga_transfer, tags):
+def _suggest_revenue(txn, fields, sga_transfer):
     """
     The revenue half of :func:`suggest_all`.
 
@@ -1665,7 +1632,6 @@ def _suggest_revenue(txn, fields, sga_transfer, tags):
         'multibill': multibill,
         # The bill the ISD number names, which the queue offers to mark paid.
         'isd_bill': paid_bill['bill'] if paid_bill is not None else None,
-        'project_tag': suggest_project_tag(txn, tags=tags),
         # LNL billing that names no event lnldb has. The P&L cannot see money
         # that is not linked to its show.
         'needs_event': bool(is_isd and refund is None and multibill is None
@@ -1674,7 +1640,7 @@ def _suggest_revenue(txn, fields, sga_transfer, tags):
     }
 
 
-def _suggest_sga_return(txn, fields, tags):
+def _suggest_sga_return(txn, fields):
     """
     The expense half of :func:`suggest_all`, for money SGA takes back.
 
@@ -1698,7 +1664,6 @@ def _suggest_sga_return(txn, fields, tags):
         'near_miss': near_miss,
         'unknown_request': unknown_request(fields) if unmatched and near_miss is None else None,
         'sga_return': True,
-        'project_tag': suggest_project_tag(txn, tags=tags),
         'linked_event': None,
         'needs_event': False,
         'warning': _unmatched_reference_warning(unmatched, near_miss, revenue=True),

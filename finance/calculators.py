@@ -1035,7 +1035,7 @@ def project_composition(fiscal_year=None, is_projection=None, limit=6):
         for child in root.get_children():
             amount = child.total_cost(fiscal_year=fiscal_year)
             if amount:
-                segments.append({'label': child.name, 'amount': amount, 'code': child.code})
+                segments.append({'label': child.name, 'amount': amount})
 
         total = sum((s['amount'] for s in segments), Decimal('0.00'))
         if total <= 0:
@@ -1046,8 +1046,8 @@ def project_composition(fiscal_year=None, is_projection=None, limit=6):
             segment['color'] = series_color(index)
             segment['percent'] = _percent(segment['amount'], total)
 
-        projects.append({'node': root, 'label': root.name, 'code': root.code,
-                         'total': total, 'segments': segments})
+        projects.append({'node': root, 'label': root.name, 'total': total,
+                         'segments': segments})
 
     projects.sort(key=lambda p: -p['total'])
     return projects[:limit]

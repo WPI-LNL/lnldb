@@ -29,7 +29,7 @@ class LedgerFacetTests(FinanceViewTestCase):
         super(LedgerFacetTests, self).setUp()
         self.grant('view_subledger', 'edit_subledger')
 
-        self.tag = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
+        self.tag = ProjectTag.objects.create(name='New Equipment List 2026')
         spend_txn = self.make_txn(op='OT-F1', amount='-120.00')
         self.spend = ParsedTransaction.objects.create(
             parent_transaction=spend_txn, amount=Decimal('-120.00'),
@@ -121,8 +121,8 @@ class LedgerFacetTests(FinanceViewTestCase):
         self.assertContains(self._ledger('q=restocking'), 'Gaff tape')
         self.assertContains(self._ledger('q=OT-F1'), 'Gaff tape')
 
-    def test_the_search_reaches_the_project_code(self):
-        self.assertContains(self._ledger('q=NEL26'), 'Gaff tape')
+    def test_the_search_reaches_the_project_name(self):
+        self.assertContains(self._ledger('q=equipment+list'), 'Gaff tape')
 
     def test_the_totals_are_reported_in_cents(self):
         """
@@ -221,7 +221,7 @@ class BulkActionGuardTests(FinanceViewTestCase):
 
     def test_a_project_may_be_assigned_to_revenue_and_expense_alike(self):
         """ A project tag says what the money was *for*; both directions have one. """
-        tag = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
+        tag = ProjectTag.objects.create(name='New Equipment List 2026')
         self._act('project_tag', tag.pk, [self.expense, self.income])
         self.expense.refresh_from_db()
         self.income.refresh_from_db()
@@ -272,7 +272,7 @@ class BulkActionGuardTests(FinanceViewTestCase):
             parent_transaction=orphan_txn, amount=Decimal('250.00'),
             effective_date=orphan_txn.accounting_date, description='Unattributed deposit')
 
-        tag = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
+        tag = ProjectTag.objects.create(name='New Equipment List 2026')
         response = self._act('project_tag', tag.pk, [orphan, self.expense])
 
         self.assertContains(response, 'unchanged')
@@ -284,7 +284,7 @@ class BulkActionGuardTests(FinanceViewTestCase):
 
     def test_an_empty_selection_says_so(self):
         response = self._act('project_tag', ProjectTag.objects.create(
-            name='Rig', code='RIG').pk, [])
+            name='Rig').pk, [])
         self.assertContains(response, 'Nothing was selected')
 
     def test_an_action_with_no_value_is_refused(self):
@@ -307,7 +307,7 @@ class BulkActionGuardTests(FinanceViewTestCase):
     def test_a_bulk_change_is_recorded_in_the_audit_trail(self):
         """ Many rows from one click is exactly when "who did this?" gets asked. """
         from reversion.models import Version
-        tag = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
+        tag = ProjectTag.objects.create(name='New Equipment List 2026')
         self._act('project_tag', tag.pk, [self.expense])
         versions = Version.objects.get_for_object(self.expense)
         self.assertTrue(versions)

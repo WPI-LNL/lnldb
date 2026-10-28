@@ -237,8 +237,8 @@ class DescriptionSeedTests(TestCase):
 
 class ProjectDropdownIndentationTests(TestCase):
     def setUp(self):
-        self.parent = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
-        self.child = ProjectTag.objects.create(name='D60 Lustr Fixtures', code='D60-LUSTR',
+        self.parent = ProjectTag.objects.create(name='New Equipment List 2026')
+        self.child = ProjectTag.objects.create(name='D60 Lustr Fixtures',
                                                parent=self.parent)
 
     def _labels(self, field):
@@ -254,7 +254,7 @@ class ProjectDropdownIndentationTests(TestCase):
         ]
         for name, form, field_name in forms_to_check:
             labels = self._labels(form.fields[field_name])
-            self.assertIn('NEL26 — New Equipment List 2026', labels, name)
+            self.assertIn('New Equipment List 2026', labels, name)
             nested = [label for label in labels if '└' in label]
             self.assertEqual(len(nested), 1, '%s should nest exactly one child' % name)
             self.assertTrue(nested[0].startswith(' '), '%s: %r' % (name, nested[0]))
@@ -262,7 +262,7 @@ class ProjectDropdownIndentationTests(TestCase):
     def test_children_follow_their_parent_in_tree_order(self):
         labels = self._labels(ReconcileForm(parent_transaction=bank(op='OT-P2'),
                                             prefix='t').fields['project_tag'])
-        self.assertLess(labels.index('NEL26 — New Equipment List 2026'),
+        self.assertLess(labels.index('New Equipment List 2026'),
                         [i for i, l in enumerate(labels) if '└' in l][0])
 
     def test_bulk_action_project_picker_is_indented(self):
@@ -330,8 +330,8 @@ class FundingRequestLineDropdownTests(TestCase):
         self.assertNotIn('>FY26 · F.26.6 A Term Films</option>', rendered)
 
     def test_a_line_is_indented_exactly_as_a_sub_project_is(self):
-        parent = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
-        child = ProjectTag.objects.create(name='D60 Lustrs', code='D60', parent=parent)
+        parent = ProjectTag.objects.create(name='New Equipment List 2026')
+        child = ProjectTag.objects.create(name='D60 Lustrs', parent=parent)
         child = ProjectTag.objects.get(pk=child.pk)
         indent = '\xa0' * 4 + '└ '
         self.assertTrue(child.indented_label.startswith(indent))
@@ -1639,13 +1639,14 @@ class AutofillFromExportTests(TestCase):
         self.assertEqual(list(form.autofilled), ['fund_source'])
         self.assertEqual(form.initial['fund_source'], fund('legacy').pk)
 
-    def test_the_project_code_is_filled_from_the_export(self):
-        tag = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
-        self.txn = bank(op='OT-NEL', amount='-129.00',
-                        worktags={'fund': '810-FD Agency', 'program': 'NEL26 build'})
+    def test_the_project_is_never_filled_in(self):
+        """ Even when the memo names the project, the Treasurer picks it. """
+        ProjectTag.objects.create(name='New Equipment List 2026')
+        self.txn = bank(op='OT-NEL', amount='-129.00', line_memo='New Equipment List 2026',
+                        worktags={'fund': '810-FD Agency'})
         form = self.form()
-        self.assertEqual(form.initial['project_tag'], tag.pk)
-        self.assertIn('NEL26', form.autofilled['project_tag'].reason)
+        self.assertNotIn('project_tag', form.initial)
+        self.assertNotIn('project_tag', form.autofilled)
 
 
 class AutofillFundingRequestTests(TestCase):

@@ -400,16 +400,15 @@ class SuggestionTests(TestCase):
         txn = WorkdayTransaction.objects.get(operational_transaction='OT-1001')
         self.assertIsNone(suggest_fund_source(txn))
 
-    def test_project_tag_matched_from_memo(self):
+    def test_no_project_is_suggested(self):
+        """ The Treasurer picks the project; nothing in the export is read for it. """
         from finance.models import ProjectTag
-        from finance.suggestions import suggest_project_tag
-        tag = ProjectTag.objects.create(name='New Equipment List', code='NEL26')
+        from finance.suggestions import suggest_all
+        ProjectTag.objects.create(name='New Equipment List')
         txn = WorkdayTransaction.objects.create(
             operational_transaction='OT-TAG', accounting_date=datetime.date(2025, 9, 1),
-            net_amount=Decimal('-100.00'), memo='Fixtures for NEL26 build')
-        suggestion = suggest_project_tag(txn)
-        self.assertIsNotNone(suggestion)
-        self.assertEqual(suggestion.value, tag.pk)
+            net_amount=Decimal('-100.00'), memo='Fixtures for New Equipment List')
+        self.assertNotIn('project_tag', suggest_all(txn))
 
     def test_suggest_all_switches_on_direction(self):
         from finance.suggestions import suggest_all

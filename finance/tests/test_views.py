@@ -160,7 +160,7 @@ class DashboardTests(FinanceViewTestCase):
             parent_transaction=revenue, amount=Decimal('500.00'), linked_event=event,
             effective_date=revenue.accounting_date)
         expense = self.make_txn(op='OT-CH2')
-        tag = ProjectTag.objects.create(name='NEL26', code='NEL26')
+        tag = ProjectTag.objects.create(name='NEL26')
         ParsedTransaction.objects.create(
             parent_transaction=expense, amount=expense.net_amount, fund_source=fund('sga_budget'),
             lnl_spend_category=category('equipment_noncapital'), project_tag=tag,
@@ -381,7 +381,7 @@ class LedgerTests(FinanceViewTestCase):
                 reverse('finance:ledger') + '?sort=%s&dir=asc' % column))
 
     def test_bulk_assign_project(self):
-        tag = ProjectTag.objects.create(name='NEL26', code='NEL26')
+        tag = ProjectTag.objects.create(name='NEL26')
         response = self.client.post(reverse('finance:bulk-action'), {
             'action': 'project_tag',
             'project_tag': tag.pk,
@@ -834,8 +834,8 @@ class ProjectExplorerTests(FinanceViewTestCase):
     def setUp(self):
         super(ProjectExplorerTests, self).setUp()
         self.grant('view_subledger', 'manage_projecttag')
-        self.parent = ProjectTag.objects.create(name='New Equipment List', code='NEL26')
-        self.child = ProjectTag.objects.create(name='D60 Lustrs', code='D60-LUSTR',
+        self.parent = ProjectTag.objects.create(name='New Equipment List')
+        self.child = ProjectTag.objects.create(name='D60 Lustrs',
                                                parent=self.parent)
         txn = self.make_txn(op='OT-T1', amount='-8000.00')
         ParsedTransaction.objects.create(
@@ -873,11 +873,11 @@ class ProjectExplorerTests(FinanceViewTestCase):
 
     def test_create_project(self):
         response = self.client.post(reverse('finance:project-new'), {
-            'name': 'Console Refresh', 'code': 'CON27', 'parent': '',
+            'name': 'Console Refresh', 'parent': '',
             'description': '', 'is_projection': '', 'archived': '',
         })
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(ProjectTag.objects.filter(code='CON27').exists())
+        self.assertTrue(ProjectTag.objects.filter(name='Console Refresh').exists())
 
 
 class FundingRequestViewTests(FinanceViewTestCase):
@@ -1057,7 +1057,7 @@ class FundingRequestInheritanceTests(FinanceViewTestCase):
         super(FundingRequestInheritanceTests, self).setUp()
         self.grant('view_subledger', 'edit_subledger')
         self.txn = self.make_txn(op='OT-FRI', amount='-250.00')
-        self.project = ProjectTag.objects.create(name='New Equipment List', code='NEL26')
+        self.project = ProjectTag.objects.create(name='New Equipment List')
         fr = FundingRequest.objects.create(name='NEL26 Grant', fiscal_year=self.txn.fiscal_year)
         self.line = FRLineItem.objects.create(
             funding_request=fr, name='Consumables', amount_awarded=Decimal('1000.00'),

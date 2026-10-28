@@ -145,7 +145,7 @@ class ProjectTagRollupTest(TestCase):
     """ ``project_tag_costs()`` against ``ProjectTag.total_cost()``. """
 
     def _spend(self, tag, amount, day):
-        txn = _bank_line('PT-%s-%s' % (tag.code, day), amount,
+        txn = _bank_line('PT-%s-%s' % (tag.pk, day), amount,
                          date=datetime.date(2025, 9, day))
         return ParsedTransaction.objects.create(
             parent_transaction=txn, amount=Decimal(amount),
@@ -155,19 +155,19 @@ class ProjectTagRollupTest(TestCase):
         """ Roots, children (one archived) and grandchildren, all with spend. """
         day = 1
         for i in range(3):
-            root = ProjectTag.objects.create(name='Project %s' % i, code='P%s' % i)
+            root = ProjectTag.objects.create(name='Project %s' % i)
             self._spend(root, '-50.00', day)
             day += 1
             for j in range(2):
                 # An archived child still counts towards its parent's cost, so
                 # the batch rollup has to see it too.
                 child = ProjectTag.objects.create(
-                    name='Asset %s%s' % (i, j), code='C%s%s' % (i, j),
+                    name='Asset %s%s' % (i, j),
                     parent=root, archived=(j == 1))
                 self._spend(child, '-20.00', day)
                 day += 1
                 grandchild = ProjectTag.objects.create(
-                    name='Part %s%s' % (i, j), code='G%s%s' % (i, j), parent=child)
+                    name='Part %s%s' % (i, j), parent=child)
                 self._spend(grandchild, '-5.00', day)
                 day += 1
 
@@ -175,7 +175,7 @@ class ProjectTagRollupTest(TestCase):
         """ Every node, rolled up and direct, against the per-node property. """
         self._forest()
         # A refund, so "net of refunds" is exercised on the batch path.
-        root = ProjectTag.objects.get(code='P0')
+        root = ProjectTag.objects.get(name='Project 0')
         original = root.transactions.first()
         credit = _bank_line('PT-credit', '7.50')
         ParsedTransaction.objects.create(
@@ -185,14 +185,14 @@ class ProjectTagRollupTest(TestCase):
         direct, rollup = project_tag_costs()
         for tag in ProjectTag.objects.all():
             self.assertEqual(rollup.get(tag.pk, Decimal('0.00')), tag.total_cost(),
-                             "rollup disagrees for %s" % tag.code)
+                             "rollup disagrees for %s" % tag)
             self.assertEqual(direct.get(tag.pk, Decimal('0.00')),
                              tag.total_cost(include_descendants=False),
-                             "direct cost disagrees for %s" % tag.code)
+                             "direct cost disagrees for %s" % tag)
 
     def test_batch_costs_respect_the_fiscal_year(self):
         """ Scoping to a year must narrow the batch figures the same way. """
-        tag = ProjectTag.objects.create(name='Spanning', code='SPAN')
+        tag = ProjectTag.objects.create(name='Spanning')
         self._spend(tag, '-40.00', 5)
         old = _bank_line('PT-old', '-15.00', date=datetime.date(2024, 3, 1))
         ParsedTransaction.objects.create(
@@ -211,7 +211,7 @@ class ProjectTagRollupTest(TestCase):
         small = len(ctx)
 
         for i in range(6):
-            extra = ProjectTag.objects.create(name='Extra %s' % i, code='X%s' % i)
+            extra = ProjectTag.objects.create(name='Extra %s' % i)
             self._spend(extra, '-9.00', 20 + i)
         with CaptureQueriesContext(connection) as ctx:
             project_tag_costs()

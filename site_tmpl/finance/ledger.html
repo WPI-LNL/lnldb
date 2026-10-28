@@ -229,7 +229,7 @@
                             </td>
                             <td data-col="project">
                                 {% if entry.project_tag %}
-                                    <a href="{% url 'finance:projects-detail' entry.project_tag.pk %}">{{ entry.project_tag.code }}</a>
+                                    <a href="{% url 'finance:projects-detail' entry.project_tag.pk %}">{{ entry.project_tag.name }}</a>
                                 {% else %}<span class="fin-muted">—</span>{% endif %}
                             </td>
                             <td data-col="workday_ref" class="fin-nowrap">

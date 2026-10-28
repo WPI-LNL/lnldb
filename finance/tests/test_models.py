@@ -608,8 +608,8 @@ class ProjectTagTests(TestCase):
     """ Fully-loaded cost of an asset across years and funding sources. """
 
     def setUp(self):
-        self.parent = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
-        self.child = ProjectTag.objects.create(name='D60 Lustrs', code='D60-LUSTR',
+        self.parent = ProjectTag.objects.create(name='New Equipment List 2026')
+        self.child = ProjectTag.objects.create(name='D60 Lustrs',
                                                parent=self.parent)
 
     def _spend(self, tag, amount, op, date=datetime.date(2025, 9, 1)):
@@ -656,7 +656,7 @@ class ProjectTagTests(TestCase):
         self._spend(self.parent, '-500.00', 'STALE2')
 
         held = self.parent            # captured before the tree changes again
-        ProjectTag.objects.create(name='Unrelated Project', code='UNREL')
+        ProjectTag.objects.create(name='Unrelated Project')
 
         self.assertEqual(held.total_cost(), Decimal('1500.00'))
         self.assertEqual(held.total_cost(),
@@ -669,13 +669,12 @@ class ProjectTagTests(TestCase):
         self.assertNotIn(self.child, form.fields['parent'].queryset)
 
     def test_indented_label_nests_sub_projects(self):
-        self.assertEqual(self.parent.indented_label,
-                         'NEL26 — New Equipment List 2026')
+        self.assertEqual(self.parent.indented_label, 'New Equipment List 2026')
         child = ProjectTag.objects.get(pk=self.child.pk)
         label = child.indented_label
         # Non-breaking spaces: a plain space would be collapsed inside <option>.
         self.assertTrue(label.startswith('\u00a0\u00a0\u00a0\u00a0└ '), repr(label))
-        self.assertIn('D60-LUSTR — D60 Lustrs', label)
+        self.assertTrue(label.endswith('└ D60 Lustrs'), repr(label))
 
 
 class JournalLineMemoTests(TestCase):

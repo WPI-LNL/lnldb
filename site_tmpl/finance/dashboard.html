@@ -291,9 +291,8 @@
                     {% for project in projects %}
                         <div class="fin-project">
                             <div class="fin-rank-head">
-                                <span class="fin-rank-label" title="{{ project.label }} ({{ project.code }})">
+                                <span class="fin-rank-label" title="{{ project.label }}">
                                     <a href="{% url 'finance:projects-detail' project.node.pk %}?{{ filter_state.querystring }}">{{ project.label }}</a>
-                                    <code class="fin-muted">{{ project.code }}</code>
                                 </span>
                                 <span class="fin-rank-value">{{ project.total|money }}</span>
                             </div>

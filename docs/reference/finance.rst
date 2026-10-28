@@ -652,7 +652,7 @@ be offered, is decided by where the answer came from.
 
 A **lookup** is something the export already states, read through a table a
 Treasurer maintains — the ledger account, Workday's own Spend Category, a request
-number written into the memo, a project code, the Fund worktag. There is no
+number written into the memo, the Fund worktag. There is no
 opinion in it, so the form selects it and captions the box with the column it
 came from. An **inference** is our own reading of the line — a word noticed in
 some prose, a resemblance somebody might not agree with. Those stay a chip to
@@ -779,7 +779,6 @@ Field                            Filled in  From
 ===============================  =========  ==========================================
 LNL spend category               253        203 Workday spend category, 50 ledger account
 Fund source                      16         a funding request number in the memo
-Project tag                      7          a project code appearing verbatim
 ===============================  =========  ==========================================
 
 Those are the lines the export itself answers. The fund was filled in only
@@ -787,6 +786,13 @@ where a memo quoted a request number, and that was deliberate -- see below.
 Every other line now arrives with the account's own money, captioned as the
 fallback it is, because a fund left blank on every row was worse than one that
 says plainly it was assumed.
+
+The project is never filled in. Projects used to carry a short code, and a memo
+that quoted one filled the project in, but typing a code was the one required
+step in making a project that nobody had a reason to care about, and it
+answered seven lines a year. ``0017_remove_project_code`` drops the field, and
+a project is known by its name everywhere: on the pickers, the ledger search
+and every table.
 
 After an import, any Workday spend category that no rule covers is named in a
 warning with a line count, because each one is a question the Treasurer would
@@ -848,7 +854,7 @@ expense; Project appears on seven of 253 lines in a year, a sub-rental is rarer,
 and the partition tick box and the cross-year opt-in are rarer still. Those sit
 behind *More*, so an ordinary row reads as two boxes and a button. The view
 unfolds it per row whenever that line has something in there worth seeing --
-a project we found, a partition that is not the ordinary one, a crossing that
+an event we found, a partition that is not the ordinary one, a crossing that
 has to be explained -- and ``queue.js`` unfolds it if a validation error lands
 on a field inside, since an invisible error is worse than the clutter the fold
 removes.

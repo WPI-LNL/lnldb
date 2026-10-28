@@ -33,7 +33,7 @@ from finance.models import (ZERO, Billing, Encumbrance, FundingRequest, FundTran
                             ParsedTransaction, TransactionStatus, WorkdayTransaction,
                             fiscal_year_for, money)
 from finance.suggestions import (ENCUMBRANCE_CLOSE_ENOUGH, SUGGESTED_FIELDS,
-                                 active_project_tags, active_suggestion_rules,
+                                 active_suggestion_rules,
                                  encumbrance_match_options, suggest_all,
                                  suggest_refund_targets)
 
@@ -66,8 +66,7 @@ def queue(request):
     paginator = Paginator(unreconciled, 25)
     page = paginator.get_page(request.GET.get('page'))
 
-    # Both loaded once for the whole page rather than per row.
-    tags = active_project_tags()
+    # Loaded once for the whole page rather than per row.
     rules = active_suggestion_rules()
 
     rows = []
@@ -75,7 +74,7 @@ def queue(request):
     for txn in page.object_list:
         # Worked out once and handed to the form, which fills in the answers
         # that came straight out of the export and leaves the guesses as chips.
-        suggestions = suggest_all(txn, tags=tags, rules=rules)
+        suggestions = suggest_all(txn, rules=rules)
         form = ReconcileForm(parent_transaction=txn, prefix='txn%s' % txn.pk,
                              suggestions=suggestions)
         filled += len(form.autofilled)
@@ -102,13 +101,11 @@ def queue(request):
             'needs_event': suggestions.get('needs_event', False),
             # The seldom-used fields are folded away so a row reads as two
             # boxes and a button. Unfolded again for the lines that actually
-            # have something in there: a project or an event we found, a cost
-            # that still needs its event, a partition that is not the ordinary
-            # one, or a crossing that has to be explained.
+            # have something in there: an event we found, a cost that still
+            # needs its event, a partition that is not the ordinary one, or a
+            # crossing that has to be explained.
             'expanded': bool(txn.crossing_requires_reason
                              or txn.defaults_to_projection
-                             or form.autofilled.get('project_tag')
-                             or suggestions.get('project_tag')
                              or (txn.net_amount < 0
                                  and (form.autofilled.get('linked_event')
                                       or suggestions.get('linked_event')

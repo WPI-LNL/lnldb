@@ -238,10 +238,9 @@ class ProjectTagAdmin(MPTTModelAdmin, VersionAdmin):
     ``MPTTModelAdmin`` comes first so the changelist renders the tree indented;
     ``VersionAdmin`` behind it keeps the history of every reparent.
     """
-    list_display = ('name', 'code', 'parent', 'is_projection', 'archived')
+    list_display = ('name', 'parent', 'is_projection', 'archived')
     list_filter = ('is_projection', 'archived')
-    search_fields = ('name', 'code')
-    prepopulated_fields = {'code': ('name',)}
+    search_fields = ('name',)
 
 
 @admin.register(ParsedTransaction)

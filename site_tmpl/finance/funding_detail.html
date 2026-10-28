@@ -159,7 +159,7 @@
                                     </td>
                                     <td>{% if entry.parent_transaction %}{{ entry.parent_transaction.payee|default:"—" }}{% else %}<span class="fin-muted">encumbrance</span>{% endif %}</td>
                                     <td class="fin-num {{ entry.amount|money_class }}">{{ entry.amount|money }}</td>
-                                    <td>{% if entry.project_tag %}{{ entry.project_tag.code }}{% else %}—{% endif %}</td>
+                                    <td>{% if entry.project_tag %}{{ entry.project_tag.name }}{% else %}—{% endif %}</td>
                                     <td>{{ entry|status_badge }}</td>
                                 </tr>
                             {% endfor %}

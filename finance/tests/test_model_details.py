@@ -203,7 +203,7 @@ class LabelTests(TestCase):
         self.assertIn('Consumables', text)
 
     def test_a_project_tag_links_to_its_own_page(self):
-        tag = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
+        tag = ProjectTag.objects.create(name='New Equipment List 2026')
         self.assertIn(str(tag.pk), tag.get_absolute_url())
 
     def test_a_funding_request_links_to_its_own_page(self):
@@ -231,8 +231,8 @@ class LabelTests(TestCase):
         self.assertIn('OVER by $29.00', line.picker_label)
 
     def test_a_project_tag_indents_by_depth(self):
-        parent = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
-        child = ProjectTag.objects.create(name='D60 Lustrs', code='D60', parent=parent)
+        parent = ProjectTag.objects.create(name='New Equipment List 2026')
+        child = ProjectTag.objects.create(name='D60 Lustrs', parent=parent)
         self.assertNotIn(' ', parent.indented_label)
         self.assertIn(' ', ProjectTag.objects.get(pk=child.pk).indented_label)
 
@@ -241,8 +241,8 @@ class ProjectRollupTests(TestCase):
     """ What a project really cost, across fiscal years and funding sources. """
 
     def setUp(self):
-        self.parent = ProjectTag.objects.create(name='New Equipment List 2026', code='NEL26')
-        self.child = ProjectTag.objects.create(name='D60 Lustrs', code='D60',
+        self.parent = ProjectTag.objects.create(name='New Equipment List 2026')
+        self.child = ProjectTag.objects.create(name='D60 Lustrs',
                                                parent=self.parent)
         self.txn = WorkdayTransaction.objects.create(
             operational_transaction='OT-R1', accounting_date=SEP,
@@ -290,7 +290,7 @@ class ProjectRollupTests(TestCase):
         on a figure people make purchasing decisions from.
         """
         stale = ProjectTag.objects.get(pk=self.parent.pk)
-        ProjectTag.objects.create(name='Unrelated', code='UNREL')
+        ProjectTag.objects.create(name='Unrelated')
         self._spend(self.child, '-300.00')
         self.assertEqual(stale.total_cost(), Decimal('300.00'))
 

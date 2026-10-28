@@ -379,7 +379,7 @@
                                 {% include 'finance/_queue_field.html' with field=row.form.funding_request label="SGA took back money for" size="lg" autofilled=row.form.autofilled.funding_request suggestion=row.suggestions.funding_request only %}
                             {% endif %}
 
-                            {% include 'finance/_queue_field.html' with field=row.form.project_tag label="Project" size="md" autofilled=row.form.autofilled.project_tag suggestion=row.suggestions.project_tag only %}
+                            {% include 'finance/_queue_field.html' with field=row.form.project_tag label="Project" size="md" only %}
 
                             {% if not row.is_revenue %}
                                 <div class="form-group fin-field fin-field-check fin-cross-year">

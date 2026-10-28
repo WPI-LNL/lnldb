@@ -19,7 +19,7 @@ value is injected into the page as raw HTML.
    so a channel that returns ``False`` instead of raising is not protected at
    all -- the endpoint stays open to anyone who knows the URL, logged in or
    not. These two channels did exactly that, which left every event name, date
-   and billing org, and every project code, readable by an anonymous visitor
+   and billing org, and every project name, readable by an anonymous visitor
    at ``/db/lookups/ajax_lookup/Events``.
 """
 from ajax_select import LookupChannel
@@ -92,9 +92,8 @@ class ProjectTagLookup(LookupChannel):
             raise PermissionDenied
 
     def get_query(self, q, request):
-        """ Match on either half of the tag, and never offer an archived one. """
-        return ProjectTag.objects.filter(
-            Q(name__icontains=q) | Q(code__icontains=q)).filter(archived=False)[:25]
+        """ Match on the name, and never offer an archived tag. """
+        return ProjectTag.objects.filter(name__icontains=q, archived=False)[:25]
 
     def get_result(self, obj):
         """ Return the plain text that lands in the input once a row is picked. """
@@ -105,6 +104,5 @@ class ProjectTagLookup(LookupChannel):
         return self.format_item_display(obj)
 
     def format_item_display(self, obj):
-        """ Render one tag as its short code followed by the human name. """
-        return '&nbsp;<strong>%s</strong> <span class="text-muted">%s</span>' % (
-            escape(obj.code), escape(obj.name))
+        """ Render one tag by its name. """
+        return '&nbsp;%s' % escape(obj.name)
