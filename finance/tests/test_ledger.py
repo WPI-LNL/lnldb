@@ -169,7 +169,7 @@ class BulkActionGuardTests(FinanceViewTestCase):
             parent_transaction=income_txn, amount=Decimal('700.00'),
             effective_date=income_txn.accounting_date, description='Concert billing',
             # Names no fund of its own, so any fund may be given to it.
-            non_event_revenue_type=RevenueSource.objects.get(slug='alumni'))
+            non_event_revenue_type=RevenueSource.objects.get(slug='donations'))
 
     def _act(self, action, value, entries, **extra):
         data = {'action': action, action: value,

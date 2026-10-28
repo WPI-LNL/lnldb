@@ -91,7 +91,7 @@ Money coming in is one of three things:
   Delivery, and the event is usually filled in for you: from the bill its ISD number is recorded on, or else from the
   show the memo names. When the payment covers the event's bill, a ticked **Mark bill paid on** box marks the bill paid
   as you settle; untick it to leave the bill unpaid. See :doc:`billing`.
-- **Other income** -- choose what it was under `or Non-Event Revenue`: an SGA reimbursement, a gift, a sale. The fund
+- **Other income** -- choose what it was under `or Non-Event Revenue`: an SGA reimbursement, a donation, gear sold, a cash deposit. The fund
   it goes into (`Into fund`) follows from the choice. An SGA reimbursement also names the request it repays
   (`Reimburses request`).
 - **A refund** -- choose the purchase it refunds under `Refund of`. A refund needs nothing else: it takes everything from

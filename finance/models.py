@@ -821,7 +821,7 @@ def own_fund_for_account(code):
 
 class RevenueSource(Vocabulary):
     """
-    Where non-event revenue came from: SGA's three kinds of payment, a gift, gear sold.
+    Where non-event revenue came from: SGA's three kinds of payment, a donation, gear sold, cash.
 
     Most of these say which fund the money goes into as well, because SGA pays
     each kind of money into its own pot: a budget deposit is the budget, a

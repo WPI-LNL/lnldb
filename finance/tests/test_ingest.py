@@ -618,7 +618,7 @@ class QueueRefundTests(FinanceViewTestCase):
     def test_the_refund_carries_no_revenue_routing(self):
         """ It is money coming back, not money coming in. """
         self.reconcile(self.credit_txn, refund_of=self.purchase.pk,
-                       non_event_revenue_type=revenue_source('alumni').pk)
+                       non_event_revenue_type=revenue_source('donations').pk)
         entry = self.credit_txn.slices.get()
         self.assertIsNone(entry.non_event_revenue_type,
                           "a refund posted with a revenue type should discard it")
@@ -633,12 +633,12 @@ class QueueRefundTests(FinanceViewTestCase):
 
     def test_a_credit_with_no_refund_target_is_still_revenue(self):
         """ The ordinary case is untouched: a deposit is not a refund. """
-        self.reconcile(self.credit_txn, non_event_revenue_type=revenue_source('alumni').pk,
+        self.reconcile(self.credit_txn, non_event_revenue_type=revenue_source('donations').pk,
                        fund_source=fund('legacy').pk)
         entry = self.credit_txn.slices.get()
         self.assertIsNone(entry.refund_of)
         self.assertEqual(entry.fund_source, fund('legacy'))
-        self.assertEqual(entry.non_event_revenue_type, revenue_source('alumni'))
+        self.assertEqual(entry.non_event_revenue_type, revenue_source('donations'))
 
     def test_the_picker_is_offered_on_a_credit_row(self):
         response = self.client.get(reverse('finance:queue') + '?fy=2026')

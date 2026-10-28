@@ -17,7 +17,7 @@ def fund(slug='sga_budget'):
     return FundSource.objects.get(slug=slug)
 
 
-def revenue_source(slug='alumni'):
+def revenue_source(slug='donations'):
     return RevenueSource.objects.get(slug=slug)
 
 

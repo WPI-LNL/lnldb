@@ -59,7 +59,7 @@ SPEND_CATEGORIES = [
     ('food', 'Food', '#F1CE63', 4, False, False, ''),
     ('software', 'Software and Subscriptions', '#59A14F', 5, False, False,
      'Licences and anything billed on a recurring basis.'),
-    ('film_rights', 'Films Rights and Shipping', '#B07AA1', 6, False, False,
+    ('film_rights', 'Films Expenses', '#B07AA1', 6, False, False,
      'The cost of running a film: the rights, getting the print here and back again, and '
      'the popcorn and posters that go with it.'),
     ('merch', 'Merch', '#FABFD2', 7, False, False, 'Crew apparel and anything sold or given away.'),
@@ -77,8 +77,7 @@ SPEND_CATEGORIES = [
      'automatically when an expense names the event it was incurred for, because the '
      'linked event already says everything a category could.'),
     ('event_other', 'Event - Other', '#A0CBE8', 12, False, False,
-     'A non-rental cost passed straight through to a client -- incurred for one event and '
-     'billed on to it unchanged.'),
+     'Use for costs billed to an event.'),
 ]
 
 # (slug, name, workday fund codes, requires a funding request, sort order,
@@ -132,8 +131,10 @@ REVENUE_SOURCES = [
      "June 30 goes back to SGA."),
     ('sga_mandatory', 'SGA Mandatory Transfer', 2, 'sga_mandatory',
      "Projection's yearly allocation into 315-AG. It carries forward."),
-    ('asset_liquidation', 'Asset Liquidation', 3, None, ''),
-    ('alumni', 'Alumni / Donation', 4, None, ''),
+    ('donations', 'Donations', 3, None, ''),
+    ('asset_liquidation', 'Asset Liquidation', 4, None, ''),
+    ('cash_deposits', 'Cash Sale and Deposits', 5, None, ''),
+    ('other', 'Other', 6, None, ''),
 ]
 
 # (code, is projection, crossing needs a written reason, worktag, notes)

@@ -95,7 +95,7 @@ class LedgerFixture(object):
 
     def build_year(self):
         self.billing = line(datetime.date(2025, 7, 10), '1000.00', 'ISD billing')
-        filed(self.billing, 'legacy', non_event_revenue_type=revenue_source('alumni'))
+        filed(self.billing, 'legacy', non_event_revenue_type=revenue_source('donations'))
         self.deposit = line(datetime.date(2025, 8, 1), '5000.00', 'SGA budget allocation')
         filed(self.deposit, 'sga_budget', non_event_revenue_type=revenue_source('sga_baseline'))
         self.budget_spend = line(datetime.date(2025, 9, 1), '-6000.00', 'Console')
@@ -149,7 +149,7 @@ class RevenueFundRuleTests(TestCase):
     def test_revenue_may_name_a_fund(self):
         txn = line(datetime.date(2025, 9, 1), '500.00', 'Fall Concert')
         entry = ParsedTransaction(parent_transaction=txn, amount=Decimal('500.00'),
-                                  non_event_revenue_type=revenue_source('alumni'),
+                                  non_event_revenue_type=revenue_source('donations'),
                                   fund_source=fund('legacy'))
         entry.full_clean()
         entry.save()
@@ -385,12 +385,12 @@ class RevenueFundFormTests(TestCase):
         self.assertNotIn('lnl_spend_category', form.fields)
 
     def test_the_fund_is_required(self):
-        form = self._form({'t-non_event_revenue_type': revenue_source('alumni').pk})
+        form = self._form({'t-non_event_revenue_type': revenue_source('donations').pk})
         self.assertFalse(form.is_valid())
         self.assertIn('fund_source', form.errors)
 
     def test_a_revenue_row_saves_with_its_fund(self):
-        form = self._form({'t-non_event_revenue_type': revenue_source('alumni').pk,
+        form = self._form({'t-non_event_revenue_type': revenue_source('donations').pk,
                            't-fund_source': fund('legacy').pk})
         self.assertTrue(form.is_valid(), form.errors)
         entry = form.save()
@@ -473,7 +473,7 @@ class StatementTests(LedgerFixture, TestCase):
 
     def test_a_slice_naming_no_fund_is_the_accounts_own_money(self):
         gift = line(datetime.date(2025, 11, 1), '50.00', 'Alumni gift')
-        filed(gift, None, non_event_revenue_type=revenue_source('alumni'))
+        filed(gift, None, non_event_revenue_type=revenue_source('donations'))
         year = balances.statement(FY26)
         self.assertEqual(row_for(year, '226-AG', 'legacy').received, Decimal('1050.00'))
 
@@ -566,7 +566,7 @@ class UnknownCashTests(TestCase):
         spend = line(datetime.date(2025, 9, 1), '-100.00', 'Gaff')
         filed(spend, 'sga_budget', lnl_spend_category=category('consumables'))
         own = line(datetime.date(2025, 9, 2), '40.00', 'Gift')
-        filed(own, 'legacy', non_event_revenue_type=revenue_source('alumni'))
+        filed(own, 'legacy', non_event_revenue_type=revenue_source('donations'))
         self.year = balances.statement(FY26)
 
     def test_the_own_fund_shows_only_what_moved(self):

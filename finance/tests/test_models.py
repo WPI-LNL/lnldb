@@ -336,7 +336,7 @@ class RoutingExclusivityTests(TestCase):
     def test_expense_cannot_be_classified_as_non_event_revenue(self):
         parent = make_txn(op='R2')
         entry = ParsedTransaction(parent_transaction=parent, amount=Decimal('-1200.00'),
-                                  non_event_revenue_type=revenue_source('alumni'),
+                                  non_event_revenue_type=revenue_source('donations'),
                                   fund_source=fund('sga_budget'))
         with self.assertRaises(ValidationError) as ctx:
             entry.full_clean()
@@ -366,7 +366,7 @@ class RoutingExclusivityTests(TestCase):
     def test_revenue_cannot_be_both_event_and_non_event(self):
         parent = make_txn(op='R4', net_amount=Decimal('500.00'))
         entry = ParsedTransaction(parent_transaction=parent, amount=Decimal('500.00'),
-                                  linked_event=self.event, non_event_revenue_type=revenue_source('alumni'))
+                                  linked_event=self.event, non_event_revenue_type=revenue_source('donations'))
         with self.assertRaises(ValidationError):
             entry.full_clean()
 
@@ -377,7 +377,7 @@ class RoutingExclusivityTests(TestCase):
             with transaction.atomic():
                 ParsedTransaction.objects.create(
                     parent_transaction=parent, amount=Decimal('-1200.00'),
-                    non_event_revenue_type=revenue_source('alumni'))
+                    non_event_revenue_type=revenue_source('donations'))
 
     def test_database_allows_an_expense_linked_to_an_event(self):
         parent = make_txn(op='R5B')
@@ -524,7 +524,7 @@ class RefundTests(TestCase):
         rev_parent = make_txn(op='F5', net_amount=Decimal('500.00'))
         revenue = ParsedTransaction.objects.create(
             parent_transaction=rev_parent, amount=Decimal('500.00'),
-            non_event_revenue_type=revenue_source('alumni'))
+            non_event_revenue_type=revenue_source('donations'))
         bad = ParsedTransaction(amount=Decimal('50.00'), refund_of=revenue,
                                 fund_source=fund('sga_budget'))
         with self.assertRaises(ValidationError) as ctx:

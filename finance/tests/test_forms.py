@@ -72,7 +72,7 @@ class SpendCategoryChoiceTests(TestCase):
         self.assertEqual([c.name for c in SpendCategory.objects.active()], [
             'Equipment - Capital', 'Equipment - Non Capital', 'Maintenance and Repair',
             'Consumables', 'Food', 'Software and Subscriptions',
-            'Films Rights and Shipping', 'Merch', 'Club Operations',
+            'Films Expenses', 'Merch', 'Club Operations',
             'Safety and Inspections', 'Adjustments', 'Event - Sub-Rental',
             'Event - Other'])
 

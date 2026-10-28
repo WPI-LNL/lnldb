@@ -66,7 +66,7 @@ class SpendByCategoryTests(TestCase):
 
 class CashFlowTests(TestCase):
     def test_separates_money_in_from_money_out(self):
-        slice_(bank('F1', '500.00', SEP), '500.00', non_event_revenue_type=revenue_source('alumni'))
+        slice_(bank('F1', '500.00', SEP), '500.00', non_event_revenue_type=revenue_source('donations'))
         slice_(bank('F2', '-200.00', SEP), '-200.00', fund_source=fund('sga_budget'))
         rows = cash_flow_by_month(fiscal_year=FY26)
         sept = [r for r in rows if r['label'] == 'Sep 25'][0]
@@ -89,7 +89,7 @@ class CashFlowTests(TestCase):
                          datetime.date.today().strftime('%b %y'))
 
     def test_quiet_months_are_still_present(self):
-        slice_(bank('F3', '500.00', OCT), '500.00', non_event_revenue_type=revenue_source('alumni'))
+        slice_(bank('F3', '500.00', OCT), '500.00', non_event_revenue_type=revenue_source('donations'))
         rows = cash_flow_by_month(fiscal_year=FY26)
         july = [r for r in rows if r['label'] == 'Jul 25'][0]
         self.assertEqual(july['revenue'], Decimal('0.00'))

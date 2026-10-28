@@ -272,7 +272,7 @@ class IncomeAndSpendingTests(CacheResetMixin, TestCase):
                datetime.date(2025, 10, 20))
         income(show('Fling', when(2025, 11, 1), student), '300.00', datetime.date(2025, 11, 5))
         gift = line(datetime.date(2025, 12, 1), '200.00', 'Alumni gift')
-        filed(gift, 'legacy', non_event_revenue_type=revenue_source('alumni'))
+        filed(gift, 'legacy', non_event_revenue_type=revenue_source('donations'))
         self.request = make_request()
         line_item = self.request.line_items.first()
         rights = line(datetime.date(2026, 1, 15), '-500.00', 'Film rights')
@@ -313,7 +313,7 @@ class IncomeAndSpendingTests(CacheResetMixin, TestCase):
     def test_spending_is_net_of_refunds_and_leaves_out_what_sga_took_back(self):
         money_out = section(self.report(), 'Money out')
         self.assertEqual(cells(money_out, 'Consumables')['full'], Decimal('350.00'))
-        self.assertEqual(cells(money_out, 'Films Rights and Shipping')['full'],
+        self.assertEqual(cells(money_out, 'Films Expenses')['full'],
                          Decimal('500.00'))
         self.assertEqual(money_out.total.cells['full'], Decimal('850.00'))
 

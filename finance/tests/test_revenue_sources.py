@@ -162,7 +162,7 @@ class SeededSourceTests(CacheResetMixin, TestCase):
         self.assertEqual(revenue_source('sga_baseline').name, 'SGA Budget')
 
     def test_a_gift_is_simply_the_accounts_own_money(self):
-        self.assertIsNone(revenue_source('alumni').credits_fund)
+        self.assertIsNone(revenue_source('donations').credits_fund)
         self.assertIsNone(revenue_source('asset_liquidation').credits_fund)
 
     def test_the_reimbursement_source_is_the_one_whose_fund_draws_on_requests(self):
@@ -211,7 +211,7 @@ class SourceDecidesFundTests(CacheResetMixin, TestCase):
                       str(caught.exception.message_dict['fund_source']))
 
     def test_a_source_with_no_fund_takes_any(self):
-        entry = self._entry(non_event_revenue_type=revenue_source('alumni'),
+        entry = self._entry(non_event_revenue_type=revenue_source('donations'),
                             fund_source=fund('legacy'))
         entry.full_clean()
 
@@ -243,7 +243,7 @@ class SGAPaymentRuleTests(CacheResetMixin, TestCase):
     def test_only_a_fund_that_draws_on_requests_can_be_paid_for_one(self):
         txn = sga_line('F.26.86 Film Posters', '500.00')
         entry = ParsedTransaction(parent_transaction=txn, amount=Decimal('500.00'),
-                                  non_event_revenue_type=revenue_source('alumni'),
+                                  non_event_revenue_type=revenue_source('donations'),
                                   fund_source=fund('legacy'), funding_request=self.request)
         with self.assertRaises(ValidationError) as caught:
             entry.full_clean()

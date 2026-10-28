@@ -1511,8 +1511,10 @@ Source                               Goes into
 SGA Funding Request Reimbursement    SGA Funding Request
 SGA Budget                           SGA Budget
 SGA Mandatory Transfer               SGA Mandatory Transfer
+Donations                            (the account's own)
 Asset Liquidation                    (the account's own)
-Alumni / Donation                    (the account's own)
+Cash Sale and Deposits               (the account's own)
+Other                                (the account's own)
 ===================================  ======================
 
 The *SGA Budget* source has the slug ``sga_baseline``, from its older name
@@ -1931,7 +1933,7 @@ flatten to nothing. Months with no activity still appear, as gaps are
 themselves informative.
 
 **Client type** is never entered by hand — it is inherited from each event's
-billing organisation. Non-event revenue (SGA's payments, alumni gifts) has no
+billing organisation. Non-event revenue (SGA's payments, donations) has no
 client and is excluded rather than silently bucketed as "Unknown".
 
 **Revenue by source** is event billing against each kind of non-event income.

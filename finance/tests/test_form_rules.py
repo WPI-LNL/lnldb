@@ -111,7 +111,7 @@ class SplitFormSetTests(TestCase):
                'slices-1-lnl_spend_category': '',
                # A source that names no fund of its own, so Legacy is allowed.
                'slices-1-non_event_revenue_type': str(
-                   RevenueSource.objects.get(slug='alumni').pk)})
+                   RevenueSource.objects.get(slug='donations').pk)})
         self.assertFalse(formset.is_valid())
         flipped = formset.forms[1]
         self.assertEqual(flipped.cleaned_data['amount'], Decimal('-400.00'))
@@ -128,7 +128,7 @@ class SplitFormSetTests(TestCase):
         }
         from finance.models import RevenueSource
         # Names no fund of its own, so the slices may go into Legacy.
-        source = RevenueSource.objects.get(slug='alumni')
+        source = RevenueSource.objects.get(slug='donations')
         for index, amount in enumerate(('400.00', '300.00')):
             data.update({
                 'slices-%s-amount' % index: amount,
