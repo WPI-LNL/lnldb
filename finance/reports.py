@@ -40,7 +40,7 @@ from finance.calculators import (_percent, billing_receivables, event_pnl_rows,
                                  event_pnl_totals, multibill_income, sga_receivables)
 from finance.models import (ZERO, ClientType, FiscalYearClose, FundBehaviour, ParsedTransaction,
                             RevenueSource, SpendCategory, WorkdayTransaction, books_start_date,
-                            client_type_for, fiscal_year_bounds, money,
+                            client_type_for, dollars, fiscal_year_bounds, money,
                             reimbursement_source)
 
 
@@ -75,12 +75,34 @@ class Column(object):
         return self.kind in (self.MONEY, self.PERCENT, self.NUMBER)
 
 
+class Unknown(object):
+    """
+    A cell whose figure is not known yet, such as an account's cash before a
+    Workday balance is entered. The page writes it ``?``; the CSV leaves it
+    blank, so a column of figures still sums. Use :data:`UNKNOWN`.
+    """
+
+    is_unknown = True
+
+    def __str__(self):
+        return '?'
+
+
+UNKNOWN = Unknown()
+
+
+def known(value):
+    """ ``value``, or :data:`UNKNOWN` when it is ``None``. """
+    return UNKNOWN if value is None else value
+
+
 class Row(object):
     """
     One line of a table.
 
-    ``cells`` maps column keys to values, and a key left out is a blank cell
-    rather than a zero. ``url`` links one cell -- the first, or the column
+    ``cells`` maps column keys to values. A key left out, or ``None``, is a
+    figure that does not apply to the row, drawn as a grey dash rather than a
+    zero; a figure not known yet is :data:`UNKNOWN`. ``url`` links one cell -- the first, or the column
     ``link`` names -- and ``note`` is a muted line beneath it; neither reaches
     the CSV, which carries figures only.
     """
@@ -167,9 +189,10 @@ class Report(object):
 def _csv_value(column, value):
     """
     A cell as a spreadsheet wants it: plain numbers with a minus sign, ISO
-    dates, and nothing at all for a blank, so a column of figures sums.
+    dates, and nothing at all for a blank or a figure not known yet, so a
+    column of figures sums.
     """
-    if value is None or value == '':
+    if value is None or value == '' or value is UNKNOWN:
         return ''
     if column.kind == Column.MONEY:
         return '%.2f' % money(value)
@@ -594,12 +617,8 @@ def income_and_spending(period, is_projection=None, fund=None):
 
 
 def _dollars(value):
-    """ A figure as words in a sentence, e.g. ``$1,250.00``. """
-    from django.contrib.humanize.templatetags.humanize import intcomma
-
-    value = money(value)
-    body = intcomma('%.2f' % abs(value))
-    return ('-$%s' if value < 0 else '$%s') % body
+    """ A figure as words in a sentence, e.g. ``$1,250.00``, as the page writes it. """
+    return dollars(money(value))
 
 
 # ---------------------------------------------------------------------------
@@ -610,6 +629,10 @@ def fund_balances(fiscal_year, today=None):
     """
     What each fund in each account held at the start and end of the year, what
     moved, and what it means: the balance page, laid out to hand over.
+
+    As on the page, money going out is below zero, so each row adds up across:
+    opening, money in, money out and transfers come to the closing, and the
+    closing and encumbrances to what is available.
     """
     today = today or timezone.localdate()
     year = balances.statement(fiscal_year, today=today)
@@ -626,7 +649,7 @@ def fund_balances(fiscal_year, today=None):
         Column('reserved', 'Encumbrances', Column.MONEY,
                title="Encumbered for purchases not yet charged"),
         Column('available', 'Available', Column.MONEY,
-               title="Closing less encumbrances. Blank for a funding request, whose money "
+               title="Closing less encumbrances. A dash for a funding request, whose money "
                      "comes after the spending"),
         Column('billed', 'Billed, not paid', Column.MONEY,
                title="What events billed and not yet paid for still owe. Not cash yet: it "
@@ -657,17 +680,22 @@ def fund_balances(fiscal_year, today=None):
                 note = ''
             if row.is_waiting:
                 event_costs -= row.closing
+            # A dash where the figure does not apply: the opening of a fund that
+            # starts every year empty, money coming into the waiting row, what
+            # is available in a fund SGA reimburses, and bills, which only ever
+            # land in the account's own money.
             rows.append(Row({
                 'fund': row.name,
                 'kind': row.behaviour_label,
-                'opening': row.opening,
-                'received': row.received,
-                'spent': row.spent,
+                'opening': known(row.opening) if row.has_opening else None,
+                'received': row.received if row.takes_income else None,
+                'spent': ZERO - row.spent,
                 'transferred': row.transferred,
-                'closing': row.closing,
-                'reserved': row.encumbered,
-                'available': row.available,
-                'billed': row.billed if row.unpaid_bills else None,
+                'closing': known(row.closing),
+                'reserved': ZERO - row.encumbered,
+                'available': (None if row.is_waiting or row.behaviour == FundBehaviour.REIMBURSED
+                              else known(row.available)),
+                'billed': row.billed if row.is_own else None,
                 'status': row.status,
             }, note=note))
             billed += row.billed
@@ -690,15 +718,14 @@ def fund_balances(fiscal_year, today=None):
                              'status': 'Lines still in the queue'}, tone='muted'))
         total = Row({
             'fund': 'Account total',
-            'opening': account.opening_cash,
+            'opening': known(account.opening_cash),
             'received': account.received,
-            'spent': account.spent,
+            'spent': ZERO - account.spent,
             'transferred': account.transferred,
-            'closing': account.closing_cash,
-            'reserved': account.encumbered,
-            'available': ((account.closing_cash - account.encumbered) if account.cash_known
-                          else None),
-            'billed': account.billed or None,
+            'closing': known(account.closing_cash),
+            'reserved': ZERO - account.encumbered,
+            'available': known(account.after_encumbrances),
+            'billed': account.billed,
             'status': 'What Workday holds' if account.cash_known
                       else 'Enter a Workday balance to see this',
         })
@@ -965,13 +992,13 @@ def owed_to_lnl(is_projection=None, today=None):
             continue
         label = ('%s %s' % (request.reference, request.name)).strip()
         sga_rows.append(Row({
-            'who': 'SGA', 'what': label, 'since': item['since'],
+            'who': 'SGA', 'what': label, 'since': known(item['since']),
             'charged': money(request.owed_at_books_start) + request.total_charged,
             'paid': request.total_received, 'owed': item['awaiting'],
-            'days': item['days'], 'age': age_band(item['days']),
+            'days': known(item['days']), 'age': known(age_band(item['days'])),
         }, url=reverse('finance:fr-detail', args=[request.pk]), link='what',
             note=_short(request.fiscal_year) + (' (closed)' if request.closed else '')))
-    sga_rows.sort(key=lambda r: -(r.cells['days'] or 0))
+    sga_rows.sort(key=lambda r: -(r.cells['days'] if r.cells['days'] is not UNKNOWN else 0))
 
     client_rows = []
     for row in billing_receivables(is_projection, today=today):
@@ -980,9 +1007,9 @@ def owed_to_lnl(is_projection=None, today=None):
         stage = stage_of(event, bill)
         client_rows.append(Row({
             'who': row['client'] or 'No client on file', 'what': event.event_name,
-            'since': getattr(bill, 'date_billed', None), 'charged': row['billed'],
-            'paid': row['received'], 'owed': row['owed'], 'days': row['days_owed'],
-            'age': age_band(row['days_owed']),
+            'since': known(getattr(bill, 'date_billed', None)), 'charged': row['billed'],
+            'paid': row['received'], 'owed': row['owed'], 'days': known(row['days_owed']),
+            'age': known(age_band(row['days_owed'])),
             'stage': STAGES[stage] if stage else ('Closed' if event.closed else ''),
         }, url=reverse('events:detail', args=[event.pk]), link='what',
             note=row['client_type']))

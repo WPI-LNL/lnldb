@@ -151,7 +151,7 @@
                 <div class="fin-stat">
                     <div class="fin-stat-label">{{ stat.label }}</div>
                     <div class="fin-stat-value {{ stat.tone }}">
-                        {% if stat.value is None %}<span class="text-muted">&mdash;</span>{% elif stat.kind == 'money' %}{{ stat.value|money }}{% elif stat.kind == 'percent' %}{{ stat.value }}%{% else %}{{ stat.value }}{% endif %}
+                        {% if stat.value.is_unknown %}<span class="fin-unknown" title="Not known yet">?</span>{% elif stat.value is None %}<span class="fin-na" title="Does not apply here">&mdash;</span>{% elif stat.kind == 'money' %}{{ stat.value|money }}{% elif stat.kind == 'percent' %}{{ stat.value }}%{% else %}{{ stat.value }}{% endif %}
                     </div>
                     {% if stat.sub %}<div class="fin-stat-sub">{{ stat.sub }}</div>{% endif %}
                 </div>
@@ -192,7 +192,7 @@
                             <tr class="fin-report-total">
                                 {% for column, value in section.total_cells %}
                                     <td class="{% if column.is_numeric %}fin-num{% endif %} {% if column.coloured and value %}{{ value|money_class }}{% endif %}">
-                                        {% if value is not None and value != '' %}{% include 'finance/_report_cell.html' %}{% endif %}
+                                        {% if column.is_numeric or value is not None and value != '' %}{% include 'finance/_report_cell.html' %}{% endif %}
                                     </td>
                                 {% endfor %}
                             </tr>

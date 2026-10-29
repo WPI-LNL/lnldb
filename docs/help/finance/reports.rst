@@ -67,7 +67,8 @@ Print, Save as PDF, or Download
   what it covers and when it was printed.
 - **PDF**: print, and choose *Save as PDF* as the printer.
 - **Spreadsheet**: click `CSV` on the Reports tab, or the download link on the report. The file opens in Excel with one
-  row per line of the report. Amounts are plain numbers, so columns add up.
+  row per line of the report. Amounts are plain numbers with a minus sign below zero, so columns add up. A figure that
+  is not known yet, or doesn't apply, is an empty cell.
 
 The **Ledger** downloads too: filter it however you like, and the download has every entry those filters select, with
 every column.
@@ -112,5 +113,10 @@ Reading a Report
   changed since the close listed at the top.
 - **Costs SGA pays for aren't LNL's losses.** On the *Events* report, costs paid from a funding request or the SGA
   budget are shown separately and don't reduce an event's margin.
+- **$0, ? and the dash mean different things.** $0 is nothing, **?** is not known yet -- an account's cash with no
+  Workday balance, say -- and a grey dash is a figure that doesn't apply to that row. Below zero is in parentheses. See
+  *Reading the Figures* in :doc:`overview`.
+- **Fund balances adds up across.** As on the *Balances* tab, *Money out* and *Encumbrances* are in parentheses, so
+  Opening + Money in + Money out + Transfers is the Closing, and Closing + Encumbrances is what is Available.
 
 `Last Modified: October 29, 2026`

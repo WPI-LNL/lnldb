@@ -46,7 +46,7 @@
         </div>
         <div class="fin-stat">
             <div class="fin-stat-label">Expenses</div>
-            <div class="fin-stat-value text-danger">{{ total_expense|money }}</div>
+            <div class="fin-stat-value text-danger">{{ total_expense|negate|money }}</div>
             <div class="fin-stat-sub">money out</div>
         </div>
         <div class="fin-stat">
@@ -207,7 +207,7 @@
                         </div>
                         <div class="fin-stat">
                             <div class="fin-stat-label">Passed through</div>
-                            <div class="fin-stat-value text-danger">{{ billing_kept.passthrough|money }}</div>
+                            <div class="fin-stat-value text-danger">{{ billing_kept.passthrough|negate|money }}</div>
                             <div class="fin-stat-sub">to rental houses and vendors</div>
                         </div>
                         <div class="fin-stat">
@@ -344,14 +344,14 @@
                         <tr>
                             <th>{{ account.code }}</th>
                             <th class="fin-num">
-                                {% if account.cash_known %}{{ account.closing_cash|money }}{% else %}<span class="fin-muted">no Workday balance yet</span>{% endif %}
+                                {% if account.cash_known %}{{ account.closing_cash|money }}{% else %}<span class="fin-unknown" title="Not known yet: no Workday balance has been recorded">?</span>{% endif %}
                             </th>
                             <th></th>
                         </tr>
                         {% for row in account.rows %}
                             <tr>
                                 <td>{{ row.name }}</td>
-                                <td class="fin-num {{ row.closing|money_class }}">{{ row.closing|money }}</td>
+                                <td class="fin-num {{ row.closing|money_class }}">{{ row.closing|figure }}</td>
                                 <td class="fin-muted">{{ row.status }}</td>
                             </tr>
                         {% endfor %}

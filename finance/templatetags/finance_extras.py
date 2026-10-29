@@ -21,6 +21,8 @@ from django.http import QueryDict
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from finance.models import dollars
+
 register = template.Library()
 
 
@@ -142,37 +144,33 @@ def _asset_stamp(path):
 @register.filter
 def money(value, show_sign=False):
     """
-    Accounting-style currency. Negatives render in parentheses, which is what
-    the Treasurer expects to see next to a Workday export.
+    Accounting-style currency, as :func:`finance.models.dollars` writes it.
+    Negatives render in parentheses, which is what the Treasurer expects to
+    see next to a Workday export; zero is ``$0``, and ``None`` -- not known
+    yet -- is ``?``. Plain text, so it is safe inside an attribute or an email.
+
+    A figure that does not apply to its row is not a value at all, so the
+    template writes the grey dash for it (``.fin-na``).
     """
     if value is None or value == '':
-        return '—'
+        return '?'
     try:
         amount = Decimal(value)
     except (InvalidOperation, TypeError, ValueError):
         return value
-    negative = amount < 0
-    body = intcomma('%.2f' % abs(amount))
-    if negative:
-        return '($%s)' % body
-    return ('+$%s' % body) if show_sign else '$%s' % body
+    if show_sign and amount > 0:
+        return '+' + dollars(amount)
+    return dollars(amount)
 
 
 @register.filter
 def figure(value):
     """
-    :func:`money` for a page that tells nothing and not known apart, as the
-    Treasurer asked: zero is ``$0`` and ``None`` -- not known yet -- is ``?``.
-    A figure that does not apply to its row is not a value at all, so the
-    template writes the dash for it.
+    :func:`money` for a cell of a table: the ``?`` of a figure not known yet
+    is marked up, so it stands out and says why on hover.
     """
     if value is None or value == '':
         return format_html('<span class="fin-unknown" title="{}">?</span>', 'Not known yet')
-    try:
-        if Decimal(value) == 0:
-            return '$0'
-    except (InvalidOperation, TypeError, ValueError):
-        return value
     return money(value)
 
 

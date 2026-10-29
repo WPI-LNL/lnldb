@@ -23,12 +23,14 @@
        and a minus typed out of habit counts the same. */
     var targetCents = Math.abs(cents($remainder.data('target')));
 
+    /* As the finance pages write a figure: $0 for nothing, and parentheses
+       below zero. */
     function money(c) {
-        var sign = c < 0 ? '-' : '';
-        var abs = Math.abs(c) / 100;
-        return sign + '$' + abs.toLocaleString(undefined, {
+        if (!c) { return '$0'; }
+        var body = '$' + (Math.abs(c) / 100).toLocaleString(undefined, {
             minimumFractionDigits: 2, maximumFractionDigits: 2
         });
+        return c < 0 ? '(' + body + ')' : body;
     }
 
     function recalc() {

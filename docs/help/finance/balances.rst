@@ -22,7 +22,8 @@ that date is counted yet, so import the latest export before relying on today's 
 a short key to the figures, and *On this page* jumps to each account.
 
 **Money going out, and any balance below zero, is always in parentheses**, like ($1,500.00). So every figure carries its
-sign, and you can add a row across or a column down.
+sign, and you can add a row across or a column down. Every finance page follows the same rules (see *Reading the
+Figures* in :doc:`overview`).
 
 Every cell is one of three things:
 

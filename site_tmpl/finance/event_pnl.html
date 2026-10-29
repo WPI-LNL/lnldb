@@ -136,7 +136,7 @@
                                 {% if row.rentals_billed or row.passthrough_cost %}
                                     {{ row.rentals_recovered|money }} / {{ row.passthrough_cost|money }}
                                 {% else %}
-                                    <span class="fin-muted">—</span>
+                                    <span class="fin-na" title="No gear was hired in for this event">—</span>
                                 {% endif %}
                             </td>
                             <td>

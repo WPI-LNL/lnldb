@@ -33,7 +33,7 @@ from finance.models import (ZERO, BalanceCheckpoint, Encumbrance, FRLineItem, Fu
                             FundTransfer, MultiBilling, ParsedTransaction, PartitionCode,
                             ProjectTag, RevenueSource, SpendCategory,
                             TransactionStatus,
-                            WorkdayTransaction, current_fiscal_year,
+                            WorkdayTransaction, current_fiscal_year, dollars,
                             event_passthrough_category, fiscal_year_bounds,
                             fiscal_year_choices, fiscal_year_for, money,
                             own_fund_for_account, summed_money)
@@ -336,8 +336,8 @@ class MultiBillChoiceField(forms.ModelChoiceField):
 
     def label_from_instance(self, obj):
         """ "Fall films · Oct 3, 2026 · $1,200.00", and "paid" once it is. """
-        label = "%s · %s · $%s" % (obj.display_name, date_format(obj.date_billed, 'M j, Y'),
-                                   money(obj.amount))
+        label = "%s · %s · %s" % (obj.display_name, date_format(obj.date_billed, 'M j, Y'),
+                                  dollars(obj.amount))
         return label + " · paid" if obj.date_paid else label
 
 
@@ -1666,11 +1666,11 @@ class BaseSplitFormSet(BaseInlineFormSet):
             # Unsigned, as the amounts are typed.
             remainder = abs(parent.net_amount) - abs(total)
             raise ValidationError(
-                "The entries add up to $%s but the line is $%s — %s. "
+                "The entries add up to %s but the line is %s — %s. "
                 "They must add up to the line exactly before it can be saved."
-                % (abs(total), abs(parent.net_amount),
-                   "$%s is left to settle" % remainder if remainder > 0
-                   else "$%s too much is entered" % -remainder))
+                % (dollars(abs(total)), dollars(abs(parent.net_amount)),
+                   "%s is left to settle" % dollars(remainder) if remainder > 0
+                   else "%s too much is entered" % dollars(-remainder)))
         # No check that every slice runs the line's way: SplitLineForm gives
         # each one the line's sign and direction, so half an expense cannot be
         # turned into revenue by splitting it.
@@ -1908,8 +1908,8 @@ class OpenEncumbranceChoiceField(forms.ModelChoiceField):
 
     def label_from_instance(self, obj):
         """ ``Spring gear order · Lights — $296.45 still encumbered · Aug 20, 2025``. """
-        return "%s — $%s still encumbered · %s" % (
-            obj.encumbrance_label, abs(obj.amount),
+        return "%s — %s still encumbered · %s" % (
+            obj.encumbrance_label, dollars(abs(obj.amount)),
             date_format(obj.effective_date, 'M j, Y'))
 
 
@@ -2026,8 +2026,8 @@ class FRLineItemForm(forms.ModelForm):
             spent = self.instance.spent
             if awarded is not None and awarded < spent:
                 self.add_error('amount_awarded',
-                               "$%s is already spent against this line; the award cannot be "
-                               "lowered below that." % spent)
+                               "%s is already spent against this line; the award cannot be "
+                               "lowered below that." % dollars(spent))
         return cleaned
 
 
@@ -2237,8 +2237,8 @@ class YearCloseForm(forms.Form):
                 proposal['field'] = 'cover_%s' % key
                 self.fields[proposal['field']] = forms.BooleanField(
                     required=False, initial=True,
-                    label="Cover the $%s overspend from %s" % (
-                        money(proposal['amount']), proposal['account'].own_fund))
+                    label="Cover the %s overspend from %s" % (
+                        dollars(proposal['amount']), proposal['account'].own_fund))
             else:
                 proposal['field'] = 'write_off_%s' % key
                 self.fields[proposal['field']] = _money_field(

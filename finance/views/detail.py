@@ -27,7 +27,8 @@ from finance.billing import bill_closed, mark_paid_from_payments, payment_offer
 from finance.calculators import bill_payments
 from finance.filters import filter_context
 from finance.forms import AllocationForm, SplitFormSet
-from finance.models import MultiBilling, ParsedTransaction, WorkdayTransaction, money, own_fund_for_account
+from finance.models import (MultiBilling, ParsedTransaction, WorkdayTransaction, dollars,
+                            own_fund_for_account)
 from finance.suggestions import suggest_all
 
 
@@ -224,8 +225,8 @@ def _mark_paid_on_split(request, txn):
     paid_on = mark_paid_from_payments(bill)
     if paid_on is None:
         received, _ = bill_payments(bill)
-        return ("%s was not marked paid: $%s of its $%s has been received."
-                % (bill.display_name, money(received), money(bill.amount)))
+        return ("%s was not marked paid: %s of its %s has been received."
+                % (bill.display_name, dollars(received), dollars(bill.amount)))
     return "Marked %s paid on %s." % (bill.display_name, date_format(paid_on, 'M j, Y'))
 
 

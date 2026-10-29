@@ -53,7 +53,7 @@ from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateF
 from finance.calculators import bill_payments, latest_bill
 from finance.filters import filter_context, get_filter_state
 from finance.models import (ZERO, Billing, BillingEmail, MultiBilling, MultiBillingCharge, MultiBillingEmail,
-                            NoBillNeeded, books_start_date, money, no_bill_needed_for)
+                            NoBillNeeded, books_start_date, dollars, money, no_bill_needed_for)
 from helpers.mixins import HasPermMixin, LoginRequiredMixin, SetFormMsgMixin
 from helpers.revision import set_revision_comment
 from pdfs.views import generate_event_bill_pdf_standalone, write_weasyprint_pdf
@@ -306,15 +306,15 @@ class MultiBillingEmailCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin,
 
 def isd_warning(bill):
     """ What to say before a bill with a recorded ISD is changed. """
-    return ("ISD %s was created for $%s. If this changes what the bill comes to, the ISD in Workday will no longer "
+    return ("ISD %s was created for %s. If this changes what the bill comes to, the ISD in Workday will no longer "
             "match it: change the ISD in Workday too, then record the new amount."
-            % (bill.isd_number, money(bill.isd_amount)))
+            % (bill.isd_number, dollars(bill.isd_amount)))
 
 
 def isd_now_differs(bill):
     """ What to say once a change has left a bill no longer matching its ISD. """
-    return ("ISD %s charges $%s, but the bill now comes to $%s. Change the ISD in Workday, then record the new "
-            "amount." % (bill.isd_number, money(bill.isd_amount), money(bill.amount)))
+    return ("ISD %s charges %s, but the bill now comes to %s. Change the ISD in Workday, then record the new "
+            "amount." % (bill.isd_number, dollars(bill.isd_amount), dollars(bill.amount)))
 
 
 def _bill_closed(request, bill, events):
@@ -364,8 +364,8 @@ def _record_workday(request, bill, form_class):
             messages.success(request, "Recorded ISD %s for %s. It is waiting on approval."
                              % (bill.isd_number, name))
             if bill.isd_differs:
-                messages.warning(request, "The ISD charges $%s, and the bill comes to $%s."
-                                 % (money(bill.isd_amount), money(bill.amount)))
+                messages.warning(request, "The ISD charges %s, and the bill comes to %s."
+                                 % (dollars(bill.isd_amount), dollars(bill.amount)))
             return HttpResponseRedirect(_back_to(request, billing_url(WAITING_ON_APPROVAL)))
         form.save(user=request.user)
         messages.success(request, "Recorded worktag %s for %s. It is ready for its ISD." % (bill.worktag_charged, name))

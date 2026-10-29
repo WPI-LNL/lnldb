@@ -70,7 +70,7 @@ record there, such as one changed outside the site, counts from the day the bill
 **Owed**, on the *Waiting on client*, *Create ISD* and *Waiting on approval* tabs, is what is still owed on the bill and
 for how many days since it was billed. These are the same figures as the *Owed to LNL* report (see :doc:`reports`). A
 bill whose payments have all been received shows *Received in full*, with `Mark paid...`. A bill for an event from before
-the books start shows a dash, because its payments were never imported.
+the books start shows a **?**, because its payments were never imported, so what it still owes isn't known.
 
 **Fiscal year.** The fiscal year in the top bar shows only events that started in that year. Each tab says how many
 more are in other years, because a show in June is often billed in July. Click the link to see them.
@@ -279,4 +279,4 @@ bills open the *Mark paid* form, instead of marking the bill paid today.
     - :doc:`multibills` for billing several events at once.
     - :doc:`reports` for the *Owed to LNL* report, which shows each client's debt with its bill's stage.
 
-`Last Modified: October 28, 2026`
+`Last Modified: October 29, 2026`

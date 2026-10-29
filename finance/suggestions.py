@@ -49,7 +49,7 @@ from django.db.models import F, Q, Value
 from django.utils.formats import date_format
 
 from finance.models import (ISD_NUMBER_FORMAT, ZERO, Billing, FundSource, MultiBilling,
-                            SuggestionRule, default_fund_source, fund_source_for_tracking,
+                            SuggestionRule, default_fund_source, dollars, fund_source_for_tracking,
                             fund_source_for_workday_fund, money, normalise_isd_number,
                             normalise_sga_reference, normalise_term, own_fund_for_account,
                             reimbursement_source, revenue_sources_by_fund, spend_category_named,
@@ -1873,8 +1873,8 @@ def encumbrance_match_label(entry, txn):
     two numbers on opposite sides of a dropdown is exactly the sort of small
     arithmetic that gets skipped.
     """
-    return "%s — $%s encumbered %s · %s" % (
-        entry.encumbrance_label, abs(money(entry.amount)),
+    return "%s — %s encumbered %s · %s" % (
+        entry.encumbrance_label, dollars(abs(money(entry.amount))),
         date_format(entry.effective_date, 'M j, Y'), _encumbrance_gap(entry.amount, txn))
 
 
@@ -1942,8 +1942,8 @@ def encumbrance_match_options(txn):
         total = sum(money(line.amount) for line in lines)
         options.append({
             'value': 'all-%s' % header.pk,
-            'label': "%s — all %s lines, $%s encumbered %s · %s" % (
-                header.description, len(lines), abs(total),
+            'label': "%s — all %s lines, %s encumbered %s · %s" % (
+                header.description, len(lines), dollars(abs(total)),
                 date_format(header.effective_date, 'M j, Y'), _encumbrance_gap(total, txn)),
             'close': _close_enough(total, txn)})
         for line in lines:
@@ -1953,8 +1953,8 @@ def encumbrance_match_options(txn):
             options.append({
                 'value': str(line.pk),
                 # Indented with em spaces, which a <select> does not collapse.
-                'label': " ↳ %s — $%s from %s · %s" % (
-                    own or "One line", abs(money(line.amount)), line.fund_source or "no fund",
+                'label': " ↳ %s — %s from %s · %s" % (
+                    own or "One line", dollars(abs(money(line.amount))), line.fund_source or "no fund",
                     _encumbrance_gap(line.amount, txn)),
                 'close': _close_enough(line.amount, txn)})
     return options

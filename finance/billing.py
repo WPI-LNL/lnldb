@@ -51,7 +51,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from finance.calculators import bill_payments, days_owed, latest_bill, received_by_event
-from finance.models import (ZERO, MultiBilling, books_start_date, client_of, finance_settings, fiscal_year_for,
+from finance.models import (ZERO, MultiBilling, books_start_date, client_of, dollars, finance_settings, fiscal_year_for,
                             money, no_bill_needed_for)
 
 READY = 'ready'
@@ -709,9 +709,9 @@ def close_refusal(item):
     if item.stage not in CLOSABLE:
         return "it is not paid"
     if item.owed and not item.received:
-        return "none of the $%s billed has been received" % item.amount
+        return "none of the %s billed has been received" % dollars(item.amount)
     if item.owed:
-        return "$%s of the $%s billed has not been received" % (item.owed, item.amount)
+        return "%s of the %s billed has not been received" % (dollars(item.owed), dollars(item.amount))
     return None
 
 

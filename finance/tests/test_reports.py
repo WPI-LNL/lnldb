@@ -19,6 +19,7 @@ import datetime
 import io
 from decimal import Decimal
 
+from django.template.loader import render_to_string
 from django.test import TestCase
 from django.urls import reverse
 
@@ -26,9 +27,9 @@ from events.tests.generators import Event2019Factory, OrgFactory
 from finance import balances
 from finance.calculators import event_billing_kept, event_financials, event_pnl_rows
 from finance.models import Billing, FiscalYearClose, FRLineItem, FundingRequest, ParsedTransaction
-from finance.reports import (AGE_BANDS, Column, Period, Report, Row, Section, age_band,
-                             as_csv, event_report, fund_balances, income_and_spending,
-                             owed_to_lnl, parse_period)
+from finance.reports import (AGE_BANDS, UNKNOWN, Column, Period, Report, Row, Section,
+                             age_band, as_csv, event_report, fund_balances,
+                             income_and_spending, owed_to_lnl, parse_period)
 from finance.tests.test_balances import LedgerFixture, checkpoint, filed, line
 from finance.tests.test_revenue_sources import (CacheResetMixin, make_request, reimburse,
                                                 spend, take_back)
@@ -369,7 +370,7 @@ class IncomeAndSpendingTests(CacheResetMixin, TestCase):
     def test_lines_still_in_the_queue_are_counted_and_named(self):
         line(datetime.date(2026, 9, 2), '-75.00', 'Not settled yet')
         report = self.report()
-        self.assertTrue(any('1 Workday line' in w and '-$75.00' in w for w in report.warnings))
+        self.assertTrue(any('1 Workday line' in w and '($75.00)' in w for w in report.warnings))
 
     def test_any_dates(self):
         report = income_and_spending(Period(datetime.date(2025, 10, 1),
@@ -451,6 +452,59 @@ class FundBalanceReportTests(LedgerFixture, TestCase):
     def test_an_account_with_no_workday_balance_says_so(self):
         self.assertTrue(any('No Workday balance has been entered for 315-AG' in w
                             for w in self.report.warnings))
+
+    def test_money_going_out_is_below_zero_so_a_row_adds_up_across(self):
+        """ As on the Balances tab: the budget took in $5,000 and spent $6,000. """
+        budget = cells(self.main, 'SGA Budget', 'fund')
+        self.assertEqual(budget['spent'], Decimal('-6000.00'))
+        self.assertEqual(budget['received'] + budget['spent'] + budget['transferred'],
+                         budget['closing'])
+        self.assertEqual(self.main.total.cells['spent'], Decimal('-6800.00'))
+        self.assertIn('-6800.00', as_csv(self.report))
+
+    def test_a_figure_that_does_not_apply_is_blank_and_zero_is_zero(self):
+        budget = cells(self.main, 'SGA Budget', 'fund')
+        self.assertIsNone(budget['opening'], "the budget starts every year empty")
+        self.assertIsNone(budget['billed'], "bills only land in the account's own money")
+        self.assertIsNone(cells(self.main, 'SGA Funding Request', 'fund')['available'])
+        legacy = cells(self.main, 'Legacy', 'fund')
+        self.assertEqual((legacy['spent'], legacy['billed']), (Decimal('0.00'), Decimal('0.00')))
+        unfiled = cells(self.main, 'Not settled yet', 'fund')
+        self.assertNotIn('received', unfiled)
+
+    def test_cash_with_no_workday_balance_is_not_known(self):
+        other = next(item for item in self.report.sections if item.title.startswith('315-AG'))
+        own = next(row.cells for row, _ in other.lines if row.cells['fund'] == str(fund('sga_mandatory')))
+        self.assertIs(own['closing'], UNKNOWN)
+        self.assertEqual([other.total.cells[key] for key in ('opening', 'closing', 'available')],
+                         [UNKNOWN] * 3)
+        self.assertNotIn('?', as_csv(self.report))
+
+
+class ReportCellTests(TestCase):
+    """ How one cell of a report is drawn: the rule every finance page follows. """
+
+    def cell(self, value, kind=Column.MONEY, signed=False):
+        return render_to_string('finance/_report_cell.html', {
+            'column': Column('x', 'X', kind, signed=signed), 'value': value}).strip()
+
+    def test_zero_is_zero_dollars(self):
+        self.assertEqual(self.cell(Decimal('0.00')), '$0')
+
+    def test_below_zero_is_in_parentheses(self):
+        self.assertEqual(self.cell(Decimal('-1500.00')), '($1,500.00)')
+        self.assertEqual(self.cell(Decimal('-1500.00'), signed=True), '($1,500.00)')
+        self.assertEqual(self.cell(Decimal('1500.00'), signed=True), '+$1,500.00')
+
+    def test_not_known_is_a_question_mark(self):
+        self.assertIn('>?</span>', self.cell(UNKNOWN))
+        self.assertIn('fin-unknown', self.cell(UNKNOWN))
+
+    def test_does_not_apply_is_a_grey_dash(self):
+        for value in (None, ''):
+            self.assertIn('fin-na', self.cell(value))
+            self.assertIn('>—</span>', self.cell(value))
+        self.assertIn('fin-na', self.cell(None, kind=Column.PERCENT))
 
 
 # ---------------------------------------------------------------------------

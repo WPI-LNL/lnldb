@@ -1491,11 +1491,12 @@ budget overspent, a funding request reimbursed for more than was spent), since a
 funding request below zero is normal. The tiles above each account's table read
 ``AccountStatement.own_row``, ``waiting_row`` and ``owed_by_sga``.
 
-Zero, unknown and not applicable are told apart, at the Treasurer's request.
-The page renders figures with the ``figure`` filter, not ``money``: zero is
-``$0``, and a figure not known yet (``None``, e.g. cash with no Workday
-balance) is ``?``. A figure that does not apply to the row is a grey dash,
-written by the template. ``FundRow.has_opening`` is false for a budget or
+Zero, unknown and not applicable are told apart, at the Treasurer's request,
+here and on every finance page (see *How a figure is written* under the reports
+below). The page renders figures with the ``figure`` filter, which marks up the
+``?`` of a figure not known yet (``None``, e.g. cash with no Workday balance);
+zero is ``$0``. A figure that does not apply to the row is a grey dash
+(``.fin-na``), written by the template. ``FundRow.has_opening`` is false for a budget or
 funding request that starts the year empty, so its Opening is a dash, though
 one still owed from last year shows its figure. ``FundRow.takes_income`` is
 false for the waiting row, which holds only costs. The *Not settled yet* row's
@@ -2138,6 +2139,30 @@ Funding Request Report  one funding request,    Every purchase charged to the re
 Form                    whenever it was spent   line by line, with its receipt; also the
                                                 PDF SGA asks for
 ======================  ======================  ==========================================
+
+**How a figure is written.** One rule holds across the finance pages, the
+reports, flash messages, form labels and the dashboard's charts, set by the
+Treasurer: below zero is in parentheses and above zero has none, zero is
+``$0``, a figure not known yet is ``?``, and a figure that does not apply to its
+row is a grey dash. :func:`finance.models.dollars` writes a figure that way, and
+the ``money`` template filter, the reports' ``_dollars`` and every message call
+it; ``charts.js``, ``split.js`` and ``encumbrance.js`` follow the same rule in the
+browser. A message never writes ``"$%s" % amount``, which prints ``$-50.00`` and
+``$0.00``. Where figures sit together and add up -- Revenue, Expenses and Net on
+the dashboard and the ledger, Billed and received, Passed through and LNL kept,
+Awarded, Spent and Remaining on a funding request, and the Fund balances report
+-- money going out is turned over (the ``negate`` filter, or ``ZERO - spent`` in
+a report, which keeps a zero from becoming ``-0.00`` in the CSV) so it shows in
+parentheses. Bills, invoices and the Funding Request Report Form go to clients
+and SGA, so they keep ``invoice_money`` and ``frrf``'s own ``-$25.00``.
+
+In a report, a cell left out of a row's ``cells`` -- or ``None`` -- is a figure
+that does not apply, drawn as the dash, and the total row draws one too in a
+column of figures. A figure not known yet is :data:`finance.reports.UNKNOWN`
+(wrap a value with ``known()``), drawn as ``?``. Both are empty cells in the CSV,
+so a column still sums. *Fund balances* uses ``UNKNOWN`` for an account's cash,
+opening, closing and available with no Workday balance; *Owed to LNL* for a debt
+whose start, and so whose age, is not known.
 
 **The period.** The filter bar's fiscal year, cut off at today while it is still
 running, which the report calls "FY27 to date". The two reports that can cover

@@ -31,7 +31,7 @@ from finance.importers import (ImportError_, discard_staged, import_workday_expo
                                purge_stale_staged, read_staged, stage_upload)
 from finance.models import (ZERO, Billing, Encumbrance, FundingRequest, FundTransfer,  # NOQA
                             MultiBilling, ParsedTransaction, TransactionStatus, WorkdayTransaction,
-                            fiscal_year_for, money)
+                            dollars, fiscal_year_for, money)
 from finance.suggestions import (ENCUMBRANCE_CLOSE_ENOUGH, SUGGESTED_FIELDS,
                                  active_suggestion_rules,
                                  encumbrance_match_options, suggest_all,
@@ -383,8 +383,8 @@ def _mark_paid_on_filing(request, entry):
         paid_on = mark_paid_from_payments(bill)
         if paid_on is None:
             received, _ = bill_payments(bill)
-            return ("The bill for %s was not marked paid: $%s of its $%s has been received."
-                    % (bill.event.event_name, money(received), money(bill.amount)))
+            return ("The bill for %s was not marked paid: %s of its %s has been received."
+                    % (bill.event.event_name, dollars(received), dollars(bill.amount)))
         return "Marked the bill for %s paid on %s." % (bill.event.event_name, date_format(paid_on, 'M j, Y'))
     if request.POST.get('bill_offered') or not entry.linked_event_id or entry.refund_of_id or entry.amount <= 0:
         return ''
@@ -418,8 +418,8 @@ def _mark_multibill_paid_on_filing(request, entry):
         paid_on = mark_paid_from_payments(bill)
         if paid_on is None:
             received, _ = bill_payments(bill)
-            return ("%s was not marked paid: $%s of its $%s has been received."
-                    % (bill.display_name, money(received), money(bill.amount)))
+            return ("%s was not marked paid: %s of its %s has been received."
+                    % (bill.display_name, dollars(received), dollars(bill.amount)))
         return "Marked %s paid on %s." % (bill.display_name, date_format(paid_on, 'M j, Y'))
     if request.POST.get('bill_offered'):
         return ''
@@ -621,9 +621,9 @@ def encumbrance(request, pk=None):
         total = abs(sum((money(line.amount) for line in lines), ZERO))
         messages.success(
             request,
-            "Encumbered $%s%s. %s Pending until the matching Workday line is imported — "
+            "Encumbered %s%s. %s Pending until the matching Workday line is imported — "
             "that line will then offer it under “Already encumbered?” in the queue."
-            % (total, " across %s lines" % len(lines) if len(lines) > 1 else "",
+            % (dollars(total), " across %s lines" % len(lines) if len(lines) > 1 else "",
                "It stays"))
         return HttpResponseRedirect(reverse('finance:ledger'))
 
@@ -695,18 +695,19 @@ def _draw_message(txn, reserved, drawn, exhausted, settled):
     verb = "settled against" if settled else "matched to"
 
     if exhausted and took == estimate:
-        message = "%s %s an encumbrance of $%s." % (txn.reference, verb, took)
+        message = "%s %s an encumbrance of %s." % (txn.reference, verb, dollars(took))
     elif exhausted:
-        message = ("%s %s an encumbrance of $%s; $%s was drawn."
-                   % (txn.reference, verb, estimate, took))
+        message = ("%s %s an encumbrance of %s; %s was drawn."
+                   % (txn.reference, verb, dollars(estimate), dollars(took)))
     else:
-        message = ("%s %s $%s of a $%s encumbrance — $%s stays encumbered."
-                   % (txn.reference, verb, took, estimate, estimate - took))
+        message = ("%s %s %s of a %s encumbrance — %s stays encumbered."
+                   % (txn.reference, verb, dollars(took), dollars(estimate),
+                      dollars(estimate - took)))
 
     left = abs(money(txn.unallocated_amount))
     if left:
-        message += (" $%s of this line is left to settle — the encumbrance did not "
-                    "cover it." % left)
+        message += (" %s of this line is left to settle — the encumbrance did not "
+                    "cover it." % dollars(left))
     return message
 
 
@@ -862,8 +863,9 @@ def draw_whole_encumbrance(lines, txn, user):
 def _whole_draw_message(txn, header, results, settled):
     """ What matching a whole encumbrance did, in a sentence or two. """
     took = abs(sum((money(drawn) for _, drawn, _ in results), ZERO))
-    message = "%s %s “%s”: $%s across %s line%s." % (
-        txn.reference, "settled against" if settled else "matched to", header.description, took,
+    message = "%s %s “%s”: %s across %s line%s." % (
+        txn.reference, "settled against" if settled else "matched to", header.description,
+        dollars(took),
         len(results), '' if len(results) == 1 else 's')
     still = header.open_lines().count()
     if still:
@@ -871,8 +873,8 @@ def _whole_draw_message(txn, header, results, settled):
             still, '' if still == 1 else 's', 'stays' if still == 1 else 'stay')
     left = abs(money(txn.unallocated_amount))
     if left:
-        message += (" $%s of this line is left to settle — the encumbrance did not "
-                    "cover it." % left)
+        message += (" %s of this line is left to settle — the encumbrance did not "
+                    "cover it." % dollars(left))
     return message
 
 
@@ -1069,8 +1071,8 @@ def unreconcile(request, pk):
             entry.delete()
 
     txn.refresh_from_db()
-    message = ("Undone. %s is back in the queue with $%s to settle."
-               % (txn.reference, abs(txn.unallocated_amount)))
+    message = ("Undone. %s is back in the queue with %s to settle."
+               % (txn.reference, dollars(abs(txn.unallocated_amount))))
     if wants_json:
         return JsonResponse({
             'ok': True,
@@ -1301,11 +1303,11 @@ def bulk_match_encumbrance(request):
     if covered:
         total = abs(sum((money(d) for _, d in covered), ZERO))
         messages.success(
-            request, "Drew $%s from the encumbrance across %s line%s%s. %s" % (
-                total, len(covered), '' if len(covered) == 1 else 's',
+            request, "Drew %s from the encumbrance across %s line%s%s. %s" % (
+                dollars(total), len(covered), '' if len(covered) == 1 else 's',
                 " and settled %s" % settled if settled else '',
                 "The encumbrance is now closed." if exhausted else
-                "$%s stays encumbered." % (abs(money(reserved)) - total)))
+                "%s stays encumbered." % dollars(abs(money(reserved)) - total)))
 
     # A line the reservation reached but did not finish. It stays in the queue,
     # which is correct and easy to miss among nine that left it -- the eye reads
@@ -1315,7 +1317,7 @@ def bulk_match_encumbrance(request):
         messages.info(
             request, "The encumbrance did not cover all of %s: %s. %s still in the queue."
             % ("one line" if len(short) == 1 else "%s lines" % len(short),
-               _name_a_few("%s ($%s left)" % (t.reference, abs(money(left)))
+               _name_a_few("%s (%s left)" % (t.reference, dollars(abs(money(left))))
                            for t, left in short),
                "It is" if len(short) == 1 else "They are"))
 

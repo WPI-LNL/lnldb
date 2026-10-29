@@ -15,16 +15,22 @@
         return;
     }
 
+    /* As the finance pages write a figure: $0 for nothing, and parentheses
+       below zero. */
     function money(value) {
-        return '$' + Number(value).toLocaleString(undefined, {
+        var n = Number(value);
+        if (!n) { return '$0'; }
+        var body = '$' + Math.abs(n).toLocaleString(undefined, {
             minimumFractionDigits: 2, maximumFractionDigits: 2
         });
+        return n < 0 ? '(' + body + ')' : body;
     }
 
     function compact(value) {
         var n = Number(value);
-        if (Math.abs(n) >= 1000) { return '$' + Math.round(n / 1000) + 'k'; }
-        return '$' + Math.round(n);
+        var abs = Math.abs(n);
+        var body = abs >= 1000 ? '$' + Math.round(abs / 1000) + 'k' : '$' + Math.round(abs);
+        return n < 0 ? '(' + body + ')' : body;
     }
 
     /* ---- Tooltips that are not trapped in the canvas -----------------------

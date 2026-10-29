@@ -21,9 +21,9 @@
             if ($del.length && $del.is(':checked')) { return; }
             sum += cents($(this).val());
         });
-        $total.text('$' + (sum / 100).toLocaleString(undefined, {
+        $total.text(sum ? '$' + (sum / 100).toLocaleString(undefined, {
             minimumFractionDigits: 2, maximumFractionDigits: 2
-        }));
+        }) : '$0');
     }
 
     $form.on('input change', '.fin-line-amount, input[name$="-DELETE"]', recalc);

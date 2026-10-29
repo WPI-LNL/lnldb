@@ -388,7 +388,7 @@
                                 {% endcomment %}
                                 <td class="fin-num fin-nowrap">
                                     {% if item.owed is None %}
-                                        <span class="fin-muted" title="The event is from before the books start, so its payments were never imported.">—</span>
+                                        <span class="fin-unknown" title="Not known: the event is from before the books start, so its payments were never imported.">?</span>
                                     {% elif item.covered %}
                                         <span class="fin-tag is-ok" title="The payments received for it add up to the bill, the last on {{ item.last_payment|date:'M j, Y' }}.">Received in full</span>
                                     {% else %}
@@ -398,7 +398,7 @@
                                     {% endif %}
                                 </td>
                             {% endif %}
-                            <td class="fin-num" title="{% if item.since %}Since {{ item.since|date:'M j, Y' }}{% endif %}">{{ item.days|default_if_none:"—" }}</td>
+                            <td class="fin-num" title="{% if item.since %}Since {{ item.since|date:'M j, Y' }}{% endif %}">{% if item.days is None %}<span class="fin-unknown" title="Not known: there is no record of when it reached this step">?</span>{% else %}{{ item.days }}{% endif %}</td>
                             <td class="text-right fin-nowrap">
                                 {% if item.covered %}
                                     {% comment %}

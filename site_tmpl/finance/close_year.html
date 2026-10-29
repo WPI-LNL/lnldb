@@ -40,7 +40,7 @@
                                 {{ field }}
                                 {% for error in field.errors %}<div class="help-block">{{ error }}</div>{% endfor %}
                                 <div class="help-block">
-                                    The ledger says {{ account.closing_cash|money }}. {{ field.help_text }}
+                                    {% if account.cash_known %}The ledger says {{ account.closing_cash|money }}.{% else %}The ledger cannot work out the cash yet: there is no Workday balance to start from.{% endif %} {{ field.help_text }}
                                 </div>
                             </div>
                         {% endfor %}
@@ -123,7 +123,7 @@
                                 {% for row in account.rows %}
                                     <tr>
                                         <td>{{ row.name }}<div class="fin-muted">{{ row.status }}</div></td>
-                                        <td class="fin-num {{ row.closing|money_class }}">{{ row.closing|money }}</td>
+                                        <td class="fin-num {{ row.closing|money_class }}">{{ row.closing|figure }}</td>
                                     </tr>
                                 {% endfor %}
                                 {% if account.unfiled_closing %}

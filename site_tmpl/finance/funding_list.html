@@ -40,7 +40,7 @@
                     <div class="alert alert-warning" style="font-size:13px;">
                         The requests add up to {{ receivables.owed|money }}{% if receivables.overpaid %} owed less {{ receivables.overpaid|money }} overpaid{% endif %},
                         but the funding-request fund on the <a href="{% url 'finance:balances' %}">balance page</a>
-                        says SGA owes {{ receivables.fund_owed|money }} &mdash; {{ receivables.difference|money }} apart.
+                        says SGA owes {{ receivables.fund_owed|money }} &mdash; {{ receivables.difference|abs_value|money }} apart.
                         That is usually an opening balance entered on one side only (a request's
                         &ldquo;owed by SGA when the books started&rdquo;, or the fund's opening split), or a
                         year-end write-off, which moves the fund but not the request.
@@ -70,13 +70,14 @@
                                 <td class="fin-num">{{ row.request.total_charged|money }}</td>
                                 <td class="fin-num">{{ row.request.total_received|money }}</td>
                                 <td class="fin-num {% if row.awaiting < 0 %}text-danger{% endif %}">
-                                    {% if row.awaiting < 0 %}overpaid {{ row.awaiting|abs_value|money }}{% else %}{{ row.awaiting|money }}{% endif %}
+                                    {{ row.awaiting|money }}{% if row.awaiting < 0 %}<div class="fin-muted">overpaid</div>{% endif %}
                                 </td>
                                 <td>
                                     {% if row.since %}
                                         {{ row.since|date:"M j, Y" }}
                                         <span class="fin-muted">&middot; {{ row.days }} day{{ row.days|pluralize }}</span>
-                                    {% else %}<span class="fin-muted">—</span>{% endif %}
+                                    {% elif row.awaiting > 0 %}<span class="fin-unknown" title="Not known yet">?</span>
+                                    {% else %}<span class="fin-na" title="Nothing is owed, so there is no date">—</span>{% endif %}
                                 </td>
                             </tr>
                         {% endfor %}
@@ -117,7 +118,7 @@
                             <td>{{ fr.reference|default:"—" }}</td>
                             <td>FY{{ fr.fiscal_year|stringformat:"s"|slice:"2:" }}</td>
                             <td class="fin-num">{{ fr.total_awarded|money }}</td>
-                            <td class="fin-num text-danger">{{ fr.total_spent|money }}</td>
+                            <td class="fin-num text-danger">{{ fr.total_spent|negate|money }}</td>
                             <td class="fin-num {% if fr.is_overspent %}text-danger{% else %}text-success{% endif %}">
                                 {{ fr.total_remaining|money }}
                             </td>

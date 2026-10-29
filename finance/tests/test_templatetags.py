@@ -34,8 +34,11 @@ class MoneyFilterTests(TestCase):
     def test_a_negative_amount_is_parenthesised(self):
         self.assertEqual(money(Decimal('-1234.50')), '($1,234.50)')
 
-    def test_zero_is_not_negative(self):
-        self.assertEqual(money(Decimal('0.00')), '$0.00')
+    def test_zero_is_zero_dollars(self):
+        """ Nothing, said plainly: a zero is neither negative nor a figure not known. """
+        self.assertEqual(money(Decimal('0.00')), '$0')
+        self.assertEqual(money(Decimal('-0.00')), '$0')
+        self.assertEqual(money(Decimal('0.00'), show_sign=True), '$0')
 
     def test_the_sign_can_be_forced_for_a_delta(self):
         self.assertEqual(money(Decimal('12.00'), show_sign=True), '+$12.00')
@@ -47,10 +50,13 @@ class MoneyFilterTests(TestCase):
         """ Belt and braces behind :func:`finance.models.money`. """
         self.assertEqual(money(Decimal('2808.24000000000')), '$2,808.24')
 
-    def test_nothing_renders_as_a_dash_not_as_zero(self):
-        """ An empty cell and a zero balance are different facts. """
-        self.assertEqual(money(None), '—')
-        self.assertEqual(money(''), '—')
+    def test_nothing_is_a_figure_not_known_yet(self):
+        """
+        A figure not known yet and a zero balance are different facts. The grey
+        dash is kept for a figure that does not apply, which the template writes.
+        """
+        self.assertEqual(money(None), '?')
+        self.assertEqual(money(''), '?')
 
     def test_something_unparseable_is_passed_through(self):
         """ Better to print the odd value than to blank the page around it. """

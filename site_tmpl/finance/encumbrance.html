@@ -95,7 +95,7 @@
                                         <td><a href="{{ entry.get_absolute_url }}">{{ entry.description }}</a></td>
                                         <td>{{ entry.fund_source|default:"" }}</td>
                                         <td>{{ entry.parent_transaction.reference }}</td>
-                                        <td class="text-right">{{ entry.amount|abs_value|money }}</td>
+                                        <td class="text-right">{{ entry.amount|money }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>

@@ -86,6 +86,22 @@ def money(value):
     return value.quantize(CENTS, rounding=ROUND_HALF_UP)
 
 
+def dollars(value):
+    """
+    A figure as every finance page and message writes it: ``$1,234.56``,
+    ``($1,234.56)`` below zero, and ``$0`` for nothing, so a zero is never
+    mistaken for a figure not worked out. ``None`` is a figure not known yet,
+    written ``?``.
+    """
+    if value is None or value == '':
+        return '?'
+    amount = money(value)
+    if not amount:
+        return '$0'
+    body = '{:,.2f}'.format(abs(amount))
+    return ('($%s)' if amount < 0 else '$%s') % body
+
+
 def summed_money(column):
     """
     ``Sum(column)`` in whole cents, and ``$0.00`` over no rows, for the SQL side.
@@ -1658,9 +1674,9 @@ class FundingRequest(models.Model):
         """ :attr:`awaiting_sga` in words. """
         awaiting = self.awaiting_sga
         if awaiting > 0:
-            return "Awaiting %s from SGA" % _dollars(awaiting)
+            return "Awaiting %s from SGA" % dollars(awaiting)
         if awaiting < 0:
-            return "SGA overpaid by %s" % _dollars(-awaiting)
+            return "SGA overpaid by %s" % dollars(-awaiting)
         if self.total_charged or self.total_received or self.owed_at_books_start:
             return "Fully reimbursed"
         return "Nothing spent yet"
@@ -1726,11 +1742,6 @@ class FundingRequest(models.Model):
         always the one being repaid.
         """
         return "%s — %s" % (self.short_label, self.reimbursement_status.lower())
-
-
-def _dollars(amount):
-    """ ``$1,234.56``, for the few model strings that state a figure. """
-    return "${:,.2f}".format(money(amount))
 
 
 class FRLineItemQuerySet(models.QuerySet):
@@ -1820,8 +1831,8 @@ class FRLineItem(models.Model):
         """ ``$120.00 left``, or ``OVER by $29.00`` rather than a negative. """
         remaining = self.remaining
         if remaining < 0:
-            return "OVER by $%s" % (-remaining)
-        return "$%s left" % remaining
+            return "OVER by %s" % dollars(-remaining)
+        return "%s left" % dollars(remaining)
 
     @property
     def nested_label(self):
@@ -2578,11 +2589,11 @@ class ParsedTransaction(models.Model):
         gross = abs(money(self.amount))
         left = self.refundable_remaining
         if self.amount is None or self.amount >= 0 or left == gross:
-            tail = "$%s" % gross
+            tail = dollars(gross)
         elif left:
-            tail = "$%s — $%s left to refund" % (gross, left)
+            tail = "%s — %s left to refund" % (dollars(gross), dollars(left))
         else:
-            tail = "$%s — fully refunded" % gross
+            tail = "%s — fully refunded" % dollars(gross)
 
         parts.append(tail)
         return " · ".join(parts)
@@ -2824,9 +2835,9 @@ class ParsedTransaction(models.Model):
                 refundable = -original.amount - already
                 if self.amount > refundable:
                     errors['amount'] = (
-                        "That is more than is left to refund. The original expense was $%s and "
-                        "$%s has already been credited back, leaving $%s."
-                        % (-original.amount, already, refundable))
+                        "That is more than is left to refund. The original expense was %s and "
+                        "%s has already been credited back, leaving %s."
+                        % (dollars(-original.amount), dollars(already), dollars(refundable)))
 
         # -- Funding request lines, and SGA's payments for them -------------
         # A fund flagged requires_funding_request is money awarded for a named

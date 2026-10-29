@@ -24,7 +24,8 @@ from finance.forms import (BalanceCheckpointForm, FundTransferForm, OpeningBalan
                            YearCloseForm)
 from finance.models import (ZERO, BalanceCheckpoint, FiscalYearClose, FundSource,
                             FundTransfer, books_start_date, current_fiscal_year,
-                            fiscal_year_bounds, fiscal_year_for, money, own_fund_for_account)
+                            dollars, fiscal_year_bounds, fiscal_year_for, money,
+                            own_fund_for_account)
 
 ONE_DAY = balances.ONE_DAY
 
@@ -157,8 +158,8 @@ def transfer_new(request):
             transfer.created_by = request.user
             transfer.full_clean()
             transfer.save()
-        messages.success(request, "Moved $%s from %s to %s." % (
-            money(transfer.amount), transfer.from_fund, transfer.to_fund))
+        messages.success(request, "Moved %s from %s to %s." % (
+            dollars(transfer.amount), transfer.from_fund, transfer.to_fund))
         return HttpResponseRedirect(_balances_url(transfer.fiscal_year))
     return _render_form(
         request, form, "Move money between funds",
@@ -252,8 +253,8 @@ def opening_balances(request):
                     FundTransfer.objects.create(
                         account=account, date=start, amount=abs(amount), from_fund=source,
                         to_fund=target, kind=FundTransfer.OPENING, created_by=request.user,
-                        description="Opening balance: %s held $%s when the books started"
-                                    % (fund, amount))
+                        description="Opening balance: %s held %s when the books started"
+                                    % (fund, dollars(amount)))
         messages.success(request, "Opening balances saved.")
         return HttpResponseRedirect(_balances_url(fiscal_year_for(start)))
 
@@ -317,9 +318,10 @@ def _year_checklist(year):
                                "Enter it below." % (account.code, date_format(last, 'M j, Y')),
                         None))
         elif at_end[0].difference:
-            out.append((False, "%s: Workday and the ledger differ by $%s on %s -- lines are "
+            out.append((False, "%s: Workday and the ledger differ by %s on %s -- lines are "
                                "missing or a balance was copied wrong."
-                        % (account.code, at_end[0].difference, date_format(last, 'M j, Y')),
+                        % (account.code, dollars(abs(at_end[0].difference)),
+                           date_format(last, 'M j, Y')),
                         None))
         else:
             out.append((True, "%s agrees with Workday on %s" % (

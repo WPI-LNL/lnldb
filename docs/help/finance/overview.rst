@@ -120,6 +120,23 @@ Words You'll See
     July to June, named for the year it ends in. FY26 is July 1st 2025 to June 30th 2026.
 
 
+Reading the Figures
+-------------------
+
+Every finance page writes figures the same way:
+
+- **A balance below zero, or money going out, is in parentheses**, like ($1,500.00). A figure above zero has none. Where
+  figures add up to a total -- Revenue, Expenses and Net, or Awarded, Spent and Remaining -- the money going out is in
+  parentheses, so the figures add up as they read.
+- **$0** -- nothing. The figure is known, and it is zero.
+- **?** -- not known yet. For example, an account's cash before you have recorded a Workday balance for it.
+- **—** (a grey dash) -- the figure doesn't apply to that row. For example, SGA's budget starts each year empty, so it has
+  no opening balance.
+
+Hover over a **?** or a dash to see why. Bills and invoices sent to clients, and the form sent to SGA, write a credit as
+*-$25.00* instead, as clients expect to see it.
+
+
 The Pages
 ---------
 
@@ -174,4 +191,4 @@ bill paid once the payment arrives. See :doc:`events`.
     New to the role? Read this page, then :doc:`import-and-settle`. Most of the job is the monthly import, and the queue
     fills in most of each line for you.
 
-`Last Modified: October 27, 2026`
+`Last Modified: October 29, 2026`

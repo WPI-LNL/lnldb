@@ -33,7 +33,7 @@
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Spent</div>
-                    <div class="fin-stat-value text-danger">{{ fr.total_spent|money }}</div>
+                    <div class="fin-stat-value text-danger">{{ fr.total_spent|negate|money }}</div>
                 </div>
                 <div class="fin-stat">
                     <div class="fin-stat-label">Remaining</div>
@@ -83,10 +83,13 @@
                     <div class="fin-stat-value text-success">{{ fr.total_received|money }}</div>
                 </div>
                 <div class="fin-stat">
-                    <div class="fin-stat-label">{% if fr.awaiting_sga < 0 %}SGA overpaid{% else %}Still owed{% endif %}</div>
+                    <div class="fin-stat-label">Still owed</div>
                     <div class="fin-stat-value {% if fr.awaiting_sga > 0 %}text-warning{% elif fr.awaiting_sga < 0 %}text-danger{% else %}text-muted{% endif %}">
-                        {{ fr.awaiting_sga|abs_value|money }}
+                        {{ fr.awaiting_sga|money }}
                     </div>
+                    {% if fr.awaiting_sga < 0 %}
+                        <div class="fin-stat-sub">SGA overpaid by {{ fr.awaiting_sga|abs_value|money }}</div>
+                    {% endif %}
                     {% if unreimbursed_since %}
                         <div class="fin-stat-sub">oldest unpaid spending {{ unreimbursed_since|date:"M j, Y" }}</div>
                     {% endif %}
