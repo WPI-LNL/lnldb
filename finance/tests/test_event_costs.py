@@ -533,7 +533,22 @@ class EventPageFinancePanelTests(FinanceViewTestCase):
         self.grant('view_subledger')
         response = self._get()
         self.assertEqual(response.context['finance']['costs'], Decimal('3000.00'))
-        self.assertContains(response, '1 subledger entry linked to this event')
+        self.assertContains(response, 'Linked subledger entries')
+        [(entry, share)] = response.context['finance_entries']
+        self.assertIsNone(share)
+        self.assertContains(response, 'href="%s"' % reverse('finance:entry-detail', args=[entry.pk]))
+
+    def test_a_multibill_payment_lists_the_events_share(self):
+        """ The table counts what the figures count: the show's share, not the whole payment. """
+        self.grant('view_subledger')
+        other = make_event('Diwali', when(2025, 10, 11))
+        bill = MultiBilling.objects.create(date_billed=datetime.date(2025, 10, 20),
+                                           amount=Decimal('200.00'))
+        bill.events.add(self.event, other)
+        payment = revenue(None, '200.00', 'R9', date=datetime.date(2025, 11, 1), linked_multibill=bill)
+        rows = dict(self._get().context['finance_entries'])
+        self.assertIn(payment, rows)
+        self.assertLess(rows[payment], Decimal('200.00'))
 
     def test_nobody_else_does(self):
         self.grant()

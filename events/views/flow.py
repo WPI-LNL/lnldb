@@ -1159,8 +1159,9 @@ def viewevent(request, id):
     # rather than at the top: finance already imports the events models, and
     # this is the only place the events app looks the other way.
     if request.user.has_perm('finance.view_subledger'):
-        from finance.calculators import event_financials
+        from finance.calculators import event_entries, event_financials
         context['finance'] = event_financials(event)
+        context['finance_entries'] = event_entries(event)
 
     return render(request, 'uglydetail.html', context)
 

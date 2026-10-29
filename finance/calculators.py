@@ -790,6 +790,24 @@ def event_financials(event, is_projection=None):
     return _event_figures(fresh, sums, books_start=books_start_date())
 
 
+def event_entries(event):
+    """
+    ``[(entry, share)]``: the subledger entries an event's figures are built
+    from, oldest first.
+
+    ``share`` is ``None`` for an entry linked to the event itself, and the
+    event's share of the payment for one linked to a multi-bill it is on (see
+    :func:`multibill_income`), so the list is what :func:`event_financials`
+    counts.
+    """
+    entries = ParsedTransaction.objects.select_related('parent_transaction', 'linked_multibill')
+    rows = [(entry, None) for entry in entries.filter(linked_event_id=event.pk)]
+    rows += [(entry, share) for entry, shown, share
+             in multibill_income(entries.filter(linked_multibill__events=event))
+             if shown.pk == event.pk]
+    return sorted(rows, key=lambda row: (row[0].effective_date or datetime.date.min, row[0].pk))
+
+
 def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False, since=None,
                    between=None, today=None):
     """

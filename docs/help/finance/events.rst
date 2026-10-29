@@ -123,8 +123,11 @@ The same button is on the event's own page, on the `Billing` tab.
 On the Event's Page
 -------------------
 
-Anyone who can see the finance pages also sees a small summary on each event's `Billing` tab, under the bills: billed,
-received, costs, encumbrances and margin, with the same flags and a link to the entries in the `Ledger`.
+Anyone who can see the finance pages also sees a `Finance` section on each event's `Billing` tab, under the bills. It
+shows billed, received, costs, encumbrances and margin, with the same flags in one box underneath. Below that is every
+subledger entry linked to the event: its date, description, payee, type, status and amount. A payment for a multi-bill
+shows the event's share of it, the same share the figures count. Click an entry to open it, or `Open in the subledger` to
+see them all in the `Ledger`.
 
 .. seealso::
     :doc:`/help/events/create-bill` covers creating and sending the bill itself.
