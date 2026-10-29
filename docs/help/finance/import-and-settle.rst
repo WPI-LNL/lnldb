@@ -119,9 +119,10 @@ Unknown request              The memo quotes an SGA funding request number that 
                              `Add F.26.195` (or whichever number) to enter it, pre-filled, then come back.
 A.27.16 or F.27.16?          The memo's request number isn't in the app, but the same number is under another letter.
                              One of the two is probably a typo; check which, and pick the right line.
-Multi-bill: split across...  One payment for a bill that covered several shows, found by the ISD number recorded on
-                             it, or by its amount. Click it to lay out each show's share on the split page, check them,
-                             and save. A ticked box there marks the bill paid as well.
+Or split across its...       One payment for a bill that covered several shows, found by the ISD number recorded on
+                             it, or by its amount. The row links it to the bill under `or Multi-bill`, and each show
+                             is credited with its share. To give each show an entry of its own instead, click the tag
+                             to lay out the shares on the split page, check them, and save.
 ===========================  ===========================================================================================
 
 
@@ -175,4 +176,4 @@ Check Against Workday
 Once the queue is empty, open the `Balances` tab and record Workday's current balance for each account. If the app's
 figure disagrees, a line is missing or was imported twice. See :doc:`balances`.
 
-`Last Modified: October 27, 2026`
+`Last Modified: October 28, 2026`

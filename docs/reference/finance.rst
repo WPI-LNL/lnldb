@@ -702,8 +702,9 @@ each ISD on its bill (see *Billing stages*), and the payment's Operational
 Transaction names the same ISD -- ``Internal Service Delivery: 25090179-ISD``
 -- so :func:`finance.suggestions.suggest_bill_by_isd` looks the number up among
 the bills before the memo is read. A bill's event fills the box in, captioned
-*ISD number recorded on the bill*. A multi-bill is offered as the split
-instead, since one payment pays all its events. The memo is still read when no
+*ISD number recorded on the bill*. A multi-bill fills in the *Linked
+multi-bill* box instead (``linked_multibill``), since one payment pays all its
+events, and the event is left blank. The memo is still read when no
 bill has the number: for bills from before numbers were recorded, and for ISDs
 whose number never was.
 
@@ -896,7 +897,7 @@ right. Three techniques, in order of preference:
 
 **Remove the option.** The strongest guard is a field that is not on screen.
 A revenue form has no ``lnl_spend_category`` or funding request line picker;
-an expense form has no ``non_event_revenue_type``; and the line picker is
+an expense form has no ``non_event_revenue_type`` or ``linked_multibill``; and the line picker is
 hidden even on an expense unless the chosen fund draws on one. Nothing to
 mis-click. The fields are *deleted* in
 :meth:`finance.forms.BaseAllocationForm._apply_direction_rules` rather than
@@ -1215,7 +1216,8 @@ The case that forced it is the sub-rental: LNL hires a console for one show and
 the invoice is that show's cost, passed straight through, sometimes with a
 rental fee on top. Until this existed, a database constraint made
 ``linked_event`` revenue-only and there was nowhere to record it. The constraint
-now forbids only ``non_event_revenue_type`` on the expense side.
+now forbids only ``non_event_revenue_type`` and ``linked_multibill`` (added in
+``0018_revenue_links_to_multibill``) on the expense side.
 
 Such an expense takes its spend category automatically, from whichever
 :class:`finance.models.SpendCategory` carries ``is_event_passthrough`` -- seeded
@@ -1654,14 +1656,35 @@ flags check lnldb's own *paid* date against the ledger:
   that ran before the books start are not flagged, because their payments were
   never imported.
 
-**One payment for several shows.** The queue offers to split a deposit across
-a multi-bill's shows when the ISD number it names is recorded on the bill.
-Failing that, it offers the split when the deposit is exactly the bill's
-amount and the memo names one of the bill's shows, or, as a guess, when
-exactly one multi-bill sent in the previous year has that amount. The split
-page then lays out one row per show, each with its share, which is the same
-share the event P&L uses. The rows are unsaved until the Treasurer checks them
-and saves, and the page offers to mark the bill paid with them.
+**One payment for several shows.** A deposit for a multi-bill is linked to
+the bill itself: ``ParsedTransaction.linked_multibill``, revenue only, and never
+together with ``linked_event`` or ``non_event_revenue_type`` (``clean()`` and
+the ``finance_multibill_payment_names_only_the_bill`` constraint). The queue
+fills it in when the ISD number the deposit names is recorded on the bill, or
+when the deposit is exactly the bill's amount and the memo names one of the
+bill's shows (:func:`finance.suggestions.suggest_multibill`). When exactly one
+multi-bill sent in the previous year has that amount, it is a chip.
+
+The entry stays one entry, and
+:func:`~finance.calculators.multibill_income` shares it across the bill's
+events by price (:func:`~finance.calculators.split_by_price`, the share the
+event P&L bills each show), the last show taking the rounding. Every
+per-event figure reads those shares: ``received_by_event`` and so
+``bill_payments``, ``payment_offer`` and ``mark_paid_from_payments``; the
+event P&L, in the year each show ran; ``revenue_rows`` and the revenue charts;
+revenue by source and event billing kept; the income report's split by client
+type; and the Balances tab's payments against each bill. The ledger's
+``?event=`` includes payments linked to a multi-bill the event is on, and
+``?multibill=`` lists what is linked to the bill and to its events. A
+multi-bill with a payment linked to it cannot be deleted
+(``on_delete=PROTECT``; the delete page refuses with a message). The field
+came in ``0018_revenue_links_to_multibill``.
+
+Splitting by hand is still offered: the row's *Or split across its N events*
+tag opens the split page, which lays out one row per show, each with its share.
+The rows are unsaved until the Treasurer checks them and saves, and the page
+offers to mark the bill paid with them. Either way each show's figures are the
+same.
 
 Multi-bills
 ~~~~~~~~~~~
@@ -1862,8 +1885,9 @@ below zero, and the ISD form refuses a creation date after today.
   and the bill is marked only if the payment was filed against that bill's
   event and what is filed now covers it. Unticked, nothing changes. When the
   Treasurer picked the event by hand and the payment covers its bill, the
-  queue says so instead. A multi-bill's split page offers the same box. Both
-  are offered only to whoever holds ``events.bill_event``.
+  queue says so instead. A payment linked to a multi-bill gets the same box
+  for the multi-bill (``mark_multibill_paid``), and so does a multi-bill's
+  split page. Both are offered only to whoever holds ``events.bill_event``.
 * **The *Mark paid* form** (:class:`~finance.billing_forms.BillPaidForm`), for
   either kind of bill, is the only other way. Its date starts as the day the
   last payment arrived when the payments received cover the bill, and as today

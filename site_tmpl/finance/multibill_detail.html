@@ -101,6 +101,9 @@
                     <div class="fin-stat-label">Payments received</div>
                     <div class="fin-stat-value" style="font-size:16px;">{{ received|money }}</div>
                     {% if last_payment %}<div class="fin-stat-sub">last on {{ last_payment|date:"M j, Y" }}</div>{% endif %}
+                    {% if perms.finance.view_subledger %}
+                        <div class="fin-stat-sub hidden-print"><a href="{% url 'finance:ledger' %}?multibill={{ bill.pk }}">See them in the ledger</a></div>
+                    {% endif %}
                 </div>
             </div>
             {% if bill.description %}<p>{{ bill.description|linebreaksbr }}</p>{% endif %}

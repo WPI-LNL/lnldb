@@ -3,8 +3,8 @@ Payments for bills: finding the bill a payment settles, and marking it paid.
 
 * **The ISD number.** A payment names the Internal Service Delivery it pays,
   and the bill that ISD's number is recorded on is a lookup: the queue fills
-  the event in for a bill, or offers to split across a multi-bill's events,
-  before it tries the memo's event name.
+  the event in for a bill, or the multi-bill for a multi-bill (see
+  ``test_multibill_payments``), before it tries the memo's event name.
 * **Marking paid when filing.** The queue, and the split page for a
   multi-bill, offer a ticked *Mark bill paid* box when the payment covers the
   bill; filing with it ticked marks the bill paid on the day the last of the

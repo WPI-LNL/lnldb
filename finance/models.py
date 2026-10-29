@@ -578,10 +578,45 @@ def client_type_for(event):
     if fund is None:
         org = client_of(event)
         fund = getattr(org, 'workday_fund', None) if org else None
+    return _client_type_of_fund(fund)
+
+
+def client_type_for_multibill(bill):
+    """
+    Classify a multi-bill's payer, as :func:`client_type_for` classifies an
+    event's: by the Workday fund of its *Bill to*, or, with none set, as its
+    first event's client.
+    """
+    if bill is None:
+        return ClientType.UNKNOWN
+    if bill.org_id is None:
+        events = sorted(bill.events.all(), key=lambda event: event.pk)
+        return client_type_for(events[0]) if events else ClientType.UNKNOWN
+    return _client_type_of_fund(getattr(bill.org, 'workday_fund', None))
+
+
+def _client_type_of_fund(fund):
+    """ A student org for SGA's student-org fund, a department for any other, unknown for none. """
     if fund is None:
         return ClientType.UNKNOWN
     return (ClientType.STUDENT_ORG if fund == student_org_workday_fund()
             else ClientType.DEPARTMENT)
+
+
+def _services_of(event):
+    """ The service categories (Lighting, Sound, ...) an event booked. """
+    # Event2019 keeps services in ServiceInstance rows...
+    instances = getattr(event, 'serviceinstance_set', None)
+    if instances is not None:
+        names = list(instances.values_list('service__category__name', flat=True))
+        if names:
+            return sorted(set(n for n in names if n))
+    # ...while the legacy Event model has direct FKs.
+    legacy = []
+    for attr, label in (('lighting', 'Lighting'), ('sound', 'Sound'), ('projection', 'Projection')):
+        if getattr(event, attr, None) is not None:
+            legacy.append(label)
+    return legacy
 
 
 # ---------------------------------------------------------------------------
@@ -2371,6 +2406,14 @@ class ParsedTransaction(models.Model):
     linked_event = models.ForeignKey('events.BaseEvent', on_delete=models.PROTECT,
                                      null=True, blank=True, related_name='subledger_entries',
                                      verbose_name="Linked event")
+    # One payment for a bill that covered several shows. It stays one entry,
+    # and each show is credited with its share by price, as the bill is split:
+    # see finance.calculators.multibill_income.
+    linked_multibill = models.ForeignKey(
+        'MultiBilling', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='subledger_entries', verbose_name="Linked multi-bill",
+        help_text="A payment for a multi-bill. Each of its events is credited with its share, "
+                  "by price, as the bill is split.")
     non_event_revenue_type = models.ForeignKey(
         RevenueSource, on_delete=models.PROTECT, null=True, blank=True,
         related_name='entries', verbose_name="Non-event revenue type")
@@ -2441,7 +2484,10 @@ class ParsedTransaction(models.Model):
     # funding_request is shared too. A reimbursement coming in names the
     # request it repays; money SGA takes back going out names the request it
     # was taken back from. Both are SGA's payments, not LNL's spending.
-    REVENUE_FIELDS = ('non_event_revenue_type',)
+    #
+    # linked_multibill is revenue only. A payment for a multi-bill names the
+    # bill in place of one event; costs for the shows still name each show.
+    REVENUE_FIELDS = ('non_event_revenue_type', 'linked_multibill')
     EXPENSE_FIELDS = ('lnl_spend_category', 'fr_line_target')
     SHARED_FIELDS = ('linked_event', 'fund_source', 'funding_request')
 
@@ -2462,13 +2508,20 @@ class ParsedTransaction(models.Model):
             models.CheckConstraint(
                 check=Q(parent_transaction__isnull=False) | Q(status='pending'),
                 name='finance_encumbrance_must_be_pending'),
-            # Expenses and refunds may not be classified as non-event revenue.
-            # linked_event is deliberately absent: an expense may name the event
-            # it was incurred for. See SHARED_FIELDS above.
+            # Expenses and refunds may not be classified as non-event revenue,
+            # nor be a multi-bill's payment. linked_event is deliberately
+            # absent: an expense may name the event it was incurred for. See
+            # SHARED_FIELDS above.
             models.CheckConstraint(
                 check=(Q(amount__gt=0, refund_of__isnull=True)
-                       | Q(non_event_revenue_type__isnull=True)),
+                       | Q(non_event_revenue_type__isnull=True, linked_multibill__isnull=True)),
                 name='finance_no_revenue_routing_on_expense'),
+            # A multi-bill's payment names the bill, and nothing else that says
+            # where the money came from: its events take their shares from it.
+            models.CheckConstraint(
+                check=(Q(linked_multibill__isnull=True)
+                       | Q(linked_event__isnull=True, non_event_revenue_type__isnull=True)),
+                name='finance_multibill_payment_names_only_the_bill'),
             # Revenue may not carry expense routing. fund_source is absent for
             # the same reason linked_event is above: income goes into a fund.
             models.CheckConstraint(
@@ -2660,8 +2713,11 @@ class ParsedTransaction(models.Model):
         org rather than re-keyed by the Treasurer.
 
         The rule itself lives in :func:`client_type_for`, so this answer and
-        the dashboard's cannot drift apart.
+        the dashboard's cannot drift apart. A multi-bill's payment is
+        classified by the bill's client, who paid it.
         """
+        if self.linked_multibill_id:
+            return client_type_for_multibill(self.linked_multibill)
         return client_type_for(self.linked_event)
 
     @property
@@ -2671,22 +2727,16 @@ class ParsedTransaction(models.Model):
 
     @property
     def event_services(self):
-        """ The service breakdown (Lighting, Sound, ...) inherited from the event. """
-        event = self.linked_event
-        if event is None:
+        """
+        The service breakdown (Lighting, Sound, ...) inherited from the event,
+        or from every event on the multi-bill this pays.
+        """
+        if self.linked_multibill_id:
+            return sorted(set(name for event in self.linked_multibill.events.all()
+                              for name in _services_of(event)))
+        if self.linked_event is None:
             return []
-        # Event2019 keeps services in ServiceInstance rows...
-        instances = getattr(event, 'serviceinstance_set', None)
-        if instances is not None:
-            names = list(instances.values_list('service__category__name', flat=True))
-            if names:
-                return sorted(set(n for n in names if n))
-        # ...while the legacy Event model has direct FKs.
-        legacy = []
-        for attr, label in (('lighting', 'Lighting'), ('sound', 'Sound'), ('projection', 'Projection')):
-            if getattr(event, attr, None) is not None:
-                legacy.append(label)
-        return legacy
+        return _services_of(self.linked_event)
 
     @property
     def event_services_display(self):
@@ -2700,8 +2750,8 @@ class ParsedTransaction(models.Model):
         cleanly. These are foreign keys now, so a blank arrives as an empty
         ``*_id`` rather than an empty string, but both are worth catching.
         """
-        for field in ('non_event_revenue_type', 'fund_source', 'lnl_spend_category',
-                      'funding_request'):
+        for field in ('non_event_revenue_type', 'linked_multibill', 'fund_source',
+                      'lnl_spend_category', 'funding_request'):
             if getattr(self, '%s_id' % field, None) == '':
                 setattr(self, '%s_id' % field, None)
 
@@ -2739,10 +2789,19 @@ class ParsedTransaction(models.Model):
             for field in self.EXPENSE_FIELDS:
                 if getattr(self, field) is not None:
                     errors[field] = "Revenue entries cannot carry expense routing."
-            if self.linked_event is None and self.non_event_revenue_type is None:
+            if (self.linked_event is None and self.linked_multibill is None
+                    and self.non_event_revenue_type is None):
                 errors['linked_event'] = (
-                    "Revenue must link to an Event, or be classified as non-event revenue.")
-            if self.linked_event is not None and self.non_event_revenue_type is not None:
+                    "Revenue must link to an Event or a multi-bill, or be classified as "
+                    "non-event revenue.")
+            if self.linked_multibill is not None and self.linked_event is not None:
+                errors['linked_multibill'] = (
+                    "Pick either a linked Event or a multi-bill, not both. A multi-bill's "
+                    "payment counts towards each of its events already.")
+            elif self.linked_multibill is not None and self.non_event_revenue_type is not None:
+                errors['non_event_revenue_type'] = (
+                    "Pick either a multi-bill or a non-event revenue type, not both.")
+            elif self.linked_event is not None and self.non_event_revenue_type is not None:
                 errors['non_event_revenue_type'] = (
                     "Pick either a linked Event or a non-event revenue type, not both.")
         else:

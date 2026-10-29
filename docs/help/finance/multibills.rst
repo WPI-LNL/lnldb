@@ -128,6 +128,8 @@ Otherwise, click `Mark paid...` on the bill's page or the list.
 `Mark unpaid` undoes it.
 
 .. seealso::
-    :doc:`events` explains how a payment for a multi-bill is split across its events in the finance queue.
+    :doc:`events` explains how a payment for a multi-bill is linked to it in the finance queue, and how each event is
+    credited with its share. A multi-bill with a payment linked to it can't be deleted. The multi-bill's page links to
+    its payments in the ledger (*See them in the ledger*).
 
-`Last Modified: October 19, 2026`
+`Last Modified: October 28, 2026`

@@ -97,6 +97,7 @@
                hidden input; the hidden one carries the name, and its wrapper
                holds both. */
             event: $scope.find('[name$="linked_event"]').first(),
+            multibill: $scope.find('select[name$="linked_multibill"]').first(),
             revenueType: $scope.find('[name$="non_event_revenue_type"]').first()
         };
     }
@@ -266,7 +267,7 @@
            ReconcileForm copies them off the purchase being reversed. The entry
            page keeps them, because there a refund is filed like any expense and
            the fund is asked for. */
-        var hide = [f.event, f.revenueType];
+        var hide = [f.event, f.multibill, f.revenueType];
         if ($refund.closest('.fin-queue-row').length) { hide.push(f.fund, f.request); }
 
         $.each(hide, function (_, $field) {

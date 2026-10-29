@@ -30,7 +30,7 @@ from mptt.forms import TreeNodeChoiceField
 from finance.importers import CSV_EXTENSIONS, XLSX_EXTENSIONS
 from finance.models import (ZERO, BalanceCheckpoint, Encumbrance, FRLineItem, FundingRequest,
                             FundSource,
-                            FundTransfer, ParsedTransaction, PartitionCode,
+                            FundTransfer, MultiBilling, ParsedTransaction, PartitionCode,
                             ProjectTag, RevenueSource, SpendCategory,
                             TransactionStatus,
                             WorkdayTransaction, current_fiscal_year,
@@ -321,6 +321,26 @@ class FundingRequestChoiceField(forms.ModelChoiceField):
         return obj.picker_label
 
 
+class MultiBillChoiceField(forms.ModelChoiceField):
+    """
+    The multi-bill a payment is for, labelled with its name, when it was sent
+    and what it came to: the three things a Treasurer matches a payment by.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """ Start empty; the form fills the queryset in. """
+        kwargs.setdefault('queryset', MultiBilling.objects.none())
+        kwargs.setdefault('required', False)
+        kwargs.setdefault('label', "Linked multi-bill")
+        super(MultiBillChoiceField, self).__init__(*args, **kwargs)
+
+    def label_from_instance(self, obj):
+        """ "Fall films · Oct 3, 2026 · $1,200.00", and "paid" once it is. """
+        label = "%s · %s · $%s" % (obj.display_name, date_format(obj.date_billed, 'M j, Y'),
+                                   money(obj.amount))
+        return label + " · paid" if obj.date_paid else label
+
+
 class RevenueSourceSelect(forms.Select):
     """
     Carries the fund each kind of income goes into onto its ``<option>``.
@@ -495,7 +515,7 @@ class BaseAllocationForm(forms.ModelForm):
 
     class Meta:
         model = ParsedTransaction
-        fields = ('amount', 'effective_date', 'description', 'linked_event',
+        fields = ('amount', 'effective_date', 'description', 'linked_event', 'linked_multibill',
                   'non_event_revenue_type', 'fund_source', 'lnl_spend_category',
                   'fr_line_target', 'funding_request', 'project_tag', 'is_projection',
                   'refund_of', 'audit_explanation', 'receipt_file')
@@ -511,7 +531,8 @@ class BaseAllocationForm(forms.ModelForm):
         # so EncumbranceForm has neither; the split modal has no refund column,
         # so SplitLineForm has no ``refund_of``.
         field_classes = {'refund_of': RefundTargetChoiceField,
-                         'funding_request': FundingRequestChoiceField}
+                         'funding_request': FundingRequestChoiceField,
+                         'linked_multibill': MultiBillChoiceField}
 
     def __init__(self, *args, **kwargs):
         """
@@ -546,6 +567,10 @@ class BaseAllocationForm(forms.ModelForm):
         # request after the spending, often once it is closed.
         self._narrow('funding_request', FundingRequest.objects.with_totals()
                      .order_by('-fiscal_year', 'reference', 'name'))
+        # Paid ones too: the payment that pays a bill is often settled after
+        # the bill was marked paid by hand.
+        self._narrow('linked_multibill', MultiBilling.objects.select_related('org')
+                     .prefetch_related('events').order_by('-date_billed', '-pk'))
 
         fund = self.fields.get('fund_source')
         if fund is not None:
@@ -908,12 +933,17 @@ class BaseAllocationForm(forms.ModelForm):
             if fund is not None:
                 fund.label = "Into fund"
                 fund.help_text = self._revenue_fund_help()
+            multibill = self.fields.get('linked_multibill')
+            if multibill is not None:
+                multibill.help_text = ("For one payment covering a multi-bill, in place of an event. "
+                                       "Each event on the bill is credited with its share, by price.")
             if request is not None:
                 request.label = "Reimburses request"
                 request.help_text = ("The funding request SGA is paying back. Needed whenever "
                                      "the money goes into a fund that draws on requests.")
         elif direction == 'expense':
-            self.fields.pop('non_event_revenue_type', None)
+            for name in ParsedTransaction.REVENUE_FIELDS:
+                self.fields.pop(name, None)
             if request is not None:
                 request.label = "SGA took back money for"
                 request.help_text = ("Only when SGA is reclaiming money it paid -- a "
@@ -1180,8 +1210,8 @@ class ReconcileForm(BaseAllocationForm):
                         'funding_request', 'linked_event', 'project_tag', 'is_projection')
 
     class Meta(BaseAllocationForm.Meta):
-        fields = ('refund_of', 'linked_event', 'non_event_revenue_type', 'fund_source',
-                  'funding_request', 'lnl_spend_category', 'fr_line_target', 'project_tag',
+        fields = ('refund_of', 'linked_event', 'linked_multibill', 'non_event_revenue_type',
+                  'fund_source', 'funding_request', 'lnl_spend_category', 'fr_line_target', 'project_tag',
                   'is_projection', 'audit_explanation')
 
     def __init__(self, *args, **kwargs):
@@ -1491,7 +1521,7 @@ class SplitLineForm(BaseAllocationForm):
     class Meta(BaseAllocationForm.Meta):
         fields = ('amount', 'description', 'fund_source', 'lnl_spend_category',
                   'fr_line_target', 'funding_request', 'project_tag', 'linked_event',
-                  'non_event_revenue_type', 'audit_explanation')
+                  'linked_multibill', 'non_event_revenue_type', 'audit_explanation')
 
     def _inherit_effective_date(self):
         """

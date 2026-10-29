@@ -821,7 +821,7 @@ class QueuePageTests(CacheResetMixin, FinanceViewTestCase):
         bill.events.set([concert, social])
         txn = isd_line('NSO A25', '900.00', date=datetime.date(2025, 10, 1))
         response = self.client.get(reverse('finance:queue'), {'fy': 'all'})
-        self.assertContains(response, 'split across 2 events')
+        self.assertContains(response, 'split across its 2 events')
         self.assertContains(response, '%s?multibill=%s' % (
             reverse('finance:txn-detail', args=[txn.pk]), bill.pk))
 

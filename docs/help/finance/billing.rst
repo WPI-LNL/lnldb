@@ -161,12 +161,13 @@ The payment comes in a Workday export, and you settle it in the finance queue (s
 
 - **The queue finds the bill by its ISD number.** The payment names the ISD it pays, such as *Internal Service
   Delivery: 25090179-ISD*. When that number is recorded on a bill, the queue fills in the event, with the caption *ISD
-  number recorded on the bill*. For a multi-bill, it offers to split the payment across the bill's events instead. A
-  bill with no ISD number recorded is still found by the event the memo names.
+  number recorded on the bill*. For a multi-bill, it fills in `or Multi-bill` instead, and each of the bill's events is
+  credited with its share. A bill with no ISD number recorded is still found by the event the memo names.
 - **Mark the bill paid as you settle.** When the payment covers the bill, the row has a ticked box, *Mark bill paid on*
   the day the money arrived. Click `Settle`, and the bill is marked paid on that day. Untick the box to leave it
   unpaid. If you choose the event yourself and the payment covers its bill, the row says so once it is settled: mark it
-  paid from the Billing page. A multi-bill's split page has the same box.
+  paid from the Billing page. A payment linked to a multi-bill has the same box, *Mark multi-bill paid on*, and so does
+  a multi-bill's split page.
 
 **Mark paid...** is for everything else: a check or cash, a bill from before the books start, or a payment settled with
 the box unticked. It is on the Billing page, the event's page and the multi-bill's page. It asks for the day the bill was
@@ -262,4 +263,4 @@ bills open the *Mark paid* form, instead of marking the bill paid today.
     - :doc:`multibills` for billing several events at once.
     - :doc:`reports` for the *Owed to LNL* report, which shows each client's debt with its bill's stage.
 
-`Last Modified: October 19, 2026`
+`Last Modified: October 28, 2026`

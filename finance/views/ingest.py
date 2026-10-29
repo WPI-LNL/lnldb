@@ -22,7 +22,7 @@ from django.urls.base import reverse
 from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
 
-from finance.billing import mark_paid_from_payments, payment_offer
+from finance.billing import bill_closed, mark_paid_from_payments, payment_offer
 from finance.calculators import bill_payments, latest_bill
 from finance.filters import filter_context, get_filter_state
 from finance.forms import (BulkEncumbranceForm, BulkReconcileForm, EncumbranceForm,
@@ -30,7 +30,7 @@ from finance.forms import (BulkEncumbranceForm, BulkReconcileForm, EncumbranceFo
 from finance.importers import (ImportError_, discard_staged, import_workday_export,
                                purge_stale_staged, read_staged, stage_upload)
 from finance.models import (ZERO, Billing, Encumbrance, FundingRequest, FundTransfer,  # NOQA
-                            ParsedTransaction, TransactionStatus, WorkdayTransaction,
+                            MultiBilling, ParsedTransaction, TransactionStatus, WorkdayTransaction,
                             fiscal_year_for, money)
 from finance.suggestions import (ENCUMBRANCE_CLOSE_ENOUGH, SUGGESTED_FIELDS,
                                  active_suggestion_rules,
@@ -328,12 +328,21 @@ def _bill_offer(txn, suggestions):
 
     Offered when the row fills in the event -- from the ISD number recorded
     on the bill, or the memo -- the event's bill is its own, and filing this
-    line would cover it. A multi-bill's payment is split across its events on
-    the line's own page, which offers the same box there.
+    line would cover it. The same when the row fills in a multi-bill, with
+    ``is_multibill`` set so the box names it apart from an event's bill.
     """
     linked = suggestions.get('linked_event')
+    multibill = suggestions.get('linked_multibill')
     refund = suggestions.get('refund_of')
-    if linked is None or not linked.is_lookup or (refund is not None and refund.is_lookup):
+    if refund is not None and refund.is_lookup:
+        return None
+    if multibill is not None and multibill.is_lookup:
+        bill = MultiBilling.objects.filter(pk=multibill.value).prefetch_related('events').first()
+        offer = payment_offer(bill, txn.unallocated_amount or txn.net_amount, txn.accounting_date)
+        if offer is not None:
+            offer['is_multibill'] = True
+        return offer
+    if linked is None or not linked.is_lookup:
         return None
     bill = suggestions.get('isd_bill')
     if not isinstance(bill, Billing):
@@ -356,10 +365,13 @@ def _mark_paid_on_filing(request, entry):
     what has been filed now covers it -- dated the day the last of the money
     arrived. When no box was offered (the event was chosen by hand) and the
     payment now covers the bill, it says so, so the bill is not forgotten.
-    Unticking an offered box leaves the bill alone, and says nothing.
+    Unticking an offered box leaves the bill alone, and says nothing. A
+    payment linked to a multi-bill does the same for the multi-bill.
     """
     if not request.user.has_perm('events.bill_event'):
         return ''
+    if entry.linked_multibill_id or request.POST.get('mark_multibill_paid', '').isdigit():
+        return _mark_multibill_paid_on_filing(request, entry)
     ticked = request.POST.get('mark_bill_paid', '')
     if ticked.isdigit():
         bill = Billing.objects.select_related('event').filter(pk=ticked).first()
@@ -387,6 +399,38 @@ def _mark_paid_on_filing(request, entry):
         return ''
     return ("The payments received now cover the bill for %s. Mark it paid from the Billing page."
             % (bill.display_name if not isinstance(bill, Billing) else event.event_name))
+
+
+def _mark_multibill_paid_on_filing(request, entry):
+    """
+    :func:`_mark_paid_on_filing` for a multi-bill: mark it paid when its box
+    was ticked and the payment was linked to it, or say when what has come in
+    now covers it and no box was offered.
+    """
+    ticked = request.POST.get('mark_multibill_paid', '')
+    if ticked.isdigit():
+        bill = MultiBilling.objects.filter(pk=ticked).prefetch_related('events').first()
+        if bill is None or bill.date_paid or bill_closed(bill):
+            return ''
+        if entry.linked_multibill_id != bill.pk:
+            return ("%s was not marked paid, because the payment was not linked to it."
+                    % bill.display_name)
+        paid_on = mark_paid_from_payments(bill)
+        if paid_on is None:
+            received, _ = bill_payments(bill)
+            return ("%s was not marked paid: $%s of its $%s has been received."
+                    % (bill.display_name, money(received), money(bill.amount)))
+        return "Marked %s paid on %s." % (bill.display_name, date_format(paid_on, 'M j, Y'))
+    if request.POST.get('bill_offered'):
+        return ''
+    bill = entry.linked_multibill
+    if bill.date_paid or bill_closed(bill):
+        return ''
+    received, _ = bill_payments(bill)
+    if received < money(bill.amount) or money(bill.amount) <= ZERO:
+        return ''
+    return ("The payments received now cover %s. Mark it paid from the Billing page."
+            % bill.display_name)
 
 
 @login_required

@@ -15,6 +15,7 @@ import reversion
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.serializers.base import DeserializationError
+from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
@@ -170,7 +171,7 @@ def transaction_detail(request, pk):
 
     slices = list(txn.slices.select_related(
         'project_tag', 'fr_line_target__funding_request', 'linked_event',
-        'funding_request').all())
+        'linked_multibill__org', 'funding_request').prefetch_related('linked_multibill__events'))
 
     context = {
         'h2': "Transaction %s" % txn.reference,
@@ -217,8 +218,8 @@ def _mark_paid_on_split(request, txn):
     if bill is None or bill.date_paid or bill_closed(bill):
         return ''
     shows = [event.pk for event in bill.events.all()]
-    if not txn.slices.filter(linked_event_id__in=shows).exists():
-        return ("%s was not marked paid, because none of this line was linked to its events."
+    if not txn.slices.filter(Q(linked_event_id__in=shows) | Q(linked_multibill=bill)).exists():
+        return ("%s was not marked paid, because none of this line was linked to it or its events."
                 % bill.display_name)
     paid_on = mark_paid_from_payments(bill)
     if paid_on is None:
@@ -280,7 +281,7 @@ def entry_detail(request, pk):
     """ Focused edit of a single allocation slice, with its audit trail. """
     entry = get_object_or_404(
         ParsedTransaction.objects.select_related(
-            'parent_transaction', 'linked_event', 'project_tag',
+            'parent_transaction', 'linked_event', 'linked_multibill', 'project_tag',
             'fr_line_target__funding_request'), pk=pk)
     can_edit = request.user.has_perm('finance.edit_subledger')
 
@@ -310,9 +311,25 @@ def entry_detail(request, pk):
         'worktags': sorted((k.replace('_', ' ').title(), v) for k, v in
                            ((entry.parent_transaction.worktags_json or {}).items()
                             if entry.parent_transaction else [])),
+        'multibill_shares': _multibill_shares_of(entry),
     }
     context.update(filter_context(request))
     return render(request, 'finance/entry_detail.html', context)
+
+
+def _multibill_shares_of(entry):
+    """
+    ``[(event, share)]`` of a multi-bill's payment, each event with what it is
+    credited, as :func:`finance.calculators.multibill_income` shares it out.
+    Empty for any other entry.
+    """
+    from finance.calculators import multibill_income
+
+    if not entry.linked_multibill_id:
+        return []
+    shares = multibill_income(ParsedTransaction.objects.filter(pk=entry.pk))
+    return sorted(((event, share) for _, event, share in shares),
+                  key=lambda pair: (pair[0].datetime_start, pair[0].pk))
 
 
 @login_required

@@ -696,17 +696,18 @@ def suggest_multibill(txn, linked_event=None):
     """
     The multi-bill a deposit pays, as ``{'multibill', 'reason', 'source'}`` or ``None``.
 
-    One bill can cover several shows, and one payment settles it, so the line
-    has to be split between the shows for each one's P&L to see its share.
-    Found two ways:
+    One bill can cover several shows, and one payment settles it. The payment
+    is linked to the bill, and each show's P&L sees its share. Found two ways:
 
     * the event the memo names was billed on a multi-bill for exactly this
       amount -- the memo said which bill, in effect, so this is a lookup;
     * otherwise one multi-bill, and only one, for exactly this amount, sent in
       the year before the money arrived -- a resemblance, offered as a guess.
 
-    Either way the queue only offers a link to the split page, which lays the
-    shares out to be checked and saved: nothing here files anything.
+    The first fills in the queue's *Linked multi-bill* box and the second is a
+    chip beside it (see :func:`_multibill_suggestion`). The queue also offers to
+    split the line across the bill's events instead. Nothing here files
+    anything.
     """
     if txn.net_amount <= 0:
         return None
@@ -1496,7 +1497,8 @@ def suggest_refund_targets(txn, limit=8):
 #: this rather than a list of its own, so adding a suggester here is enough to
 #: have it pre-fill.
 SUGGESTED_FIELDS = ('spend_category', 'fund_source', 'fr_request', 'fr_line_target',
-                    'linked_event', 'refund_of', 'revenue_source', 'funding_request')
+                    'linked_event', 'linked_multibill', 'refund_of', 'revenue_source',
+                    'funding_request')
 
 #: The form field each of those maps to. Spend category is the odd one out
 #: because LNL's category and Workday's share a name but are different things,
@@ -1509,6 +1511,7 @@ FIELD_NAMES = {
     'fr_request': 'fr_request',
     'fr_line_target': 'fr_line_target',
     'linked_event': 'linked_event',
+    'linked_multibill': 'linked_multibill',
     'refund_of': 'refund_of',
     'revenue_source': 'non_event_revenue_type',
     'funding_request': 'funding_request',
@@ -1614,12 +1617,18 @@ def _suggest_revenue(txn, fields, sga_transfer):
         multibill = suggest_multibill(txn, linked_event)
     is_isd = (txn.document_type or '').strip().lower() == ISD_DOCUMENT_TYPE
     event_named = linked_event is not None and linked_event.is_lookup
+    linked_multibill = _multibill_suggestion(multibill)
+    if linked_multibill is not None and linked_multibill.is_lookup:
+        # The payment is the bill's, so it is linked to the bill. The event the
+        # memo named is one of its shows, and gets its share from there.
+        linked_event = None
 
     return {
         'kind': 'revenue',
         'memo': fields,
         'description': suggest_description(txn),
         'linked_event': linked_event,
+        'linked_multibill': linked_multibill,
         'refund_of': refund,
         'fund_source': fund,
         # Event billing has no source of its own: the event is the answer.
@@ -1638,6 +1647,20 @@ def _suggest_revenue(txn, fields, sga_transfer):
                             and not event_named),
         'warning': _unmatched_reference_warning(unmatched, near_miss, revenue=True),
     }
+
+
+def _multibill_suggestion(multibill):
+    """
+    :func:`suggest_multibill`'s answer as a :class:`Suggestion` for the
+    *Linked multi-bill* box, or ``None``. The ISD number and the memo fill it
+    in; a bill found by its amount alone is a chip.
+    """
+    if multibill is None:
+        return None
+    bill = multibill['multibill']
+    source = multibill['source']
+    return Suggestion(bill.pk, HIGH if source in FILLS_IN else MEDIUM, multibill['reason'],
+                      bill.display_name, source=source)
 
 
 def _suggest_sga_return(txn, fields):

@@ -258,7 +258,7 @@ class ParsedTransactionAdmin(VersionAdmin):
     list_filter = ('status', 'is_projection', 'fund_source', 'lnl_spend_category')
     search_fields = ('description', 'audit_explanation',
                      'parent_transaction__operational_transaction')
-    raw_id_fields = ('parent_transaction', 'linked_event', 'refund_of')
+    raw_id_fields = ('parent_transaction', 'linked_event', 'linked_multibill', 'refund_of')
     list_select_related = ('lnl_spend_category', 'project_tag')
     date_hierarchy = 'effective_date'
 

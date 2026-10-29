@@ -18,6 +18,9 @@
                 {% if event_filter %}
                     <input type="hidden" name="event" value="{{ event_filter.pk }}">
                 {% endif %}
+                {% if multibill_filter %}
+                    <input type="hidden" name="multibill" value="{{ multibill_filter.pk }}">
+                {% endif %}
 
                 <div class="form-group">
                     <input type="search" name="q" class="form-control input-sm" style="width:240px;"
@@ -110,8 +113,17 @@
         <div class="alert alert-info" style="padding:8px 14px;">
             Showing entries for
             <a href="{% url 'events:detail' event_filter.pk %}"><strong>{{ event_filter.event_name }}</strong></a>
-            ({{ event_filter.datetime_start|date:"M j, Y" }}), across every fiscal year.
+            ({{ event_filter.datetime_start|date:"M j, Y" }}), across every fiscal year,
+            with any payment for a multi-bill it is on.
             <a href="{% url 'finance:ledger' %}?{{ event_clear_querystring }}" class="alert-link">Clear</a>
+        </div>
+    {% endif %}
+    {% if multibill_filter %}
+        <div class="alert alert-info" style="padding:8px 14px;">
+            Showing entries for the multi-bill
+            <a href="{% url 'finance:multibill-detail' multibill_filter.pk %}"><strong>{{ multibill_filter.display_name }}</strong></a>
+            and its {{ multibill_filter.events.all|length }} event{{ multibill_filter.events.all|length|pluralize }}, across every fiscal year.
+            <a href="{% url 'finance:ledger' %}?{{ multibill_clear_querystring }}" class="alert-link">Clear</a>
         </div>
     {% endif %}
 
@@ -203,12 +215,15 @@
                             <td data-col="event">
                                 {% if entry.linked_event %}
                                     <a href="{% url 'events:detail' entry.linked_event.pk %}">{{ entry.linked_event.event_name }}</a>
+                                {% elif entry.linked_multibill %}
+                                    <a href="{% url 'finance:multibill-detail' entry.linked_multibill.pk %}">{{ entry.linked_multibill.display_name }}</a>
+                                    <span class="fin-tag" title="A payment for a multi-bill: each of its events is credited with its share">Multi-bill</span>
                                 {% elif entry.non_event_revenue_type %}
                                     {{ entry.non_event_revenue_type }}
                                 {% else %}<span class="fin-muted">—</span>{% endif %}
                             </td>
                             <td data-col="client_type">
-                                {% if entry.linked_event %}{{ entry.client_type_display }}{% else %}<span class="fin-muted">—</span>{% endif %}
+                                {% if entry.linked_event or entry.linked_multibill %}{{ entry.client_type_display }}{% else %}<span class="fin-muted">—</span>{% endif %}
                             </td>
                             <td data-col="services">
                                 {{ entry.event_services_display|default:"—" }}

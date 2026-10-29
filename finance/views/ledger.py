@@ -30,7 +30,7 @@ from django.views.decorators.http import require_POST
 import reversion
 from finance.filters import FilterState, filter_context, get_filter_state
 from finance.forms import BulkActionForm
-from finance.models import (FundSource, ParsedTransaction, ProjectTag, SpendCategory,
+from finance.models import (FundSource, MultiBilling, ParsedTransaction, ProjectTag, SpendCategory,
                             TransactionStatus, money)
 from finance.reports import Period
 from finance.views.reports import csv_response
@@ -83,8 +83,11 @@ LEDGER_CSV_COLUMNS = (
     ('Type', lambda e: e.get_entry_type_display()),
     ('Status', lambda e: e.get_status_display()),
     ('Partition', lambda e: 'Projection' if e.is_projection else 'Event Production'),
-    ('Event', lambda e: e.linked_event.event_name if e.linked_event_id else ''),
-    ('Client type', lambda e: e.client_type_display if e.linked_event_id else ''),
+    ('Event', lambda e: (e.linked_event.event_name if e.linked_event_id else
+                         'Multi-bill: %s' % e.linked_multibill.display_name if e.linked_multibill_id
+                         else '')),
+    ('Client type',
+     lambda e: e.client_type_display if e.linked_event_id or e.linked_multibill_id else ''),
     ('Fund', lambda e: e.fund_source.name if e.fund_source_id else ''),
     ('Spend category', lambda e: e.lnl_spend_category.name if e.lnl_spend_category_id else ''),
     ('Revenue source',
@@ -130,17 +133,28 @@ def ledger(request):
 
     base = (ParsedTransaction.objects.select_related(
                 'parent_transaction', 'project_tag', 'fr_line_target__funding_request',
-                'funding_request', 'linked_event')
-            .prefetch_related('linked_event__serviceinstance_set__service__category'))
+                'funding_request', 'linked_event', 'linked_multibill__org')
+            .prefetch_related('linked_event__serviceinstance_set__service__category',
+                              'linked_multibill__events'))
 
     # One event's entries, from the event P&L or the event's own page. Every
     # year of them: a late-June show is billed in July, so its revenue and its
     # rental sit in different fiscal years, and a year filter would show half
     # an event. The partition still applies -- that is a question about the
     # entries, not about when they landed.
+    # A payment linked to a multi-bill the event is on is one of its entries
+    # too: the event takes its share of it.
+    #
+    # One multi-bill's entries are the same, for the bill: what is linked to
+    # it, and to any event on it.
     event = _event_filter(request.GET.get('event'))
+    multibill = None if event is not None else _multibill_filter(request.GET.get('multibill'))
     if event is not None:
-        qs = FilterState(None, state.partition).apply(base).filter(linked_event=event)
+        qs = FilterState(None, state.partition).apply(base).filter(
+            Q(linked_event=event) | Q(linked_multibill__in=MultiBilling.objects.filter(events=event)))
+    elif multibill is not None:
+        qs = FilterState(None, state.partition).apply(base).filter(
+            Q(linked_multibill=multibill) | Q(linked_event__in=multibill.events.all()))
     else:
         qs = state.apply(base)
 
@@ -155,6 +169,7 @@ def ledger(request):
             Q(parent_transaction__memo__icontains=query) |
             Q(parent_transaction__operational_transaction__icontains=query) |
             Q(linked_event__event_name__icontains=query) |
+            Q(linked_multibill__name__icontains=query) |
             Q(project_tag__name__icontains=query))
 
     # -- facet filters ------------------------------------------------------
@@ -192,6 +207,8 @@ def ledger(request):
     if request.GET.get('format') == 'csv':
         if event is not None:
             part = 'event-%s' % event.pk
+        elif multibill is not None:
+            part = 'multibill-%s' % multibill.pk
         elif state.fiscal_year:
             part = Period(fiscal_year=state.fiscal_year).file_part
         else:
@@ -232,6 +249,8 @@ def ledger(request):
         },
         'event_filter': event,
         'event_clear_querystring': _without(params, 'event'),
+        'multibill_filter': multibill,
+        'multibill_clear_querystring': _without(params, 'multibill'),
         'bulk_form': BulkActionForm(),
         'can_edit': request.user.has_perm('finance.edit_subledger'),
     }
@@ -247,6 +266,14 @@ def _event_filter(raw):
     if not raw.isdigit():
         return None
     return BaseEvent.objects.filter(pk=int(raw)).first()
+
+
+def _multibill_filter(raw):
+    """ The multi-bill a ``?multibill=<pk>`` names, or ``None`` for anything else. """
+    raw = (raw or '').strip()
+    if not raw.isdigit():
+        return None
+    return MultiBilling.objects.filter(pk=int(raw)).prefetch_related('events').first()
 
 
 def _without(params, key):

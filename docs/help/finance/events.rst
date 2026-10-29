@@ -45,9 +45,14 @@ Link a Payment to Its Show
 A department's payment arrives as an Internal Service Delivery whose memo names the show, for example
 ``Lens and Lights services for Pan Asian Festival D26``. The queue fills in `Link to Event` from it.
 
-**One payment for several shows.** When a payment matches a bill that covered several shows (a multi-bill), the row is
-tagged `Multi-bill: split across 3 events`. Click the tag: the split page lays out each show's share, worked out from
-what each would have cost on its own. Check the shares and save.
+**One payment for several shows.** A payment for a bill that covered several shows (a multi-bill) is linked to the
+bill: pick it under `or Multi-bill`, in place of an event. The queue fills it in when the bill's ISD number is recorded,
+or when the memo names one of its shows and the payment is exactly the bill's amount. When the amount alone matches one
+multi-bill, it is offered as a suggestion to click. The payment stays one entry, and each show is credited with its
+share, worked out from what each would have cost on its own: the same share the bill is split by on this tab.
+
+To give each show an entry of its own instead, click the row's `Or split across its 3 events` tag. The split page lays
+out each show's share. Check the shares and save. Either way, each show's figures come out the same.
 
 
 The Events Tab
@@ -124,4 +129,4 @@ received, costs, encumbrances and margin, with the same flags and a link to the 
 .. seealso::
     :doc:`/help/events/create-bill` covers creating and sending the bill itself.
 
-`Last Modified: October 19, 2026`
+`Last Modified: October 28, 2026`

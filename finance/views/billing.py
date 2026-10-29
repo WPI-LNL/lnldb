@@ -181,6 +181,19 @@ class MultiBillingDelete(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, Dele
     msg = "Delete MultiBill"
     perms = 'events.bill_event'
 
+    def dispatch(self, request, *args, **kwargs):
+        """
+        Refuse, back on the bill's page, while a payment is linked to it:
+        deleting it would leave the money credited to no event.
+        """
+        bill = MultiBilling.objects.filter(pk=kwargs.get('pk')).first()
+        if bill is not None and bill.subledger_entries.exists():
+            messages.error(request, "%s has payments linked to it in the ledger, so it cannot be "
+                                    "deleted. Link them to its events instead first."
+                           % bill.display_name)
+            return HttpResponseRedirect(reverse('finance:multibill-detail', args=[bill.pk]))
+        return super(MultiBillingDelete, self).dispatch(request, *args, **kwargs)
+
     def get_object(self, *args, **kwargs):
         """ Validate preconditions for deleting a multibill """
         obj = super(MultiBillingDelete, self).get_object(*args, **kwargs)

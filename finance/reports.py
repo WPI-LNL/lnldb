@@ -35,7 +35,7 @@ from django.utils.formats import date_format
 from finance import activity, balances
 from finance.billing import STAGES, stage_of
 from finance.calculators import (_percent, billing_receivables, event_pnl_rows,
-                                 event_pnl_totals, sga_receivables)
+                                 event_pnl_totals, multibill_income, sga_receivables)
 from finance.models import (ZERO, ClientType, FiscalYearClose, FundBehaviour, ParsedTransaction,
                             RevenueSource, SpendCategory, WorkdayTransaction, books_start_date,
                             client_type_for, fiscal_year_bounds, money,
@@ -391,9 +391,13 @@ def _money_in(entries):
     out = defaultdict(lambda: ZERO)
     income = entries.filter(amount__gt=0, refund_of__isnull=True)
 
-    by_event = {row['linked_event']: money(row['t']) for row in
-                income.filter(linked_event__isnull=False)
-                .values('linked_event').annotate(t=Sum('amount'))}
+    by_event = defaultdict(lambda: ZERO)
+    for row in (income.filter(linked_event__isnull=False)
+                .values('linked_event').annotate(t=Sum('amount'))):
+        by_event[row['linked_event']] += money(row['t'])
+    # A multi-bill's payment, by each event's share, as if split by hand.
+    for _, event, share in multibill_income(income):
+        by_event[event.pk] += share
     found = set()
     for event in (BaseEvent.objects.filter(pk__in=list(by_event))
                   .select_related('billing_org').prefetch_related('org')):
@@ -403,7 +407,7 @@ def _money_in(entries):
         if pk not in found:
             out[('event', ClientType.UNKNOWN)] += amount
 
-    for row in (income.filter(linked_event__isnull=True)
+    for row in (income.filter(linked_event__isnull=True, linked_multibill__isnull=True)
                 .values('non_event_revenue_type').annotate(t=Sum('amount'))):
         out[('source', row['non_event_revenue_type'])] += money(row['t'])
 

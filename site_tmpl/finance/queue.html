@@ -171,16 +171,18 @@
                     {% endif %}
 
                     {% comment %}
-                        One payment for a bill that covered several shows. The
-                        split page lays out each show's share to check and
-                        save; nothing is filed from here.
+                        One payment for a bill that covered several shows. It is
+                        linked to the bill in the Multi-bill box below, and each
+                        show is credited with its share. Splitting it into an
+                        entry per show instead is still offered: the split page
+                        lays the shares out to check and save.
                     {% endcomment %}
                     {% if row.suggestions.multibill %}
                         {% with mb=row.suggestions.multibill %}
-                            <a class="fin-tag is-warn" href="{% url 'finance:txn-detail' row.txn.pk %}?multibill={{ mb.multibill.pk }}"
-                               title="{{ mb.reason }}. Split it so each event's P&L sees its share.">
+                            <a class="fin-tag" href="{% url 'finance:txn-detail' row.txn.pk %}?multibill={{ mb.multibill.pk }}"
+                               title="{{ mb.reason }}. Linking it to the multi-bill credits each event with its share; split it instead to give each event an entry of its own.">
                                 <span class="glyphicon glyphicon-th-list"></span>
-                                Multi-bill{% if mb.multibill.name %} “{{ mb.multibill.name }}”{% endif %}: split across {{ mb.multibill.events.all|length }} events
+                                Or split across its {{ mb.multibill.events.all|length }} events
                             </a>
                         {% endwith %}
                     {% endif %}
@@ -290,6 +292,7 @@
                                 {% endcomment %}
                                 {% include 'finance/_queue_field.html' with field=row.form.refund_of label="Refund of" size="lg" autofilled=row.form.autofilled.refund_of suggestion=row.suggestions.refund_of only %}
                                 {% include 'finance/_queue_field.html' with field=row.form.linked_event label="Link to Event" size="lg" autofilled=row.form.autofilled.linked_event only %}
+                                {% include 'finance/_queue_field.html' with field=row.form.linked_multibill label="or Multi-bill" size="lg" autofilled=row.form.autofilled.linked_multibill suggestion=row.suggestions.linked_multibill only %}
                                 {% comment %}
                                     This payment covers the event's bill, so marking
                                     the bill paid -- dated the day the last of its
@@ -301,10 +304,10 @@
                                 {% if row.bill_offer %}
                                     <div class="form-group fin-field fin-field-check fin-mark-paid">
                                         <input type="hidden" name="bill_offered" value="{{ row.bill_offer.bill.pk }}">
-                                        <label title="The payments received for the event, this one included, add up to its bill of {{ row.bill_offer.owed|money }}.">Bill</label>
+                                        <label title="The payments received for the {% if row.bill_offer.is_multibill %}multi-bill's events{% else %}event{% endif %}, this one included, add up to its bill of {{ row.bill_offer.owed|money }}.">Bill</label>
                                         <label class="fin-inline-check">
-                                            <input type="checkbox" name="mark_bill_paid" value="{{ row.bill_offer.bill.pk }}" checked>
-                                            Mark bill paid on {{ row.bill_offer.paid_on|date:"M j, Y" }}
+                                            <input type="checkbox" name="{% if row.bill_offer.is_multibill %}mark_multibill_paid{% else %}mark_bill_paid{% endif %}" value="{{ row.bill_offer.bill.pk }}" checked>
+                                            Mark {% if row.bill_offer.is_multibill %}multi-bill{% else %}bill{% endif %} paid on {{ row.bill_offer.paid_on|date:"M j, Y" }}
                                         </label>
                                     </div>
                                 {% endif %}

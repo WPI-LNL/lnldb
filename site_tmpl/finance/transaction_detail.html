@@ -143,6 +143,7 @@
                                         <td>
                                             {% if entry.is_revenue %}
                                                 {% if entry.linked_event %}{{ entry.linked_event.event_name }}
+                                                {% elif entry.linked_multibill %}<a href="{% url 'finance:multibill-detail' entry.linked_multibill.pk %}">{{ entry.linked_multibill.display_name }}</a> <span class="fin-tag">Multi-bill</span>
                                                 {% else %}{{ entry.non_event_revenue_type }}{% endif %}
                                                 {% if entry.fund_source %}
                                                     <span class="fin-muted">&middot; into {{ entry.fund_source }}</span>
@@ -239,7 +240,7 @@
                                             <th style="width:120px;">Amount</th>
                                             <th>Description</th>
                                             {% if txn.net_amount > 0 %}
-                                                <th>Event / Revenue Type</th>
+                                                <th>Event / Multi-bill / Revenue Type</th>
                                                 <th title="An SGA reimbursement goes into the funding-request fund and names the request it repays">Into fund / Request</th>
                                             {% else %}
                                                 <th>Fund</th>
@@ -261,6 +262,7 @@
                                                 {% if txn.net_amount > 0 %}
                                                     <td>
                                                         {{ form.linked_event }}
+                                                        <div class="form-group fin-cell-group" title="{{ form.linked_multibill.help_text }}">{{ form.linked_multibill }}</div>
                                                         {{ form.non_event_revenue_type }}
                                                     </td>
                                                     <td>

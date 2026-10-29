@@ -17,6 +17,7 @@ from decimal import Decimal
 
 from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import TruncMonth
+from django.utils import timezone
 
 from finance.models import (ZERO, ClientType, FundBehaviour, FundingRequest, MultiBilling,
                             ParsedTransaction, books_start_date, client_of, client_type_for,
@@ -216,11 +217,18 @@ def revenue_rows(fiscal_year=None, is_projection=None):
     ``select_related`` on a polymorphic FK hands back base instances, which
     would hide ``Event2019.workday_fund``, so the events are re-fetched through
     the polymorphic manager and joined up in Python.
+
+    A payment linked to a multi-bill is one row per event on the bill, each
+    with its share (see :func:`multibill_income`), as if it had been split by
+    hand.
     """
     from events.models import BaseEvent
 
-    entries = list(_scoped(ParsedTransaction.objects.revenue(), fiscal_year, is_projection))
-    event_ids = {e.linked_event_id for e in entries if e.linked_event_id}
+    scoped = _scoped(ParsedTransaction.objects.revenue(), fiscal_year, is_projection)
+    entries = list(scoped.filter(linked_multibill__isnull=True))
+    shared = multibill_income(scoped)
+    event_ids = ({e.linked_event_id for e in entries if e.linked_event_id}
+                 | {event.pk for _, event, _ in shared})
 
     events = {}
     if event_ids:
@@ -234,6 +242,8 @@ def revenue_rows(fiscal_year=None, is_projection=None):
     for entry in entries:
         event = events.get(entry.linked_event_id)
         rows.append({'entry': entry, 'event': event, 'amount': entry.amount})
+    for entry, event, share in shared:
+        rows.append({'entry': entry, 'event': events.get(event.pk), 'amount': share})
     return rows
 
 
@@ -493,6 +503,49 @@ def split_by_price(multibilling, amount):
     return shares
 
 
+#: A payment linked to a multi-bill or to one event: what makes income event billing.
+_EVENT_INCOME = Q(linked_event__isnull=False) | Q(linked_multibill__isnull=False)
+
+
+def multibill_income(entries):
+    """
+    ``[(entry, event, share)]`` for each payment among ``entries`` linked to a
+    multi-bill rather than to one event: a row for each event on the bill,
+    with its share of the payment.
+
+    Shared by price, as :func:`split_by_price` shares out the bill itself, so
+    each show is credited as the P&L says it was billed and the shares add up
+    to the payment to the cent. A show whose share is $0 gets no row. This is
+    how every per-event figure -- the P&L, what a bill has received, the
+    Balances tab -- reads a payment that was linked rather than split.
+    """
+    entries = list(entries.filter(linked_multibill__isnull=False))
+    if not entries:
+        return []
+    bills = (MultiBilling.objects.prefetch_related('events')
+             .in_bulk({entry.linked_multibill_id for entry in entries}))
+    cache, out = {}, []
+    for entry in entries:
+        bill = bills.get(entry.linked_multibill_id)
+        if bill is None:
+            continue
+        key = (bill.pk, money(entry.amount))
+        if key not in cache:
+            cache[key] = split_by_price(bill, entry.amount)
+        shares = cache[key]
+        for event in sorted(bill.events.all(), key=lambda e: e.pk):
+            share = shares.get(event.pk)
+            if share:
+                out.append((entry, event, share))
+    return out
+
+
+def _add_multibill_income(sums, share):
+    """ Count one event's ``share`` of a multi-bill's payment into its :func:`_event_aggregates` sums. """
+    sums['received'] = money(sums.get('received')) + share
+    sums['entries'] = (sums.get('entries') or 0) + 1
+
+
 def latest_bill(event):
     """
     The bill that stands for an event: its latest own bill, else its latest
@@ -548,12 +601,22 @@ def received_by_event(event_ids):
     """
     ``{event pk: (received, last_day)}`` of the payments filed against each of
     these events, in one query. ``last_day`` is when the last of the money
-    reached Workday. An event with nothing filed is left out.
+    reached Workday. An event with nothing filed is left out. A payment linked
+    to a multi-bill counts towards each event on it by its share (see
+    :func:`multibill_income`).
     """
-    rows = (ParsedTransaction.objects.revenue()
-            .filter(linked_event_id__in=list(event_ids), parent_transaction__isnull=False)
+    ids = set(event_ids)
+    payments = ParsedTransaction.objects.revenue().filter(parent_transaction__isnull=False)
+    rows = (payments.filter(linked_event_id__in=list(ids))
             .values('linked_event').annotate(received=Sum('amount'), last=Max('effective_date')))
-    return {row['linked_event']: (money(row['received']), row['last']) for row in rows}
+    out = {row['linked_event']: (money(row['received']), row['last']) for row in rows}
+    shared = payments.filter(linked_multibill__events__in=list(ids)).distinct()
+    for entry, event, share in multibill_income(shared):
+        if event.pk not in ids:
+            continue
+        received, last = out.get(event.pk, (ZERO, None))
+        out[event.pk] = (received + share, max(day for day in (last, entry.effective_date) if day))
+    return out
 
 
 def bill_payments(bill):
@@ -716,11 +779,15 @@ def event_financials(event, is_projection=None):
     section comment above. ``is_projection`` narrows the entries to one side of
     the partition, as the filter bar does everywhere else.
     """
-    entries = ParsedTransaction.objects.filter(linked_event_id=event.pk)
+    entries = ParsedTransaction.objects.all()
     if is_projection is not None:
         entries = entries.filter(is_projection=is_projection)
+    sums = _event_sums(entries.filter(linked_event_id=event.pk))
+    for _, shown, share in multibill_income(entries.filter(linked_multibill__events=event)):
+        if shown.pk == event.pk:
+            _add_multibill_income(sums, share)
     fresh = _event_queryset().filter(pk=event.pk).first() or event
-    return _event_figures(fresh, _event_sums(entries), books_start=books_start_date())
+    return _event_figures(fresh, sums, books_start=books_start_date())
 
 
 def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False, since=None,
@@ -740,8 +807,10 @@ def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False,
     ``today`` is the day a bill's age is counted to.
     """
     entries = ParsedTransaction.objects.filter(linked_event__isnull=False)
+    shared = ParsedTransaction.objects.filter(linked_multibill__isnull=False)
     if is_projection is not None:
         entries = entries.filter(is_projection=is_projection)
+        shared = shared.filter(is_projection=is_projection)
     start = end = None
     if between is not None:
         start, end = between
@@ -755,6 +824,12 @@ def event_pnl_rows(fiscal_year=None, is_projection=None, include_unlinked=False,
     sums = {}
     for row in entries.values('linked_event').annotate(**_event_aggregates()):
         sums[row['linked_event']] = row
+    # A multi-bill's payment counts in the year each of its shows ran in.
+    for _, event, share in multibill_income(shared):
+        ran = timezone.localtime(event.datetime_start).date()
+        if (start is not None and not start <= ran <= end) or (since is not None and ran < since):
+            continue
+        _add_multibill_income(sums.setdefault(event.pk, {}), share)
 
     event_ids = set(sums)
     if include_unlinked:
@@ -820,13 +895,13 @@ def revenue_by_source(fiscal_year=None, is_projection=None):
     income = entries.revenue()
 
     rows = []
-    event = income.filter(linked_event__isnull=False).aggregate(
+    event = income.filter(_EVENT_INCOME).aggregate(
         t=Sum('amount'), n=Count('pk'))
     if event['n']:
         rows.append({'key': 'event', 'label': 'Event billing', 'amount': money(event['t']),
                      'taken_back': ZERO, 'entries': event['n'], 'source': None})
 
-    by_source = (income.filter(linked_event__isnull=True,
+    by_source = (income.filter(linked_event__isnull=True, linked_multibill__isnull=True,
                                non_event_revenue_type__isnull=False)
                  .values('non_event_revenue_type', 'non_event_revenue_type__name',
                          'non_event_revenue_type__slug')
@@ -884,7 +959,7 @@ def event_billing_kept(fiscal_year=None, is_projection=None):
     funding request or a budget -- does not: no billing went to pay for it.
     """
     entries = _scoped(ParsedTransaction.objects.all(), fiscal_year, is_projection)
-    gross = money(entries.revenue().filter(linked_event__isnull=False)
+    gross = money(entries.revenue().filter(_EVENT_INCOME)
                   .aggregate(t=Sum('amount'))['t'])
     sums = entries.aggregate(all=Sum('amount', filter=_EVENT_PASSTHROUGH),
                              sga=Sum('amount', filter=_EVENT_SGA_PASSTHROUGH))

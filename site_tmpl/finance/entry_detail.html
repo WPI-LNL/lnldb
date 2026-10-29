@@ -82,6 +82,35 @@
                 </div>
             {% endif %}
 
+            {# ---- A multi-bill's payment, and each event's share of it ---- #}
+            {% if entry.linked_multibill %}
+                <div class="fin-panel">
+                    <div class="fin-panel-head">
+                        <span>Payment for a multi-bill</span>
+                        <a href="{% url 'finance:multibill-detail' entry.linked_multibill.pk %}">{{ entry.linked_multibill.display_name }}</a>
+                    </div>
+                    <div class="fin-panel-body">
+                        <p class="fin-muted">Each event on the bill is credited with its share of this payment, by price, as the bill is split. Client type: {{ entry.client_type_display }}.</p>
+                    </div>
+                    <div class="fin-table-wrap">
+                        <table class="table fin-table">
+                            <thead><tr><th>Event</th><th></th><th class="fin-num">Share</th></tr></thead>
+                            <tbody>
+                                {% for event, share in multibill_shares %}
+                                    <tr>
+                                        <td><a href="{% url 'events:detail' event.pk %}">{{ event.event_name }}</a></td>
+                                        <td class="fin-muted">{{ event.datetime_start|date:"M j, Y" }}</td>
+                                        <td class="fin-num">{{ share|money }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr><td colspan="3" class="fin-muted">The multi-bill has no events.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+
             {# ---- Inherited event metadata ---- #}
             {% if entry.linked_event %}
                 <div class="fin-panel">

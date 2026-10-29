@@ -419,7 +419,8 @@ class Books(object):
 
     def _load_billed_events(self):
         from events.models import BaseEvent
-        from finance.calculators import _event_queryset, event_billed, latest_bill
+        from finance.calculators import (_event_queryset, event_billed, latest_bill,
+                                         multibill_income)
 
         if self.start is None:
             return []
@@ -432,11 +433,14 @@ class Books(object):
             return []
         stopped = event_paid_days(ids)
         payments = defaultdict(list)
-        for event, date, amount in (ParsedTransaction.objects.revenue()
-                                    .filter(linked_event_id__in=ids,
-                                            parent_transaction__isnull=False)
+        settled = ParsedTransaction.objects.revenue().filter(parent_transaction__isnull=False)
+        for event, date, amount in (settled.filter(linked_event_id__in=ids)
                                     .values_list('linked_event_id', 'effective_date', 'amount')):
             payments[event].append((date, money(amount)))
+        # A multi-bill's payment counts towards each event by its share.
+        for entry, event, share in multibill_income(
+                settled.filter(linked_multibill__events__in=ids).distinct()):
+            payments[event.pk].append((entry.effective_date, share))
         cache, out = {}, []
         for event in _event_queryset().filter(pk__in=ids):
             billed, _ = event_billed(event, cache)
