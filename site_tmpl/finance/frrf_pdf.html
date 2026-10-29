@@ -1,0 +1,306 @@
+{% load static %}
+{% load finance_extras %}
+{% comment %}
+    The breakdown at the front of a Funding Request Report Form: what SGA's
+    form asks for -- the request's number, when it was approved, what was
+    approved and what was spent -- then every purchase, line by line, with the
+    number of the receipt behind it. finance.frrf.report_form_pdf draws it
+    with xhtml2pdf and puts each receipt after it, in number order.
+
+    xhtml2pdf reads only simple CSS, so every rule here is one class and the
+    layout is tables. Padding at a cell's sides is taken out of the column
+    widths, and on every column it collapses the narrow Receipt column; so
+    only the two columns after the wordy ones have it, on the left, to keep a
+    full line of text off the column before.
+{% endcomment %}
+<html>
+<head>
+    <style>
+        @page {
+            size: letter;
+            margin: 0.6in;
+        }
+
+        body {
+            font-family: Helvetica;
+            font-size: 9pt;
+        }
+
+        .top {
+            vertical-align: top;
+        }
+
+        .lnl-name {
+            font-size: 15pt;
+            font-weight: bold;
+        }
+
+        .lnl-contact {
+            font-size: 8pt;
+            vertical-align: top;
+        }
+
+        .title {
+            font-size: 17pt;
+            font-weight: bold;
+            text-align: right;
+            vertical-align: top;
+            color: #444444;
+        }
+
+        .rule {
+            border-top: 2px solid #000000;
+            padding-top: 6px;
+        }
+
+        .fact-label {
+            font-weight: bold;
+            padding-top: 2px;
+        }
+
+        .fact {
+            padding-top: 2px;
+        }
+
+        .line-name {
+            font-size: 12pt;
+            font-weight: bold;
+            padding-top: 14px;
+        }
+
+        .line-figures {
+            text-align: right;
+            vertical-align: bottom;
+            padding-top: 14px;
+        }
+
+        .line-description {
+            color: #555555;
+            margin: 2px 0 4px 0;
+        }
+
+        .head {
+            font-size: 8pt;
+            font-weight: bold;
+            border-bottom: 1px solid #000000;
+            padding-top: 2px;
+            padding-bottom: 2px;
+        }
+
+        .head-num {
+            font-size: 8pt;
+            font-weight: bold;
+            border-bottom: 1px solid #000000;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            text-align: right;
+        }
+
+        .head-gap {
+            font-size: 8pt;
+            font-weight: bold;
+            border-bottom: 1px solid #000000;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            padding-left: 4px;
+        }
+
+        .cell-gap {
+            padding-top: 2px;
+            padding-bottom: 2px;
+            padding-left: 4px;
+            border-bottom: 0.5px solid #cccccc;
+        }
+
+        .cell {
+            padding-top: 2px;
+            padding-bottom: 2px;
+            border-bottom: 0.5px solid #cccccc;
+        }
+
+        .num {
+            padding-top: 2px;
+            padding-bottom: 2px;
+            border-bottom: 0.5px solid #cccccc;
+            text-align: right;
+        }
+
+        .muted {
+            color: #666666;
+            padding-top: 2px;
+            padding-bottom: 2px;
+        }
+
+        .total {
+            font-weight: bold;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            border-top: 1px solid #000000;
+        }
+
+        .total-num {
+            font-weight: bold;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            border-top: 1px solid #000000;
+            text-align: right;
+        }
+
+        .grand {
+            font-size: 12pt;
+            font-weight: bold;
+            padding-top: 4px;
+            padding-bottom: 2px;
+            border-top: 2px solid #000000;
+            border-bottom: 2px solid #000000;
+        }
+
+        .grand-num {
+            font-size: 12pt;
+            font-weight: bold;
+            padding-top: 4px;
+            padding-bottom: 2px;
+            border-top: 2px solid #000000;
+            border-bottom: 2px solid #000000;
+            text-align: right;
+        }
+
+        .section {
+            font-size: 12pt;
+            font-weight: bold;
+            margin: 18px 0 4px 0;
+        }
+
+        .footer {
+            font-size: 8pt;
+            font-style: italic;
+            color: #666666;
+            text-align: center;
+            margin-top: 18px;
+        }
+    </style>
+</head>
+
+<body>
+    <table>
+        <tr>
+            <td width="80" class="top"><img src="{% static 'img/pdf-lnl-logo.png' %}" width="69" height="56"></td>
+            <td class="lnl-contact">
+                <span class="lnl-name">WPI Lens and Lights</span><br>
+                100 Institute Road<br>
+                Worcester, MA 01609<br>
+                lnl@wpi.edu
+            </td>
+            <td class="title">Funding Request<br>Report Form</td>
+        </tr>
+    </table>
+
+    <table>
+        <tr>
+            <td class="rule" width="120"></td>
+            <td class="rule"></td>
+        </tr>
+        <tr>
+            <td class="fact-label">Organization</td>
+            <td class="fact">WPI Lens and Lights</td>
+        </tr>
+        <tr>
+            <td class="fact-label">Request ID</td>
+            <td class="fact">{{ fr.reference|default:"—" }}{% if fr.approving_body %} ({{ fr.approving_body }}){% endif %}</td>
+        </tr>
+        <tr>
+            <td class="fact-label">Request</td>
+            <td class="fact">{{ fr.name }}</td>
+        </tr>
+        <tr>
+            <td class="fact-label">Fiscal year</td>
+            <td class="fact">FY{{ fr.fiscal_year|stringformat:"s"|slice:"2:" }}</td>
+        </tr>
+        <tr>
+            <td class="fact-label">Date approved</td>
+            <td class="fact">{{ fr.date_approved|date:"F j, Y"|default:"—" }}</td>
+        </tr>
+        <tr>
+            <td class="fact-label">Amount approved</td>
+            <td class="fact">{{ fr.total_awarded|invoice_money }}</td>
+        </tr>
+        <tr>
+            <td class="fact-label">Total spent</td>
+            <td class="fact"><b>{{ form.total_spent|invoice_money }}</b></td>
+        </tr>
+        <tr>
+            <td class="fact-label">Receipts</td>
+            <td class="fact">{{ form.receipts|length }}, following this breakdown in number order</td>
+        </tr>
+    </table>
+
+    <p class="section">Breakdown</p>
+    {% for line, purchases, spent in form.lines %}
+        <table>
+            <tr>
+                <td class="line-name">{{ line.name }}</td>
+                <td class="line-figures" width="220">{{ spent|invoice_money }} spent of {{ line.amount_awarded|invoice_money }} approved</td>
+            </tr>
+        </table>
+        {% if line.description %}<p class="line-description">{{ line.description|linebreaksbr }}</p>{% endif %}
+        <table repeat="1">
+            <tr>
+                <td class="head" width="8%">Receipt</td>
+                <td class="head" width="12%">Date</td>
+                <td class="head" width="20%">Paid to</td>
+                <td class="head-gap" width="34%">Description</td>
+                <td class="head-gap" width="15%">Workday</td>
+                <td class="head-num" width="11%">Amount</td>
+            </tr>
+            {% for purchase in purchases %}
+                <tr>
+                    <td class="cell">{{ purchase.receipt.number|default:"" }}</td>
+                    <td class="cell">{{ purchase.date|date:"M j, Y" }}</td>
+                    <td class="cell">{{ purchase.payee }}</td>
+                    <td class="cell-gap">{{ purchase.description }}{% if purchase.is_refund %} (refund){% endif %}</td>
+                    <td class="cell-gap">{{ purchase.workday }}</td>
+                    <td class="num">{{ purchase.amount|invoice_money }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="muted">Nothing was spent on this line.</td></tr>
+            {% endfor %}
+            {% if purchases %}
+                <tr>
+                    <td colspan="5" class="total">{{ line.name }}</td>
+                    <td class="total-num">{{ spent|invoice_money }}</td>
+                </tr>
+            {% endif %}
+        </table>
+    {% endfor %}
+
+    <table>
+        <tr><td colspan="2">&nbsp;</td></tr>
+        <tr>
+            <td class="grand">Total spent</td>
+            <td class="grand-num" width="120">{{ form.total_spent|invoice_money }}</td>
+        </tr>
+    </table>
+
+    {% if form.receipts %}
+        <p class="section">Receipts</p>
+        <table repeat="1">
+            <tr>
+                <td class="head" width="15%">Receipt</td>
+                <td class="head" width="55%">Paid to</td>
+                <td class="head" width="15%">Date</td>
+                <td class="head-num" width="15%">Amount</td>
+            </tr>
+            {% for receipt in form.receipts %}
+                <tr>
+                    <td class="cell">Receipt {{ receipt.number }}</td>
+                    <td class="cell">{{ receipt.payee }}</td>
+                    <td class="cell">{{ receipt.date|date:"M j, Y" }}</td>
+                    <td class="num">{{ receipt.amount|invoice_money }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+
+    <p class="footer">Generated {{ generated_on|date:"F j, Y" }} from the Lens and Lights ledger.</p>
+</body>
+</html>

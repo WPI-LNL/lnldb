@@ -63,6 +63,10 @@ what they cover rather than alphabetically.
     balances, events and owed-to-LNL reports against figures small enough to
     add up by hand, the CSV, and the ledger's download. The activity reports
     are tested with what they report on, in ``test_activity``.
+``test_frrf``
+    The Funding Request Report Form: which purchases are on it, which receipt
+    backs each and how they are numbered, the report's warnings, the PDF with
+    each receipt on its own labelled pages, and the page and its permission.
 ``test_activity``
     What LNL's work was worth, from the events app: WPI terms, pricing every
     show in bulk exactly as the events app does, student organizations against

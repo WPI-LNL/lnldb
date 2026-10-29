@@ -13,9 +13,17 @@
                 {% if fr.is_projection %}<span class="fin-tag is-projection">PROJECTION</span>{% endif %}
                 {% if fr.closed %}<span class="label label-default">Closed</span>{% endif %}
             </span>
-            {% permission request.user has 'finance.manage_fundingrequest' %}
-                <a href="{% url 'finance:fr-edit' fr.pk %}" class="btn btn-xs btn-default">Edit</a>
-            {% endpermission %}
+            <span>
+                {% permission request.user has 'finance.view_subledger' %}
+                    <a href="{% url 'finance:report' 'fr-report-form' %}?request={{ fr.pk }}" class="btn btn-xs btn-default"
+                       title="The breakdown and receipts SGA asks for before it pays the request back">
+                        <span class="glyphicon glyphicon-file"></span> Report form
+                    </a>
+                {% endpermission %}
+                {% permission request.user has 'finance.manage_fundingrequest' %}
+                    <a href="{% url 'finance:fr-edit' fr.pk %}" class="btn btn-xs btn-default">Edit</a>
+                {% endpermission %}
+            </span>
         </div>
         <div class="fin-panel-body">
             <div class="fin-stats" style="margin-bottom:12px;">

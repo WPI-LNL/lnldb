@@ -85,6 +85,10 @@ the line.
 
 SGA often pays in the next fiscal year, and often after a request is closed. Both are fine.
 
+**Before SGA pays.** SGA reimburses a request only after you submit its *Funding Request Report Form*, with a receipt
+for every purchase. Click `Report form` on the request's page: it lists every purchase with its receipt, warns about
+anything missing, and downloads as the PDF to submit. See :doc:`reports`.
+
 **If SGA takes money back** -- for instance, after paying the same request twice -- it arrives as money going out, and
 the queue recognises that too. It fills in the fund `SGA Funding Request` and, under `More`, the request in `SGA took
 back money for`. It needs no spend category, because LNL didn't spend anything.
@@ -113,4 +117,4 @@ Closing a Request
 Once a request is finished, edit it and tick **Closed**. It disappears from the dashboard's burndown, but its history
 stays, and SGA's reimbursements are still matched to it.
 
-`Last Modified: October 27, 2026`
+`Last Modified: October 29, 2026`

@@ -12,7 +12,9 @@ download cannot disagree about a figure.
 The figures come from the same places the rest of the app takes them:
 :mod:`finance.balances` for what each fund holds, :mod:`finance.calculators`
 for events and what LNL is owed, :mod:`finance.activity` for the work LNL did
-(read from the events app, not the ledger). The one report that groups
+(read from the events app, not the ledger), :mod:`finance.frrf` for a funding
+request's purchases and their receipts, which it also makes into the PDF SGA
+asks for. The one report that groups
 ledger entries itself, :func:`income_and_spending`, does so by the rules the
 dashboard uses: income is money in that is not a refund, spending is net of
 refunds, and money SGA took back undoes a reimbursement rather than being
@@ -32,7 +34,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from finance import activity, balances
+from finance import activity, balances, frrf
 from finance.billing import STAGES, stage_of
 from finance.calculators import (_percent, billing_receivables, event_pnl_rows,
                                  event_pnl_totals, multibill_income, sga_receivables)
@@ -1416,13 +1418,146 @@ def activity_trends(fiscal_year, by='term', measure='events', today=None):
 
 
 # ---------------------------------------------------------------------------
+# The Funding Request Report Form
+# ---------------------------------------------------------------------------
+
+#: The file types the PDF takes, as a sentence says them.
+RECEIPT_TYPES = "PDFs, and JPEG, PNG, GIF, BMP, TIFF and WebP images"
+
+
+def _plural(count, one, many):
+    return '%s %s' % (count, one if count == 1 else many)
+
+
+def fr_report_form(fr):
+    """
+    The breakdown SGA asks for before it pays a request back: every purchase
+    charged to the request, line by line, with the number of the receipt
+    behind it -- to check on screen before the PDF goes to SGA.
+
+    :func:`finance.frrf.gather` decides what is on it. This lays it out, and
+    warns about everything that would get an item refused or leave one off
+    the form: a purchase with no receipt, a receipt the PDF cannot take or
+    that may be a quote, spending still in the queue, and a request missing
+    the number or the approval date SGA's form asks for. It warns and never
+    leaves anything out: what to send is the Treasurer's decision.
+    """
+    form = frrf.gather(fr)
+    columns = [Column('receipt', 'Receipt', Column.NUMBER),
+               Column('date', 'Date', Column.DATE),
+               Column('payee', 'Paid to'),
+               Column('description', 'Description'),
+               Column('workday', 'Workday'),
+               Column('amount', 'Amount', Column.MONEY)]
+
+    sections = []
+    for line, purchases, spent in form.lines:
+        rows = []
+        for purchase in purchases:
+            receipt = purchase.receipt
+            missing = receipt is None and not purchase.is_refund
+            if purchase.is_refund:
+                note = 'Refund'
+            elif missing:
+                note = 'No receipt'
+            elif receipt.from_encumbrance:
+                note = "Receipt from the encumbrance: check it isn't a quote"
+            else:
+                note = ''
+            rows.append(Row({
+                'receipt': receipt.number if receipt is not None else None,
+                'date': purchase.date,
+                'payee': purchase.payee,
+                'description': purchase.description or '(no description)',
+                'workday': purchase.workday,
+                'amount': purchase.amount,
+            }, url=purchase.entry.get_absolute_url(), note=note,
+                tone='danger' if missing else '', link='description'))
+        sections.append(Section(
+            line.name, rows,
+            Row({'description': 'Spent, of %s approved' % _dollars(line.amount_awarded),
+                 'amount': spent}),
+            empty='Nothing has been spent on this line.'))
+
+    purchases = [purchase for purchase in form.purchases if not purchase.is_refund]
+    stats = [
+        Stat('Request ID', fr.reference or None, sub=fr.approving_body, kind=Column.TEXT),
+        Stat('Date approved', _day(fr.date_approved) if fr.date_approved else None,
+             kind=Column.TEXT),
+        Stat('Amount approved', fr.total_awarded),
+        Stat('Total spent', form.total_spent, tone='text-danger',
+             sub='what SGA is asked to pay back'),
+        Stat('Receipts', len(form.receipts), kind=Column.NUMBER,
+             sub='%s of %s with one' % (len(purchases) - len(form.missing),
+                                        _plural(len(purchases), 'purchase', 'purchases')),
+             tone='text-danger' if form.missing else ''),
+    ]
+
+    warnings = []
+    if form.missing:
+        warnings.append(
+            "%s no receipt, %s in all, marked in red below. SGA doesn't fund an item without "
+            "proof of purchase: attach one on each entry's page."
+            % (_plural(len(form.missing), 'purchase has', 'purchases have'),
+               _dollars(sum((purchase.amount for purchase in form.missing), ZERO))))
+    if not fr.reference:
+        warnings.append("The request has no SGA reference number, which SGA's form asks for. "
+                        "Add it on the request's Edit page.")
+    if not fr.date_approved:
+        warnings.append("The request has no approval date, which SGA's form asks for. Add it "
+                        "on the request's Edit page.")
+    for receipt in form.receipts:
+        if not receipt.kind:
+            warnings.append(
+                "Receipt %s (%s) can't go into the PDF, which takes %s. Attach it again as a "
+                "PDF or a JPEG, or send it to SGA as a separate file."
+                % (receipt.number, receipt.name, RECEIPT_TYPES))
+        if receipt.from_encumbrance:
+            warnings.append(
+                "Receipt %s was attached to the encumbrance the purchase was logged as, which "
+                "takes a receipt or a quote. Check it is a receipt: a quote isn't proof of "
+                "purchase." % receipt.number)
+    if form.unsettled:
+        warnings.append(
+            "%s quoting %s %s still in the queue, %s in all. Settle %s, or %s won't be on the "
+            "form." % (_plural(len(form.unsettled), 'Workday line', 'Workday lines'),
+                       fr.reference, 'is' if len(form.unsettled) == 1 else 'are',
+                       _dollars(-sum((money(txn.net_amount) for txn in form.unsettled), ZERO)),
+                       'it' if len(form.unsettled) == 1 else 'them',
+                       'it' if len(form.unsettled) == 1 else 'they'))
+    if form.encumbered:
+        warnings.append("%s is still encumbered on this request and isn't on the form: SGA "
+                        "pays back only what has been spent." % _dollars(form.encumbered))
+    for line, _, spent in form.lines:
+        if spent > line.amount_awarded:
+            warnings.append("Spending on %s is %s over what SGA approved for it."
+                            % (line.name, _dollars(spent - line.amount_awarded)))
+
+    notes = [
+        "Every purchase charged to one of the request's lines that has reached Workday, "
+        "settled or not, with refunds taken off. What is only encumbered is left out: SGA "
+        "pays back only what has been spent.",
+        "Receipts are numbered in the order the breakdown first reaches them. A purchase's "
+        "receipt is the one attached to its entry, or else to another entry on the same "
+        "Workday line, or else to the encumbrance it was logged as.",
+        "The PDF for SGA has this breakdown first, then every receipt in number order, each "
+        "page labelled with its number. It takes %s." % RECEIPT_TYPES,
+        "Submit it on myWPI: the Student Government Association's page, Surveys, then "
+        "Funding Request Report Form.",
+    ]
+    return Report('fr-report-form', 'Funding Request Report Form', fr.short_label, '',
+                  form.file_part, columns, sections, stats, notes, warnings)
+
+
+# ---------------------------------------------------------------------------
 # The list the Reports page shows
 # ---------------------------------------------------------------------------
 
 #: ``slug: (title, what it answers, what period it takes)``. The period is
 #: ``'range'`` for a fiscal year or any dates, ``'year'`` for a fiscal year
-#: only, ``'today'`` for a report that is always as of today, and ``'trend'``
-#: for the terms or years up to a fiscal year.
+#: only, ``'today'`` for a report that is always as of today, ``'trend'``
+#: for the terms or years up to a fiscal year, and ``'request'`` for one
+#: funding request, whenever its spending was.
 #: The order here is the order the Reports tab lists them in.
 REPORTS = OrderedDict((
     ('income-and-spending', ("Income and spending",
@@ -1446,4 +1581,8 @@ REPORTS = OrderedDict((
                   "What LNL is doing more or less of, term over term or year over year: who for, "
                   "which services, which service tiers and add-ons, and which clients.",
                   'trend')),
+    ('fr-report-form', ("Funding Request Report Form",
+                        "What SGA asks for before it pays a funding request back: every purchase "
+                        "charged to the request, line by line, with its receipt. Downloads as "
+                        "the PDF to submit, with the receipts in it.", 'request')),
 ))

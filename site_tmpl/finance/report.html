@@ -28,6 +28,11 @@
                 </span>
             </span>
             <span>
+                {% if pdf_url and can_view_receipts %}
+                    <a href="{{ pdf_url }}" class="btn btn-xs btn-primary" target="_blank">
+                        <span class="glyphicon glyphicon-file"></span> PDF for SGA
+                    </a>
+                {% endif %}
                 <a href="{{ csv_url }}" class="btn btn-xs btn-default">
                     <span class="glyphicon glyphicon-download-alt"></span> Download CSV
                 </a>
@@ -90,6 +95,31 @@
                 </form>
                 <div class="fin-muted" style="margin-top:6px;">
                     Ends with the fiscal year chosen above. The Event Production / Projection switch does not apply.
+                </div>
+            {% elif takes == 'request' %}
+                {% if fr_choices %}
+                    <form method="get" class="form-inline">
+                        <input type="hidden" name="fy" value="{{ filter_state.fiscal_year|default:'all' }}">
+                        <input type="hidden" name="partition" value="{{ filter_state.partition|default:'all' }}">
+                        <div class="form-group">
+                            <select name="request" class="form-control input-sm" aria-label="Funding request">
+                                {% for choice in fr_choices %}
+                                    <option value="{{ choice.pk }}" {% if fr and fr.pk == choice.pk %}selected{% endif %}>{{ choice.picker_label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-default btn-sm">Apply</button>
+                        {% if fr %}
+                            <a href="{% url 'finance:fr-detail' fr.pk %}" class="btn btn-link btn-sm">Open the request</a>
+                        {% endif %}
+                    </form>
+                {% endif %}
+                <div class="fin-muted" style="margin-top:6px;">
+                    The fiscal year chosen above decides which requests are offered. The form covers all of
+                    the request's spending, whenever it was.
+                    {% if fr and not can_view_receipts %}
+                        The PDF has the receipts in it, so it needs permission to view receipts.
+                    {% endif %}
                 </div>
             {% elif takes == 'year' %}
                 <p class="fin-muted" style="margin:0;">

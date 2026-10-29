@@ -25,14 +25,17 @@
                                     {% if item.takes == 'range' %}The fiscal year chosen above, or any dates.
                                     {% elif item.takes == 'year' %}The fiscal year chosen above.
                                     {% elif item.takes == 'trend' %}Term over term or year over year, up to the fiscal year chosen above.
+                                    {% elif item.takes == 'request' %}One funding request, chosen on the report.
                                     {% else %}As of today.{% endif %}
                                 </div>
                             </td>
                             <td class="fin-nowrap" style="width:140px;">
                                 <a href="{% url 'finance:report' item.slug %}?{{ filter_state.querystring }}" class="btn btn-xs btn-default">View</a>
-                                <a href="{% url 'finance:report' item.slug %}?{{ filter_state.querystring }}&amp;format=csv" class="btn btn-xs btn-default">
-                                    <span class="glyphicon glyphicon-download-alt"></span> CSV
-                                </a>
+                                {% if item.takes != 'request' %}
+                                    <a href="{% url 'finance:report' item.slug %}?{{ filter_state.querystring }}&amp;format=csv" class="btn btn-xs btn-default">
+                                        <span class="glyphicon glyphicon-download-alt"></span> CSV
+                                    </a>
+                                {% endif %}
                             </td>
                         </tr>
                     {% endfor %}

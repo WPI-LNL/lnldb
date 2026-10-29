@@ -8,7 +8,8 @@ report prints cleanly from the browser and downloads as a CSV file.
 .. caution::
     **Permission Required:** View subledger
 
-    Anyone who can see the finance pages can open the reports.
+    Anyone who can see the finance pages can open the reports. The *Funding Request Report Form*'s PDF has the
+    receipts in it, so downloading it also needs permission to view receipts, which Officers have.
 
 -----
 
@@ -37,6 +38,9 @@ Student organizations and departments   a fiscal year, or   The value of LNL's w
                                                             *external wear percentage*.
 Event activity                          terms or years      What LNL is doing more or less of, term over term or year
                                                             over year: who for, which services and which clients.
+Funding Request Report Form             one funding         What SGA asks for before it pays a funding request back:
+                                        request             every purchase charged to it, line by line, with its
+                                                            receipt. Downloads as the PDF to submit. See below.
 ======================================  ==================  ===========================================================
 
 Below the reports, the tab also links to the **Ledger** download.
@@ -69,6 +73,37 @@ The **Ledger** downloads too: filter it however you like, and the download has e
 every column.
 
 
+The Funding Request Report Form
+-------------------------------
+
+SGA pays a funding request back only after you submit a *Funding Request Report Form*: a breakdown of everything spent
+on the request, with a copy of the receipt, invoice or ISD for each purchase. SGA won't fund an item without proof of
+purchase. This report puts the breakdown and the receipts together for you from the ledger.
+
+#. Open it from the request's own page (`Report form`), or from the `Reports` tab and pick the request.
+#. Read the warnings at the top and fix what you can. Purchases with no receipt are shown in red: click one to open
+   its entry and attach the receipt. The report also warns about a receipt that may be a quote, a receipt the PDF
+   can't take (an iPhone ``.HEIC`` photo, say), spending on the request still waiting in the queue, and a request
+   with no SGA number or approval date.
+#. Click `PDF for SGA`. The PDF starts with the breakdown: the request's number, approval date, amount approved and
+   total spent, then each line of the request with every purchase charged to it. Then come the receipts, in the
+   order the breakdown numbers them, each page labelled with its receipt number.
+#. Submit it on myWPI: open the *Student Government Association* page, the `Surveys` tab, then *Funding Request
+   Report Form*, and attach the PDF.
+
+**What's counted.** Every purchase charged to one of the request's lines that has reached Workday, with refunds taken
+off. Money that is only encumbered isn't on the form, because SGA pays back only what has been spent.
+
+**Where a receipt comes from.** The receipt attached to the purchase's entry. If a purchase was split across two lines
+of the request, one receipt on either entry covers both. If the purchase was logged in advance as an encumbrance with
+a receipt or quote attached, that file is used, and the report reminds you to check it is a receipt: a quote isn't
+proof of purchase.
+
+**Receipt files.** The PDF takes PDFs and JPEG, PNG, GIF, BMP, TIFF and WebP images, and turns phone photos the right
+way up. Anything else gets a page in its place saying it is submitted as a separate file, so attach that file to
+SGA's form yourself, or upload it again as a PDF or JPEG.
+
+
 Reading a Report
 ----------------
 
@@ -78,4 +113,4 @@ Reading a Report
 - **Costs SGA pays for aren't LNL's losses.** On the *Events* report, costs paid from a funding request or the SGA
   budget are shown separately and don't reduce an event's margin.
 
-`Last Modified: October 27, 2026`
+`Last Modified: October 29, 2026`

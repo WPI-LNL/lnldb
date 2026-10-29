@@ -189,7 +189,7 @@ Balances     ``balances/``   What each fund holds; Workday balances,          ``
 Projects     ``projects/``   Spending by project tag                          ``manage_projecttag``
 Funding      ``funding/``    Funding requests: what SGA owes, and each        ``manage_fundingrequest``
                              request's lines and burndown
-Reports      ``reports/``    Six reports to print or download
+Reports      ``reports/``    Seven reports to print or download
 ===========  ==============  ===============================================  ==========================
 
 Three more pages are reached from those: one bank line
@@ -245,6 +245,8 @@ Where                                        What it holds
 :mod:`finance.balances`                      Each fund's balance and each account's cash, on any day
 :mod:`finance.reports`                       The reports, as data one template draws and one function
                                              writes as CSV
+:mod:`finance.frrf`                          The Funding Request Report Form: a request's purchases, the
+                                             receipt behind each, and the PDF for SGA
 :mod:`finance.activity`                      What LNL's work was worth, priced from the events app
 :mod:`finance.filters`                       The filter bar: fiscal year and partition
 ``finance/views/``                           One module per tab, plus ``detail`` for the line and entry
@@ -2109,6 +2111,9 @@ and departments         dates                   client at full rates, service by
 Event activity          terms or years, up to   Who the work was for, which services,
                         the year chosen         tiers and add-ons, and which clients, term
                                                 over term or year over year
+Funding Request Report  one funding request,    Every purchase charged to the request,
+Form                    whenever it was spent   line by line, with its receipt; also the
+                                                PDF SGA asks for
 ======================  ======================  ==========================================
 
 **The period.** The filter bar's fiscal year, cut off at today while it is still
@@ -2144,6 +2149,49 @@ characters.
 **The ledger** downloads as well. ``?format=csv`` on the ledger gives every row
 its filters select -- not only the page on screen -- with every column, whether
 it is showing or not. The Reports tab links to it, below the reports.
+
+The Funding Request Report Form
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SGA pays a funding request back only for what was actually spent, and only
+once it has seen a breakdown of every purchase and a copy of the receipt,
+invoice or ISD behind each one; an item without proof of purchase is not
+funded. The form is put together from the ledger by :mod:`finance.frrf`.
+
+**What is on it.** Every entry charged to one of the request's lines that has
+reached Workday, settled or not, line by line in the request's own order and by
+date within a line, with refunds as negative amounts. Encumbrances are left
+out, and so are SGA's own payments, which name the request rather than a line.
+Every line of the request is listed, including lines nothing was spent on.
+
+**Which receipt.** The entry's own; failing that, one attached to another entry
+on the same Workday line, because an order split across two lines of a request
+is one purchase with one receipt; failing that, the encumbrance's, which is
+flagged because an encumbrance takes "a receipt or a quote". Receipts are
+numbered in the order the breakdown first reaches them, and a file backing
+several entries is numbered, and printed, once.
+
+**The page** is an ordinary report: ``?request=<pk>`` picks the request, and
+the picker offers the filter bar's year's requests plus the one asked for.
+With none asked for it opens the first that SGA still owes on. The year and
+side do not narrow the form itself. It warns, and never leaves anything out,
+about: purchases with no receipt (shown in red), a request with no reference
+number or approval date, receipts whose file type the PDF cannot take,
+receipts taken from an encumbrance, unsettled Workday lines in the queue whose
+memo quotes the request's number, money still encumbered, and lines spent past
+their award. Each funding request's page links to it.
+
+**The PDF** (``?format=pdf``) needs ``view_subledger_receipts``, since the
+receipts are in it. It is a breakdown page drawn by xhtml2pdf from
+``finance/frrf_pdf.html``, then each receipt in number order on letter pages
+captioned "Receipt 3 of 7" with the payee, date, amount and request lines.
+A PDF receipt's pages are shrunk to fit below the caption, never enlarged; a
+photo is turned the way its EXIF says, flattened onto white and kept at 2,000
+pixels on its longest side. A file is recognised by its bytes rather than its
+name, and one that cannot be read -- gone from storage, password-protected, a
+HEIC photo -- becomes a page saying so, so the numbering stays whole. The PDF
+does not use WeasyPrint, which the invoices do, so it can be made on a machine
+without cairo installed.
 
 What the work was worth
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -2288,9 +2336,10 @@ Permissions
     creates this one automatically; it is granted alongside ``view_subledger``,
     since those pages are part of the same read-only tour.
 ``view_subledger_receipts``
-    See the receipt attached to an entry. Separate from ``view_subledger``
-    because a receipt is a scan of somebody's purchase, which is a narrower
-    thing to hand out than a ledger row.
+    See the receipt attached to an entry, and download the Funding Request
+    Report Form's PDF, which has the receipts in it. Separate from
+    ``view_subledger`` because a receipt is a scan of somebody's purchase,
+    which is a narrower thing to hand out than a ledger row.
 ``edit_subledger``
     Create and edit entries, run bulk actions and log encumbrances. Marking a bill
     paid as its payment is settled also needs the events app's ``bill_event``,
@@ -2624,6 +2673,14 @@ Balances
 Reports
 ~~~~~~~
 .. automodule:: finance.reports
+    :members:
+    :undoc-members:
+
+-----
+
+Funding Request Report Form
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. automodule:: finance.frrf
     :members:
     :undoc-members:
 
