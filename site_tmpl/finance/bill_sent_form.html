@@ -1,0 +1,31 @@
+{# Mark a bill or a multi-bill sent: the day it reached the client some other way than its email, and how. #}
+{% extends 'finance/base_finance.html' %}
+{% load crispy_forms_tags %}
+
+{% block fin_content %}
+    <p class="hidden-print"><a href="{{ cancel_url }}">&larr; Back</a></p>
+    <div class="row">
+        <div class="col-md-7">
+            <div class="fin-panel">
+                <div class="fin-panel-head">{{ h2 }}</div>
+                <div class="fin-panel-body">
+                    <p>
+                        For a bill that reached the client without its email from lnldb, such as one handed over at a
+                        meeting. It then waits on the client for the worktag, as an emailed bill does.
+                    </p>
+                    <form method="post">
+                        {% csrf_token %}
+                        {% crispy form %}
+                        <div class="text-right">
+                            {% if bill.sent_on %}
+                                <button type="submit" name="unsend" value="1" class="btn btn-link pull-left" formnovalidate>Mark not sent</button>
+                            {% endif %}
+                            <a href="{{ cancel_url }}" class="btn btn-default">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Mark sent</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

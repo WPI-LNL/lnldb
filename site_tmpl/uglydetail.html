@@ -776,6 +776,9 @@
                                                     <span class="glyphicon glyphicon-exclamation-sign" title="This shouldn't happen!"></span> Never<br>
                                                 {% endif %}
                                             {% endfor %}
+                                            {% if billing.sent_on %}
+                                                {{ billing.sent_on }}, not by email{% if billing.sent_note %}: {{ billing.sent_note }}{% endif %}<br>
+                                            {% endif %}
                                         </td>
                                         <td>
                                             {% if not event.closed %}
@@ -810,6 +813,9 @@
                                                     <span class="glyphicon glyphicon-exclamation-sign" title="This shouldn't happen!"></span> Never<br>
                                                 {% endif %}
                                             {% endfor %}
+                                            {% if multibilling.sent_on %}
+                                                {{ multibilling.sent_on }}, not by email{% if multibilling.sent_note %}: {{ multibilling.sent_note }}{% endif %}<br>
+                                            {% endif %}
                                         </td>
                                         <td>
                                             MultiBill

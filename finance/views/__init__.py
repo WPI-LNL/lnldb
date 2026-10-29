@@ -5,10 +5,11 @@ from finance.views.balances import (balance_sheet, checkpoint_delete, checkpoint
                                     transfer_new)
 from finance.views.billing import (BillingCreate, BillingDelete, BillingEmailCreate, BillingUpdate,
                                    MultiBillingDelete, MultiBillingEmailCreate, bill_isd, bill_mark_paid,
-                                   bill_mark_unpaid, bill_worktag, billing_close, billing_page,
+                                   bill_mark_sent, bill_mark_unpaid, bill_worktag, billing_close, billing_page,
                                    generate_multibill_pdf,
                                    multibill_charge, multibill_charge_delete, multibill_detail, multibill_edit,
-                                   multibill_isd, multibill_list, multibill_mark_paid, multibill_mark_unpaid,
+                                   multibill_isd, multibill_list, multibill_mark_paid, multibill_mark_sent,
+                                   multibill_mark_unpaid,
                                    multibill_update_total, multibill_worktag, no_bill_needed,
                                    no_bill_needed_undo)
 from finance.views.dashboard import dashboard

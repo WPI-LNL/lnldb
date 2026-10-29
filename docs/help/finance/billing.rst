@@ -24,16 +24,23 @@ The page has one tab for each stage, with the number of bills at it.
 Tab                    What it means                                                 What to do
 =====================  ============================================================  ===============================
 Ready to bill          The VP has reviewed the event for billing, and no bill has    `Bill`, or tick events and
-                       been sent. A bill you made but never emailed is listed here   `Make a multi-bill`, or
+                       been sent. A bill you made but never sent is listed here      `Make a multi-bill`, or
                        too, marked *Not sent*.                                       `No bill needed`. For a bill
-                                                                                     not sent: `Email client`.
+                                                                                     not sent: `Email client`, or
+                                                                                     `Mark sent...`,
+                                                                                     `Enter worktag` or
+                                                                                     `Mark paid...` without
+                                                                                     emailing it.
 No bill needed         You decided the event is not billed.                          `Close`, or `Undo`.
-Waiting on client      The bill has been emailed, and no worktag has come back.      `Email again`, or
+Waiting on client      The bill has been emailed or marked sent, and no worktag has  `Email again`, or
+                       come back.
                                                                                      `Enter worktag` if the client
-                                                                                     replied by email.
+                                                                                     replied by email, or
+                                                                                     `Mark paid...`.
 Create ISD             The client sent the worktag.                                  Create the ISD in Workday, then
                                                                                      type its number and click
-                                                                                     `Record ISD`.
+                                                                                     `Record ISD`. Or
+                                                                                     `Mark paid...`.
 Waiting on approval    The ISD is in Workday, waiting for the client to approve it   Settle the payment when it
                        and the money to arrive.                                      arrives, which marks the bill
                                                                                      paid; or `Mark paid...`.
@@ -43,17 +50,22 @@ Paid                   The bill is paid, and the event is still open.           
 
 Events appear only once they are reviewed for billing, and leave once they are closed.
 
+The stages are the usual order, not a rule. A bill does not have to be emailed: if you handed it over some other way,
+click `Mark sent...` (see *Ready to Bill*), `Enter worktag` when the client sends one, or `Mark paid...` once it is
+paid. `Mark paid...` is on every bill not
+yet paid, at any stage, so a bill paid by cash or check goes straight to *Paid* from wherever it was.
+
 **Days** is how long a bill has been at its stage:
 
 - *Ready to bill*: since the event was reviewed, or, for a bill not sent, since the bill was made.
 - *No bill needed*: since you decided it.
-- *Waiting on client*: since the bill was last emailed.
+- *Waiting on client*: since the bill was last emailed, or the day you marked it sent if that is later.
 - *Create ISD*: since the worktag came in.
 - *Waiting on approval*: since the day the ISD was created in Workday.
 - *Paid*: since the day it was paid.
 
 When the client sends the worktag through the bill's form, the day comes from the event's history. An event with no
-record there, such as one changed outside the site, counts from the day the bill was last emailed.
+record there, such as one changed outside the site, counts from the day the bill was last sent.
 
 **Owed**, on the *Waiting on client*, *Create ISD* and *Waiting on approval* tabs, is what is still owed on the bill and
 for how many days since it was billed. These are the same figures as the *Owed to LNL* report (see :doc:`reports`). A
@@ -72,7 +84,11 @@ Ready to Bill
 
 This tab has three sections:
 
-- **Bills made but never sent.** Click `Email client` to send the bill.
+- **Bills made but never sent.** Click `Email client` to send the bill. If the client already has it, such as one
+  you handed over at a meeting or emailed from your own inbox, click `Mark sent...`: give the day and, if you like, how
+  it was sent. It moves to *Waiting on client* as an emailed bill does, and its *Last sent* says *Not by email*. Click
+  `Change` there to fix the day, or `Mark not sent` on that page to undo it. You can also click `Enter worktag` for
+  the worktag the client sent, or `Mark paid...` if they have paid.
 - **Bill on its own.** Click `Bill` to make the event's bill, as on the event page.
 - **Bill in bulk.** Events marked to be billed in bulk, grouped by client. Click `Make a multi-bill of these` to start
   a multi-bill with all of one client's events.

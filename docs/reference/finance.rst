@@ -1791,9 +1791,10 @@ record:
 Stage                  Read off
 =====================  ======================================================
 Ready to bill          Reviewed, not closed, and no bill; or a bill with no
-                       email sent, shown as *Not sent*
+                       email sent and no ``sent_on``, shown as *Not sent*
 No bill needed         No bill, and a ``NoBillNeeded`` row for the event
-Waiting on client      An email sent for the bill, and no worktag yet
+Waiting on client      An email sent for the bill, or ``sent_on``, and no
+                       worktag yet
 Create ISD             A worktag: ``worktag_charged`` on the bill, which the
                        Treasurer records, or a worktag on the event, which
                        only the client's form sets. The fund can be on the
@@ -1811,6 +1812,23 @@ the event's figures read, so an event billed again after a paid bill is back
 at work. A multi-bill is one row for all its events, listed while any of them
 is open. It has no form for the client, so it reaches *Create ISD* only when
 the Treasurer records its worktag.
+
+The stages are read in that order, but nothing makes a bill pass through each.
+Every unpaid bill on the Billing page, and an event's own bill in its *Next
+step* box, offers *Mark paid*, and a bill not sent offers *Mark sent* and
+*Enter worktag* too, so a bill handed over without the app's email is not
+stuck at *Not sent*.
+
+**Sent without the email.** Emailing a bill records itself (``sent_at`` on
+its ``BillingEmail``). A bill that reached the client some other way is
+marked sent instead: ``sent_on`` and ``sent_note`` on either kind of bill
+(migration ``0019_bill_sent_by_hand``), set by
+:class:`~finance.billing_forms.BillSentForm`, which refuses a day before the
+bill was made or after today. :func:`finance.billing.sent_on` reads the later
+of the last email and ``sent_on``, and that day is what moves a bill to
+*Waiting on client*, starts its days there and fills *Last sent* on the
+Billing page, the multi-bill list and the weekly digest. *Mark not sent*
+clears both fields; a paid bill is past either.
 
 **The ISD record.** Both kinds of bill carry the same fields
 (:class:`~finance.models.ISDRecord`, migration ``0006_isd_record_and_no_bill_needed``):

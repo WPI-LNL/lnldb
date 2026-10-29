@@ -30,7 +30,7 @@
                             <th align="left">Bill</th>
                             <th align="left">Client</th>
                             <th align="right">Amount</th>
-                            <th align="left">Last emailed</th>
+                            <th align="left">Last sent</th>
                             <th align="right">Days</th>
                         </tr>
                         {% for item in waiting_on_client %}
@@ -41,7 +41,7 @@
                                     {{ item.amount|money }}
                                     {% if item.received %}<br><small>{{ item.received|money }} received</small>{% endif %}
                                 </td>
-                                <td>{{ item.last_emailed|date:"M j, Y" }}</td>
+                                <td>{{ item.last_sent|date:"M j, Y" }}</td>
                                 <td align="right">{{ item.days }}</td>
                             </tr>
                         {% endfor %}

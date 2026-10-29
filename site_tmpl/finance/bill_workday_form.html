@@ -49,8 +49,8 @@
                         <dd>{{ item.client.retname|default:"—" }}</dd>
                         <dt>Billed</dt>
                         <dd>{{ bill.amount|money }} on {{ bill.date_billed|date:"M j, Y" }}</dd>
-                        <dt>Last emailed</dt>
-                        <dd>{{ item.last_emailed|date:"M j, Y"|default:"never" }}</dd>
+                        <dt>Last sent</dt>
+                        <dd>{{ item.last_sent|date:"M j, Y"|default:"never" }}{% if item.sent_by_hand %}, not by email{% endif %}</dd>
                         {% if item.is_multibill %}
                             <dt>Events</dt>
                             <dd>{% for event in item.events %}{{ event.event_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</dd>

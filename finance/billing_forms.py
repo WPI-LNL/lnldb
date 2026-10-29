@@ -305,6 +305,32 @@ class MultiBillChargeForm(forms.ModelForm):
         return charge
 
 
+class BillSentForm(forms.Form):
+    """
+    When a bill (or a multi-bill) reached its client some other way than its
+    email from lnldb, and how: handed over at a meeting, or sent from the
+    Treasurer's own inbox. It moves the bill on to *Waiting on client*, as the
+    email would.
+    """
+    sent_on = forms.DateField(label="Sent on", widget=forms.DateInput(attrs={'type': 'date'}))
+    sent_note = forms.CharField(required=False, max_length=200, label="How it was sent",
+                                help_text="Such as handed over at a meeting, or emailed from your own inbox.")
+
+    def __init__(self, *args, **kwargs):
+        self.bill = kwargs.pop('bill')
+        super(BillSentForm, self).__init__(*args, **kwargs)
+        self.helper = finance_form_helper()
+
+    def clean_sent_on(self):
+        day = self.cleaned_data['sent_on']
+        if day > timezone.localdate():
+            raise ValidationError("A bill cannot have been sent after today.")
+        if day < self.bill.date_billed:
+            raise ValidationError("The bill was made on %s, so it cannot have been sent before then."
+                                  % date_format(self.bill.date_billed, 'M j, Y'))
+        return day
+
+
 class BillPaidForm(forms.Form):
     """
     When a bill (or a multi-bill) was paid, and how, when it was not through

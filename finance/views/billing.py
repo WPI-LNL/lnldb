@@ -45,9 +45,10 @@ from emails.generators import BillingEmailGenerator, DefaultLNLEmailGenerator as
 from events.models import BaseEvent
 from finance.billing import (CLOSABLE, CREATE_ISD, NO_BILL_NEEDED, PAID, READY, STAGE_HELP, STAGES,
                              WAITING_ON_APPROVAL, WAITING_ON_CLIENT, BillItem, attach_payments, billing_items,
-                             by_stage, closable_items, close_item, event_item, filter_items, ready_sections)
+                             by_stage, closable_items, close_item, event_item, filter_items, ready_sections,
+                             sent_on)
 from finance.billing_forms import (BillingEmailForm, BillingForm, BillingUpdateForm, BillISDForm, BillPaidForm,
-                                   BillWorktagForm, MultiBillChargeForm, MultiBillForm, MultiBillingEmailForm,
+                                   BillSentForm, BillWorktagForm, MultiBillChargeForm, MultiBillForm, MultiBillingEmailForm,
                                    NoBillNeededForm, bill_events, clear_isd, client_tally)
 from finance.calculators import bill_payments, latest_bill
 from finance.filters import filter_context, get_filter_state
@@ -597,6 +598,9 @@ def multibill_list(request):
                        closed_events=Count('events', filter=Q(events__closed=True), distinct=True))
              .order_by('-date_billed', '-pk'))
     page = Paginator(bills, 40).get_page(request.GET.get('page'))
+    for bill in page.object_list:
+        bill.last_sent = sent_on(bill)
+        bill.sent_by_hand = bill.sent_on is not None and bill.sent_on == bill.last_sent
     return render(request, 'finance/multibillings.html',
                   _billing_context(request, h2="Multi-bills", page=page))
 
@@ -748,6 +752,14 @@ def multibill_mark_unpaid(request, pk):
     return _mark_unpaid(request, bill)
 
 
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def multibill_mark_sent(request, pk):
+    """ The *Mark sent* form for a multi-bill. See :func:`_mark_sent`. """
+    bill = get_object_or_404(MultiBilling, pk=pk)
+    return _mark_sent(request, bill)
+
+
 # ---------------------------------------------------------------------------
 # Marking a bill paid
 #
@@ -806,6 +818,43 @@ def _mark_paid(request, bill):
     return render(request, 'finance/bill_paid_form.html', context)
 
 
+def _mark_sent(request, bill):
+    """
+    When a bill reached its client some other way than its email, and how.
+
+    Emailing a bill records that it went out; a bill handed over in person, or
+    sent from the Treasurer's own inbox, is marked sent here instead, and moves
+    on to *Waiting on client* just the same. *Mark not sent* takes it off
+    again. A paid bill is past needing either.
+    """
+    back = _bill_url(bill)
+    refused = _bill_closed(request, bill, bill_events(bill))
+    if refused:
+        return refused
+    name = _bill_name(bill)
+    if bill.date_paid:
+        messages.info(request, "%s was paid on %s, so it is past being sent."
+                      % (name[0].upper() + name[1:], date_format(bill.date_paid, 'M j, Y')))
+        return HttpResponseRedirect(back)
+    if request.method == 'POST' and 'unsend' in request.POST:
+        bill.sent_on = None
+        bill.sent_note = ''
+        bill.save(update_fields=['sent_on', 'sent_note'])
+        messages.success(request, "%s is no longer marked sent." % (name[0].upper() + name[1:]))
+        return HttpResponseRedirect(_back_to(request, back))
+    form = BillSentForm(request.POST or None, bill=bill,
+                        initial={'sent_on': bill.sent_on or timezone.localdate(), 'sent_note': bill.sent_note})
+    if request.method == 'POST' and form.is_valid():
+        bill.sent_on = form.cleaned_data['sent_on']
+        bill.sent_note = form.cleaned_data['sent_note']
+        bill.save(update_fields=['sent_on', 'sent_note'])
+        messages.success(request, "Marked %s sent on %s." % (name, date_format(bill.sent_on, 'M j, Y')))
+        return HttpResponseRedirect(_back_to(request, back))
+    context = _billing_context(request, h2="Mark %s sent" % name, bill=bill, form=form,
+                               is_multibill=isinstance(bill, MultiBilling), cancel_url=_back_to(request, back))
+    return render(request, 'finance/bill_sent_form.html', context)
+
+
 def _mark_unpaid(request, bill):
     """ Take a bill's paid date off, and how it was paid, so it can be changed again. """
     back = _bill_url(bill)
@@ -826,6 +875,14 @@ def bill_mark_paid(request, event, pk):
     """ The *Mark paid* form for one event's bill. See :func:`_mark_paid`. """
     bill = get_object_or_404(Billing.objects.select_related('event'), event_id=event, pk=pk)
     return _mark_paid(request, bill)
+
+
+@login_required
+@permission_required('events.bill_event', raise_exception=True)
+def bill_mark_sent(request, event, pk):
+    """ The *Mark sent* form for one event's bill. See :func:`_mark_sent`. """
+    bill = get_object_or_404(Billing.objects.select_related('event'), event_id=event, pk=pk)
+    return _mark_sent(request, bill)
 
 
 @login_required

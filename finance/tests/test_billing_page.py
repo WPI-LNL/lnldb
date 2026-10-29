@@ -112,8 +112,28 @@ class StageTests(TestCase):
         made = bill(gala, emailed_days_ago=9)
         BillingEmail.objects.create(billing=made, subject='Again', message='Again', sent_at=evening(days_ago(2)))
         found = item(gala)
-        self.assertEqual((found.stage, found.since, found.last_emailed),
-                         (billing.WAITING_ON_CLIENT, days_ago(2), days_ago(2)))
+        self.assertEqual((found.stage, found.since, found.last_sent, found.sent_by_hand),
+                         (billing.WAITING_ON_CLIENT, days_ago(2), days_ago(2), False))
+
+    def test_a_bill_marked_sent_waits_on_the_client_from_that_day(self):
+        gala = show('Gala')
+        made = bill(gala, billed_days_ago=8)
+        made.sent_on = days_ago(5)
+        made.save()
+        found = item(gala)
+        self.assertEqual((found.stage, found.not_sent, found.since, found.sent_by_hand),
+                         (billing.WAITING_ON_CLIENT, False, days_ago(5), True))
+        # Emailed after it was handed over: the email is the last time it went out.
+        BillingEmail.objects.create(billing=made, subject='Bill', message='Bill', sent_at=evening(days_ago(1)))
+        found = item(gala)
+        self.assertEqual((found.since, found.sent_by_hand), (days_ago(1), False))
+
+    def test_a_multibill_marked_sent_waits_on_the_client(self):
+        bulk = multibill([show('Film')])
+        bulk.sent_on = days_ago(3)
+        bulk.save()
+        found = billing.multibill_item(bulk)
+        self.assertEqual((found.stage, found.since, found.sent_by_hand), (billing.WAITING_ON_CLIENT, days_ago(3), True))
 
     def test_a_worktag_from_the_client_means_create_the_isd(self):
         gala = show('Gala', worktag='1234-CC', workday_fund=110)
@@ -372,6 +392,79 @@ class BillingPageTests(ViewTestCase):
         self.assertContains(resp, '%s?events=%s&amp;events=%s' % (reverse('finance:multibill-new'),
                                                                   films[0].pk, films[1].pk))
         self.assertContains(resp, 'Make a multi-bill of the ticked events')
+
+    def test_a_bill_need_not_be_emailed_to_be_paid(self):
+        gala = show('Gala')
+        made = bill(gala)
+        tab = self.url + '?stage=ready&fy=all'
+        resp = self.client.get(tab)
+        paid = reverse('finance:bill-paid', args=[gala.pk, made.pk])
+        self.assertContains(resp, paid)
+        self.assertContains(resp, reverse('finance:bill-worktag', args=[gala.pk, made.pk]))
+        self.assertRedirects(self.client.post(paid, {'next': tab, 'date_paid': TODAY.isoformat(),
+                                                     'paid_note': 'Check handed over'}), tab)
+        self.assertEqual(item(gala).stage, billing.PAID)
+
+    def test_mark_a_bill_sent_without_emailing_it(self):
+        gala = show('Gala')
+        made = bill(gala, billed_days_ago=8)
+        tab = self.url + '?stage=ready&fy=all'
+        sent = reverse('finance:bill-sent', args=[gala.pk, made.pk])
+        self.assertContains(self.client.get(tab), sent)
+        self.assertOk(self.client.get(sent))
+        self.assertRedirects(self.client.post(sent, {'next': tab, 'sent_on': days_ago(2).isoformat(),
+                                                     'sent_note': 'Handed over at the meeting'}), tab)
+        made.refresh_from_db()
+        self.assertEqual((made.sent_on, made.sent_note), (days_ago(2), 'Handed over at the meeting'))
+        resp = self.client.get(self.url + '?stage=waiting-on-client&fy=all')
+        self.assertContains(resp, 'Not by email: Handed over at the meeting.')
+        self.assertContains(resp, sent)
+
+    def test_mark_sent_refuses_a_day_before_the_bill_or_after_today(self):
+        gala = show('Gala')
+        made = bill(gala, billed_days_ago=8)
+        sent = reverse('finance:bill-sent', args=[gala.pk, made.pk])
+        for day, error in ((days_ago(9), 'cannot have been sent before then'),
+                           (TODAY + datetime.timedelta(days=1), 'cannot have been sent after today')):
+            self.assertContains(self.client.post(sent, {'sent_on': day.isoformat()}), error)
+        made.refresh_from_db()
+        self.assertIsNone(made.sent_on)
+
+    def test_mark_not_sent_puts_it_back(self):
+        gala = show('Gala')
+        made = bill(gala)
+        made.sent_on, made.sent_note = TODAY, 'By hand'
+        made.save()
+        self.client.post(reverse('finance:bill-sent', args=[gala.pk, made.pk]), {'unsend': '1'})
+        made.refresh_from_db()
+        self.assertEqual((made.sent_on, made.sent_note), (None, ''))
+        self.assertTrue(item(gala).not_sent)
+
+    def test_a_paid_bill_is_past_being_sent(self):
+        gala = show('Gala')
+        made = bill(gala, paid_days_ago=1)
+        self.client.post(reverse('finance:bill-sent', args=[gala.pk, made.pk]), {'sent_on': TODAY.isoformat()})
+        made.refresh_from_db()
+        self.assertIsNone(made.sent_on)
+
+    def test_mark_a_multibill_sent(self):
+        bulk = multibill([show('Film'), show('Other film')])
+        sent = reverse('finance:multibill-sent', args=[bulk.pk])
+        self.assertContains(self.client.get(self.url + '?stage=ready&fy=all'), sent)
+        self.assertContains(self.client.get(reverse('finance:multibill-detail', args=[bulk.pk])), sent)
+        self.client.post(sent, {'sent_on': TODAY.isoformat()})
+        bulk.refresh_from_db()
+        self.assertEqual(bulk.sent_on, TODAY)
+        self.assertContains(self.client.get(reverse('finance:multibill-detail', args=[bulk.pk])),
+                            'not by email')
+        self.assertContains(self.client.get(reverse('finance:multibill-list')), 'not by email')
+
+    def test_every_unpaid_stage_offers_mark_paid(self):
+        waiting = bill(show('Ball'), emailed_days_ago=3)
+        isd = bill(show('Fair', worktag='1234-CC'), emailed_days_ago=3)
+        for stage, made in (('waiting-on-client', waiting), ('create-isd', isd)):
+            resp = self.client.get(self.url + '?stage=%s&fy=all' % stage)
+            self.assertContains(resp, reverse('finance:bill-paid', args=[made.event_id, made.pk]))
 
     def test_other_years_are_counted_not_hidden(self):
         show('Fall show', start=datetime.date(2026, 9, 10))
@@ -691,6 +784,29 @@ class NextStepBoxTests(ViewTestCase):
         resp = self.page(gala)
         self.assertContains(resp, 'Next step: Waiting on client.')
         self.assertContains(resp, reverse('finance:bill-email', args=[gala.pk, made.pk]))
+
+    def test_a_bill_not_sent_can_skip_the_email(self):
+        gala = show('Gala')
+        made = bill(gala)
+        resp = self.page(gala)
+        self.assertContains(resp, reverse('finance:bill-email', args=[gala.pk, made.pk]))
+        self.assertContains(resp, reverse('finance:bill-sent', args=[gala.pk, made.pk]))
+        self.assertContains(resp, reverse('finance:bill-worktag', args=[gala.pk, made.pk]))
+        self.assertContains(resp, reverse('finance:bill-paid', args=[gala.pk, made.pk]))
+
+    def test_a_bill_marked_sent_says_so(self):
+        gala = show('Gala')
+        made = bill(gala)
+        made.sent_on, made.sent_note = TODAY, 'Handed over'
+        made.save()
+        resp = self.page(gala)
+        self.assertContains(resp, 'Next step: Waiting on client.')
+        self.assertContains(resp, '(Handed over), not by email.')
+
+    def test_waiting_on_the_client_offers_mark_paid(self):
+        gala = show('Gala')
+        made = bill(gala, emailed_days_ago=3)
+        self.assertContains(self.page(gala), reverse('finance:bill-paid', args=[gala.pk, made.pk]))
 
     def test_marked_to_bill_in_bulk_starts_a_multibill(self):
         film = show('Film', billed_in_bulk=True)

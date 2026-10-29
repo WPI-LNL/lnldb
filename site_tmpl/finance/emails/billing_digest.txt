@@ -5,7 +5,7 @@ WAITING ON THE CLIENT, {{ client_days }} DAYS OR MORE
 Emailed, and no worktag has come back. Email them again from the Billing page:
 {{ base }}{% url 'finance:billing' %}?stage=waiting-on-client&fy=all
 {% for item in waiting_on_client %}
-- {{ item.name }}{% if item.client %} ({{ item.client.retname }}){% endif %}: {{ item.amount|money }}, last emailed {{ item.last_emailed|date:"M j, Y" }}, {{ item.days }} days ago.{% if item.received %} {{ item.received|money }} received so far.{% endif %}
+- {{ item.name }}{% if item.client %} ({{ item.client.retname }}){% endif %}: {{ item.amount|money }}, last sent {{ item.last_sent|date:"M j, Y" }}, {{ item.days }} days ago.{% if item.received %} {{ item.received|money }} received so far.{% endif %}
   {{ base }}{{ item.url }}{% endfor %}
 {% endif %}{% if waiting_on_approval %}
 WAITING ON APPROVAL, {{ approval_days }} DAYS OR MORE

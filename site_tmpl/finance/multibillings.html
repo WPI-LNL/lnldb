@@ -18,7 +18,7 @@
                         <th>Events</th>
                         <th>Billed</th>
                         <th class="fin-num">Total</th>
-                        <th>Last emailed</th>
+                        <th>Last sent</th>
                         <th>Paid</th>
                         <th></th>
                     </tr>
@@ -34,7 +34,7 @@
                             <td>{{ bill.date_billed|date:"M j, Y" }}</td>
                             <td class="fin-num">{{ bill.amount|money }}</td>
                             <td>
-                                {% if bill.last_emailed %}{{ bill.last_emailed|date:"M j, Y" }}
+                                {% if bill.last_sent %}{{ bill.last_sent|date:"M j, Y" }}{% if bill.sent_by_hand %} <small class="fin-muted">not by email</small>{% endif %}
                                 {% else %}<span class="text-warning">Never</span>{% endif %}
                             </td>
                             <td>

@@ -98,6 +98,9 @@ for you -- the events, the total, and a request to reply with the worktag to cha
 sending. The invoice is attached, named after the bill (such as *fall-films-bill.pdf*). Every email sent is listed on
 the bill's page.
 
+If the client got the bill some other way, such as by hand, click `Mark sent...` on the bill's page instead. It waits
+on the client for the worktag just as an emailed bill does.
+
 
 The Worktag and the ISD
 -----------------------

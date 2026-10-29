@@ -66,11 +66,19 @@
                                     <td class="fin-num">{{ item.amount|money }}</td>
                                     <td class="fin-num">{{ item.days }}</td>
                                     <td class="text-right fin-nowrap">
+                                        {% comment %}
+                                            Emailing is the usual next step, not the only one: a bill
+                                            handed over some other way can be marked sent, take the
+                                            worktag the client sent, or be marked paid.
+                                        {% endcomment %}
                                         {% if item.is_multibill %}
                                             <a href="{% url 'finance:multibill-email' item.bill.pk %}" class="btn btn-xs btn-primary">Email client</a>
                                         {% else %}
                                             <a href="{% url 'finance:bill-email' item.event.pk item.bill.pk %}" class="btn btn-xs btn-primary">Email client</a>
                                         {% endif %}
+                                        <a href="{{ item.sent_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-default" title="It reached the client some other way, such as by hand">Mark sent…</a>
+                                        <a href="{{ item.worktag_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-default" title="The client sent the worktag without being emailed the bill">Enter worktag</a>
+                                        <a href="{{ item.paid_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-default" title="Paid without being emailed: give the day and how">Mark paid…</a>
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -266,7 +274,7 @@
                         {% else %}
                             <th>Billed</th>
                             <th class="fin-num">Amount</th>
-                            {% if stage == 'waiting-on-client' %}<th>Last emailed</th>{% endif %}
+                            {% if stage == 'waiting-on-client' %}<th>Last sent</th>{% endif %}
                             {% if stage == 'waiting-on-approval' %}<th>ISD</th><th>Worktag</th>{% endif %}
                             {% if stage == 'paid' %}<th>Paid</th>{% endif %}
                         {% endif %}
@@ -345,7 +353,7 @@
                                     {% endif %}
                                 </td>
                                 {% if stage == 'waiting-on-client' %}
-                                    <td class="fin-nowrap">{{ item.last_emailed|date:"M j, Y" }}</td>
+                                    <td class="fin-nowrap">{{ item.last_sent|date:"M j, Y" }}{% if item.sent_by_hand %}<br><small class="fin-muted">Not by email{% if item.bill.sent_note %}: {{ item.bill.sent_note }}{% endif %}. <a href="{{ item.sent_url }}?next={{ here|urlencode }}">Change</a></small>{% endif %}</td>
                                 {% endif %}
                                 {% if stage == 'waiting-on-approval' %}
                                     <td class="fin-nowrap">
@@ -425,12 +433,16 @@
                                     <a href="{{ item.isd_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-link">Change</a>
                                 {% elif stage == 'waiting-on-approval' %}
                                     <a href="{{ item.isd_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-link">{% if item.bill.isd_number %}Change ISD{% else %}Record ISD{% endif %}</a>
-                                    {% if not item.covered %}
-                                        <a href="{{ item.paid_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-default" title="Paid by cash or check, or before the books start: give the day and how">Mark paid…</a>
-                                    {% endif %}
                                 {% elif stage == 'paid' and can_close and not item.close_refusal %}
                                     <button type="submit" form="fin-close-form" name="only" value="{{ item.key }}" class="btn btn-xs btn-default"
                                             onclick="return confirm('Close {% if item.is_multibill %}the events on {% endif %}{{ item.name|escapejs }}? Closing locks {% if item.is_multibill %}each{% else %}the{% endif %} event for edits, and cannot be easily undone.');">Close</button>
+                                {% endif %}
+                                {% if stage != 'paid' and not item.covered %}
+                                    {% comment %}
+                                        A bill can be paid at any stage -- cash or a check before the
+                                        worktag came back, or one from before the books start.
+                                    {% endcomment %}
+                                    <a href="{{ item.paid_url }}?next={{ here|urlencode }}" class="btn btn-xs btn-default" title="Paid by cash or check, or before the books start: give the day and how">Mark paid…</a>
                                 {% endif %}
                             </td>
                         </tr>

@@ -3218,6 +3218,12 @@ class FiscalYearClose(models.Model):
 PAID_NOTE_HELP = ("How it was paid, when no payment received in Workday covers it: cash, a check, or a bill "
                   "from before the books start.")
 
+#: What a bill's *sent_on* means. A bill is usually sent by its email from
+#: lnldb, which records itself; this is for one that reached the client some
+#: other way.
+SENT_ON_HELP = "When the bill reached the client some other way than its email from lnldb."
+SENT_NOTE_HELP = "How the bill reached the client, such as handed over at a meeting."
+
 #: Workday's number for an Internal Service Delivery: digits, then "-ISD", as
 #: it appears when the ISD is created and again in the export's Operational
 #: Transaction column ("Internal Service Delivery: 25090179-ISD").
@@ -3287,6 +3293,9 @@ class Billing(ISDRecord):
     date_paid = models.DateField(null=True, blank=True)
     paid_note = models.CharField(max_length=200, blank=True, verbose_name="How it was paid",
                                  help_text=PAID_NOTE_HELP)
+    sent_on = models.DateField(null=True, blank=True, verbose_name="Sent on", help_text=SENT_ON_HELP)
+    sent_note = models.CharField(max_length=200, blank=True, verbose_name="How it was sent",
+                                 help_text=SENT_NOTE_HELP)
     event = models.ForeignKey('events.BaseEvent', on_delete=models.CASCADE, related_name="billings")
     amount = models.DecimalField(max_digits=8, decimal_places=2)
     # Who recorded the ISD. Set by the page that records it, never typed: left
@@ -3354,6 +3363,9 @@ class MultiBilling(ISDRecord):
     date_paid = models.DateField(null=True, blank=True)
     paid_note = models.CharField(max_length=200, blank=True, verbose_name="How it was paid",
                                  help_text=PAID_NOTE_HELP)
+    sent_on = models.DateField(null=True, blank=True, verbose_name="Sent on", help_text=SENT_ON_HELP)
+    sent_note = models.CharField(max_length=200, blank=True, verbose_name="How it was sent",
+                                 help_text=SENT_NOTE_HELP)
     org = models.ForeignKey('events.Organization', on_delete=models.PROTECT, null=True,
                             related_name='multibillings', verbose_name="Bill to")
     events = models.ManyToManyField('events.BaseEvent', related_name='multibillings',

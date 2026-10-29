@@ -16,11 +16,11 @@ A stage is read off what the bill and its event record:
 Stage                   Read off
 ======================  =====================================================
 Ready to bill           Reviewed, with no bill; or a bill that was never
-                        emailed, which is shown as *Not sent*
+                        sent, which is shown as *Not sent*
 No bill needed          The Treasurer decided the event is not billed
                         (:class:`~finance.models.NoBillNeeded`)
-Waiting on client       The bill has been emailed, and no worktag has come
-                        back
+Waiting on client       The bill has been sent -- emailed, or marked sent
+                        by the Treasurer -- and no worktag has come back
 Create ISD              A worktag has come back: through the bill's form, onto
                         the event, or recorded on the bill by the Treasurer
 Waiting on approval     The ISD's number is recorded on the bill -- or, for a
@@ -76,7 +76,7 @@ STAGES = OrderedDict((
 STAGE_HELP = {
     READY: "Reviewed for billing, and not yet sent a bill.",
     NO_BILL_NEEDED: "You decided these are not billed. Close each event when nothing else is left to do on it.",
-    WAITING_ON_CLIENT: "The bill has been emailed. The client has not yet sent the worktag to charge.",
+    WAITING_ON_CLIENT: "The bill has been sent. The client has not yet sent the worktag to charge.",
     CREATE_ISD: "The client sent a worktag. Create the Internal Service Delivery in Workday, then record its "
                 "number.",
     WAITING_ON_APPROVAL: "The ISD is in Workday, waiting for the client to approve it and the money to arrive.",
@@ -102,7 +102,7 @@ class BillItem(object):
     with every event on it.
 
     ``since`` is the day the item reached its stage, from which ``days`` is
-    counted. ``not_sent`` marks a bill that exists but was never emailed,
+    counted. ``not_sent`` marks a bill that exists but was never sent,
     which is still ready to bill. ``no_bill`` is the event's *No bill needed*
     record, when it has one.
 
@@ -225,13 +225,14 @@ class BillItem(object):
                 and getattr(self.event, 'is_sga_funded', False) and self.price_now == ZERO)
 
     @property
-    def last_emailed(self):
-        """ When the bill was last emailed, or ``None``. """
-        if self.bill is None:
-            return None
-        emails = (self.bill.multibillingemail_set.all() if self.is_multibill
-                  else self.bill.billingemail_set.all())
-        return _last_sent(emails)
+    def last_sent(self):
+        """ When the bill last went to the client, by email or otherwise, or ``None``. See :func:`sent_on`. """
+        return None if self.bill is None else sent_on(self.bill)
+
+    @property
+    def sent_by_hand(self):
+        """ Whether the bill last went out some other way than its email: marked sent by the Treasurer. """
+        return self.bill is not None and self.bill.sent_on is not None and self.bill.sent_on == self.last_sent
 
     @property
     def memo(self):
@@ -315,6 +316,13 @@ class BillItem(object):
         return reverse('events:bills:pdf', args=(self.event.pk,))
 
     @property
+    def sent_url(self):
+        """ The *Mark sent* form, for a bill that reached the client some other way than its email. """
+        if self.is_multibill:
+            return reverse('finance:multibill-sent', args=(self.bill.pk,))
+        return reverse('finance:bill-sent', args=(self.event.pk, self.bill.pk))
+
+    @property
     def worktag_url(self):
         """ Where the Treasurer records the worktag a client sent by email. """
         if self.is_multibill:
@@ -336,10 +344,21 @@ def _local_day(value):
     return value
 
 
-def _last_sent(emails):
+def _last_emailed(emails):
     """ The day the latest of these bill emails went out, or ``None`` if none did. """
     sent = [email.sent_at for email in emails if email.sent_at is not None]
     return _local_day(max(sent)) if sent else None
+
+
+def sent_on(bill):
+    """
+    The day a bill last went to its client: the latest email that sent it, or
+    the day the Treasurer marked it sent some other way (``sent_on``),
+    whichever is later. ``None`` if neither.
+    """
+    emails = bill.multibillingemail_set.all() if isinstance(bill, MultiBilling) else bill.billingemail_set.all()
+    days = [day for day in (_last_emailed(emails), bill.sent_on) if day is not None]
+    return max(days) if days else None
 
 
 def _reviewed_day(event):
@@ -378,7 +397,7 @@ def event_item(event, bill, no_bill=None):
         return BillItem(READY, [event], since=_reviewed_day(event))
     if bill.date_paid:
         return BillItem(PAID, [event], bill, since=bill.date_paid)
-    sent = _last_sent(bill.billingemail_set.all())
+    sent = sent_on(bill)
     # A worktag on the event is only ever put there by the client's form; the
     # fund can be there without one, so it is not read.
     worktag_sent = bool(getattr(event, 'worktag', None))
@@ -405,7 +424,7 @@ def multibill_item(bill):
         return BillItem(WAITING_ON_APPROVAL, events, bill, since=bill.isd_entered_on)
     if bill.worktag_charged:
         return BillItem(CREATE_ISD, events, bill, since=bill.worktag_entered_on)
-    sent = _last_sent(bill.multibillingemail_set.all())
+    sent = sent_on(bill)
     if sent is None:
         return BillItem(READY, events, bill, since=bill.date_billed, not_sent=True)
     return BillItem(WAITING_ON_CLIENT, events, bill, since=sent)
@@ -430,7 +449,7 @@ def _date_from_history(items):
                                  WORKDAY_ENTERED_COMMENT)
     for item in undated:
         pk = item.event.pk
-        fallback = (worktag_days.get(pk) or item.bill.worktag_entered_on or item.last_emailed
+        fallback = (worktag_days.get(pk) or item.bill.worktag_entered_on or item.last_sent
                     or item.bill.date_billed)
         item.since = entered_days.get(pk, fallback) if item.stage == WAITING_ON_APPROVAL else fallback
 
@@ -735,7 +754,7 @@ def digest():
     What the weekly billing digest lists, as a dict:
 
     * ``waiting_on_client``: bills the client has not answered at least
-      ``client_days`` days after they were last emailed (14 to start);
+      ``client_days`` days after they were last sent (14 to start);
     * ``waiting_on_approval``: ISDs still waiting at least ``approval_days``
       days after they were recorded (21 to start);
     * ``to_close``: events paid, or needing no bill, that are still open.

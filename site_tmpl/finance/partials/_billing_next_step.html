@@ -10,10 +10,10 @@
         <p>
             <strong>Next step: {{ item.stage_label }}.</strong>
             {% if item.is_multibill %}
-                Billed on the multi-bill <a href="{{ item.url }}">{{ item.name }}</a>{% if item.stage == 'ready' %}, which has not been emailed yet{% elif item.stage == 'waiting-on-client' %}, emailed {{ item.last_emailed|date:"M j, Y" }}. Waiting for the client to send the worktag to charge{% elif item.stage == 'create-isd' %}. The client sent the worktag {{ item.worktag }}{% if item.fund %} ({{ item.fund }}){% endif %}: create the Internal Service Delivery in Workday for {{ item.amount|money }}{% elif item.stage == 'waiting-on-approval' %}. ISD {{ item.bill.isd_number }} is waiting for the client to approve it and the money to arrive{% elif item.stage == 'paid' %}, paid {{ item.bill.date_paid|date:"M j, Y" }}. Close the event when nothing else is left to do on it{% endif %}.
+                Billed on the multi-bill <a href="{{ item.url }}">{{ item.name }}</a>{% if item.stage == 'ready' %}, which has not been sent yet{% elif item.stage == 'waiting-on-client' %}, {% if item.sent_by_hand %}marked sent{% else %}emailed{% endif %} {{ item.last_sent|date:"M j, Y" }}. Waiting for the client to send the worktag to charge{% elif item.stage == 'create-isd' %}. The client sent the worktag {{ item.worktag }}{% if item.fund %} ({{ item.fund }}){% endif %}: create the Internal Service Delivery in Workday for {{ item.amount|money }}{% elif item.stage == 'waiting-on-approval' %}. ISD {{ item.bill.isd_number }} is waiting for the client to approve it and the money to arrive{% elif item.stage == 'paid' %}, paid {{ item.bill.date_paid|date:"M j, Y" }}. Close the event when nothing else is left to do on it{% endif %}.
             {% elif item.stage == 'ready' %}
                 {% if item.not_sent %}
-                    A bill was made on {{ item.bill.date_billed|date:"M j, Y" }} but has not been emailed to the client.
+                    A bill was made on {{ item.bill.date_billed|date:"M j, Y" }} but has not been sent to the client.
                 {% else %}
                     Reviewed for billing{% if item.days is not None %} {{ item.days }} day{{ item.days|pluralize }} ago{% endif %}, and not billed yet.
                     {% if event.billed_in_bulk %}It is marked to be billed in bulk, on a multi-bill.{% endif %}
@@ -23,8 +23,12 @@
                 Not being billed: {{ item.no_bill.get_reason_display }}{% if item.no_bill.note %} ({{ item.no_bill.note }}){% endif %}.
                 Close the event when nothing else is left to do on it.
             {% elif item.stage == 'waiting-on-client' %}
-                The bill was emailed {{ item.last_emailed|date:"M j, Y" }}. Waiting for the client to send the worktag
-                to charge.
+                {% if item.sent_by_hand %}
+                    The bill was marked sent {{ item.last_sent|date:"M j, Y" }}{% if item.bill.sent_note %} ({{ item.bill.sent_note }}){% endif %}, not by email.
+                {% else %}
+                    The bill was emailed {{ item.last_sent|date:"M j, Y" }}.
+                {% endif %}
+                Waiting for the client to send the worktag to charge.
             {% elif item.stage == 'create-isd' %}
                 The client sent the worktag {{ item.worktag }}{% if item.fund %} ({{ item.fund }}){% endif %}. Create
                 the Internal Service Delivery in Workday for {{ item.amount|money }}, then record its number.
@@ -49,6 +53,9 @@
             {% elif item.stage == 'ready' %}
                 {% if item.not_sent %}
                     <a href="{% url 'finance:bill-email' event.pk item.bill.pk %}" class="btn btn-sm btn-primary">Email the client</a>
+                    <a href="{{ item.sent_url }}?next={{ request.get_full_path|urlencode }}%23billing" class="btn btn-sm btn-default" title="It reached the client some other way, such as by hand">Mark sent…</a>
+                    <a href="{{ item.worktag_url }}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-default" title="The client sent the worktag without being emailed the bill">Enter worktag</a>
+                    <a href="{{ item.paid_url }}?next={{ request.get_full_path|urlencode }}%23billing" class="btn btn-sm btn-default" title="Paid without being emailed: give the day and how">Mark paid…</a>
                 {% else %}
                     {% if item.suggest_no_bill %}
                         <a href="{% url 'finance:no-bill-needed' event.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-primary">No bill needed</a>
@@ -71,14 +78,14 @@
                 </form>
             {% elif item.stage == 'waiting-on-client' %}
                 <a href="{{ item.worktag_url }}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-default">Enter worktag</a>
-                <a href="{% url 'finance:bill-email' event.pk item.bill.pk %}" class="btn btn-sm btn-default">Email again</a>
+                <a href="{% url 'finance:bill-email' event.pk item.bill.pk %}" class="btn btn-sm btn-default">Email{% if not item.sent_by_hand %} again{% endif %}</a>
+                {% if item.sent_by_hand %}
+                    <a href="{{ item.sent_url }}?next={{ request.get_full_path|urlencode }}%23billing" class="btn btn-sm btn-link">Change when it was sent</a>
+                {% endif %}
             {% elif item.stage == 'create-isd' %}
                 <a href="{{ item.isd_url }}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-primary">Record ISD</a>
                 <a href="{% url 'finance:billing' %}?stage=create-isd" class="btn btn-sm btn-default">What to enter in Workday</a>
             {% elif item.stage == 'waiting-on-approval' %}
-                {% if not item.covered %}
-                    <a href="{{ item.paid_url }}?next={{ request.get_full_path|urlencode }}%23billing" class="btn btn-sm btn-default" title="Paid by cash or check, or before the books start: give the day and how">Mark paid…</a>
-                {% endif %}
                 <a href="{{ item.isd_url }}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-link">{% if item.bill.isd_number %}Change ISD{% else %}Record ISD{% endif %}</a>
             {% elif item.stage == 'paid' %}
                 <form method="post" action="{% url 'finance:bill-unpaid' event.pk item.bill.pk %}" style="display:inline;">
@@ -86,6 +93,11 @@
                     <input type="hidden" name="next" value="{{ request.get_full_path }}#billing">
                     <button type="submit" class="btn btn-sm btn-link">Mark unpaid</button>
                 </form>
+            {% endif %}
+            {% if not item.is_multibill and not item.covered %}
+                {% if item.stage == 'waiting-on-client' or item.stage == 'create-isd' or item.stage == 'waiting-on-approval' %}
+                    <a href="{{ item.paid_url }}?next={{ request.get_full_path|urlencode }}%23billing" class="btn btn-sm btn-default" title="Paid by cash or check, or before the books start: give the day and how">Mark paid…</a>
+                {% endif %}
             {% endif %}
             <a href="{% url 'finance:billing' %}?stage={{ item.stage }}" class="btn btn-sm btn-link">Billing page</a>
         </div>

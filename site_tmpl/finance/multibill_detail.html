@@ -198,8 +198,18 @@
     <div class="fin-panel">
         <div class="fin-panel-head">
             <span>Emails sent</span>
-            <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-xs btn-default hidden-print">Email client</a>
+            <span class="hidden-print">
+                {% if not bill.date_paid and not has_closed_events %}
+                    <a href="{% url 'finance:multibill-sent' bill.pk %}" class="btn btn-xs btn-default" title="It reached the client some other way, such as by hand">{% if bill.sent_on %}Change when it was sent{% else %}Mark sent…{% endif %}</a>
+                {% endif %}
+                <a href="{% url 'finance:multibill-email' bill.pk %}" class="btn btn-xs btn-default">Email client</a>
+            </span>
         </div>
+        {% if bill.sent_on %}
+            <div class="fin-panel-body">
+                Marked sent {{ bill.sent_on|date:"M j, Y" }}, not by email{% if bill.sent_note %}: {{ bill.sent_note }}{% endif %}.
+            </div>
+        {% endif %}
         {% if emails %}
             <div class="fin-table-wrap">
                 <table class="table fin-table">

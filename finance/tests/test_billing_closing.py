@@ -296,7 +296,7 @@ class DigestCommandTests(CacheResetMixin, TestCase):
         self.run_command()
         text = mail.outbox[0].body
         self.assertIn('WAITING ON THE CLIENT, 14 DAYS OR MORE', text)
-        self.assertIn('- Masque Fall Production (Masque): $382.50, last emailed', text)
+        self.assertIn('- Masque Fall Production (Masque): $382.50, last sent', text)
         self.assertIn('15 days ago.', text)
         self.assertIn('/db/finance/billing/?stage=waiting-on-client&fy=all', text)
         self.assertIn(reverse('events:detail', args=[self.waiting.pk]), text)
