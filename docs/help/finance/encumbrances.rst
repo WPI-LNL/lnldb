@@ -58,7 +58,8 @@ the real amount. An encumbrance with several lines is listed whole, with its lin
 #. Click `Match & settle`.
 
 The line takes its fund, category, event and funding request line from the encumbrance -- you don't fill anything in
-again -- and its date becomes the date the money actually went out.
+again -- and its date becomes the date the money actually went out. Its description becomes the Workday memo, as on any
+other settled line; the encumbrance keeps its own description for whatever is still encumbered.
 
 .. warning::
     **Don't settle the line the ordinary way** while its encumbrance is open. That records the purchase twice: once as
@@ -92,4 +93,4 @@ cancelled; the money then stops counting as encumbered. Lines already matched to
 Matching a line to the wrong encumbrance can't be undone from the queue, because undoing would also throw away the
 encumbrance. Open the entry from the `Ledger` and correct it instead.
 
-`Last Modified: October 27, 2026`
+`Last Modified: October 28, 2026`

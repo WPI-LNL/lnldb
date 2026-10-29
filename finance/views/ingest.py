@@ -35,7 +35,7 @@ from finance.models import (ZERO, Billing, Encumbrance, FundingRequest, FundTran
 from finance.suggestions import (ENCUMBRANCE_CLOSE_ENOUGH, SUGGESTED_FIELDS,
                                  active_suggestion_rules,
                                  encumbrance_match_options, suggest_all,
-                                 suggest_refund_targets)
+                                 suggest_description, suggest_refund_targets)
 
 #: Where a staged upload's details live between the two halves of an import.
 #: The session, not a hidden form field, so a token cannot be replayed by
@@ -750,6 +750,18 @@ def _encumbrance_draw(reserved, remaining, stretch=True):
     return (remaining if covers_the_line else reserved), True
 
 
+def _matched_description(txn):
+    """
+    What an encumbrance line reads as once it is an entry on ``txn``.
+
+    The Workday memo, the same way the queue's own form fills it in. The
+    encumbrance's name was how the Treasurer found the reservation before the
+    charge existed; once it has cleared, the memo says what the money actually
+    bought, and the link back to the encumbrance is kept on the entry anyway.
+    """
+    return suggest_description(txn) or txn.description
+
+
 def _slice_from_encumbrance(entry, txn, amount, user):
     """
     One bank line's share of a reservation, as its own ledger entry.
@@ -757,7 +769,8 @@ def _slice_from_encumbrance(entry, txn, amount, user):
     Written when the reservation is bigger than the line and so survives it.
     The routing is copied because that is the whole point -- somebody already
     decided what this money was for -- but the receipt is not: it is evidence of
-    a purchase that has cleared, and what is left reserved has not.
+    a purchase that has cleared, and what is left reserved has not. Nor is the
+    description: the entry reads as the Workday line does.
 
     ``created_by`` is the person allocating, while the reservation keeps whoever
     wrote it. The two are different facts and the ledger has room for both.
@@ -767,7 +780,7 @@ def _slice_from_encumbrance(entry, txn, amount, user):
         amount=amount,
         status=TransactionStatus.PENDING,
         effective_date=txn.accounting_date,
-        description=entry.description,
+        description=_matched_description(txn),
         audit_explanation=entry.audit_explanation,
         is_projection=entry.is_projection,
         fund_source=entry.fund_source,
@@ -816,6 +829,7 @@ def draw_from_encumbrance(entry, txn, user, stretch=True):
     entry.parent_transaction = txn
     entry.amount = draw
     entry.effective_date = txn.accounting_date
+    entry.description = _matched_description(txn)
     entry.full_clean()
     entry.save()
     return draw, True
@@ -892,7 +906,8 @@ def match_encumbrance(request, pk):
       fiscal years on the ledger, the cash-flow chart and the award balance.
     * **Routing is left exactly as it was.** Somebody already decided what this
       money was for; the arrival of the invoice is not new information about
-      that.
+      that. The description is the exception: it becomes the Workday memo, as
+      on any other settled line.
     """
     txn = get_object_or_404(WorkdayTransaction, pk=pk)
     redirect_to = request.POST.get('next') or reverse('finance:queue')

@@ -819,7 +819,23 @@ class EncumbranceMatchingTests(FinanceViewTestCase):
         entry.refresh_from_db()
         self.assertEqual(entry.fr_line_target, self.line)
         self.assertEqual(entry.lnl_spend_category, category('consumables'))
+
+    def test_the_description_becomes_the_workday_memo(self):
+        """ The encumbrance's name found the reservation; the memo says what was bought. """
+        txn = self.make_txn(op='OT-ENC4M', amount='-200.00',
+                            memo='Gaff tape, Consumables, (A.26.3)')
+        entry = self.encumber('-200.00', description='Tape for load-ins')
+        self.match(txn, entry)
+        entry.refresh_from_db()
         self.assertEqual(entry.description, 'Gaff tape')
+
+    def test_no_memo_falls_back_to_the_payee(self):
+        txn = self.make_txn(op='OT-ENC4P', amount='-200.00', memo='')
+        entry = self.encumber('-200.00', description='Tape for load-ins')
+        self.match(txn, entry)
+        entry.refresh_from_db()
+        self.assertEqual(entry.description, txn.description)
+        self.assertNotEqual(entry.description, 'Tape for load-ins')
 
     def test_a_matched_line_settles_and_leaves_the_queue(self):
         txn = self.make_txn(op='OT-ENC5', amount='-200.00')
@@ -862,7 +878,9 @@ class EncumbranceMatchingTests(FinanceViewTestCase):
         drawn = ParsedTransaction.objects.get(parent_transaction=txn)
         self.assertEqual(drawn.amount, Decimal('-203.55'))
         self.assertEqual(drawn.fr_line_target, self.line)
-        self.assertEqual(drawn.description, 'Whole gear order')
+        self.assertEqual(drawn.description, 'Test line')
+        # What stays encumbered keeps its own name.
+        self.assertEqual(entry.description, 'Whole gear order')
         # $203.55 spent plus $296.45 still committed: the award has not moved.
         self.assertEqual(self.line.spent, Decimal('500.00'))
 
@@ -1197,7 +1215,7 @@ class EncumbranceDrawdownTests(FinanceViewTestCase):
         drawn = txn.slices.get()
         self.assertEqual(drawn.fr_line_target, self.line)
         self.assertEqual(drawn.lnl_spend_category, category('consumables'))
-        self.assertEqual(drawn.description, 'PCDI kit build')
+        self.assertEqual(drawn.description, 'Test line')
 
     def test_the_allocator_authors_the_slice_not_the_reserver(self):
         """ Two different facts, and the ledger has room for both. """
@@ -1256,7 +1274,7 @@ class EncumbranceDrawdownTests(FinanceViewTestCase):
         for txn in lines:
             txn.refresh_from_db()
             self.assertFalse(txn.unallocated_amount, txn.reference)
-            self.assertEqual(txn.slices.get().description, 'PCDI kit build')
+            self.assertEqual(txn.slices.get().description, 'Test line')
         self.encumbrance.refresh_from_db()
         self.assertEqual(self.encumbrance.amount, Decimal('-564.50'))
         # Charged once: the four lines, not the four lines plus the reservation.
