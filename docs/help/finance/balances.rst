@@ -30,6 +30,8 @@ For each account there is a table with one row per fund:
 - **Encumbrances** -- purchases logged in advance against it. Not spent yet, but spoken for. The *free* figure
   under it is what is left once they are paid. A funding request never holds money to spend, since SGA pays after the
   spending, so under it the figure is *to reimburse*: what SGA will owe once the encumbered purchases are charged.
+- **Billed, not paid** -- on Legacy's row: what events you have billed and haven't been paid for yet still owe. It isn't
+  cash yet, so it isn't counted in Legacy, but it shows what is coming. See below.
 - **What it means** -- for example, that a negative funding request balance is money SGA owes LNL.
 
 The **Not settled yet** row is every line still in the queue. With it, the funds always add up to the account's cash; once
@@ -45,6 +47,20 @@ make Legacy look short while you wait for the client to pay you back:
   Legacy that day instead.
 - An encumbrance linked to an event waits in the same row until the event is paid for.
 - Spending on a funding request doesn't wait. The funding request's own row already shows what SGA owes.
+
+**Billed, not paid** is filled in for you from the bills: there is nothing to log. Every bill whose event hasn't been paid
+for yet counts, less any part-payment already received, including bills you haven't emailed yet. Click the figure to see
+them listed under the table, longest-owed first, with the client, the date billed and the stage each bill is at. Every
+event's payment goes into 226-AG, Projection showings' included, so the bills are all on 226-AG's Legacy row.
+
+- Under it, **free once paid** is what Legacy will have free when all those bills are paid: what is free now, plus what
+  they still owe, less the event costs and encumbrances waiting for those same events, which move into Legacy when each
+  is paid. Events with costs waiting but no bill yet aren't counted on either side.
+- A bill stops counting when it is marked paid, when its event is marked *No bill needed*, or when the event is closed --
+  the same day its waiting costs move into Legacy.
+- For a past year, it shows what was billed and unpaid on June 30.
+- The *Owed to LNL* report can show a little more: it also lists bills marked paid for less than they asked, and events
+  closed with money still owed. The Balances tab counts those as never going to be paid.
 
 The last row adds up every column for the account. Its opening and closing are the account's cash, so they need a Workday
 balance; the money that came in, was spent and is encumbered is added up either way. Transfers always add up to zero,
@@ -119,4 +135,4 @@ Closing records every account's cash and fund balances as they stood, and makes 
 since the close. If the new figures are right, click `Reopen` and close the year again to record them. Reopening takes
 back the year-end transfers; the Workday balances you entered stay.
 
-`Last Modified: October 19, 2026`
+`Last Modified: October 28, 2026`

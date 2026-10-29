@@ -24,7 +24,8 @@ Income and spending                     a fiscal year, or   What came in, by cli
                                                             to one fund.
 Fund balances                           a fiscal year       Each fund's opening balance, what moved, its closing
                                                             balance and its encumbrances, account by account, adding
-                                                            up to Workday's cash.
+                                                            up to Workday's cash. Also what bills not yet paid still
+                                                            owe, and what Legacy will have free once they are paid.
 Events                                  a fiscal year, or   Every event's billing, payments, costs and margin, grouped
                                         any dates           by type of client, with costs SGA paid for shown apart.
 Owed to LNL                             today               What SGA owes on each funding request and each client owes

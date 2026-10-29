@@ -622,15 +622,24 @@ def fund_balances(fiscal_year, today=None):
         Column('available', 'Available', Column.MONEY,
                title="Closing less encumbrances. Blank for a funding request, whose money "
                      "comes after the spending"),
+        Column('billed', 'Billed, not paid', Column.MONEY,
+               title="What events billed and not yet paid for still owe. Not cash yet: it "
+                     "lands in this fund when each is paid"),
         Column('status', 'What it means'),
     ]
 
     sections, stats, notes, warnings = [], [], [], []
-    carries = unspent = awaiting = event_costs = ZERO
+    carries = unspent = awaiting = event_costs = billed = ZERO
+    free_once_paid = None
     for account in year.accounts:
         rows = []
         for row in account.rows:
-            if row.is_own:
+            if row.is_own and row.free_once_paid is not None:
+                note = "the account's own money; %s free once its %s bill%s paid" % (
+                    _dollars(row.free_once_paid), len(row.unpaid_bills),
+                    ' is' if len(row.unpaid_bills) == 1 else 's are')
+                free_once_paid = row.free_once_paid
+            elif row.is_own:
                 note = "the account's own money"
             elif row.encumbered and row.to_reimburse is not None:
                 note = "%s to reimburse once the encumbrances are charged" % _dollars(
@@ -652,8 +661,10 @@ def fund_balances(fiscal_year, today=None):
                 'closing': row.closing,
                 'reserved': row.encumbered,
                 'available': row.available,
+                'billed': row.billed if row.unpaid_bills else None,
                 'status': row.status,
             }, note=note))
+            billed += row.billed
             if row.closing is None:
                 continue
             if row.behaviour == FundBehaviour.CARRIES:
@@ -681,6 +692,7 @@ def fund_balances(fiscal_year, today=None):
             'reserved': account.encumbered,
             'available': ((account.closing_cash - account.encumbered) if account.cash_known
                           else None),
+            'billed': account.billed or None,
             'status': 'What Workday holds' if account.cash_known
                       else 'Enter a Workday balance to see this',
         })
@@ -722,6 +734,10 @@ def fund_balances(fiscal_year, today=None):
         stats.append(Stat('Event costs awaiting payment', event_costs,
                           "spent on events not yet paid for, not yet taken from Legacy",
                           tone='text-warning'))
+    if billed:
+        stats.append(Stat('Billed, not paid', billed,
+                          "%s free once paid" % _dollars(free_once_paid)
+                          if free_once_paid is not None else "owed on bills not yet paid"))
 
     if year.before_books:
         warnings.append("%s is before the books start, so there is nothing to report."
@@ -730,7 +746,9 @@ def fund_balances(fiscal_year, today=None):
         notes.insert(0, "The books start on %s.%s Balances count every settled line, whichever "
                         "side of the partition it was for. An expense linked to an event is not "
                         "taken from Legacy (or any fund that carries forward) until the event is "
-                        "paid for, marked No bill needed, or closed."
+                        "paid for, marked No bill needed, or closed. Billed, not paid is what "
+                        "bills not yet paid still owe; free once paid adds it to what is free "
+                        "and takes off the costs waiting for those same events."
                      % (_day(year.books_start),
                         " The newest imported line is from %s." % _day(year.latest_line_date)
                         if year.latest_line_date else ''))

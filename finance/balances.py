@@ -32,6 +32,14 @@ to Workday's figure. The arithmetic, for one account on one day:
   costs move on that day instead. An encumbrance naming an event waits the
   same way. See :func:`event_paid_days`.
 
+* **What billed events will pay in** is shown beside the funds, not in them:
+  no cash has moved. Every payment for an event lands in the Event Production
+  account's own fund (Legacy in 226-AG) -- a Projection showing's too -- so
+  each bill not yet paid is listed there with what is still owed on it, and
+  *free once paid* says what Legacy will have when they all are: the payments
+  come in, and the costs waiting for those same events move in with them. See
+  :meth:`Books.billed_unpaid`.
+
 Nothing is carried from one year to the next by copying a closing balance into
 an opening one. Every figure is a sum from the start of the books, so a line
 imported in August for a June purchase corrects last year's closing balance
@@ -39,8 +47,9 @@ and this year's opening in the same moment. See
 :class:`~finance.models.FiscalYearClose` for how a closed year notices.
 """
 import datetime
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
+from django.db.models import Q
 from django.utils import timezone
 
 from finance.models import (ZERO, BalanceCheckpoint, FiscalYearClose, FundBehaviour,
@@ -54,6 +63,37 @@ ONE_DAY = datetime.timedelta(days=1)
 #: The key the costs still waiting for their event's payment are held under,
 #: in place of a fund's pk.
 WAITING = 'waiting'
+
+#: One event with a bill: the bill that stands for it, what it was billed, the
+#: day it stopped waiting for its payment (``None`` while it still waits), and
+#: ``[(date, amount)]`` of the payments settled against it.
+BilledEvent = namedtuple('BilledEvent', 'event bill billed stopped payments')
+
+
+class UnpaidBill(object):
+    """ One bill not yet paid, as a fund row lists it: the event, its bill and what is still owed. """
+
+    def __init__(self, event, bill, owed):
+        self.event = event
+        self.bill = bill
+        self.owed = owed
+
+    @property
+    def stage(self):
+        """
+        Where the bill stands, as the Billing page says it. Worked out only when
+        shown: the dashboard reads the same statement and never shows it.
+        """
+        from finance.billing import STAGES, stage_of
+        stage = stage_of(self.event, self.bill)
+        return STAGES[stage] if stage else ''
+
+    @property
+    def client(self):
+        """ Who the bill is to (a multi-bill's *Bill to*, else the event's client), or ``''``. """
+        from finance.calculators import payer_of
+        org = payer_of(self.event)
+        return org.retname if org else ''
 
 
 def _local_day(value):
@@ -127,6 +167,13 @@ class Books(object):
         self.funds = {fund.pk: fund for fund in FundSource.objects.select_related('account')}
         own = account_own_funds()
         self.own_fund_ids = {code: fund.pk for code, fund in own.items()}
+        #: The account every event's payment lands in: the Event Production
+        #: account with money of its own. A Projection showing is paid into it
+        #: too.
+        self.billing_account = next((account.code for account in self.accounts
+                                     if not account.is_projection
+                                     and account.code in self.own_fund_ids), None)
+        self._billed_events = None
 
         codes = partition_codes()
         #: ``{line pk: (date, amount, account code)}``. Every line: cash is a
@@ -352,6 +399,80 @@ class Books(object):
         source = self.funds.get(fund)
         return source is not None and source.account is not None and source.account.code == code
 
+    # -- bills ----------------------------------------------------------------
+    @property
+    def billed_events(self):
+        """
+        A :data:`BilledEvent` for every event billed since the books started,
+        loaded the first time anything asks: most of what reads :class:`Books`
+        never does.
+
+        The billed figure is :func:`~finance.calculators.event_billed`'s, a
+        multi-bill shared out by price, so it is the bill the Owed to LNL
+        report and the event's P&L read. Cancelled and test events are left
+        out, and so are events before the books start, whose payments were
+        never imported.
+        """
+        if self._billed_events is None:
+            self._billed_events = self._load_billed_events()
+        return self._billed_events
+
+    def _load_billed_events(self):
+        from events.models import BaseEvent
+        from finance.calculators import _event_queryset, event_billed, latest_bill
+
+        if self.start is None:
+            return []
+        ids = list(BaseEvent.objects
+                   .filter(Q(billings__isnull=False) | Q(multibillings__isnull=False),
+                           cancelled=False, test_event=False,
+                           datetime_start__date__gte=self.start)
+                   .values_list('pk', flat=True).distinct())
+        if not ids:
+            return []
+        stopped = event_paid_days(ids)
+        payments = defaultdict(list)
+        for event, date, amount in (ParsedTransaction.objects.revenue()
+                                    .filter(linked_event_id__in=ids,
+                                            parent_transaction__isnull=False)
+                                    .values_list('linked_event_id', 'effective_date', 'amount')):
+            payments[event].append((date, money(amount)))
+        cache, out = {}, []
+        for event in _event_queryset().filter(pk__in=ids):
+            billed, _ = event_billed(event, cache)
+            out.append(BilledEvent(event, latest_bill(event), billed, stopped.get(event.pk),
+                                   payments.get(event.pk, [])))
+        return out
+
+    def billed_unpaid(self, code, day):
+        """
+        An :class:`UnpaidBill` for every bill still waiting for its payment
+        at the end of ``day``, longest-owed first, if ``code`` is the account
+        event payments land in (:attr:`billing_account`), and ``[]`` for any
+        other.
+
+        A bill counts from the day it is dated, until the day its event stops
+        waiting for its payment -- marked paid, marked *No bill needed* or
+        closed (:func:`event_paid_days`), the same day the event's costs move
+        into Legacy. What is owed is the bill less the payments settled
+        against it by then. A bill not emailed yet still counts: what it will
+        bring in is known.
+        """
+        if code != self.billing_account:
+            return []
+        out = []
+        for item in self.billed_events:
+            if item.bill is None or item.billed is None or item.bill.date_billed > day:
+                continue
+            if item.stopped is not None and item.stopped <= day:
+                continue
+            received = sum((amount for date, amount in item.payments if date <= day), ZERO)
+            owed = item.billed - received
+            if owed > 0:
+                out.append(UnpaidBill(item.event, item.bill, owed))
+        out.sort(key=lambda unpaid: (unpaid.bill.date_billed, unpaid.event.pk))
+        return out
+
 
 # ---------------------------------------------------------------------------
 # One year, laid out
@@ -364,6 +485,13 @@ class FundRow(object):
     #: the events it waits for. See :class:`WaitingRow`.
     is_waiting = False
     events = ()
+
+    #: The bills not yet paid whose money will land in this fund, each an
+    #: :class:`UnpaidBill`, and what still waits for those same events (see
+    #: :meth:`Books.waiting_events`). Only the own fund of the account event
+    #: payments land in has any: see :meth:`Books.billed_unpaid`.
+    unpaid_bills = ()
+    waiting_for_billed = ZERO
 
     def __init__(self, fund, opening, received, spent, transferred, closing, encumbered,
                  is_own, year_over):
@@ -402,6 +530,24 @@ class FundRow(object):
         if self.closing is None or self.behaviour == FundBehaviour.REIMBURSED:
             return None
         return self.closing - self.encumbered
+
+    @property
+    def billed(self):
+        """ What the bills not yet paid will bring into this fund. """
+        return sum((unpaid.owed for unpaid in self.unpaid_bills), ZERO)
+
+    @property
+    def free_once_paid(self):
+        """
+        What will be free once every bill not yet paid is: the payments come
+        in, and the costs and encumbrances waiting for those same events move
+        in with them. Events with costs waiting and no bill yet are left out of
+        both sides, as what they will bring in is not known. ``None`` with no
+        bill unpaid, or no free figure to start from.
+        """
+        if not self.unpaid_bills or self.available is None:
+            return None
+        return self.available + self.billed - self.waiting_for_billed
 
     @property
     def to_reimburse(self):
@@ -563,6 +709,16 @@ class AccountStatement(object):
         return self._sum('encumbered')
 
     @property
+    def billed(self):
+        """ What bills not yet paid will bring into the account. """
+        return self._sum('billed')
+
+    @property
+    def unpaid_bills(self):
+        """ Every :class:`UnpaidBill` on the account's funds, longest-owed first. """
+        return [unpaid for row in self.rows for unpaid in row.unpaid_bills]
+
+    @property
     def funds_total(self):
         """ Every fund's closing balance, plus what is unfiled. """
         if not self.cash_known:
@@ -631,16 +787,17 @@ def _row_order(row):
             fund.sort_order if fund else 999, row.name)
 
 
-def _waiting_row(books, code, opening, moved, closing, reserved, last, year_over):
+def _waiting_row(waits, opening, moved, closing, reserved, year_over):
     """
     The account's row of event costs awaiting payment, or ``None`` when nothing
     waits or waited. Takes its figures out of the funds' dicts as it goes.
+    ``waits`` is :meth:`Books.waiting_events` at the end of the period.
     """
     from events.models import BaseEvent
 
     movement = moved.pop(WAITING, None) or {'received': ZERO, 'spent': ZERO,
                                             'transferred': ZERO}
-    waiting = {pk: amount for pk, amount in books.waiting_events(code, last).items() if amount}
+    waiting = {pk: amount for pk, amount in waits.items() if amount}
     names = BaseEvent.objects.non_polymorphic().in_bulk(list(waiting))
     events = sorted(((names[pk], amount) for pk, amount in waiting.items() if pk in names),
                     key=lambda pair: (pair[0].datetime_start, pair[0].pk))
@@ -678,7 +835,8 @@ def statement(fiscal_year, books=None, today=None):
         moved = books.movements(code, first, last)
         reserved = books.encumbered(code, last)
         cash_known = opening_cash is not None
-        waiting = _waiting_row(books, code, opening, moved, closing, reserved, last, year_over)
+        waits = books.waiting_events(code, last)
+        waiting = _waiting_row(waits, opening, moved, closing, reserved, year_over)
 
         held_here = {pk for pk, fund in books.funds.items()
                      if fund.account_id == account.pk and fund.is_active}
@@ -702,6 +860,13 @@ def statement(fiscal_year, books=None, today=None):
                                 movement['transferred'], row_closing,
                                 reserved.get(fund_id, ZERO), is_own, year_over))
         rows.sort(key=_row_order)
+
+        unpaid = books.billed_unpaid(code, last)
+        own_row = next((row for row in rows if row.is_own), None)
+        if unpaid and own_row is not None:
+            own_row.unpaid_bills = unpaid
+            own_row.waiting_for_billed = sum((waits.get(bill.event.pk, ZERO) for bill in unpaid),
+                                             ZERO)
 
         checkpoints = []
         anchor = books.anchor(code)

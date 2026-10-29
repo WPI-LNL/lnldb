@@ -1474,6 +1474,30 @@ as the opening, not as a first-year transfer.
 Encumbrances show beside each fund in their own column. They are not cash, and they
 belong to the account their fund is held in.
 
+**Billed, not paid** is the money billed events are about to pay in, shown beside
+the fund it will land in rather than counted in it. Every event's payment arrives
+in the Event Production account -- a Projection showing's too -- so the bills sit
+on that account's own fund, Legacy in 226-AG (``Books.billing_account``: the
+account that is not Projection's and has money of its own). Nothing is logged
+for it: ``Books.billed_unpaid`` reads the bills. A bill counts from its *Billed
+on* date until the day its event stops waiting for its payment -- the same day
+its waiting costs move into Legacy, by the same rule -- and what counts is the
+bill (:func:`~finance.calculators.event_billed`, a multi-bill shared out by
+price) less the payments settled against the event by then. A bill not emailed
+yet counts. A cancelled or test event, or one before the books start, does not.
+
+This is narrower than the *Owed to LNL* report, on purpose. The report also lists
+a bill marked paid for less than it asked, and an event closed with money still
+owed. The balances already treat both as never going to be paid, so counting
+them here as still coming would contradict the waiting row.
+
+Under it, *free once paid* is what Legacy will have free when every one of those
+bills is paid: free now, plus what they still owe, less the costs and
+encumbrances waiting for those same events, which move into Legacy on the same
+day (``FundRow.free_once_paid``). An event with costs waiting and no bill yet is
+left out of both sides, since what it will bring in is not known. The page lists
+the bills under the account's table, longest-owed first, with each one's stage.
+
 Closing a year
 ~~~~~~~~~~~~~~
 

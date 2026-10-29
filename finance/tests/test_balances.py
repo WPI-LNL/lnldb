@@ -782,6 +782,121 @@ class EventCostTests(LedgerFixture, TestCase):
         self.assertEqual(stats['Carries forward'], Decimal('11000.00'))
 
 
+class BilledUnpaidTests(LedgerFixture, TestCase):
+    """
+    The Spring Concert was billed $2,000 on Dec 1 2025 and has not paid. Its
+    $1,500 truss hire waits for that payment (see EventCostTests), and Legacy
+    holds $11,000 with nothing encumbered, so once the bill is paid Legacy will
+    have $11,000 + $2,000 - $1,500 = $11,500 free.
+    """
+
+    def setUp(self):
+        self.build_year()
+        self.year_end.delete()
+        checkpoint('226-AG', datetime.date(2025, 6, 30), '10000.00')
+        self.show = Event2019Factory.create(event_name='Spring Concert')
+        filed(line(datetime.date(2025, 11, 1), '-1500.00', 'Truss hire'), 'legacy',
+              linked_event=self.show, lnl_spend_category=category('event_subrental'))
+        self.bill = Billing.objects.create(event=self.show, date_billed=datetime.date(2025, 12, 1),
+                                           amount=Decimal('2000.00'))
+
+    def legacy(self, fiscal_year=FY26):
+        return row_for(balances.statement(fiscal_year), '226-AG', 'legacy')
+
+    def test_an_unpaid_bill_is_listed_beside_legacy(self):
+        year = balances.statement(FY26)
+        legacy = row_for(year, '226-AG', 'legacy')
+        self.assertEqual(legacy.billed, Decimal('2000.00'))
+        self.assertEqual([(b.event.pk, b.owed) for b in legacy.unpaid_bills],
+                         [(self.show.pk, Decimal('2000.00'))])
+        self.assertEqual(year.account('226-AG').billed, Decimal('2000.00'))
+        # Not cash: Legacy and the account's total are as they were.
+        self.assertEqual(legacy.closing, Decimal('11000.00'))
+        self.assertEqual(year.account('226-AG').out_of_balance, Decimal('0.00'))
+
+    def test_free_once_paid_takes_off_the_costs_waiting_for_the_same_event(self):
+        self.assertEqual(self.legacy().free_once_paid, Decimal('11500.00'))
+
+    def test_an_encumbrance_waiting_for_the_event_comes_off_too(self):
+        ParsedTransaction.objects.create(
+            amount=Decimal('-300.00'), effective_date=datetime.date(2026, 5, 1),
+            fund_source=fund('legacy'), linked_event=self.show,
+            lnl_spend_category=category('event_subrental'), description='Lifts')
+        self.assertEqual(self.legacy().free_once_paid, Decimal('11200.00'))
+
+    def test_costs_waiting_for_an_event_with_no_bill_are_left_out(self):
+        """ What that event will bring in is not known, so neither side is counted. """
+        other = Event2019Factory.create(event_name='Winter Gala')
+        filed(line(datetime.date(2025, 11, 5), '-400.00', 'Hazer hire'), 'legacy',
+              linked_event=other, lnl_spend_category=category('event_subrental'))
+        self.assertEqual(self.legacy().free_once_paid, Decimal('11500.00'))
+
+    def test_a_part_payment_leaves_the_rest(self):
+        filed(line(datetime.date(2026, 1, 15), '500.00', 'ISD Spring Concert'), 'legacy',
+              linked_event=self.show)
+        legacy = self.legacy()
+        self.assertEqual(legacy.billed, Decimal('1500.00'))
+        # The $500 is in Legacy already, so the figure once paid is the same.
+        self.assertEqual(legacy.free_once_paid, Decimal('11500.00'))
+
+    def test_marked_paid_it_drops_off(self):
+        self.bill.date_paid = datetime.date(2026, 3, 1)
+        self.bill.save()
+        legacy = self.legacy()
+        self.assertEqual(legacy.billed, Decimal('0.00'))
+        self.assertIsNone(legacy.free_once_paid)
+
+    def test_closed_it_drops_off(self):
+        """ The balances already treat a closed event as never going to be paid. """
+        self.show.closed, self.show.closed_on = True, aware(2026, 2, 1)
+        self.show.save()
+        self.assertEqual(self.legacy().unpaid_bills, ())
+
+    def test_each_show_on_a_multibill_owes_its_share(self):
+        self.bill.delete()
+        other = Event2019Factory.create(event_name='Winter Gala')
+        multibill = MultiBilling.objects.create(date_billed=datetime.date(2025, 12, 1),
+                                                amount=Decimal('2000.00'))
+        multibill.events.add(self.show, other)
+        legacy = self.legacy()
+        self.assertEqual(legacy.billed, Decimal('2000.00'))
+        self.assertEqual({b.event.pk for b in legacy.unpaid_bills}, {self.show.pk, other.pk})
+
+    def test_a_past_year_shows_what_was_unpaid_on_june_30(self):
+        self.bill.date_paid = datetime.date(2026, 8, 1)
+        self.bill.save()
+        self.assertEqual(self.legacy(FY26).billed, Decimal('2000.00'))
+        self.assertEqual(self.legacy(FY26 + 1).billed, Decimal('0.00'))
+
+    def test_a_bill_dated_after_the_day_shown_is_not_counted(self):
+        self.bill.date_billed = datetime.date(2026, 7, 15)
+        self.bill.save()
+        self.assertEqual(self.legacy(FY26).billed, Decimal('0.00'))
+        self.assertEqual(self.legacy(FY26 + 1).billed, Decimal('2000.00'))
+
+    def test_an_event_before_the_books_start_is_left_out(self):
+        """ Its payment, if any, was never imported. """
+        self.show.datetime_start = timezone.make_aware(datetime.datetime(2025, 1, 10, 19))
+        self.show.save()
+        self.assertEqual(self.legacy().billed, Decimal('0.00'))
+
+    def test_every_bill_lands_in_226_ag_never_315_ag(self):
+        """ A Projection showing is paid into 226-AG too. """
+        year = balances.statement(FY26)
+        projection = year.account('315-AG')
+        if projection is not None:
+            self.assertEqual(projection.billed, Decimal('0.00'))
+        self.assertEqual(year.account('226-AG').billed, Decimal('2000.00'))
+
+    def test_the_report_shows_it(self):
+        from finance.reports import fund_balances
+        report = fund_balances(FY26)
+        stats = {stat.label: stat for stat in report.stats}
+        self.assertEqual(stats['Billed, not paid'].value, Decimal('2000.00'))
+        self.assertIn('$11,500.00 free once paid', stats["Billed, not paid"].sub)
+        self.assertIn('billed', [column.key for column in report.columns])
+
+
 # ---------------------------------------------------------------------------
 # The pages
 # ---------------------------------------------------------------------------
@@ -821,6 +936,20 @@ class BalancePageTests(LedgerFixture, FinanceViewTestCase):
         self.assertContains(response, 'Event costs awaiting payment')
         self.assertContains(response, reverse('events:detail', args=[show.pk]))
         self.assertNotContains(response, 'miss the cash')
+
+    def test_a_bill_not_yet_paid_is_listed_with_free_once_paid(self):
+        show = Event2019Factory.create(event_name='Spring Concert')
+        Billing.objects.create(event=show, date_billed=datetime.date(2025, 12, 1),
+                               amount=Decimal('2000.00'))
+        self.grant('view_subledger')
+        response = self.client.get(reverse('finance:balances'), {'fy': FY26})
+        self.assertContains(response, 'Billed, not paid')
+        self.assertContains(response, 'Bills not yet paid')
+        self.assertContains(response, reverse('events:detail', args=[show.pk]))
+        # Legacy's $11,000 free, plus the $2,000 the bill still owes.
+        self.assertContains(response, '$13,000.00 free once paid')
+        footer = response.content.decode().split('<tfoot>')[1].split('</tfoot>')[0]
+        self.assertIn('$2,000.00', footer)
 
     def test_an_account_with_no_workday_balance_still_adds_up_what_moved(self):
         self.year_end.delete()

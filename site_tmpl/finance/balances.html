@@ -45,6 +45,7 @@
                     {% if year.latest_line_date %}The newest imported line is from {{ year.latest_line_date|date:"M j, Y" }}, so nothing later is counted yet.{% endif %}
                     Balances count every settled line, whichever Projection or Event Production side it was for.
                     An expense linked to an event is not taken from Legacy (or any fund that carries forward) until the event is paid for: until then it waits under Event costs awaiting payment.
+                    Bills not yet paid are under Billed, not paid, beside the fund their payments go into; they are not cash until they arrive.
                 {% else %}
                     Nothing has been imported yet. The books start with the fiscal year of the first Workday line.
                 {% endif %}
@@ -138,6 +139,7 @@
                             <th class="fin-num" title="Money moved between funds inside this account, and an event's costs moving into the fund they were charged to once the event is paid for. Workday never sees these: no cash moves.">Transfers</th>
                             <th class="fin-num">{% if year.year_over %}Closing{% else %}Now{% endif %}</th>
                             <th class="fin-num" title="Purchases encumbered against this fund and not yet charged">Encumbrances</th>
+                            <th class="fin-num" title="What events billed and not yet paid for still owe. Not cash yet: it lands in this fund when each is paid.">Billed, not paid</th>
                             <th>What it means</th>
                         </tr>
                     </thead>
@@ -170,6 +172,15 @@
                                         {% endif %}
                                     {% else %}<span class="fin-muted">—</span>{% endif %}
                                 </td>
+                                <td class="fin-num">
+                                    {% if row.unpaid_bills %}
+                                        <a href="#fin-unpaid-{{ account.code|slugify }}">{{ row.billed|money }}</a>
+                                        <div class="fin-muted">{{ row.unpaid_bills|length }} bill{{ row.unpaid_bills|length|pluralize }}</div>
+                                        {% if row.free_once_paid is not None %}
+                                            <div class="fin-muted" title="Free now, plus what these bills still owe, less the event costs and encumbrances waiting for the same events, which move into this fund when each is paid">{{ row.free_once_paid|money }} free once paid</div>
+                                        {% endif %}
+                                    {% else %}<span class="fin-muted">—</span>{% endif %}
+                                </td>
                                 <td>{{ row.status }}</td>
                             </tr>
                         {% endfor %}
@@ -182,6 +193,7 @@
                                 <td class="fin-num">{{ account.unfiled_opening|money }}</td>
                                 <td></td><td></td><td></td>
                                 <td class="fin-num"><strong>{{ account.unfiled_closing|money }}</strong></td>
+                                <td></td>
                                 <td></td>
                                 <td>Settle these and the money moves into its funds</td>
                             </tr>
@@ -197,6 +209,7 @@
                             <th class="fin-num">{{ account.transferred|money }}</th>
                             <th class="fin-num">{{ account.closing_cash|money }}</th>
                             <th class="fin-num">{{ account.encumbered|money }}</th>
+                            <th class="fin-num">{% if account.billed %}{{ account.billed|money }}{% else %}<span class="fin-muted">—</span>{% endif %}</th>
                             <th>
                                 {% if account.out_of_balance %}
                                     <span class="text-danger">The funds miss the cash by {{ account.out_of_balance|money }}</span>
@@ -206,6 +219,34 @@
                     </tfoot>
                 </table>
             </div>
+
+            {% if account.unpaid_bills %}
+                <div class="fin-panel-divider" id="fin-unpaid-{{ account.code|slugify }}">Bills not yet paid</div>
+                <div class="fin-table-wrap">
+                    <table class="table fin-table">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Client</th>
+                                <th>Billed on</th>
+                                <th>Stage</th>
+                                <th class="fin-num">Still owed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for unpaid in account.unpaid_bills %}
+                                <tr>
+                                    <td><a href="{% url 'events:detail' unpaid.event.pk %}">{{ unpaid.event }}</a></td>
+                                    <td>{{ unpaid.client|default:"No client on file" }}</td>
+                                    <td>{{ unpaid.bill.date_billed|date:"M j, Y" }}</td>
+                                    <td>{{ unpaid.stage }}</td>
+                                    <td class="fin-num">{{ unpaid.owed|money }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
 
             {% if account.checkpoints %}
                 <div class="fin-panel-divider">Workday balances</div>
