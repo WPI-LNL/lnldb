@@ -511,6 +511,17 @@ class StatementTests(LedgerFixture, TestCase):
                          (Decimal('-300.00'), Decimal('150.00')))
         self.assertIsNone(requests.available)
         self.assertEqual(requests.to_reimburse, Decimal('450.00'))
+        self.assertEqual(requests.after_encumbrances, Decimal('-450.00'))
+        account = balances.statement(FY26).account('226-AG')
+        self.assertEqual(account.owed_by_sga, Decimal('450.00'))
+        self.assertEqual(account.after_encumbrances, Decimal('9350.00'))
+
+    def test_only_a_balance_to_act_on_needs_attention(self):
+        """ A funding request below zero is SGA owing LNL, as usual; an overspent budget is not. """
+        year = balances.statement(FY26)
+        self.assertTrue(row_for(year, '226-AG', 'sga_budget').needs_attention)
+        self.assertFalse(row_for(year, '226-AG', 'sga_fr').needs_attention)
+        self.assertFalse(row_for(year, '226-AG', 'legacy').needs_attention)
 
     def test_each_column_adds_up_across_the_funds(self):
         ParsedTransaction.objects.create(
@@ -948,8 +959,54 @@ class BalancePageTests(LedgerFixture, FinanceViewTestCase):
         self.assertContains(response, reverse('events:detail', args=[show.pk]))
         # Legacy's $11,000 free, plus the $2,000 the bill still owes.
         self.assertContains(response, '$13,000.00 free once paid')
-        footer = response.content.decode().split('<tfoot>')[1].split('</tfoot>')[0]
+        bills = response.content.decode().split('id="fin-unpaid-')[1]
+        footer = bills.split('<tfoot>')[1].split('</tfoot>')[0]
         self.assertIn('$2,000.00', footer)
+
+    def test_money_going_out_is_in_parentheses(self):
+        self.grant('view_subledger')
+        response = self.client.get(reverse('finance:balances'), {'fy': FY26})
+        footer = response.content.decode().split('<tfoot>')[1].split('</tfoot>')[0]
+        self.assertIn('($6,800.00)', footer)
+        self.assertNotIn('($6,500.00)', footer)
+
+    def test_zero_is_a_figure_and_a_figure_that_does_not_apply_is_a_dash(self):
+        """ $0 is nothing, a question mark is not known, a dash is does not apply. """
+        self.grant('view_subledger')
+        response = self.client.get(reverse('finance:balances'), {'fy': FY26})
+        table = response.content.decode().split('<tbody>')[1].split('</tbody>')[0]
+        cells = table.split('SGA Funding Request')[1].split('</tr>')[0].split('</td>')
+        # A funding request starts the year with nothing owed on it, and no transfer.
+        self.assertIn('fin-na', cells[1])
+        self.assertIn('—', cells[1])
+        self.assertTrue(cells[4].strip().endswith('>$0'), cells[4])
+        self.assertNotIn('fin-unknown', table)
+
+    def test_a_figure_not_known_is_a_question_mark(self):
+        self.year_end.delete()
+        self.grant('view_subledger')
+        response = self.client.get(reverse('finance:balances'), {'fy': FY26})
+        footer = response.content.decode().split('<tfoot>')[1].split('</tfoot>')[0]
+        self.assertIn('<span class="fin-unknown" title="Not known yet">?</span>', footer)
+
+    def test_a_funding_request_still_owed_from_last_year_has_an_opening(self):
+        year = balances.statement(FY26 + 1)
+        requests = row_for(year, '226-AG', 'sga_fr')
+        self.assertEqual(requests.opening, Decimal('-300.00'))
+        self.assertTrue(requests.has_opening)
+        self.assertFalse(row_for(balances.statement(FY26), '226-AG', 'sga_fr').has_opening)
+
+    def test_an_event_waiting_for_payment_is_listed_with_its_costs_in_parentheses(self):
+        show = Event2019Factory.create(event_name='Spring Concert')
+        filed(line(datetime.date(2025, 11, 1), '-1500.00', 'Truss hire'), 'legacy',
+              linked_event=show, lnl_spend_category=category('event_subrental'))
+        self.grant('view_subledger')
+        response = self.client.get(reverse('finance:balances'), {'fy': FY26})
+        waiting = response.content.decode().split('id="fin-waiting-')[1].split('</table>')[0]
+        self.assertIn('Spring Concert', waiting)
+        self.assertIn('($1,500.00)', waiting)
+        row = response.content.decode().split('Waits for each event')[1].split('</tr>')[0]
+        self.assertIn('fin-na', row.split('</td>')[2], 'only costs wait, so Came in does not apply')
 
     def test_an_account_with_no_workday_balance_still_adds_up_what_moved(self):
         self.year_end.delete()

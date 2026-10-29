@@ -159,6 +159,24 @@ def money(value, show_sign=False):
 
 
 @register.filter
+def figure(value):
+    """
+    :func:`money` for a page that tells nothing and not known apart, as the
+    Treasurer asked: zero is ``$0`` and ``None`` -- not known yet -- is ``?``.
+    A figure that does not apply to its row is not a value at all, so the
+    template writes the dash for it.
+    """
+    if value is None or value == '':
+        return format_html('<span class="fin-unknown" title="{}">?</span>', 'Not known yet')
+    try:
+        if Decimal(value) == 0:
+            return '$0'
+    except (InvalidOperation, TypeError, ValueError):
+        return value
+    return money(value)
+
+
+@register.filter
 def invoice_money(value):
     """
     Currency as an invoice to a client writes it: $1,234.50, or -$50.00 for a
@@ -198,6 +216,19 @@ def abs_value(value):
     """
     try:
         return abs(Decimal(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return value
+
+
+@register.filter
+def negate(value):
+    """
+    The figure with its sign turned over, for an amount kept as a positive
+    figure of money going out -- spent, encumbered -- that a column adding up
+    to a balance shows in parentheses. ``None`` stays ``None``.
+    """
+    try:
+        return -Decimal(value)
     except (InvalidOperation, TypeError, ValueError):
         return value
 

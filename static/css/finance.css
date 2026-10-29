@@ -119,6 +119,72 @@
 .fin-stat-value { font-size: 22px; font-weight: 600; line-height: 1.2; }
 .fin-stat-sub { font-size: 12px; color: #9aa5b1; margin-top: 2px; }
 
+/* Tiles inside a panel, above the table they sum up: smaller, and no gap
+   below since the panel's own padding gives one. */
+.fin-stats-compact { margin-bottom: 0; }
+.fin-stats-compact .fin-stat { padding: 10px 12px; background: #fafbfc; }
+.fin-stats-compact .fin-stat-value { font-size: 19px; font-variant-numeric: tabular-nums; }
+.fin-stats-compact .fin-stat-value a { color: inherit; }
+.fin-stats-compact .fin-stat-sub { color: #7b8794; }
+
+/* ---- Balances ------------------------------------------------------------- */
+/* An anchor clears the sticky filter bar when jumped to, rather than landing
+   underneath it. */
+.fin-anchor { scroll-margin-top: 70px; }
+
+.fin-balance-intro { margin: 0 0 4px; font-size: 13px; color: #52606d; }
+
+/* A figure that does not apply to its row (a grey dash), set apart from $0
+   (nothing) and a question mark (not known yet). */
+.fin-na { color: #b0b9c3; cursor: help; }
+.fin-unknown { font-weight: 600; cursor: help; }
+
+.fin-howto { margin-top: 6px; font-size: 12.5px; }
+/* Bootstrap's normalize makes summary a block, which hides the arrow that
+   says it opens. */
+.fin-howto > summary { display: list-item; cursor: pointer; color: #31708f; }
+.fin-howto > ul { margin: 6px 0 0; padding-left: 18px; color: #52606d; }
+.fin-howto > ul > li { margin-bottom: 4px; }
+
+.fin-jump {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+    font-size: 12.5px;
+    font-weight: 400;
+}
+.fin-panel-body > .fin-jump { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eceff1; }
+.fin-jump-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #7b8794;
+}
+
+/* Roomier than the ledger's rows: a handful of funds read across, not
+   scanned down. The balance column is the one to find at a glance. */
+.fin-balance-table { font-size: 13px; }
+.fin-balance-table > tbody > tr > td,
+.fin-balance-table > tfoot > tr > th { padding: 8px 10px; }
+.fin-balance-table > thead > tr > th { padding: 7px 10px; vertical-align: bottom; }
+.fin-balance-table > thead > tr > th > small {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: #9aa5b1;
+}
+.fin-balance-table > tfoot > tr > th { border-top: 2px solid #dfe3e8; background: #fafbfc; }
+.fin-balance-table > tfoot > tr > th .fin-muted { font-weight: 400; font-size: 11.5px; }
+.fin-balance-table .fin-col-key { font-weight: 600; background: #f3f7fa; }
+.fin-balance-table > thead > tr > th.fin-col-key { background: #e9eff4; }
+.fin-balance-table .fin-col-sep { border-left: 1px solid #dfe3e8; }
+.fin-balance-table .fin-row-idle > td,
+.fin-balance-table .fin-row-idle > td a { color: #9aa5b1; }
+
 /* ---- Panels --------------------------------------------------------------- */
 .fin-panel {
     background: #fff;

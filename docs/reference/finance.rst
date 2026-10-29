@@ -1460,7 +1460,7 @@ row, so the account's *Spent* total counts it once. A cost charged after the
 event was paid for goes straight to the fund. A cost on a fund SGA pays for
 doesn't wait, because the funding request's own balance already says what SGA
 owes. An open encumbrance linked to an event waits the same way, in the row's
-Encumbrances column. Income from the event goes to its fund at once.
+Encumbered column. Income from the event goes to its fund at once.
 
 **Transfers** (:class:`~finance.models.FundTransfer`) move money between two
 funds inside one account. No cash moves, so Workday never sees them. Each is
@@ -1477,6 +1477,29 @@ as the opening, not as a first-year transfer.
 
 Encumbrances show beside each fund in their own column. They are not cash, and they
 belong to the account their fund is held in.
+
+**Signs on the page.** Every figure on the Balances tab carries its sign, and a
+negative one is in parentheses (the ``money`` filter), so a row adds up across
+and a column down. ``FundRow`` keeps ``spent`` and ``encumbered`` as positive
+amounts going out, as the reports and dashboard read them, so the template turns
+them over with the ``negate`` filter. *After encumbrances*
+(``FundRow.after_encumbrances``) is the balance less what is encumbered, for
+every kind of row: the free figure for a fund that holds money, and below zero
+by ``to_reimburse`` for a funding request. A balance is red only when
+``FundRow.needs_attention`` says so (money that carries forward overdrawn, a
+budget overspent, a funding request reimbursed for more than was spent), since a
+funding request below zero is normal. The tiles above each account's table read
+``AccountStatement.own_row``, ``waiting_row`` and ``owed_by_sga``.
+
+Zero, unknown and not applicable are told apart, at the Treasurer's request.
+The page renders figures with the ``figure`` filter, not ``money``: zero is
+``$0``, and a figure not known yet (``None``, e.g. cash with no Workday
+balance) is ``?``. A figure that does not apply to the row is a grey dash,
+written by the template. ``FundRow.has_opening`` is false for a budget or
+funding request that starts the year empty, so its Opening is a dash, though
+one still owed from last year shows its figure. ``FundRow.takes_income`` is
+false for the waiting row, which holds only costs. The *Not settled yet* row's
+movements and the anchor Workday balance's difference are dashes too.
 
 **Billed, not paid** is the money billed events are about to pay in, shown beside
 the fund it will land in rather than counted in it. Every event's payment arrives

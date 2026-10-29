@@ -490,6 +490,10 @@ class FundRow(object):
     is_waiting = False
     events = ()
 
+    #: Whether money can come into the row. Only costs ever wait for an event,
+    #: so for the waiting row *Came in* does not apply.
+    takes_income = True
+
     #: The bills not yet paid whose money will land in this fund, each an
     #: :class:`UnpaidBill`, and what still waits for those same events (see
     #: :meth:`Books.waiting_events`). Only the own fund of the account event
@@ -565,6 +569,51 @@ class FundRow(object):
         return self.encumbered - self.closing
 
     @property
+    def after_encumbrances(self):
+        """
+        The balance once the encumbered purchases are charged, for every kind
+        of row: :attr:`available` for a fund that holds money, and less than
+        zero by :attr:`to_reimburse` for one SGA reimburses. ``None`` while the
+        balance is unknown.
+        """
+        if self.closing is None:
+            return None
+        return self.closing - self.encumbered
+
+    @property
+    def has_opening(self):
+        """
+        Whether the row has an opening balance to show. SGA's budget and a
+        funding request start a year with nothing in them -- the budget goes
+        back to SGA and the request is paid -- so for those an opening applies
+        only when something was left over: a budget SGA has not taken back
+        yet, or a reimbursement SGA still owes.
+        """
+        if self.behaviour in (FundBehaviour.RETURNS, FundBehaviour.REIMBURSED):
+            return bool(self.opening)
+        return True
+
+    @property
+    def is_idle(self):
+        """ Nothing in the fund and nothing moved through it this year. """
+        return not any((self.closing, self.opening, self.received, self.spent, self.transferred,
+                        self.encumbered))
+
+    @property
+    def needs_attention(self):
+        """
+        Whether the balance is one the Treasurer has to act on: money that
+        carries forward overdrawn, a budget overspent, or a funding request
+        reimbursed for more than was spent. A funding request below zero is
+        not: that is SGA owing LNL, as it always does until SGA pays.
+        """
+        if not self.closing:
+            return False
+        if self.behaviour == FundBehaviour.REIMBURSED:
+            return self.closing > 0
+        return self.behaviour is not None and self.closing < 0
+
+    @property
     def status(self):
         """
         What the closing figure means, in words, for this kind of fund.
@@ -607,6 +656,7 @@ class WaitingRow(FundRow):
     """
 
     is_waiting = True
+    takes_income = False
 
     def __init__(self, opening, received, spent, transferred, closing, encumbered, year_over,
                  events):
@@ -721,6 +771,33 @@ class AccountStatement(object):
     def unpaid_bills(self):
         """ Every :class:`UnpaidBill` on the account's funds, longest-owed first. """
         return [unpaid for row in self.rows for unpaid in row.unpaid_bills]
+
+    @property
+    def own_row(self):
+        """ The row of the account's own money, or ``None``. """
+        return next((row for row in self.rows if row.is_own), None)
+
+    @property
+    def waiting_row(self):
+        """ The row of event costs awaiting payment, or ``None`` when nothing waits or waited. """
+        return next((row for row in self.rows if row.is_waiting), None)
+
+    @property
+    def owed_by_sga(self):
+        """
+        What SGA will owe on the funds it reimburses once their encumbered
+        purchases are charged, or ``None`` with no such fund in use.
+        """
+        owed = [row.to_reimburse for row in self.rows
+                if row.to_reimburse is not None and not row.is_idle]
+        return sum(owed, ZERO) if owed else None
+
+    @property
+    def after_encumbrances(self):
+        """ The cash once every encumbered purchase is charged, or ``None`` while it is unknown. """
+        if not self.cash_known:
+            return None
+        return self.closing_cash - self.encumbered
 
     @property
     def funds_total(self):
