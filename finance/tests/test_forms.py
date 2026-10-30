@@ -320,7 +320,7 @@ class FundingRequestLineDropdownTests(TestCase):
         for name, form in self._forms():
             self.assertEqual(self._groups(form.fields['fr_line_target']), [
                 ('FY26 · A.26.16 Speakers', ['\xa0' * 4 + '└ Mains — $650.00 left']),
-                ('FY26 · F.26.6 A Term Films', ['\xa0' * 4 + '└ Film Rights — $5000.00 left',
+                ('FY26 · F.26.6 A Term Films', ['\xa0' * 4 + '└ Film Rights — $5,000.00 left',
                                                 '\xa0' * 4 + '└ Posters — $120.00 left']),
             ], name)
 
@@ -401,6 +401,32 @@ class FundingRequestLineTests(TestCase):
 
     def test_description_is_on_the_form(self):
         self.assertIn('description', FRLineItemForm().fields)
+
+    def test_a_line_with_spending_cannot_be_deleted(self):
+        """ The spending is held to it by the database, which raised a server error. """
+        from finance.models import FundingRequest
+        fr = FundingRequest.objects.create(name='NEL26 Grant')
+        line = FRLineItem.objects.create(funding_request=fr, name='Fixtures',
+                                         amount_awarded=Decimal('1000.00'))
+        ParsedTransaction.objects.create(
+            parent_transaction=bank(op='OT-FRD1', amount='-100.00'), amount=Decimal('-100.00'),
+            effective_date=datetime.date(2025, 9, 15), fund_source=fund('sga_fr'),
+            lnl_spend_category=category('consumables'), fr_line_target=line)
+        formset = self._post([{'id': str(line.pk), 'name': 'Fixtures',
+                               'amount_awarded': '1000.00', 'DELETE': 'on'}], fr=fr)
+        self.assertFalse(formset.is_valid())
+        self.assertIn('Move them to another line first', str(formset.non_form_errors()))
+
+    def test_a_line_with_no_spending_can_be_deleted(self):
+        from finance.models import FundingRequest
+        fr = FundingRequest.objects.create(name='NEL26 Grant')
+        line = FRLineItem.objects.create(funding_request=fr, name='Fixtures',
+                                         amount_awarded=Decimal('1000.00'))
+        formset = self._post([{'id': str(line.pk), 'name': 'Fixtures',
+                               'amount_awarded': '1000.00', 'DELETE': 'on'}], fr=fr)
+        self.assertTrue(formset.is_valid(), formset.errors)
+        formset.save()
+        self.assertFalse(FRLineItem.objects.filter(pk=line.pk).exists())
 
     def test_description_is_optional(self):
         from finance.models import FundingRequest
@@ -581,7 +607,7 @@ class CrossFiscalYearTests(TestCase):
         form = ReconcileForm(parent_transaction=self.txn, prefix='t')
         rendered = str(form['fr_line_target'])
         self.assertIn('<optgroup label="FY26 · FY26 Grant">', rendered)
-        self.assertIn('$1000.00 left', rendered)
+        self.assertIn('$1,000.00 left', rendered)
 
     def test_same_year_needs_no_ceremony(self):
         self.assertTrue(self._post(self.this_year).is_valid())
@@ -637,14 +663,30 @@ class RefundGuardTests(TestCase):
     def test_a_refund_within_the_balance_is_fine(self):
         self._credit('OT-RF5', '40.00').full_clean()
 
-    def test_only_this_years_expenses_are_offered_as_targets(self):
-        old = ParsedTransaction.objects.create(
-            parent_transaction=bank(op='OT-RF6', amount='-80.00'), amount=Decimal('-80.00'),
-            effective_date=datetime.date(2024, 9, 15), fund_source=fund('sga_budget'),
+    def _purchase(self, op, day):
+        return ParsedTransaction.objects.create(
+            parent_transaction=bank(op=op, amount='-80.00'), amount=Decimal('-80.00'),
+            effective_date=day, fund_source=fund('sga_budget'),
             lnl_spend_category=category('consumables'))
+
+    def test_this_years_and_last_years_expenses_are_offered_as_targets(self):
+        """ The credit for a June purchase often lands in July, in the next fiscal year. """
+        june = self._purchase('OT-RF6', datetime.date(2025, 6, 20))
+        older = self._purchase('OT-RF7', datetime.date(2024, 6, 20))
         offered = list(AllocationForm(parent_transaction=self.txn).fields['refund_of'].queryset)
         self.assertIn(self.expense, offered)
-        self.assertNotIn(old, offered)
+        self.assertIn(june, offered)
+        self.assertNotIn(older, offered)
+
+    def test_a_refund_of_the_whole_purchase_still_offers_it_when_edited(self):
+        """ Credited in full by this refund, the purchase stays its option, so it can be saved again. """
+        refund = self._credit('OT-RF8', '100.00')
+        refund.save()
+        form = AllocationForm(instance=refund, parent_transaction=refund.parent_transaction)
+        self.assertIn(self.expense, list(form.fields['refund_of'].queryset))
+        # Fully credited, it is not offered to any other credit.
+        other = AllocationForm(parent_transaction=bank(op='OT-RF9', amount='20.00'))
+        self.assertNotIn(self.expense, list(other.fields['refund_of'].queryset))
 
 
 class EventLinkedExpenseTests(TestCase):

@@ -5,7 +5,12 @@ Spend categories, fund sources and revenue sources are rows now rather than
 enum members, so tests look them up by slug. The rows themselves are created by
 the seed data migration, which runs when the test database is built.
 """
-from finance.models import FundSource, RevenueSource, SpendCategory, reset_partition_cache
+import datetime
+
+from django.utils import timezone
+
+from finance.models import (Encumbrance, FundSource, RevenueSource, SpendCategory,
+                            reset_partition_cache)
 
 
 def category(slug='consumables'):
@@ -19,6 +24,19 @@ def fund(slug='sga_budget'):
 
 def revenue_source(slug='donations'):
     return RevenueSource.objects.get(slug=slug)
+
+
+def encumbrance(description, logged_on):
+    """
+    An :class:`Encumbrance` logged on ``logged_on``, which its open lines are
+    dated. ``created_on`` is set on create whatever is passed, so it is moved
+    afterwards.
+    """
+    header = Encumbrance.objects.create(description=description)
+    Encumbrance.objects.filter(pk=header.pk).update(
+        created_on=timezone.make_aware(datetime.datetime.combine(logged_on, datetime.time(12))))
+    header.refresh_from_db()
+    return header
 
 
 def clear_caches():

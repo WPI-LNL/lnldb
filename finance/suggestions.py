@@ -49,11 +49,11 @@ from django.db.models import F, Q, Value
 from django.utils.formats import date_format
 
 from finance.models import (ISD_NUMBER_FORMAT, ZERO, Billing, FundSource, MultiBilling,
-                            SuggestionRule, default_fund_source, dollars, fund_source_for_tracking,
-                            fund_source_for_workday_fund, money, normalise_isd_number,
-                            normalise_sga_reference, normalise_term, own_fund_for_account,
-                            reimbursement_source, revenue_sources_by_fund, spend_category_named,
-                            summed_money)
+                            SuggestionRule, default_fund_source, dollars, fiscal_year_for,
+                            fund_source_for_tracking, fund_source_for_workday_fund, money,
+                            normalise_isd_number, normalise_sga_reference, normalise_term,
+                            own_fund_for_account, refund_window, reimbursement_source,
+                            revenue_sources_by_fund, spend_category_named, summed_money)
 
 HIGH, MEDIUM, LOW = 'high', 'medium', 'low'
 
@@ -257,8 +257,11 @@ def suggest_description(txn):
     put "B&H Photo" in a Description column on a row that already says B&H
     Photo -- and, worse, would make a blank spare row in the split modal look
     like one somebody had filled in.
+
+    Cut to the 255 characters a description holds: a memo can be longer, and
+    the entry it is copied onto would be refused.
     """
-    return memo_fields(txn).description
+    return memo_fields(txn).description[:255]
 
 
 # ---------------------------------------------------------------------------
@@ -1413,6 +1416,14 @@ def suggest_refund_target(txn):
         entry.picker_label, source=EXPORT)
 
 
+def _refund_range(txn):
+    """
+    The purchases a credit can be offered as refunding: up to its own date, and
+    no older than the refund picker goes back (:func:`finance.models.refund_window`).
+    """
+    return refund_window(fiscal_year_for(txn.accounting_date))[0], txn.accounting_date
+
+
 def _exact_reversals(txn, limit=8):
     """
     Entries this credit reverses line for line. Newest first.
@@ -1433,7 +1444,7 @@ def _exact_reversals(txn, limit=8):
         .filter(parent_transaction__isnull=False,
                 parent_transaction__memo__iexact=memo,
                 amount=-money(txn.net_amount),
-                effective_date__lte=txn.accounting_date)
+                effective_date__range=_refund_range(txn))
         .exclude(parent_transaction=txn)
         .select_related('parent_transaction')
         .order_by('-effective_date', '-pk'))
@@ -1476,7 +1487,7 @@ def suggest_refund_targets(txn, limit=8):
         .filter(Q(parent_transaction__supplier__iexact=txn.payee) |
                 Q(parent_transaction__employee__iexact=txn.payee),
                 amount__lt=0,
-                effective_date__lte=txn.accounting_date)
+                effective_date__range=_refund_range(txn))
         .select_related('parent_transaction')
         .order_by('-effective_date', '-pk'))
 
@@ -1928,7 +1939,7 @@ def encumbrance_match_options(txn):
         header = entry.encumbrance
         whole = SimpleNamespace(amount=sum(money(line.amount) for line in lines),
                                 description=header.description, audit_explanation='',
-                                effective_date=header.effective_date)
+                                effective_date=lines[0].effective_date)
         # Ranked by the better of the whole and its best line, so a two-line
         # order that adds up to the charge is not buried under its own halves.
         score = min(encumbrance_match_score(whole, txn), encumbrance_match_score(entry, txn))
@@ -1948,7 +1959,7 @@ def encumbrance_match_options(txn):
             'value': 'all-%s' % header.pk,
             'label': "%s — all %s lines, %s encumbered %s · %s" % (
                 header.description, len(lines), dollars(abs(total)),
-                date_format(header.effective_date, 'M j, Y'), _encumbrance_gap(total, txn)),
+                date_format(lines[0].effective_date, 'M j, Y'), _encumbrance_gap(total, txn)),
             'close': _close_enough(total, txn)})
         for line in lines:
             own = (line.description or '').strip()

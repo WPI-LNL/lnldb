@@ -234,12 +234,14 @@ class BulkActionGuardTests(FinanceViewTestCase):
             amount=Decimal('-400.00'), effective_date=datetime.date(2025, 9, 15),
             description='Deposit on a console', fund_source=fund('sga_budget'),
             lnl_spend_category=category('equipment_noncapital'))
+        self.grant('settle_subledger')
         response = self._act('status', TransactionStatus.SETTLED, [encumbrance])
         self.assertContains(response, 'still have money left to settle')
         encumbrance.refresh_from_db()
         self.assertEqual(encumbrance.status, TransactionStatus.PENDING)
 
     def test_a_balanced_line_does_settle_in_bulk(self):
+        self.grant('settle_subledger')
         response = self._act('status', TransactionStatus.SETTLED, [self.expense])
         self.assertContains(response, 'Updated 1 entry')
         self.expense.refresh_from_db()
@@ -293,6 +295,18 @@ class BulkActionGuardTests(FinanceViewTestCase):
             'selected': str(self.expense.pk)}, follow=True)
         self.assertContains(response, 'Pick a value to apply')
 
+    def test_changing_the_status_needs_the_settle_permission(self):
+        """ The bulk bar must not settle what the Settle button would refuse to. """
+        response = self._act('status', TransactionStatus.SETTLED, [self.expense])
+        self.assertContains(response, "permission to change whether entries are settled")
+        self.expense.refresh_from_db()
+        self.assertEqual(self.expense.status, TransactionStatus.PENDING)
+        self.assertNotContains(self.client.get(reverse('finance:ledger')), '>Set status<')
+
+    def test_with_the_settle_permission_the_status_is_offered(self):
+        self.grant('settle_subledger')
+        self.assertContains(self.client.get(reverse('finance:ledger')), '>Set status<')
+
     def test_the_bulk_bar_needs_the_edit_permission(self):
         stranger = get_user_model().objects.create_user(
             username='reader', email='reader@wpi.edu', password='x')
@@ -312,3 +326,31 @@ class BulkActionGuardTests(FinanceViewTestCase):
         versions = Version.objects.get_for_object(self.expense)
         self.assertTrue(versions)
         self.assertIn('Bulk project tag', versions[0].revision.get_comment())
+
+
+class LedgerReceiptTests(FinanceViewTestCase):
+    """ A receipt is a scan of somebody's purchase: only for those allowed to see receipts. """
+
+    def setUp(self):
+        super(LedgerReceiptTests, self).setUp()
+        self.grant('view_subledger')
+        txn = self.make_txn(op='OT-R1', amount='-120.00')
+        entry = ParsedTransaction.objects.create(
+            parent_transaction=txn, amount=Decimal('-120.00'), effective_date=txn.accounting_date,
+            description='Gaff tape', fund_source=fund('sga_budget'),
+            lnl_spend_category=category('consumables'))
+        ParsedTransaction.objects.filter(pk=entry.pk).update(receipt_file='finance/receipts/gaff.pdf')
+
+    def _ledger(self):
+        return self.client.get(reverse('finance:ledger'), {'fy': 'all'})
+
+    def test_the_receipt_is_not_in_the_page_without_the_permission(self):
+        response = self._ledger()
+        self.assertNotContains(response, 'gaff.pdf')
+        self.assertNotContains(response, 'data-col="receipt"')
+
+    def test_the_receipt_is_linked_with_it(self):
+        self.grant('view_subledger_receipts')
+        response = self._ledger()
+        self.assertContains(response, 'gaff.pdf')
+        self.assertContains(response, 'data-col="receipt"')

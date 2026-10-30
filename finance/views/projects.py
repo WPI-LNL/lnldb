@@ -262,6 +262,8 @@ def funding_edit(request, pk=None):
         for errors in formset.errors:
             for error in errors.values():
                 messages.error(request, error)
+        for error in formset.non_form_errors():
+            messages.error(request, error)
     else:
         # A new request can arrive pre-filled from the memo that quoted it:
         # the number, the name written after it, and the year the number says.

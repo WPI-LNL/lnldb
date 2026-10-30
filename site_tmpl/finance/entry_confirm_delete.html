@@ -26,17 +26,15 @@
                         </div>
                     {% endif %}
 
-                    {% if entry.refunds.exists %}
-                        <div class="alert alert-warning">
-                            This purchase has refunds linked to it. Remove those first.
-                        </div>
+                    {% if blocked %}
+                        <div class="alert alert-warning">{{ blocked }}</div>
                     {% endif %}
 
                     <form method="post">
                         {% csrf_token %}
                         <a href="{% if txn %}{% url 'finance:txn-detail' txn.pk %}{% else %}{% url 'finance:ledger' %}{% endif %}"
-                           class="btn btn-default">Cancel</a>
-                        <button type="submit" class="btn btn-danger">Remove entry</button>
+                           class="btn btn-default">{% if blocked %}Back{% else %}Cancel{% endif %}</a>
+                        {% if not blocked %}<button type="submit" class="btn btn-danger">Remove entry</button>{% endif %}
                     </form>
                 </div>
             </div>

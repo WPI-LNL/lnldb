@@ -95,7 +95,8 @@ Money coming in is one of three things:
   it goes into (`Into fund`) follows from the choice. An SGA reimbursement also names the request it repays
   (`Reimburses request`).
 - **A refund** -- choose the purchase it refunds under `Refund of`. A refund needs nothing else: it takes everything from
-  the purchase it reverses.
+  the purchase it reverses. The list has purchases from this fiscal year and the one before, so a July credit for a
+  June purchase can still be settled as its refund.
 
 Settle the line
 ^^^^^^^^^^^^^^^
@@ -168,7 +169,11 @@ Fix a Mistake
 - **To change one detail** (a category, a project), open the entry from the `Ledger` and edit it.
 - **Many entries at once:** tick them in the `Ledger` and use the bar at the bottom.
 
-A purchase that has a refund recorded against it can't be undone until the refund is undone, since the refund points at it.
+A purchase that has a refund recorded against it can't be undone or removed until the refund is undone, since the refund
+points at it.
+
+Undoing a settled line, removing a settled entry, and changing whether entries are settled from the `Ledger`'s bar all
+need the same permission as settling.
 
 
 Check Against Workday

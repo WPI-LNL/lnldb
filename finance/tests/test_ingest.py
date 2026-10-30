@@ -21,13 +21,15 @@ from django.contrib.messages import constants as message_levels
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
+from finance.forms import EncumbranceForm
 from finance.models import (Encumbrance, FRLineItem, FundingRequest, ParsedTransaction,
                             SpendCategory, SuggestionRule, TransactionStatus, WorkdayTransaction)
 from finance.suggestions import (encumbrance_match_label, encumbrance_match_options,
                                  suggest_all, suggest_encumbrance_matches)
 from finance.tests.test_views import CSV_HEADER, CSV_ROW, FinanceViewTestCase
-from finance.tests.util import category, fund, revenue_source
+from finance.tests.util import category, encumbrance, fund, revenue_source
 
 
 class ImportReportingTests(FinanceViewTestCase):
@@ -289,7 +291,6 @@ class EncumbranceViewTests(FinanceViewTestCase):
                       'lnl_spend_category': str(category('consumables').pk)}]
         data = {
             'description': 'Gaff tape run',
-            'effective_date': '2025-09-15',
             'lines-TOTAL_FORMS': str(len(lines)),
             'lines-INITIAL_FORMS': str(existing),
             'lines-MIN_NUM_FORMS': '0',
@@ -339,8 +340,13 @@ class EncumbranceViewTests(FinanceViewTestCase):
         self.assertIsNone(entry.parent_transaction)
         self.assertEqual(entry.status, TransactionStatus.PENDING)
         self.assertTrue(entry.is_encumbrance)
-        self.assertEqual(entry.effective_date, datetime.date(2025, 9, 15))
         self.assertEqual(entry.encumbrance.description, 'Gaff tape run')
+
+    def test_there_is_no_date_to_fill_in(self):
+        """ The money is encumbered from the day it is logged, so its lines are dated today. """
+        self.assertNotIn('effective_date', EncumbranceForm().fields)
+        self._post(reverse('finance:encumbrance-new'), effective_date='2026-12-01')
+        self.assertEqual(ParsedTransaction.objects.get().effective_date, timezone.localdate())
 
     def test_one_description_is_enough(self):
         """ No second "What is this for?" box to fill in. """
@@ -399,12 +405,10 @@ class EncumbranceViewTests(FinanceViewTestCase):
         # It only ever had the encumbrance's description, so it follows it.
         self.assertEqual(entry.description, 'Spike tape run')
 
-    def test_a_new_date_reaches_every_line(self):
-        self._post(reverse('finance:encumbrance-new'))
-        header = Encumbrance.objects.get()
-        self._post(reverse('finance:encumbrance-edit', args=[header.pk]),
-                   lines=self._edit_lines(header), existing=1, effective_date='2025-10-01')
-        self.assertEqual(ParsedTransaction.objects.get().effective_date, datetime.date(2025, 10, 1))
+    def test_a_line_added_later_is_dated_when_the_encumbrance_was_logged(self):
+        header = encumbrance('Gaff tape run', datetime.date(2025, 9, 15))
+        self._post(reverse('finance:encumbrance-edit', args=[header.pk]))
+        self.assertEqual(header.open_lines().get().effective_date, datetime.date(2025, 9, 15))
 
     def test_a_line_can_be_added_and_one_removed(self):
         self._post(reverse('finance:encumbrance-new'))
@@ -1072,15 +1076,14 @@ class WholeEncumbranceMatchingTests(FinanceViewTestCase):
         request = FundingRequest.objects.create(name='Fall Load-ins', fiscal_year=2026)
         self.fr_line = FRLineItem.objects.create(
             funding_request=request, name='Consumables', amount_awarded=Decimal('500.00'))
-        self.header = Encumbrance.objects.create(
-            description='Spring gear order', effective_date=datetime.date(2025, 8, 20))
+        self.header = encumbrance('Spring gear order', datetime.date(2025, 8, 20))
 
     def line(self, amount, description, **routing):
         fields = {
             'parent_transaction': None,
             'amount': Decimal(amount),
             'status': TransactionStatus.PENDING,
-            'effective_date': self.header.effective_date,
+            'effective_date': self.header.logged_on,
             'description': description,
             'fund_source': fund('sga_budget'),
             'lnl_spend_category': category('consumables'),
@@ -1492,8 +1495,7 @@ class UndoingAMatchTests(FinanceViewTestCase):
         request = FundingRequest.objects.create(name='Fall Load-ins', fiscal_year=2026)
         self.fr_line = FRLineItem.objects.create(
             funding_request=request, name='Consumables', amount_awarded=Decimal('2000.00'))
-        self.header = Encumbrance.objects.create(
-            description='Gaff tape order', effective_date=datetime.date(2025, 8, 20))
+        self.header = encumbrance('Gaff tape order', datetime.date(2025, 8, 20))
 
     def encumber(self, amount, description='Gaff tape order', **routing):
         """ An open line, saved with its history as the encumbrance form saves it. """
@@ -1501,7 +1503,7 @@ class UndoingAMatchTests(FinanceViewTestCase):
             'parent_transaction': None,
             'amount': Decimal(amount),
             'status': TransactionStatus.PENDING,
-            'effective_date': self.header.effective_date,
+            'effective_date': self.header.logged_on,
             'description': description,
             'fund_source': fund('sga_fr'),
             'lnl_spend_category': category('consumables'),
@@ -1537,7 +1539,7 @@ class UndoingAMatchTests(FinanceViewTestCase):
         self.assertEqual(entry.status, TransactionStatus.PENDING)
         self.assertEqual(entry.amount, Decimal('-200.00'))
         self.assertEqual(entry.description, 'Gaff tape order')
-        self.assertEqual(entry.effective_date, self.header.effective_date)
+        self.assertEqual(entry.effective_date, self.header.logged_on)
         self.assertEqual(entry.fr_line_target, self.fr_line)
         self.assertFalse(txn.slices.exists())
         self.assertIn(txn, WorkdayTransaction.objects.unreconciled())
@@ -1651,7 +1653,7 @@ class UndoingAMatchTests(FinanceViewTestCase):
         """
         entry = ParsedTransaction.objects.create(
             parent_transaction=None, amount=Decimal('-200.00'),
-            status=TransactionStatus.PENDING, effective_date=self.header.effective_date,
+            status=TransactionStatus.PENDING, effective_date=self.header.logged_on,
             description='Own words', fund_source=fund('sga_fr'),
             lnl_spend_category=category('consumables'), fr_line_target=self.fr_line,
             encumbrance=self.header)

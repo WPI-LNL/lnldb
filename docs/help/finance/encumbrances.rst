@@ -23,8 +23,10 @@ Add an Encumbrance
 #. Fill in the top of the form:
 
    - **Description** -- what the purchase is. Nobody else will know later.
-   - **Date** -- roughly when the money will go out.
    - **Receipt or quote**, if you have one.
+
+   There is no date to fill in. The money counts as encumbered from the day you log it until its Workday line arrives,
+   so its lines are dated today.
 
 #. Fill in a line for each fund the purchase is charged to. Most purchases need only one. Click `Add a line` for more.
 

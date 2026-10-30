@@ -59,7 +59,7 @@ lines are indented under it with how much is left on each, the same way the proj
 
     FY26 · F.26.6 A Term Films
         └ Fixtures — $340.00 left
-        └ Film Rights — $5000.00 left
+        └ Film Rights — $5,000.00 left
 
 The **Funding request** box beside it narrows the list to one request's lines, and picking a line fills it in. Choosing
 `Any request` lists every line again. The two boxes work the same way everywhere a line is picked: the queue, the bulk
@@ -107,6 +107,8 @@ the page says by how much; the usual cause is a starting balance entered in one 
 Each request's own page shows its lines with what was awarded, spent and left, every purchase charged to it, and every
 payment SGA made for it.
 
+A line with spending or an encumbrance charged to it can't be deleted. Charge them to another line first.
+
 **Requests from before the books start.** If spending on a request began before the books start, enter what SGA still owed on
 it then under **Owed by SGA when the books started**, or its reimbursement will make SGA look overpaid.
 
@@ -117,4 +119,4 @@ Closing a Request
 Once a request is finished, edit it and tick **Closed**. It disappears from the dashboard's burndown, but its history
 stays, and SGA's reimbursements are still matched to it.
 
-`Last Modified: October 29, 2026`
+`Last Modified: October 30, 2026`

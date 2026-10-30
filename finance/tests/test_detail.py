@@ -474,3 +474,96 @@ class EntryDeleteTests(FinanceViewTestCase):
         self.assertTrue(surviving, "the entry's history went with it")
         self.assertIn('Reconciled from the ingestion queue',
                       surviving[0].revision.get_comment())
+
+
+class RemovingGuardTests(FinanceViewTestCase):
+    """
+    What can't be removed, and how the page says so.
+
+    A purchase with a refund against it is held in place by the database, which
+    raised a server error from both the entry page and the split's *Del* box.
+    A settled entry needs the settle permission to remove, as Undo does.
+    """
+
+    def setUp(self):
+        super(RemovingGuardTests, self).setUp()
+        self.grant('view_subledger', 'edit_subledger', 'settle_subledger')
+        self.txn = self.make_txn(op='OT-RG1', amount='-100.00')
+        self.purchase = ParsedTransaction.objects.create(
+            parent_transaction=self.txn, amount=Decimal('-100.00'),
+            effective_date=self.txn.accounting_date, description='Gaff tape',
+            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'),
+            status=TransactionStatus.SETTLED)
+
+    def _refund(self):
+        credit = self.make_txn(op='OT-RG2', amount='40.00')
+        return ParsedTransaction.objects.create(
+            parent_transaction=credit, amount=Decimal('40.00'),
+            effective_date=credit.accounting_date, description='Gaff tape returned',
+            refund_of=self.purchase, fund_source=fund('sga_budget'),
+            lnl_spend_category=category('consumables'), status=TransactionStatus.SETTLED)
+
+    def _delete(self):
+        return self.client.post(reverse('finance:entry-delete', args=[self.purchase.pk]), follow=True)
+
+    def _split(self, txn, entry, **row):
+        """ ``txn``'s split posted back with its one entry, as the page renders it. """
+        data = {
+            'slices-TOTAL_FORMS': '1', 'slices-INITIAL_FORMS': '1',
+            'slices-MIN_NUM_FORMS': '0', 'slices-MAX_NUM_FORMS': '1000',
+            'slices-0-id': str(entry.pk),
+            'slices-0-amount': str(abs(entry.amount)),
+            'slices-0-description': entry.description,
+            'slices-0-fund_source': str(entry.fund_source_id),
+        }
+        data.update({'slices-0-%s' % name: value for name, value in row.items()})
+        return self.client.post(reverse('finance:txn-detail', args=[txn.pk]), data, follow=True)
+
+    def test_a_purchase_with_a_refund_is_not_removed_and_the_page_says_why(self):
+        self._refund()
+        page = self.client.get(reverse('finance:entry-delete', args=[self.purchase.pk]))
+        self.assertContains(page, 'Remove the refund first')
+        self.assertNotContains(page, 'Remove entry</button>')
+        response = self._delete()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Remove the refund first')
+        self.assertTrue(ParsedTransaction.objects.filter(pk=self.purchase.pk).exists())
+
+    def test_a_settled_entry_needs_the_settle_permission_to_remove(self):
+        self.revoke('settle_subledger')
+        self.assertContains(self._delete(), "don't have permission to unsettle it")
+        self.assertTrue(ParsedTransaction.objects.filter(pk=self.purchase.pk).exists())
+
+    def test_a_pending_entry_can_be_removed_without_it(self):
+        self.revoke('settle_subledger')
+        ParsedTransaction.objects.filter(pk=self.purchase.pk).update(status=TransactionStatus.PENDING)
+        self._delete()
+        self.assertFalse(ParsedTransaction.objects.filter(pk=self.purchase.pk).exists())
+
+    def test_the_split_will_not_delete_a_purchase_with_a_refund(self):
+        self._refund()
+        response = self._split(self.txn, self.purchase, DELETE='on',
+                               lnl_spend_category=str(category('consumables').pk))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Remove the refund first')
+        self.assertTrue(ParsedTransaction.objects.filter(pk=self.purchase.pk).exists())
+
+    def test_the_split_will_not_delete_a_settled_entry_without_the_settle_permission(self):
+        self.revoke('settle_subledger')
+        response = self._split(self.txn, self.purchase, DELETE='on',
+                               lnl_spend_category=str(category('consumables').pk))
+        self.assertContains(response, "don't have permission to unsettle it")
+        self.assertTrue(ParsedTransaction.objects.filter(pk=self.purchase.pk).exists())
+
+    def test_a_refund_saved_again_on_the_split_keeps_its_purchases_routing(self):
+        """
+        The credit line's split shows the money-coming-in columns, which have
+        no spend category or FR line. A refund is an expense, so they were
+        posted blank and wiped.
+        """
+        refund = self._refund()
+        self._split(refund.parent_transaction, refund, description='Gaff tape back')
+        refund.refresh_from_db()
+        self.assertEqual(refund.description, 'Gaff tape back')
+        self.assertEqual(refund.lnl_spend_category, category('consumables'))
+        self.assertEqual(refund.refund_of, self.purchase)

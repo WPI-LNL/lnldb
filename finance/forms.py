@@ -36,7 +36,7 @@ from finance.models import (ZERO, BalanceCheckpoint, Encumbrance, FRLineItem, Fu
                             WorkdayTransaction, current_fiscal_year, dollars,
                             event_passthrough_category, fiscal_year_bounds,
                             fiscal_year_choices, fiscal_year_for, money,
-                            own_fund_for_account, summed_money)
+                            own_fund_for_account, refund_window, summed_money)
 from finance.suggestions import AWARD, lookups_for_form, suggest_all, suggest_description
 
 
@@ -708,9 +708,10 @@ class BaseAllocationForm(forms.ModelForm):
         """
         Expenses this could be a refund of.
 
-        Restricted to the same fiscal year: a credit note lands within weeks of
-        the purchase, so an older match is nearly always the wrong row picked
-        out of a long list.
+        Restricted to this fiscal year and the one before (:func:`refund_window`):
+        a credit note lands within weeks of the purchase, so an older match is
+        nearly always the wrong row picked out of a long list, but a few weeks
+        can cross June 30.
 
         Three kinds of row are left out because choosing them could only ever
         fail validation, and an option that cannot be picked is worse than no
@@ -718,19 +719,22 @@ class BaseAllocationForm(forms.ModelForm):
 
         * encumbrances, where no money has left the account to come back;
         * this entry itself, which cannot be its own refund;
-        * anything already credited back in full.
+        * anything already credited back in full, by refunds other than this
+          one. The purchase this entry already refunds is always offered, even
+          when this refund is what credited it in full, or saving the entry
+          again would lose it.
 
         ``parent_transaction`` is selected because every label reads the
         payee off it, and a dropdown of forty purchases is otherwise forty
         queries.
         """
-        start, end = fiscal_year_bounds(self._entry_fiscal_year())
+        start, end = refund_window(self._entry_fiscal_year())
         qs = (ParsedTransaction.objects
-              .filter(amount__lt=0, parent_transaction__isnull=False,
-                      effective_date__range=(start, end))
-              .select_related('parent_transaction')
+              .filter(amount__lt=0, parent_transaction__isnull=False)
               .annotate(_credited=summed_money('refunds__amount'))
-              .exclude(_credited__gte=F('amount') * Value(-1))
+              .filter(Q(effective_date__range=(start, end), _credited__lt=F('amount') * Value(-1))
+                      | Q(pk=self.instance.refund_of_id))
+              .select_related('parent_transaction')
               .order_by('-effective_date', '-pk'))
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
@@ -1360,9 +1364,8 @@ class ReconcileForm(BaseAllocationForm):
 
 class EncumbranceForm(forms.ModelForm):
     """
-    What an encumbrance's lines share: what the purchase is, roughly when the
-    money goes out, and the quote. The money itself is on the lines -- see
-    :class:`EncumbranceLineFormSet`.
+    What an encumbrance's lines share: what the purchase is and the quote. The
+    money itself is on the lines -- see :class:`EncumbranceLineFormSet`.
 
     One description is all it asks for. There used to be a second required
     box, "What is this for?", which on nearly every encumbrance was the
@@ -1371,9 +1374,8 @@ class EncumbranceForm(forms.ModelForm):
 
     class Meta:
         model = Encumbrance
-        fields = ('description', 'effective_date', 'receipt_file')
+        fields = ('description', 'receipt_file')
         widgets = {
-            'effective_date': forms.DateInput(attrs={'type': 'date'}),
             'description': forms.TextInput(attrs={'placeholder': 'e.g. Spring gear order'}),
         }
 
@@ -1387,8 +1389,8 @@ class EncumbranceLineForm(BaseAllocationForm):
     One line of an encumbrance: an amount, and where it is charged.
 
     Always an expense, always Pending, and never on a bank line. The date is the
-    encumbrance's, as a split's entries take the bank line's. A line left
-    without a description of its own takes the encumbrance's, so the ledger
+    day the encumbrance was logged, as a split's entries take the bank line's. A
+    line left without a description of its own takes the encumbrance's, so the ledger
     never shows a blank; and the box starts empty again on the edit page when
     the line only ever had that, so renaming the encumbrance renames it too.
     """
@@ -1441,7 +1443,7 @@ class EncumbranceLineForm(BaseAllocationForm):
         return -abs(amount)
 
     def clean(self):
-        """ Take the encumbrance's date, and its description when the line has none. """
+        """ Take the day the encumbrance was logged, and its description when the line has none. """
         cleaned = super(EncumbranceLineForm, self).clean()
         if self.encumbrance_date:
             self.instance.effective_date = self.encumbrance_date
@@ -1551,12 +1553,31 @@ class SplitLineForm(BaseAllocationForm):
         Every slice has to run the same way as the line it splits, so the sign
         tells the form nothing it does not already know -- and read from what
         was typed, a cost entered as ``4342.40`` became a revenue row and lost
-        its spend category.
+        its spend category. A refund is the exception, as on a queue row: money
+        coming in that belongs on the expense side.
         """
         parent = self._parent()
         if parent is not None:
-            return 'revenue' if parent.net_amount > 0 else 'expense'
+            positive = parent.net_amount > 0
+            return 'revenue' if positive and not self._refund_selected() else 'expense'
         return super(SplitLineForm, self)._direction()
+
+    def _keep_refund_routing(self):
+        """
+        Keep the routing a refund took from its purchase.
+
+        The table shows the columns of the line's own direction, and a refund
+        on money coming in is an expense: its spend category and FR line aren't
+        on the row, so they come back blank. Put into ``cleaned_data`` before
+        the checks run, so a refund on a funding request still names its line.
+        """
+        if not self.instance.refund_of_id:
+            return
+        original = self.instance.refund_of
+        for name in ReconcileForm.REFUND_INHERITED:
+            if name in self.fields:
+                self.cleaned_data[name] = getattr(original, name)
+            setattr(self.instance, name, getattr(original, name))
 
     def clean_amount(self):
         """
@@ -1581,6 +1602,7 @@ class SplitLineForm(BaseAllocationForm):
         against its siblings' *old* amounts, so moving money from one settled
         slice to another could never balance one slice at a time.
         """
+        self._keep_refund_routing()
         cleaned = super(SplitLineForm, self).clean()
         self._inherit_effective_date()
         self.instance.status = TransactionStatus.PENDING
@@ -1622,8 +1644,13 @@ class BaseSplitFormSet(BaseInlineFormSet):
     'Save' button in the UI.
     """
     def __init__(self, *args, **kwargs):
-        """ Accept the bank line being split, which every slice needs. """
+        """
+        Accept the bank line being split, which every slice needs, and whether
+        the person saving may settle, without which a settled entry can't be
+        removed.
+        """
         self.parent_transaction = kwargs.pop('parent_transaction', None)
+        self.can_settle = kwargs.pop('can_settle', True)
         super(BaseSplitFormSet, self).__init__(*args, **kwargs)
 
     def get_form_kwargs(self, index):
@@ -1647,6 +1674,23 @@ class BaseSplitFormSet(BaseInlineFormSet):
         parent = self.parent_transaction or self.instance
         if parent is None or parent.pk is None:
             return
+
+        for form in self.forms:
+            if not form.cleaned_data or not form.cleaned_data.get('DELETE') or form.instance.pk is None:
+                continue
+            # The database won't orphan a refund, so its purchase stays until
+            # the refund goes.
+            if form.instance.refunds.exists():
+                raise ValidationError(
+                    "%s has a refund recorded against it. Remove the refund first."
+                    % (form.instance.description or "An entry you deleted"))
+            # Read from the database: SplitLineForm.clean() has already set
+            # every row to Pending, to be settled again once saved.
+            if not self.can_settle and ParsedTransaction.objects.filter(
+                    pk=form.instance.pk, status=TransactionStatus.SETTLED).exists():
+                raise ValidationError(
+                    "%s is settled, and you don't have permission to unsettle it."
+                    % (form.instance.description or "An entry you deleted"))
 
         total = Decimal('0.00')
         live_forms = 0
@@ -2035,10 +2079,19 @@ class BaseFRLineItemFormSet(BaseInlineFormSet):
     """ Numbers the lines by where they sit in the table, unless told otherwise. """
 
     def clean(self):
-        """ Number any line that was left without an explicit order. """
+        """
+        Refuse to delete a line anything is charged to, and number any line
+        that was left without an explicit order.
+        """
         super(BaseFRLineItemFormSet, self).clean()
         if any(self.errors):
             return
+        for form in self.forms:
+            if (form.cleaned_data and form.cleaned_data.get('DELETE') and form.instance.pk
+                    and form.instance.allocations.exists()):
+                raise ValidationError(
+                    "“%s” can't be deleted: entries or encumbrances are charged to it. Move them "
+                    "to another line first." % form.instance.name)
         position = 0
         for form in self.forms:
             if not form.cleaned_data or form.cleaned_data.get('DELETE'):

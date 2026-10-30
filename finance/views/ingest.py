@@ -576,18 +576,18 @@ def encumbrance(request, pk=None):
     form = EncumbranceForm(data, request.FILES or None, instance=instance)
     old_description = instance.description if instance else None
 
-    # The lines take the encumbrance's date and, when they have none of their
-    # own, its description -- the submitted ones once they are known to be good.
-    date = instance.effective_date if instance else None
+    # The lines are dated the day the encumbrance was logged and, when they
+    # have no description of their own, take its -- the submitted one once it
+    # is known to be good.
     description = old_description or ''
     form_ok = data is not None and form.is_valid()
     if form_ok:
-        date = form.cleaned_data['effective_date']
         description = form.cleaned_data['description']
 
+    header = instance or Encumbrance()
     formset = EncumbranceLineFormSet(
-        data, instance=instance or Encumbrance(), prefix='lines',
-        encumbrance_date=date, encumbrance_description=description)
+        data, instance=header, prefix='lines',
+        encumbrance_date=header.logged_on, encumbrance_description=description)
 
     # Both validated, so a bad line and a missing description show together.
     if data is not None and formset.is_valid() and form_ok:
@@ -607,15 +607,11 @@ def encumbrance(request, pk=None):
                 line.save()
             for line in formset.deleted_objects:
                 line.delete()
-            # A line nobody touched still follows a new date, and a new
-            # description when it only ever had the old one.
-            for line in header.open_lines():
-                changed = line.effective_date != header.effective_date
-                line.effective_date = header.effective_date
-                if old_description is not None and line.description == old_description:
-                    changed = changed or line.description != header.description
+            # A line nobody touched still follows a new description when it
+            # only ever had the old one.
+            if old_description is not None and old_description != header.description:
+                for line in header.open_lines().filter(description=old_description):
                     line.description = header.description
-                if changed:
                     line.full_clean()
                     line.save()
 
@@ -1083,7 +1079,8 @@ def _put_back_on_encumbrance(entry):
       A slice with a receipt on it stays a row of its own, so the receipt is
       kept.
 
-    Either way the line takes the encumbrance's date, as every open line does.
+    Either way the line is dated the day the encumbrance was logged, as every
+    open line is.
 
     :returns: how much is encumbered again.
     """
@@ -1106,7 +1103,7 @@ def _put_back_on_encumbrance(entry):
 
     entry.parent_transaction = None
     entry.status = TransactionStatus.PENDING
-    entry.effective_date = header.effective_date
+    entry.effective_date = header.logged_on
     if before is not None:
         entry.amount = before['amount']
         entry.description = before['description']
@@ -1151,6 +1148,18 @@ def unreconcile(request, pk):
         if wants_json:
             return JsonResponse({'ok': True, 'reference': txn.reference, 'message': message})
         messages.info(request, message)
+        return HttpResponseRedirect(redirect_to)
+
+    # Undoing a settled line unsettles it, which needs the same permission as
+    # settling it did.
+    if (any(s.status == TransactionStatus.SETTLED for s in slices)
+            and not request.user.has_perm('finance.settle_subledger')):
+        message = ("%s cannot be undone: it is settled, and you don't have permission to "
+                   "unsettle it." % txn.reference)
+        if wants_json:
+            return JsonResponse({'ok': False, 'reference': txn.reference,
+                                 'message': message}, status=403)
+        messages.error(request, message)
         return HttpResponseRedirect(redirect_to)
 
     # A slice someone has since credited a refund against is load-bearing: the
@@ -1311,7 +1320,7 @@ def bulk_reconcile(request):
                 parent_transaction=txn,
                 amount=remaining if remaining else txn.net_amount,
                 effective_date=txn.accounting_date,
-                description=txn.journal_line_memo or txn.description,
+                description=(txn.journal_line_memo or txn.description)[:255],
                 fund_source=form.cleaned_data['fund_source'],
                 lnl_spend_category=form.cleaned_data.get('lnl_spend_category'),
                 project_tag=form.cleaned_data.get('project_tag'),

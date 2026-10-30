@@ -190,4 +190,4 @@ bill paid once the payment arrives. See :doc:`events`.
     New to the role? Read this page, then :doc:`import-and-settle`. Most of the job is the monthly import, and the queue
     fills in most of each line for you.
 
-`Last Modified: October 29, 2026`
+`Last Modified: October 30, 2026`

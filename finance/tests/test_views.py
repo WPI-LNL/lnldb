@@ -39,6 +39,12 @@ class FinanceViewTestCase(ViewTestCase):
         self.user = type(self.user).objects.get(pk=self.user.pk)
         self.client.force_login(self.user)
 
+    def revoke(self, *codenames):
+        for codename in codenames:
+            self.user.user_permissions.remove(Permission.objects.get(codename=codename))
+        self.user = type(self.user).objects.get(pk=self.user.pk)
+        self.client.force_login(self.user)
+
     def make_txn(self, op='OT-1', amount='-1200.00', org=None, date=None, memo='Test line'):
         """ ``org`` is the Student Organization worktag, which drives the partition. """
         worktags = {'ledger_account': '71100:Supplies', 'spend_category': 'Supplies'}
@@ -1234,6 +1240,19 @@ class UnreconcileTests(FinanceViewTestCase):
         response = self.client.post(reverse('finance:unreconcile', args=[self.txn.pk]))
         self.assertEqual(response.status_code, 403)
         self.assertTrue(ParsedTransaction.objects.filter(pk=self.entry.pk).exists())
+
+    def test_undoing_a_settled_line_needs_the_settle_permission(self):
+        """ Unsettling is the other half of settling, and Undo must not be a way around it. """
+        self.revoke('settle_subledger')
+        response = self._undo()
+        self.assertContains(response, "don't have permission to unsettle it")
+        self.assertTrue(ParsedTransaction.objects.filter(pk=self.entry.pk).exists())
+
+    def test_a_pending_line_can_be_undone_without_it(self):
+        self.revoke('settle_subledger')
+        ParsedTransaction.objects.filter(pk=self.entry.pk).update(status=TransactionStatus.PENDING)
+        self._undo()
+        self.assertFalse(ParsedTransaction.objects.filter(pk=self.entry.pk).exists())
 
     def test_get_is_not_enough_to_delete_anything(self):
         response = self.client.get(reverse('finance:unreconcile', args=[self.txn.pk]))

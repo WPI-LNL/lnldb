@@ -398,6 +398,15 @@ def fiscal_year_bounds(fiscal_year):
     return start, end
 
 
+def refund_window(fiscal_year):
+    """
+    ``(first_day, last_day)`` of the purchases a refund dated in
+    ``fiscal_year`` can give money back for: that year and the one before,
+    since the credit for a June purchase often lands in July.
+    """
+    return fiscal_year_bounds(fiscal_year - 1)[0], fiscal_year_bounds(fiscal_year)[1]
+
+
 def current_fiscal_year():
     """ The fiscal year we are in today, in local time. """
     return fiscal_year_for(timezone.localdate())
@@ -2301,13 +2310,14 @@ class Encumbrance(models.Model):
 
     A line keeps pointing here after it is matched to a Workday line, so the
     entry it became can say which encumbrance it came from.
+
+    It has no date of its own. Money is encumbered from the moment it is
+    logged until its Workday line is matched, so its open lines are dated the
+    day it was logged (:attr:`logged_on`) and count on every balance from then.
     """
     glyphicon = 'lock'
 
     description = models.CharField(max_length=255, help_text="What the purchase is.")
-    effective_date = models.DateField(
-        default=timezone.localdate, verbose_name="Date",
-        help_text="Roughly when the money will go out.")
     receipt_file = models.FileField(upload_to='finance/receipts/%Y/%m/', null=True, blank=True,
                                     verbose_name="Receipt or quote")
 
@@ -2316,13 +2326,18 @@ class Encumbrance(models.Model):
                                    blank=True, related_name='encumbrances')
 
     class Meta:
-        ordering = ('-effective_date', '-pk')
+        ordering = ('-created_on', '-pk')
 
     def __str__(self):
         return self.description
 
     def get_absolute_url(self):
         return reverse('finance:encumbrance-edit', args=[self.pk])
+
+    @property
+    def logged_on(self):
+        """ The day it was logged, which its open lines are dated; today before it is saved. """
+        return timezone.localdate(self.created_on) if self.created_on else timezone.localdate()
 
     def open_lines(self):
         """ The lines still waiting for their Workday charge, in the order they were written. """

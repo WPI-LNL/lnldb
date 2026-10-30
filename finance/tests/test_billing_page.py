@@ -482,7 +482,7 @@ class BillingPageTests(ViewTestCase):
         resp = self.client.get(self.url + '?stage=create-isd&fy=all')
         made = Billing.objects.get(event=gala)
         for text in ('$250.00', 'data-copy="250.00"', '1234-CC', '110-FD', 'Ada Lovelace', 'ada@wpi.edu',
-                     'Lens and Lights services for Gala', 'Spring budget, please', 'Now $0.00',
+                     'Lens and Lights services for Gala', 'Spring budget, please', 'Now $0',
                      reverse('events:bills:pdf', args=[gala.pk]), reverse('finance:bill-isd', args=[gala.pk, made.pk]),
                      'name="isd_number"', 'name="worktag" value="1234-CC"', 'name="fund" value="110"',
                      'name="amount" value="250.00"'):
@@ -698,11 +698,11 @@ class WorktagAndISDTests(ViewTestCase):
         bulk.recalculate()
         self.isd('25090300-ISD', url=reverse('finance:multibill-isd', args=[bulk.pk]), amount=str(bulk.amount))
         self.assertContains(self.client.get(reverse('finance:multibill-edit', args=[bulk.pk])),
-                            'ISD 25090300-ISD was created for $0.00.')
+                            'ISD 25090300-ISD was created for $0.')
         resp = self.client.post(reverse('finance:multibill-charge-new', args=[bulk.pk]),
                                 {'kind': 'oneoff', 'description': 'Popcorn', 'quantity': '1', 'unit_price': '40.00'},
                                 follow=True)
-        self.assertContains(resp, 'ISD 25090300-ISD charges $0.00, but the bill now comes to $40.00.')
+        self.assertContains(resp, 'ISD 25090300-ISD charges $0, but the bill now comes to $40.00.')
         bulk.refresh_from_db()
         self.assertTrue(bulk.isd_differs)
 

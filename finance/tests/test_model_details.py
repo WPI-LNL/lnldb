@@ -219,7 +219,7 @@ class LabelTests(TestCase):
         label = line.picker_label
         self.assertIn('FY26', label)
         self.assertIn('F.26.6', label)
-        self.assertIn('$5000.00 left', label)
+        self.assertIn('$5,000.00 left', label)
 
     def test_an_overspent_fr_line_says_so_rather_than_showing_a_negative(self):
         request = FundingRequest.objects.create(name='A Term Films', fiscal_year=2026)

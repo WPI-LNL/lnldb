@@ -174,7 +174,7 @@
                         <th data-col="project"><a href="{% sort_url 'project' %}">Project{% sort_indicator 'project' %}</a></th>
                         <th data-col="workday_ref">Workday Ref</th>
                         <th data-col="ledger_account">Ledger Acct</th>
-                        <th data-col="receipt">Receipt</th>
+                        {% if perms.finance.view_subledger_receipts %}<th data-col="receipt">Receipt</th>{% endif %}
                         <th style="width:40px;"></th>
                     </tr>
                 </thead>
@@ -256,12 +256,14 @@
                             <td data-col="ledger_account">
                                 {% if entry.parent_transaction %}{{ entry.parent_transaction.ledger_account|default:"—" }}{% else %}—{% endif %}
                             </td>
+                            {% if perms.finance.view_subledger_receipts %}
                             <td data-col="receipt">
                                 {% if entry.receipt_file %}
                                     <a href="{{ entry.receipt_file.url }}" target="_blank" title="View receipt">
                                         <span class="glyphicon glyphicon-paperclip"></span></a>
                                 {% else %}<span class="fin-muted">—</span>{% endif %}
                             </td>
+                            {% endif %}
                             <td>
                                 <a href="{% url 'finance:entry-detail' entry.pk %}" class="btn btn-xs btn-default"
                                    title="Open">&rsaquo;</a>

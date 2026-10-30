@@ -27,8 +27,8 @@ from finance.billing import bill_closed, mark_paid_from_payments, payment_offer
 from finance.calculators import bill_payments
 from finance.filters import filter_context
 from finance.forms import AllocationForm, SplitFormSet
-from finance.models import (MultiBilling, ParsedTransaction, WorkdayTransaction, dollars,
-                            own_fund_for_account)
+from finance.models import (MultiBilling, ParsedTransaction, TransactionStatus, WorkdayTransaction,
+                            dollars, own_fund_for_account)
 from finance.suggestions import suggest_all
 
 
@@ -111,7 +111,8 @@ def transaction_detail(request, pk):
 
     if request.method == 'POST' and can_edit:
         formset = SplitFormSet(request.POST, request.FILES, instance=txn,
-                               parent_transaction=txn)
+                               parent_transaction=txn,
+                               can_settle=request.user.has_perm('finance.settle_subledger'))
         if formset.is_valid():
             with reversion.create_revision():
                 reversion.set_user(request.user)
@@ -336,6 +337,18 @@ def _multibill_shares_of(entry):
                   key=lambda pair: (pair[0].datetime_start, pair[0].pk))
 
 
+def _why_not_removable(request, entry):
+    """ Why ``entry`` can't be removed by this person, or ``None`` if it can. """
+    # The database won't orphan a refund, so its purchase stays until the
+    # refund goes.
+    if entry.refunds.exists():
+        return "This purchase has a refund recorded against it. Remove the refund first."
+    if (entry.status == TransactionStatus.SETTLED
+            and not request.user.has_perm('finance.settle_subledger')):
+        return "This entry is settled, and you don't have permission to unsettle it."
+    return None
+
+
 @login_required
 @permission_required('finance.edit_subledger', raise_exception=True)
 def entry_delete(request, pk):
@@ -361,8 +374,12 @@ def entry_delete(request, pk):
     """
     entry = get_object_or_404(ParsedTransaction, pk=pk)
     parent = entry.parent_transaction
+    blocked = _why_not_removable(request, entry)
 
     if request.method == 'POST':
+        if blocked:
+            messages.error(request, blocked)
+            return HttpResponseRedirect(reverse('finance:entry-delete', args=[entry.pk]))
         with reversion.create_revision():
             reversion.set_user(request.user)
             reversion.set_comment("Entry removed")
@@ -375,6 +392,7 @@ def entry_delete(request, pk):
         'h2': "Remove entry?",
         'entry': entry,
         'txn': parent,
+        'blocked': blocked,
     }
     context.update(filter_context(request))
     return render(request, 'finance/entry_confirm_delete.html', context)

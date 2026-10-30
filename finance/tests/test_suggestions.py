@@ -31,7 +31,8 @@ from finance.models import FundSource, ParsedTransaction, SpendCategory, Workday
 from finance.suggestions import (AWARD, DEFAULT, EXPORT, GUESS, HIGH, LOW, MEDIUM, MEMO,
                                  Suggestion, event_name_from_memo,
                                  event_name_from_transaction, parse_memo,
-                                 suggest_linked_event, suggest_refund_targets)
+                                 suggest_description, suggest_linked_event,
+                                 suggest_refund_targets)
 from finance.tests.util import category, fund
 
 SEP = datetime.date(2025, 9, 15)
@@ -145,6 +146,16 @@ class MemoFormatTests(TestCase):
         fields = parse_memo('(A.27.16)')
         self.assertEqual(fields.reference, 'A.27.16')
         self.assertEqual(fields.description, '')
+
+    def test_a_description_from_a_long_memo_fits_on_an_entry(self):
+        """ A description holds 255 characters; a longer memo was refused when settled. """
+        memo = 'Stage risers and skirting for the spring concert ' * 7
+        txn = WorkdayTransaction.objects.create(
+            operational_transaction='OT-LONG', accounting_date=datetime.date(2025, 9, 15),
+            net_amount=Decimal('-50.00'), memo=memo,
+            worktags_json={'journal_line_memo': memo})
+        self.assertGreater(len(memo), 255)
+        self.assertEqual(suggest_description(txn), memo[:255])
 
 
 class EventNameFromMemoTests(TestCase):

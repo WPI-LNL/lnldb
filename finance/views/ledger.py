@@ -226,11 +226,20 @@ def ledger(request):
     params = request.GET.copy()
     params.pop('page', None)
 
+    bulk_form = BulkActionForm()
+    if not request.user.has_perm('finance.settle_subledger'):
+        bulk_form.fields['action'].choices = [
+            choice for choice in bulk_form.fields['action'].choices if choice[0] != 'status']
+
     context = {
         'h2': "Subledger",
         'fin_page': 'ledger',
         'page_obj': page,
-        'columns': LEDGER_COLUMNS,
+        # A receipt is only for those allowed to see receipts, so its column
+        # isn't offered to anyone else.
+        'columns': [column for column in LEDGER_COLUMNS
+                    if column[0] != 'receipt'
+                    or request.user.has_perm('finance.view_subledger_receipts')],
         'result_count': paginator.count,
         'net_total': net_total,
         'revenue_total': revenue_total,
@@ -251,7 +260,7 @@ def ledger(request):
         'event_clear_querystring': _without(params, 'event'),
         'multibill_filter': multibill,
         'multibill_clear_querystring': _without(params, 'multibill'),
-        'bulk_form': BulkActionForm(),
+        'bulk_form': bulk_form,
         'can_edit': request.user.has_perm('finance.edit_subledger'),
     }
     context.update(filter_context(request))
@@ -304,6 +313,12 @@ def bulk_action(request):
 
     action = form.cleaned_data['action']
     value = form.cleaned_data[action]
+
+    # Settling, or taking an entry back out of Settled, is a separate
+    # permission from editing, and the bulk bar must not be a way around it.
+    if action == 'status' and not request.user.has_perm('finance.settle_subledger'):
+        messages.error(request, "You don't have permission to change whether entries are settled.")
+        return HttpResponseRedirect(redirect_to)
     entries = list(ParsedTransaction.objects.filter(pk__in=ids))
 
     # Expense routing on a revenue row is refused by a database constraint, so

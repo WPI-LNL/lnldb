@@ -352,13 +352,22 @@ still answers yes to ``is_expense``, and is still counted as spending
 everywhere it was before.
 
 An encumbrance can have several lines. One order paid partly out of Legacy and
-partly off a funding request is one ``Encumbrance`` row -- the description, the
-date and the quote -- with a line on each fund. The lines are the
+partly off a funding request is one ``Encumbrance`` row -- the description and
+the quote -- with a line on each fund. The lines are the
 ``ParsedTransaction`` rows described above, linked by ``encumbrance``, so every
 balance and burndown reads them exactly as it read a single-line
 encumbrance and never reads the ``Encumbrance`` row at all. A line keeps the
 link after it is matched, so the entry it became can say where it came from.
 A line with no description of its own takes the encumbrance's.
+
+An encumbrance has no date. Money is encumbered from the day it is logged
+until it is matched, so its open lines are dated that day
+(``Encumbrance.logged_on``) and count on every balance from then. It used to
+ask for "roughly when the money will go out", and the Balances tab counts an
+encumbrance only from its date, so one dated next month left the money free
+to spend until then. Migration ``0021_encumbrance_no_date`` dropped the field
+and moved any open line dated after its encumbrance was logged back to that
+day.
 
 Enforced accounting rules
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -922,7 +931,12 @@ tick. Charging FY25 spending to an FY26 funding request is the worked example:
 the picker lists this year's requests, and *"Charge a different fiscal year"*
 widens it. Submitting another year's line without that tick is refused by name
 — "This is FY26 spending but FY25 Grant is an FY25 request." The same
-thinking narrows the refund target list to the current year.
+thinking narrows the refund target list to this fiscal year and the one before
+(:func:`finance.models.refund_window`): a credit lands within weeks of its
+purchase, but those weeks can cross June 30. The queue's refund suggestions
+look back no further, so it never suggests a purchase the picker refuses. The
+purchase a refund already refunds is always on its own picker, even once that
+refund has credited it in full, so the entry can be saved again.
 
 **Put the number where the decision is.** The funding request line picker
 lists each request as a heading carrying its year, with its lines indented
@@ -1045,7 +1059,17 @@ row itself is untouched -- it is immutable bank truth, and only what LNL decided
 
 One case is refused rather than forced: a slice with a refund recorded against it
 is load-bearing, since the refund exists to reverse *that* purchase, and the
-database will not orphan it. The queue says so instead of returning a 500.
+database will not orphan it. The queue says so instead of returning a 500, and
+so do removing the entry on its own page and ticking its *Del* box on the
+split. Likewise a funding request line with entries or encumbrances charged to
+it can't be deleted from the request's edit page
+(``BaseFRLineItemFormSet.clean``).
+
+On the split page a refund is an expense, as on a queue row, even though the
+credit line's table shows the money-coming-in columns. It keeps the routing it
+took from its purchase (``SplitLineForm._keep_refund_routing``), since its
+spend category and FR line are not on the row and would otherwise be posted
+blank.
 
 An entry that came from an encumbrance (it names one in ``encumbrance``) is not
 deleted but put back on it, by
@@ -1065,7 +1089,8 @@ which came from the bank line. The two shapes a match writes go back differently
   and the slice is deleted. If that line has closed since (a later charge took
   it), or the slice has a receipt on it, the slice becomes an open line itself.
 
-Either way the line takes the encumbrance's date, as every open line does. The
+Either way the line is dated the day the encumbrance was logged
+(``Encumbrance.logged_on``), as every open line is. The
 message is a warning that names both changes -- the line unsettled and the
 encumbrance restored -- because the second is easy to miss when only the first was
 meant.
@@ -2417,8 +2442,9 @@ Permissions
     Read-only access to the funding request list and detail pages. Django
     creates this one automatically.
 ``view_subledger_receipts``
-    See the receipt attached to an entry, and download the Funding Request
-    Report Form's PDF, which has the receipts in it. Separate from
+    See the receipt attached to an entry, on its page or in the ledger's
+    *Receipt* column (not offered without it), and download the Funding
+    Request Report Form's PDF, which has the receipts in it. Separate from
     ``view_subledger`` because a receipt is a scan of somebody's purchase,
     which is a narrower thing to hand out than a ledger row.
 ``edit_subledger``
@@ -2427,7 +2453,10 @@ Permissions
     which Officers hold.
 ``settle_subledger``
     Settle Workday lines: mark their entries Settled. Shown as *Settle
-    Workday lines*.
+    Workday lines*. Taking a line back out of Settled needs it too: undoing a
+    settled line, removing a settled entry (on its own page or with the
+    split's *Del* box) and the ledger bar's *Set status*, which is not offered
+    without it.
 ``import_workdaytransaction``
     Upload Workday journal exports.
 ``manage_projecttag`` / ``manage_fundingrequest``
