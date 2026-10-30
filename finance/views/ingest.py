@@ -21,6 +21,8 @@ from django.shortcuts import get_object_or_404, render
 from django.urls.base import reverse
 from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
+from reversion.errors import RevertError
+from reversion.models import Version
 
 from finance.billing import bill_closed, mark_paid_from_payments, payment_offer
 from finance.calculators import bill_payments, latest_bill
@@ -680,35 +682,63 @@ def _name_a_few(labels, limit=5):
     return named
 
 
-def _draw_message(txn, reserved, drawn, exhausted, settled):
+def _charged_to(entry):
+    """ Where an encumbrance line charges its money, as a message names it. """
+    return str(entry.fr_line_target or entry.fund_source or "the encumbrance's fund")
+
+
+def _over_encumbered(needed, encumbered, left, entry):
     """
-    What one drawdown did, in a sentence.
+    The warning for a line that needed more than was encumbered for it, or ``''``.
+
+    Said for any amount over, however small: a charge the encumbrance stretched
+    over is still money nobody encumbered, and it should be seen every time. ``left`` is what the line still has to settle afterwards -- the
+    part the encumbrance did not stretch over. ``entry`` is the line that took
+    the stretch, for where the extra was charged.
+    """
+    over = abs(money(needed)) - abs(money(encumbered))
+    if over <= 0:
+        return ''
+    left = abs(money(left))
+    stretched = over - left
+    note = " The charge was %s more than was encumbered" % dollars(over)
+    if stretched > 0 and left:
+        return note + (": %s of it is charged to %s with the encumbrance, and %s of this line "
+                       "is left to settle." % (dollars(stretched), _charged_to(entry), dollars(left)))
+    if stretched > 0:
+        return note + ", and the extra is charged to %s with the encumbrance." % _charged_to(entry)
+    return note + ": %s of this line is left to settle." % dollars(left)
+
+
+def _draw_message(txn, entry, reserved, drawn, exhausted, settled):
+    """
+    What one drawdown did, in a sentence, and whether it is a warning.
 
     Says all three of what the line took, what the reservation has left, and
     what the line still needs, because any of them can be non-obvious after a
     draw: a reservation spanning ten lines is neither used up nor
     untouched, and the Treasurer has no other way to see where it stands
     without going and looking.
+
+    :returns: ``(message, warn)`` -- ``warn`` when the line needed more than
+        was encumbered; see :func:`_over_encumbered`.
     """
     took = abs(money(drawn))
     estimate = abs(money(reserved))
+    left = abs(money(txn.unallocated_amount))
     verb = "settled against" if settled else "matched to"
 
-    if exhausted and took == estimate:
-        message = "%s %s an encumbrance of %s." % (txn.reference, verb, dollars(took))
-    elif exhausted:
-        message = ("%s %s an encumbrance of %s; %s was drawn."
-                   % (txn.reference, verb, dollars(estimate), dollars(took)))
+    if exhausted:
+        message = "%s %s an encumbrance of %s." % (txn.reference, verb, dollars(estimate))
     else:
         message = ("%s %s %s of a %s encumbrance — %s stays encumbered."
                    % (txn.reference, verb, dollars(took), dollars(estimate),
                       dollars(estimate - took)))
 
-    left = abs(money(txn.unallocated_amount))
-    if left:
-        message += (" %s of this line is left to settle — the encumbrance did not "
-                    "cover it." % dollars(left))
-    return message
+    # The line is left with something to settle only when it needed more than
+    # the encumbrance held, so the warning says that too.
+    warning = _over_encumbered(took + left, estimate, left, entry)
+    return message + warning, bool(warning)
 
 
 def _encumbrance_draw(reserved, remaining, stretch=True):
@@ -735,6 +765,8 @@ def _encumbrance_draw(reserved, remaining, stretch=True):
     With ``stretch`` off, the second shape is treated as the third: the
     reservation covers what it says and no more. See
     :func:`draw_whole_encumbrance`, where only the last line may stretch.
+    Either way the callers warn about the second and third shapes; see
+    :func:`_over_encumbered`.
 
     :returns: ``(draw, exhausted)`` -- what this line takes, and whether the
         reservation has nothing left afterwards.
@@ -860,8 +892,11 @@ def draw_whole_encumbrance(lines, txn, user):
     return results
 
 
-def _whole_draw_message(txn, header, results, settled):
-    """ What matching a whole encumbrance did, in a sentence or two. """
+def _whole_draw_message(txn, header, encumbered, results, settled):
+    """
+    What matching a whole encumbrance did, in a sentence or two, and whether
+    it is a warning. ``encumbered`` is what its lines held before the match.
+    """
     took = abs(sum((money(drawn) for _, drawn, _ in results), ZERO))
     message = "%s %s “%s”: %s across %s line%s." % (
         txn.reference, "settled against" if settled else "matched to", header.description,
@@ -872,10 +907,9 @@ def _whole_draw_message(txn, header, results, settled):
         message += " %s line%s of it %s encumbered." % (
             still, '' if still == 1 else 's', 'stays' if still == 1 else 'stay')
     left = abs(money(txn.unallocated_amount))
-    if left:
-        message += (" %s of this line is left to settle — the encumbrance did not "
-                    "cover it." % dollars(left))
-    return message
+    # Only the last line stretches, so the extra is charged the way it is.
+    warning = _over_encumbered(took + left, encumbered, left, results[-1][0])
+    return message + warning, bool(warning)
 
 
 @login_required
@@ -955,6 +989,7 @@ def match_encumbrance(request, pk):
                     % txn.reference)
 
     reserved = entry.amount
+    encumbered = sum((money(line.amount) for line in lines), ZERO) if whole else reserved
 
     try:
         with transaction.atomic(), reversion.create_revision():
@@ -976,29 +1011,25 @@ def match_encumbrance(request, pk):
         txn.settle()
 
     if whole:
-        message = _whole_draw_message(txn, header, results, settled)
+        message, warn = _whole_draw_message(txn, header, encumbered, results, settled)
     else:
-        message = _draw_message(txn, reserved, drawn, exhausted, settled)
+        message, warn = _draw_message(txn, entry, reserved, drawn, exhausted, settled)
 
     if wants_json:
         txn.refresh_from_db()
+        # Undo is offered as after any other settle: it puts what came from the
+        # encumbrance back on it (see unreconcile).
         return JsonResponse({
             'ok': True,
             'reference': txn.reference,
             'message': message,
+            'warning': warn,
             'settled': settled,
             'done': txn.is_fully_allocated,
             'unallocated': str(txn.unallocated_amount),
-            # The queue's Undo deletes a row's allocations outright. That is
-            # the right way back out of an allocation typed a second ago and
-            # the wrong way back out of an encumbrance logged weeks ago -- it
-            # would take the description, the reason and the reservation with
-            # it, and none of that came from the bank line. Correcting a wrong
-            # match is an edit on the entry, not a deletion.
-            'undoable': False,
         })
 
-    messages.success(request, message)
+    (messages.warning if warn else messages.success)(request, message)
     return HttpResponseRedirect(redirect_to)
 
 
@@ -1018,6 +1049,74 @@ def settle(request, pk):
     return HttpResponseRedirect(redirect_to)
 
 
+def _before_the_match(entry):
+    """
+    What ``entry`` held as an open encumbrance line, from its history, or ``None``.
+
+    The newest version of it with no bank line. ``None`` for a slice drawn off a
+    larger line, which was written already on its bank line, and for a row with
+    no history from before its match.
+    """
+    for version in Version.objects.get_for_object(entry):
+        try:
+            fields = version.field_dict
+        except RevertError:                                 # pragma: no cover
+            continue
+        if fields.get('parent_transaction_id') is None:
+            return fields
+    return None
+
+
+def _put_back_on_encumbrance(entry):
+    """
+    Return one entry that came from an encumbrance to it, as before the match.
+
+    Two shapes, the two :func:`draw_from_encumbrance` writes:
+
+    * **The encumbrance line itself**, which the match that finished it moved
+      onto the bank line. It goes back to the amount and description its
+      history says it had, so an encumbrance the charge stretched over comes
+      back at what was encumbered, not at what was charged.
+    * **A slice drawn off a larger line.** Its money goes back onto that line
+      if it is still open -- the one on the same encumbrance with the same
+      routing -- and otherwise the slice becomes an open line again itself.
+      A slice with a receipt on it stays a row of its own, so the receipt is
+      kept.
+
+    Either way the line takes the encumbrance's date, as every open line does.
+
+    :returns: how much is encumbered again.
+    """
+    header = entry.encumbrance
+    before = _before_the_match(entry)
+    if before is None and not entry.receipt_file:
+        line = header.open_lines().filter(
+            fund_source_id=entry.fund_source_id,
+            lnl_spend_category_id=entry.lnl_spend_category_id,
+            fr_line_target_id=entry.fr_line_target_id,
+            project_tag_id=entry.project_tag_id,
+            linked_event_id=entry.linked_event_id,
+            is_projection=entry.is_projection).first()
+        if line is not None:
+            line.amount = money(line.amount) + money(entry.amount)
+            line.full_clean()
+            line.save()
+            entry.delete()
+            return money(entry.amount)
+
+    entry.parent_transaction = None
+    entry.status = TransactionStatus.PENDING
+    entry.effective_date = header.effective_date
+    if before is not None:
+        entry.amount = before['amount']
+        entry.description = before['description']
+    else:
+        entry.description = header.description
+    entry.full_clean()
+    entry.save()
+    return money(entry.amount)
+
+
 @login_required
 @permission_required('finance.edit_subledger', raise_exception=True)
 @require_POST
@@ -1035,6 +1134,12 @@ def unreconcile(request, pk):
     The Workday line itself is never touched. It is immutable bank truth: only
     what LNL decided *about* it is being withdrawn, which is why this is a
     deletion of slices and not an edit of anything.
+
+    The exception is an entry that came from an encumbrance. Deleting it would
+    take the encumbrance with it -- the description, the reason and the money
+    somebody set aside weeks ago, none of which came from the bank line -- so
+    it is put back on the encumbrance instead (:func:`_put_back_on_encumbrance`),
+    and the message is a warning that says both things happened.
     """
     txn = get_object_or_404(WorkdayTransaction, pk=pk)
     redirect_to = request.POST.get('next') or reverse('finance:queue')
@@ -1064,23 +1169,46 @@ def unreconcile(request, pk):
         messages.error(request, message)
         return HttpResponseRedirect(redirect_to)
 
-    with reversion.create_revision():
-        reversion.set_user(request.user)
-        reversion.set_comment("Settling undone — entries removed")
-        for entry in slices:
-            entry.delete()
+    restored = {}
+    try:
+        with transaction.atomic(), reversion.create_revision():
+            reversion.set_user(request.user)
+            reversion.set_comment("Settling undone — entries removed")
+            for entry in slices:
+                if entry.encumbrance_id is None:
+                    entry.delete()
+                    continue
+                header = entry.encumbrance
+                restored[header] = restored.get(header, ZERO) + _put_back_on_encumbrance(entry)
+    except ValidationError as exc:                          # pragma: no cover
+        message = "%s could not be undone: %s" % (txn.reference, " ".join(exc.messages))
+        if wants_json:
+            return JsonResponse({'ok': False, 'reference': txn.reference,
+                                 'message': message}, status=409)
+        messages.error(request, message)
+        return HttpResponseRedirect(redirect_to)
 
     txn.refresh_from_db()
     message = ("Undone. %s is back in the queue with %s to settle."
                % (txn.reference, dollars(abs(txn.unallocated_amount))))
+    if restored:
+        # Unsettling the line and encumbering the money again are two changes,
+        # and the second is easy to miss when you only meant the first.
+        message = ("Undone. %s is unsettled and back in the queue with %s to settle, and its "
+                   "%s restored: %s is encumbered again on %s."
+                   % (txn.reference, dollars(abs(txn.unallocated_amount)),
+                      "encumbrance was" if len(restored) == 1 else "encumbrances were",
+                      dollars(abs(sum(restored.values(), ZERO))),
+                      _name_a_few("“%s”" % header.description for header in restored)))
     if wants_json:
         return JsonResponse({
             'ok': True,
             'reference': txn.reference,
             'message': message,
             'removed': len(slices),
+            'warning': bool(restored),
         })
-    messages.success(request, message)
+    (messages.warning if restored else messages.success)(request, message)
     return HttpResponseRedirect(redirect_to)
 
 
@@ -1234,9 +1362,11 @@ def bulk_match_encumbrance(request):
     makes the drawdown reproducible: the same selection and the same reservation
     always produce the same allocation, whichever order the rows were ticked in.
 
-    Stops when the reservation runs out rather than stretching it, and says how
-    many lines were left over. A reservation is evidence about the purchase it
-    was written for, not about whatever else is on the same export.
+    Stops when the reservation runs out and names the lines left over. A
+    reservation is evidence about the purchase it was written for, not about
+    whatever else is on the same export. The line that finishes it may stretch
+    it over a small difference, as a single match does, and every way the
+    selection needed more than was encumbered is said as a warning.
     """
     form = BulkEncumbranceForm(request.POST)
     redirect_to = request.POST.get('next') or reverse('finance:queue')
@@ -1274,7 +1404,7 @@ def bulk_match_encumbrance(request):
     reserved = entry.amount
     can_settle = request.user.has_perm('finance.settle_subledger')
     covered, settled, refused, untouched = [], 0, [], []
-    exhausted = False
+    exhausted, stretched = False, None
 
     with reversion.create_revision():
         reversion.set_user(request.user)
@@ -1285,6 +1415,7 @@ def bulk_match_encumbrance(request):
                 # rather than partly done -- and is named below.
                 untouched = lines[index:]
                 break
+            left_before = abs(money(entry.amount))
             try:
                 # Each row is validated on its own and a failure leaves it
                 # alone: a bulk action must never write a row the rest of the
@@ -1293,9 +1424,15 @@ def bulk_match_encumbrance(request):
                 with transaction.atomic():
                     drawn, exhausted = draw_from_encumbrance(entry, txn, request.user)
             except ValidationError as exc:
+                # The savepoint undid the database, but the draw had already
+                # changed the encumbrance in memory, and the next row would
+                # draw from that.
+                entry.refresh_from_db()
                 refused.append((txn, exc))
                 continue
             covered.append((txn, drawn))
+            if exhausted and abs(money(drawn)) > left_before:
+                stretched = (txn, abs(money(drawn)) - left_before)
             if can_settle and txn.is_fully_allocated:
                 txn.settle()
                 settled += 1
@@ -1309,12 +1446,20 @@ def bulk_match_encumbrance(request):
                 "The encumbrance is now closed." if exhausted else
                 "%s stays encumbered." % dollars(abs(money(reserved)) - total)))
 
+    # Everything below is the selection needing more than was encumbered, so
+    # each is a warning, however small.
+    if stretched is not None:
+        txn, extra = stretched
+        messages.warning(
+            request, "%s was %s more than was left on the encumbrance, and the extra is charged "
+                     "to %s with it." % (txn.reference, dollars(extra), _charged_to(entry)))
+
     # A line the reservation reached but did not finish. It stays in the queue,
     # which is correct and easy to miss among nine that left it -- the eye reads
     # "settled 9" and stops.
     short = [(t, t.unallocated_amount) for t, _ in covered if t.unallocated_amount]
     if short:
-        messages.info(
+        messages.warning(
             request, "The encumbrance did not cover all of %s: %s. %s still in the queue."
             % ("one line" if len(short) == 1 else "%s lines" % len(short),
                _name_a_few("%s (%s left)" % (t.reference, dollars(abs(money(left))))
@@ -1324,7 +1469,7 @@ def bulk_match_encumbrance(request):
     # The lines the reservation did not reach. Named rather than counted: the
     # Treasurer has to route them by hand and needs to know which.
     if untouched:
-        messages.info(
+        messages.warning(
             request, "The encumbrance ran out before %s line%s: %s. Settle %s on %s own."
             % (len(untouched), '' if len(untouched) == 1 else 's',
                _name_a_few(t.reference for t in untouched),

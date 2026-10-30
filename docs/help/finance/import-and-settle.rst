@@ -163,7 +163,8 @@ Fix a Mistake
 
 - **Just now:** click `Undo` on the row before it disappears.
 - **Later:** find the entry in the `Ledger`, click through to its Workday line, and click `Undo settling`. The
-  line goes back to the queue with no entries, and the Workday line itself is untouched.
+  line goes back to the queue with no entries, and the Workday line itself is untouched. On a line matched to an
+  encumbrance, the money goes back on the encumbrance, and a warning says so; see :doc:`encumbrances`.
 - **To change one detail** (a category, a project), open the entry from the `Ledger` and edit it.
 - **Many entries at once:** tick them in the `Ledger` and use the bar at the bottom.
 
@@ -176,4 +177,4 @@ Check Against Workday
 Once the queue is empty, open the `Balances` tab and record Workday's current balance for each account. If the app's
 figure disagrees, a line is missing or was imported twice. See :doc:`balances`.
 
-`Last Modified: October 28, 2026`
+`Last Modified: October 30, 2026`

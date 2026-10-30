@@ -14,8 +14,10 @@ import datetime
 import io
 from decimal import Decimal
 
+import reversion
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.contrib.messages import constants as message_levels
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
@@ -775,6 +777,9 @@ class EncumbranceMatchingTests(FinanceViewTestCase):
     def messages(self, response):
         return [str(m) for m in response.context['messages']]
 
+    def warnings(self, response):
+        return [str(m) for m in response.context['messages'] if m.level == message_levels.WARNING]
+
     # -- the point of the whole feature ------------------------------------
     def test_matching_charges_the_award_once(self):
         """
@@ -900,6 +905,31 @@ class EncumbranceMatchingTests(FinanceViewTestCase):
         self.assertIn('$203.55', message)
         self.assertIn('$296.45 stays encumbered', message)
 
+    # -- a charge over what was encumbered is always a warning -------------
+    def test_a_stretched_match_is_a_warning(self):
+        """
+        However small the difference: the extra is money nobody encumbered, and
+        the Treasurer wants to see it every time.
+        """
+        txn = self.make_txn(op='OT-ENC30', amount='-203.55')
+        response = self.match(txn, self.encumber('-200.00'))
+        warning, = self.warnings(response)
+        self.assertIn('an encumbrance of $200.00', warning)
+        self.assertIn('$3.55 more than was encumbered', warning)
+        self.assertIn('charged to %s with the encumbrance' % self.line, warning)
+
+    def test_an_exact_match_is_not_a_warning(self):
+        txn = self.make_txn(op='OT-ENC31', amount='-200.00')
+        response = self.match(txn, self.encumber('-200.00'))
+        self.assertEqual(self.warnings(response), [])
+        self.assertIn('settled against an encumbrance of $200.00', self.messages(response)[0])
+
+    def test_an_over_estimate_is_not_a_warning(self):
+        """ A smaller charge leaves the rest encumbered, which is the ordinary case. """
+        txn = self.make_txn(op='OT-ENC32', amount='-203.55')
+        response = self.match(txn, self.encumber('-500.00'))
+        self.assertEqual(self.warnings(response), [])
+
     # -- refusals ----------------------------------------------------------
     def test_choosing_nothing_says_so(self):
         txn = self.make_txn(op='OT-ENC10', amount='-200.00')
@@ -959,14 +989,16 @@ class EncumbranceMatchingTests(FinanceViewTestCase):
         self.assertTrue(payload['done'])
         self.assertTrue(payload['settled'])
 
-    def test_xhr_does_not_offer_undo(self):
-        """
-        The queue's Undo deletes a row's allocations. On a matched encumbrance
-        that would destroy the description, the reason and the reservation --
-        none of which came from the bank line.
-        """
-        txn = self.make_txn(op='OT-ENC21', amount='-200.00')
-        self.assertIs(self.xhr(txn, self.encumber('-200.00')).json()['undoable'], False)
+    def test_xhr_says_when_it_is_a_warning(self):
+        """ So the row's note is amber for a charge over the encumbrance. """
+        over = self.make_txn(op='OT-ENC21', amount='-203.55')
+        payload = self.xhr(over, self.encumber('-200.00')).json()
+        self.assertIs(payload['warning'], True)
+        self.assertIn('$3.55 more than was encumbered', payload['message'])
+
+        exact = self.make_txn(op='OT-ENC21B', amount='-200.00')
+        self.assertIs(self.xhr(exact, self.encumber('-200.00', description='Other')).json()['warning'],
+                      False)
 
     def test_xhr_refusals_carry_their_own_message(self):
         txn = self.make_txn(op='OT-ENC22', amount='500.00')
@@ -1097,6 +1129,28 @@ class WholeEncumbranceMatchingTests(FinanceViewTestCase):
         self.assertEqual(big.amount, Decimal('-480.00'))
         self.assertEqual((small.parent_transaction, small.amount), (txn, Decimal('-20.00')))
 
+    def test_a_charge_over_the_whole_encumbrance_warns(self):
+        """ The last line took the $3.55, and the warning says where it went. """
+        self.line('-300.00', 'Lights')
+        self.on_the_award('-200.00', 'Cable')
+        txn = self.make_txn(op='OT-W7', amount='-503.55')
+
+        response = self.match(txn, 'all-%s' % self.header.pk)
+
+        warnings = [str(m) for m in response.context['messages']
+                    if m.level == message_levels.WARNING]
+        self.assertEqual(len(warnings), 1)
+        self.assertIn('$3.55 more than was encumbered', warnings[0])
+        self.assertIn('charged to %s' % self.fr_line, warnings[0])
+
+    def test_a_whole_match_for_what_was_encumbered_does_not_warn(self):
+        self.line('-300.00', 'Lights')
+        self.on_the_award('-200.00', 'Cable')
+        response = self.match(self.make_txn(op='OT-W8', amount='-500.00'),
+                              'all-%s' % self.header.pk)
+        self.assertFalse([m for m in response.context['messages']
+                          if m.level == message_levels.WARNING])
+
     def test_one_line_can_still_be_matched_on_its_own(self):
         budget = self.line('-300.00', 'Lights')
         award = self.on_the_award('-200.00', 'Cable')
@@ -1184,6 +1238,9 @@ class EncumbranceDrawdownTests(FinanceViewTestCase):
     def messages(self, response):
         return [str(m) for m in response.context['messages']]
 
+    def warnings(self, response):
+        return [str(m) for m in response.context['messages'] if m.level == message_levels.WARNING]
+
     # -- one at a time -----------------------------------------------------
     def test_a_smaller_line_draws_down_rather_than_closing(self):
         txn = self.bank_line('SINV-1', '-80.00')
@@ -1253,9 +1310,11 @@ class EncumbranceDrawdownTests(FinanceViewTestCase):
         self.assertTrue(WorkdayTransaction.objects.unreconciled().filter(pk=txn.pk).exists())
 
     def test_the_message_says_what_is_left_on_the_line(self):
+        """ A charge too big to stretch over is more than was encumbered too. """
         response = self.match(self.bank_line('SINV-BIG', '-5000.00'), self.encumbrance)
-        self.assertIn('$4000.00 of this line is left to settle',
-                      self.messages(response)[0])
+        warning, = self.warnings(response)
+        self.assertIn('$4,000.00 more than was encumbered', warning)
+        self.assertIn('$4,000.00 of this line is left to settle', warning)
 
     def test_a_slightly_larger_line_is_still_covered_whole(self):
         """ $1,000.00 reserved against $1,003.55 charged is an estimate, not a gap. """
@@ -1313,9 +1372,60 @@ class EncumbranceDrawdownTests(FinanceViewTestCase):
         lines = [self.bank_line('SINV-1', '-900.00', day=1),
                  self.bank_line('SINV-2', '-300.00', day=2)]
         response = self.draw(lines)
-        joined = " ".join(self.messages(response))
+        joined = " ".join(self.warnings(response))
         self.assertIn('did not cover all of', joined)
         self.assertIn('SINV-2', joined)
+
+    def test_the_lines_it_could_not_reach_are_a_warning(self):
+        """ The selection needed more than was encumbered. """
+        lines = [self.bank_line('SINV-%s' % n, '-400.00', day=n) for n in (1, 2, 3, 4)]
+        self.assertIn('ran out before', " ".join(self.warnings(self.draw(lines))))
+
+    def test_a_bulk_draw_that_stretches_warns(self):
+        """
+        $1,000 over $600 and $420: the second line needs $20 more than is left,
+        which is within the tolerance, so it is covered whole -- and said.
+        """
+        first = self.bank_line('SINV-1', '-600.00', day=1)
+        second = self.bank_line('SINV-2', '-420.00', day=2)
+        response = self.draw([first, second])
+
+        second.refresh_from_db()
+        self.assertFalse(second.unallocated_amount)
+        joined = " ".join(self.warnings(response))
+        self.assertIn('SINV-2 was $20.00 more than was left on the encumbrance', joined)
+        self.assertIn('charged to %s' % self.line, joined)
+
+    def test_a_bulk_draw_within_the_encumbrance_does_not_warn(self):
+        lines = [self.bank_line('SINV-%s' % n, '-100.00', day=n) for n in (1, 2, 3)]
+        self.assertEqual(self.warnings(self.draw(lines)), [])
+
+    def test_a_refused_line_does_not_change_what_the_next_one_draws(self):
+        """
+        The middle line is on the Projection account and the encumbrance is
+        Event Production spending with no reason given, so it is refused. The
+        draw had already moved the encumbrance onto it in memory; drawing the
+        next line from that copy wrote the encumbrance onto the refused line.
+        """
+        entry = ParsedTransaction.objects.create(
+            parent_transaction=None, amount=Decimal('-1000.00'),
+            status=TransactionStatus.PENDING, effective_date=datetime.date(2025, 8, 1),
+            description='Cable order', fund_source=fund('sga_budget'),
+            lnl_spend_category=category('consumables'), is_projection=False)
+        first = self.make_txn(op='SINV-A', amount='-600.00', date=datetime.date(2025, 9, 1))
+        refused = self.make_txn(op='SINV-B', amount='-400.00', org='315-AG',
+                                date=datetime.date(2025, 9, 2))
+        last = self.make_txn(op='SINV-C', amount='-300.00', date=datetime.date(2025, 9, 3))
+
+        response = self.draw([first, refused, last], entry=entry)
+
+        self.assertIn('SINV-B unchanged', " ".join(self.messages(response)))
+        self.assertFalse(refused.slices.exists())
+        entry.refresh_from_db()
+        self.assertIsNone(entry.parent_transaction)
+        self.assertEqual(entry.amount, Decimal('-100.00'))
+        self.assertEqual(entry.description, 'Cable order')
+        self.assertEqual(last.slices.get().amount, Decimal('-300.00'))
 
     def test_oldest_line_first_whatever_order_was_ticked(self):
         """ The drawdown has to be reproducible, not dependent on click order. """
@@ -1364,6 +1474,202 @@ class EncumbranceDrawdownTests(FinanceViewTestCase):
         self.assertContains(response, 'Draw selected')
         self.assertContains(response, 'PCDI kit build')
         self.assertContains(response, 'still encumbered')
+
+
+class UndoingAMatchTests(FinanceViewTestCase):
+    """
+    Undo settling on a line matched to an encumbrance.
+
+    Deleting the entries, as undo does for any other line, would throw away the
+    encumbrance with them -- the money somebody set aside weeks ago, and why. So
+    what came from the encumbrance goes back on it, as it was before the match,
+    and the message is a warning that says both things happened.
+    """
+
+    def setUp(self):
+        super(UndoingAMatchTests, self).setUp()
+        self.grant('view_subledger', 'edit_subledger', 'settle_subledger')
+        request = FundingRequest.objects.create(name='Fall Load-ins', fiscal_year=2026)
+        self.fr_line = FRLineItem.objects.create(
+            funding_request=request, name='Consumables', amount_awarded=Decimal('2000.00'))
+        self.header = Encumbrance.objects.create(
+            description='Gaff tape order', effective_date=datetime.date(2025, 8, 20))
+
+    def encumber(self, amount, description='Gaff tape order', **routing):
+        """ An open line, saved with its history as the encumbrance form saves it. """
+        fields = {
+            'parent_transaction': None,
+            'amount': Decimal(amount),
+            'status': TransactionStatus.PENDING,
+            'effective_date': self.header.effective_date,
+            'description': description,
+            'fund_source': fund('sga_fr'),
+            'lnl_spend_category': category('consumables'),
+            'fr_line_target': self.fr_line,
+            'encumbrance': self.header,
+        }
+        fields.update(routing)
+        with reversion.create_revision():
+            return ParsedTransaction.objects.create(**fields)
+
+    def match(self, txn, value):
+        self.client.post(reverse('finance:match-encumbrance', args=[txn.pk]),
+                         {'encumbrance': str(value)})
+
+    def undo(self, txn):
+        return self.client.post(reverse('finance:unreconcile', args=[txn.pk]), follow=True)
+
+    def warnings(self, response):
+        return [str(m) for m in response.context['messages'] if m.level == message_levels.WARNING]
+
+    def open_total(self):
+        return sum((line.amount for line in self.header.open_lines()), Decimal('0'))
+
+    def test_the_encumbrance_comes_back_as_it_was(self):
+        entry = self.encumber('-200.00')
+        txn = self.make_txn(op='OT-UM1', amount='-200.00')
+        self.match(txn, entry.pk)
+
+        self.undo(txn)
+
+        entry.refresh_from_db()
+        self.assertIsNone(entry.parent_transaction)
+        self.assertEqual(entry.status, TransactionStatus.PENDING)
+        self.assertEqual(entry.amount, Decimal('-200.00'))
+        self.assertEqual(entry.description, 'Gaff tape order')
+        self.assertEqual(entry.effective_date, self.header.effective_date)
+        self.assertEqual(entry.fr_line_target, self.fr_line)
+        self.assertFalse(txn.slices.exists())
+        self.assertIn(txn, WorkdayTransaction.objects.unreconciled())
+        # Encumbered again, and not spent.
+        self.assertEqual(self.fr_line.spent, Decimal('200.00'))
+
+    def test_a_stretched_encumbrance_comes_back_at_what_was_encumbered(self):
+        """ The $3.55 it stretched over was never encumbered. """
+        entry = self.encumber('-200.00')
+        txn = self.make_txn(op='OT-UM2', amount='-203.55')
+        self.match(txn, entry.pk)
+
+        self.undo(txn)
+
+        entry.refresh_from_db()
+        self.assertEqual(entry.amount, Decimal('-200.00'))
+
+    def test_a_drawn_slice_goes_back_on_its_line(self):
+        entry = self.encumber('-1000.00')
+        txn = self.make_txn(op='OT-UM3', amount='-80.00')
+        self.match(txn, entry.pk)
+        entry.refresh_from_db()
+        self.assertEqual(entry.amount, Decimal('-920.00'))
+
+        self.undo(txn)
+
+        entry.refresh_from_db()
+        self.assertEqual(entry.amount, Decimal('-1000.00'))
+        self.assertEqual(list(self.header.open_lines()), [entry])
+        self.assertEqual(ParsedTransaction.objects.count(), 1)
+
+    def test_undone_in_either_order_the_encumbrance_adds_back_up(self):
+        """
+        The first line's slice was drawn off the encumbrance line that the
+        second line then took whole, so it has no open line to go back on and
+        becomes one again itself.
+        """
+        entry = self.encumber('-1000.00')
+        first = self.make_txn(op='OT-UM4', amount='-400.00')
+        last = self.make_txn(op='OT-UM5', amount='-600.00')
+        self.match(first, entry.pk)
+        self.match(last, entry.pk)
+
+        self.undo(first)
+        self.assertEqual(self.open_total(), Decimal('-400.00'))
+        entry.refresh_from_db()
+        self.assertEqual(entry.parent_transaction, last)
+
+        self.undo(last)
+        self.assertEqual(self.open_total(), Decimal('-1000.00'))
+        self.assertFalse(ParsedTransaction.objects.filter(parent_transaction__isnull=False).exists())
+
+    def test_a_whole_match_puts_every_line_back(self):
+        lights = self.encumber('-300.00', 'Lights', fund_source=fund('sga_budget'),
+                               fr_line_target=None)
+        cable = self.encumber('-200.00', 'Cable')
+        txn = self.make_txn(op='OT-UM6', amount='-503.55')
+        self.match(txn, 'all-%s' % self.header.pk)
+
+        self.undo(txn)
+
+        lights.refresh_from_db()
+        cable.refresh_from_db()
+        self.assertEqual((lights.parent_transaction, lights.amount, lights.description),
+                         (None, Decimal('-300.00'), 'Lights'))
+        self.assertEqual((cable.parent_transaction, cable.amount, cable.description),
+                         (None, Decimal('-200.00'), 'Cable'))
+
+    def test_an_ordinary_entry_on_the_same_line_is_still_removed(self):
+        entry = self.encumber('-300.00')
+        txn = self.make_txn(op='OT-UM7', amount='-500.00')
+        self.match(txn, entry.pk)
+        typed = ParsedTransaction.objects.create(
+            parent_transaction=txn, amount=Decimal('-200.00'),
+            effective_date=txn.accounting_date, description='Batteries',
+            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'))
+
+        self.undo(txn)
+
+        self.assertFalse(ParsedTransaction.objects.filter(pk=typed.pk).exists())
+        entry.refresh_from_db()
+        self.assertEqual((entry.parent_transaction, entry.amount), (None, Decimal('-300.00')))
+
+    def test_the_warning_says_both_things_happened(self):
+        entry = self.encumber('-200.00')
+        txn = self.make_txn(op='OT-UM8', amount='-200.00')
+        self.match(txn, entry.pk)
+
+        warning, = self.warnings(self.undo(txn))
+
+        self.assertIn('OT-UM8 is unsettled and back in the queue with $200.00 to settle', warning)
+        self.assertIn('encumbrance was restored: $200.00 is encumbered again on “Gaff tape order”',
+                      warning)
+
+    def test_xhr_says_it_is_a_warning(self):
+        """ queue.js shows the note in amber when it is. """
+        entry = self.encumber('-200.00')
+        txn = self.make_txn(op='OT-UM9', amount='-200.00')
+        self.match(txn, entry.pk)
+        payload = self.client.post(reverse('finance:unreconcile', args=[txn.pk]),
+                                   HTTP_X_REQUESTED_WITH='XMLHttpRequest').json()
+        self.assertTrue(payload['ok'])
+        self.assertIs(payload['warning'], True)
+        self.assertIn('encumbrance was restored', payload['message'])
+
+    def test_without_history_the_line_comes_back_at_what_was_charged(self):
+        """
+        Every encumbrance written in the app has a history; one that somehow
+        has none still goes back, at the amount on the line, under the
+        encumbrance's own description.
+        """
+        entry = ParsedTransaction.objects.create(
+            parent_transaction=None, amount=Decimal('-200.00'),
+            status=TransactionStatus.PENDING, effective_date=self.header.effective_date,
+            description='Own words', fund_source=fund('sga_fr'),
+            lnl_spend_category=category('consumables'), fr_line_target=self.fr_line,
+            encumbrance=self.header)
+        txn = self.make_txn(op='OT-UM10', amount='-203.55')
+        self.match(txn, entry.pk)
+
+        self.undo(txn)
+
+        entry.refresh_from_db()
+        self.assertEqual((entry.parent_transaction, entry.amount, entry.description),
+                         (None, Decimal('-203.55'), 'Gaff tape order'))
+
+    def test_the_line_page_says_the_money_goes_back(self):
+        entry = self.encumber('-200.00')
+        txn = self.make_txn(op='OT-UM11', amount='-200.00')
+        self.match(txn, entry.pk)
+        response = self.client.get(reverse('finance:txn-detail', args=[txn.pk]))
+        self.assertContains(response, 'The money that came from an encumbrance goes back on it.')
 
 
 class EncumbranceMatchRankingTests(TestCase):
@@ -1486,7 +1792,7 @@ class EncumbranceMatchRankingTests(TestCase):
         label = encumbrance_match_label(self._encumbrance('-200.00', 'Cable order'), txn)
         self.assertIn('Cable order', label)
         self.assertIn('$200.00 encumbered', label)
-        self.assertIn('3.55 over', label)
+        self.assertIn('$3.55 over', label)
 
     def test_an_exact_match_says_so(self):
         txn = self._txn('-200.00')

@@ -178,6 +178,9 @@ def transaction_detail(request, pk):
         'h2': "Transaction %s" % txn.reference,
         'txn': txn,
         'slices': slices,
+        # Undo settling puts these back on their encumbrance rather than
+        # deleting them, and the page says so before it is clicked.
+        'from_encumbrance': any(entry.encumbrance_id for entry in slices),
         'formset': formset,
         'suggestions': suggest_all(txn),
         'unallocated': txn.unallocated_amount,

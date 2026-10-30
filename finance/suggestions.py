@@ -1761,6 +1761,10 @@ ENCUMBRANCE_LOOKAHEAD_DAYS = 30
 #: is still offered in the picker -- a badly estimated match is still a match,
 #: and only a person can tell -- but a $900 reservation and a $12 charge should
 #: not put a warning on each other, or the warning stops being read.
+#:
+#: It is also how far an encumbrance stretches over a charge bigger than it
+#: (see :func:`finance.views.ingest._encumbrance_draw`). Stretching is never
+#: silent: any charge over what was encumbered is reported as a warning.
 ENCUMBRANCE_CLOSE_ENOUGH = Decimal('0.25')
 
 
@@ -1879,11 +1883,11 @@ def encumbrance_match_label(entry, txn):
 
 
 def _encumbrance_gap(amount, txn):
-    """ ``exact match``, ``12.50 over`` or ``12.50 under``: the bank line against ``amount``. """
+    """ ``exact match``, ``$12.50 over`` or ``$12.50 under``: the bank line against ``amount``. """
     difference = abs(money(txn.net_amount)) - abs(money(amount))
     if not difference:
         return "exact match"
-    return "%s %s" % (money(abs(difference)), "over" if difference > 0 else "under")
+    return "%s %s" % (dollars(abs(difference)), "over" if difference > 0 else "under")
 
 
 def encumbrance_match_options(txn):

@@ -1047,6 +1047,29 @@ One case is refused rather than forced: a slice with a refund recorded against i
 is load-bearing, since the refund exists to reverse *that* purchase, and the
 database will not orphan it. The queue says so instead of returning a 500.
 
+An entry that came from an encumbrance (it names one in ``encumbrance``) is not
+deleted but put back on it, by
+:func:`~finance.views.ingest._put_back_on_encumbrance`. Deleting it would take the
+encumbrance with it -- the money somebody set aside weeks ago, and why, none of
+which came from the bank line. The two shapes a match writes go back differently:
+
+* **The encumbrance line itself**, which the match that finished it moved onto the
+  bank line, goes back to the amount and description its revision history says it
+  had just before -- the newest version with no ``parent_transaction``. So a $200
+  encumbrance stretched over a $203.55 charge comes back at $200.00. A row with no
+  such version comes back at the amount on the line, under the encumbrance's
+  description.
+* **A slice drawn off a larger line** has no history from before the match. Its
+  money goes back onto the open line it came from -- the one on the same
+  encumbrance with the same fund, category, FR line, project, event and side --
+  and the slice is deleted. If that line has closed since (a later charge took
+  it), or the slice has a receipt on it, the slice becomes an open line itself.
+
+Either way the line takes the encumbrance's date, as every open line does. The
+message is a warning that names both changes -- the line unsettled and the
+encumbrance restored -- because the second is easy to miss when only the first was
+meant.
+
 In the queue the undo is offered in the row that was just settled, for twelve
 seconds, before the row is removed. The row stays in the DOM for exactly that
 reason -- undoing has to put the Treasurer's own answers back in front of them,
@@ -1085,14 +1108,14 @@ The ingestion queue offers that on the bank line itself. Above the routing form
 picker listing the candidates, each labelled with what was encumbered, when, and
 how far it is from the amount that actually cleared::
 
-    Gaff tape order — $200.00 encumbered Aug 20, 2025 · 3.55 over
+    Gaff tape order — $200.00 encumbered Aug 20, 2025 · $3.55 over
 
 An encumbrance with more than one open line is offered whole, with its lines
 indented under it (:func:`~finance.suggestions.encumbrance_match_options`)::
 
-    Spring gear order — all 2 lines, $500.00 encumbered Oct 1, 2026 · 3.55 over
-      ↳ Lights — $300.00 from Legacy · 203.55 over
-      ↳ Cable — $200.00 from SGA Funding Request · 303.55 over
+    Spring gear order — all 2 lines, $500.00 encumbered Oct 1, 2026 · $3.55 over
+      ↳ Lights — $300.00 from Legacy · $203.55 over
+      ↳ Cable — $200.00 from SGA Funding Request · $303.55 over
 
 Choosing the whole encumbrance divides the bank line the way its lines are
 divided, line by line in the order they were written
@@ -1142,13 +1165,19 @@ apart because charging the wrong one to a budget line is invisible afterwards:
 Encumbrance **larger**        The line takes what it needs; the encumbrance stays open
                               for the rest.
 Line larger, **not by much**  Within :data:`~finance.suggestions.ENCUMBRANCE_CLOSE_ENOUGH`
-                              the difference is estimate noise, so the encumbrance
-                              stretches to cover the line and closes.
+                              (a quarter of the line) the difference is estimate noise,
+                              so the encumbrance stretches to cover the line and closes.
 Line larger **by a lot**      The encumbrance covers only what it says. The rest of the
                               line stays in the queue to be routed on its own —
                               swallowing the difference would charge the budget line
                               money nobody encumbered.
 ============================  =========================================================
+
+Both of the last two are a warning, however small the difference
+(:func:`~finance.views.ingest._over_encumbered`): the message says how much more
+the line needed than was encumbered, and either where the stretch was charged or
+what is left to settle. A stretch is money nobody encumbered, even when it is
+estimate noise, and it should be seen every time rather than absorbed quietly. The queue row's note turns amber for it.
 
 The encumbrance is the row that persists. It keeps its primary key, its author
 and its whole revision history across every line it pays for, and only the line
@@ -1172,10 +1201,18 @@ drawdown across all of them —
 Oldest line first, because that is the order the money actually left and it
 makes the result reproducible: the same selection and the same encumbrance
 always produce the same entries, whichever order the rows were ticked in. It
-stops when the encumbrance runs out rather than stretching it, and reports all
-three outcomes by name — what was covered, what was covered only partly, and
-which lines it never reached. A batch that half-worked and said only
-"settled 9 lines" is how the other half gets found a month later.
+stops when the encumbrance runs out, and reports all three outcomes by name —
+what was covered, what was covered only partly, and which lines it never
+reached. A batch that half-worked and said only "settled 9 lines" is how the
+other half gets found a month later. The line that finishes the encumbrance may
+stretch it, exactly as a single match does. The stretch, a line covered only
+partly and lines never reached all mean the selection needed more than was
+encumbered, so each is a warning.
+
+A row that fails validation is left alone and named, and the encumbrance is
+reloaded before the next row. The failed draw had already changed it in memory
+before the savepoint rolled the database back, and drawing the next row from
+that copy would write the encumbrance onto the refused line.
 
 It takes no routing fields of its own, unlike the ordinary bulk settle: the
 answer to *where does this money go* is written on the encumbrance already, and
@@ -1198,12 +1235,10 @@ typed, then on how close the dates are. It filters only what would be *wrong*
 to offer: revenue lines, entries already on a bank line, and encumbrances dated
 absurdly far from the charge.
 
-The queue's *Undo* is deliberately not offered after a match. Undo deletes a
-row's entries, which is the right way back out of an entry typed a
-second ago and the wrong way back out of an encumbrance logged weeks ago — it
-would take the description, the reason and the encumbrance with it, none of
-which came from the bank line. Correcting a wrong match is an edit on the
-entry.
+The queue's *Undo* is offered after a match as after any other settle. It goes
+through the same view as *Undo settling*, which puts what came from the
+encumbrance back on it rather than deleting it (see `Undoing settling`_). The
+row's note then stays up as a warning saying so.
 
 
 Costs that belong to one event

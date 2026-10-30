@@ -143,9 +143,13 @@
                     return;
                 }
                 // Back to an ordinary, editable row with everything the
-                // Treasurer typed still in it.
+                // Treasurer typed still in it. Undoing a match also puts the
+                // money back on the encumbrance, which the warning says.
                 $row.removeClass('fin-queue-done');
                 $row.find('.fin-queue-note').remove();
+                if (data.warning) {
+                    rowMessage($row, data.message, 'warning');
+                }
                 $row.find('button[type="submit"]').prop('disabled', false).removeClass('fin-busy');
                 updateCounts(1);
             }).fail(function (xhr) {
@@ -240,23 +244,22 @@
                 // put while the undo window is open.
                 var pk = $row.attr('id').replace('txn-', '');
                 $row.addClass('fin-queue-done');
-                rowMessage($row, data.message, 'success');
+                // A match whose charge was more than was encumbered warns.
+                rowMessage($row, data.message, data.warning ? 'warning' : 'success');
                 updateCounts(-1);
-                // Undo deletes the row's allocations outright, which is the
-                // right way back out of an allocation just typed and the wrong
-                // way back out of an encumbrance somebody logged weeks ago --
-                // it would take the description, the reason and the reservation
-                // with it. Matching says so by sending undoable: false.
-                if (data.undoable !== false) {
-                    undoButton($row, pk);
-                }
+                undoButton($row, pk);
                 $(document).trigger('fin:row-done', [pk]);
             } else {
                 // A partial allocation leaves work behind, so the row stays and
-                // says how much is still loose.
+                // says how much is still loose. A match's warning says it
+                // already.
                 $submit.prop('disabled', false).removeClass('fin-busy');
-                rowMessage($row, data.message + ' ' + data.unallocated + ' left to settle.',
-                           'success');
+                if (data.warning) {
+                    rowMessage($row, data.message, 'warning');
+                } else {
+                    rowMessage($row, data.message + ' ' + data.unallocated + ' left to settle.',
+                               'success');
+                }
                 $form[0].reset();
             }
         }).fail(function (xhr) {

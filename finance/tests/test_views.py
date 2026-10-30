@@ -1224,6 +1224,8 @@ class UnreconcileTests(FinanceViewTestCase):
         payload = response.json()
         self.assertTrue(payload['ok'])
         self.assertEqual(payload['removed'], 1)
+        # Only undoing a match is a warning; see UndoingAMatchTests.
+        self.assertIs(payload['warning'], False)
 
     def test_it_needs_the_edit_permission(self):
         stranger = get_user_model().objects.create_user(

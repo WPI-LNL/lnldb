@@ -38,7 +38,7 @@ Add an Encumbrance
 
 #. Click `Encumber funds`.
 
-Each line shows in the `Ledger` with the type *Encumbrance*, and under *Encumbrances* beside its fund on the
+Each line shows in the `Ledger` with the type *Encumbrance*, and in the *Encumbered* column beside its fund on the
 `Balances` tab.
 
 
@@ -51,8 +51,10 @@ the real amount. An encumbrance with several lines is listed whole, with its lin
 
 #. Choose the right one. Nothing is chosen for you, because matching the wrong one charges the wrong budget line.
 
-   - Choose the **whole encumbrance** when this one Workday line is the whole purchase. The line is divided between the
-     funds the way your lines were.
+   - Choose the **whole encumbrance** when this one Workday line is the whole purchase. Each of your lines takes its own
+     amount, in the order you wrote them, so the line is divided between the funds the way your lines were. If the
+     charge is smaller, the lines it doesn't reach stay encumbered; if it is a little larger, the last line takes the
+     difference.
    - Choose **one of its lines** when Workday charged that part on its own.
 
 #. Click `Match & settle`.
@@ -69,9 +71,13 @@ other settled line; the encumbrance keeps its own description for whatever is st
 
 - **The charge is smaller** than what was encumbered: the line takes what it needs and the rest stays encumbered, ready for
   the next charge. A rental invoiced in parts works this way.
-- **The charge is a little larger:** the encumbrance stretches to cover it and closes.
+- **The charge is a little larger** (up to a third more): the encumbrance stretches to cover it and closes. The extra
+  is charged to the same fund and funding request line as the encumbrance.
 - **The charge is a lot larger:** the encumbrance covers only what it was for, and the rest of the line stays in the
   queue for you to settle separately.
+
+Whenever the charge is larger than what was encumbered, by any amount, you get a warning saying how much more it was and
+where the extra went, so you can check it was meant.
 
 
 One Encumbrance, Many Workday Lines
@@ -80,7 +86,8 @@ One Encumbrance, Many Workday Lines
 When one order arrives as many Workday lines, tick each of their rows in the queue, choose the encumbrance (or, for one
 with several lines, the line) in the bar at the bottom, and click `Draw selected`. The lines are matched oldest first
 until the encumbrance runs out, and the page lists which were covered in full, which only in part, and which it didn't
-reach.
+reach. The last line it reaches can stretch the encumbrance a little, as a single match does. Whenever the lines need
+more than was encumbered, the page warns you.
 
 
 Change or Cancel an Encumbrance
@@ -90,7 +97,9 @@ Find it in the `Ledger` -- search for its description, or choose the `Pending` s
 links to the encumbrance, where you can change its details, add or remove lines, or click `Delete` if the purchase is
 cancelled; the money then stops counting as encumbered. Lines already matched to Workday are kept.
 
-Matching a line to the wrong encumbrance can't be undone from the queue, because undoing would also throw away the
-encumbrance. Open the entry from the `Ledger` and correct it instead.
+To undo a match, click `Undo` on the row before it disappears, or, later, open the Workday line and click
+`Undo settling`. The line goes back to the queue, and the money goes back on the encumbrance as it was before you matched
+it, at what was encumbered rather than what was charged. A warning says that both happened, so check the encumbrance is
+still wanted.
 
-`Last Modified: October 28, 2026`
+`Last Modified: October 30, 2026`

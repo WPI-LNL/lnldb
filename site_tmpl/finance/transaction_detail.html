@@ -187,7 +187,7 @@
                     {% if can_edit %}
                         <div class="fin-panel-body fin-panel-actions">
                             <form method="post" action="{% url 'finance:unreconcile' txn.pk %}"
-                                  onsubmit="return confirm('Remove all {{ slices|length }} entr{{ slices|length|pluralize:'y,ies' }} and put this line back in the queue? The Workday record itself is not touched.');">
+                                  onsubmit="return confirm('Remove all {{ slices|length }} entr{{ slices|length|pluralize:'y,ies' }} and put this line back in the queue?{% if from_encumbrance %} The money that came from an encumbrance goes back on it.{% endif %} The Workday record itself is not touched.');">
                                 {% csrf_token %}
                                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
                                 <button type="submit" class="btn btn-default btn-sm">
@@ -195,7 +195,8 @@
                                     Undo settling
                                 </button>
                                 <span class="fin-muted">
-                                    Returns this line to the queue with no entries.
+                                    Returns this line to the queue with no entries.{% if from_encumbrance %}
+                                    The money that came from an encumbrance goes back on it.{% endif %}
                                 </span>
                             </form>
                         </div>

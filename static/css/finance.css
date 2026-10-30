@@ -327,6 +327,7 @@
     border-radius: 3px;
 }
 .fin-queue-note-success { background: #dff0d8; color: #3c763d; }
+.fin-queue-note-warning { background: #fcf8e3; color: #8a6d3b; }
 .fin-queue-note-error { background: #f2dede; color: #a94442; }
 .fin-field-error { color: #a94442; font-size: 11.5px; margin-top: 3px; max-width: 240px; }
 /* A finished row recedes, but its confirmation does not.
