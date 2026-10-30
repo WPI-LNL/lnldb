@@ -2412,12 +2412,10 @@ Permissions
 -----------
 
 ``view_subledger``
-    Read-only access to every page, including every report. General members
-    get this.
+    Read-only access to every page, including every report.
 ``view_fundingrequest``
     Read-only access to the funding request list and detail pages. Django
-    creates this one automatically; it is granted alongside ``view_subledger``,
-    since those pages are part of the same read-only tour.
+    creates this one automatically.
 ``view_subledger_receipts``
     See the receipt attached to an entry, and download the Funding Request
     Report Form's PDF, which has the receipts in it. Separate from
@@ -2451,16 +2449,19 @@ Group                Finance permissions
 ===================  =========================================================
 Officer              All nine. The Treasurer is an Officer, and this is the
                      Treasurer's tool.
-Active               ``view_subledger`` and ``view_fundingrequest`` only —
-                     read-only, no receipts.
+Every other group    None. Active members cannot see the finance pages.
 ===================  =========================================================
+
+Active members held ``view_subledger`` and ``view_fundingrequest`` until
+migration ``0020_finance_officers_only``, which takes them back from a database
+that loaded the older fixture.
 
 Adding a permission to a model is therefore only half of adding it: until a
 group holds it, the only account that can exercise it is a superuser. That is
 worth stating because it fails silently and no view test can catch it — view
 tests grant themselves whatever they need. ``finance/tests/test_rollups.py``
-loads the fixture and asserts the Officer grant, which is the check that does
-catch it.
+loads the fixture and asserts the Officer grant, and that no other group holds
+any finance permission. It is the check that does catch it.
 
 Looking after the app
 ---------------------

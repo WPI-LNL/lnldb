@@ -256,14 +256,11 @@ class GroupFixtureTest(TestCase):
                          "fixtures/groups.json does not grant Officers these finance "
                          "permissions, so a fresh install cannot use the app")
 
-    def test_active_members_get_read_only_access(self):
+    def test_only_officers_get_finance_permissions(self):
         """
-        General membership sees the ledger and nothing else.
-
-        Receipts are deliberately excluded: ``view_subledger_receipts`` exists
-        precisely so that reading a ledger row and opening somebody's receipt
-        are separate decisions, and granting both together would make it
-        pointless.
+        Finance is for Officers. No other group, Active members included, can
+        open a finance page.
         """
-        held = self._held_by('Active')
-        self.assertEqual(held, {'view_subledger', 'view_fundingrequest'})
+        others = {name: self._held_by(name)
+                  for name in Group.objects.exclude(name='Officer').values_list('name', flat=True)}
+        self.assertEqual({name: held for name, held in others.items() if held}, {})

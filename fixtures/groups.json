@@ -754,16 +754,6 @@
         "organization"
       ],
       [
-        "view_fundingrequest",
-        "finance",
-        "fundingrequest"
-      ],
-      [
-        "view_subledger",
-        "finance",
-        "parsedtransaction"
-      ],
-      [
         "add_equipmentclass",
         "inventory",
         "equipmentclass"

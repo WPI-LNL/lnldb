@@ -9,8 +9,8 @@ was awarded, what has been spent on each line, and what SGA still owes.
 .. caution::
     **Permission Required:** Manage funding requests
 
-    Entering and editing requests needs permission to manage funding requests, which Officers have. Active members can
-    view them.
+    Entering and editing requests needs permission to manage funding requests, which Officers have. Only Officers can
+    see them.
 
 -----
 

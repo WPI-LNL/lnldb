@@ -21,9 +21,8 @@ This page is the map. The other finance guides each cover one job:
 .. caution::
     **Permission Required:** View subledger
 
-    Officers, including the Treasurer, hold every finance permission. Active members can look at the finance pages but
-    cannot change anything or see receipts. If you do not see `Finance` in the navigation bar, your role does not grant
-    you access.
+    The finance pages are for Officers, including the Treasurer, who hold every finance permission. No one else can
+    see them. If you do not see `Finance` in the navigation bar, your role does not grant you access.
 
 .. seealso::
     For the reasons behind how the app works, and for webmasters looking after it, see the
