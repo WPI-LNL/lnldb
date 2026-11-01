@@ -276,6 +276,30 @@ class StagedImportTests(FinanceViewTestCase):
         from finance.importers import purge_stale_staged
         purge_stale_staged()
 
+    def test_a_staged_file_too_old_to_confirm_is_not_read(self):
+        """ It was only purged when the next upload started, so it was still read until then. """
+        import datetime as dt
+        from django.core.files.storage import default_storage
+        from finance.importers import read_staged
+        self._choose()
+        token = self._staged_token()
+        self.assertIsNotNone(read_staged(token, now=timezone.now() + dt.timedelta(hours=5)))
+        self.assertIsNone(read_staged(token, now=timezone.now() + dt.timedelta(hours=7)))
+        self.assertFalse(default_storage.exists(token))
+
+    def test_a_confirmation_left_open_overnight_imports_nothing(self):
+        import os
+        import time
+        from django.core.files.storage import default_storage
+        self._choose()
+        token = self._staged_token()
+        yesterday = time.time() - 20 * 3600
+        os.utime(default_storage.path(token), (yesterday, yesterday))
+        response = self.client.post(reverse('finance:upload-confirm'), {}, follow=True)
+        self.assertContains(response, 'no longer waiting')
+        self.assertFalse(WorkdayTransaction.objects.exists())
+        self.assertFalse(default_storage.exists(token))
+
 
 class EncumbranceViewTests(FinanceViewTestCase):
     """ Encumbering funds for a purchase the bank feed has not seen yet. """
@@ -1672,6 +1696,58 @@ class UndoingAMatchTests(FinanceViewTestCase):
         self.match(txn, entry.pk)
         response = self.client.get(reverse('finance:txn-detail', args=[txn.pk]))
         self.assertContains(response, 'The money that came from an encumbrance goes back on it.')
+
+    # -- one entry at a time -------------------------------------------------
+    # Remove, on the entry's page, and the split's Del box deleted the entry
+    # outright, taking the encumbered money with it. They put it back too.
+
+    def test_removing_the_entry_puts_it_back_as_undo_does(self):
+        entry = self.encumber('-200.00')
+        txn = self.make_txn(op='OT-UM12', amount='-203.55')
+        self.match(txn, entry.pk)
+        self.assertContains(self.client.get(reverse('finance:entry-delete', args=[entry.pk])),
+                            'puts its money back on that encumbrance')
+
+        response = self.client.post(reverse('finance:entry-delete', args=[entry.pk]), follow=True)
+
+        entry.refresh_from_db()
+        self.assertEqual((entry.parent_transaction, entry.status, entry.amount),
+                         (None, TransactionStatus.PENDING, Decimal('-200.00')))
+        self.assertFalse(txn.slices.exists())
+        warning, = self.warnings(response)
+        self.assertIn('put back on the encumbrance “Gaff tape order”: $200.00 is encumbered again', warning)
+
+    def test_removing_it_from_the_split_puts_it_back_too(self):
+        entry = self.encumber('-200.00')
+        txn = self.make_txn(op='OT-UM13', amount='-200.00')
+        self.match(txn, entry.pk)
+        entry.refresh_from_db()
+        data = {
+            'slices-TOTAL_FORMS': '2', 'slices-INITIAL_FORMS': '1',
+            'slices-MIN_NUM_FORMS': '0', 'slices-MAX_NUM_FORMS': '1000',
+            'slices-0-id': str(entry.pk), 'slices-0-amount': '200.00',
+            'slices-0-description': entry.description,
+            'slices-0-fund_source': str(entry.fund_source_id),
+            'slices-0-lnl_spend_category': str(entry.lnl_spend_category_id),
+            'slices-0-fr_line_target': str(self.fr_line.pk), 'slices-0-DELETE': 'on',
+            'slices-1-amount': '200.00', 'slices-1-description': 'Batteries',
+            'slices-1-fund_source': str(fund('legacy').pk),
+            'slices-1-lnl_spend_category': str(category('consumables').pk),
+        }
+
+        response = self.client.post(reverse('finance:txn-detail', args=[txn.pk]), data, follow=True)
+
+        entry.refresh_from_db()
+        self.assertEqual((entry.parent_transaction, entry.amount), (None, Decimal('-200.00')))
+        self.assertEqual(list(txn.slices.values_list('description', flat=True)), ['Batteries'])
+        self.assertIn('$200.00 encumbered again on “Gaff tape order”', ' '.join(self.warnings(response)))
+
+    def test_an_open_line_is_changed_on_its_encumbrance_not_removed_on_its_own(self):
+        """ Taking it off here could leave an encumbrance with no lines at all. """
+        entry = self.encumber('-200.00')
+        response = self.client.post(reverse('finance:entry-delete', args=[entry.pk]), follow=True)
+        self.assertContains(response, 'Change its lines, or delete it, from the encumbrance.')
+        self.assertTrue(ParsedTransaction.objects.filter(pk=entry.pk).exists())
 
 
 class EncumbranceMatchRankingTests(TestCase):

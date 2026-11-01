@@ -51,8 +51,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from finance.calculators import bill_payments, days_owed, latest_bill, received_by_event
-from finance.models import (ZERO, MultiBilling, books_start_date, client_of, dollars, finance_settings, fiscal_year_for,
-                            money, no_bill_needed_for)
+from finance.models import (ZERO, Billing, MultiBilling, books_start_date, client_of, dollars, finance_settings,
+                            fiscal_year_for, money, no_bill_needed_for)
 
 READY = 'ready'
 NO_BILL_NEEDED = 'no-bill-needed'
@@ -638,6 +638,88 @@ def mark_paid_from_payments(bill):
     bill.paid_note = ''
     bill.save(update_fields=['date_paid', 'paid_note'])
     return last
+
+
+# ---------------------------------------------------------------------------
+# Payments taken back
+#
+# A bill marked paid with no word on how it was paid was paid through Workday:
+# the payments filed against it covered it. When one of those payments is
+# taken back -- settling undone, the entry removed, or linked to something
+# else -- the bill may not be covered any more, and then nothing shows it was
+# paid. These find the bills a change could leave like that, before it is
+# made, and take the paid date off the ones it did, after.
+# ---------------------------------------------------------------------------
+
+def _covered(bill):
+    """ Whether the payments filed against ``bill`` add up to it. """
+    received, _ = bill_payments(bill)
+    owed = money(bill.amount)
+    return owed > ZERO and received >= owed
+
+
+def bills_paid_from(entries):
+    """
+    The bills marked paid on the strength of the payments among ``entries``.
+
+    Each bill for an event or a multi-bill one of them is linked to -- a
+    multi-bill's payment counts towards each of its events' bills too -- that
+    is marked paid with no word on how, and that the payments filed against
+    it cover. Read before the payments change, and handed to
+    :func:`unpay_uncovered` after.
+    """
+    events, multibills = set(), set()
+    for entry in entries:
+        if entry.refund_of_id or entry.parent_transaction_id is None or money(entry.amount) <= ZERO:
+            continue
+        if entry.linked_event_id:
+            events.add(entry.linked_event_id)
+        if entry.linked_multibill_id:
+            multibills.add(entry.linked_multibill_id)
+    if not events and not multibills:
+        return []
+    events |= {pk for pk in MultiBilling.objects.filter(pk__in=multibills).values_list('events', flat=True)
+               if pk is not None}
+    bills = list(Billing.objects.filter(event_id__in=events, date_paid__isnull=False, paid_note='')
+                 .select_related('event'))
+    bills += list(MultiBilling.objects.filter(Q(pk__in=multibills) | Q(events__in=events),
+                                              date_paid__isnull=False, paid_note='')
+                  .distinct().prefetch_related('events'))
+    return [bill for bill in bills if _covered(bill)]
+
+
+def unpay_uncovered(bills, user):
+    """
+    Take the paid date off each of ``bills`` (from :func:`bills_paid_from`) that
+    the payments filed against it no longer cover, and say what happened, as a
+    list of sentences.
+
+    A bill with a closed event is locked, and ``user`` may not be able to bill:
+    then the bill is left paid, and the sentence says it is no longer covered.
+    """
+    notes = []
+    for bill in bills:
+        bill.refresh_from_db(fields=['date_paid', 'paid_note', 'amount'])
+        if not bill.date_paid or bill.paid_note or _covered(bill):
+            continue
+        if isinstance(bill, MultiBilling):
+            name = bill.display_name
+        else:
+            name = "The bill for %s" % bill.event.event_name
+        received, _ = bill_payments(bill)
+        figures = "%s of its %s has been received" % (dollars(received), dollars(bill.amount))
+        if bill_closed(bill):
+            notes.append("%s is still marked paid, though only %s now. An event on it is closed, so it "
+                         "can't be changed." % (name, figures))
+        elif not user.has_perm('events.bill_event'):
+            notes.append("%s is still marked paid, though only %s now. Someone who can bill should mark "
+                         "it unpaid." % (name, figures))
+        else:
+            bill.date_paid = None
+            bill.save(update_fields=['date_paid'])
+            notes.append("%s is unpaid again: it was marked paid from the payments filed, and only %s now."
+                         % (name, figures))
+    return notes
 
 
 def attach_payments(items, today=None, paid=False):

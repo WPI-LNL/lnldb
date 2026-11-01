@@ -350,6 +350,53 @@ class MarkPaidFormTests(CacheResetMixin, FinanceViewTestCase):
         response = self.client.post(self.url(), {'date_paid': days_ago(4).isoformat(), 'paid_note': 'Cash'})
         self.assertEqual(response.status_code, 403)
 
+    def test_the_clients_own_members_are_not_shown_what_they_cannot_use(self):
+        """
+        The event page showed Create Bill, Mark Paid, Update and Delete to
+        anyone holding Bill event on the event, and the client's members do;
+        every one of those pages needs the Officers' permission, and said 403.
+        """
+        member = UserFactory.create(is_superuser=False, onboarded=True)
+        org = OrgFactory.create(name='Drama Council')
+        org.associated_users.add(member)
+        self.gala.org.add(org)
+        self.gala.billing_org = org
+        self.gala.approved = True
+        self.gala.save()
+        links = [self.url(), reverse('finance:bill-new', args=[self.gala.pk]),
+                 reverse('finance:bill-edit', args=[self.gala.pk, self.bill.pk]),
+                 reverse('finance:bill-delete', args=[self.gala.pk, self.bill.pk])]
+
+        page = self.client.get(reverse('events:detail', args=[self.gala.pk]))
+        for link in links:
+            self.assertContains(page, 'href="%s' % link)
+
+        self.client.force_login(member)
+        page = self.client.get(reverse('events:detail', args=[self.gala.pk]))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'Bills')
+        for link in links:
+            self.assertNotContains(page, 'href="%s' % link)
+
+    def test_marking_paid_and_unpaid_is_in_the_bills_history(self):
+        from reversion.models import Version
+        self.client.post(self.url(), {'date_paid': days_ago(4).isoformat(), 'paid_note': 'Cash'})
+        self.client.post(self.url('bill-unpaid'))
+        unpaid, paid = Version.objects.get_for_object(self.bill)[:2]
+        self.assertEqual((paid.revision.get_comment(), paid.field_dict['date_paid'], paid.revision.user),
+                         ('Marked paid', days_ago(4), self.user))
+        self.assertEqual((unpaid.revision.get_comment(), unpaid.field_dict['date_paid']), ('Marked unpaid', None))
+
+    def test_a_multibills_changes_are_in_its_history(self):
+        from reversion.models import Version
+        films = [show('Film %s' % n, start=days_ago(40)) for n in (1, 2)]
+        bills = multibill(films)
+        self.client.post(reverse('finance:multibill-paid', args=[bills.pk]),
+                         {'date_paid': days_ago(1).isoformat(), 'paid_note': 'Cash'})
+        version, = Version.objects.get_for_object(bills)
+        self.assertEqual((version.revision.get_comment(), version.field_dict['date_paid']),
+                         ('Marked paid', days_ago(1)))
+
     def test_marking_unpaid_opens_it_again(self):
         self.bill.date_paid = days_ago(2)
         self.bill.paid_note = 'Cash'
@@ -381,6 +428,28 @@ class MarkPaidFormTests(CacheResetMixin, FinanceViewTestCase):
     def test_editing_a_bill_no_longer_sets_its_paid_date(self):
         self.assertNotIn('date_paid', BillingUpdateForm(self.gala, instance=self.bill).fields)
 
+    def test_an_event_on_a_multibill_is_billed_there(self):
+        """ A bill of its own would stand for it while its share of the multi-bill still counted. """
+        films = [show('Film %s' % n, start=days_ago(40)) for n in (1, 2)]
+        multibill(films)
+        url = reverse('finance:bill-new', args=[films[0].pk])
+        response = self.client.post(url, {'date_billed': days_ago(1).isoformat(), 'amount': '50.00'},
+                                    follow=True)
+        self.assertContains(response, 'Film 1 is on the multi-bill Fall films, so it is billed there.')
+        self.assertFalse(Billing.objects.filter(event=films[0]).exists())
+        films[0].approved = True
+        films[0].save()
+        page = self.client.get(reverse('events:detail', args=[films[0].pk]))
+        self.assertNotContains(page, 'href="%s"' % url)
+
+    def test_without_the_permission_nothing_about_the_event_is_said(self):
+        films = [show('Film %s' % n, start=days_ago(40)) for n in (1, 2)]
+        multibill(films)
+        self.revoke('bill_event')
+        response = self.client.get(reverse('finance:bill-new', args=[films[0].pk]))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(list(response.wsgi_request._messages), [])
+
     def test_the_event_lists_and_page_open_the_form(self):
         response = self.client.get(reverse('events:detail', args=[self.gala.pk]))
         self.assertContains(response, 'href="%s"' % self.url())
@@ -389,6 +458,106 @@ class MarkPaidFormTests(CacheResetMixin, FinanceViewTestCase):
     def test_covered_means_the_note_may_be_left_blank(self):
         self.assertFalse(BillPaidForm(covered=True).fields['paid_note'].required)
         self.assertTrue(BillPaidForm(covered=False).fields['paid_note'].required)
+
+
+class PaymentTakenBackTests(CacheResetMixin, FinanceViewTestCase):
+    """
+    A bill marked paid from a payment, when that payment is taken back.
+
+    Undo, removing the entry, or linking it to another event left the bill
+    marked paid with nothing received: its event's costs stayed out of the
+    waiting row, and it dropped off *Billed, not paid*. Now the paid date
+    comes off when what is left filed no longer covers the bill. A bill marked
+    paid by hand, saying how, is left alone, and so is one the payments never
+    covered.
+    """
+
+    def setUp(self):
+        super(PaymentTakenBackTests, self).setUp()
+        self.grant('view_subledger', 'edit_subledger', 'settle_subledger', 'bill_event', 'view_events')
+        self.gala = show('Spring Gala', start=days_ago(40))
+        self.bill = bill(self.gala, '500.00', billed_days_ago=30, paid_days_ago=2)
+        self.entry = filed(self.gala, '500.00', days_ago(2))
+        self.line = self.entry.parent_transaction
+
+    def undo(self):
+        return self.client.post(reverse('finance:unreconcile', args=[self.line.pk]), follow=True)
+
+    def said(self, response):
+        return ' '.join(str(message) for message in response.context['messages'])
+
+    def test_undoing_the_payment_marks_the_bill_unpaid(self):
+        response = self.undo()
+        self.bill.refresh_from_db()
+        self.assertIsNone(self.bill.date_paid)
+        self.assertIn('The bill for Spring Gala is unpaid again: it was marked paid from the payments filed, '
+                      'and only $0 of its $500.00 has been received now.', self.said(response))
+
+    def test_removing_the_payment_marks_it_unpaid(self):
+        response = self.client.post(reverse('finance:entry-delete', args=[self.entry.pk]), follow=True)
+        self.bill.refresh_from_db()
+        self.assertIsNone(self.bill.date_paid)
+        self.assertIn('is unpaid again', self.said(response))
+
+    def test_linking_the_payment_to_another_event_marks_it_unpaid(self):
+        other = show('Winter Ball', start=days_ago(40))
+        self.client.post(reverse('finance:entry-detail', args=[self.entry.pk]), {
+            'amount': '500.00', 'effective_date': self.entry.effective_date.isoformat(),
+            'description': 'Payment', 'linked_event': str(other.pk),
+            'fund_source': str(fund('legacy').pk)})
+        self.entry.refresh_from_db()
+        self.assertEqual(self.entry.linked_event_id, other.pk)
+        self.bill.refresh_from_db()
+        self.assertIsNone(self.bill.date_paid)
+
+    def test_a_bill_still_covered_stays_paid(self):
+        filed(self.gala, '500.00', days_ago(3))
+        self.undo()
+        self.bill.refresh_from_db()
+        self.assertEqual(self.bill.date_paid, days_ago(2))
+
+    def test_a_bill_marked_paid_by_hand_stays_paid(self):
+        self.bill.paid_note = 'Check from the department'
+        self.bill.save()
+        self.undo()
+        self.bill.refresh_from_db()
+        self.assertEqual(self.bill.date_paid, days_ago(2))
+
+    def test_a_bill_the_payments_never_covered_stays_paid(self):
+        """ The events app marked bills paid with no word on how; those were never ours to judge. """
+        self.entry.delete()
+        part = filed(self.gala, '200.00', days_ago(2))
+        self.client.post(reverse('finance:unreconcile', args=[part.parent_transaction.pk]))
+        self.bill.refresh_from_db()
+        self.assertEqual(self.bill.date_paid, days_ago(2))
+
+    def test_a_closed_event_keeps_its_bill_paid_and_says_so(self):
+        self.gala.closed = True
+        self.gala.save()
+        response = self.undo()
+        self.bill.refresh_from_db()
+        self.assertEqual(self.bill.date_paid, days_ago(2))
+        self.assertIn('The bill for Spring Gala is still marked paid, though only $0 of its $500.00 has been '
+                      'received now. An event on it is closed', self.said(response))
+
+    def test_someone_who_cannot_bill_is_told_instead(self):
+        self.revoke('bill_event')
+        response = self.undo()
+        self.bill.refresh_from_db()
+        self.assertEqual(self.bill.date_paid, days_ago(2))
+        self.assertIn('Someone who can bill should mark it unpaid.', self.said(response))
+
+    def test_a_multibill_paid_from_a_linked_payment(self):
+        films = [show('Film %s' % n, start=days_ago(40)) for n in (1, 2)]
+        bills = multibill(films, paid_days_ago=3)
+        line = payment('26090200-ISD', '300.00', days_ago(3))
+        ParsedTransaction.objects.create(parent_transaction=line, amount=Decimal('300.00'),
+                                         effective_date=line.accounting_date, status=TransactionStatus.SETTLED,
+                                         linked_multibill=bills, fund_source=fund('legacy'))
+        response = self.client.post(reverse('finance:unreconcile', args=[line.pk]), follow=True)
+        bills.refresh_from_db()
+        self.assertIsNone(bills.date_paid)
+        self.assertIn('Fall films is unpaid again', self.said(response))
 
 
 class PnLMarkPaidTests(CacheResetMixin, FinanceViewTestCase):

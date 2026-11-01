@@ -132,8 +132,9 @@ Move Money Between Funds
 
 Sometimes money changes funds without Workday seeing anything -- for example, covering an overspent budget from LNL's
 own money. Click `Move money between funds`, choose the **account**, the **date**, the fund it comes **From** and goes
-**To**, the **amount** and why, and save. No cash moves, so the account's total doesn't change. Transfers are listed
-at the bottom of the page and can be deleted there.
+**To**, the **amount** and why, and save. No cash moves, so the account's total doesn't change. Both funds must be
+held in that account, unless the account's own lines were charged to the other fund -- a funding request paid out of
+315-AG, say. Transfers are listed at the bottom of the page and can be deleted there.
 
 
 Close the Year
@@ -162,4 +163,4 @@ Closing records every account's cash and fund balances as they stood, and makes 
 since the close. If the new figures are right, click `Reopen` and close the year again to record them. Reopening takes
 back the year-end transfers; the Workday balances you entered stay.
 
-`Last Modified: October 29, 2026`
+`Last Modified: November 1, 2026`

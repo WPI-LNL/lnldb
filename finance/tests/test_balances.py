@@ -1066,6 +1066,31 @@ class BalanceInputTests(LedgerFixture, FinanceViewTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(FundTransfer.objects.exists())
 
+    def test_a_transfer_naming_a_fund_held_in_another_account_is_refused(self):
+        """
+        Legacy would gain money that never left the Projection fund: the
+        transfer counts on the account it names, and the mandatory transfer
+        has nothing in 226-AG to move.
+        """
+        response = self.client.post(reverse('finance:transfer-new'), {
+            'account': account('226-AG').pk, 'date': '2026-06-01', 'amount': '100.00',
+            'from_fund': fund('sga_mandatory').pk, 'to_fund': fund('legacy').pk,
+            'description': 'Not ours to move'})
+        self.assertContains(response, 'SGA Mandatory Transfer is held in 315-AG, and nothing in 226-AG is '
+                                      'charged to it')
+        self.assertFalse(FundTransfer.objects.exists())
+
+    def test_one_held_elsewhere_with_money_in_this_account_is_allowed(self):
+        """ A funding request charged out of 315-AG has a row there, which the close squares too. """
+        spend = line(datetime.date(2026, 3, 1), '-50.00', 'Projector lamp', org=PROJECTION)
+        filed(spend, 'sga_fr', lnl_spend_category=category('consumables'))
+        response = self.client.post(reverse('finance:transfer-new'), {
+            'account': account('315-AG').pk, 'date': '2026-06-01', 'amount': '50.00',
+            'from_fund': fund('sga_mandatory').pk, 'to_fund': fund('sga_fr').pk,
+            'description': 'SGA will not reimburse the lamp'})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(FundTransfer.objects.filter(account=account('315-AG')).exists())
+
     def test_a_transfer_before_the_books_start_is_refused(self):
         response = self.client.post(reverse('finance:transfer-new'), {
             'account': account('226-AG').pk, 'date': '2025-06-01', 'amount': '10.00',
@@ -1159,6 +1184,12 @@ class CloseYearTests(LedgerFixture, FinanceViewTestCase):
         self.client.post(reverse('finance:reopen-year', args=[FY26]))
         self.assertFalse(FiscalYearClose.objects.exists())
         self.assertFalse(FundTransfer.objects.exists())
+        # The close, snapshot and all, stays in the history.
+        from reversion.models import Version
+        closed, = Version.objects.get_deleted(FiscalYearClose)
+        self.assertEqual(closed.field_dict['fiscal_year'], FY26)
+        self.assertEqual(closed.field_dict['snapshot']['accounts']['226-AG']['funds']['Legacy'], '9900.00')
+        self.assertEqual(closed.revision.user, self.user)
         # What Workday said stays true.
         self.assertTrue(BalanceCheckpoint.objects.filter(as_of=datetime.date(2026, 6, 30))
                         .exists())

@@ -192,7 +192,15 @@ don't. When they don't, it also asks how the bill was paid, such as *check from 
 what you wrote.
 
 `Mark unpaid`, in the event's *Next step* box or on the multi-bill's page, undoes it. Editing a bill does not change
-whether it is paid.
+whether it is paid. Undoing or removing the payment a bill was marked paid from, or linking it to another event, marks
+the bill unpaid again when what is left received no longer covers it; a bill marked paid by hand, saying how, is left
+alone.
+
+Every change to a bill or a multi-bill -- marked paid or unpaid, sent, its worktag or ISD, its charges and total -- is
+kept in its history, with who made it and when. The site admin shows it.
+
+The client's own billing contacts can see an event's bills on its page, but not the buttons that change them, which
+only officers can use.
 
 
 Multi-bills
@@ -200,7 +208,8 @@ Multi-bills
 
 A multi-bill is one row, under its name, with its events listed underneath. It goes through the same stages as a bill
 for one event: enter the worktag the client sends back, record the ISD, then split its payment across its events,
-which marks it paid. Its page has the same buttons.
+which marks it paid. Its page has the same buttons. An event on a multi-bill is billed there, so it can't also have a
+bill of its own: take it off the multi-bill first.
 
 
 Closing Events
@@ -279,4 +288,4 @@ bills open the *Mark paid* form, instead of marking the bill paid today.
     - :doc:`multibills` for billing several events at once.
     - :doc:`reports` for the *Owed to LNL* report, which shows each client's debt with its bill's stage.
 
-`Last Modified: October 29, 2026`
+`Last Modified: November 1, 2026`

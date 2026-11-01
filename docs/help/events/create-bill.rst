@@ -36,7 +36,8 @@ Create and Send a Bill
     The event must have already been reviewed before it can be billed. If the event status is `Awaiting Review`, please
     contact the officer responsible for reviewing the event before continuing.
 
-#. Click `Create Bill` on the event page. This button will only appear once the event has been reviewed.
+#. Click `Create Bill` on the event page. This button will only appear once the event has been reviewed, and not for
+   an event on a multi-bill, which is billed there.
 #. Enter the date billed and the total amount due. These fields will be pre-filled with the current date and the total
    amount from the `Price Breakdown` in the billing tab. Be sure to double check these values and update them if
    necessary.
@@ -82,4 +83,4 @@ Otherwise, under the `Billing` tab, locate the bill and click `Mark Paid...`. Th
 such as the `All Events` page (`Events` > `All Events`). It opens a form asking the day the bill was paid. If no
 payment received in Workday covers the bill, it also asks how it was paid, such as a check or cash.
 
-`Last Modified: October 16, 2026`
+`Last Modified: November 1, 2026`

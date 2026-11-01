@@ -67,6 +67,10 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
     perms = 'events.bill_event'
 
     def dispatch(self, request, *args, **kwargs):
+        # Nothing about the event is said until the permission is checked:
+        # without it, HasPermMixin refuses before any of the checks below.
+        if not request.user.has_perm(self.perms):
+            return super(BillingCreate, self).dispatch(request, *args, **kwargs)
         self.event = get_object_or_404(BaseEvent, pk=self.kwargs['event'])
         if self.event.closed:
             messages.add_message(request, messages.ERROR, 'Event is closed.')
@@ -75,6 +79,14 @@ class BillingCreate(SetFormMsgMixin, HasPermMixin, LoginRequiredMixin, CreateVie
         if decided is not None:
             messages.error(request, "%s is marked No bill needed (%s). Undo that first to bill it."
                            % (self.event.event_name, decided.get_reason_display()))
+            return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)) + "#billing")
+        # Its own bill would stand for it in finance while its share of the
+        # multi-bill's payment still counted, so it would look billed twice.
+        multibill = self.event.multibillings.order_by('-date_billed', '-pk').first()
+        if multibill is not None:
+            messages.error(request, "%s is on the multi-bill %s, so it is billed there. Take it off that "
+                                    "multi-bill first to bill it on its own."
+                           % (self.event.event_name, multibill.display_name))
             return HttpResponseRedirect(reverse('events:detail', args=(self.kwargs['event'],)) + "#billing")
         return super(BillingCreate, self).dispatch(request, *args, **kwargs)
 
@@ -651,6 +663,10 @@ def multibill_edit(request, pk=None):
     form = MultiBillForm(request.POST or None, instance=bill, include_unmarked=include_unmarked,
                          initial={'events': chosen} if chosen else None)
     if request.method == 'POST' and form.is_valid():
+        # Its history keeps no list of its events (see MultiBilling), so this says which.
+        set_revision_comment("%s the multi-bill, for %s" % (
+            "Changed" if pk else "Created", ", ".join(event.event_name for event in form.cleaned_data['events'])),
+            form)
         saved = form.save()
         messages.success(request, "%s %s. It comes to %s."
                          % ("Saved" if pk else "Created", saved.display_name, money(saved.amount)))
@@ -679,6 +695,7 @@ def multibill_charge(request, pk, charge_pk=None):
               else MultiBillingCharge(multibilling=bill))
     form = MultiBillChargeForm(request.POST or None, instance=charge)
     if request.method == 'POST' and form.is_valid():
+        set_revision_comment("Changed a charge" if charge_pk else "Added a charge", form)
         saved = form.save()
         bill.recalculate()
         messages.success(request, "%s %s. %s now comes to %s."
@@ -703,6 +720,7 @@ def multibill_charge_delete(request, pk, charge_pk):
     if refused:
         return refused
     charge = get_object_or_404(MultiBillingCharge, pk=charge_pk, multibilling=bill)
+    set_revision_comment("Removed the charge %s" % charge.description, None)
     charge.delete()
     bill.recalculate()
     messages.success(request, "Removed %s. %s now comes to %s."
@@ -725,6 +743,7 @@ def multibill_update_total(request, pk):
     if refused:
         return refused
     before = money(bill.amount)
+    set_revision_comment("Recalculated the total", None)
     if bill.recalculate():
         messages.success(request, "%s now comes to %s; it was %s."
                          % (bill.display_name, money(bill.amount), before))
@@ -803,6 +822,7 @@ def _mark_paid(request, bill):
     form = BillPaidForm(request.POST or None, covered=covered,
                         initial={'date_paid': last_payment if covered else timezone.localdate()})
     if request.method == 'POST' and form.is_valid():
+        set_revision_comment("Marked paid", None)
         bill.date_paid = form.cleaned_data['date_paid']
         bill.paid_note = form.cleaned_data['paid_note']
         bill.save(update_fields=['date_paid', 'paid_note'])
@@ -837,6 +857,7 @@ def _mark_sent(request, bill):
                       % (name[0].upper() + name[1:], date_format(bill.date_paid, 'M j, Y')))
         return HttpResponseRedirect(back)
     if request.method == 'POST' and 'unsend' in request.POST:
+        set_revision_comment("Marked not sent", None)
         bill.sent_on = None
         bill.sent_note = ''
         bill.save(update_fields=['sent_on', 'sent_note'])
@@ -845,6 +866,7 @@ def _mark_sent(request, bill):
     form = BillSentForm(request.POST or None, bill=bill,
                         initial={'sent_on': bill.sent_on or timezone.localdate(), 'sent_note': bill.sent_note})
     if request.method == 'POST' and form.is_valid():
+        set_revision_comment("Marked sent", None)
         bill.sent_on = form.cleaned_data['sent_on']
         bill.sent_note = form.cleaned_data['sent_note']
         bill.save(update_fields=['sent_on', 'sent_note'])
@@ -861,6 +883,7 @@ def _mark_unpaid(request, bill):
     refused = _bill_closed(request, bill, bill_events(bill))
     if refused:
         return refused
+    set_revision_comment("Marked unpaid", None)
     bill.date_paid = None
     bill.paid_note = ''
     bill.save(update_fields=['date_paid', 'paid_note'])

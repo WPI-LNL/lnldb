@@ -14,6 +14,15 @@
                     {% if not txn %}Change its lines, or delete it, from there.{% endif %}
                 </div>
             {% endif %}
+            {% if entry.refund_of %}
+                {# A refund has no routing of its own: ParsedTransaction.REFUND_INHERITED. #}
+                <div class="alert alert-info">
+                    A refund of <a href="{{ entry.refund_of.get_absolute_url }}">{{ entry.refund_of.description|default:"a purchase" }}</a>,
+                    so it is charged where the purchase is:
+                    {{ entry.fund_source|default:"no fund" }}{% if entry.lnl_spend_category %}, {{ entry.lnl_spend_category }}{% endif %}{% if entry.fr_line_target %}, FR line {{ entry.fr_line_target.name }}{% endif %}{% if entry.project_tag %}, {{ entry.project_tag }}{% endif %}.
+                    Change the purchase and this refund follows it.
+                </div>
+            {% endif %}
             {% if txn %}
                 <div class="fin-panel fin-immutable">
                     <div class="fin-panel-head">
@@ -145,7 +154,10 @@
                             {% csrf_token %}
                             {% crispy form %}
                             <div class="text-right">
-                                <a href="{% url 'finance:entry-delete' entry.pk %}" class="btn btn-link text-danger">Remove</a>
+                                {# An open encumbrance line is removed on its encumbrance. #}
+                                {% if txn or not entry.encumbrance_id %}
+                                    <a href="{% url 'finance:entry-delete' entry.pk %}" class="btn btn-link text-danger">Remove</a>
+                                {% endif %}
                                 <button type="submit" class="btn btn-primary">Save</button>
                             </div>
                         </form>

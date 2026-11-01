@@ -487,7 +487,7 @@ class RefundTests(TestCase):
         purchase_parent = make_txn(op='F1', net_amount=Decimal('-400.00'))
         self.purchase = ParsedTransaction.objects.create(
             parent_transaction=purchase_parent, amount=Decimal('-400.00'),
-            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'),
+            fund_source=fund('sga_fr'), lnl_spend_category=category('consumables'),
             fr_line_target=self.line)
 
     def test_purchase_consumes_budget(self):
@@ -513,12 +513,16 @@ class RefundTests(TestCase):
         self.assertFalse(refund.is_revenue)
 
     def test_refund_keeps_expense_routing(self):
-        """ A refund carries expense routing; that is what makes it restore a budget. """
+        """
+        A refund carries expense routing; that is what makes it restore a budget.
+        It is the purchase's, whatever the refund was given.
+        """
         refund_parent = make_txn(op='F4', net_amount=Decimal('150.00'))
         refund = ParsedTransaction(parent_transaction=refund_parent, amount=Decimal('150.00'),
                                    refund_of=self.purchase, fund_source=fund('sga_budget'),
                                    lnl_spend_category=category('consumables'))
         refund.full_clean()  # must not raise despite being positive
+        self.assertEqual((refund.fund_source, refund.fr_line_target), (fund('sga_fr'), self.line))
 
     def test_refund_cannot_reverse_revenue(self):
         rev_parent = make_txn(op='F5', net_amount=Decimal('500.00'))

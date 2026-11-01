@@ -196,7 +196,7 @@
                                     {% endpermission %}
                                 {% endif %}
                                 {% if event.reviewed and event.last_bill and not event.paid %}
-                                    {% permission request.user has 'events.bill_event' of event %}
+                                    {% permission request.user has 'events.bill_event' %}
                                         <span class="markpaidtask"><a class="btn btn-link" href="{% url 'finance:bill-paid' event.id event.last_bill.id %}?next={{ request.get_full_path|urlencode }}">Mark&nbsp;Paid…</a></span>
                                     {% endpermission %}
                                 {% endif %}

@@ -24,7 +24,7 @@ from django.views.decorators.http import require_POST
 from reversion.errors import RevertError
 from reversion.models import Version
 
-from finance.billing import bill_closed, mark_paid_from_payments, payment_offer
+from finance.billing import bill_closed, bills_paid_from, mark_paid_from_payments, payment_offer, unpay_uncovered
 from finance.calculators import bill_payments, latest_bill
 from finance.filters import filter_context, get_filter_state
 from finance.forms import (BulkEncumbranceForm, BulkReconcileForm, EncumbranceForm,
@@ -1137,6 +1137,10 @@ def unreconcile(request, pk):
     somebody set aside weeks ago, none of which came from the bank line -- so
     it is put back on the encumbrance instead (:func:`_put_back_on_encumbrance`),
     and the message is a warning that says both things happened.
+
+    A bill marked paid from the payment being undone is marked unpaid again
+    when what is left filed no longer covers it
+    (:func:`finance.billing.unpay_uncovered`), and the warning says so too.
     """
     txn = get_object_or_404(WorkdayTransaction, pk=pk)
     redirect_to = request.POST.get('next') or reverse('finance:queue')
@@ -1179,6 +1183,7 @@ def unreconcile(request, pk):
         return HttpResponseRedirect(redirect_to)
 
     restored = {}
+    paid = bills_paid_from(slices)
     try:
         with transaction.atomic(), reversion.create_revision():
             reversion.set_user(request.user)
@@ -1189,6 +1194,7 @@ def unreconcile(request, pk):
                     continue
                 header = entry.encumbrance
                 restored[header] = restored.get(header, ZERO) + _put_back_on_encumbrance(entry)
+            unpaid = unpay_uncovered(paid, request.user)
     except ValidationError as exc:                          # pragma: no cover
         message = "%s could not be undone: %s" % (txn.reference, " ".join(exc.messages))
         if wants_json:
@@ -1209,15 +1215,18 @@ def unreconcile(request, pk):
                       "encumbrance was" if len(restored) == 1 else "encumbrances were",
                       dollars(abs(sum(restored.values(), ZERO))),
                       _name_a_few("“%s”" % header.description for header in restored)))
+    # A bill paid from this line is a third change, and as easy to miss.
+    message = " ".join([message] + unpaid)
+    warn = bool(restored or unpaid)
     if wants_json:
         return JsonResponse({
             'ok': True,
             'reference': txn.reference,
             'message': message,
             'removed': len(slices),
-            'warning': bool(restored),
+            'warning': warn,
         })
-    (messages.warning if restored else messages.success)(request, message)
+    (messages.warning if warn else messages.success)(request, message)
     return HttpResponseRedirect(redirect_to)
 
 

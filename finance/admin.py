@@ -380,10 +380,11 @@ class FundTransferAdmin(VersionAdmin):
 
 
 @admin.register(FiscalYearClose)
-class FiscalYearCloseAdmin(admin.ModelAdmin):
+class FiscalYearCloseAdmin(VersionAdmin):
     """
     The record of each closed year. Read-only: closing and reopening happen on
     the balance page, which makes and takes back the year-end transfers with it.
+    A reopened year's close, snapshot and all, stays in the history.
     """
     list_display = ('fiscal_year', 'closed_on', 'closed_by')
     readonly_fields = ('fiscal_year', 'closed_on', 'closed_by', 'snapshot', 'notes')
@@ -393,6 +394,9 @@ class FiscalYearCloseAdmin(admin.ModelAdmin):
         return False
 
 
-# Bills came from the events app, registered there with the default admin; they
-# kept it when they moved. Each event's own admin page lists its bills too.
-admin.site.register(Billing)
+# Bills came from the events app, registered there with the default admin. They
+# keep their history now, so the admin shows it. Each event's own admin page
+# lists its bills too.
+@admin.register(Billing)
+class BillingAdmin(VersionAdmin):
+    """ Bills for one event. """

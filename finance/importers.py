@@ -899,13 +899,42 @@ def stage_upload(file_obj):
     return saved
 
 
-def read_staged(token):
-    """ The staged bytes as a file object, or ``None`` if it is no longer there. """
+def _staged_at(path):
+    """
+    When an upload was staged, or ``None`` if that can't be told: the file
+    store's modified time, else the time :func:`stage_upload` put at the start
+    of its name, for a store that doesn't keep one.
+    """
+    try:
+        modified = default_storage.get_modified_time(path)
+    except (OSError, NotImplementedError):
+        try:
+            modified = datetime.datetime.strptime(path.rsplit('/', 1)[-1][:14], '%Y%m%d%H%M%S')
+        except ValueError:
+            return None
+        return timezone.make_aware(modified, datetime.timezone.utc)
+    if timezone.is_naive(modified):
+        modified = timezone.make_aware(modified, timezone.get_default_timezone())
+    return modified
+
+
+def read_staged(token, now=None):
+    """
+    The staged bytes as a file object, or ``None`` if they are no longer
+    waiting: never staged, gone, or staged longer than :data:`STAGING_MAX_AGE`
+    ago. One that has waited too long is deleted, as the next upload would.
+    """
     if not token or not str(token).startswith(STAGING_DIR + '/'):
         # A token is a storage path we wrote. Anything else is someone trying
         # to make the importer read an arbitrary file out of the store.
         return None
     if not default_storage.exists(token):
+        return None
+    # A confirmation page left open overnight must not import in the morning:
+    # the preview it showed may no longer be what the file adds.
+    staged = _staged_at(token)
+    if staged is None or (now or timezone.now()) - staged > STAGING_MAX_AGE:
+        discard_staged(token)
         return None
     with default_storage.open(token, 'rb') as handle:
         return io.BytesIO(handle.read())
@@ -936,11 +965,6 @@ def purge_stale_staged(now=None):
         return
     for name in files:
         path = '%s/%s' % (STAGING_DIR, name)
-        try:
-            modified = default_storage.get_modified_time(path)
-        except (OSError, NotImplementedError):
-            continue
-        if timezone.is_naive(modified):
-            modified = timezone.make_aware(modified, timezone.get_default_timezone())
-        if now - modified > STAGING_MAX_AGE:
+        modified = _staged_at(path)
+        if modified is not None and now - modified > STAGING_MAX_AGE:
             discard_staged(path)

@@ -24,6 +24,14 @@
                             immutable and will not be touched. Removing this entry puts
                             {{ entry.amount|money }} back in what is left to settle.
                         </div>
+                        {% if entry.encumbrance %}
+                            <div class="alert alert-warning">
+                                This entry came from the encumbrance
+                                <a href="{{ entry.encumbrance.get_absolute_url }}">{{ entry.encumbrance }}</a>.
+                                Removing it puts its money back on that encumbrance, as
+                                Undo does, rather than deleting it.
+                            </div>
+                        {% endif %}
                     {% endif %}
 
                     {% if blocked %}

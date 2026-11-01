@@ -342,6 +342,17 @@ A refund is a *contra-expense*, not revenue. Because expenses are stored
 negative and refunds positive, a return credit restores the budget line it came
 out of purely by arithmetic — no special-casing in the burndown code.
 
+That only works if the refund is charged where the purchase is, so a refund has
+no routing of its own. The fields in ``ParsedTransaction.REFUND_INHERITED`` --
+fund, spend category, FR line, SGA request, event, project and side -- are
+copied from the purchase in ``clean()`` and on every save
+(``_take_routing_from_purchase``), and saving a purchase carries a change to
+its refunds (``_carry_routing_to_refunds``). No form, bulk action or shell
+write can move one away: the ledger's bulk bar skips refunds for fund,
+category and project (a refund ticked with its purchase moves with it), and a
+refund's entry page shows where it is charged instead of offering the boxes
+(``AllocationForm._apply_direction_rules``).
+
 An encumbrance is money set aside for a purchase that has not happened yet, and
 it read as *Expense* in the ledger's Type column until it got a word of its own.
 That is not a synonym: no money has left the account, there is no bank line
@@ -629,8 +640,10 @@ browser will not re-submit an ``<input type=file>`` it never kept. Staged
 uploads live under ``finance/staged_imports/`` with unguessable names, and the
 token is held in the session rather than in a form field, so it cannot be
 replayed by anyone else. They are consumed on confirmation, deleted on cancel,
-and purged after six hours by the next upload -- a confirmation left open
-overnight should not quietly import itself in the morning.
+and expire after six hours (``STAGING_MAX_AGE``) -- a confirmation left open
+overnight should not quietly import itself in the morning. ``read_staged``
+refuses and deletes one that old when it is confirmed, and the next upload
+purges any left behind.
 
 Two cases skip the question, because it would be asking twice: *Preview only*,
 which is already a request to look and not touch, and a file with no new lines,
@@ -1095,6 +1108,23 @@ message is a warning that names both changes -- the line unsettled and the
 encumbrance restored -- because the second is easy to miss when only the first was
 meant.
 
+Removing one such entry does the same: *Remove* on its own page
+(:func:`~finance.views.detail.entry_delete`) and the split's *Del* box put it
+back on its encumbrance rather than deleting it, with a warning. A line still
+open on its encumbrance can't be removed from its entry page; it is changed or
+deleted on the encumbrance, whose form will not leave it with no lines.
+
+**A bill paid from what is taken back.** A bill marked paid with no
+``paid_note`` was paid through Workday: the payments filed against it covered
+it. Undo, *Remove*, the split page and the entry page (relinking a payment to
+another event) read the bills the change could uncover before making it
+(:func:`~finance.billing.bills_paid_from`), and afterwards take the paid date off
+any that what is left no longer covers
+(:func:`~finance.billing.unpay_uncovered`), saying so. A bill marked paid by
+hand with a note, or one the payments never covered (the events app's old
+one-click *Mark Paid*), is left alone. One with a closed event, or when the
+person can't bill, stays paid, and the message says it is no longer covered.
+
 In the queue the undo is offered in the row that was just settled, for twelve
 seconds, before the row is removed. The row stays in the DOM for exactly that
 reason -- undoing has to put the Treasurer's own answers back in front of them,
@@ -1527,7 +1557,11 @@ funds inside one account. No cash moves, so Workday never sees them. Each is
 one row taking an amount from one fund and giving it to another, which keeps
 the account's total unchanged by construction. That is the only double-entry
 idea the app needs, and it needs it only where money changes hands without a
-bank line.
+bank line. A transfer recorded by hand (``FundTransferForm``) refuses a fund
+held in another account unless the account's own lines were charged to it --
+otherwise the money would appear on this account out of nowhere and leave the
+other account's fund untouched. The year-end close squares such a fund's row
+the same way.
 
 **Opening balances** say how the opening cash was split: for instance, that
 SGA already owed $300 for spending before the books started. The page asks for
@@ -1957,7 +1991,11 @@ Other), a note, who decided and when. A database constraint requires a note
 when the reason is Other. Undoing it deletes the row. It is only for an event
 with no bill, and while it stands the event cannot be billed (``BillingCreate``
 refuses) or put on a multi-bill (:func:`~finance.billing_forms.billable_events`
-leaves it out). The event's figures read *No bill needed* instead of *Not
+leaves it out). ``BillingCreate`` refuses an event on a multi-bill too, as
+``billable_events`` leaves out an event with a bill of its own: finance would
+take the event's own bill as its bill while still crediting it with its share
+of the multi-bill's payment, so it would look billed twice. The event page
+hides *Create Bill* for it. The event's figures read *No bill needed* instead of *Not
 billed*. It is suggested for an event marked SGA-funded whose price is $0 --
 which, by how ``Event2019.cost_total`` prices an SGA-funded show, means it has
 no rentals or one-off charges -- by tagging its row, making its button the
@@ -2009,7 +2047,21 @@ payment's date across in one click; its button now opens the form with that
 date filled in. The bill's edit form no longer has a paid date. Outside
 finance, the *Mark Paid* buttons on the event lists (``site_tmpl/events.html``)
 and on the event's bills (``site_tmpl/uglydetail.html``) became links to the
-form.
+form. Those templates, and *Create Bill*, *Update* and *Delete* beside them,
+check ``bill_event`` site-wide, as the bill pages do, so a client's own
+members see the event's bills but none of the links; the multi-bill's *See
+invoice* link checks ``view_event_billing`` site-wide, as its view does.
+
+**History.** ``Billing``, ``MultiBilling`` (following its charges, and without
+its events, which reversion would serialise through the polymorphic event
+manager and fail; the multi-bill's edit page names them in its comment
+instead), ``MultiBillingCharge`` and ``FiscalYearClose`` are registered with
+django-reversion, so every change to a bill -- marked paid or unpaid, marked
+sent, its worktag or ISD, a charge, a recalculated total -- is a version with
+who made it, through the revision middleware, and the bill pages name each
+change in its comment. A deleted bill or a reopened year's close keeps the
+versions it had (``Version.objects.get_deleted``), snapshot and all; the
+admin's bill and close pages show the history.
 
 **What is owed.** On the unpaid tabs, each bill shows what has been received
 against it, what is still owed and for how many days
@@ -2456,7 +2508,9 @@ Permissions
     Workday lines*. Taking a line back out of Settled needs it too: undoing a
     settled line, removing a settled entry (on its own page or with the
     split's *Del* box) and the ledger bar's *Set status*, which is not offered
-    without it.
+    without it. Without it, saving the split leaves an entry that was settled
+    Settled, as editing it on its own page does, and only new entries are left
+    Pending.
 ``import_workdaytransaction``
     Upload Workday journal exports.
 ``manage_projecttag`` / ``manage_fundingrequest``

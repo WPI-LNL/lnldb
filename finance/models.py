@@ -2517,6 +2517,14 @@ class ParsedTransaction(models.Model):
     EXPENSE_FIELDS = ('lnl_spend_category', 'fr_line_target')
     SHARED_FIELDS = ('linked_event', 'fund_source', 'funding_request')
 
+    #: Routing a refund takes from the purchase it reverses. A refund charged
+    #: anywhere other than where the money went does not undo the spending:
+    #: the fund keeps the charge, the funding request line keeps the draw, and
+    #: only the grand total nets out. So a refund never has routing of its own
+    #: (see :meth:`_take_routing_from_purchase`).
+    REFUND_INHERITED = ('fund_source', 'lnl_spend_category', 'fr_line_target',
+                        'funding_request', 'linked_event', 'project_tag', 'is_projection')
+
     class Meta:
         ordering = ('-effective_date', '-pk')
         verbose_name = "Subledger Entry"
@@ -2781,6 +2789,34 @@ class ParsedTransaction(models.Model):
             if getattr(self, '%s_id' % field, None) == '':
                 setattr(self, '%s_id' % field, None)
 
+    def _routing_attnames(self):
+        """ :attr:`REFUND_INHERITED` as the columns that hold them. """
+        return [self._meta.get_field(name).attname for name in self.REFUND_INHERITED]
+
+    def _take_routing_from_purchase(self):
+        """
+        Charge a refund exactly where its purchase was.
+
+        Read from the database rather than off ``refund_of``, which may be a
+        copy loaded before the purchase last changed. Applied on every save as
+        well as in ``clean()``, so no form, bulk action or shell write can move
+        a refund away from its purchase; :meth:`_carry_routing_to_refunds` takes
+        a change to the purchase to its refunds.
+        """
+        if self.refund_of_id is None:
+            return
+        routing = (ParsedTransaction.objects.filter(pk=self.refund_of_id)
+                   .values(*self._routing_attnames()).first())
+        for attname, value in (routing or {}).items():
+            setattr(self, attname, value)
+
+    def _carry_routing_to_refunds(self):
+        """ Move every refund of this purchase to wherever the purchase is now charged. """
+        attnames = self._routing_attnames()
+        for refund in self.refunds.all():
+            if any(getattr(refund, name) != getattr(self, name) for name in attnames):
+                refund.save()
+
     def clean(self):
         """
         Enforce the rules that keep the ledger auditable.
@@ -2809,6 +2845,9 @@ class ParsedTransaction(models.Model):
         if self.amount is None or self.amount == 0:
             errors['amount'] = "Amount must be non-zero."
             raise ValidationError(errors)
+
+        # A refund's routing is its purchase's, so the rules below check that.
+        self._take_routing_from_purchase()
 
         # -- Rule 2: revenue and expense routing are mutually exclusive -----
         if self.entry_type == self.REVENUE:
@@ -2975,8 +3014,13 @@ class ParsedTransaction(models.Model):
         self._partition_was_stated = True
 
     def _apply_partition_default(self):
-        """ Start an unanswered new entry on the side its account belongs to. """
+        """
+        Start an unanswered new entry on the side its account belongs to. A
+        refund is on its purchase's side, whatever account the credit landed in.
+        """
         if not self._state.adding or getattr(self, '_partition_was_stated', True):
+            return
+        if self.refund_of_id is not None:
             return
         if self.parent_transaction_id is None:
             return
@@ -2995,6 +3039,7 @@ class ParsedTransaction(models.Model):
         partition is allowed to override a deliberate answer, and which is not.
         """
         self._normalise_blanks()
+        self._take_routing_from_purchase()
         self._apply_partition_default()
         # A funding request names its side explicitly, so it is applied here as
         # well as in clean() -- bulk actions and shell writes skip full_clean(),
@@ -3005,7 +3050,12 @@ class ParsedTransaction(models.Model):
         self._adopt_partition_from_funding_request()
         if self.parent_transaction_id is not None and not self.effective_date:
             self.effective_date = self.parent_transaction.accounting_date
-        return super(ParsedTransaction, self).save(*args, **kwargs)
+        adding = self._state.adding
+        result = super(ParsedTransaction, self).save(*args, **kwargs)
+        # Only spending that was already saved can have been refunded.
+        if not adding and self.amount is not None and money(self.amount) < 0:
+            self._carry_routing_to_refunds()
+        return result
 
     def _adopt_partition_from_funding_request(self):
         """
@@ -3192,6 +3242,7 @@ class FundTransfer(models.Model):
         return fiscal_year_for(self.date)
 
 
+@reversion.register()
 class FiscalYearClose(models.Model):
     """
     The record that a fiscal year's books were closed.
@@ -3237,6 +3288,11 @@ class FiscalYearClose(models.Model):
 # The tables kept their events_* names when the models moved (migration
 # 0003_bills_from_events), so no row was copied, and the names the events app
 # reaches them by -- event.billings, event.multibillings -- did not change.
+#
+# Bills, multi-bills and their charges are tracked by django-reversion, like
+# the ledger, so every change to one -- marked paid or unpaid, sent, its ISD
+# recorded or removed, its total recalculated -- is in its history, with who
+# made it. A deleted bill keeps the history it had, and the admin can recover it.
 # ---------------------------------------------------------------------------
 
 #: Why a bill was marked paid without a payment from Workday that covers it.
@@ -3313,6 +3369,7 @@ class ISDRecord(models.Model):
                 and money(self.isd_amount) != money(self.amount))
 
 
+@reversion.register()
 class Billing(ISDRecord):
     """ A bill for one event, sent to its client """
     date_billed = models.DateField()
@@ -3366,6 +3423,10 @@ def _cents_down(value):
     return Decimal(value).quantize(CENTS, rounding=ROUND_DOWN)
 
 
+# Its events are left out of its history: django-reversion serialises them
+# through the polymorphic event manager, which cannot read an event back with
+# only its key. The page that changes them names them in the comment instead.
+@reversion.register(follow=['charges'], exclude=['events'])
 class MultiBilling(ISDRecord):
     """
     One bill covering several events, sent to one client.
@@ -3473,6 +3534,7 @@ class MultiBilling(ISDRecord):
         return True
 
 
+@reversion.register()
 class MultiBillingCharge(models.Model):
     """
     A line on a multi-bill that is not one of its events.

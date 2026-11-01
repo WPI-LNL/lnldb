@@ -321,6 +321,21 @@ def bulk_action(request):
         return HttpResponseRedirect(redirect_to)
     entries = list(ParsedTransaction.objects.filter(pk__in=ids))
 
+    # A refund is charged wherever its purchase is, and saving one puts it back
+    # there, so changing its routing here could only be undone silently. One
+    # whose purchase is ticked too moves with it, and isn't reported.
+    if action in ParsedTransaction.REFUND_INHERITED:
+        chosen = {entry.pk for entry in entries}
+        refunds = [e for e in entries if e.refund_of_id]
+        alone = [e for e in refunds if e.refund_of_id not in chosen]
+        if alone:
+            messages.warning(
+                request,
+                "%s refund%s skipped — a refund is charged where its purchase is. Change the "
+                "purchase, and its refunds follow."
+                % (len(alone), ' was' if len(alone) == 1 else 's were'))
+        entries = [e for e in entries if not e.refund_of_id]
+
     # Expense routing on a revenue row is refused by a database constraint, so
     # without this a mixed selection takes the whole action down with a 500.
     # The fund is not expense routing: money coming in names one too.

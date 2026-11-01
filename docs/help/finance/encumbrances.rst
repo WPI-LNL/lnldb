@@ -97,11 +97,13 @@ Change or Cancel an Encumbrance
 
 Find it in the `Ledger` -- search for its description, or choose the `Pending` status -- and open it. The entry page
 links to the encumbrance, where you can change its details, add or remove lines, or click `Delete` if the purchase is
-cancelled; the money then stops counting as encumbered. Lines already matched to Workday are kept.
+cancelled; the money then stops counting as encumbered. Lines already matched to Workday are kept. A line still
+waiting for its Workday charge is changed or removed there, on the encumbrance, not from its own entry page.
 
 To undo a match, click `Undo` on the row before it disappears, or, later, open the Workday line and click
 `Undo settling`. The line goes back to the queue, and the money goes back on the encumbrance as it was before you matched
 it, at what was encumbered rather than what was charged. A warning says that both happened, so check the encumbrance is
-still wanted.
+still wanted. Removing one matched entry, with `Remove` on its page or the `Del` box on the split page, puts its money
+back the same way.
 
-`Last Modified: October 30, 2026`
+`Last Modified: November 1, 2026`

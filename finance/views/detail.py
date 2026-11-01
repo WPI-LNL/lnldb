@@ -23,13 +23,14 @@ from django.utils.formats import date_format
 from reversion.errors import RevertError
 from reversion.models import Version
 
-from finance.billing import bill_closed, mark_paid_from_payments, payment_offer
+from finance.billing import bill_closed, bills_paid_from, mark_paid_from_payments, payment_offer, unpay_uncovered
 from finance.calculators import bill_payments
 from finance.filters import filter_context
 from finance.forms import AllocationForm, SplitFormSet
-from finance.models import (MultiBilling, ParsedTransaction, TransactionStatus, WorkdayTransaction,
+from finance.models import (ZERO, MultiBilling, ParsedTransaction, TransactionStatus, WorkdayTransaction,
                             dollars, own_fund_for_account)
 from finance.suggestions import suggest_all
+from finance.views.ingest import _name_a_few, _put_back_on_encumbrance
 
 
 def _snapshot(version):
@@ -110,10 +111,16 @@ def transaction_detail(request, pk):
     bill_offer = None
 
     if request.method == 'POST' and can_edit:
+        can_settle = request.user.has_perm('finance.settle_subledger')
         formset = SplitFormSet(request.POST, request.FILES, instance=txn,
-                               parent_transaction=txn,
-                               can_settle=request.user.has_perm('finance.settle_subledger'))
+                               parent_transaction=txn, can_settle=can_settle)
         if formset.is_valid():
+            # Read from the database: SplitLineForm.clean() has set every row
+            # to Pending, so that they are weighed together.
+            before = list(txn.slices.all())
+            was_settled = {entry.pk for entry in before if entry.status == TransactionStatus.SETTLED}
+            paid = bills_paid_from(before)
+            restored = {}
             with reversion.create_revision():
                 reversion.set_user(request.user)
                 reversion.set_comment("Split purchase across %s entries"
@@ -127,23 +134,54 @@ def transaction_detail(request, pk):
                     if not entry.effective_date:
                         entry.effective_date = txn.accounting_date
                     entry.full_clean()
+                    # Changing a settled entry doesn't unsettle it for someone
+                    # who can't settle, as on its own page. Checked above as
+                    # Pending, against the other rows' new amounts; the formset
+                    # has made the whole line add up, which is all Settled asks.
+                    if not can_settle and entry.pk in was_settled:
+                        entry.status = TransactionStatus.SETTLED
                     entry.save()
                 for obj in formset.deleted_objects:
-                    obj.delete()
+                    if obj.encumbrance_id is None:
+                        obj.delete()
+                        continue
+                    # As Undo does: the money goes back on the encumbrance it
+                    # came from, rather than the encumbrance going with it.
+                    # Fetched again, without what the deleted row had typed in.
+                    entry = ParsedTransaction.objects.select_related('encumbrance').get(pk=obj.pk)
+                    header = entry.encumbrance
+                    restored[header] = restored.get(header, ZERO) + _put_back_on_encumbrance(entry)
+                unpaid = unpay_uncovered(paid, request.user)
             # It cannot be saved unless it balances, so it is finished: settled
             # now, as the queue settles a line it files whole. Left Pending for
             # someone without the permission, which keeps it in the queue.
-            if request.user.has_perm('finance.settle_subledger'):
+            if can_settle:
                 # Fetched with its slices prefetched, so it still believes it
                 # has the ones it had before this save.
                 txn.refresh_from_db()
                 txn.settle()
                 messages.success(request, "Split saved and settled — the entries add up to the "
                                           "line, so it has left the queue.")
+            elif not txn.slices.filter(status=TransactionStatus.PENDING).exists():
+                messages.success(request, "Split saved — the entries add up to the line, and it "
+                                          "stays settled.")
+            elif was_settled:
+                messages.success(request, "Split saved — the entries add up to the line. The "
+                                          "entries that were settled stay settled; the rest stay "
+                                          "in the queue as Pending until someone who can settle "
+                                          "the line clicks Mark settled.")
             else:
                 messages.success(request, "Split saved — the entries add up to the line. It "
                                           "stays in the queue as Pending until someone who can "
                                           "settle it clicks Mark settled.")
+            if restored:
+                messages.warning(request, "%s encumbered again on %s: the entries removed came from "
+                                          "%s, so their money was put back rather than deleted."
+                                 % (dollars(abs(sum(restored.values(), ZERO))),
+                                    _name_a_few("“%s”" % header.description for header in restored),
+                                    "it" if len(restored) == 1 else "them"))
+            for note in unpaid:
+                messages.warning(request, note)
             paid = _mark_paid_on_split(request, txn)
             if paid:
                 messages.info(request, paid)
@@ -287,10 +325,12 @@ def entry_detail(request, pk):
     entry = get_object_or_404(
         ParsedTransaction.objects.select_related(
             'parent_transaction', 'linked_event', 'linked_multibill', 'project_tag',
-            'fr_line_target__funding_request'), pk=pk)
+            'fr_line_target__funding_request', 'refund_of'), pk=pk)
     can_edit = request.user.has_perm('finance.edit_subledger')
 
     if request.method == 'POST' and can_edit:
+        # Before the form writes what was typed onto the entry.
+        paid = bills_paid_from([entry])
         form = AllocationForm(request.POST, request.FILES, instance=entry,
                               parent_transaction=entry.parent_transaction)
         if form.is_valid():
@@ -300,7 +340,10 @@ def entry_detail(request, pk):
                 obj = form.save(commit=False)
                 obj.full_clean()
                 obj.save()
+                unpaid = unpay_uncovered(paid, request.user)
             messages.success(request, "Saved.")
+            for note in unpaid:
+                messages.warning(request, note)
             return HttpResponseRedirect(entry.get_absolute_url())
     else:
         form = AllocationForm(instance=entry, parent_transaction=entry.parent_transaction)
@@ -339,6 +382,10 @@ def _multibill_shares_of(entry):
 
 def _why_not_removable(request, entry):
     """ Why ``entry`` can't be removed by this person, or ``None`` if it can. """
+    # Taking a line off an encumbrance is changing the encumbrance.
+    if entry.encumbrance_id is not None and entry.parent_transaction_id is None:
+        return ("This is a line of the encumbrance “%s”, still waiting for its Workday charge. "
+                "Change its lines, or delete it, from the encumbrance." % entry.encumbrance)
     # The database won't orphan a refund, so its purchase stays until the
     # refund goes.
     if entry.refunds.exists():
@@ -371,8 +418,13 @@ def entry_delete(request, pk):
        history stays queryable through
        ``Version.objects.get_for_object_reference(ParsedTransaction, pk)``,
        which is how a removed allocation can still be accounted for.
+
+    Two things happen besides. An entry that came from an encumbrance goes
+    back on it, as Undo puts it back, rather than taking the encumbered money
+    with it. And a bill marked paid from this payment is marked unpaid again
+    when what is left filed no longer covers it.
     """
-    entry = get_object_or_404(ParsedTransaction, pk=pk)
+    entry = get_object_or_404(ParsedTransaction.objects.select_related('encumbrance'), pk=pk)
     parent = entry.parent_transaction
     blocked = _why_not_removable(request, entry)
 
@@ -380,11 +432,24 @@ def entry_delete(request, pk):
         if blocked:
             messages.error(request, blocked)
             return HttpResponseRedirect(reverse('finance:entry-delete', args=[entry.pk]))
+        paid = bills_paid_from([entry])
+        header = entry.encumbrance
         with reversion.create_revision():
             reversion.set_user(request.user)
             reversion.set_comment("Entry removed")
-            entry.delete()
-        messages.success(request, "Entry removed. The Workday line itself is untouched.")
+            if header is None:
+                entry.delete()
+            else:
+                restored = _put_back_on_encumbrance(entry)
+            unpaid = unpay_uncovered(paid, request.user)
+        if header is None:
+            messages.success(request, "Entry removed. The Workday line itself is untouched.")
+        else:
+            messages.warning(request, "Entry removed, and its money put back on the encumbrance "
+                                      "“%s”: %s is encumbered again. The Workday line itself is "
+                                      "untouched." % (header.description, dollars(abs(restored))))
+        for note in unpaid:
+            messages.warning(request, note)
         return HttpResponseRedirect(
             parent.get_absolute_url() if parent else reverse('finance:ledger'))
 

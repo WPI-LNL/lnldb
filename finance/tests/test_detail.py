@@ -295,6 +295,54 @@ class SplitLeavesTheQueueTests(FinanceViewTestCase):
                          [Decimal('-4000.00'), Decimal('-3324.72')])
         self.assertFalse(self._in_queue())
 
+    def _resplit(self, rows):
+        """ The settled split posted back as ``[(entry or None, amount, description)]``. """
+        data = {
+            'slices-TOTAL_FORMS': str(len(rows)),
+            'slices-INITIAL_FORMS': str(len([row for row in rows if row[0] is not None])),
+            'slices-MIN_NUM_FORMS': '0', 'slices-MAX_NUM_FORMS': '1000',
+        }
+        for index, (entry, amount, description) in enumerate(rows):
+            data.update({
+                'slices-%s-amount' % index: amount,
+                'slices-%s-description' % index: description,
+                'slices-%s-fund_source' % index: str(fund('legacy').pk),
+                'slices-%s-lnl_spend_category' % index: str(category('consumables').pk),
+            })
+            if entry is not None:
+                data['slices-%s-id' % index] = str(entry.pk)
+        return self.client.post(self._url(), data, follow=True)
+
+    def test_changing_a_settled_split_does_not_unsettle_it_without_the_settle_permission(self):
+        """
+        Saving the split reopened every row it changed, so someone who can't
+        settle could unsettle a line by changing a description -- which Undo,
+        Remove and the bulk bar all refuse them.
+        """
+        self._split('-4342.40', '-2982.32')
+        first, second = list(self.txn.slices.order_by('pk'))
+        self.revoke('settle_subledger')
+        response = self._resplit([(first, '4000.00', 'Lamps'), (second, '3324.72', second.description)])
+        self.assertContains(response, 'stays settled')
+        self.assertEqual(sorted(self.txn.slices.values_list('amount', flat=True)),
+                         [Decimal('-4000.00'), Decimal('-3324.72')])
+        self.assertEqual(set(self.txn.slices.values_list('status', flat=True)),
+                         {TransactionStatus.SETTLED})
+        self.assertFalse(self._in_queue())
+
+    def test_a_row_added_without_the_settle_permission_waits_to_be_settled(self):
+        """ Only what was settled stays settled; the new row is for someone who can settle. """
+        self._split('-4342.40', '-2982.32')
+        first, second = list(self.txn.slices.order_by('pk'))
+        self.revoke('settle_subledger')
+        response = self._resplit([(first, '4342.40', first.description), (second, '2000.00', 'Cable'),
+                                  (None, '982.32', 'Tape')])
+        self.assertContains(response, 'that were settled stay settled')
+        statuses = dict(self.txn.slices.values_list('description', 'status'))
+        self.assertEqual(statuses['Cable'], TransactionStatus.SETTLED)
+        self.assertEqual(statuses['Tape'], TransactionStatus.PENDING)
+        self.assertTrue(self._in_queue())
+
 
 class EntryDetailTests(FinanceViewTestCase):
     """ One slice, its form, and its history. """
@@ -567,3 +615,85 @@ class RemovingGuardTests(FinanceViewTestCase):
         self.assertEqual(refund.description, 'Gaff tape back')
         self.assertEqual(refund.lnl_spend_category, category('consumables'))
         self.assertEqual(refund.refund_of, self.purchase)
+
+
+class RefundRoutingTests(FinanceViewTestCase):
+    """
+    A refund is charged where its purchase is, always.
+
+    The queue copied the purchase's routing onto a refund when it was filed,
+    but nothing kept the two together afterwards: the ledger's bulk bar or the
+    refund's own page could move it to another fund, crediting money back to a
+    fund that never spent it, and changing the purchase left the refund behind.
+    """
+
+    def setUp(self):
+        super(RefundRoutingTests, self).setUp()
+        self.grant('view_subledger', 'edit_subledger', 'settle_subledger')
+        self.txn = self.make_txn(op='OT-RR1', amount='-100.00')
+        self.purchase = ParsedTransaction.objects.create(
+            parent_transaction=self.txn, amount=Decimal('-100.00'),
+            effective_date=self.txn.accounting_date, description='Gaff tape',
+            fund_source=fund('sga_budget'), lnl_spend_category=category('consumables'),
+            status=TransactionStatus.SETTLED)
+        credit = self.make_txn(op='OT-RR2', amount='40.00')
+        self.refund = ParsedTransaction.objects.create(
+            parent_transaction=credit, amount=Decimal('40.00'),
+            effective_date=credit.accounting_date, description='Gaff tape returned',
+            refund_of=self.purchase, status=TransactionStatus.SETTLED)
+
+    def _bulk(self, action, value, *entries):
+        return self.client.post(reverse('finance:bulk-action'), {
+            'action': action, action: str(value),
+            'selected': ','.join(str(entry.pk) for entry in entries)}, follow=True)
+
+    def test_a_refund_saved_with_no_routing_takes_its_purchases(self):
+        self.refund.refresh_from_db()
+        self.assertEqual((self.refund.fund_source, self.refund.lnl_spend_category),
+                         (fund('sga_budget'), category('consumables')))
+
+    def test_a_refund_cannot_be_moved_off_its_purchase(self):
+        self.refund.fund_source = fund('legacy')
+        self.refund.save()
+        self.refund.refresh_from_db()
+        self.assertEqual(self.refund.fund_source, fund('sga_budget'))
+
+    def test_changing_the_purchase_moves_its_refunds(self):
+        self.purchase.fund_source = fund('legacy')
+        self.purchase.lnl_spend_category = category('repairs')
+        self.purchase.save()
+        self.refund.refresh_from_db()
+        self.assertEqual((self.refund.fund_source, self.refund.lnl_spend_category),
+                         (fund('legacy'), category('repairs')))
+
+    def test_the_bulk_bar_skips_a_refund_and_says_why(self):
+        response = self._bulk('fund_source', fund('legacy').pk, self.refund)
+        self.assertContains(response, '1 refund was skipped')
+        self.refund.refresh_from_db()
+        self.assertEqual(self.refund.fund_source, fund('sga_budget'))
+
+    def test_a_refund_ticked_with_its_purchase_moves_with_it(self):
+        response = self._bulk('fund_source', fund('legacy').pk, self.purchase, self.refund)
+        self.assertNotContains(response, 'skipped')
+        self.refund.refresh_from_db()
+        self.assertEqual(self.refund.fund_source, fund('legacy'))
+
+    def test_the_bulk_bar_skips_a_refund_for_a_spend_category_too(self):
+        self._bulk('lnl_spend_category', category('repairs').pk, self.refund)
+        self.refund.refresh_from_db()
+        self.assertEqual(self.refund.lnl_spend_category, category('consumables'))
+
+    def test_the_refunds_page_shows_where_it_is_charged_instead_of_asking(self):
+        page = self.client.get(reverse('finance:entry-detail', args=[self.refund.pk]))
+        self.assertContains(page, 'so it is charged where the purchase is')
+        self.assertNotContains(page, 'name="fund_source"')
+        self.assertNotContains(page, 'name="lnl_spend_category"')
+
+    def test_saving_the_refunds_page_keeps_its_purchases_routing(self):
+        self.client.post(reverse('finance:entry-detail', args=[self.refund.pk]), {
+            'amount': '40.00', 'effective_date': self.refund.effective_date.isoformat(),
+            'description': 'Tape back', 'refund_of': str(self.purchase.pk),
+            'fund_source': str(fund('legacy').pk)})
+        self.refund.refresh_from_db()
+        self.assertEqual(self.refund.description, 'Tape back')
+        self.assertEqual(self.refund.fund_source, fund('sga_budget'))

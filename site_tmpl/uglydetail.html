@@ -64,8 +64,13 @@
                                 <a class="btn btn-success btn-lg"
                                    href="{% url "events:review" event.id %}">Review For Billing	</a>
                             {% endpermission %}
-                        {% else %}
-                            {% permission request.user has 'events.bill_event' of event %}
+                        {% elif not event.multibillings.exists %}
+                            {% comment %}
+                                The site-wide permission, which the bill pages check: a
+                                client's billing contacts hold it for their own events
+                                only. An event on a multi-bill is billed there.
+                            {% endcomment %}
+                            {% permission request.user has 'events.bill_event' %}
                                 <a class="btn btn-primary btn-lg"
                                    href="{% url "finance:bill-new" event.id %}">Create Bill</a>
                             {% endpermission %}
@@ -781,6 +786,11 @@
                                             {% endif %}
                                         </td>
                                         <td>
+                                            {% comment %}
+                                                The site-wide permission, which the bill
+                                                pages check, as for Create Bill above.
+                                            {% endcomment %}
+                                            {% permission request.user has 'events.bill_event' %}
                                             {% if not event.closed %}
                                                 <div class="form-inline">
                                                     <div class="form-group">
@@ -795,6 +805,7 @@
                                                     </div>
                                                 </div>
                                             {% endif %}
+                                            {% endpermission %}
                                         </td>
                                     {% endpermission %}
                                 </tr>
@@ -803,7 +814,13 @@
                                 <tr>
                                     <td>{{ multibilling.date_billed }}</td>
                                     <td>{{ multibilling.date_paid }}</td>
-                                    <td><a href="{% url 'finance:multibill-pdf' multibilling.id %}">See invoice</a></td>
+                                    <td>
+                                        {% permission request.user has 'events.view_event_billing' %}
+                                            <a href="{% url 'finance:multibill-pdf' multibilling.id %}">See invoice</a>
+                                        {% else %}
+                                            On a multi-bill
+                                        {% endpermission %}
+                                    </td>
                                     {% permission request.user has 'events.bill_event' of event %}
                                         <td>
                                             {% for email in multibilling.multibillingemail_set.all %}

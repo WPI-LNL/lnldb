@@ -1190,6 +1190,25 @@ class AllocationForm(BaseAllocationForm):
         self.helper = finance_form_helper(
             label_class='col-md-4', field_class='col-md-8', form_class='form-horizontal')
 
+    def _apply_direction_rules(self):
+        """
+        Take the routing boxes off a refund, as the queue does.
+
+        A refund is charged wherever its purchase is, and the model copies that
+        on every save, so a box here could only be changed and then put back.
+        The page shows the purchase's routing instead. Read from what was
+        submitted, so clearing the purchase brings the boxes back to file the
+        money as something else.
+        """
+        super(AllocationForm, self)._apply_direction_rules()
+        if self.is_bound:
+            refund = self.data.get(self.add_prefix('refund_of'))
+        else:
+            refund = self.instance.refund_of_id or self.initial.get('refund_of')
+        if refund:
+            for name in ParsedTransaction.REFUND_INHERITED + ('allow_cross_year_fr', 'fr_request'):
+                self.fields.pop(name, None)
+
 
 class ReconcileForm(BaseAllocationForm):
     """
@@ -1205,13 +1224,10 @@ class ReconcileForm(BaseAllocationForm):
     REQUIRED_ON_REVENUE = ('fund_source',)
 
     #: Routing a credit takes from the purchase it reverses, rather than asking
-    #: for it again. A refund filed anywhere other than where the money went
-    #: does not undo the spending: the fund keeps the charge, the funding
-    #: request line keeps the draw, and only the grand total nets out. There is
-    #: exactly one right answer for every one of these and the original entry
-    #: already holds it, so the queue fills them in and shows no boxes at all.
-    REFUND_INHERITED = ('fund_source', 'lnl_spend_category', 'fr_line_target',
-                        'funding_request', 'linked_event', 'project_tag', 'is_projection')
+    #: for it again. There is exactly one right answer for every one of these
+    #: and the original entry already holds it, so the queue fills them in and
+    #: shows no boxes at all. See ``ParsedTransaction.REFUND_INHERITED``.
+    REFUND_INHERITED = ParsedTransaction.REFUND_INHERITED
 
     class Meta(BaseAllocationForm.Meta):
         fields = ('refund_of', 'linked_event', 'linked_multibill', 'non_event_revenue_type',
@@ -2203,6 +2219,36 @@ class FundTransferForm(forms.ModelForm):
                 "fund held on that day, use Opening balances instead."
                 % date_format(self.books_start, 'M j, Y'))
         return date
+
+    def clean(self):
+        """
+        Refuse a fund held in another account, unless it has money in this one.
+
+        The transfer moves money inside the account it names. A fund held in
+        another account has nothing here to move: the transfer would give the
+        other fund a row on this account and leave its real balance untouched,
+        and the money would appear out of nowhere. The exception is a fund this
+        account's own lines were charged to -- a funding request paid out of
+        315-AG, say -- whose row here the year-end close squares the same way.
+        """
+        cleaned = super(FundTransferForm, self).clean()
+        account = cleaned.get('account')
+        if account is None:
+            return cleaned
+        elsewhere = [(name, cleaned[name]) for name in ('from_fund', 'to_fund')
+                     if cleaned.get(name) is not None
+                     and cleaned[name].account_id not in (None, account.pk)]
+        if not elsewhere:
+            return cleaned
+        from finance.balances import Books
+
+        here, _, _ = Books().positions(account.code, cleaned.get('date') or timezone.localdate())
+        for name, fund in elsewhere:
+            if fund.pk not in here:
+                self.add_error(name, "%s is held in %s, and nothing in %s is charged to it, so it has "
+                                     "nothing here to move. Pick a fund held in %s, or record this on %s."
+                               % (fund, fund.account.code, account.code, account.code, fund.account.code))
+        return cleaned
 
 
 class OpeningBalancesForm(forms.Form):

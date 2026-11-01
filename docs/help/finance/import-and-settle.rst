@@ -96,7 +96,9 @@ Money coming in is one of three things:
   (`Reimburses request`).
 - **A refund** -- choose the purchase it refunds under `Refund of`. A refund needs nothing else: it takes everything from
   the purchase it reverses. The list has purchases from this fiscal year and the one before, so a July credit for a
-  June purchase can still be settled as its refund.
+  June purchase can still be settled as its refund. It stays charged wherever the purchase is: change the purchase's
+  fund, category or FR line and its refunds follow. A refund's own page shows where it is charged rather than asking,
+  and the `Ledger`'s bar skips refunds.
 
 Settle the line
 ^^^^^^^^^^^^^^^
@@ -133,7 +135,8 @@ Split a Line That Paid for Several Things
 One card charge can cover tape, a repair and a show's rental. Click `Split` on the row (or open the line from the ledger)
 to reach `Split This Purchase`. Add a row for each part with `Add a slice`, fill in each one, and click `Save split`.
 Type each amount as it reads on the receipt, without a minus sign: every part runs the same way as the line. To drop a
-row, tick its `Del` box. The parts must add up to the line exactly; the page tells you how much is left over. Saving
+row, tick its `Del` box; a row that came from an encumbrance goes back on the encumbrance instead of being deleted, as
+Undo puts it back. The parts must add up to the line exactly; the page tells you how much is left over. Saving
 settles the line and it leaves the queue. To move money between the parts later, change the amounts and save the split
 again.
 
@@ -141,8 +144,9 @@ A part paid from `SGA Funding Request` names the request line it was spent again
 above it as on a queue row. Under them, `SGA took money back?` is only for a line where SGA took money back, which names
 the whole request instead of a line.
 
-If your role can write entries but not settle, the parts are saved as **Pending** and the line stays in the queue until someone
-who can settle opens it and clicks `Mark settled`.
+If your role can write entries but not settle, new parts are saved as **Pending** and the line stays in the queue until
+someone who can settle opens it and clicks `Mark settled`. Parts that were already settled stay settled when you change
+them, as they do on an entry's own page.
 
 The same page splits one rental invoice between two shows: one row per show, each with its own `Incurred for event`.
 
@@ -166,7 +170,13 @@ Fix a Mistake
 - **Later:** find the entry in the `Ledger`, click through to its Workday line, and click `Undo settling`. The
   line goes back to the queue with no entries, and the Workday line itself is untouched. On a line matched to an
   encumbrance, the money goes back on the encumbrance, and a warning says so; see :doc:`encumbrances`.
-- **To change one detail** (a category, a project), open the entry from the `Ledger` and edit it.
+- **To change one detail** (a category, a project), open the entry from the `Ledger` and edit it. `Remove` on the
+  entry's page takes one entry off its line; one that came from an encumbrance goes back on it, as with Undo.
+
+When a payment you undo, remove or link to another event had marked a bill paid, and what is left filed no longer
+covers the bill, the bill is marked unpaid again and the message says so. A bill marked paid by hand, saying how it was
+paid, is left alone. So is one with a closed event, or when you can't bill; then the message says the bill is no
+longer covered.
 - **Many entries at once:** tick them in the `Ledger` and use the bar at the bottom.
 
 A purchase that has a refund recorded against it can't be undone or removed until the refund is undone, since the refund
@@ -182,4 +192,4 @@ Check Against Workday
 Once the queue is empty, open the `Balances` tab and record Workday's current balance for each account. If the app's
 figure disagrees, a line is missing or was imported twice. See :doc:`balances`.
 
-`Last Modified: October 30, 2026`
+`Last Modified: November 1, 2026`
